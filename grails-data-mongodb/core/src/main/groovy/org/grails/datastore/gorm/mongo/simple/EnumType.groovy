@@ -85,10 +85,10 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
      * @Example: Will return String class for list of String mapped by hasMany.
      */
     private static Class getCollectionType(PersistentProperty property) {
-        if(property instanceof Basic) {
+        if (property instanceof Basic) {
             return ((Basic)property).componentType
         }
-        else if(property instanceof Association) {
+        else if (property instanceof Association) {
             return ((Association)property).associatedEntity.javaClass
         }
         return null
@@ -217,7 +217,7 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
         }
 
         // Iterate each field in the query deeply to get the blank field
-        for(String key in nativeQuery.keySet()) {
+        for (String key in nativeQuery.keySet()) {
             def value = nativeQuery.get(key)
             if (value instanceof Collection) {
                 ((Collection<Document>) value).each { Document queryObject ->

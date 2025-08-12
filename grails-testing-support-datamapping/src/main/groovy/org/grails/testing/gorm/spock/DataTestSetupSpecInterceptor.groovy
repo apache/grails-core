@@ -64,7 +64,7 @@ class DataTestSetupSpecInterceptor implements IMethodInterceptor {
                     Class.forName(source)
                 }
             })
-            grailsDatastore SimpleMapDatastore, DatastoreUtils.createPropertyResolver(application.config), application.config?.dataSources?.keySet() ?: ([] as Set<String>), testInstance.domainClassesToMock?: [] as Class<?>[]
+            grailsDatastore SimpleMapDatastore, DatastoreUtils.createPropertyResolver(application.config), application.config?.dataSources?.keySet() ?: ([] as Set<String>), testInstance.domainClassesToMock ?: [] as Class<?>[]
 
                 constraintRegistry(DefaultConstraintRegistry, ref('messageSource'))
                 grailsDomainClassMappingContext(grailsDatastore: 'getMappingContext')

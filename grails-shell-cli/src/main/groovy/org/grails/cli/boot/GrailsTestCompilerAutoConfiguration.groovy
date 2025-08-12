@@ -47,7 +47,7 @@ class GrailsTestCompilerAutoConfiguration extends CompilerAutoConfiguration {
     @Override
     boolean matches(ClassNode classNode) {
         def matches = AstUtils.subclasses(classNode, 'Specification')
-        if(matches) {
+        if (matches) {
             lastMatch = classNode
         }
         return matches
@@ -60,7 +60,7 @@ class GrailsTestCompilerAutoConfiguration extends CompilerAutoConfiguration {
 
     @Override
     void applyDependencies(DependencyCustomizer dependencies) throws CompilationFailedException {
-        if(lastMatch != null) {
+        if (lastMatch != null) {
             def annotation = GrailsApplicationCompilerAutoConfiguration.createGrabAnnotation('org.apache.grails.testing', 'grails-testing-support-core', Environment.class.getPackage().getImplementationVersion(), null, null, true)
             lastMatch.addAnnotation(annotation)
         }

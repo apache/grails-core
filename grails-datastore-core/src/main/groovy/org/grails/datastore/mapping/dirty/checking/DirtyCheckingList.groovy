@@ -55,7 +55,6 @@ class DirtyCheckingList extends DirtyCheckingCollection implements List {
         target.add(index, element)
     }
 
-
     @Override
     Object remove(int index) {
         parent.markDirty(property)

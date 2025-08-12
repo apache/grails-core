@@ -42,6 +42,7 @@ import grails.util.Environment
 @CompileStatic
 @Canonical
 class CodeGenConfig implements Cloneable, ConfigMap {
+
     final NavigableMap configMap
 
     GroovyClassLoader groovyClassLoader = new GroovyClassLoader(CodeGenConfig.getClassLoader())
@@ -127,7 +128,7 @@ class CodeGenConfig implements Cloneable, ConfigMap {
     @Override
     def <T> T getRequiredProperty(String key, Class<T> targetType) throws IllegalStateException {
         def value = getProperty(key, targetType)
-        if(value == null) {
+        if (value == null) {
             throw new IllegalStateException("Property [$key] not found")
         }
         return value
@@ -140,15 +141,15 @@ class CodeGenConfig implements Cloneable, ConfigMap {
 
         def envName = Environment.current.name
         def environmentSpecific = getProperty("environments.${envName}", Map.class)
-        if(environmentSpecific != null) {
-            if(!environmentSpecific.isEmpty()) {
+        if (environmentSpecific != null) {
+            if (!environmentSpecific.isEmpty()) {
                 mergeMap(environmentSpecific, false)
             }
         }
     }
 
     void loadGroovy(File groovyConfig) {
-        if(groovyConfig.exists()) {
+        if (groovyConfig.exists()) {
             def envName = Environment.current.name
             def configSlurper = new ConfigSlurper(envName)
             configSlurper.classLoader = groovyClassLoader
@@ -160,59 +161,59 @@ class CodeGenConfig implements Cloneable, ConfigMap {
     @CompileDynamic // fails with CompileStatic!
     void loadYml(InputStream input) {
         Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()))
-        for(Object yamlObject : yaml.loadAll(input)) {
-            if(yamlObject instanceof Map) { // problem here with CompileStatic
+        for (Object yamlObject : yaml.loadAll(input)) {
+            if (yamlObject instanceof Map) { // problem here with CompileStatic
                 mergeMap((Map)yamlObject)
             }
         }
     }
 
-    void mergeMap(Map sourceMap, boolean parseFlatKeys =false) {
+    void mergeMap(Map sourceMap, boolean parseFlatKeys = false) {
         configMap.merge(sourceMap, parseFlatKeys)
     }
 
     <T> T navigate(Class<T> requiredType, String... path) {
         Object result = configMap.navigate(path)
-        if(result == null) {
+        if (result == null) {
             return null
         }
         return convertToType(result, requiredType)
     }
 
     protected <T> T convertToType(Object value, Class<T> requiredType) {
-        if(value == null || value instanceof NavigableMap.NullSafeNavigator) {
+        if (value == null || value instanceof NavigableMap.NullSafeNavigator) {
             return null
         }
-        else if(requiredType.isInstance(value)) {
+        else if (requiredType.isInstance(value)) {
             return (T)value
         }
-        if(requiredType==String.class) {
+        if (requiredType == String.class) {
             return String.valueOf(value)
-        } else if(requiredType==Boolean.class) {
+        } else if (requiredType == Boolean.class) {
             Boolean booleanObject = toBooleanObject(String.valueOf(value))
             return booleanObject != null ? booleanObject : Boolean.FALSE
-        } else if (requiredType==boolean) {
+        } else if (requiredType == boolean) {
             Boolean booleanObject = toBooleanObject(String.valueOf(value))
             return booleanObject != null ? booleanObject.booleanValue() : Boolean.FALSE.booleanValue()
-        } else if(requiredType==Integer.class) {
-            if(value instanceof Number) {
+        } else if (requiredType == Integer.class) {
+            if (value instanceof Number) {
                 return Integer.valueOf(((Number)value).intValue())
             } else {
                 return Integer.valueOf(String.valueOf(value))
             }
-        } else if(requiredType==Long.class) {
-            if(value instanceof Number) {
+        } else if (requiredType == Long.class) {
+            if (value instanceof Number) {
                 return Long.valueOf(((Number)value).longValue())
             } else {
                 return Long.valueOf(String.valueOf(value))
             }
-        } else if(requiredType==Double.class) {
-            if(value instanceof Number) {
+        } else if (requiredType == Double.class) {
+            if (value instanceof Number) {
                 return Double.valueOf(((Number)value).doubleValue())
             } else {
                 return Double.valueOf(String.valueOf(value))
             }
-        } else if(requiredType==BigDecimal.class) {
+        } else if (requiredType == BigDecimal.class) {
             return new BigDecimal(String.valueOf(value))
         } else {
             return convertToOtherTypes(value, requiredType)
@@ -232,13 +233,13 @@ class CodeGenConfig implements Cloneable, ConfigMap {
     }
 
     Object asType(Class type) {
-        if(type==Boolean || type==boolean) {
+        if (type == Boolean || type == boolean) {
             return asBoolean()
-        } else if (type==String) {
+        } else if (type == String) {
             return toString()
-        } else if (type==Map) {
+        } else if (type == Map) {
             return this
-        } else if (type==CodeGenConfig) {
+        } else if (type == CodeGenConfig) {
             return new CodeGenConfig(this)
         } else {
             throw new GroovyCastException(this, type)
@@ -271,13 +272,13 @@ class CodeGenConfig implements Cloneable, ConfigMap {
     }
 
     <T> T getProperty(String name, Class<T> requiredType) {
-        return convertToType( configMap.get(name), requiredType )
+        return convertToType(configMap.get(name), requiredType)
     }
 
     @Override
     def <T> T getProperty(String key, Class<T> targetType, T defaultValue) {
         def v = getProperty(key, targetType)
-        if(v == null) {
+        if (v == null) {
             return defaultValue
         }
         return v
@@ -286,7 +287,6 @@ class CodeGenConfig implements Cloneable, ConfigMap {
     void setProperty(String name, Object value) {
         configMap.setProperty(name, value)
     }
-
 
     /**
      * toBooleanObject method ported from org.apache.commons.lang.BooleanUtils.toBooleanObject to Groovy code
@@ -301,7 +301,7 @@ class CodeGenConfig implements Cloneable, ConfigMap {
             return null
         }
         int strlen = str.length()
-        if (strlen==0) {
+        if (strlen == 0) {
             return null
         } else if (strlen == 1) {
             char ch0 = str.charAt(0)
@@ -317,11 +317,11 @@ class CodeGenConfig implements Cloneable, ConfigMap {
             char ch0 = str.charAt(0)
             char ch1 = str.charAt(1)
             if ((ch0 == 'o' || ch0 == 'O') &&
-                (ch1 == 'n' || ch1 == 'N') ) {
+                (ch1 == 'n' || ch1 == 'N')) {
                 return Boolean.TRUE
             }
             if ((ch0 == 'n' || ch0 == 'N') &&
-                (ch1 == 'o' || ch1 == 'O') ) {
+                (ch1 == 'o' || ch1 == 'O')) {
                 return Boolean.FALSE
             }
         } else if (strlen == 3) {
@@ -330,12 +330,12 @@ class CodeGenConfig implements Cloneable, ConfigMap {
             char ch2 = str.charAt(2)
             if ((ch0 == 'y' || ch0 == 'Y') &&
                 (ch1 == 'e' || ch1 == 'E') &&
-                (ch2 == 's' || ch2 == 'S') ) {
+                (ch2 == 's' || ch2 == 'S')) {
                 return Boolean.TRUE
             }
             if ((ch0 == 'o' || ch0 == 'O') &&
                 (ch1 == 'f' || ch1 == 'F') &&
-                (ch2 == 'f' || ch2 == 'F') ) {
+                (ch2 == 'f' || ch2 == 'F')) {
                 return Boolean.FALSE
             }
         } else if (strlen == 4) {
@@ -346,7 +346,7 @@ class CodeGenConfig implements Cloneable, ConfigMap {
             if ((ch0 == 't' || ch0 == 'T') &&
                 (ch1 == 'r' || ch1 == 'R') &&
                 (ch2 == 'u' || ch2 == 'U') &&
-                (ch3 == 'e' || ch3 == 'E') ) {
+                (ch3 == 'e' || ch3 == 'E')) {
                 return Boolean.TRUE
             }
         } else if (strlen == 5) {
@@ -359,7 +359,7 @@ class CodeGenConfig implements Cloneable, ConfigMap {
                 (ch1 == 'a' || ch1 == 'A') &&
                 (ch2 == 'l' || ch2 == 'L') &&
                 (ch3 == 's' || ch3 == 'S') &&
-                (ch4 == 'e' || ch4 == 'E') ) {
+                (ch4 == 'e' || ch4 == 'E')) {
                 return Boolean.FALSE
             }
         }

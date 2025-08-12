@@ -30,6 +30,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 
 @CompileStatic
 class MockCascadingDomainClassValidator extends PersistentEntityValidator implements CascadingValidator {
+
     MockCascadingDomainClassValidator(PersistentEntity entity, MessageSource messageSource, ConstraintsEvaluator constraintsEvaluator) {
         super(entity, messageSource, constraintsEvaluator)
     }

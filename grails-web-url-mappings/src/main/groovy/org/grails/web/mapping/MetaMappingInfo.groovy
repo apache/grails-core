@@ -30,6 +30,7 @@ import grails.gorm.validation.ConstrainedProperty
  */
 @PackageScope
 class MetaMappingInfo {
+
     def namespace
     def controller
     def action

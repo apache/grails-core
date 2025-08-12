@@ -230,7 +230,7 @@ class Jsr310ConvertersConfiguration {
         new CustomDateBindingEditor<LocalDate>() {
             @Override
             LocalDate getDate(Calendar c) {
-                LocalDate.of(c.get(Calendar.YEAR), c.get(Calendar.MONTH)+1, c.get(Calendar.DAY_OF_MONTH))
+                LocalDate.of(c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH))
             }
 
             @Override
@@ -398,7 +398,7 @@ class Jsr310ConvertersConfiguration {
         T convert(Object value, Closure callable) {
             T dateValue
             if (value instanceof String) {
-                if(!value) {
+                if (!value) {
                     return null
                 }
                 def firstException
@@ -411,7 +411,7 @@ class Jsr310ConvertersConfiguration {
                         }
                     }
                 }
-                if(dateValue == null && firstException) {
+                if (dateValue == null && firstException) {
                     throw firstException
                 }
             }

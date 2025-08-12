@@ -36,6 +36,7 @@ import org.grails.encoder.Encoder
  */
 @CompileStatic
 class URLCodecFactory implements CodecFactory {
+
     static final CodecIdentifier URL_CODEC_IDENTIFIER = new DefaultCodecIdentifier('URL')
 
     Encoder encoder = new Encoder() {
@@ -45,7 +46,7 @@ class URLCodecFactory implements CodecFactory {
         }
 
         Object encode(Object o) {
-            if(o==null) return o
+            if (o == null) return o
             URLEncoder.encode(String.valueOf(o), resolveEncoding())
         }
 
@@ -69,7 +70,7 @@ class URLCodecFactory implements CodecFactory {
 
         @Override
         Object decode(Object o) {
-            if(o==null) return o
+            if (o == null) return o
             URLDecoder.decode(String.valueOf(o), resolveEncoding())
         }
     }

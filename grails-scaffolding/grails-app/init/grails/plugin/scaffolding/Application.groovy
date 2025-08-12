@@ -28,6 +28,7 @@ import grails.plugins.metadata.PluginSource
 @CompileStatic
 @PluginSource
 class Application extends GrailsAutoConfiguration {
+
     static void main(String[] args) {
         GrailsApp.run(Application)
     }

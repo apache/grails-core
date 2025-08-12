@@ -32,6 +32,7 @@ import org.grails.datastore.mapping.multitenancy.TenantResolver
  */
 @CompileStatic
 class FixedTenantResolver implements TenantResolver {
+
     /**
      * The tenant id to resolve to
      */
@@ -42,7 +43,7 @@ class FixedTenantResolver implements TenantResolver {
     }
 
     FixedTenantResolver(Serializable tenantId) {
-        if(tenantId == null) {
+        if (tenantId == null) {
             throw new IllegalArgumentException('Argument [tenantId] cannot be null')
         }
         this.tenantId = tenantId

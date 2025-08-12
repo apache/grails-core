@@ -90,7 +90,6 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         given: 'A bunch of people'
         createPeople()
 
-
         when: 'A detached criteria instance is created matching the last name'
         def criteria = new DetachedCriteria(Person)
         criteria.with {
@@ -127,7 +126,6 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         }
         int total = criteria.deleteAll()
 
-
         then: 'The number of deletions is correct'
         total == 4
         Person.count() == 2
@@ -153,7 +151,6 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
     void 'Test dynamic finder on detached criteria'() {
         given: 'A bunch of people'
         createPeople()
-
 
         when: 'A detached criteria instance is created matching the last name'
         def criteria = new DetachedCriteria(Person)
@@ -190,7 +187,6 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         given: 'A bunch of people'
         createPeople()
 
-
         when: 'A detached criteria instance is created matching the last name'
         def criteria = new DetachedCriteria(Person)
         criteria.with {
@@ -216,7 +212,6 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         given: 'A bunch of people'
         createPeople()
 
-
         when: 'A detached criteria instance is created matching the last name and count is called with additional criteria'
         def criteria = new DetachedCriteria(Person)
         criteria.with {
@@ -235,7 +230,6 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         given: 'A bunch of people'
         createPeople()
 
-
         when: 'A detached criteria instance is created matching the last name'
         def criteria = new DetachedCriteria(Person)
         criteria.with {
@@ -251,7 +245,6 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
     void 'Test list method on detached criteria'() {
         given: 'A bunch of people'
         createPeople()
-
 
         when: 'A detached criteria instance is created matching the last name'
         def criteria = new DetachedCriteria(Person)
@@ -293,7 +286,6 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         then: 'The list method returns all'
         results.size() == 6
     }
-
 
     void 'Test update method on detached criteria with empty criteria'() {
         given: 'a bunch of people'

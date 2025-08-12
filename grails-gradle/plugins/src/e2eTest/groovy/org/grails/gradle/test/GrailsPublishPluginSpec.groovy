@@ -28,6 +28,7 @@ import org.gradle.testkit.runner.UnexpectedBuildFailure
 import spock.lang.PendingFeature
 
 class GrailsPublishPluginSpec extends GradleSpecification {
+
     List<File> toCleanup = []
 
     def cleanup() {
@@ -35,7 +36,7 @@ class GrailsPublishPluginSpec extends GradleSpecification {
             try {
                 file.deleteDir()
             }
-            catch(ignored) {
+            catch (ignored) {
             }
         }
     }
@@ -702,18 +703,18 @@ class GrailsPublishPluginSpec extends GradleSpecification {
         maven-metadata.xml.sha1
          */
 
-        File javadocJar = artifacts.find{ it.name.endsWith('javadoc.jar') }
+        File javadocJar = artifacts.find { it.name.endsWith('javadoc.jar') }
         javadocJar
         findJarFileEntry('DefaultPackage/TestJava.html', javadocJar)
         findJarFileEntry('another/TestOtherJava.html', javadocJar)
         findJarFileEntry('org/grails/example/MyProject.html', javadocJar)
 
-        File sourcesJar = artifacts.find{ it.name.endsWith('sources.jar') }
+        File sourcesJar = artifacts.find { it.name.endsWith('sources.jar') }
         sourcesJar
         findJarFileEntry('TestJava.java', sourcesJar)
         findJarFileEntry('org/grails/example/MyProject.groovy', sourcesJar)
 
-        File classesJar = artifacts.find{ it.name.endsWith('.jar') && !it.name.endsWith('javadoc.jar') && !it.name.endsWith('sources.jar') }
+        File classesJar = artifacts.find { it.name.endsWith('.jar') && !it.name.endsWith('javadoc.jar') && !it.name.endsWith('sources.jar') }
         classesJar
         findJarFileEntry('TestJava.class', classesJar)
         findJarFileEntry('org/grails/example/MyProject.class', classesJar)
@@ -754,18 +755,18 @@ class GrailsPublishPluginSpec extends GradleSpecification {
         Files.exists(artifactDir)
         File[] artifacts = artifactDir.toFile().listFiles()
 
-        File javadocJar = artifacts.find{ it.name.endsWith('javadoc.jar') }
+        File javadocJar = artifacts.find { it.name.endsWith('javadoc.jar') }
         javadocJar
         findJarFileEntry('DefaultPackage/TestJava.html', javadocJar)
         findJarFileEntry('another/TestOtherJava.html', javadocJar)
         findJarFileEntry('org/grails/example/MyProject.html', javadocJar)
 
-        File sourcesJar = artifacts.find{ it.name.endsWith('sources.jar') }
+        File sourcesJar = artifacts.find { it.name.endsWith('sources.jar') }
         sourcesJar
         findJarFileEntry('TestJava.java', sourcesJar)
         findJarFileEntry('org/grails/example/MyProject.groovy', sourcesJar)
 
-        File classesJar = artifacts.find{ it.name.endsWith('.jar') && !it.name.endsWith('javadoc.jar') && !it.name.endsWith('sources.jar') }
+        File classesJar = artifacts.find { it.name.endsWith('.jar') && !it.name.endsWith('javadoc.jar') && !it.name.endsWith('sources.jar') }
         classesJar
         findJarFileEntry('TestJava.class', classesJar)
         findJarFileEntry('org/grails/example/MyProject.class', classesJar)
@@ -819,16 +820,16 @@ class GrailsPublishPluginSpec extends GradleSpecification {
         Files.exists(artifactDir)
         File[] artifacts = artifactDir.toFile().listFiles()
 
-        File javadocJar = artifacts.find{ it.name.endsWith('javadoc.jar') }
+        File javadocJar = artifacts.find { it.name.endsWith('javadoc.jar') }
         javadocJar
         findJarFileEntry('TestJava.html', javadocJar) // TODO: Unfortunately, groovydoc seems to always put this under DefaultPackage, while javadoc does not
         findJarFileEntry('another/TestOtherJava.html', javadocJar)
 
-        File sourcesJar = artifacts.find{ it.name.endsWith('sources.jar') }
+        File sourcesJar = artifacts.find { it.name.endsWith('sources.jar') }
         sourcesJar
         findJarFileEntry('TestJava.java', sourcesJar)
 
-        File classesJar = artifacts.find{ it.name.endsWith('.jar') && !it.name.endsWith('javadoc.jar') && !it.name.endsWith('sources.jar') }
+        File classesJar = artifacts.find { it.name.endsWith('.jar') && !it.name.endsWith('javadoc.jar') && !it.name.endsWith('sources.jar') }
         classesJar
         findJarFileEntry('TestJava.class', classesJar)
     }
@@ -862,17 +863,17 @@ class GrailsPublishPluginSpec extends GradleSpecification {
         Files.exists(artifactDir)
         File[] artifacts = artifactDir.toFile().listFiles()
 
-        File javadocJar = artifacts.find{ it.name.endsWith('javadoc.jar') }
+        File javadocJar = artifacts.find { it.name.endsWith('javadoc.jar') }
         javadocJar
         findJarFileEntry('DefaultPackage/TestJava.html', javadocJar)
         findJarFileEntry('another/TestOtherJava.html', javadocJar)
 
-        File sourcesJar = artifacts.find{ it.name.endsWith('sources.jar') }
+        File sourcesJar = artifacts.find { it.name.endsWith('sources.jar') }
         sourcesJar
         findJarFileEntry('TestJava.java', sourcesJar)
         findJarFileEntry('Testing.txt', sourcesJar)
 
-        File classesJar = artifacts.find{ it.name.endsWith('.jar') && !it.name.endsWith('javadoc.jar') && !it.name.endsWith('sources.jar') }
+        File classesJar = artifacts.find { it.name.endsWith('.jar') && !it.name.endsWith('javadoc.jar') && !it.name.endsWith('sources.jar') }
         classesJar
         findJarFileEntry('TestJava.class', classesJar)
     }
@@ -909,20 +910,20 @@ class GrailsPublishPluginSpec extends GradleSpecification {
         Files.exists(artifactDir)
         File[] artifacts = artifactDir.toFile().listFiles()
 
-        File javadocJar = artifacts.find{ it.name.endsWith('javadoc.jar') }
+        File javadocJar = artifacts.find { it.name.endsWith('javadoc.jar') }
         javadocJar
         findJarFileEntry('DefaultPackage/TestJava.html', javadocJar)
         findJarFileEntry('another/TestOtherJava.html', javadocJar)
         findJarFileEntry('org/grails/example/SubProject1.html', javadocJar)
         !findJarFileEntry('org/grails/example/SubProject2.html', javadocJar)
 
-        File sourcesJar = artifacts.find{ it.name.endsWith('sources.jar') }
+        File sourcesJar = artifacts.find { it.name.endsWith('sources.jar') }
         sourcesJar
         findJarFileEntry('TestJava.java', sourcesJar)
         findJarFileEntry('org/grails/example/SubProject1.groovy', sourcesJar)
         !findJarFileEntry('org/grails/example/SubProject2.groovy', sourcesJar)
 
-        File classesJar = artifacts.find{ it.name.endsWith('.jar') && !it.name.endsWith('javadoc.jar') && !it.name.endsWith('sources.jar') }
+        File classesJar = artifacts.find { it.name.endsWith('.jar') && !it.name.endsWith('javadoc.jar') && !it.name.endsWith('sources.jar') }
         classesJar
         findJarFileEntry('TestJava.class', classesJar)
         findJarFileEntry('org/grails/example/SubProject1.class', classesJar)
@@ -961,20 +962,20 @@ class GrailsPublishPluginSpec extends GradleSpecification {
         Files.exists(artifactDir)
         File[] artifacts = artifactDir.toFile().listFiles()
 
-        File javadocJar = artifacts.find{ it.name.endsWith('javadoc.jar') }
+        File javadocJar = artifacts.find { it.name.endsWith('javadoc.jar') }
         javadocJar
         findJarFileEntry('DefaultPackage/TestJava.html', javadocJar)
         findJarFileEntry('another/TestOtherJava.html', javadocJar)
         findJarFileEntry('org/grails/example/SubProject1.html', javadocJar)
         !findJarFileEntry('org/grails/example/SubProject2.html', javadocJar)
 
-        File sourcesJar = artifacts.find{ it.name.endsWith('sources.jar') }
+        File sourcesJar = artifacts.find { it.name.endsWith('sources.jar') }
         sourcesJar
         findJarFileEntry('TestJava.java', sourcesJar)
         findJarFileEntry('org/grails/example/SubProject1.groovy', sourcesJar)
         !findJarFileEntry('org/grails/example/SubProject2.groovy', sourcesJar)
 
-        File classesJar = artifacts.find{ it.name.endsWith('.jar') && !it.name.endsWith('javadoc.jar') && !it.name.endsWith('sources.jar') }
+        File classesJar = artifacts.find { it.name.endsWith('.jar') && !it.name.endsWith('javadoc.jar') && !it.name.endsWith('sources.jar') }
         classesJar
         findJarFileEntry('TestJava.class', classesJar)
         findJarFileEntry('org/grails/example/SubProject1.class', classesJar)
@@ -1010,18 +1011,18 @@ class GrailsPublishPluginSpec extends GradleSpecification {
         Files.exists(artifactDir)
         File[] artifacts = artifactDir.toFile().listFiles()
 
-        File javadocJar = artifacts.find{ it.name.endsWith('javadoc.jar') }
+        File javadocJar = artifacts.find { it.name.endsWith('javadoc.jar') }
         javadocJar
         findJarFileEntry('DefaultPackage/TestJava.html', javadocJar)
         findJarFileEntry('another/TestOtherJava.html', javadocJar)
         findJarFileEntry('org/grails/example/MyProject.html', javadocJar)
 
-        File sourcesJar = artifacts.find{ it.name.endsWith('sources.jar') }
+        File sourcesJar = artifacts.find { it.name.endsWith('sources.jar') }
         sourcesJar
         findJarFileEntry('TestJava.java', sourcesJar)
         findJarFileEntry('org/grails/example/MyProject.groovy', sourcesJar)
 
-        File classesJar = artifacts.find{ it.name.endsWith('.jar') && !it.name.endsWith('javadoc.jar') && !it.name.endsWith('sources.jar') }
+        File classesJar = artifacts.find { it.name.endsWith('.jar') && !it.name.endsWith('javadoc.jar') && !it.name.endsWith('sources.jar') }
         classesJar
         findJarFileEntry('TestJava.class', classesJar)
         findJarFileEntry('org/grails/example/MyProject.class', classesJar)
@@ -1056,15 +1057,15 @@ class GrailsPublishPluginSpec extends GradleSpecification {
         Files.exists(artifactDir)
         File[] artifacts = artifactDir.toFile().listFiles()
 
-        File javadocJar = artifacts.find{ it.name.endsWith('javadoc.jar') }
+        File javadocJar = artifacts.find { it.name.endsWith('javadoc.jar') }
         javadocJar
         findJarFileEntry('org/grails/example/MyProject.html', javadocJar)
 
-        File sourcesJar = artifacts.find{ it.name.endsWith('sources.jar') }
+        File sourcesJar = artifacts.find { it.name.endsWith('sources.jar') }
         sourcesJar
         findJarFileEntry('org/grails/example/MyProject.groovy', sourcesJar)
 
-        File classesJar = artifacts.find{ it.name.endsWith('.jar') && !it.name.endsWith('javadoc.jar') && !it.name.endsWith('sources.jar') }
+        File classesJar = artifacts.find { it.name.endsWith('.jar') && !it.name.endsWith('javadoc.jar') && !it.name.endsWith('sources.jar') }
         classesJar
         findJarFileEntry('org/grails/example/MyProject.class', classesJar)
     }

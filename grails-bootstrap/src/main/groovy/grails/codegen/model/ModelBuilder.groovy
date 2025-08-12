@@ -53,7 +53,7 @@ trait ModelBuilder {
      * @return The {@link Model} instance
      */
     Model model(String className) {
-        if(defaultPackage && !className.contains('.')) {
+        if (defaultPackage && !className.contains('.')) {
             return new ModelImpl("${defaultPackage}.$className")
         }
         else {

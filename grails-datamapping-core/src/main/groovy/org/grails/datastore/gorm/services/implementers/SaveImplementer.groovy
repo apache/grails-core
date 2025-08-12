@@ -44,11 +44,12 @@ import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.namedAr
  */
 @CompileStatic
 class SaveImplementer extends AbstractSaveImplementer implements SingleResultServiceImplementer<GormEntity> {
+
     static final List<String> HANDLED_PREFIXES = ['save', 'store', 'persist']
 
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
-        if( methodNode.parameters.length == 0 ) {
+        if (methodNode.parameters.length == 0) {
             return false
         }
         else {
@@ -61,9 +62,9 @@ class SaveImplementer extends AbstractSaveImplementer implements SingleResultSer
         BlockStatement body = (BlockStatement) newMethodNode.getCode()
         Parameter[] parameters = newMethodNode.parameters
         int parameterCount = parameters.length
-        if(parameterCount == 1 && AstUtils.isDomainClass(parameters[0].type)) {
+        if (parameterCount == 1 && AstUtils.isDomainClass(parameters[0].type)) {
             body.addStatement(
-                returnS( callX( varX( parameters[0] ), 'save', namedArgs(failOnError: ConstantExpression.TRUE) ) )
+                returnS(callX(varX(parameters[0]), 'save', namedArgs(failOnError: ConstantExpression.TRUE)))
             )
         }
         else {

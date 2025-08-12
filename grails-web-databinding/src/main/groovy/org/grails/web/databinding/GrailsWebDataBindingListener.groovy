@@ -31,6 +31,7 @@ import grails.util.GrailsNameUtils
 
 @CompileStatic
 class GrailsWebDataBindingListener extends DataBindingListenerAdapter {
+
     private final MessageSource messageSource
 
     GrailsWebDataBindingListener(MessageSource messageSource) {

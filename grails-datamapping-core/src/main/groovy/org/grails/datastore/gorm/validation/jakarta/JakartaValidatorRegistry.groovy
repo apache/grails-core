@@ -114,9 +114,9 @@ class JakartaValidatorRegistry extends DefaultValidatorRegistry implements Valid
     @Override
     Validator getValidator(PersistentEntity entity) {
         def ann = entity.javaClass.getAnnotation(Validated)
-        if(ann != null && isAvailable()) {
+        if (ann != null && isAvailable()) {
             def validator = validatorFactory.getValidator()
-            if(validator instanceof GormValidatorAdapter) {
+            if (validator instanceof GormValidatorAdapter) {
                 return (Validator)validator
             }
             else {

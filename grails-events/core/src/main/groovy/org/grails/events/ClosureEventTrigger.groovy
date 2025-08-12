@@ -67,23 +67,23 @@ class ClosureEventTrigger<T> implements EventTrigger<T> {
         boolean isSpread = !eventArg && dataLength > 1 && argCount == dataLength
         try {
             def result
-            if(isSpread) {
+            if (isSpread) {
                 result = callSpread(subscriberClosure, data)
             }
             else {
-                if(eventArg) {
+                if (eventArg) {
                     result = subscriberClosure.call(event)
                 }
                 else {
                     result = subscriberClosure.call(data)
                 }
             }
-            if(reply != null) {
+            if (reply != null) {
                 return reply.call(result)
             }
             return result
         } catch (Throwable e) {
-            if(reply != null && reply.parameterTypes && reply.parameterTypes[0].isInstance(e)) {
+            if (reply != null && reply.parameterTypes && reply.parameterTypes[0].isInstance(e)) {
                 reply.call(e)
             }
             else {

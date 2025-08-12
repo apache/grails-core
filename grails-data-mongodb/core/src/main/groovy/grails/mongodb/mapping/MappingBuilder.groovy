@@ -60,7 +60,7 @@ class MappingBuilder {
 
         @Override
         MongoCollection build() {
-            if(mapping == null) {
+            if (mapping == null) {
                 MongoCollection nc = new MongoCollection()
                 mapping = MongoCollection.configureExisting(nc, definition)
             }

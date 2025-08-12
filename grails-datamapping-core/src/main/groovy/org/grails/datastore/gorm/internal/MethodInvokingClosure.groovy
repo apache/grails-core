@@ -23,6 +23,7 @@ import org.codehaus.groovy.runtime.metaclass.MethodSelectionException
 @SuppressWarnings('rawtypes')
 @CompileStatic
 abstract class MethodInvokingClosure extends Closure {
+
     protected String methodName
     protected apiDelegate
     protected Class[] parameterTypes
@@ -66,7 +67,7 @@ abstract class MethodInvokingClosure extends Closure {
         } catch (MethodSelectionException mse) {
             // the metamethod already exists with multiple signatures, pick the most specific
             return theMetaClass.methods.find { MetaMethod existingMethod ->
-                existingMethod.name == methodName && existingMethod.isStatic()==staticScope && ((!parameterTypes && !existingMethod.parameterTypes) || parameterTypes==existingMethod.parameterTypes)
+                existingMethod.name == methodName && existingMethod.isStatic() == staticScope && ((!parameterTypes && !existingMethod.parameterTypes) || parameterTypes == existingMethod.parameterTypes)
             }
         }
     }

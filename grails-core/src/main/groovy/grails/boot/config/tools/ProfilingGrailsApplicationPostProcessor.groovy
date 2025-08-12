@@ -34,7 +34,6 @@ import grails.core.GrailsApplicationLifeCycle
  */
 class ProfilingGrailsApplicationPostProcessor extends GrailsApplicationPostProcessor implements BeanPostProcessor {
 
-
     long startTime
 
     ProfilingGrailsApplicationPostProcessor(GrailsApplicationLifeCycle lifeCycle, ApplicationContext applicationContext, Class... classes) {
@@ -51,7 +50,7 @@ class ProfilingGrailsApplicationPostProcessor extends GrailsApplicationPostProce
     @Override
     Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         def totalTime = System.currentTimeMillis() - startTime
-        if(totalTime > 10) {
+        if (totalTime > 10) {
             println "Creating bean $beanName of type ${bean.getClass()} took ${totalTime}ms"
         }
         return bean

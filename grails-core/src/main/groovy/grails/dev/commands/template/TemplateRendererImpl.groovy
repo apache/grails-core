@@ -224,7 +224,6 @@ class TemplateRendererImpl implements TemplateRenderer {
         return resource(f)
     }
 
-
     protected static void writeTemplateToDestination(Template template, Map model, File destination) {
         destination.parentFile.mkdirs()
         destination.withWriter { BufferedWriter w ->

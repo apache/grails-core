@@ -30,6 +30,7 @@ import org.grails.datastore.mapping.model.config.GormProperties
  * @since 6.0
  */
 interface ConstraintsEvaluator {
+
     /**
      * The name of the constraints property
      */

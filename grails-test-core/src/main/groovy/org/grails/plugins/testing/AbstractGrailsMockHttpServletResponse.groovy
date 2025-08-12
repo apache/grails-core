@@ -37,7 +37,6 @@ import org.grails.web.util.GrailsApplicationAttributes
  */
 abstract class AbstractGrailsMockHttpServletResponse extends MockHttpServletResponse {
 
-
     /**
      * Sets the response format
      *
@@ -45,7 +44,6 @@ abstract class AbstractGrailsMockHttpServletResponse extends MockHttpServletResp
      */
     void setFormat(String format) {
         HttpServletRequest request = GrailsWebRequest.lookup().getCurrentRequest()
-
 
         request.setAttribute(GrailsApplicationAttributes.RESPONSE_FORMAT, format)
         // remove so that is can be repopulated

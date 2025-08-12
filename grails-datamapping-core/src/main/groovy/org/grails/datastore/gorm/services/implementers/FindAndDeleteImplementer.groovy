@@ -50,7 +50,7 @@ class FindAndDeleteImplementer extends FindOneImplementer implements SingleResul
 
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
-        if(methodNode.parameters.length == 0) {
+        if (methodNode.parameters.length == 0) {
             return false
         }
         else {

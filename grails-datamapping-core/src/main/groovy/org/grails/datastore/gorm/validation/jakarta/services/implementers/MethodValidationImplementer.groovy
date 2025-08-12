@@ -89,12 +89,12 @@ class MethodValidationImplementer implements ServiceEnhancer {
 
     @Override
     boolean doesEnhance(ClassNode domainClass, MethodNode methodNode) {
-        if(ClassUtils.isPresent('jakarta.validation.Validation')) {
-            for(Parameter p in methodNode.parameters) {
-                if( p.annotations.any() { AnnotationNode ann ->
+        if (ClassUtils.isPresent('jakarta.validation.Validation')) {
+            for (Parameter p in methodNode.parameters) {
+                if (p.annotations.any() { AnnotationNode ann ->
                     def constraintAnn = findAnnotation(ann.classNode, Constraint)
                     constraintAnn != null
-                } ) {
+                }) {
                     return true
                 }
 
@@ -118,10 +118,10 @@ class MethodValidationImplementer implements ServiceEnhancer {
         )
 
         Integer validatedMethodCount = (Integer)targetClassNode.getNodeMetaData(VALIDATED_METHOD)
-        if(validatedMethodCount == null) {
+        if (validatedMethodCount == null) {
             validatedMethodCount = 0
         }
-        else{
+        else {
             validatedMethodCount++
         }
 
@@ -132,24 +132,24 @@ class MethodValidationImplementer implements ServiceEnhancer {
         MethodCallExpression getClassCall = callThisD(targetClassNode, 'getClass', ZERO_ARGUMENTS)
         List<Expression> validateArgsList = []
         List<Expression> parameterTypesList = []
-        for(Parameter p in newMethodNode.parameters) {
+        for (Parameter p in newMethodNode.parameters) {
             validateArgsList.add(varX(p))
             parameterTypesList.add(classX(p.type.plainNodeReference))
         }
         ArrayExpression parameterTypes = new ArrayExpression(CLASS_Type.plainNodeReference, parameterTypesList)
-        MethodCallExpression getMethodCall = callX(getClassCall, 'getMethod', args( constX(newMethodNode.name), parameterTypes))
+        MethodCallExpression getMethodCall = callX(getClassCall, 'getMethod', args(constX(newMethodNode.name), parameterTypes))
         FieldNode methodField = targetClassNode.addField(methodFieldName, Modifier.PRIVATE, make(Method).plainNodeReference, getMethodCall)
 
         // add a first line to the method body that validates the method
         ArrayExpression argArray = new ArrayExpression(OBJECT_TYPE, validateArgsList)
-        String validateMethodName = abstractMethodNode.exceptions?.contains( make(ConstraintViolationException) ) ? 'jakartaValidate' : 'validate'
-        MethodCallExpression validateCall = callThisD(ValidatedService, validateMethodName, args(varThis(), varX(methodField),argArray))
-        if(body instanceof BlockStatement) {
-            ((BlockStatement)body).statements.add(0, stmt( validateCall ))
+        String validateMethodName = abstractMethodNode.exceptions?.contains(make(ConstraintViolationException)) ? 'jakartaValidate' : 'validate'
+        MethodCallExpression validateCall = callThisD(ValidatedService, validateMethodName, args(varThis(), varX(methodField), argArray))
+        if (body instanceof BlockStatement) {
+            ((BlockStatement)body).statements.add(0, stmt(validateCall))
         }
         else {
             body = new BlockStatement([
-               stmt( validateCall ),
+               stmt(validateCall),
                body
             ], newMethodNode.variableScope)
             newMethodNode.setCode(body)
@@ -179,7 +179,6 @@ class MethodValidationImplementer implements ServiceEnhancer {
             addParameterNamesMethodNode = innerClassNode.getMethods('addParameterNames')[0]
         }
 
-
         ArgumentListExpression addParameterNamesArguments = args(constX(newMethodNode.name))
         ListExpression parameterNames = new ListExpression()
         List<Expression> parameterTypes = []
@@ -191,11 +190,10 @@ class MethodValidationImplementer implements ServiceEnhancer {
         addParameterNamesArguments.addExpression(parameterTypesArray)
         addParameterNamesArguments.addExpression(parameterNames)
 
-
         def callExpression = callThisD(innerClassNode, addParameterNamesMethodNode.name, addParameterNamesArguments)
         callExpression.setMethodTarget(addParameterNamesMethodNode)
         ConstructorNode constructorNode = innerClassNode.getDeclaredConstructor(ZERO_PARAMETERS)
-        if(constructorNode == null) {
+        if (constructorNode == null) {
             constructorNode = new ConstructorNode(Modifier.PUBLIC, ZERO_PARAMETERS, null, new BlockStatement())
             innerClassNode.addConstructor(constructorNode)
         }

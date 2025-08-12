@@ -58,7 +58,7 @@ class RxPromise<T>  implements Promise<T> {
     protected boolean finished = false
 
     RxPromise(RxPromiseFactory promiseFactory, Closure callable, Scheduler scheduler) {
-        this(promiseFactory, Single.create( { SingleEmitter<? super T> singleSubscriber ->
+        this(promiseFactory, Single.create({ SingleEmitter<? super T> singleSubscriber ->
             try {
                 singleSubscriber.onSuccess((T)runCallable(callable))
             } catch (Throwable t) {
@@ -135,7 +135,7 @@ class RxPromise<T>  implements Promise<T> {
 
     @Override
     boolean cancel(boolean mayInterruptIfRunning) {
-        if(subscription != null) {
+        if (subscription != null) {
             subscription.dispose()
             return subscription.isDisposed()
         }
@@ -144,7 +144,7 @@ class RxPromise<T>  implements Promise<T> {
 
     @Override
     boolean isCancelled() {
-        if(subscription == null) {
+        if (subscription == null) {
             return false
         }
         else {
@@ -167,7 +167,7 @@ class RxPromise<T>  implements Promise<T> {
         try {
             return subject.timeout(timeout, unit).blockingFirst()
         } catch (Throwable e) {
-            if(e.cause instanceof TimeoutException) {
+            if (e.cause instanceof TimeoutException) {
                 throw e.cause
             }
             else {
@@ -178,7 +178,7 @@ class RxPromise<T>  implements Promise<T> {
 
     static Object runCallable(Closure callable) {
         Object rtn = callable.call()
-        if(rtn == null) {
+        if (rtn == null) {
             return Void
         } else {
             return rtn

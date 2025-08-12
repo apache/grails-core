@@ -48,6 +48,7 @@ import org.grails.orm.hibernate.support.HibernateDatastoreConnectionSourcesRegis
  */
 @Slf4j
 class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
+
     public static final String SESSION_FACTORY_BEAN_NAME = 'sessionFactory'
     public static final String DEFAULT_DATA_SOURCE_NAME = Settings.SETTING_DATASOURCE
     public static final String DATA_SOURCES = Settings.SETTING_DATASOURCES
@@ -84,24 +85,23 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
         configureDataSources(this.configuration)
     }
 
-
     @CompileStatic
     void configureDataSources(PropertyResolver config) {
 
         Set<String> dataSourceNames = new HashSet<String>()
 
-        if(config == null) {
+        if (config == null) {
             dataSourceNames = [defaultDataSourceBeanName] as Set
         }
         else {
             Map dataSources = config.getProperty(DATA_SOURCES, Map.class, Collections.emptyMap())
 
             if (dataSources != null && !dataSources.isEmpty()) {
-                dataSourceNames.addAll( AbstractConnectionSources.toValidConnectionSourceNames(dataSources) )
+                dataSourceNames.addAll(AbstractConnectionSources.toValidConnectionSourceNames(dataSources))
             }
             Map dataSource = (Map)config.getProperty(DEFAULT_DATA_SOURCE_NAME, Map.class, Collections.emptyMap())
             if (dataSource != null && !dataSource.isEmpty()) {
-                dataSourceNames.add( ConnectionSource.DEFAULT )
+                dataSourceNames.add(ConnectionSource.DEFAULT)
             }
         }
         this.dataSources = dataSourceNames
@@ -153,13 +153,13 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
                 bean.autowire = true
                 dataSourceConnectionSourceFactory = ref('dataSourceConnectionSourceFactory')
             }
-            hibernateDatastore(HibernateDatastore, config, hibernateConnectionSourceFactory, eventPublisher) { bean->
+            hibernateDatastore(HibernateDatastore, config, hibernateConnectionSourceFactory, eventPublisher) { bean ->
                 bean.primary = true
             }
-            sessionFactory(hibernateDatastore:'getSessionFactory') { bean->
+            sessionFactory(hibernateDatastore: 'getSessionFactory') { bean ->
                 bean.primary = true
             }
-            transactionManager(hibernateDatastore: 'getTransactionManager') { bean->
+            transactionManager(hibernateDatastore: 'getTransactionManager') { bean ->
                 bean.primary = true
             }
             autoTimestampEventListener(hibernateDatastore: 'getAutoTimestampEventListener')
@@ -169,7 +169,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             grailsDomainClassMappingContext(hibernateDatastore: 'getMappingContext')
 
             loadDataServices(null)
-                    .each {serviceName, serviceClass->
+                    .each { ServiceName, serviceClass ->
                         "$serviceName"(DatastoreServiceMethodInvokingFactoryBean, serviceClass) {
                             targetObject = ref('hibernateDatastore')
                             targetMethod = 'getService'
@@ -177,13 +177,12 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
                         }
                     }
 
-            if(isGrailsPresent) {
-                if(ClassUtils.isPresent('org.grails.plugin.hibernate.support.AggregatePersistenceContextInterceptor')) {
+            if (isGrailsPresent) {
+                if (ClassUtils.isPresent('org.grails.plugin.hibernate.support.AggregatePersistenceContextInterceptor')) {
                     ClassLoader cl = ClassUtils.getClassLoader()
                     persistenceInterceptor(cl.loadClass('org.grails.plugin.hibernate.support.AggregatePersistenceContextInterceptor'), ref('hibernateDatastore'))
                     proxyHandler(cl.loadClass('org.grails.datastore.gorm.proxy.ProxyHandlerAdapter'), ref('hibernateProxyHandler'))
                 }
-
 
                 boolean osivEnabled = config.getProperty('hibernate.osiv.enabled', Boolean, true)
                 boolean isWebApplication = beanDefinitionRegistry?.containsBeanDefinition('dispatcherServlet') ||
@@ -199,7 +198,6 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
         }
         return beanDefinitions
     }
-
 
     protected GenericApplicationContext createApplicationContext() {
         GenericApplicationContext applicationContext = new GenericApplicationContext()

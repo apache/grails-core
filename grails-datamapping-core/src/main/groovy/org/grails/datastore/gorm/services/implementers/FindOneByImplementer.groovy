@@ -41,13 +41,14 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
  */
 @CompileStatic
 class FindOneByImplementer extends FindAllByImplementer implements SingleResultServiceImplementer<GormEntity> {
-    static final List<String> HANDLED_PREFIXES = ['findBy','getBy', 'findOneBy']
+
+    static final List<String> HANDLED_PREFIXES = ['findBy', 'getBy', 'findOneBy']
 
     @Override
     void doImplement(ClassNode domainClassNode, ClassNode targetClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, boolean isArray) {
         BlockStatement body = (BlockStatement)newMethodNode.getCode()
         Parameter[] parameters = newMethodNode.parameters
-        if(parameters.length == 1 && parameters[0].name == GormProperties.IDENTITY) {
+        if (parameters.length == 1 && parameters[0].name == GormProperties.IDENTITY) {
             // add a method that invokes get(id)
             ArgumentListExpression argList = buildArgs(parameters, abstractMethodNode, body)
             Expression queryMethodCall = callX(findStaticApiForConnectionId(domainClassNode, newMethodNode), 'get', argList)

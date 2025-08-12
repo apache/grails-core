@@ -110,7 +110,6 @@ class Entity<P extends Property> {
         return this
     }
 
-
     /**
      * Sets the datastore to use
      *
@@ -121,7 +120,6 @@ class Entity<P extends Property> {
         this.datasources = [name]
         return this
     }
-
 
     /**
      * Sets the connection to use
@@ -141,7 +139,7 @@ class Entity<P extends Property> {
      * @return
      */
     Entity<P> connections(List<String> names) {
-        if(names != null && names.size() > 0) {
+        if (names != null && names.size() > 0) {
             this.datasources = names
         }
         return this
@@ -249,7 +247,7 @@ class Entity<P extends Property> {
      * @return This mapping
      */
     P property(@DelegatesTo(type='P') Closure propertyConfig) {
-        if(propertyConfigs.containsKey('*')) {
+        if (propertyConfigs.containsKey('*')) {
             P cloned = cloneGlobalConstraint()
             return Property.configureExisting(cloned, propertyConfig)
         }
@@ -265,8 +263,8 @@ class Entity<P extends Property> {
      * @param propertyConfig The property config
      * @return This mapping
      */
-    P property( Map propertyConfig) {
-        if(propertyConfigs.containsKey('*')) {
+    P property(Map propertyConfig) {
+        if (propertyConfigs.containsKey('*')) {
             // apply global constraints constraints
             P cloned = cloneGlobalConstraint()
             return Property.configureExisting(cloned, propertyConfig)
@@ -291,11 +289,11 @@ class Entity<P extends Property> {
     }
 
     def propertyMissing(String name, Object val) {
-        if(val instanceof Closure) {
+        if (val instanceof Closure) {
             property(name, (Closure)val)
         }
-        else if(val instanceof Property) {
-            propertyConfigs[name] =((P)val)
+        else if (val instanceof Property) {
+            propertyConfigs[name] = ((P)val)
         }
         else {
             throw new MissingPropertyException(name, Entity)
@@ -304,17 +302,17 @@ class Entity<P extends Property> {
 
     @CompileDynamic
     def methodMissing(String name, Object args) {
-        if(args && args.getClass().isArray()) {
-            if(args[0] instanceof Closure) {
+        if (args && args.getClass().isArray()) {
+            if (args[0] instanceof Closure) {
                 property(name, (Closure)args[0])
             }
-            else if(args[0] instanceof Property) {
+            else if (args[0] instanceof Property) {
                 propertyConfigs[name] = (P)args[0]
             }
-            else if(args[0] instanceof Map) {
+            else if (args[0] instanceof Map) {
                 P property = getOrInitializePropertyConfig(name)
                 Map namedArgs = (Map) args[0]
-                if(args[-1] instanceof Closure) {
+                if (args[-1] instanceof Closure) {
                     Property.configureExisting(
                             property,
                             ((Closure)args[-1])
@@ -334,10 +332,10 @@ class Entity<P extends Property> {
 
     protected P getOrInitializePropertyConfig(String name) {
         P pc = propertyConfigs[name]
-        if(pc == null && propertyConfigs.containsKey('*')) {
+        if (pc == null && propertyConfigs.containsKey('*')) {
             // apply global constraints constraints
             P globalConstraints = propertyConfigs.get('*')
-            if(globalConstraints != null) {
+            if (globalConstraints != null) {
                 pc = (P)globalConstraints.clone()
             }
         }

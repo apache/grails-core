@@ -84,7 +84,7 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
             }
             methods.addAll methodsToAdd
             if (clazz != GormStaticApi.class && clazz != GormInstanceApi && clazz != GormValidationApi && clazz != AbstractGormApi) {
-                def extendedMethodsToAdd = methodsToAdd.findAll { Method m -> !ReflectionUtils.isMethodOverriddenFromParent(m)}
+                def extendedMethodsToAdd = methodsToAdd.findAll { Method m -> !ReflectionUtils.isMethodOverriddenFromParent(m) }
                 extendedMethods.addAll extendedMethodsToAdd
             }
             clazz = clazz.getSuperclass()
@@ -93,14 +93,14 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
     }
 
     List<Method> getMethods() {
-        if(methods == null) {
+        if (methods == null) {
             initializeMethods(getClass())
         }
         return methods
     }
 
     List<Method> getExtendedMethods() {
-        if(extendedMethods == null) {
+        if (extendedMethods == null) {
             initializeMethods(getClass())
         }
         return extendedMethods

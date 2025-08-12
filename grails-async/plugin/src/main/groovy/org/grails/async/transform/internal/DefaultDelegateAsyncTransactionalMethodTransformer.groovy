@@ -65,7 +65,7 @@ class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyn
     private static final ClassNode CLASS_NODE_MAP = new ClassNode(Map.class).getPlainNodeReference()
     private static final String METHOD_NAME_SET_TRANSACTION_MANAGER = 'setTransactionManager'
     private static final VariableExpression EXPRESSION_THIS = new VariableExpression('this')
-    private static final Token OPERATOR_ASSIGNMENT = new Token(Types.EQUAL, '=', -1,-1)
+    private static final Token OPERATOR_ASSIGNMENT = new Token(Types.EQUAL, '=', -1, -1)
     private static final String VARIABLE_TRANSACTION_MANAGER = 'txMgr'
     private FieldNode transactionalField
     private boolean isTransactional = false
@@ -73,14 +73,14 @@ class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyn
     private int promiseDecoratorCount = 0
 
     @Override
-    void transformTransactionalMethod(ClassNode classNode,ClassNode delegateClassNode,  MethodNode methodNode, ListExpression promiseDecorators) {
+    void transformTransactionalMethod(ClassNode classNode, ClassNode delegateClassNode, MethodNode methodNode, ListExpression promiseDecorators) {
 
         if (transactionalField == null) {
             transactionalField = delegateClassNode.getField(TRANSACTIONAL_FIELD)
             isTransactional = false
-            if(transactionalField) {
+            if (transactionalField) {
                 def ie = transactionalField.getInitialExpression()
-                if(ie instanceof ConstantExpression) {
+                if (ie instanceof ConstantExpression) {
                     isTransactional = ie.isTrueExpression()
                 }
             }
@@ -92,9 +92,8 @@ class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyn
 
             int currentIndex = promiseDecoratorCount++
 
-
             final methodLookupArguments = new ArgumentListExpression(new ConstantExpression(methodNode.getName()))
-            for(Parameter p in methodNode.getParameters()) {
+            for (Parameter p in methodNode.getParameters()) {
                 methodLookupArguments.addExpression(new ClassExpression(p.getType().getPlainNodeReference()))
             }
             final promiseLookupExpression = new BinaryExpression(new PropertyExpression(EXPRESSION_THIS, FIELD_NAME_PROMISE_DECORATORS), Token.newSymbol(Types.LEFT_SQUARE_BRACKET, -1, -1), new ConstantExpression(currentIndex))
@@ -137,7 +136,7 @@ class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyn
                 classNode.addField(new FieldNode(FIELD_NAME_TRANSACTION_MANAGER, Modifier.PRIVATE, INTERFACE_TRANSACTION_MANAGER, classNode, GrailsASTUtils.NULL_EXPRESSION))
             }
             final promiseDecoratorsField = classNode.getField(FIELD_NAME_PROMISE_DECORATORS)
-            if(promiseDecoratorsField == null) {
+            if (promiseDecoratorsField == null) {
                 classNode.addField(new FieldNode(FIELD_NAME_PROMISE_DECORATORS, Modifier.PRIVATE, CLASS_NODE_MAP, classNode, new MapExpression()))
             }
 

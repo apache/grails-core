@@ -109,10 +109,10 @@ class GrailsTransactionTemplate {
                         }
                     } finally {
                         boolean inheritRollbackOnly = true
-                        if(transactionAttribute instanceof CustomizableRollbackTransactionAttribute) {
+                        if (transactionAttribute instanceof CustomizableRollbackTransactionAttribute) {
                             inheritRollbackOnly = transactionAttribute.isInheritRollbackOnly()
                         }
-                        if(inheritRollbackOnly && status.isRollbackOnly()) {
+                        if (inheritRollbackOnly && status.isRollbackOnly()) {
                             status.setRollbackOnly()
                         }
                     }

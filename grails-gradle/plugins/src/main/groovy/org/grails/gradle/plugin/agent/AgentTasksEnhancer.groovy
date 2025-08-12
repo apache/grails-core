@@ -35,12 +35,13 @@ import org.grails.gradle.plugin.core.GrailsExtension
  */
 @CompileStatic
 class AgentTasksEnhancer implements Action<Project> {
+
     @Override
     void execute(Project project) {
         try {
             Set<ResolvedArtifact> agentJars = project.getConfigurations().getByName('agent').resolvedConfiguration.resolvedArtifacts
 
-            if(agentJars) {
+            if (agentJars) {
                 File agentJar = agentJars.iterator().next().file
                 for (Task task : project.getTasks()) {
                     if (task instanceof JavaExec) {
@@ -56,31 +57,31 @@ class AgentTasksEnhancer implements Action<Project> {
     private void addAgent(Project project, JavaExec exec, File agent) {
 
         GrailsExtension.Agent agentConfig = project.extensions.findByType(GrailsExtension)?.agent ?: new GrailsExtension.Agent()
-        if(agentConfig.enabled) {
+        if (agentConfig.enabled) {
             exec.jvmArgs "-javaagent:${agentConfig.path?.absolutePath ?: agent.absolutePath}"
 
             for (String arg in agentConfig.jvmArgs) {
                 exec.jvmArgs arg
             }
-            for(Map.Entry<String, String> entry in agentConfig.systemProperties) {
+            for (Map.Entry<String, String> entry in agentConfig.systemProperties) {
                 exec.systemProperty(entry.key, entry.value)
             }
 
-            Map<String, String> agentArgs= [
+            Map<String, String> agentArgs = [
                     inclusions: agentConfig.inclusions,
-                    synchronize: String.valueOf( agentConfig.synchronize ),
-                    allowSplitPackages: String.valueOf( agentConfig.allowSplitPackages ),
+                    synchronize: String.valueOf(agentConfig.synchronize),
+                    allowSplitPackages: String.valueOf(agentConfig.allowSplitPackages),
                     cacheDir: agentConfig.cacheDir ? project.mkdir(agentConfig.cacheDir) : project.mkdir('build/springloaded')
             ] as Map<String, String>
-            if(agentConfig.logging != null) {
+            if (agentConfig.logging != null) {
                 agentArgs.put('logging', String.valueOf(agentConfig.logging))
             }
-            if(agentConfig.exclusions) {
+            if (agentConfig.exclusions) {
                 agentArgs.put('exclusions', agentConfig.exclusions)
             }
             agentArgs.put('profile', 'grails')
             agentArgs.put('caching', 'true')
-            exec.systemProperty('springloaded', agentArgs.collect { entry -> "$entry.key=$entry.value"}.join(';'))
+            exec.systemProperty('springloaded', agentArgs.collect { entry -> "$entry.key=$entry.value" }.join(';'))
         }
 
     }

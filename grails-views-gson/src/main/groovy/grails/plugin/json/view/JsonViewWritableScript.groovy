@@ -44,7 +44,7 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
     @Override
     Writer doWrite(Writer out) throws IOException {
 
-        if(!prettyPrint) {
+        if (!prettyPrint) {
             this.json = new StreamingJsonBuilder(out, this.generator)
             run()
             return out
@@ -60,7 +60,6 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
         }
     }
 
-
     /**
      * TODO: When Groovy 2.4.5 go back to JsonBuilder from groovy-json
      *
@@ -68,17 +67,17 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
      * @return
      */
     StreamingJsonBuilder json(@DelegatesTo(value = StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure callable) {
-        if(parentData.size() > 0) {
+        if (parentData.size() > 0) {
             if (!inline) {
                 out.write(JsonOutput.OPEN_BRACE)
             }
             Iterator parentInfoIt = parentData.iterator()
-            while ( parentInfoIt.hasNext() ) {
+            while (parentInfoIt.hasNext()) {
                 ParentInfo parentInfo = parentInfoIt.next()
                 def parentWritable = prepareParentWritable(parentInfo.parentTemplate, parentInfo.parentModel)
                 parentWritable.writeTo(out)
                 resetProcessedObjects()
-                if ( parentInfoIt.hasNext() ) {
+                if (parentInfoIt.hasNext()) {
                     out.write(JsonOutput.COMMA)
                 }
             }
@@ -92,7 +91,7 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
         else {
 
             this.root = callable
-            if(inline) {
+            if (inline) {
                 def jsonDelegate = new StreamingJsonBuilder.StreamingJsonDelegate(out, true, generator)
                 callable.setDelegate(jsonDelegate)
                 callable.call()
@@ -136,17 +135,17 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
      * @return The json builder
      */
     StreamingJsonBuilder json(JsonOutput.JsonWritable writable) {
-        if(parentData.size() > 0) {
+        if (parentData.size() > 0) {
             if (!inline) {
                 out.write(JsonOutput.OPEN_BRACE)
             }
             Iterator parentInfoIt = parentData.iterator()
-            while ( parentInfoIt.hasNext() ) {
+            while (parentInfoIt.hasNext()) {
                 ParentInfo parentInfo = parentInfoIt.next()
                 def parentWritable = prepareParentWritable(parentInfo.parentTemplate, parentInfo.parentModel)
                 parentWritable.writeTo(out)
                 resetProcessedObjects()
-                if ( parentInfoIt.hasNext() ) {
+                if (parentInfoIt.hasNext()) {
                     out.write(JsonOutput.COMMA)
                 }
             }
@@ -176,12 +175,12 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
     }
 
     StreamingJsonBuilder json(Object...args) {
-        if(args.length == 1) {
+        if (args.length == 1) {
             def val = args[0]
-            if(val instanceof JsonOutput.JsonUnescaped) {
+            if (val instanceof JsonOutput.JsonUnescaped) {
                 this.json((JsonOutput.JsonUnescaped)val)
             }
-            else if(val instanceof JsonOutput.JsonWritable) {
+            else if (val instanceof JsonOutput.JsonWritable) {
                 this.json((JsonOutput.JsonWritable)val)
             }
             else {
@@ -196,7 +195,7 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
 
     private GrailsView prepareParentWritable(GrailsViewTemplate parentTemplate, Map parentModel) {
         parentModel.putAll(binding.variables)
-        for(o in binding.variables.values()) {
+        for (o in binding.variables.values()) {
             if (o != null) {
                 parentModel.put(GrailsNameUtils.getPropertyName(o.getClass().getSuperclass().getName()), o)
             }
@@ -213,7 +212,6 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
         writable.generator = generator
         return writable
     }
-
 
     private void resetProcessedObjects() {
         if (binding.hasVariable(DefaultGrailsJsonViewHelper.PROCESSED_OBJECT_VARIABLE)) {

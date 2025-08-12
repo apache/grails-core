@@ -64,9 +64,9 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
     void setInterceptors(Interceptor[] interceptors) {
         this.interceptors = interceptors.sort(new OrderComparator()) as List<Interceptor>
         this.reverseInterceptors = this.interceptors.reverse()
-        if(LOG.isDebugEnabled()) {
+        if (LOG.isDebugEnabled()) {
             LOG.debug('Computed interceptor execution order:')
-            for(Interceptor i in interceptors) {
+            for (Interceptor i in interceptors) {
                 LOG.debug("- ${GrailsNameUtils.getLogicalPropertyName(i.getClass().name, 'Interceptor')} (order: ${i.order}) ")
             }
         }
@@ -74,13 +74,13 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
 
     @Override
     boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        if(!interceptors.isEmpty()) {
+        if (!interceptors.isEmpty()) {
             List<Interceptor> matchInterceptors = []
             request.setAttribute(ATTRIBUTE_MATCHED_INTERCEPTORS, matchInterceptors)
-            for(i in interceptors) {
-                if(i.doesMatch(request)) {
+            for (i in interceptors) {
+                if (i.doesMatch(request)) {
                     matchInterceptors.add(i)
-                    if( !i.before() ) {
+                    if (!i.before()) {
                         return false
                     }
                 }
@@ -92,16 +92,16 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
     @Override
     void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
         Object matchedInterceptorsObject = request.getAttribute(ATTRIBUTE_MATCHED_INTERCEPTORS)
-        if(matchedInterceptorsObject) {
+        if (matchedInterceptorsObject) {
             if (modelAndView != null) {
                 request.setAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, modelAndView)
             }
 
             List<Interceptor> reversedInterceptors = ((List<Interceptor>) matchedInterceptorsObject).reverse()
             request.setAttribute(ATTRIBUTE_MATCHED_INTERCEPTORS, reversedInterceptors)
-            for(i in reversedInterceptors) {
-                if( !i.after() ) {
-                    if(request.getAttribute(INTERCEPTOR_RENDERED_VIEW)) {
+            for (i in reversedInterceptors) {
+                if (!i.after()) {
+                    if (request.getAttribute(INTERCEPTOR_RENDERED_VIEW)) {
                         ModelAndView interceptorsModelAndView = i.modelAndView
                         modelAndView.viewName = interceptorsModelAndView.viewName
                         modelAndView.model.clear()
@@ -123,8 +123,8 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
         }
         request.setAttribute(Matcher.THROWABLE, ex)
         Object matchedInterceptorsObject = request.getAttribute(ATTRIBUTE_MATCHED_INTERCEPTORS)
-        if(matchedInterceptorsObject) {
-            for(i in ((List<Interceptor>) matchedInterceptorsObject)) {
+        if (matchedInterceptorsObject) {
+            for (i in ((List<Interceptor>) matchedInterceptorsObject)) {
                 i.afterView()
             }
         }

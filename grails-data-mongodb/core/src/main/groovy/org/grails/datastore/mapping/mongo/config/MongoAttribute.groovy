@@ -67,7 +67,6 @@ class MongoAttribute extends Attribute {
         }
     }
 
-
     /**
      * Configures the index attributes
      *
@@ -110,7 +109,7 @@ class MongoAttribute extends Attribute {
      * @param indexType The geo index type
      */
     void setGeoIndex(String indexType) {
-        if(Boolean.valueOf(indexType)) {
+        if (Boolean.valueOf(indexType)) {
             setIndex(true)
             initIndexAttributes()
             indexAttributes.put(INDEX_TYPE, INDEX_TYPE_2D)

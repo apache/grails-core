@@ -49,7 +49,7 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 @TagLib
 class FormatTagLib implements TagLibrary {
 
-    static returnObjectForTags = ['formatBoolean','formatDate','formatNumber','encodeAs']
+    static returnObjectForTags = ['formatBoolean', 'formatDate', 'formatNumber', 'encodeAs']
 
     MessageSource messageSource
     CodecLookup codecLookup
@@ -178,7 +178,7 @@ class FormatTagLib implements TagLibrary {
         def dateFormat
         if (!type) {
             if (!format && formatName) {
-                format = messageHelper(formatName,null,null,locale)
+                format = messageHelper(formatName, null, null, locale)
                 if (!format) {
                     throwTagError("Attribute [formatName] of Tag [formatDate] specifies a format key [$formatName] that does not exist within a message bundle!")
                 }
@@ -190,10 +190,10 @@ class FormatTagLib implements TagLibrary {
             dateFormat = grailsTagDateHelper.getFormatFromPattern(format, timeZone, locale)
         }
         else {
-            if (type=='DATE') {
+            if (type == 'DATE') {
                 dateFormat = grailsTagDateHelper.getDateFormat(dateStyle, timeZone, locale)
             }
-            else if (type=='TIME') {
+            else if (type == 'TIME') {
                 dateFormat = grailsTagDateHelper.getTimeFormat(timeStyle, timeZone, locale)
             }
             else { // 'both' or 'datetime'
@@ -245,13 +245,13 @@ class FormatTagLib implements TagLibrary {
 
         if (type == null) {
             if (!format && formatName) {
-                format = messageHelper(formatName,null,null,locale)
+                format = messageHelper(formatName, null, null, locale)
                 if (!format) {
                     throwTagError("Attribute [formatName] of Tag [formatNumber] specifies a format key [$formatName] that does not exist within a message bundle!")
                 }
             }
             else if (!format) {
-                format = messageHelper('number.format', { messageHelper('default.number.format', '0', null, locale) } ,null ,locale)
+                format = messageHelper('number.format', { messageHelper('default.number.format', '0', null, locale) }, null, locale)
             }
         }
 
@@ -331,7 +331,7 @@ class FormatTagLib implements TagLibrary {
         try {
             formatted = decimalFormat.format(number)
         }
-        catch(ArithmeticException e) {
+        catch (ArithmeticException e) {
             // if roundingMode is UNNECESSARY and ArithemeticException raises, just return original number formatted with default number formatting
             formatted = NumberFormat.getNumberInstance(locale).format(number)
         }

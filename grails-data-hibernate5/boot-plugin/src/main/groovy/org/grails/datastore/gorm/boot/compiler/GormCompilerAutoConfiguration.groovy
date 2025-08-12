@@ -32,7 +32,8 @@ import org.grails.cli.compiler.DependencyCustomizer
  *
  */
 @CompileStatic
-class GormCompilerAutoConfiguration extends CompilerAutoConfiguration{
+class GormCompilerAutoConfiguration extends CompilerAutoConfiguration {
+
     @Override
     boolean matches(ClassNode classNode) {
         return AstUtils.hasAtLeastOneAnnotation(classNode, 'grails.persistence.Entity', 'grails.gorm.annotation.Entity', 'Entity')

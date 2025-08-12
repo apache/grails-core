@@ -58,7 +58,7 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
 
     @PostConstruct
     void initializeTagLibrary() {
-        if(!Environment.isDevelopmentMode()) {
+        if (!Environment.isDevelopmentMode()) {
             TagLibraryMetaUtils.enhanceTagLibMetaClass(GrailsMetaClassUtils.getExpandoMetaClass(getClass()), getTagLibraryLookup(), getTaglibNamespace())
         }
     }
@@ -67,7 +67,7 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
     def raw(Object value) {
         if (rawEncoder == null) {
             rawEncoder = WithCodecHelper.lookupEncoder(grailsApplication, 'Raw')
-            if(rawEncoder == null)
+            if (rawEncoder == null)
                 return InvokerHelper.invokeMethod(value, 'encodeAsRaw', null)
         }
         return rawEncoder.encode(value)
@@ -83,7 +83,7 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
     }
 
     String getTaglibNamespace() {
-        if(hasProperty('namespace')) {
+        if (hasProperty('namespace')) {
             return ((GroovyObject)this).getProperty('namespace')
         }
         return TagOutput.DEFAULT_NAMESPACE
@@ -119,9 +119,8 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
      * @param newOut The new output writer
      */
     void setOut(Writer newOut) {
-        OutputEncodingStack.currentStack().push(newOut,true)
+        OutputEncodingStack.currentStack().push(newOut, true)
     }
-
 
     /**
      * Property missing implementation that looks up tag library namespaces or tags in the default namespace

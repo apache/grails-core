@@ -37,5 +37,4 @@ import org.grails.testing.spock.RunOnceExtension
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 @ExtensionAnnotation(RunOnceExtension)
-@interface RunOnce {
-}
+@interface RunOnce {}

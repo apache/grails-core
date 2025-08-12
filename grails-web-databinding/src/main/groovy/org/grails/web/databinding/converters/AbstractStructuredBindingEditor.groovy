@@ -70,8 +70,8 @@ abstract class AbstractStructuredBindingEditor<T> implements TypedStructuredBind
     Map<String, Object> getPropertyValuesMap(String propertyPrefix, DataBindingSource bindingSource) {
         Map<String, Object> valuesMap = [:]
         def prefix = propertyPrefix + '_'
-        for(String key : bindingSource.propertyNames) {
-            if(key.startsWith(prefix) && key.size() > prefix.size()) {
+        for (String key : bindingSource.propertyNames) {
+            if (key.startsWith(prefix) && key.size() > prefix.size()) {
                 def propName = key[prefix.size()..-1]
                 valuesMap[propName] = bindingSource.getPropertyValue(key)
             }

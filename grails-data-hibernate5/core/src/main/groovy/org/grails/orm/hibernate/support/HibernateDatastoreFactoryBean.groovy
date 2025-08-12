@@ -65,8 +65,7 @@ class HibernateDatastoreFactoryBean<T extends AbstractHibernateDatastore> implem
     T getObject() throws Exception {
         AbstractHibernateDatastore datastore = objectType.newInstance(mappingContext, sessionFactory, configuration, dataSourceName)
 
-
-        if(applicationContext != null) {
+        if (applicationContext != null) {
             datastore.setApplicationContext(applicationContext)
         }
 

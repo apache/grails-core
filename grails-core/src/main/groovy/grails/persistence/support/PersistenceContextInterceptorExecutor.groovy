@@ -46,7 +46,6 @@ class PersistenceContextInterceptorExecutor {
         destroyPersistenceContextInternal(persistenceContextInterceptors)
     }
 
-
     static void initPersistenceContext(ApplicationContext appCtx) {
         if (appCtx) {
             final interceptors = appCtx.getBeansOfType(PersistenceContextInterceptor).values()
@@ -76,6 +75,5 @@ class PersistenceContextInterceptorExecutor {
             }
         }
     }
-
 
 }

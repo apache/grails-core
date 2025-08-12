@@ -31,7 +31,6 @@ import grails.web.mapping.LinkGenerator
 @CompileStatic
 interface GrailsViewHelper extends LinkGenerator {
 
-
     /**
      * Obtains a i18n message
      * @param arguments The arguments

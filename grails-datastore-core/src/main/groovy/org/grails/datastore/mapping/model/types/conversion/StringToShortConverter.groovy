@@ -27,6 +27,7 @@ import org.springframework.core.convert.converter.Converter
  */
 @CompileStatic
 class StringToShortConverter implements Converter<String, Short> {
+
     Short convert(String source) {
         new Short(source)
     }

@@ -63,10 +63,10 @@ abstract class AbstractDetachedCriteriaServiceImplementor extends AbstractReadOp
         Parameter[] parameters = newMethodNode.parameters
         int parameterCount = parameters.length
         AnnotationNode joinAnnotation = AstUtils.findAnnotation(abstractMethodNode, Join)
-        if(lookupById() && joinAnnotation == null && parameterCount == 1 && parameters[0].name == GormProperties.IDENTITY) {
+        if (lookupById() && joinAnnotation == null && parameterCount == 1 && parameters[0].name == GormProperties.IDENTITY) {
             // optimize query by id
-            Expression byId = callX( classX(domainClassNode), 'get', varX(parameters[0]))
-            implementById(domainClassNode,abstractMethodNode,newMethodNode, targetClassNode, body, byId)
+            Expression byId = callX(classX(domainClassNode), 'get', varX(parameters[0]))
+            implementById(domainClassNode, abstractMethodNode, newMethodNode, targetClassNode, body, byId)
         }
         else {
             Expression argsExpression = AstUtils.ZERO_ARGUMENTS
@@ -77,7 +77,7 @@ abstract class AbstractDetachedCriteriaServiceImplementor extends AbstractReadOp
             )
             Expression connectionId = findConnectionId(newMethodNode)
 
-            if(connectionId != null) {
+            if (connectionId != null) {
                 body.addStatement(
                     assignS(queryVar, callX(queryVar, 'withConnection', connectionId))
                 )
@@ -87,7 +87,7 @@ abstract class AbstractDetachedCriteriaServiceImplementor extends AbstractReadOp
             if (parameterCount > 0) {
                 for (Parameter parameter in parameters) {
                     String parameterName = parameter.name
-                    if(parameterName == GormProperties.IDENTITY) {
+                    if (parameterName == GormProperties.IDENTITY) {
                         body.addStatement(
                             stmt(
                                 callX(queryVar, 'idEq', varX(parameter))
@@ -97,7 +97,7 @@ abstract class AbstractDetachedCriteriaServiceImplementor extends AbstractReadOp
                     else if (isValidParameter(domainClassNode, parameter, parameterName)) {
                         body.addStatement(
                             stmt(
-                                callX(queryVar, 'eq', args( constX(parameterName), varX(parameter) ))
+                                callX(queryVar, 'eq', args(constX(parameterName), varX(parameter)))
                             )
                         )
                     } else if (parameter.type == ClassHelper.MAP_TYPE && parameterName == 'args') {

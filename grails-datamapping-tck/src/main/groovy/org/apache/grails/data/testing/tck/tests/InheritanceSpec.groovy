@@ -40,7 +40,7 @@ class InheritanceSpec extends GrailsDataTckSpec {
         def country = new Country([code: 'UK', name: 'United Kingdom', population: 10000000])
 
         city.save()
-        country.save(flush:true)
+        country.save(flush: true)
         manager.session.clear()
 
         when:

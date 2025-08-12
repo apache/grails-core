@@ -25,6 +25,7 @@ import grails.views.GrailsViewTemplate
 
 @CompileStatic
 class ParentInfo {
+
     /**
      * The parent template if any
      */

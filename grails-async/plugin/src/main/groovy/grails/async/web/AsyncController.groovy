@@ -39,6 +39,7 @@ import jakarta.servlet.http.HttpServletRequest
  */
 @CompileStatic
 trait AsyncController {
+
     /**
      * Raw access to the Servlet 3.0 startAsync method
      *

@@ -70,7 +70,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
 
         def evaluated = constraintsEvaluator.evaluate(targetClass)
         this.constrainedProperties = Collections.unmodifiableMap(evaluated)
-        if(constrainedProperties == null) {
+        if (constrainedProperties == null) {
             throw new IllegalStateException("Constraint evaluator returned null for class: $targetClass")
         }
     }
@@ -87,18 +87,18 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         def validatedObjects = new HashSet()
         validatedObjects.add(obj)
 
-        for(PersistentProperty pp in entity.persistentProperties) {
+        for (PersistentProperty pp in entity.persistentProperties) {
             def propertyName = pp.name
 
             ConstrainedProperty constrainedProperty = constrainedProperties.get(propertyName)
 
-            if(constrainedProperty != null) {
+            if (constrainedProperty != null) {
                 validatePropertyWithConstraint(obj, propertyName, entityReflector, errors, constrainedProperty, pp)
             }
 
-            if(pp instanceof Association) {
+            if (pp instanceof Association) {
                 Association association = (Association)pp
-                if(cascade) {
+                if (cascade) {
                     cascadeToAssociativeProperty(obj, errors, entityReflector, association, validatedObjects)
                 }
             }
@@ -106,9 +106,9 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             constrainedPropertyNames.remove(propertyName)
         }
 
-        for(String remainingProperty in constrainedPropertyNames) {
+        for (String remainingProperty in constrainedPropertyNames) {
             ConstrainedProperty constrainedProperty = constrainedProperties.get(remainingProperty)
-            if(remainingProperty != null) {
+            if (remainingProperty != null) {
                 validatePropertyWithConstraint(obj, remainingProperty, entityReflector, errors, constrainedProperty, null)
             }
         }
@@ -122,7 +122,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * @param bean The original bean
      * @param association The associative property
      */
-    protected void cascadeToAssociativeProperty(Object parent, Errors errors, EntityReflector reflector, Association association, Set validatedObjects ) {
+    protected void cascadeToAssociativeProperty(Object parent, Errors errors, EntityReflector reflector, Association association, Set validatedObjects) {
         String propertyName = association.getName()
         if (errors.hasFieldErrors(propertyName)) {
             return
@@ -131,15 +131,15 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         if (association instanceof ToOne) {
             Object associatedObject = reflector.getProperty(parent, propertyName)
 
-            if(associatedObject != null && proxyHandler?.isInitialized(associatedObject)) {
-                if(association.doesCascadeValidate(associatedObject)) {
+            if (associatedObject != null && proxyHandler?.isInitialized(associatedObject)) {
+                if (association.doesCascadeValidate(associatedObject)) {
                     cascadeValidationToOne(parent, propertyName, (ToOne)association, errors, reflector, associatedObject, null, validatedObjects)
                 }
                 else {
                     Errors existingErrors = retrieveErrors(associatedObject)
-                    if(existingErrors != null && existingErrors.hasErrors()) {
-                        for(error in existingErrors.fieldErrors) {
-                            String path = "${propertyName}." +error.field
+                    if (existingErrors != null && existingErrors.hasErrors()) {
+                        for (error in existingErrors.fieldErrors) {
+                            String path = "${propertyName}." + error.field
                             errors.rejectValue(path, error.code, error.arguments, error.defaultMessage)
                         }
                     }
@@ -147,7 +147,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             }
         }
         else if (association instanceof ToMany) {
-            if(association.doesCascadeValidate(null)) {
+            if (association.doesCascadeValidate(null)) {
                 cascadeValidationToMany(parent, propertyName, association, errors, reflector, validatedObjects)
             }
         }
@@ -172,20 +172,20 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
     protected void cascadeValidationToMany(Object parentObject, String propertyName, Association association, Errors errors, EntityReflector entityReflector, Set validatedObjects) {
 
         Object collection = entityReflector.getProperty(parentObject, propertyName)
-        if(collection == null || !proxyHandler?.isInitialized(collection)) {
+        if (collection == null || !proxyHandler?.isInitialized(collection)) {
             return
         }
 
         if (collection instanceof List || collection instanceof SortedSet) {
             int idx = 0
             for (Object associatedObject : ((Collection)collection)) {
-                cascadeValidationToOne(parentObject, propertyName, association, errors, entityReflector,associatedObject, idx++, validatedObjects)
+                cascadeValidationToOne(parentObject, propertyName, association, errors, entityReflector, associatedObject, idx++, validatedObjects)
             }
         }
         else if (collection instanceof Collection) {
             Integer index = 0
             for (Object associatedObject : ((Collection)collection)) {
-                cascadeValidationToOne(parentObject, propertyName, association, errors, entityReflector,associatedObject, index++, validatedObjects)
+                cascadeValidationToOne(parentObject, propertyName, association, errors, entityReflector, associatedObject, index++, validatedObjects)
             }
         }
         else if (collection instanceof Map) {
@@ -213,7 +213,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             return
         }
 
-        if(validatedObjects.contains(associatedObject)) {
+        if (validatedObjects.contains(associatedObject)) {
             return
         }
 
@@ -240,7 +240,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         Map associatedConstrainedProperties
 
         def validator = mappingContext.getEntityValidator(associatedEntity)
-        if(validator instanceof PersistentEntityValidator) {
+        if (validator instanceof PersistentEntityValidator) {
             associatedConstrainedProperties = ((PersistentEntityValidator)validator).getConstrainedProperties()
         }
         else {
@@ -272,7 +272,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
                 }
 
                 if (associatedPersistentProperty instanceof Association) {
-                    if(association.isBidirectional() && associatedPersistentProperty == association.inverseSide) {
+                    if (association.isBidirectional() && associatedPersistentProperty == association.inverseSide) {
                         // If this property is the inverse side of the currently processed association then
                         // we don't want to process it
                         continue
@@ -321,11 +321,11 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         }
         FieldError fieldError = errors.getFieldError(constrainedPropertyName)
         if (fieldError == null) {
-            if(persistentProperty != null) {
+            if (persistentProperty != null) {
                 constrainedProperty.validate(obj, reflector.getProperty(obj, constrainedPropertyName), errors)
             }
             else {
-                if(obj instanceof GroovyObject) {
+                if (obj instanceof GroovyObject) {
                     constrainedProperty.validate(obj, ((GroovyObject)obj).getProperty(constrainedPropertyName), errors)
                 }
             }

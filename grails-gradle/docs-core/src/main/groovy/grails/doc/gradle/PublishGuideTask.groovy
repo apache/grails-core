@@ -131,7 +131,7 @@ class PublishGuideTask extends DefaultTask {
 
         File resources = resourcesDir.get().asFile
         File docProperties = new File(resources, 'doc.properties')
-        if(docProperties.exists()) {
+        if (docProperties.exists()) {
             docProperties.withInputStream { input ->
                 combinedProperties.load(input)
             }

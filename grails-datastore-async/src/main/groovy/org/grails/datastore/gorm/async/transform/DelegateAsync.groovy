@@ -18,6 +18,7 @@
  */
 
 package org.grails.datastore.gorm.async.transform
+
 import java.lang.annotation.Documented
 import java.lang.annotation.ElementType
 import java.lang.annotation.Retention
@@ -65,5 +66,6 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Target([ElementType.TYPE, ElementType.FIELD])
 @GroovyASTTransformationClass('org.grails.datastore.gorm.async.transform.DelegateAsyncTransformation')
 @interface DelegateAsync {
+
     Class value() default DelegateAsync
 }

@@ -50,14 +50,14 @@ class CookieTenantResolver implements TenantResolver {
     @Override
     Serializable resolveTenantIdentifier() throws TenantNotFoundException {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes()
-        if(requestAttributes instanceof ServletWebRequest) {
+        if (requestAttributes instanceof ServletWebRequest) {
 
             HttpServletRequest servletRequest = ((ServletWebRequest) requestAttributes).getRequest()
             Cookie[] cookies = servletRequest.getCookies()
-            if(cookies != null) {
+            if (cookies != null) {
 
                 for (Cookie cookie : cookies) {
-                    if( cookieName.equals( cookie.name ) ) {
+                    if (cookieName.equals(cookie.name)) {
                         return cookie.getValue()
                     }
                 }

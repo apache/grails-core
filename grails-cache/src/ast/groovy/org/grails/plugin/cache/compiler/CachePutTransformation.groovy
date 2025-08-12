@@ -62,7 +62,6 @@ class CachePutTransformation extends AbstractCacheTransformation {
         VariableExpression cacheManagerVariableExpression = varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)
         BlockStatement cachingBlock = block()
 
-
         // Cache $_cache_cacheVariable = this.grailsCacheManager.getCache("...");
         VariableExpression cacheDeclaration = declareCache(annotationNode, cacheManagerVariableExpression, cachingBlock)
 

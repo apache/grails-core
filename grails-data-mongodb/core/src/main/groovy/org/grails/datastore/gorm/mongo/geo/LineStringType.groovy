@@ -34,13 +34,14 @@ import grails.mongodb.geo.Point
  */
 @CompileStatic
 class LineStringType extends GeoJSONType<LineString> {
+
     LineStringType() {
         super(LineString)
     }
 
     @Override
     LineString createFromCoords(List<List<Double>> coords) {
-        if(coords.size() < 2) throw new DataAccessResourceFailureException("Invalid polygon data returned: $coords")
+        if (coords.size() < 2) throw new DataAccessResourceFailureException("Invalid polygon data returned: $coords")
 
         def points = coords.collect() { List<Double> pos -> new Point(pos.get(0), pos.get(1)) }
         return new LineString(points as Point[])

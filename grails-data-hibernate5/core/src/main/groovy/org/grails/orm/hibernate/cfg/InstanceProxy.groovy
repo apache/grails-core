@@ -25,6 +25,7 @@ import org.grails.orm.hibernate.AbstractHibernateGormValidationApi
 
 @CompileStatic
 class InstanceProxy {
+
     protected instance
     protected AbstractHibernateGormValidationApi validateApi
     protected AbstractHibernateGormInstanceApi instanceApi

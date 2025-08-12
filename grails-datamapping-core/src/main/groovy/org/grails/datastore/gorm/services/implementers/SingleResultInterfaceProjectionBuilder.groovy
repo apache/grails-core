@@ -56,7 +56,7 @@ trait SingleResultInterfaceProjectionBuilder extends InterfaceProjectionBuilder 
 
         VariableExpression delegateVar = varX('$delegate', innerClassNode)
         VariableExpression targetVar = varX('$target', targetDomainClass)
-        MethodCallExpression setTargetCall = callX(delegateVar, '$setTarget', targetVar )
+        MethodCallExpression setTargetCall = callX(delegateVar, '$setTarget', targetVar)
         setTargetCall.setMethodTarget(methodTarget)
         block(
             declS(delegateVar, ctorX(innerClassNode)),
@@ -67,6 +67,5 @@ trait SingleResultInterfaceProjectionBuilder extends InterfaceProjectionBuilder 
             ))
         )
     }
-
 
 }

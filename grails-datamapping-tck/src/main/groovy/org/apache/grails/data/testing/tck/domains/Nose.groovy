@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class Nose implements Serializable {
+
     Long id
     Long version
     boolean hasFreckles

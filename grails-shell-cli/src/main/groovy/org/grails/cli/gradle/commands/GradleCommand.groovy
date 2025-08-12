@@ -38,6 +38,7 @@ import org.grails.cli.profile.ProjectContextAware
  */
 @CompileStatic
 class GradleCommand implements ProjectCommand, Completer, ProjectContextAware {
+
     public static final String GRADLE = 'gradle'
 
     final String name = GRADLE
@@ -56,7 +57,7 @@ class GradleCommand implements ProjectCommand, Completer, ProjectContextAware {
     boolean handle(ExecutionContext context) {
         GradleUtil.runBuildWithConsoleOutput(context) { BuildLauncher buildLauncher ->
             def args = context.commandLine.remainingArgsString?.trim()
-            if(args) {
+            if (args) {
                 buildLauncher.withArguments(args)
             }
         }
@@ -67,7 +68,7 @@ class GradleCommand implements ProjectCommand, Completer, ProjectContextAware {
     int complete(String buffer, int cursor, List<CharSequence> candidates) {
         initializeCompleter()
 
-        if(completer)
+        if (completer)
             return completer.complete(buffer, cursor, candidates)
         else
             return cursor

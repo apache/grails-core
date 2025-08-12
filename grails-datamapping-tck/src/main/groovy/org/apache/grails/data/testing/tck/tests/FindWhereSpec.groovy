@@ -27,7 +27,6 @@ class FindWhereSpec extends GrailsDataTckSpec {
         given:
         def entityId = new TestEntity(name: 'David', age: 27).save().id
 
-
         when:
         def entity = TestEntity.findWhere(name: 'David')
 

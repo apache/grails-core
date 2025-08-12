@@ -55,7 +55,6 @@ class CacheGrailsPlugin extends Plugin {
 
             customCacheKeyGenerator(CustomCacheKeyGenerator)
 
-
             Class<? extends GrailsCacheManager> cacheClazz = GrailsConcurrentMapCacheManager
             // Selects cache manager from config
             if (config.getProperty('grails.cache.cacheManager', String, null) == 'GrailsConcurrentLinkedMapCacheManager') {
@@ -85,7 +84,7 @@ class CacheGrailsPlugin extends Plugin {
             }
 
             List<String> defaultCaches = ['grailsBlocksCache', 'grailsTemplatesCache']
-            for(name in defaultCaches) {
+            for (name in defaultCaches) {
                 if (!grailsCacheManager.cacheExists(name)) {
                     grailsCacheManager.getCache(name)
                 }

@@ -363,16 +363,16 @@ class ValidationTagLib implements TagLibrary {
     }
 
     // Maps out how Grails contraints map to Apache commons validators
-    static CONSTRAINT_TYPE_MAP = [email     : 'email',
+    static CONSTRAINT_TYPE_MAP = [email: 'email',
                                   creditCard: 'creditCard',
-                                  matches   : 'mask',
-                                  blank     : 'required',
-                                  nullable  : 'required',
-                                  maxSize   : 'maxLength',
-                                  minSize   : 'minLength',
-                                  range     : 'intRange',
-                                  size      : 'intRange',
-                                  length    : 'maxLength,minLength']
+                                  matches: 'mask',
+                                  blank: 'required',
+                                  nullable: 'required',
+                                  maxSize: 'maxLength',
+                                  minSize: 'minLength',
+                                  range: 'intRange',
+                                  size: 'intRange',
+                                  length: 'maxLength,minLength']
 
     /**
      * Validates a form using Apache commons validator javascript against constraints defined in a Grails

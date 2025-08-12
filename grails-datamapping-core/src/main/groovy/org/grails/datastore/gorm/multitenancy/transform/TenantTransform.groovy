@@ -74,6 +74,7 @@ import static org.grails.datastore.mapping.reflect.AstUtils.varThis
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
+
     private static final Object APPLIED_MARKER = new Object()
     private static final ClassExpression CURRENT_TENANT_ANNOTATION_TYPE_EXPR = classX(CurrentTenant)
     private static final ClassExpression TENANT_ANNOTATION_TYPE_EXPR = classX(Tenant)
@@ -98,9 +99,9 @@ class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
         ClassNode tenantServiceClassNode = make(TenantService)
         VariableScope variableScope = methodNode.getVariableScope()
         VariableExpression tenantServiceVar = varX('$tenantService', tenantServiceClassNode)
-        variableScope.putDeclaredVariable( tenantServiceVar )
+        variableScope.putDeclaredVariable(tenantServiceVar)
         newMethodBody.addStatement(
-            declS(tenantServiceVar, callD(ServiceRegistry, 'targetDatastore', 'getService', classX(tenantServiceClassNode) ) )
+            declS(tenantServiceVar, callD(ServiceRegistry, 'targetDatastore', 'getService', classX(tenantServiceClassNode)))
         )
 
         ClassNode serializableClassNode = make(Serializable)
@@ -112,38 +113,38 @@ class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
         } else {
             // must be @Tenant
             Expression annValue = annotationNode.getMember('value')
-            if(annValue instanceof ClosureExpression) {
+            if (annValue instanceof ClosureExpression) {
                 VariableExpression closureVar = varX('$tenantResolver', CLOSURE_TYPE)
                 VariableExpression tenantIdVar = varX('$tenantId', serializableClassNode)
                 tenantIdVar.setClosureSharedVariable(true)
-                variableScope.putDeclaredVariable( closureVar )
-                variableScope.putReferencedLocalVariable( tenantIdVar )
-                variableScope.putDeclaredVariable( tenantIdVar )
+                variableScope.putDeclaredVariable(closureVar)
+                variableScope.putReferencedLocalVariable(tenantIdVar)
+                variableScope.putDeclaredVariable(tenantIdVar)
                 // Generates:
                 // Closure $tenantResolver = ...
                 // $tenantResolver = $tenantResolver.clone()
                 // $tenantResolver.setDelegate(this)
                 // Serializable $tenantId = (Serializable)$tenantResolver.call()
                 // if($tenantId == null) throw new TenantNotFoundException(..)
-                newMethodBody.addStatement  declS( closureVar, annValue)
-                newMethodBody.addStatement  assignS( closureVar, callD( closureVar, 'clone'))
-                newMethodBody.addStatement  stmt( callD( closureVar, 'setDelegate', varThis() ) )
-                newMethodBody.addStatement  declS( tenantIdVar, castX( serializableClassNode, callD( closureVar, 'call') ))
-                newMethodBody.addStatement ifS( equalsNullX(tenantIdVar),
-                    throwS( ctorX( make(TenantNotFoundException), constX('Tenant id resolved from @Tenant is null')) )
+                newMethodBody.addStatement declS(closureVar, annValue)
+                newMethodBody.addStatement assignS(closureVar, callD(closureVar, 'clone'))
+                newMethodBody.addStatement stmt(callD(closureVar, 'setDelegate', varThis()))
+                newMethodBody.addStatement declS(tenantIdVar, castX(serializableClassNode, callD(closureVar, 'call')))
+                newMethodBody.addStatement ifS(equalsNullX(tenantIdVar),
+                    throwS(ctorX(make(TenantNotFoundException), constX('Tenant id resolved from @Tenant is null')))
                 )
-                return makeDelegatingClosureCall( tenantServiceVar, 'withId', args(tenantIdVar), params( param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
+                return makeDelegatingClosureCall(tenantServiceVar, 'withId', args(tenantIdVar), params(param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
             }
             else {
                 addError('@Tenant value should be a closure', annotationNode)
-                return makeDelegatingClosureCall( tenantServiceVar, 'withCurrent', params( param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
+                return makeDelegatingClosureCall(tenantServiceVar, 'withCurrent', params(param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
             }
         }
     }
 
     @Override
     protected Parameter[] prepareNewMethodParameters(MethodNode methodNode, Map<String, ClassNode> genericsSpec, ClassNode classNode = null) {
-        if(methodNode.getAnnotations(WITHOUT_TENANT_ANNOTATION_TYPE).isEmpty() && (!classNode || classNode.getAnnotations(WITHOUT_TENANT_ANNOTATION_TYPE).isEmpty())) {
+        if (methodNode.getAnnotations(WITHOUT_TENANT_ANNOTATION_TYPE).isEmpty() && (!classNode || classNode.getAnnotations(WITHOUT_TENANT_ANNOTATION_TYPE).isEmpty())) {
             final Parameter tenantIdParameter = param(make(Serializable), VAR_TENANT_ID)
             Parameter[] parameters = methodNode.getParameters()
             Parameter[] newParameters = parameters.length > 0 ? (copyParameters(((parameters as List) + [tenantIdParameter]) as Parameter[], genericsSpec)) : [tenantIdParameter] as Parameter[]
@@ -178,19 +179,19 @@ class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
      */
     static boolean hasTenantAnnotation(AnnotatedNode node) {
         ClassNode classNode
-        if(node instanceof MethodNode) {
-            if(AstUtils.findAnnotation(node, WithoutTenant)) {
+        if (node instanceof MethodNode) {
+            if (AstUtils.findAnnotation(node, WithoutTenant)) {
                 return false
             }
             classNode = ((MethodNode)node).getDeclaringClass()
         }
-        else if(node instanceof ClassNode) {
+        else if (node instanceof ClassNode) {
             classNode = ((ClassNode)node)
         }
-        if(classNode != null) {
+        if (classNode != null) {
 
-            for(ann in [CurrentTenant, Tenant]) {
-                if(AstUtils.findAnnotation(classNode, ann) || AstUtils.findAnnotation(node, ann)) {
+            for (ann in [CurrentTenant, Tenant]) {
+                if (AstUtils.findAnnotation(classNode, ann) || AstUtils.findAnnotation(node, ann)) {
                     return true
                 }
             }

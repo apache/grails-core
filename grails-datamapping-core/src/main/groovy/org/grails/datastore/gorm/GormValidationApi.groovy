@@ -75,10 +75,10 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
 
     Validator getValidator() {
         if (!internalValidator) {
-            if(persistentEntity instanceof ValidatorProvider) {
+            if (persistentEntity instanceof ValidatorProvider) {
                 internalValidator = ((ValidatorProvider)persistentEntity).validator
             }
-            if(!internalValidator) {
+            if (!internalValidator) {
                 internalValidator = mappingContext.getEntityValidator(persistentEntity)
             }
         }
@@ -98,7 +98,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
             deepValidate = ClassUtils.getBooleanFromMap(ARGUMENT_DEEP_VALIDATE, arguments)
         }
 
-        if(hasDatastore) {
+        if (hasDatastore) {
             currentSession = datastore.currentSession
             previousFlushMode = currentSession.flushMode
             currentSession.setFlushMode(FlushModeType.COMMIT)
@@ -108,7 +108,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
             fireEvent(instance, fields)
 
             Validator validator = getValidator()
-            if(validator == null) {
+            if (validator == null) {
                 return true
             }
 
@@ -142,7 +142,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
 
             return !getErrors(instance).hasErrors()
         } finally {
-            if(previousFlushMode != null) {
+            if (previousFlushMode != null) {
                 currentSession.setFlushMode(previousFlushMode)
             }
         }
@@ -213,14 +213,13 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
         doValidate instance, (Map)null, (List)null
     }
 
-
     /**
      * Obtains the errors for an instance
      * @param instance The instance to obtain errors for
      * @return The {@link Errors} instance
      */
     Errors getErrors(D instance) {
-        if(instance instanceof GormValidateable) {
+        if (instance instanceof GormValidateable) {
             GormValidateable gv = (GormValidateable)instance
             def errors = gv.errors
             if (errors == null) {
@@ -250,7 +249,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * @param errors The errors
      */
     void setErrors(D instance, Errors errors) {
-        if(instance instanceof GormValidateable) {
+        if (instance instanceof GormValidateable) {
             GormValidateable gv = (GormValidateable) instance
             gv.errors = errors
         }
@@ -273,7 +272,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * @return True if errors exist
      */
     boolean hasErrors(D instance) {
-        if(instance instanceof GormValidateable) {
+        if (instance instanceof GormValidateable) {
             GormValidateable gv = (GormValidateable) instance
             return gv.hasErrors()
         }

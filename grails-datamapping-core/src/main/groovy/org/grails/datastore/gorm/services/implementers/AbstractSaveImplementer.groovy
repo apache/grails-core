@@ -50,6 +50,7 @@ import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.namedAr
  */
 @CompileStatic
 abstract class AbstractSaveImplementer extends AbstractWriteOperationImplementer {
+
     protected Statement bindParametersAndSave(ClassNode domainClassNode, MethodNode abstractMethodNode, Parameter[] parameters, BlockStatement body, VariableExpression entityVar) {
         Expression argsExpression = null
 
@@ -83,7 +84,7 @@ abstract class AbstractSaveImplementer extends AbstractWriteOperationImplementer
         }
 
         Expression connectionId = findConnectionId(abstractMethodNode)
-        if(connectionId != null) {
+        if (connectionId != null) {
             returnS(callX(buildInstanceApiLookup(domainClassNode, connectionId), 'save', args(entityVar, saveArgs)))
         }
         else {

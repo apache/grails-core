@@ -47,9 +47,9 @@ class JsonApiDataBindingSourceCreator extends JsonDataBindingSourceCreator {
 
     @Override
     protected Map createJsonMap(Object jsonElement) {
-        if(jsonElement instanceof Map) {
+        if (jsonElement instanceof Map) {
             def jsonMap = (Map) jsonElement
-            if(jsonMap.containsKey(DATA)) {
+            if (jsonMap.containsKey(DATA)) {
                 jsonMap = new LinkedHashMap(jsonMap)
                 def data = jsonMap.get(DATA)
                 if (data instanceof Map) {

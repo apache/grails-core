@@ -69,11 +69,10 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
      */
     Properties toProperties() {
         Properties properties = new Properties()
-        properties.putAll( dataSource.toHibernateProperties() )
-        properties.putAll( hibernate.toProperties() )
+        properties.putAll(dataSource.toHibernateProperties())
+        properties.putAll(hibernate.toProperties())
         return properties
     }
-
 
     @Builder(builderStrategy = SimpleStrategy, prefix = '')
     @AutoClone
@@ -101,7 +100,6 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
          * Flush settings
          */
         FlushSettings flush = new FlushSettings()
-
 
         /**
          * The configuration class
@@ -209,7 +207,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
 
         @CompileStatic
         Map<String, Object> toHibernateEventListeners(AbstractClosureEventTriggeringInterceptor eventTriggeringInterceptor) {
-            if(eventTriggeringInterceptor != null) {
+            if (eventTriggeringInterceptor != null) {
                 return [
                     'save': eventTriggeringInterceptor,
                     'save-update': eventTriggeringInterceptor,
@@ -234,10 +232,10 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         @CompileStatic
         Properties toProperties() {
             Properties props = new Properties()
-            if(naming_strategy != null) {
+            if (naming_strategy != null) {
                 props.put('hibernate.naming_strategy', naming_strategy.name)
             }
-            if(configClass != null) {
+            if (configClass != null) {
                 props.put('hibernate.config_class', configClass.name)
             }
             props.put('hibernate.use_query_cache', String.valueOf(cache.queries))
@@ -264,8 +262,8 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
             }
 
             String prefix = 'hibernate'
-            props.putAll( additionalProperties )
-            populateProperties(props, this,prefix)
+            props.putAll(additionalProperties)
+            populateProperties(props, this, prefix)
             return props
         }
 
@@ -273,7 +271,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         protected void populateProperties(Properties props, Map current, String prefix) {
             for (key in current.keySet()) {
                 def value = current.get(key)
-                if(value instanceof Map) {
+                if (value instanceof Map) {
                     populateProperties(props, (Map)value, "${prefix}.$key")
                 }
                 else {
@@ -338,7 +336,6 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
              */
             boolean enabled = true
         }
-
 
     }
 }

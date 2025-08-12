@@ -36,6 +36,7 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 
 @CompileStatic
 class WebSetupInterceptor implements IMethodInterceptor {
+
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {
         GrailsWebUnitTest test = (GrailsWebUnitTest)invocation.instance
@@ -52,6 +53,5 @@ class WebSetupInterceptor implements IMethodInterceptor {
         GrailsWebRequest webRequest = GrailsWebMockUtil.bindMockWebRequest(applicationContext, request, response)
         test.webRequest = webRequest
     }
-
 
 }

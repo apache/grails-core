@@ -34,13 +34,12 @@ import org.grails.datastore.gorm.transform.AstPropertyResolveUtils
 @CompileStatic
 class FindOnePropertyProjectionImplementer extends AbstractProjectionImplementer implements SingleResultProjectionServiceImplementer {
 
-
     @Override
     boolean isCompatibleReturnType(ClassNode domainClass, MethodNode methodNode, ClassNode returnType, String prefix) {
         String propertyName = establishPropertyName(methodNode, prefix, domainClass)
-        if(propertyName) {
+        if (propertyName) {
             ClassNode propertyType = AstPropertyResolveUtils.getPropertyType(domainClass, propertyName)
-            if(isValidPropertyType(resolveProjectionReturnType(returnType), propertyType)) {
+            if (isValidPropertyType(resolveProjectionReturnType(returnType), propertyType)) {
                 return true
             }
         }
@@ -55,7 +54,6 @@ class FindOnePropertyProjectionImplementer extends AbstractProjectionImplementer
     protected ClassNode resolveProjectionReturnType(ClassNode returnType) {
         return returnType
     }
-
 
     @Override
     Iterable<String> getHandledPrefixes() {

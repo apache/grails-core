@@ -35,6 +35,7 @@ import org.grails.datastore.mapping.config.Property
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 @CompileStatic
 class CompositeIdentity extends Property {
+
     /**
      * The property names that make up the custom identity
      */

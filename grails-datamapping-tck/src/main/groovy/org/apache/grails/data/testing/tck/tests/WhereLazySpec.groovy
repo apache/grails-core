@@ -22,6 +22,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Product
 
 class WhereLazySpec extends GrailsDataTckSpec {
+
     void setupSpec() {
         manager.domainClasses.addAll([Product])
     }

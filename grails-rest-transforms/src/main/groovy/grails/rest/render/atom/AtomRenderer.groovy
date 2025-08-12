@@ -117,7 +117,7 @@ class AtomRenderer<T> extends HalXmlRenderer<T> {
 
     static String generateIdForURI(String url, Date dateCreated = null, Object id = null) {
         if (url.startsWith('http')) {
-            url = url.substring(url.indexOf('//')+2, url.length())
+            url = url.substring(url.indexOf('//') + 2, url.length())
         }
         url = url.replace('#', '/')
         def i = url.indexOf('/')

@@ -50,11 +50,12 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
  */
 @CompileStatic
 class DeleteImplementer extends AbstractDetachedCriteriaServiceImplementor implements SingleResultServiceImplementer<Number> {
+
     static final List<String> HANDLED_PREFIXES = ['delete', 'remove']
 
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
-        if(methodNode.parameters.length == 0) return false
+        if (methodNode.parameters.length == 0) return false
         else {
             return AstUtils.isDomainClass(domainClass) && super.doesImplement(domainClass, methodNode)
         }
@@ -80,7 +81,7 @@ class DeleteImplementer extends AbstractDetachedCriteriaServiceImplementor imple
         boolean isVoidReturnType = ClassHelper.VOID_TYPE.equals(newMethodNode.returnType)
         VariableExpression obj = varX('$obj')
         Statement deleteStatement = stmt(callX(obj, 'delete'))
-        if(!isVoidReturnType) {
+        if (!isVoidReturnType) {
             deleteStatement = block(
                 deleteStatement,
                 returnS(constX(1))
@@ -94,7 +95,7 @@ class DeleteImplementer extends AbstractDetachedCriteriaServiceImplementor imple
                 deleteStatement
             )
         ])
-        if(!isVoidReturnType) {
+        if (!isVoidReturnType) {
             body.addStatement(
                 returnS(constX(0))
             )
@@ -109,7 +110,7 @@ class DeleteImplementer extends AbstractDetachedCriteriaServiceImplementor imple
 
         body.addStatements([
                 // return query.deleteAll()
-                isVoidReturnType ? stmt(deleteCall) : returnS( deleteCall )
+                isVoidReturnType ? stmt(deleteCall) : returnS(deleteCall)
         ])
     }
 }

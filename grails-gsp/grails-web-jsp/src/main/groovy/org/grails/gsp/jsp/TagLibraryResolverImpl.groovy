@@ -47,11 +47,13 @@ import grails.core.support.GrailsApplicationAware
  */
 @CompileStatic
 class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAware, TagLibraryResolver, ResourceLoaderAware, BeanClassLoaderAware {
+
     protected Map<String, JspTagLib> tagLibs = new ConcurrentHashMap<String, JspTagLib>()
     GrailsApplication grailsApplication
     ServletContext servletContext
     ClassLoader classLoader
     ResourceLoader resourceLoader
+
     @Value('${grails.gsp.tldScanPattern:}')
     String[] tldScanPatterns = [] as String[]
     volatile boolean initialized = false
@@ -60,25 +62,25 @@ class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAw
      * Resolves a JspTagLib instance for the given URI
      */
     JspTagLib resolveTagLibrary(String uri) {
-        if(!initialized) {
+        if (!initialized) {
             initialize()
         }
         return tagLibs[uri]
     }
 
     synchronized void initialize() {
-        if(servletContext) {
+        if (servletContext) {
             Resource webXml = getWebXmlFromServletContext()
             if (webXml?.exists()) {
                 loadTagLibLocations(webXml)
             }
         }
-        if(resourceLoader && tldScanPatterns) {
-            PathMatchingResourcePatternResolver patternResolver=new PathMatchingResourcePatternResolver(resourceLoader)
-            for(String tldResourcePattern : tldScanPatterns) {
+        if (resourceLoader && tldScanPatterns) {
+            PathMatchingResourcePatternResolver patternResolver = new PathMatchingResourcePatternResolver(resourceLoader)
+            for (String tldResourcePattern : tldScanPatterns) {
                 patternResolver.getResources(tldResourcePattern).each { Resource resource ->
                     JspTagLib jspTagLib = loadJspTagLib(resource.getInputStream())
-                    if(jspTagLib) {
+                    if (jspTagLib) {
                         tagLibs.put(jspTagLib.URI, jspTagLib)
                     }
                 }
@@ -100,8 +102,8 @@ class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAw
             else {
                 jspTagLib = loadJspTagLib(getTldFromServletContext(location), uri)
             }
-            if(jspTagLib) {
-                tagLibs.put(uri,jspTagLib)
+            if (jspTagLib) {
+                tagLibs.put(uri, jspTagLib)
             }
         }
     }
@@ -109,9 +111,9 @@ class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAw
     private JspTagLib loadFromJar(String uri, String loc) {
         JspTagLib jspTagLib = null
         List<URL> jarURLs = resolveJarUrls()
-        def fileLoc = loc[4..loc.indexOf('!')-1]
-        String pathWithinZip = loc[loc.indexOf('!')+1..-1]
-        URL jarFile = jarURLs.find { URL url -> url.toExternalForm() == fileLoc}
+        def fileLoc = loc[4..loc.indexOf('!') - 1]
+        String pathWithinZip = loc[loc.indexOf('!') + 1..-1]
+        URL jarFile = jarURLs.find { URL url -> url.toExternalForm() == fileLoc }
         if (jarFile) {
             jarFile.openStream().withStream { InputStream jarFileInputStream ->
                 ZipInputStream zipInput = new ZipInputStream(jarFileInputStream)
@@ -143,7 +145,7 @@ class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAw
 
     protected List<URL> getJarsFromServletContext() {
         def files = servletContext.getResourcePaths('/WEB-INF/lib')
-        files = files.findAll { String path ->  path.endsWith('.jar') || path.endsWith('.zip')}
+        files = files.findAll { String path ->  path.endsWith('.jar') || path.endsWith('.zip') }
         files.collect { String path -> servletContext.getResource(path) } as List
     }
 
@@ -153,8 +155,8 @@ class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAw
      */
     protected URLClassLoader resolveRootLoader() {
         def classLoader = getClass().classLoader
-        while(classLoader != null) {
-            if(classLoader instanceof URLClassLoader && ((URLClassLoader)classLoader).getURLs()) {
+        while (classLoader != null) {
+            if (classLoader instanceof URLClassLoader && ((URLClassLoader)classLoader).getURLs()) {
                 return (URLClassLoader)classLoader
             }
             classLoader = classLoader.parent
@@ -164,8 +166,8 @@ class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAw
 
     private JspTagLib loadJspTagLib(InputStream inputStream, String specifiedUri = null) {
         TldReader tldReader = new TldReader(inputStream)
-        String uri = specifiedUri?:tldReader.uri
-        if(tldReader.tags) {
+        String uri = specifiedUri ?: tldReader.uri
+        if (tldReader.tags) {
             return new JspTagLibImpl(uri, tldReader.tags, classLoader)
         } else {
             return null

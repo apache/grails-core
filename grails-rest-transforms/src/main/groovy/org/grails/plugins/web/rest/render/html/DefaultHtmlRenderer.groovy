@@ -38,8 +38,10 @@ import grails.web.mime.MimeType
  */
 @CompileStatic
 class DefaultHtmlRenderer<T> implements Renderer<T> {
+
     protected Class<T> targetType
     protected MimeType[] mimeTypes = [MimeType.XHTML, MimeType.HTML] as MimeType[]
+
     @Autowired(required = false)
     ProxyHandler proxyHandler
 
@@ -85,7 +87,7 @@ class DefaultHtmlRenderer<T> implements Renderer<T> {
     }
 
     protected void applyModel(RenderContext context, Object object) {
-        if(object instanceof Map) {
+        if (object instanceof Map) {
             context.setModel((Map)object)
         }
         else {
@@ -94,7 +96,7 @@ class DefaultHtmlRenderer<T> implements Renderer<T> {
     }
 
     protected String resolveModelVariableName(Object object) {
-        if(object != null) {
+        if (object != null) {
             if (proxyHandler != null) {
                 object = proxyHandler.unwrapIfProxy(object)
             }
@@ -114,10 +116,10 @@ class DefaultHtmlRenderer<T> implements Renderer<T> {
                 if (proxyHandler != null) {
                     first = proxyHandler.unwrapIfProxy(first)
                 }
-                if(coll instanceof List) {
+                if (coll instanceof List) {
                     return GrailsNameUtils.getPropertyName(first.getClass()) + suffix + 'List'
                 }
-                if(coll instanceof Set) {
+                if (coll instanceof Set) {
                     return GrailsNameUtils.getPropertyName(first.getClass()) + suffix + 'Set'
                 }
                 return GrailsNameUtils.getPropertyName(first.getClass()) + suffix + 'Collection'

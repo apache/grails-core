@@ -25,17 +25,18 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class SystemOutErrCapturer {
+
     ByteArrayOutputStream out
     ByteArrayOutputStream err
     SystemStreamsRedirector previousState
-    
+
     SystemOutErrCapturer capture() {
         out = new ByteArrayOutputStream()
         err = new ByteArrayOutputStream()
         previousState = SystemStreamsRedirector.create(null, new PrintStream(out, true), new PrintStream(err, true)).redirect()
         this
     }
-    
+
     SystemOutErrCapturer redirectToNull() {
         out = null
         err = null
@@ -43,14 +44,14 @@ class SystemOutErrCapturer {
         previousState = SystemStreamsRedirector.create(null, new PrintStream(nullStream, true), new PrintStream(nullStream, true)).redirect()
         this
     }
-    
+
     void close() {
-        if(previousState != null) {
+        if (previousState != null) {
             previousState.redirect()
             previousState = null
         }
     }
-    
+
     static <T> T withCapturedOutput(Closure<T> closure) {
         SystemOutErrCapturer capturer = new SystemOutErrCapturer().capture()
         try {
@@ -59,7 +60,7 @@ class SystemOutErrCapturer {
             capturer.close()
         }
     }
-    
+
     static <T> T withNullOutput(Closure<T> closure) {
         SystemOutErrCapturer capturer = new SystemOutErrCapturer().redirectToNull()
         try {
@@ -68,22 +69,22 @@ class SystemOutErrCapturer {
             capturer.close()
         }
     }
-    
+
     @CompileStatic
     static class NullOutputStream extends OutputStream {
         @Override
         void write(byte[] b) throws IOException {
-            
-        }       
-        
+
+        }
+
         @Override
         void write(int b) throws IOException {
-            
+
         }
-        
+
         @Override
         void write(byte[] b, int off, int len) throws IOException {
-            
+
         }
     }
 }

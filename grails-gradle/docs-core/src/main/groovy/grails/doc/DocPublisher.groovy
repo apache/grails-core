@@ -48,6 +48,7 @@ import grails.doc.internal.YamlTocStrategy
  * @since 1.2
  */
 class DocPublisher {
+
     static final String TOC_FILENAME = 'toc.yml'
 
     /** The source directory of the documentation */
@@ -177,7 +178,7 @@ class DocPublisher {
         String imgsDir = new File(refDocsDir, calculatePathToResources('img')).path
         File fontsDir = new File(refDocsDir, calculatePathToResources('fonts'))
         ant.mkdir(dir: imgsDir)
-        ant.mkdir(dir: fontsDir )
+        ant.mkdir(dir: fontsDir)
         String cssDir = new File(refDocsDir, calculatePathToResources('css')).path
         ant.mkdir(dir: cssDir)
         String jsDir = new File(refDocsDir, calculatePathToResources('js')).path
@@ -189,7 +190,7 @@ class DocPublisher {
         }
 
         if (images && images.exists()) {
-            ant.copy(todir: imgsDir, overwrite: true, failonerror:false) {
+            ant.copy(todir: imgsDir, overwrite: true, failonerror: false) {
                 fileset(dir: images)
             }
         }
@@ -202,12 +203,12 @@ class DocPublisher {
         }
 
         if (css && css.exists()) {
-            ant.copy(todir: cssDir, overwrite: true, failonerror:false) {
+            ant.copy(todir: cssDir, overwrite: true, failonerror: false) {
                 fileset(dir: css)
             }
         }
         if (fonts && fonts.exists()) {
-            ant.copy(todir: fontsDir, overwrite: true, failonerror:false) {
+            ant.copy(todir: fontsDir, overwrite: true, failonerror: false) {
                 fileset(dir: fonts)
             }
         }
@@ -215,12 +216,12 @@ class DocPublisher {
             fileset(dir: "${docResources}/js")
         }
         if (js && js.exists()) {
-            ant.copy(todir: jsDir, overwrite: true, failonerror:false) {
+            ant.copy(todir: jsDir, overwrite: true, failonerror: false) {
                 fileset(dir: js)
             }
         }
         if (style && style.exists()) {
-            ant.copy(todir: "${docResources}/style", overwrite: true, failonerror:false) {
+            ant.copy(todir: "${docResources}/style", overwrite: true, failonerror: false) {
                 fileset(dir: style)
             }
         }
@@ -318,7 +319,7 @@ class DocPublisher {
             sourceRepo: sourceRepo,
         )
 
-        if(engine instanceof AsciiDocEngine) {
+        if (engine instanceof AsciiDocEngine) {
             // pass attributes to asciidoc
             ((AsciiDocEngine)engine).attributes.putAll(
                     version: version,
@@ -330,7 +331,6 @@ class DocPublisher {
             )
         }
 
-
         // Build the user guide sections first.
         def template = templateEngine.createTemplate(new File("${docResources}/style/guideItem.html").newReader(encoding))
         def sectionTemplate = templateEngine.createTemplate(new File("${docResources}/style/section.html").newReader(encoding))
@@ -338,7 +338,7 @@ class DocPublisher {
 
         def chapterVars
         def chapters = guide.children
-        chapters.eachWithIndex{ chapter, i ->
+        chapters.eachWithIndex { chapter, i ->
             chapterVars = [*:vars, chapterNumber: i + 1]
             if (i != 0) {
                 chapterVars['prev'] = chapters[i - 1]
@@ -367,7 +367,7 @@ class DocPublisher {
                 vars.section = section
 
                 new File("${refDocsDir}/ref/${section}").mkdirs()
-                def textiles = f.listFiles().findAll { it.name.endsWith(ext)}.sort()
+                def textiles = f.listFiles().findAll { it.name.endsWith(ext) }.sort()
                 def usageFile = new File("${src}/ref/${section}${ext}")
                 if (usageFile.exists()) {
                     def data = usageFile.getText(StandardCharsets.UTF_8.name())
@@ -377,7 +377,7 @@ class DocPublisher {
                     output.warn "Rendering document file $usageFile.name"
                     vars.content = engine.render(data, context)
                     vars.sourcePath = "ref/$usageFile.name"
-                    new File("${refDocsDir}/ref/${section}/Usage.html").withWriter(encoding) {out ->
+                    new File("${refDocsDir}/ref/${section}/Usage.html").withWriter(encoding) { out ->
                         template.make(vars).writeTo(out)
                     }
                 }
@@ -390,7 +390,7 @@ class DocPublisher {
                     output.warn "Rendering document file $txt.name"
                     vars.content = engine.render(data, context)
                     vars.sourcePath = "ref/${section}/$txt.name"
-                    new File("${refDocsDir}/ref/${section}/${name}.html").withWriter(encoding) {out ->
+                    new File("${refDocsDir}/ref/${section}/${name}.html").withWriter(encoding) { out ->
                         template.make(vars).writeTo(out)
                     }
                 }
@@ -408,13 +408,13 @@ class DocPublisher {
         vars.resourcesPath = calculatePathToResources(pathToRoot)
 
         template = templateEngine.createTemplate(new File("${docResources}/style/layout.html").newReader(encoding))
-        new File("${refGuideDir}/single.html").withWriter(encoding) {out ->
+        new File("${refGuideDir}/single.html").withWriter(encoding) { out ->
             template.make(vars).writeTo(out)
         }
 
         vars.content = ''
         vars.single = false
-        new File("${refGuideDir}/index.html").withWriter(encoding) {out ->
+        new File("${refGuideDir}/index.html").withWriter(encoding) { out ->
             template.make(vars).writeTo(out)
         }
 
@@ -424,7 +424,7 @@ class DocPublisher {
         vars.path = pathToRoot
         vars.resourcesPath = calculatePathToResources(pathToRoot)
 
-        new File("${refDocsDir}/index.html").withWriter(encoding) {out ->
+        new File("${refDocsDir}/index.html").withWriter(encoding) { out ->
             template.make(vars).writeTo(out)
         }
 
@@ -530,7 +530,7 @@ class DocPublisher {
         }
         def metaProps = DocPublisher.metaClass.properties
         Properties props
-        if(engineProperties != null) {
+        if (engineProperties != null) {
             props = engineProperties
         }
         else {
@@ -538,21 +538,20 @@ class DocPublisher {
             engineProperties = props
         }
 
-
-        if(propertiesFile?.exists()) {
-            if(propertiesFile.name.endsWith('.properties')) {
+        if (propertiesFile?.exists()) {
+            if (propertiesFile.name.endsWith('.properties')) {
                 propertiesFile.withInputStream {
                     props.load(it)
                 }
             }
-            else if(propertiesFile.name.endsWith('.yml')) {
+            else if (propertiesFile.name.endsWith('.yml')) {
                 propertiesFile.withInputStream { input ->
                     def ymls = new Yaml(new SafeConstructor(new LoaderOptions())).loadAll(input)
-                    for(yml in ymls) {
-                        if(yml instanceof Map) {
+                    for (yml in ymls) {
+                        if (yml instanceof Map) {
                             def config = yml.grails?.doc
-                            if(config instanceof Map) {
-                                flattenKeys(props, (Map) config,[], true)
+                            if (config instanceof Map) {
+                                flattenKeys(props, (Map) config, [], true)
                             }
                         }
                     }
@@ -561,7 +560,6 @@ class DocPublisher {
             }
 
         }
-
 
         for (MetaProperty mp in metaProps) {
             if (mp.type == String) {
@@ -575,7 +573,7 @@ class DocPublisher {
         context = new BaseInitialRenderContext()
         initContext(context, '..')
 
-        if(asciidoc) {
+        if (asciidoc) {
             engine = new AsciiDocEngine(context)
         }
         else {
@@ -597,24 +595,24 @@ class DocPublisher {
     private void flattenKeys(Map<String, Object> flatConfig, Map currentMap, List<String> path, boolean forceStrings) {
         currentMap.each { key, value ->
             String stringKey = String.valueOf(key)
-            if(value != null) {
-                if(value instanceof Map) {
+            if (value != null) {
+                if (value instanceof Map) {
                     flattenKeys(flatConfig, (Map)value, ((path + [stringKey]) as List<String>).asImmutable(), forceStrings)
                 } else {
                     String fullKey
-                    if(path) {
+                    if (path) {
                         fullKey = path.join('.') + '.' + stringKey
                     } else {
                         fullKey = stringKey
                     }
-                    if(value instanceof Collection) {
-                        if(forceStrings) {
+                    if (value instanceof Collection) {
+                        if (forceStrings) {
                             flatConfig.put(fullKey, ((Collection)value).join(','))
                         } else {
                             flatConfig.put(fullKey, value)
                         }
                         int index = 0
-                        for(Object item: (Collection)value) {
+                        for (Object item: (Collection)value) {
                             String collectionKey = "${fullKey}[${index}]".toString()
                             flatConfig.put(collectionKey, forceStrings ? String.valueOf(item) : item)
                             index++
@@ -642,7 +640,7 @@ class DocPublisher {
 
         for (ch in toc.children) {
             List<String> internalErrors = verifyTocInternal(baseDir, ch, sectionsFound, gdocsNotInToc, [])
-            if(internalErrors) {
+            if (internalErrors) {
                 errors.addAll(internalErrors)
             }
         }
@@ -682,7 +680,7 @@ class DocPublisher {
 
         for (s in section.children) {
             List<String> internalErrors = verifyTocInternal(baseDir, s, existing, gdocFiles, pathElements + section.name)
-            if(internalErrors) {
+            if (internalErrors) {
                 errors.addAll(internalErrors)
             }
         }
@@ -748,7 +746,7 @@ class DocPublisher {
         }
         finally {
             // Don't need the JAR file any more, so remove it.
-            ant.delete(file: "${dir}/${src}", failonerror:false)
+            ant.delete(file: "${dir}/${src}", failonerror: false)
         }
     }
 

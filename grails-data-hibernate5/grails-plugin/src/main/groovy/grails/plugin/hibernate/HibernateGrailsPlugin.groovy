@@ -67,12 +67,12 @@ class HibernateGrailsPlugin extends Plugin {
     Set<String> dataSourceNames
 
     Closure doWithSpring() {
-        {->
+        { ->
             ConfigurableApplicationContext applicationContext = (ConfigurableApplicationContext) applicationContext
 
             GrailsApplication grailsApplication = grailsApplication
             Config config = grailsApplication.config
-            if(config instanceof PropertySourcesConfig) {
+            if (config instanceof PropertySourcesConfig) {
                 ConfigurableConversionService conversionService = applicationContext.getEnvironment().getConversionService()
                 conversionService.addConverter(new Converter<String, Class>() {
                     @Override
@@ -82,7 +82,6 @@ class HibernateGrailsPlugin extends Plugin {
                 })
                 ((PropertySourcesConfig)config).setConversionService(conversionService)
             }
-
 
             def domainClasses = grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE)
                                                  .collect() { GrailsClass cls -> cls.clazz }
@@ -98,7 +97,6 @@ class HibernateGrailsPlugin extends Plugin {
             beans.call()
         }
     }
-
 
     @Override
     void onChange(Map<String, Object> event) {

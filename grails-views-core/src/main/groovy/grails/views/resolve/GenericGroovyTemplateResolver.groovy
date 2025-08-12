@@ -35,13 +35,13 @@ import org.grails.io.support.GrailsResourceUtils
 @CompileStatic
 @Slf4j
 class GenericGroovyTemplateResolver implements TemplateResolver {
+
     /**
      * The base directory to load templates in development mode
      */
     public static final char SLASH_CHAR = '/' as char
     public static final char DOT_CHAR = '.' as char
     public static final char UNDERSCORE_CHAR = '_' as char
-
 
     File baseDir = BuildSettings.BASE_DIR ? new File(BuildSettings.BASE_DIR, GrailsResourceUtils.VIEWS_DIR_PATH) : null
 
@@ -57,9 +57,9 @@ class GenericGroovyTemplateResolver implements TemplateResolver {
 
     @Override
     URL resolveTemplate(String path) {
-        if(baseDir != null) {
+        if (baseDir != null) {
             def f = new File(baseDir, path)
-            if(f.exists()) {
+            if (f.exists()) {
                 return f.toURI().toURL()
             }
         }
@@ -84,13 +84,13 @@ class GenericGroovyTemplateResolver implements TemplateResolver {
     }
 
     static String resolveTemplateName(String scope, String path) {
-        if(path.startsWith(File.separator) || path.startsWith('/')) {
+        if (path.startsWith(File.separator) || path.startsWith('/')) {
             path = path.substring(1) // remove leading path separator
         }
         path = path.replace(File.separatorChar, UNDERSCORE_CHAR)
         path = path.replace(SLASH_CHAR, UNDERSCORE_CHAR)
         path = path.replace(DOT_CHAR, UNDERSCORE_CHAR)
-        if(scope) {
+        if (scope) {
             scope = scope.replaceAll(/[\W\s]/, String.valueOf(UNDERSCORE_CHAR))
             path = "${scope}_${path}"
         }

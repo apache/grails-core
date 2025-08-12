@@ -33,6 +33,7 @@ import org.springframework.beans.factory.FactoryBean
  */
 @CompileStatic
 class PromiseFactoryBean extends PromiseFactoryBuilder implements FactoryBean<PromiseFactory> {
+
     @Override
     PromiseFactory getObject() throws Exception {
         PromiseFactory promiseFactory = build()

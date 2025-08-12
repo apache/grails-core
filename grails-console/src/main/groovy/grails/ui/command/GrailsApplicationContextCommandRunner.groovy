@@ -45,7 +45,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
     @Override
     ConfigurableApplicationContext run(String... args) {
         def command = ApplicationContextCommandRegistry.instance.findCommand(commandName)
-        if(command) {
+        if (command) {
 
             Object skipBootstrap = command.hasProperty('skipBootstrap')?.getProperty(command)
             if (skipBootstrap instanceof Boolean && !System.getProperty(Settings.SETTING_SKIP_BOOTSTRAP)) {
@@ -91,7 +91,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
      * @param args The first argument is the Command name, the last argument is the Application class name
      */
     static void main(String[] args) {
-        if(args.size() > 1) {
+        if (args.size() > 1) {
             Class applicationClass = null
             String className = args.last()
             try {

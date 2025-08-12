@@ -40,6 +40,7 @@ import org.apache.grails.common.compiler.GroovyTransformOrder
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 class JpaGormEntityTransformation extends GormEntityTransformation {
+
     private static final ClassNode MY_TYPE = new ClassNode(JpaEntity.class)
 
     @Override
@@ -62,7 +63,7 @@ class JpaGormEntityTransformation extends GormEntityTransformation {
 
     @Override
     void visit(ClassNode classNode, SourceUnit sourceUnit) {
-        if(!hasAnnotation(classNode, JPA_ENTITY_CLASS_NODE)) {
+        if (!hasAnnotation(classNode, JPA_ENTITY_CLASS_NODE)) {
             classNode.addAnnotation(JPA_ENTITY_ANNOTATION_NODE)
         }
         super.visit(classNode, sourceUnit)

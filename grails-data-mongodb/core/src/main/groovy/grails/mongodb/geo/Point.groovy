@@ -25,7 +25,8 @@ import groovy.transform.EqualsAndHashCode
  */
 @EqualsAndHashCode
 @CompileStatic
-class Point extends Shape implements GeoJSON{
+class Point extends Shape implements GeoJSON {
+
     /**
      * The x and y values that indicate the location of the point
      */
@@ -44,7 +45,7 @@ class Point extends Shape implements GeoJSON{
     /**
      * @return An array representation of the point
      */
-    double[] asArray() { [x,y] as double[] }
+    double[] asArray() { [x, y] as double[] }
 
     /**
      * @return A list representation of the point
@@ -72,10 +73,10 @@ class Point extends Shape implements GeoJSON{
      * @return A Point
      */
     static Point valueOf(List<Number> coords) {
-        if(coords.size() == 2) {
+        if (coords.size() == 2) {
             def x = coords.get(0)
             def y = coords.get(1)
-            if((x instanceof Number) && (y instanceof Number)) {
+            if ((x instanceof Number) && (y instanceof Number)) {
                 return new Point(x.doubleValue(), y.doubleValue())
             }
         }
@@ -89,13 +90,13 @@ class Point extends Shape implements GeoJSON{
      * @param index The index of the point
      * @return A Point
      */
-    static Point getPointAtIndex( List coords, int index ) {
+    static Point getPointAtIndex(List coords, int index) {
         def coord = coords.get(index)
-        if(coord instanceof Point) {
+        if (coord instanceof Point) {
             return (Point)coord
         }
-        else if(coord instanceof List) {
-            return valueOf( (List<Number>) coord )
+        else if (coord instanceof List) {
+            return valueOf((List<Number>) coord)
         }
         throw new IllegalArgumentException("Invalid coordinates: $coords")
     }

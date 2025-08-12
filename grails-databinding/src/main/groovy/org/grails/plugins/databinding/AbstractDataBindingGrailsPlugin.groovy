@@ -59,7 +59,7 @@ abstract class AbstractDataBindingGrailsPlugin extends Plugin {
 
     @Override
     Closure doWithSpring() {
-        {->
+        { ->
             def application = grailsApplication
             def config = application.config
             boolean trimStringsSetting = config.getProperty(Settings.TRIM_STRINGS, Boolean, true)
@@ -67,7 +67,6 @@ abstract class AbstractDataBindingGrailsPlugin extends Plugin {
             boolean dateParsingLenientSetting = config.getProperty(Settings.DATE_LENIENT_PARSING, Boolean, false)
             Integer autoGrowCollectionLimitSetting = config.getProperty(Settings.AUTO_GROW_COLLECTION_LIMIT, Integer, 256)
             List dateFormats = config.getProperty(Settings.DATE_FORMATS, List, DEFAULT_DATE_FORMATS)
-
 
             "${DataBindingUtils.DATA_BINDER_BEAN_NAME}"(GrailsWebDataBinder, grailsApplication) {
                 // trimStrings defaults to TRUE

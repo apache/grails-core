@@ -29,6 +29,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class MatchSpec {
+
     /**
      * The full method name
      */

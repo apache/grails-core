@@ -41,6 +41,7 @@ import static org.grails.datastore.mapping.reflect.AstUtils.implementsInterface
  */
 @CompileStatic
 class FindAllStringQueryImplementer extends AbstractStringQueryImplementer implements IterableServiceImplementer<GormEntity> {
+
     @Override
     protected boolean isCompatibleReturnType(ClassNode domainClass, MethodNode methodNode, ClassNode returnType, String prefix) {
         boolean isCompatibleReturnType = false

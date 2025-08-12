@@ -22,7 +22,6 @@ import groovy.transform.CompileStatic
 
 import jakarta.servlet.http.HttpSession
 
-
 /**
  *
  * Methods added to the {@link HttpSession} interface

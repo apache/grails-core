@@ -34,9 +34,10 @@ import grails.util.GrailsMetaClassUtils
  * @since 2.3
  */
 class CodecMetaClassSupport {
+
     static final Object[] EMPTY_ARGS = []
-    static final String ENCODE_AS_PREFIX= 'encodeAs'
-    static final String DECODE_PREFIX= 'decode'
+    static final String ENCODE_AS_PREFIX = 'encodeAs'
+    static final String DECODE_PREFIX = 'decode'
 
     /**
      * Adds "encodeAs*" and "decode*" metamethods for given codecClass
@@ -101,12 +102,12 @@ class CodecMetaClassSupport {
         }
 
         addMetaMethod(targetMetaClasses, encodeMethodName, encoderClosure)
-        if(codecFactory.encoder) {
+        if (codecFactory.encoder) {
             addAliasMetaMethods(targetMetaClasses, codecFactory.encoder.codecIdentifier.codecAliases, encodeMethodNameClosure, encoderClosure)
         }
 
         addMetaMethod(targetMetaClasses, decodeMethodName, decoderClosure)
-        if(codecFactory.decoder) {
+        if (codecFactory.decoder) {
             addAliasMetaMethods(targetMetaClasses, codecFactory.decoder.codecIdentifier.codecAliases, decodeMethodNameClosure, decoderClosure)
         }
     }

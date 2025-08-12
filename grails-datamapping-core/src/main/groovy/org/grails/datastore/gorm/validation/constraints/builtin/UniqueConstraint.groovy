@@ -52,12 +52,12 @@ class UniqueConstraint extends AbstractConstraint {
 
     UniqueConstraint(Class<?> constraintOwningClass, String constraintPropertyName, Object constraintParameter, MessageSource messageSource) {
         super(constraintOwningClass, constraintPropertyName, constraintParameter, messageSource)
-        if(constraintParameter instanceof Iterable) {
-            for(property in ((Iterable)constraintParameter)) {
+        if (constraintParameter instanceof Iterable) {
+            for (property in ((Iterable)constraintParameter)) {
                 group.add(property.toString())
             }
         }
-        else if(constraintParameter instanceof CharSequence) {
+        else if (constraintParameter instanceof CharSequence) {
             group.add(constraintParameter.toString())
         }
     }
@@ -90,13 +90,13 @@ class UniqueConstraint extends AbstractConstraint {
                     property = targetEntity.getPropertyByName(constraintPropertyName)
                 }
             }
-            constraintClass = targetEntity != null? targetEntity.javaClass: constraintClass
+            constraintClass = targetEntity != null ? targetEntity.javaClass : constraintClass
         }
 
         // Re-create the detached criteria based on the new constraint class
         detachedCriteria = new DetachedCriteria(constraintClass)
 
-        if(targetEntity == null) {
+        if (targetEntity == null) {
             throw new IllegalStateException("Cannot validate object [$target]. It is not a persistent entity")
         }
 
@@ -104,23 +104,23 @@ class UniqueConstraint extends AbstractConstraint {
         String constraintPropertyName = this.constraintPropertyName
         List group = this.group
 
-        if(target instanceof DirtyCheckable) {
+        if (target instanceof DirtyCheckable) {
             Boolean anyChanges = target.hasChanged(constraintPropertyName)
-            for(prop in group) {
+            for (prop in group) {
                 anyChanges |= target.hasChanged(prop.toString())
             }
-            if(!anyChanges) {
+            if (!anyChanges) {
                 return
             }
         }
 
         PersistentProperty persistentProperty = targetEntity.getPropertyByName(constraintPropertyName)
         boolean isToOne = persistentProperty instanceof ToOne
-        if(isToOne) {
+        if (isToOne) {
             PersistentEntity association = ((Association) persistentProperty).getAssociatedEntity()
             if (!association.mappingContext.proxyHandler.isProxy(propertyValue)) {
                 def associationId = association.reflector.getIdentifier(propertyValue)
-                if(associationId == null) {
+                if (associationId == null) {
                     // unsaved entity
                     return
                 }
@@ -184,7 +184,6 @@ class UniqueConstraint extends AbstractConstraint {
             }
         }
     }
-
 
     @Override
     boolean supports(Class type) {

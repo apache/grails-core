@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class Plant implements Serializable {
+
     Long id
     Long version
     boolean goesInPatch

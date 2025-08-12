@@ -24,6 +24,7 @@ import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 
 @Entity
 class UniqueGroup implements Serializable, DirtyCheckable {
+
     Long id
     Long version
     String name

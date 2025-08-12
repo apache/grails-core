@@ -42,7 +42,7 @@ class MkdirStep extends AbstractStep {
     MkdirStep(ProfileCommand command, Map<String, Object> parameters) {
         super(command, parameters)
         location = parameters.location
-        if(!location) {
+        if (!location) {
             throw new CommandException('Location not specified for mkdir step')
         }
     }
@@ -53,7 +53,7 @@ class MkdirStep extends AbstractStep {
     @Override
     boolean handle(ExecutionContext context) {
         def args = context.commandLine.remainingArgs
-        if(args) {
+        if (args) {
             def name = args[0]
             def variableResolver = new ArtefactVariableResolver(name)
             File destination = variableResolver.resolveFile(location, context)

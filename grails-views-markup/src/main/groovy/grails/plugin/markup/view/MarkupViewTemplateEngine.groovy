@@ -49,7 +49,6 @@ class MarkupViewTemplateEngine extends ResolvableGroovyTemplateEngine {
     public static final String VIEW_BASE_CLASS = 'grails.views.markup.baseClass'
     public static final String COMPILE_STATIC = 'grails.views.markup.compileStatic'
 
-
     MarkupTemplateEngine innerEngine
 
     private final boolean compileStatic
@@ -69,10 +68,6 @@ class MarkupViewTemplateEngine extends ResolvableGroovyTemplateEngine {
         })
         prepareCustomizers(this.compilerConfiguration)
     }
-
-
-
-
 
     @Override
     WritableScriptTemplate createTemplate(String path, URL url) throws CompilationFailedException, ClassNotFoundException, IOException {
@@ -136,18 +131,18 @@ class MarkupViewTemplateEngine extends ResolvableGroovyTemplateEngine {
 
     @Override
     protected void prepareCustomizers(CompilerConfiguration cc) {
-        if(innerEngine != null) {
+        if (innerEngine != null) {
 
-            innerEngine.compilerConfiguration.compilationCustomizers.removeAll( this.compilerConfiguration.compilationCustomizers )
+            innerEngine.compilerConfiguration.compilationCustomizers.removeAll(this.compilerConfiguration.compilationCustomizers)
             CompilerConfiguration newConfig = new CompilerConfiguration(this.compilerConfiguration)
             super.prepareCustomizers(newConfig)
 
-            if(compileStatic) {
+            if (compileStatic) {
                 newConfig.addCompilationCustomizers(
                         new ASTTransformationCustomizer(Collections.singletonMap('extensions', 'groovy.text.markup.MarkupTemplateTypeCheckingExtension'), CompileStatic.class))
             }
 
-            innerEngine.compilerConfiguration.addCompilationCustomizers( newConfig.compilationCustomizers as CompilationCustomizer[])
+            innerEngine.compilerConfiguration.addCompilationCustomizers(newConfig.compilationCustomizers as CompilationCustomizer[])
         }
 
     }

@@ -19,8 +19,8 @@
 
 package grails.doc.dropdown
 
-
 class Snapshot implements Comparable<Snapshot>, Serializable {
+
     private static final long serialVersionUID = 1L
 
     private String text

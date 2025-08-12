@@ -32,6 +32,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class FactoriesLoaderSupport {
+
     /** The location to look for the factories. Can be present in multiple JAR files. */
     static final String FACTORIES_RESOURCE_LOCATION = 'META-INF/grails.factories'
 

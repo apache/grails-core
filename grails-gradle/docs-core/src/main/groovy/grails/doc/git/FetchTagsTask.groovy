@@ -68,7 +68,7 @@ abstract class FetchTagsTask extends Exec {
                 file.mkdirs()
             }
 
-            if(ignoreExitValue) {
+            if (ignoreExitValue) {
                 logger.lifecycle('not a git repo, so assuming a default tag of {}', defaultTag.get())
             }
 

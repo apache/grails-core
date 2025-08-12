@@ -90,15 +90,15 @@ class JsonRenderer <T> extends DefaultJsonRenderer<T> {
                     return excludes.contains(property)
                 }
             }
-            if(includes?.contains(GormProperties.VERSION)) {
+            if (includes?.contains(GormProperties.VERSION)) {
                 domainClassMarshaller.includeVersion = true
             }
-            if(includes?.contains('class')) {
+            if (includes?.contains('class')) {
                 domainClassMarshaller.includeClass = true
             }
 
             marshaller = domainClassMarshaller
-        } else if(!Collection.isAssignableFrom(targetType) && !Map.isAssignableFrom(targetType)) {
+        } else if (!Collection.isAssignableFrom(targetType) && !Map.isAssignableFrom(targetType)) {
             marshaller = (ObjectMarshaller<JSON>)new GroovyBeanMarshaller() {
                 @Override
                 protected boolean includesProperty(Object o, String property) {
@@ -111,7 +111,7 @@ class JsonRenderer <T> extends DefaultJsonRenderer<T> {
                 }
             }
         }
-        if(marshaller) {
+        if (marshaller) {
 
             registerCustomMarshaller(marshaller)
         }

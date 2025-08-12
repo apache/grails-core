@@ -59,7 +59,7 @@ class GlobalJpaEntityTransform extends AbstractASTTransformation implements ASTT
     }
 
     void visitClass(ClassNode classNode, SourceUnit source) {
-        if(hasAnnotation(classNode, ClassHelper.make(Entity))) {
+        if (hasAnnotation(classNode, ClassHelper.make(Entity))) {
             def jpaEntityTransformation = new JpaGormEntityTransformation()
             jpaEntityTransformation.compilationUnit = compilationUnit
             jpaEntityTransformation.visit(classNode, source)

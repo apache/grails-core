@@ -229,7 +229,6 @@ class GrailsApp extends SpringApplication {
                 }
             }
 
-
             developmentModeActive = true
             Thread.start {
                 CompilerConfiguration compilerConfig = new CompilerConfiguration()
@@ -238,7 +237,6 @@ class GrailsApp extends SpringApplication {
                 while (isDevelopmentModeActive()) {
                     // Workaround for some IDE / OS combos - 2 events (new + update) for the same file
                     def uniqueChangedFiles = changedFiles as Set
-
 
                     def i = uniqueChangedFiles.size()
                     try {

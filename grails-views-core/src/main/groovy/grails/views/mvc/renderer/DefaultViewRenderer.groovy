@@ -45,6 +45,7 @@ import org.grails.web.util.GrailsApplicationAttributes
 @InheritConstructors
 @CompileStatic
 abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
+
     public static final String MODEL_OBJECT = 'object'
     final SmartViewResolver viewResolver
 
@@ -54,22 +55,20 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
 
     final Renderer defaultRenderer
 
-
     DefaultViewRenderer(Class<T> targetType, MimeType mimeType, SmartViewResolver viewResolver, ProxyHandler proxyHandler, RendererRegistry rendererRegistry, Renderer defaultRenderer) {
-        super(targetType,mimeType)
+        super(targetType, mimeType)
         this.viewResolver = viewResolver
         this.proxyHandler = proxyHandler
         this.rendererRegistry = rendererRegistry
         this.defaultRenderer = defaultRenderer
     }
 
-
     @Override
     void render(T object, RenderContext context) {
         def arguments = context.arguments
         def ct = arguments?.contentType
 
-        if(ct) {
+        if (ct) {
             context.setContentType(ct.toString())
         }
         else {
@@ -108,8 +107,8 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
             view = (AbstractUrlBasedView)viewResolver.resolveView(viewUri, request, response)
         }
 
-        if(view == null) {
-            if(proxyHandler != null) {
+        if (view == null) {
+            if (proxyHandler != null) {
                 object = (T)proxyHandler.unwrapIfProxy(object)
             }
 
@@ -118,18 +117,18 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
             view = (AbstractUrlBasedView)viewResolver.resolveView(cls, request, response)
         }
 
-        if(view != null) {
+        if (view != null) {
             Map<String, ?> model
-            if(object instanceof Map) {
+            if (object instanceof Map) {
                 def map = (Map) object
                 model = map
-                if(view == viewResolver.objectView) {
+                if (view == viewResolver.objectView) {
                     // avoid stack overflow by making a copy of the map
                     model.put(MODEL_OBJECT, new LinkedHashMap(map))
                 }
             } else {
                 model = [(resolveModelVariableName(object)): object]
-                if(view == viewResolver.objectView) {
+                if (view == viewResolver.objectView) {
                     model.put(MODEL_OBJECT, object)
                 }
             }

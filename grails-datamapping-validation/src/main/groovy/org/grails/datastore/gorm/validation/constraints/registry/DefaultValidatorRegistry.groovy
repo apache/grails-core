@@ -61,7 +61,7 @@ class DefaultValidatorRegistry implements ValidatorRegistry, ConstraintRegistry,
         this.mappingContext = mappingContext
     }
 
-    protected Map<String, Object> resolveDefaultConstraints( ConnectionSourceSettings connectionSourceSettings ) {
+    protected Map<String, Object> resolveDefaultConstraints(ConnectionSourceSettings connectionSourceSettings) {
         Closure defaultConstraints = connectionSourceSettings.default.constraints
         Map<String, Object> defaultConstraintsMap = null
         if (defaultConstraints != null) {
@@ -78,7 +78,7 @@ class DefaultValidatorRegistry implements ValidatorRegistry, ConstraintRegistry,
     @Override
     Validator getValidator(PersistentEntity entity) {
         Validator validator = validatorMap.get(entity)
-        if(validator != null) {
+        if (validator != null) {
             return validator
         }
         else {

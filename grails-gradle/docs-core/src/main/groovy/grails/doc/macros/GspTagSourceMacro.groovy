@@ -33,12 +33,11 @@ class GspTagSourceMacro extends BaseMacro implements Serializable {
 
     @Internal
     protected String description = ' '
+
     @Internal
     protected String[] paramDescription = {}
 
     private static final long serialVersionUID = 0L
-
-
 
     @Input
     List baseDirs
@@ -55,14 +54,14 @@ class GspTagSourceMacro extends BaseMacro implements Serializable {
         def source = params.params.get('0')
 
         def i = source.indexOf('=')
-        def type = source[0..i-1]
-        def name = source[i+1..-1]
+        def type = source[0..i - 1]
+        def name = source[i + 1..-1]
 
         switch (type) {
             case 'tag':
                 def j = name.indexOf('.')
-                def className = name[0..j-1]
-                def tagName = name[j+1..-1]
+                def className = name[0..j - 1]
+                def tagName = name[j + 1..-1]
 
                 // Recursively search for the tag library source file in the
                 // configured base directory.

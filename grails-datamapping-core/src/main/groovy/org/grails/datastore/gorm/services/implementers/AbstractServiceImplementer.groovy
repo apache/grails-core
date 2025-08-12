@@ -71,7 +71,7 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
         def alreadyImplemented = methodNode.getNodeMetaData(IMPLEMENTED)
 
         String prefix = resolvePrefix(methodNode)
-        if(!alreadyImplemented && prefix) {
+        if (!alreadyImplemented && prefix) {
             ClassNode returnType = methodNode.returnType
             return isCompatibleReturnType(domainClass, methodNode, returnType, prefix)
         }
@@ -91,7 +91,6 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
      * @return True if it is a compatible return type
      */
     protected abstract boolean isCompatibleReturnType(ClassNode domainClass, MethodNode methodNode, ClassNode returnType, String prefix)
-
 
     /**
      * Copies annotation from the abstract method to the implementation method
@@ -117,12 +116,12 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
      * @return True if it is
      */
     protected boolean isValidParameter(ClassNode domainClassNode, Parameter parameter, String parameterName) {
-        if(GormProperties.IDENTITY.equals(parameterName)) {
+        if (GormProperties.IDENTITY.equals(parameterName)) {
             return true
         }
         else {
             ClassNode propertyType = AstPropertyResolveUtils.getPropertyType(domainClassNode, parameterName)
-            if(propertyType != null && (propertyType == parameter.type || AstUtils.isSubclassOf(parameter.type, propertyType.name))) {
+            if (propertyType != null && (propertyType == parameter.type || AstUtils.isSubclassOf(parameter.type, propertyType.name))) {
                 return true
             }
         }
@@ -140,32 +139,32 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
      * @return The datastore expression
      */
     protected Expression transactionalDatastore() {
-        return castX( ClassHelper.make(TransactionCapableDatastore), propX(varX('this'), 'targetDatastore'))
+        return castX(ClassHelper.make(TransactionCapableDatastore), propX(varX('this'), 'targetDatastore'))
     }
 
     /**
      * @return The datastore expression
      */
     protected Expression multiTenantDatastore() {
-        return castX( ClassHelper.make(MultiTenantCapableDatastore), propX(varX('this'), 'targetDatastore'))
+        return castX(ClassHelper.make(MultiTenantCapableDatastore), propX(varX('this'), 'targetDatastore'))
     }
 
     /**
      * @return The tenant service
      */
     protected Expression tenantService() {
-        return callD(ServiceRegistry, 'targetDatastore', 'getService', classX(make(TenantService)) )
+        return callD(ServiceRegistry, 'targetDatastore', 'getService', classX(make(TenantService)))
     }
 
     /**
      * @return The transaction service
      */
     protected Expression transactionService() {
-        return callD(ServiceRegistry, 'targetDatastore', 'getService', classX(make(TransactionService)) )
+        return callD(ServiceRegistry, 'targetDatastore', 'getService', classX(make(TransactionService)))
     }
 
     protected Expression findConnectionId(MethodNode methodNode) {
-        if(TenantTransform.hasTenantAnnotation(methodNode)) {
+        if (TenantTransform.hasTenantAnnotation(methodNode)) {
             return callD(classX(ClassHelper.make(MultiTenancySettings)), 'resolveConnectionForTenantId', args(
                 propX(multiTenantDatastore(), 'multiTenancyMode'), callD(tenantService(), 'currentId')
             ))
@@ -173,8 +172,8 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
         else {
             AnnotationNode ann = TransactionalTransform.findTransactionalAnnotation(methodNode)
             Expression connectionId = ann?.getMember('connection')
-            if(connectionId == null) {
-                connectionId= ann?.getMember('value')
+            if (connectionId == null) {
+                connectionId = ann?.getMember('value')
             }
             return connectionId
         }
@@ -194,7 +193,7 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
 
     protected Expression findInstanceApiForConnectionId(ClassNode domainClass, MethodNode methodNode) {
         Expression connectionId = findConnectionId(methodNode)
-        if(connectionId != null) {
+        if (connectionId != null) {
             return buildInstanceApiLookup(domainClass, connectionId)
         }
         else {
@@ -204,7 +203,7 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
 
     protected Expression findStaticApiForConnectionId(ClassNode domainClass, MethodNode methodNode) {
         Expression connectionId = findConnectionId(methodNode)
-        if(connectionId != null) {
+        if (connectionId != null) {
             return buildStaticApiLookup(domainClass, connectionId)
         }
         else {

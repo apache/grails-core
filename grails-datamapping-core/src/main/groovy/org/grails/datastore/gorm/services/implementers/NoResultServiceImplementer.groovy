@@ -25,5 +25,4 @@ package org.grails.datastore.gorm.services.implementers
  * @author Graeme Rocher
  * @since 6.1.1
  */
-interface NoResultServiceImplementer extends PrefixedServiceImplementer {
-}
+interface NoResultServiceImplementer extends PrefixedServiceImplementer {}

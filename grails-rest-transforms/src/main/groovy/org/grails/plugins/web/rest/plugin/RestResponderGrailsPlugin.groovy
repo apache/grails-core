@@ -38,6 +38,7 @@ import org.grails.plugins.web.rest.render.DefaultRendererRegistry
  * @author Graeme Rocher
  */
 class RestResponderGrailsPlugin extends Plugin {
+
     private static final Log LOG = LogFactory.getLog(RestResponderGrailsPlugin)
 
     def version = GrailsUtil.getGrailsVersion()
@@ -48,7 +49,7 @@ class RestResponderGrailsPlugin extends Plugin {
 
     @Override
     Closure doWithSpring() {
-        {->
+        { ->
 
             def application = grailsApplication
             RestResponderGrailsPlugin.registryResourceControllers(application)
@@ -67,11 +68,11 @@ class RestResponderGrailsPlugin extends Plugin {
 
     @CompileStatic
     static void registryResourceControllers(GrailsApplication app) {
-        for(GrailsClass grailsClass in app.getArtefacts(DomainClassArtefactHandler.TYPE)) {
+        for (GrailsClass grailsClass in app.getArtefacts(DomainClassArtefactHandler.TYPE)) {
             final clazz = grailsClass.clazz
             if (clazz.getAnnotation(Resource)) {
                 String controllerClassName = "${clazz.name}Controller"
-                if (!app.getArtefact(ControllerArtefactHandler.TYPE,controllerClassName)) {
+                if (!app.getArtefact(ControllerArtefactHandler.TYPE, controllerClassName)) {
                     try {
                         app.addArtefact(ControllerArtefactHandler.TYPE, app.classLoader.loadClass(controllerClassName))
                     } catch (ClassNotFoundException cnfe) {

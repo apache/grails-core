@@ -90,16 +90,16 @@ class MongoDbDataStoreSpringInitializer extends AbstractDatastoreInitializer {
             callable.delegate = delegate
             callable.call()
             ApplicationEventPublisher eventPublisher
-            if(beanDefinitionRegistry instanceof ConfigurableApplicationContext){
+            if (beanDefinitionRegistry instanceof ConfigurableApplicationContext) {
                 eventPublisher = new ConfigurableApplicationContextEventPublisher((ConfigurableApplicationContext)beanDefinitionRegistry)
             }
-            else if(resourcePatternResolver.resourceLoader instanceof ConfigurableApplicationContext) {
+            else if (resourcePatternResolver.resourceLoader instanceof ConfigurableApplicationContext) {
                 eventPublisher = new ConfigurableApplicationContextEventPublisher((ConfigurableApplicationContext)resourcePatternResolver.resourceLoader)
             }
             else {
                 eventPublisher = new DefaultApplicationEventPublisher()
             }
-            if(mongo == null) {
+            if (mongo == null) {
                 mongoConnectionSourceFactory(MongoConnectionSourceFactory) { bean ->
                     bean.autowire = true
                 }
@@ -134,7 +134,7 @@ class MongoDbDataStoreSpringInitializer extends AbstractDatastoreInitializer {
             }
 
             loadDataServices(secondaryDatastore ? 'mongo' : null)
-                    .each {serviceName, serviceClass->
+                    .each { serviceName, serviceClass ->
                         "$serviceName"(DatastoreServiceMethodInvokingFactoryBean, serviceClass) {
                             targetObject = ref('mongoDatastore')
                             targetMethod = 'getService'
@@ -144,8 +144,6 @@ class MongoDbDataStoreSpringInitializer extends AbstractDatastoreInitializer {
 
         }
     }
-
-
 
     /**
      * Sets the name of the Mongo bean to use

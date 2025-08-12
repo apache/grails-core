@@ -159,7 +159,7 @@ class GrailsVersion implements Comparable<GrailsVersion> {
      * @return Obtains the current Grails version
      */
     static GrailsVersion getCurrent() {
-        if(currentVersion != null) {
+        if (currentVersion != null) {
             return currentVersion
         }
         else if (ClassUtils.isPresent('grails.util.BuildSettings')) {

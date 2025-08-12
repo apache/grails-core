@@ -63,12 +63,11 @@ abstract class AbstractProjectionImplementer extends AbstractDetachedCriteriaSer
     }
 
     protected boolean isValidPropertyType(ClassNode returnType, ClassNode propertyType) {
-        if(propertyType == null) return false
+        if (propertyType == null) return false
         else {
             returnType == propertyType || AstUtils.isSubclassOfOrImplementsInterface(returnType, propertyType)
         }
     }
-
 
     @Override
     protected boolean lookupById() {
@@ -79,7 +78,6 @@ abstract class AbstractProjectionImplementer extends AbstractDetachedCriteriaSer
     void implementById(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode, BlockStatement body, Expression byIdLookup) {
         // no-op
     }
-
 
     @Override
     void implementWithQuery(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode, BlockStatement body, VariableExpression detachedCriteriaVar, Expression queryArgs) {

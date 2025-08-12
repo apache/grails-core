@@ -45,6 +45,7 @@ import org.springframework.util.ClassUtils
  */
 @CompileStatic
 class PersistenceContextInterceptorAggregator implements BeanDefinitionRegistryPostProcessor, Ordered {
+
     Pattern persistenceInterceptorBeanNamePattern = ~/^.*[pP]ersistenceInterceptor$/
     String aggregatorBeanName = 'persistenceInterceptor'
     Class aggregatorBeanClass = ClassUtils.forName('org.grails.datastore.gorm.support.AggregatePersistenceContextInterceptor', Thread.currentThread().contextClassLoader)
@@ -56,7 +57,7 @@ class PersistenceContextInterceptorAggregator implements BeanDefinitionRegistryP
 
     protected createAggregatePersistenceContextInterceptorOnDemand(BeanDefinitionRegistry registry) {
         Collection<String> persistenceInterceptorBeanNames = findPersistenceInterceptorBeanNames(registry)
-        if(persistenceInterceptorBeanNames.size() > 1) {
+        if (persistenceInterceptorBeanNames.size() > 1) {
             ManagedList interceptorBeans = moveInterceptorBeansToManagedList(registry, persistenceInterceptorBeanNames)
             registry.registerBeanDefinition(aggregatorBeanName, createAggregateBeanDefinition(interceptorBeans))
         }

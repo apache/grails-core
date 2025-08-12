@@ -38,23 +38,23 @@ import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundExcept
  * @since 6.0
  */
 @CompileStatic
-class SubDomainTenantResolver implements TenantResolver{
+class SubDomainTenantResolver implements TenantResolver {
 
     @Override
     Serializable resolveTenantIdentifier() {
 
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes()
-        if(requestAttributes instanceof ServletWebRequest) {
+        if (requestAttributes instanceof ServletWebRequest) {
 
             HttpServletRequest httpServletRequest = ((ServletWebRequest) requestAttributes).getRequest()
             String subdomain = httpServletRequest.getRequestURL().toString()
             String requestURI = httpServletRequest.getRequestURI()
             def i = requestURI.length()
-            if(i > 0) {
-                subdomain = subdomain.substring(0, subdomain.length()-i)
+            if (i > 0) {
+                subdomain = subdomain.substring(0, subdomain.length() - i)
             }
             subdomain = subdomain.substring(subdomain.indexOf('/') + 2)
-            if( subdomain.indexOf('.') > -1 ) {
+            if (subdomain.indexOf('.') > -1) {
                 return subdomain.substring(0, subdomain.indexOf('.'))
             }
             else {

@@ -104,7 +104,6 @@ class DefaultJsonViewHelper extends DefaultGrailsViewHelper {
         }
     }
 
-
     protected Class getGenericType(Class declaringClass, PropertyDescriptor descriptor) {
         def field = ReflectionUtils.findField(declaringClass, descriptor.getName())
         if (field != null) {

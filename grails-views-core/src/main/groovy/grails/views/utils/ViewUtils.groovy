@@ -57,11 +57,11 @@ class ViewUtils {
      * @return A list of strings
      */
     static List<String> getStringListFromMap(String key, Map map, List<String> defaultValue = []) {
-        if(map == null) return defaultValue
+        if (map == null) return defaultValue
 
-        if(map.containsKey(key)) {
+        if (map.containsKey(key)) {
             def o = map.get(key)
-            if(o instanceof Iterable) {
+            if (o instanceof Iterable) {
                 return ((Iterable)o).toList() as List<String>
             }
             else {

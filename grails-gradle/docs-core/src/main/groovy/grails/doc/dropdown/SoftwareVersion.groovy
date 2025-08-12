@@ -20,6 +20,7 @@
 package grails.doc.dropdown
 
 class SoftwareVersion implements Comparable<SoftwareVersion>, Serializable {
+
     private static final long serialVersionUID = 1L
 
     int major

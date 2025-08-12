@@ -72,6 +72,7 @@ import org.grails.datastore.mapping.model.types.TenantId
  */
 @CompileStatic
 class BsonPersistentEntityCodec implements Codec {
+
     public static final EncoderContext DEFAULT_ENCODER_CONTEXT = EncoderContext.builder().build()
     public static final DecoderContext DEFAULT_DECODER_CONTEXT = DecoderContext.builder().build()
     private static final Map<Class<? extends PersistentProperty>, PropertyEncoder> ENCODERS = [:]
@@ -124,41 +125,41 @@ class BsonPersistentEntityCodec implements Codec {
         boolean abortReading = false
 
         final boolean hasDynamicAttributes = instance instanceof DynamicAttributes
-        while(bsonType != BsonType.END_OF_DOCUMENT) {
+        while (bsonType != BsonType.END_OF_DOCUMENT) {
 
             def name = bsonReader.readName()
-            if(!abortReading) {
+            if (!abortReading) {
 
-                if(isDiscriminatorProperty(name)) {
+                if (isDiscriminatorProperty(name)) {
                     def childEntity = mappingContext
                             .getChildEntityByDiscriminator(persistentEntity.rootEntity, bsonReader.readString())
-                    if(childEntity != null) {
+                    if (childEntity != null) {
                         persistentEntity = childEntity
                         instance = childEntity
                                 .newInstance()
                         def newAccess = createEntityAccess(childEntity, instance)
-                        newAccess.setIdentifierNoConversion( access.identifier )
+                        newAccess.setIdentifierNoConversion(access.identifier)
                         access = newAccess
                     }
                     bsonType = bsonReader.readBsonType()
                     continue
                 }
 
-                if(isIdentifierProperty(name)) {
-                    getPropertyDecoder(Identity).decode( bsonReader, (Identity)persistentEntity.identity, access, decoderContext, codecRegistry)
+                if (isIdentifierProperty(name)) {
+                    getPropertyDecoder(Identity).decode(bsonReader, (Identity)persistentEntity.identity, access, decoderContext, codecRegistry)
                     Object cachedInstance = retrieveCachedInstance(access)
 
-                    if(cachedInstance != null) {
+                    if (cachedInstance != null) {
                         instance = cachedInstance
                         abortReading = true
                     }
                 }
                 else {
                     PersistentProperty property = persistentEntity.getPropertyByName(name)
-                    if(property && bsonType != BsonType.NULL) {
+                    if (property && bsonType != BsonType.NULL) {
                         def propKind = property.getClass().superclass
 
-                        if(CharSequence.isAssignableFrom(property.type) && bsonType == BsonType.STRING) {
+                        if (CharSequence.isAssignableFrom(property.type) && bsonType == BsonType.STRING) {
                             access.setPropertyNoConversion(property.name, bsonReader.readString())
                         }
                         else {
@@ -166,7 +167,7 @@ class BsonPersistentEntityCodec implements Codec {
                         }
 
                     }
-                    else if(!abortReading && hasDynamicAttributes) {
+                    else if (!abortReading && hasDynamicAttributes) {
                         readSchemaless(bsonReader, ((DynamicAttributes)instance), name, decoderContext)
                     }
                     else {
@@ -175,7 +176,7 @@ class BsonPersistentEntityCodec implements Codec {
 
                 }
             }
-            else if(!abortReading){
+            else if (!abortReading) {
                 readSchemaless(bsonReader, ((DynamicAttributes)instance), name, decoderContext)
             }
             else {
@@ -187,10 +188,8 @@ class BsonPersistentEntityCodec implements Codec {
 
         readingComplete(access)
 
-
         return instance
     }
-
 
     void encode(BsonWriter writer, Object value, EncoderContext encoderContext = DEFAULT_ENCODER_CONTEXT) {
         encode(writer, value, encoderContext, true)
@@ -201,7 +200,7 @@ class BsonPersistentEntityCodec implements Codec {
         def access = createEntityAccess(value)
         def entity = access.persistentEntity
 
-        if(!entity.isRoot()) {
+        if (!entity.isRoot()) {
             def discriminatorName = getDiscriminatorAttributeName()
             def discriminator = entity.discriminator
             writer.writeName(discriminatorName)
@@ -210,7 +209,7 @@ class BsonPersistentEntityCodec implements Codec {
 
         if (includeIdentifier) {
             def id = access.getIdentifier()
-            if(id != null) {
+            if (id != null) {
                 getPropertyEncoder(Identity).encode writer, (Identity)entity.identity, id, access, encoderContext, codecRegistry
             }
         }
@@ -224,12 +223,12 @@ class BsonPersistentEntityCodec implements Codec {
             }
         }
 
-        if(value instanceof DynamicAttributes) {
+        if (value instanceof DynamicAttributes) {
             def attributes = ((DynamicAttributes) value).attributes()
             writeAttributes(attributes, writer, encoderContext)
         }
 
-        beforeFinishDocument(writer,access)
+        beforeFinishDocument(writer, access)
         writer.writeEndDocument()
         writer.flush()
         writingComplete(access)
@@ -245,11 +244,11 @@ class BsonPersistentEntityCodec implements Codec {
         def entity = access.persistentEntity
 
         def proxyFactory = mappingContext.proxyFactory
-        if( proxyFactory.isProxy(value) ) {
+        if (proxyFactory.isProxy(value)) {
             value = proxyFactory.unwrap(value)
         }
 
-        if(value instanceof DirtyCheckable) {
+        if (value instanceof DirtyCheckable) {
             BsonWriter writer = new BsonDocumentWriter(update)
             writer.writeStartDocument()
             DirtyCheckable dirty = (DirtyCheckable)value
@@ -258,35 +257,35 @@ class BsonPersistentEntityCodec implements Codec {
             def dirtyProperties = new ArrayList<String>(dirty.listDirtyPropertyNames())
             boolean isNew = dirtyProperties.isEmpty() && dirty.hasChanged()
             def isVersioned = entity.isVersioned()
-            if(isNew) {
+            if (isNew) {
                 // if it is new it can only be an embedded entity that has now been updated
                 // so we get all properties
                 dirtyProperties = entity.persistentPropertyNames
 
-                if(isVersioned) {
+                if (isVersioned) {
                     EntityPersister.incrementEntityVersion(access)
                 }
 
             }
             else {
                 // schedule lastUpdated if necessary
-                if( entity.getPropertyByName(GormProperties.LAST_UPDATED) != null) {
+                if (entity.getPropertyByName(GormProperties.LAST_UPDATED) != null) {
                     dirtyProperties.add(GormProperties.LAST_UPDATED)
                 }
             }
 
-            for(propertyName in dirtyProperties) {
+            for (propertyName in dirtyProperties) {
                 def prop = entity.getPropertyByName(propertyName)
-                if(prop != null) {
+                if (prop != null) {
 
                     processed << propertyName
                     Object v = access.getProperty(prop.name)
                     if (v != null) {
-                        if(prop instanceof Embedded) {
+                        if (prop instanceof Embedded) {
                             writer.writeName(prop.name)
                             encodeUpdate(v, createEntityAccess(((Embedded)prop).associatedEntity, v), encoderContext, true)
                         }
-                        else if(prop instanceof EmbeddedCollection) {
+                        else if (prop instanceof EmbeddedCollection) {
                             // TODO: embedded collections
                         }
                         else {
@@ -298,18 +297,18 @@ class BsonPersistentEntityCodec implements Codec {
                         }
 
                     }
-                    else if(embedded || !isNew) {
+                    else if (embedded || !isNew) {
                         writer.writeName(propertyName)
                         writer.writeNull()
                     }
                 }
             }
 
-            if(value instanceof DynamicAttributes) {
+            if (value instanceof DynamicAttributes) {
                 Map<String, Object> attributes = ((DynamicAttributes) value).attributes()
-                for(attr in attributes.keySet()) {
+                for (attr in attributes.keySet()) {
                     Object v = attributes.get(attr)
-                    if(v == null) {
+                    if (v == null) {
                         writer.writeName(attr)
                         writer.writeNull()
                     }
@@ -411,12 +410,12 @@ class BsonPersistentEntityCodec implements Codec {
         def codec = codecRegistry.get(targetClass)
 
         BsonValue bsonValue = (BsonValue)codec.decode(bsonReader, decoderContext)
-        if(bsonValue != null) {
+        if (bsonValue != null) {
 
             def converter = CodecExtensions.getBsonConverter(bsonValue.getClass())
             dynamicAttributes.putAt(
                     name,
-                    converter != null ? converter.convert( bsonValue ) : bsonValue
+                    converter != null ? converter.convert(bsonValue) : bsonValue
             )
         }
     }
@@ -441,7 +440,6 @@ class BsonPersistentEntityCodec implements Codec {
         def discriminatorName = getDiscriminatorAttributeName()
         return discriminatorName != null && name.equals(discriminatorName)
     }
-
 
     /**
      * Obtains the property encoder for the given property type

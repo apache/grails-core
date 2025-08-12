@@ -35,5 +35,4 @@ import org.junit.jupiter.api.BeforeEach
  */
 @Deprecated
 @AnnotationCollector([BeforeEach, RunOnce])
-@interface OnceBefore {
-}
+@interface OnceBefore {}

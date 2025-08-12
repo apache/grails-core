@@ -32,7 +32,6 @@ import org.grails.datastore.mapping.core.Ordered
 @CompileStatic
 class OrderedComparator<T> implements Comparator<T> {
 
-
     /**
      * Useful constant for the highest precedence value.
      * @see java.lang.Integer#MIN_VALUE

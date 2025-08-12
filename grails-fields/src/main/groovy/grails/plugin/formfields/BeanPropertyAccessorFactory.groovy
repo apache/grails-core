@@ -142,7 +142,7 @@ class BeanPropertyAccessorFactory implements GrailsApplicationAware {
     }
 
     private static Class resolveDomainPropertyType(PersistentEntity beanClass, String propertyName) {
-        if(beanClass) {
+        if (beanClass) {
             String propertyNameWithoutIndex = stripIndex(propertyName)
             PersistentProperty persistentProperty = beanClass.getPropertyByName(propertyNameWithoutIndex)
             if (!persistentProperty && beanClass.isIdentityName(propertyNameWithoutIndex)) {
@@ -207,6 +207,5 @@ class BeanPropertyAccessorFactory implements GrailsApplicationAware {
         def matcher = propertyName =~ INDEXED_PROPERTY_PATTERN
         matcher.matches() ? (matcher[0] as String[])[1] : propertyName
     }
-
 
 }

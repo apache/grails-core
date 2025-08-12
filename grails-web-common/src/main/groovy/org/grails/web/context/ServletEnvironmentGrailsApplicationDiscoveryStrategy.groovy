@@ -37,7 +37,8 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
  * @since 2.4
  */
 @CompileStatic
-class ServletEnvironmentGrailsApplicationDiscoveryStrategy implements GrailsApplicationDiscoveryStrategy{
+class ServletEnvironmentGrailsApplicationDiscoveryStrategy implements GrailsApplicationDiscoveryStrategy {
+
     ServletContext servletContext
     ApplicationContext applicationContext
 
@@ -49,12 +50,12 @@ class ServletEnvironmentGrailsApplicationDiscoveryStrategy implements GrailsAppl
     @Override
     GrailsApplication findGrailsApplication() {
         def context = findApplicationContext()
-        if(context) {
+        if (context) {
             return context.getBean(GrailsApplication.APPLICATION_ID, GrailsApplication)
         }
         else {
             def webReq = GrailsWebRequest.lookup()
-            if(webReq) {
+            if (webReq) {
                 webReq.applicationContext?.getBean(GrailsApplication.APPLICATION_ID, GrailsApplication)
             }
         }
@@ -65,11 +66,11 @@ class ServletEnvironmentGrailsApplicationDiscoveryStrategy implements GrailsAppl
         if (applicationContext != null) {
             return applicationContext
         }
-        if(servletContext == null) {
+        if (servletContext == null) {
             return ContextLoader.currentWebApplicationContext
         }
         def context = WebApplicationContextUtils.getWebApplicationContext(servletContext)
-        if(context) {
+        if (context) {
             return context
         }
         return GrailsWebRequest.lookup()?.applicationContext

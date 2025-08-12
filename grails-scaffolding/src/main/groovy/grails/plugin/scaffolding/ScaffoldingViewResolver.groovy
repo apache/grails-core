@@ -49,6 +49,7 @@ import org.grails.web.servlet.view.GroovyPageViewResolver
  */
 @CompileStatic
 class ScaffoldingViewResolver extends GroovyPageViewResolver implements ResourceLoaderAware, ModelBuilder {
+
     final Class templateOverridePluginDescriptor
 
     ScaffoldingViewResolver() {
@@ -109,14 +110,14 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
         }
 
         def url = IOUtils.findResourceRelativeToClass(controllerClass, "/META-INF/templates/scaffolding/${shortViewName}.gsp")
-        resource = url? new UrlResource(url) : null
+        resource = url ? new UrlResource(url) : null
         if (resource?.exists()) {
             return resource
         }
 
         if (templateOverridePluginDescriptor) {
             url = IOUtils.findResourceRelativeToClass(templateOverridePluginDescriptor, "/META-INF/templates/scaffolding/${shortViewName}.gsp")
-            resource = url? new UrlResource(url) : null
+            resource = url ? new UrlResource(url) : null
             if (resource?.exists()) {
                 return resource
             }
@@ -129,7 +130,7 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
         def view = super.loadView(viewName, locale)
         if (view == null) {
             String cacheKey = buildCacheKey(viewName)
-            view = enableReload? null : generatedViewCache.get(cacheKey)
+            view = enableReload ? null : generatedViewCache.get(cacheKey)
             if (view != null) {
                 return view
             } else {
@@ -147,7 +148,7 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
 
                 if (scaffoldValue instanceof Class) {
                     def shortViewName = viewName.substring(viewName.lastIndexOf('/') + 1)
-                    Resource res = controllerClass.namespace? resolveResource(controllerClass.clazz, "${controllerClass.namespace}/${shortViewName}") : null
+                    Resource res = controllerClass.namespace ? resolveResource(controllerClass.clazz, "${controllerClass.namespace}/${shortViewName}") : null
                     if (!res?.exists()) {
                         res = resolveResource(controllerClass.clazz, shortViewName)
                     }

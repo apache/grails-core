@@ -95,6 +95,5 @@ class DirtyCheckingCollection implements Collection, DirtyCheckableCollection {
         target.remove(o)
     }
 
-
 }
 

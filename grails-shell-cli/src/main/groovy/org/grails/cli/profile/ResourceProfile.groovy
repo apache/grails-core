@@ -33,7 +33,6 @@ import org.grails.io.support.Resource
 @CompileStatic
 class ResourceProfile extends AbstractProfile implements Profile {
 
-
     ResourceProfile(ProfileRepository repository, String name, Resource profileDir) {
         super(profileDir)
         super.name = name
@@ -50,7 +49,6 @@ class ResourceProfile extends AbstractProfile implements Profile {
         Profile profile = new ResourceProfile(repository, name, profileDir)
         return profile
     }
-
 
     boolean equals(o) {
         if (this.is(o)) return true

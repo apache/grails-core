@@ -27,6 +27,7 @@ import org.gradle.api.plugins.JavaPlatformPlugin
  * Decides on the property name for a dependency
  */
 class PropertyNameCalculator {
+
     final Map<String, String> keysToPlatformCoordinates = [:]
     final Map<String, ExtractedDependencyConstraint> platformDefinitions = [:]
 
@@ -42,7 +43,7 @@ class PropertyNameCalculator {
 
     void addProjects(Collection<Project> projects) {
         for (Project project : projects) {
-            if(project.plugins.hasPlugin(JavaPlatformPlugin) || !project.extensions.findByName('grailsPublish')) {
+            if (project.plugins.hasPlugin(JavaPlatformPlugin) || !project.extensions.findByName('grailsPublish')) {
                 continue
             }
 
@@ -81,7 +82,7 @@ class PropertyNameCalculator {
             return null
         }
 
-        if(found.versionPropertyReference) {
+        if (found.versionPropertyReference) {
             return found
         }
 

@@ -143,7 +143,6 @@ class Mapping extends Entity<PropertyConfig> {
      */
     String comment
 
-
     boolean isTablePerConcreteClass() {
         return tablePerConcreteClass
     }
@@ -195,7 +194,7 @@ class Mapping extends Entity<PropertyConfig> {
      */
     @Override
     Mapping id(Map identityConfig) {
-        if(identity instanceof Identity) {
+        if (identity instanceof Identity) {
             Identity.configureExisting((Identity)identity, identityConfig)
         }
         return this
@@ -207,7 +206,7 @@ class Mapping extends Entity<PropertyConfig> {
      */
     @Override
     Mapping id(@DelegatesTo(Identity) Closure identityConfig) {
-        if(identity instanceof Identity) {
+        if (identity instanceof Identity) {
             Identity.configureExisting((Identity)identity, identityConfig)
         }
         return this
@@ -230,7 +229,7 @@ class Mapping extends Entity<PropertyConfig> {
      * @return This mapping
      */
     Mapping cache(@DelegatesTo(CacheConfig) Closure cacheConfig) {
-        if(this.cache == null) {
+        if (this.cache == null) {
             this.cache = new CacheConfig()
         }
         CacheConfig.configureExisting(cache, cacheConfig)
@@ -243,7 +242,7 @@ class Mapping extends Entity<PropertyConfig> {
      * @return This mapping
      */
     Mapping cache(Map cacheConfig) {
-        if(this.cache == null) {
+        if (this.cache == null) {
             this.cache = new CacheConfig()
         }
         CacheConfig.configureExisting(cache, cacheConfig)
@@ -256,14 +255,13 @@ class Mapping extends Entity<PropertyConfig> {
      * @return This mapping
      */
     Mapping cache(String usage) {
-        if(this.cache == null) {
+        if (this.cache == null) {
             this.cache = new CacheConfig()
         }
         this.cache.usage = usage
         this.cache.enabled = true
         return this
     }
-
 
     /**
      * Configures sorting
@@ -272,7 +270,7 @@ class Mapping extends Entity<PropertyConfig> {
      * @return This mapping
      */
     Mapping sort(String name, String direction) {
-        if(name && direction) {
+        if (name && direction) {
             this.sort.name = name
             this.sort.direction = direction
         }
@@ -286,7 +284,7 @@ class Mapping extends Entity<PropertyConfig> {
      * @return This mapping
      */
     Mapping sort(Map nameAndDirections) {
-        if(nameAndDirections) {
+        if (nameAndDirections) {
             this.sort.namesAndDirections = nameAndDirections
         }
         return this
@@ -298,7 +296,7 @@ class Mapping extends Entity<PropertyConfig> {
      * @return This mapping
      */
     Mapping discriminator(@DelegatesTo(DiscriminatorConfig) Closure discriminatorDef) {
-        if(discriminator == null) {
+        if (discriminator == null) {
             discriminator = new DiscriminatorConfig()
         }
         discriminatorDef.setDelegate(discriminator)
@@ -313,7 +311,7 @@ class Mapping extends Entity<PropertyConfig> {
      * @return This mapping
      */
     Mapping discriminator(String value) {
-        if(discriminator == null) {
+        if (discriminator == null) {
             discriminator = new DiscriminatorConfig()
         }
         discriminator.value = value
@@ -326,15 +324,15 @@ class Mapping extends Entity<PropertyConfig> {
      * @return This mapping
      */
     Mapping discriminator(Map args) {
-        if(args != null) {
-            if(discriminator == null) {
+        if (args != null) {
+            if (discriminator == null) {
                 discriminator = new DiscriminatorConfig()
             }
 
             String value = args.remove('value')?.toString()
             discriminator.value = value
             if (args.column instanceof String) {
-                discriminator.column = new ColumnConfig(name:args.column.toString())
+                discriminator.column = new ColumnConfig(name: args.column.toString())
             }
             else if (args.column instanceof Map) {
                 ColumnConfig config = new ColumnConfig()
@@ -343,11 +341,11 @@ class Mapping extends Entity<PropertyConfig> {
                 discriminator.column = config
             }
             discriminator.type(args.remove('type'))
-            if(args.containsKey('insert')) {
-                discriminator.insertable( args.remove('insert') as Boolean )
+            if (args.containsKey('insert')) {
+                discriminator.insertable(args.remove('insert') as Boolean)
             }
-            if(args.containsKey('insertable')) {
-                discriminator.insertable( args.remove('insertable') as Boolean )
+            if (args.containsKey('insertable')) {
+                discriminator.insertable(args.remove('insertable') as Boolean)
             }
             discriminator.formula(args.remove('formula')?.toString())
         }
@@ -399,10 +397,9 @@ class Mapping extends Entity<PropertyConfig> {
     @CompileStatic
     Mapping version(String versionColumn) {
         PropertyConfig pc = getOrInitializePropertyConfig(GormProperties.VERSION)
-        pc.columns << new ColumnConfig(name:versionColumn)
+        pc.columns << new ColumnConfig(name: versionColumn)
         return this
     }
-
 
     /**
      * Configure a property
@@ -438,7 +435,7 @@ class Mapping extends Entity<PropertyConfig> {
      */
     @Override
     PropertyConfig property(@DelegatesTo(PropertyConfig) Closure propertyConfig) {
-        if(columns.containsKey('*')) {
+        if (columns.containsKey('*')) {
             PropertyConfig cloned = cloneGlobalConstraint()
             return PropertyConfig.configureExisting(cloned, propertyConfig)
         }
@@ -464,8 +461,8 @@ class Mapping extends Entity<PropertyConfig> {
      * @return This mapping
      */
     @Override
-    PropertyConfig property( Map propertyConfig) {
-        if(columns.containsKey('*')) {
+    PropertyConfig property(Map propertyConfig) {
+        if (columns.containsKey('*')) {
             // apply global constraints constraints
             PropertyConfig cloned = cloneGlobalConstraint()
             return PropertyConfig.configureExisting(cloned, propertyConfig)
@@ -514,11 +511,11 @@ class Mapping extends Entity<PropertyConfig> {
 
     @Override
     def propertyMissing(String name, Object val) {
-        if(val instanceof Closure) {
+        if (val instanceof Closure) {
             property(name, (Closure)val)
         }
-        else if(val instanceof PropertyConfig) {
-            columns[name] =((PropertyConfig)val)
+        else if (val instanceof PropertyConfig) {
+            columns[name] = ((PropertyConfig)val)
         }
         else {
             throw new MissingPropertyException(name, Mapping)
@@ -528,17 +525,17 @@ class Mapping extends Entity<PropertyConfig> {
     @CompileDynamic
     @Override
     def methodMissing(String name, Object args) {
-        if(args && args.getClass().isArray()) {
-            if(args[0] instanceof Closure) {
+        if (args && args.getClass().isArray()) {
+            if (args[0] instanceof Closure) {
                 property(name, (Closure)args[0])
             }
-            else if(args[0] instanceof PropertyConfig) {
+            else if (args[0] instanceof PropertyConfig) {
                 columns[name] = (PropertyConfig)args[0]
             }
-            else if(args[0] instanceof Map) {
+            else if (args[0] instanceof Map) {
                 PropertyConfig property = getOrInitializePropertyConfig(name)
                 Map namedArgs = (Map) args[0]
-                if(args[-1] instanceof Closure) {
+                if (args[-1] instanceof Closure) {
                     PropertyConfig.configureExisting(
                             property,
                             ((Closure)args[-1])
@@ -559,12 +556,12 @@ class Mapping extends Entity<PropertyConfig> {
     @Override
     protected PropertyConfig getOrInitializePropertyConfig(String name) {
         PropertyConfig pc = columns[name]
-        if(pc == null && columns.containsKey('*')) {
+        if (pc == null && columns.containsKey('*')) {
             // apply global constraints constraints
             PropertyConfig globalConstraints = columns.get('*')
-            if(globalConstraints != null) {
+            if (globalConstraints != null) {
                 pc = (PropertyConfig)globalConstraints.clone()
-                if(pc.columns.size() == 1) {
+                if (pc.columns.size() == 1) {
                     pc.firstColumnIsColumnCopy = true
                 }
             }

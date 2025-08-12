@@ -37,6 +37,7 @@ import org.grails.datastore.mapping.config.Property
 @CompileStatic
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 class Identity extends Property {
+
     /**
      * The generator to use
      */

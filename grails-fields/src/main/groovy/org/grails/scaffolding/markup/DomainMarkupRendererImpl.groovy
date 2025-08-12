@@ -92,9 +92,9 @@ class DomainMarkupRendererImpl implements DomainMarkupRenderer {
             }
         }
         if (tableProperties.size() > maxListOutputSize) {
-            tableProperties = tableProperties[0..(maxListOutputSize-1)]
+            tableProperties = tableProperties[0..(maxListOutputSize - 1)]
         }
-        outputMarkupContent (
+        outputMarkupContent(
             contextMarkupRenderer.listOutputContext(domainClass, tableProperties) { DomainProperty domainProperty ->
                 propertyMarkupRenderer.renderListOutput(domainProperty)
             }

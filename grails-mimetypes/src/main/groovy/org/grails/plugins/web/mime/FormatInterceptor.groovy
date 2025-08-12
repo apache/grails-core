@@ -28,6 +28,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class FormatInterceptor {
+
     LinkedHashMap<String, Object> formatOptions = new LinkedHashMap<String, Object>()
     Object invokeMethod(String name, args) {
         Object[] argsArray = args instanceof Object[] ? ((Object[])args) : [args] as Object[]

@@ -41,7 +41,8 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
  */
 @CompileStatic
 class FindOneImplementer extends AbstractDetachedCriteriaServiceImplementor implements SingleResultServiceImplementer<GormEntity> {
-    static final List<String> HANDLED_PREFIXES = ['retrieve','get', 'find', 'read']
+
+    static final List<String> HANDLED_PREFIXES = ['retrieve', 'get', 'find', 'read']
 
     @Override
     protected boolean isCompatibleReturnType(ClassNode domainClass, MethodNode methodNode, ClassNode returnType, String prefix) {

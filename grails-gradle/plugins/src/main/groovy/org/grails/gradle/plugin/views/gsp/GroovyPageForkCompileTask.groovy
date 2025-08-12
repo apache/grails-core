@@ -106,7 +106,6 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
         destinationDirectory = objectFactory.directoryProperty().convention(project.layout.buildDirectory.dir('gsp-classes/main'))
     }
 
-
     @Override
     @PathSensitive(PathSensitivity.RELATIVE)
     FileTree getSource() {
@@ -115,16 +114,16 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
 
     @Override
     void setSource(Object source) {
-        if(Directory.isAssignableFrom(source.class)) {
+        if (Directory.isAssignableFrom(source.class)) {
             this.srcDir.set(source as Directory)
         }
-        else if(File.isAssignableFrom(source.class)) {
+        else if (File.isAssignableFrom(source.class)) {
             this.srcDir.set(source as File)
             if (!srcDir.getAsFile().get().isDirectory()) {
                 throw new IllegalArgumentException("The source for ${getFileExtension().toUpperCase()} compilation must be a single directory, but was $source")
             }
         }
-        else if(DirectoryProperty.isAssignableFrom(source.class)) {
+        else if (DirectoryProperty.isAssignableFrom(source.class)) {
             this.srcDir.set(source as DirectoryProperty)
         }
         else {

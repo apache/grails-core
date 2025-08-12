@@ -38,6 +38,7 @@ import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundExcept
  */
 @CompileStatic
 class HttpHeaderTenantResolver implements TenantResolver {
+
     public static final String HEADER_NAME = 'gorm.tenantId'
 
     /**
@@ -49,12 +50,12 @@ class HttpHeaderTenantResolver implements TenantResolver {
     Serializable resolveTenantIdentifier() {
 
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes()
-        if(requestAttributes instanceof ServletWebRequest) {
+        if (requestAttributes instanceof ServletWebRequest) {
 
             HttpServletRequest httpServletRequest = ((ServletWebRequest) requestAttributes).getRequest()
             String tenantId = httpServletRequest.getHeader(headerName.toLowerCase())
 
-            if ( tenantId ) {
+            if (tenantId) {
                 return tenantId
             }
             throw new TenantNotFoundException("Tenant could not be resolved from HTTP Header: ${headerName}")

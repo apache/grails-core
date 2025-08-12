@@ -32,7 +32,6 @@ import org.grails.cli.profile.commands.script.GroovyScriptCommand
 @CompileStatic
 trait CommandEvents {
 
-
     /**
      * Register to listen for an event
      *
@@ -43,7 +42,6 @@ trait CommandEvents {
     void on(String eventName, @DelegatesTo(GroovyScriptCommand) Closure callable) {
         EventStorage.registerEvent(eventName, callable)
     }
-
 
     /**
      * Register to listen for an event that runs before the given command

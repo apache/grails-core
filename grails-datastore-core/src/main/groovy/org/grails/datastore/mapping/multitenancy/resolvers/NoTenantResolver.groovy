@@ -32,6 +32,7 @@ import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundExcept
  */
 @CompileStatic
 class NoTenantResolver implements TenantResolver {
+
     @Override
     Serializable resolveTenantIdentifier() {
         throw new TenantNotFoundException()

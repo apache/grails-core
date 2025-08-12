@@ -35,7 +35,6 @@ class ExceptionUtils {
 
     public static final String EXCEPTION_ATTRIBUTE = 'exception'
 
-
     static RuntimeException getFirstRuntimeException(Throwable e) {
         if (e instanceof RuntimeException) return (RuntimeException) e
 

@@ -63,8 +63,8 @@ class RxEventBus extends AbstractEventBus {
     protected Callable buildNotificationCallable(Event event, Collection<Subscription> eventSubscriptions, Closure reply) {
         return {
             PublishSubject sub = subjects.get(event.id)
-            if(sub.hasObservers() && !sub.hasComplete()) {
-                if(reply != null) {
+            if (sub.hasObservers() && !sub.hasComplete()) {
+                if (reply != null) {
                     sub.onNext(new EventWithReply(event, reply))
                 }
                 else {
@@ -98,10 +98,10 @@ class RxEventBus extends AbstractEventBus {
 
         RxClosureSubscription(CharSequence eventId, Map<CharSequence, Collection<Subscription>> subscriptions, Closure subscriber, Subject subject, Scheduler scheduler) {
             super(eventId, subscriptions, subscriber)
-            this.subscription = subject.observeOn(scheduler).subscribe( { eventObject ->
+            this.subscription = subject.observeOn(scheduler).subscribe({ eventObject ->
                 Event event
                 Closure reply = null
-                if(eventObject  instanceof EventWithReply) {
+                if (eventObject instanceof EventWithReply) {
                     def eventWithReply = (EventWithReply) eventObject
                     event = eventWithReply.event
                     reply = eventWithReply.reply
@@ -112,14 +112,14 @@ class RxEventBus extends AbstractEventBus {
 
                 EventTrigger trigger = buildTrigger(event as Event, reply)
                 trigger.proceed()
-            }  as Consumer, { Throwable t ->
+            } as Consumer, { Throwable t ->
                 log.error("Error occurred triggering event listener for event [$eventId]: ${t.message}", t)
             } as Consumer<Throwable>)
         }
 
         @Override
         Subscription cancel() {
-            if(!subscription.disposed) {
+            if (!subscription.disposed) {
                 subscription.dispose()
             }
             return super.cancel()
@@ -137,17 +137,17 @@ class RxEventBus extends AbstractEventBus {
 
         RxEventSubscriberSubscription(CharSequence eventId, Map<CharSequence, Collection<Subscription>> subscriptions, Subscriber subscriber, Subject subject, Scheduler scheduler) {
             super(eventId, subscriptions, subscriber)
-            this.subscription = subject.observeOn(scheduler).subscribe( { event ->
+            this.subscription = subject.observeOn(scheduler).subscribe({ event ->
                 EventTrigger trigger = buildTrigger(event as Event)
                 trigger.proceed()
-            }  as Consumer, { Throwable t ->
+            } as Consumer, { Throwable t ->
                 log.error("Error occurred triggering event listener for event [$eventId]: ${t.message}", t)
             } as Consumer<Throwable>)
         }
 
         @Override
         Subscription cancel() {
-            if(!subscription.disposed) {
+            if (!subscription.disposed) {
                 subscription.dispose()
             }
             return super.cancel()

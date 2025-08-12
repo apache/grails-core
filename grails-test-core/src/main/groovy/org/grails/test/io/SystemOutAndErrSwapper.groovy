@@ -126,7 +126,6 @@ class SystemOutAndErrSwapper {
             textOut = new BufferedWriter(new OutputStreamWriter(out, 'UTF-8'))
         }
 
-
         @Override
         void print(Object o) {
             try {

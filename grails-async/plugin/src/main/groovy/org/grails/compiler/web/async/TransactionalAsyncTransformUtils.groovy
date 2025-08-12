@@ -34,7 +34,6 @@ import java.lang.reflect.Method
 @CompileStatic
 class TransactionalAsyncTransformUtils {
 
-
     /**
      * Creates a {@link TransactionalPromiseDecorator} for the given transactionManager and method to be invoked
      *

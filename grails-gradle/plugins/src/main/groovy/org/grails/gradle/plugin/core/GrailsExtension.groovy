@@ -31,6 +31,7 @@ import org.gradle.api.Project
  */
 @CompileStatic
 class GrailsExtension {
+
     Project project
 
     GrailsExtension(Project project) {
@@ -106,6 +107,5 @@ class GrailsExtension {
         Map<String, String> systemProperties = ['jdk.reflect.allowGetCallerClass': 'true']
         List<String> jvmArgs = ['-Xverify:none']
     }
-
 
 }

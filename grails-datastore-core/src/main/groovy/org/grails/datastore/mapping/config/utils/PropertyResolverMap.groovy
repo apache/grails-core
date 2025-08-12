@@ -31,6 +31,7 @@ import org.springframework.core.env.PropertyResolver
 @CompileStatic
 @Deprecated
 class PropertyResolverMap implements Map<String, Object>, PropertyResolver {
+
     @Delegate final PropertyResolver propertyResolver
 
     PropertyResolverMap(PropertyResolver propertyResolver) {

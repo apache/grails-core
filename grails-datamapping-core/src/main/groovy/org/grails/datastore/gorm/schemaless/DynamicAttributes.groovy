@@ -36,8 +36,8 @@ trait DynamicAttributes {
 
     private void putAtDynamic(String name, value) {
         def oldValue = dynamicAttributes.put(name, value)
-        if(oldValue != value) {
-            if(this instanceof DirtyCheckable) {
+        if (oldValue != value) {
+            if (this instanceof DirtyCheckable) {
                 ((DirtyCheckable)this).markDirty(name, value, oldValue)
             }
         }
@@ -50,7 +50,7 @@ trait DynamicAttributes {
      * @param value The value of the attribute
      */
     void putAt(String name, value) {
-        if(this.hasProperty(name)) {
+        if (this.hasProperty(name)) {
             try {
                 ((GroovyObject)this).setProperty(name, value)
             } catch (ReadOnlyPropertyException e) {
@@ -68,7 +68,7 @@ trait DynamicAttributes {
      * @return The value of the attribute
      */
     def getAt(String name) {
-        if(this.hasProperty(name)) {
+        if (this.hasProperty(name)) {
             return ((GroovyObject)this).getProperty(name)
         }
         else {
@@ -92,7 +92,7 @@ trait DynamicAttributes {
      * @return The dynamic attributes
      */
     Map<String, Object> attributes(Map<String, Object> newAttributes) {
-        if(newAttributes != null) {
+        if (newAttributes != null) {
             this.dynamicAttributes.putAll(newAttributes)
         }
         return dynamicAttributes

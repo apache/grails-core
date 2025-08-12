@@ -51,6 +51,7 @@ import static org.grails.cli.profile.ProfileUtil.createDependency
 @CompileStatic
 @ToString(includes = ['name'])
 abstract class AbstractProfile implements Profile {
+
     protected final Resource profileDir
     protected String name
     protected List<Profile> parentProfiles
@@ -86,23 +87,21 @@ abstract class AbstractProfile implements Profile {
         this.classLoader = classLoader
         this.profileDir = profileDir
 
-
         def url = profileDir.getURL()
         def jarFile = IOUtils.findJarFile(url)
         def pattern = ~/.+-(\d.+)\.jar/
 
-
         def path
-        if(jarFile != null) {
+        if (jarFile != null) {
             path = jarFile.name
         }
-        else if(url != null){
+        else if (url != null) {
             def p = url.path
             path = p.substring(0, p.indexOf('.jar') + 4)
         }
-        if(path) {
+        if (path) {
             def matcher = pattern.matcher(path)
-            if(matcher.matches()) {
+            if (matcher.matches()) {
                 this.version = matcher.group(1)
             }
         }
@@ -121,29 +120,29 @@ abstract class AbstractProfile implements Profile {
         instructions = profileConfig.get('instructions')?.toString() ?: ''
 
         def parents = profileConfig.get('extends')
-        if(parents) {
+        if (parents) {
             parentNames = parents.toString().split(',').collect() { String name -> name.trim() }
         }
-        if(this.name == null) {
+        if (this.name == null) {
             throw new IllegalStateException("Profile name not set. Profile for path ${profileDir.URL} is invalid")
         }
         def map = new NavigableMap()
         map.merge(profileConfig)
         navigableConfig = map
         def commandsByName = profileConfig.get('commands')
-        if(commandsByName instanceof Map) {
+        if (commandsByName instanceof Map) {
             def commandsMap = (Map) commandsByName
-            for(clsName in  commandsMap.keySet()) {
+            for (clsName in  commandsMap.keySet()) {
                 def fileName = commandsMap[clsName].toString()
-                if(fileName.endsWith('.groovy')) {
+                if (fileName.endsWith('.groovy')) {
                     GroovyScriptCommand cmd = (GroovyScriptCommand)classLoader.loadClass(clsName.toString()).newInstance()
                     cmd.profile = this
                     cmd.profileRepository = profileRepository
                     internalCommands.add cmd
                 }
-                else if(fileName.endsWith('.yml')) {
+                else if (fileName.endsWith('.yml')) {
                     def yamlCommand = profileDir.createRelative("commands/$fileName")
-                    if(yamlCommand.exists()) {
+                    if (yamlCommand.exists()) {
                         Map<String, Object> data = new Yaml(new SafeConstructor(new LoaderOptions())).<Map>load(yamlCommand.getInputStream())
                         Command cmd = new DefaultMultiStepCommand(clsName.toString(), this, data)
                         Object minArguments = data?.minArguments
@@ -156,14 +155,14 @@ abstract class AbstractProfile implements Profile {
         }
 
         def featuresConfig = profileConfig.get('features')
-        if(featuresConfig instanceof Map) {
+        if (featuresConfig instanceof Map) {
             Map featureMap = (Map) featuresConfig
             def featureList = (List) featureMap.get('provided') ?: Collections.emptyList()
             def defaultFeatures = (List) featureMap.get('defaults') ?: Collections.emptyList()
             def requiredFeatures = (List) featureMap.get('required') ?: Collections.emptyList()
             for (fn in featureList) {
                 def featureData = profileDir.createRelative("features/${fn}/feature.yml")
-                if(featureData.exists()) {
+                if (featureData.exists()) {
                     def f = new DefaultFeature(this, fn.toString(), profileDir.createRelative("features/$fn/"))
                     features.add f
                 }
@@ -173,12 +172,10 @@ abstract class AbstractProfile implements Profile {
             requiredFeatureNames.addAll(requiredFeatures as Set<String>)
         }
 
-
-
         def dependenciesConfig = profileConfig.get('dependencies')
 
         if (dependenciesConfig instanceof List) {
-            List<Exclusion> exclusions =[]
+            List<Exclusion> exclusions = []
             for (entry in dependenciesConfig) {
                 if (entry instanceof Map) {
                     def scope = (String) entry.scope
@@ -218,7 +215,7 @@ abstract class AbstractProfile implements Profile {
     Set<String> getBinaryExtensions() {
         Set<String> calculatedBinaryExtensions = []
         def parents = getExtends()
-        for(profile in parents) {
+        for (profile in parents) {
             calculatedBinaryExtensions.addAll(profile.binaryExtensions)
         }
         calculatedBinaryExtensions.addAll(binaryExtensions)
@@ -228,7 +225,7 @@ abstract class AbstractProfile implements Profile {
     Set<String> getExecutablePatterns() {
         Set<String> calculatedExecutablePatterns = []
         def parents = getExtends()
-        for(profile in parents) {
+        for (profile in parents) {
             calculatedExecutablePatterns.addAll(profile.executablePatterns)
         }
         calculatedExecutablePatterns.addAll(executablePatterns)
@@ -243,7 +240,7 @@ abstract class AbstractProfile implements Profile {
     @Override
     Iterable<Feature> getRequiredFeatures() {
         def requiredFeatureInstances = getFeatures().findAll() { Feature f -> requiredFeatureNames.contains(f.name) }
-        if(requiredFeatureInstances.size() != requiredFeatureNames.size()) {
+        if (requiredFeatureInstances.size() != requiredFeatureNames.size()) {
             throw new IllegalStateException("One or more required features were not found on the classpath. Required features: $requiredFeatureNames")
         }
         return requiredFeatureInstances
@@ -254,7 +251,7 @@ abstract class AbstractProfile implements Profile {
         Set<Feature> calculatedFeatures = []
         calculatedFeatures.addAll(features)
         def parents = getExtends()
-        for(profile in parents) {
+        for (profile in parents) {
             calculatedFeatures.addAll profile.features
         }
         return calculatedFeatures
@@ -262,12 +259,12 @@ abstract class AbstractProfile implements Profile {
 
     @Override
     List<String> getBuildMergeProfileNames() {
-        if(buildMerge != null) {
+        if (buildMerge != null) {
             return this.buildMerge
         }
         else {
             List<String> mergeNames = []
-            for(parent in getExtends()) {
+            for (parent in getExtends()) {
                 mergeNames.add(parent.name)
             }
             mergeNames.add(name)
@@ -279,7 +276,7 @@ abstract class AbstractProfile implements Profile {
     List<String> getBuildRepositories() {
         List<String> calculatedRepositories = []
         def parents = getExtends()
-        for(profile in parents) {
+        for (profile in parents) {
             calculatedRepositories.addAll(profile.buildRepositories)
         }
         calculatedRepositories.addAll(buildRepositories)
@@ -290,10 +287,10 @@ abstract class AbstractProfile implements Profile {
     List<String> getBuildPlugins() {
         List<String> calculatedPlugins = []
         def parents = getExtends()
-        for(profile in parents) {
+        for (profile in parents) {
             def dependencies = profile.buildPlugins
-            for(dep in dependencies) {
-                if(!buildExcludes.contains(dep))
+            for (dep in dependencies) {
+                if (!buildExcludes.contains(dep))
                     calculatedPlugins.add(dep)
             }
         }
@@ -305,7 +302,7 @@ abstract class AbstractProfile implements Profile {
     List<String> getRepositories() {
         List<String> calculatedRepositories = []
         def parents = getExtends()
-        for(profile in parents) {
+        for (profile in parents) {
             calculatedRepositories.addAll(profile.repositories)
         }
         calculatedRepositories.addAll(repositories)
@@ -315,10 +312,10 @@ abstract class AbstractProfile implements Profile {
     List<Dependency> getDependencies() {
         List<Dependency> calculatedDependencies = []
         def parents = getExtends()
-        for(profile in parents) {
+        for (profile in parents) {
             def dependencies = profile.dependencies
-            for(dep in dependencies) {
-                if(exclusionDependencySelector.selectDependency(dep)) {
+            for (dep in dependencies) {
+                if (exclusionDependencySelector.selectDependency(dep)) {
                     calculatedDependencies.add(dep)
                 }
             }
@@ -339,7 +336,6 @@ abstract class AbstractProfile implements Profile {
         return profileDir
     }
 
-
     @Override
     NavigableMap getConfiguration() {
         navigableConfig
@@ -354,7 +350,7 @@ abstract class AbstractProfile implements Profile {
     Iterable<Profile> getExtends() {
         return parentNames.collect() { String parentName ->
             def parent = profileRepository.getProfile(parentName, true)
-            if(parent == null) {
+            if (parent == null) {
                 throw new IllegalStateException("Profile [$name] declares an invalid dependency on parent profile [$parentName]")
             }
             return parent
@@ -367,15 +363,15 @@ abstract class AbstractProfile implements Profile {
 
         Collection<Completer> completers = []
 
-        for(Command cmd in commands) {
+        for (Command cmd in commands) {
             def description = cmd.description
 
             def commandNameCompleter = new StringsCompleter(cmd.name)
-            if(cmd instanceof Completer) {
+            if (cmd instanceof Completer) {
                 completers << new ArgumentCompleter(commandNameCompleter, (Completer)cmd)
-            }else {
-                if(description.completer) {
-                    if(description.flags) {
+            } else {
+                if (description.completer) {
+                    if (description.flags) {
                         completers  << new ArgumentCompleter(commandNameCompleter,
                                                             description.completer,
                                                             new StringsCompleter(description.flags.collect() { CommandArgument arg -> "-$arg.name".toString() }))
@@ -386,7 +382,7 @@ abstract class AbstractProfile implements Profile {
 
                 }
                 else {
-                    if(description.flags) {
+                    if (description.flags) {
                         completers  << new ArgumentCompleter(commandNameCompleter, new StringsCompleter(description.flags.collect() { CommandArgument arg -> "-$arg.name".toString() }))
                     }
                     else {
@@ -407,27 +403,27 @@ abstract class AbstractProfile implements Profile {
 
     @Override
     Iterable<Command> getCommands(ProjectContext context) {
-        if(commandsByName == null) {
+        if (commandsByName == null) {
             commandsByName = new LinkedHashMap<String, Command>()
             List excludes = []
             def registerCommand = { Command command ->
                 def name = command.name
-                if(!commandsByName.containsKey(name) && !excludes.contains(name)) {
-                    if(command instanceof ProfileRepositoryAware) {
+                if (!commandsByName.containsKey(name) && !excludes.contains(name)) {
+                    if (command instanceof ProfileRepositoryAware) {
                         ((ProfileRepositoryAware)command).setProfileRepository(profileRepository)
                     }
                     commandsByName.put(name, command)
                     def desc = command.description
                     def synonyms = desc.synonyms
-                    if(synonyms) {
-                        for(String syn in synonyms) {
+                    if (synonyms) {
+                        for (String syn in synonyms) {
                             commandsByName.put(syn, command)
                         }
                     }
-                    if(command instanceof ProjectContextAware) {
+                    if (command instanceof ProjectContextAware) {
                         ((ProjectContextAware)command).projectContext = context
                     }
-                    if(command instanceof ProfileCommand) {
+                    if (command instanceof ProfileCommand) {
                         ((ProfileCommand)command).profile = this
                     }
                 }
@@ -436,7 +432,7 @@ abstract class AbstractProfile implements Profile {
             CommandRegistry.instance.findCommands(this).each(registerCommand)
 
             def parents = getExtends()
-            if(parents) {
+            if (parents) {
                 excludes = (List)configuration.navigate('command', 'excludes') ?: []
                 registerParentCommands(context, parents, registerCommand)
             }
@@ -449,7 +445,7 @@ abstract class AbstractProfile implements Profile {
             parent.getCommands(context).each registerCommand
 
             def extended = parent.extends
-            if(extended) {
+            if (extended) {
                 registerParentCommands context, extended, registerCommand
             }
         }
@@ -468,10 +464,10 @@ abstract class AbstractProfile implements Profile {
         def commandLine = context.commandLine
         def commandName = commandLine.commandName
         def cmd = commandsByName[commandName]
-        if(cmd) {
+        if (cmd) {
             def requiredArguments = cmd?.description?.arguments
             int requiredArgumentCount = requiredArguments?.findAll() { CommandArgument ca -> ca.required }?.size() ?: 0
-            if(commandLine.remainingArgs.size() < requiredArgumentCount) {
+            if (commandLine.remainingArgs.size() < requiredArgumentCount) {
                 context.console.error "Command [$commandName] missing required arguments: ${requiredArguments*.name}. Type 'grails help $commandName' for more info."
                 return false
             }
@@ -484,14 +480,14 @@ abstract class AbstractProfile implements Profile {
             cmd = commandsByName.values().find() { Command c ->
                 ScriptNameResolver.resolvesTo(commandName, c.name)
             }
-            if(cmd) {
+            if (cmd) {
                 return cmd.handle(context)
             }
             else {
                 context.console.error("Command not found ${context.commandLine.commandName}")
                 def mostSimilar = CosineSimilarity.mostSimilar(commandName, commandsByName.keySet())
                 List<String> topMatches = mostSimilar.subList(0, Math.min(3, mostSimilar.size()))
-                if(topMatches) {
+                if (topMatches) {
                     context.console.log("Did you mean: ${topMatches.join(' or ')}?")
                 }
                 return false

@@ -74,7 +74,7 @@ class ResponseRedirector {
         if (argument instanceof String) {
             return Boolean.valueOf(argument)
         }
-        else if(argument == null && defaultValue != null) {
+        else if (argument == null && defaultValue != null) {
             return defaultValue
         }
         else {
@@ -120,7 +120,7 @@ class ResponseRedirector {
      * Redirects the response the the given URI
      */
     private void redirectResponse(String serverBaseURL, String actualUri, HttpServletRequest request, HttpServletResponse response, boolean permanent, boolean moved, boolean absolute) {
-        if(log.isDebugEnabled()) {
+        if (log.isDebugEnabled()) {
             log.debug "Method [redirect] forwarding request to [$actualUri]"
             log.debug "Executing redirect with response [$response]"
         }
@@ -137,7 +137,7 @@ class ResponseRedirector {
         String redirectUrl = useJessionId ? response.encodeRedirectURL(redirectURI) : redirectURI
 
         int status
-        if(permanent) {
+        if (permanent) {
             status = moved ? HttpStatus.MOVED_PERMANENTLY.value() : HttpStatus.PERMANENT_REDIRECT.value()
         }
         else {

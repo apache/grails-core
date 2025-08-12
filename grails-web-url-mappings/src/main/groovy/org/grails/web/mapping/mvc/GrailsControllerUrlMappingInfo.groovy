@@ -26,7 +26,7 @@ import grails.web.mapping.UrlMappingInfo
  *
  * @since 3.0
  */
-class GrailsControllerUrlMappingInfo implements UrlMappingInfo{
+class GrailsControllerUrlMappingInfo implements UrlMappingInfo {
 
     GrailsControllerClass controllerClass
     @Delegate UrlMappingInfo info

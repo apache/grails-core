@@ -50,7 +50,7 @@ trait EventBusAware {
      * @return Retrieves the event bus
      */
     EventBus getEventBus() {
-        if(this.eventBus == null) {
+        if (this.eventBus == null) {
             this.eventBus = new EventBusBuilder().build()
         }
         return this.eventBus

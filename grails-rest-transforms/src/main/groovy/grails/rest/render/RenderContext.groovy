@@ -43,7 +43,6 @@ interface RenderContext {
      */
     List<String> getExcludes()
 
-
     /**
      * @return Arguments passed by the user
      */

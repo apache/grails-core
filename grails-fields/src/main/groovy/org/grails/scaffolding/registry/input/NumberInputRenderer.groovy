@@ -54,7 +54,7 @@ class NumberInputRenderer implements DomainInputRenderer {
 
             attributes.type = 'number'
 
-            if(typeName in ['double', 'float', 'bigdecimal']) {
+            if (typeName in ['double', 'float', 'bigdecimal']) {
                 attributes.step = 'any'
             }
             if (constraints?.scale != null) {

@@ -33,6 +33,7 @@ import org.grails.web.databinding.DataBindingLazyMetaPropertyMap
  */
 @CompileStatic
 trait WebDataBinding {
+
     /**
      * Binds the source object to the properties of the target instance converting any types as necessary
      *

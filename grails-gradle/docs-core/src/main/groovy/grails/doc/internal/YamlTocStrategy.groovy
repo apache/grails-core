@@ -27,6 +27,7 @@ import org.yaml.snakeyaml.constructor.SafeConstructor
  * Class representing a Grails user guide table of contents defined in YAML.
  */
 class YamlTocStrategy {
+
     private final parser = new Yaml(new SafeConstructor(new LoaderOptions()))
     private resourceChecker
     private String ext = '.gdoc'

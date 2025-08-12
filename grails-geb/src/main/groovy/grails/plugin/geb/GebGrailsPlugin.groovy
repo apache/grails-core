@@ -27,6 +27,7 @@ import grails.plugins.metadata.PluginSource
 @PluginSource
 @CompileStatic
 class GebGrailsPlugin extends Plugin {
+
     def grailsVersion = '7.0.0 > *'
     def pluginExcludes = []
     def title = 'Grails Geb Plugin'

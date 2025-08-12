@@ -46,11 +46,10 @@ class CustomTypeDecoder implements PropertyDecoder<Custom> {
         decode(codecRegistry, reader, decoderContext, marshaller, property, entityAccess)
     }
 
-
     protected static void decode(CodecRegistry codecRegistry, BsonReader reader, DecoderContext decoderContext, CustomTypeMarshaller marshaller, PersistentProperty property, EntityAccess entityAccess) {
         def bsonType = reader.currentBsonType
 
-        if(marshaller instanceof CodecCustomTypeMarshaller) {
+        if (marshaller instanceof CodecCustomTypeMarshaller) {
             Codec codec = marshaller.codec
             def value = codec.decode(reader, decoderContext)
             if (value != null) {
@@ -60,7 +59,7 @@ class CustomTypeDecoder implements PropertyDecoder<Custom> {
         else {
 
             def codec = CodecExtensions.getCodecForBsonType(bsonType, codecRegistry)
-            if(codec != null) {
+            if (codec != null) {
                 def decoded = codec.decode(reader, decoderContext)
                 def value = marshaller.read(property, new Document(
                         MappingUtils.getTargetKey(property),

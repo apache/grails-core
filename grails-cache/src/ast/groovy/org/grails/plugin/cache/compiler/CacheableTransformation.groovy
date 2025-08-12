@@ -71,7 +71,7 @@ class CacheableTransformation extends AbstractCacheTransformation {
     @Override
     protected Expression buildDelegatingMethodCall(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, MethodNode methodNode, MethodCallExpression originalMethodCallExpr, BlockStatement newMethodBody) {
         boolean isControllerClass = classNode.name.endsWith(ControllerArtefactHandler.TYPE)
-        if(isControllerClass) {
+        if (isControllerClass) {
             log.warn("@Cacheable is not supported on controller methods. Ignoring method: ${methodNode.name}")
             return originalMethodCallExpr
         }
@@ -92,7 +92,6 @@ class CacheableTransformation extends AbstractCacheTransformation {
         // def $_cache_cacheKey = customCacheKeyGenerator.generate(className, methodName, hashCode, $_method_parameter_map)
         VariableExpression cacheKeyDeclaration = declareCacheKey(sourceUnit, annotationNode, classNode, methodNode , cachingBlock)
 
-
         // ValueWrapper $_cache_valueWrapper = $_cache_cacheVariable.get($_cache_cacheKey);
         VariableExpression cacheValueWrapper = varX(CACHE_VALUE_WRAPPER_LOCAL_VARIABLE_NAME, make(Cache.ValueWrapper))
         cachingBlock.addStatement(
@@ -109,7 +108,7 @@ class CacheableTransformation extends AbstractCacheTransformation {
         VariableExpression originalValueExpr = varX(CACHE_ORIGINAL_METHOD_RETURN_VALUE_LOCAL_VARIABLE_NAME)
         cachingBlock.addStatement(
             ifElseS(notNullX(cacheValueWrapper),
-                returnS( callD(cacheValueWrapper, 'get')),
+                returnS(callD(cacheValueWrapper, 'get')),
                 block(
                     declS(originalValueExpr, originalMethodCallExpr),
                     stmt(callD(cacheDeclaration, 'put', args(cacheKeyDeclaration, originalValueExpr))),

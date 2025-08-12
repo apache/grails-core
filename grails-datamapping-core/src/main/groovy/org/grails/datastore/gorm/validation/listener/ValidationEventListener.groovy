@@ -43,7 +43,8 @@ import org.grails.datastore.mapping.engine.event.PreUpdateEvent
  * @since 6.0
  */
 @CompileStatic
-class ValidationEventListener extends AbstractPersistenceEventListener{
+class ValidationEventListener extends AbstractPersistenceEventListener {
+
     ValidationEventListener(Datastore datastore) {
         super(datastore)
     }
@@ -51,10 +52,10 @@ class ValidationEventListener extends AbstractPersistenceEventListener{
     @Override
     protected void onPersistenceEvent(AbstractPersistenceEvent event) {
         def entityObject = event.getEntityObject()
-        if(entityObject instanceof GormValidateable) {
+        if (entityObject instanceof GormValidateable) {
             GormValidateable gormValidateable = (GormValidateable) entityObject
-            if(gormValidateable.shouldSkipValidation()) {
-                if( gormValidateable.getErrors()?.hasErrors() )  {
+            if (gormValidateable.shouldSkipValidation()) {
+                if (gormValidateable.getErrors()?.hasErrors())  {
                     event.cancel()
                 }
             }
@@ -67,7 +68,7 @@ class ValidationEventListener extends AbstractPersistenceEventListener{
                 try {
                     currentSession.setFlushMode(FlushModeType.COMMIT)
                     boolean hasErrors = false
-                    if(source instanceof ConnectionSourcesProvider) {
+                    if (source instanceof ConnectionSourcesProvider) {
                         def connectionSourceName = ((ConnectionSourcesProvider) source).connectionSources.defaultConnectionSource.name
                         GormValidationApi validationApi = GormEnhancer.findValidationApi((Class<Object>)entityObject.getClass(), connectionSourceName)
                         hasErrors = !validationApi.validate((Object)entityObject)
@@ -75,7 +76,7 @@ class ValidationEventListener extends AbstractPersistenceEventListener{
                     else {
                         hasErrors = !gormValidateable.validate()
                     }
-                    if( hasErrors ) {
+                    if (hasErrors) {
                         event.cancel()
                     }
                 } finally {

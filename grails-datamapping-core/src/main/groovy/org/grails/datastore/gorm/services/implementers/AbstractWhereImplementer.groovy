@@ -55,7 +55,6 @@ import static org.grails.datastore.mapping.reflect.AstUtils.processVariableScope
 @CompileStatic
 abstract class AbstractWhereImplementer extends AbstractReadOperationImplementer implements AnnotatedServiceImplementer<Where> {
 
-
     public static final int POSITION = FindAllByImplementer.POSITION - 100
 
     @Override
@@ -70,7 +69,7 @@ abstract class AbstractWhereImplementer extends AbstractReadOperationImplementer
 
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
-        if( isAnnotated(domainClass, methodNode) ) {
+        if (isAnnotated(domainClass, methodNode)) {
             return isCompatibleReturnType(domainClass, methodNode, methodNode.returnType, methodNode.name)
         }
         return false
@@ -83,11 +82,11 @@ abstract class AbstractWhereImplementer extends AbstractReadOperationImplementer
         abstractMethodNode.annotations.remove(annotationNode)
         Expression expr = annotationNode.getMember('value')
         SourceUnit sourceUnit = abstractMethodNode.declaringClass.module.context
-        if(expr instanceof ClosureExpression) {
+        if (expr instanceof ClosureExpression) {
             ClosureExpression originalClosureExpression = (ClosureExpression) expr
             ClosureExpression closureExpression = AstUtils.makeClosureAwareOfArguments(newMethodNode, originalClosureExpression)
             DetachedCriteriaTransformer transformer = new DetachedCriteriaTransformer(sourceUnit)
-            transformer.transformClosureExpression( domainClassNode, closureExpression)
+            transformer.transformClosureExpression(domainClassNode, closureExpression)
 
             BlockStatement body = (BlockStatement)newMethodNode.getCode()
 
@@ -99,7 +98,7 @@ abstract class AbstractWhereImplementer extends AbstractReadOperationImplementer
             )
             Expression connectionId = findConnectionId(newMethodNode)
 
-            if(connectionId != null) {
+            if (connectionId != null) {
                 body.addStatement(
                         assignS(queryVar, callX(queryVar, 'withConnection', connectionId))
                 )
@@ -117,7 +116,6 @@ abstract class AbstractWhereImplementer extends AbstractReadOperationImplementer
             AstUtils.error(sourceUnit, annotationNode, '@Where value must be a closure')
         }
     }
-
 
     protected ClassNode getDetachedCriteriaType(ClassNode domainClassNode) {
         ClassHelper.make(DetachedCriteria)

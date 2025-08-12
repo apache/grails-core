@@ -390,12 +390,13 @@ class GrailsGradlePlugin extends GroovyPlugin {
             File resourcesDir = SourceSets.findMainSourceSet(project).output.resourcesDir
             File buildInfoFile = new File(resourcesDir, 'META-INF/grails.build.info')
 
-
             Task buildPropertiesTask = project.tasks.create('buildProperties')
-            Map<String, Object> buildPropertiesContents = ['grails.env'            : Environment.isSystemSet() ? Environment.getCurrent().getName() : Environment.PRODUCTION.getName(),
-                                                           'info.app.name'         : project.name,
-                                                           'info.app.version'      : project.version instanceof Serializable ? project.version : project.version.toString(),
-                                                           'info.app.grailsVersion': project.properties.get('grailsVersion')]
+            Map<String, Object> buildPropertiesContents = [
+                'grails.env': Environment.isSystemSet() ? Environment.getCurrent().getName() : Environment.PRODUCTION.getName(),
+                'info.app.name': project.name,
+                'info.app.version': project.version instanceof Serializable ? project.version : project.version.toString(),
+                'info.app.grailsVersion': project.properties.get('grailsVersion')
+            ]
 
             buildPropertiesTask.inputs.properties(buildPropertiesContents)
             buildPropertiesTask.outputs.file(buildInfoFile)
@@ -789,9 +790,9 @@ class GrailsGradlePlugin extends GroovyPlugin {
             }
 
             Map<String, String> replaceTokens = [
-                    'info.app.name'         : project.name,
-                    'info.app.version'      : project.version?.toString(),
-                    'info.app.grailsVersion': grailsVersion
+                'info.app.name': project.name,
+                'info.app.version': project.version?.toString(),
+                'info.app.grailsVersion': grailsVersion
             ]
 
             task.from(project.relativePath('src/main/templates')) { spec ->

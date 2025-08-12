@@ -19,7 +19,6 @@
 
 package grails.plugin.json.view
 
-
 import grails.plugin.json.view.api.jsonapi.DefaultJsonApiIdRenderer
 import grails.plugin.json.view.mvc.JsonViewResolver
 import grails.plugins.Plugin
@@ -57,14 +56,15 @@ class JsonViewGrailsPlugin extends Plugin {
     // Online location of the plugin's browseable source code.
     def scm = [ url: 'https://github.com/grails/grails-views' ]
 
-    Closure doWithSpring() { {->
+    Closure doWithSpring() {
+        { ->
             jsonApiIdRenderStrategy(DefaultJsonApiIdRenderer)
             jsonViewConfiguration(JsonViewConfiguration)
             jsonTemplateEngine(JsonViewTemplateEngine, jsonViewConfiguration, applicationContext.classLoader)
             jsonSmartViewResolver(JsonViewResolver, jsonTemplateEngine) {
                 templateResolver = bean(PluginAwareTemplateResolver, jsonViewConfiguration)
             }
-            jsonViewResolver(GenericGroovyTemplateViewResolver, jsonSmartViewResolver )
+            jsonViewResolver(GenericGroovyTemplateViewResolver, jsonSmartViewResolver)
         }
     }
 }

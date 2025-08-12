@@ -53,7 +53,7 @@ class RxPromiseFactory extends AbstractPromiseFactory {
 
     @Override
     <T> Promise<T> createPromise(Closure<T>[] closures) {
-        if(closures.length == 1) {
+        if (closures.length == 1) {
             return new RxPromise<T>(this, closures[0], Schedulers.io())
         }
         else {
@@ -79,7 +79,7 @@ class RxPromiseFactory extends AbstractPromiseFactory {
     <T> Promise<T> onComplete(List<Promise<T>> promises, Closure<T> callable) {
         new RxPromise<T>(this, Observable.concat(
             promises.collect { Promise p ->
-                if(p instanceof BoundPromise) {
+                if (p instanceof BoundPromise) {
                     return Observable.just(((BoundPromise)p).value) as Observable<T>
                 }
                 else {

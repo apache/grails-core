@@ -34,6 +34,7 @@ import grails.plugins.GrailsPluginManager
  */
 @TagLib
 class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
+
     ApplicationContext applicationContext
 
     GrailsPluginManager pluginManager
@@ -41,7 +42,7 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
     boolean hasResourceProcessor = false
 
     static encodeAsForTags = [escapeJavascript: 'JavaScript',
-                              javascript: [expressionCodec:'JavaScript', scriptletCodec:'JavaScript', replaceOnly:true]]
+                              javascript: [expressionCodec: 'JavaScript', scriptletCodec: 'JavaScript', replaceOnly: true]]
 
     @PostConstruct
     private void initHasResourceProcessor() {
@@ -110,7 +111,7 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
             if (requestPluginContext) {
                 reqResCtx = (requestPluginContext.startsWith('/') ? requestPluginContext.substring(1) : requestPluginContext) + '/'
             }
-            attrs.uri = appBase + reqResCtx + 'js/'+attrs.remove('src')
+            attrs.uri = appBase + reqResCtx + 'js/' + attrs.remove('src')
         }
         out << g.external(attrs)
     }

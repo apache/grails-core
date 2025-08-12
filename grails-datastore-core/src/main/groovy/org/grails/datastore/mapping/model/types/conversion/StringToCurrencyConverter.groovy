@@ -27,6 +27,7 @@ import org.springframework.core.convert.converter.Converter
  */
 @CompileStatic
 class StringToCurrencyConverter implements Converter<String, Currency> {
+
     Currency convert(String source) {
         Currency.getInstance(source)
     }

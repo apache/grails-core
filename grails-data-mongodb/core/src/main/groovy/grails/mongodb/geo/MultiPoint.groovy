@@ -27,7 +27,8 @@ import groovy.transform.EqualsAndHashCode
  */
 @CompileStatic
 @EqualsAndHashCode
-class MultiPoint extends Shape implements GeoJSON{
+class MultiPoint extends Shape implements GeoJSON {
+
     final List<Point> positions
 
     MultiPoint(Point... positions) {
@@ -50,10 +51,10 @@ class MultiPoint extends Shape implements GeoJSON{
 
     static MultiPoint valueOf(List coords) {
         List<Point> points = (List<Point>) coords.collect() {
-            if(it instanceof Point) {
+            if (it instanceof Point) {
                 return it
             }
-            else if(it instanceof List) {
+            else if (it instanceof List) {
                 return Point.valueOf((List<Number>)it)
             }
             throw new IllegalArgumentException("Invalid coordinates: $coords")

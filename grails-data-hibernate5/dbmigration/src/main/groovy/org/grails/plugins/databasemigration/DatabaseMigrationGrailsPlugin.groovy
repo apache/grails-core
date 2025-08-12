@@ -67,7 +67,7 @@ class DatabaseMigrationGrailsPlugin extends Plugin {
                 return
             }
 
-            if(!updateAllOnStart) {
+            if (!updateAllOnStart) {
                 def updateOnStart = config.getProperty("${configPrefix}.updateOnStart", Boolean, false)
                 if (!updateOnStart) {
                     return

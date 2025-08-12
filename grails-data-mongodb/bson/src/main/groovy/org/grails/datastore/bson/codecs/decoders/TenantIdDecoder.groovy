@@ -38,11 +38,12 @@ import org.grails.datastore.mapping.model.types.TenantId
  */
 @CompileStatic
 class TenantIdDecoder implements PropertyDecoder<TenantId> {
+
     @Override
     void decode(BsonReader reader, TenantId property, EntityAccess entityAccess, DecoderContext decoderContext, CodecRegistry codecRegistry) {
         BsonType bsonType = reader.currentBsonType
         def decoder = SimpleDecoder.SIMPLE_TYPE_DECODERS.get(property.type)
-        if(bsonType != decoder.bsonType()) {
+        if (bsonType != decoder.bsonType()) {
             SimpleDecoder.DEFAULT_DECODERS.get(bsonType).decode(reader, property, entityAccess)
         }
         else {

@@ -48,6 +48,7 @@ import org.grails.cli.profile.ProjectContext
  */
 @CompileStatic
 class GradleUtil {
+
     private static final boolean DEFAULT_SUPPRESS_OUTPUT = true
 
     static ProjectConnection openGradleConnection(File baseDir) {
@@ -106,8 +107,8 @@ class GradleUtil {
     static LongRunningOperation setupConsoleOutput(ProjectContext context, LongRunningOperation operation) {
         GrailsConsole grailsConsole = context.console
         operation.colorOutput = grailsConsole.ansiEnabled
-        operation.standardOutput = new GrailsConsolePrintStream( grailsConsole.out )
-        operation.standardError = new GrailsConsoleErrorPrintStream( grailsConsole.err )
+        operation.standardOutput = new GrailsConsolePrintStream(grailsConsole.out)
+        operation.standardError = new GrailsConsoleErrorPrintStream(grailsConsole.err)
         operation
     }
 

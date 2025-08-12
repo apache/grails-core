@@ -38,9 +38,7 @@ import org.grails.io.support.FactoriesLoaderSupport
 @CompileStatic
 class GrailsFactoriesLoader extends FactoriesLoaderSupport {
 
-
     private static final Object[] NO_ARGUMENTS = [] as Object[]
-
 
     /**
      * Load the factory implementations of the given type from the default location,
@@ -64,9 +62,9 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
     }
 
     static <T> List<T> loadFactoriesWithArguments(Class<T> factoryClass, ClassLoader classLoader, Object[] arguments) {
-        boolean hasArguments = !(arguments != null && arguments.length==0)
+        boolean hasArguments = !(arguments != null && arguments.length == 0)
         List<T> results = new ArrayList<T>()
-        for(Class<? extends T> clazz : loadFactoryClasses(factoryClass, classLoader)) {
+        for (Class<? extends T> clazz : loadFactoryClasses(factoryClass, classLoader)) {
             results.add(hasArguments ? clazz.newInstance(arguments) : clazz.getDeclaredConstructor().newInstance())
         }
 
@@ -87,13 +85,12 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
         List<Class<T>> result = []
         for (String factoryName in factoryNames) {
             def clazz = loadFactoryClass(factoryName, factoryClass, classLoader)
-            if(clazz) {
+            if (clazz) {
                 result.add clazz
             }
         }
         return result
     }
-
 
     private static <T> Class<? extends T> loadFactoryClass(String instanceClassName, Class<T> factoryClass, ClassLoader classLoader) {
         try {
@@ -112,7 +109,7 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
 
     static <T> T loadFactory(Class<T> factoryClass, ClassLoader classLoader = GrailsFactoriesLoader.class.classLoader) {
         def all = loadFactories(factoryClass, classLoader)
-        if(all) {
+        if (all) {
             return all.get(0)
         }
     }
@@ -123,7 +120,7 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
 
     static <T> T loadFactory(Class<T> factoryClass, ClassLoader classLoader, Object... arguments) {
         def all = loadFactoriesWithArguments(factoryClass, classLoader, arguments)
-        if(all) {
+        if (all) {
             return (T)all.get(0)
         }
     }

@@ -43,6 +43,7 @@ import static org.grails.cli.profile.ProfileUtil.createDependency
 @ToString(includes = ['profile', 'name'])
 @CompileStatic
 class DefaultFeature implements Feature {
+
     final Profile profile
     final String name
     final Resource location
@@ -60,8 +61,8 @@ class DefaultFeature implements Feature {
         configuration.merge(featureConfig)
         def dependenciesConfig = configuration.get('dependencies')
 
-        if(dependenciesConfig instanceof List) {
-            for(entry in ((List) dependenciesConfig)) {
+        if (dependenciesConfig instanceof List) {
+            for (entry in ((List) dependenciesConfig)) {
                 if (entry instanceof Map) {
                     def scope = (String) entry.scope
                     def os = entry.os

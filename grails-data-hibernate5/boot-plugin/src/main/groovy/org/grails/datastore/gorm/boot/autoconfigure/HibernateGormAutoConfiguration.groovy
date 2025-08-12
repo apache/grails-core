@@ -73,16 +73,16 @@ class HibernateGormAutoConfiguration implements ApplicationContextAware,BeanFact
     HibernateDatastore hibernateDatastore() {
         List<String> packageNames = AutoConfigurationPackages.get(this.beanFactory)
         List<Package> packages = []
-        for(name in packageNames) {
+        for (name in packageNames) {
             Package pkg = Package.getPackage(name)
-            if(pkg != null) {
+            if (pkg != null) {
                 packages.add(pkg)
             }
         }
 
         ConfigurableListableBeanFactory beanFactory = applicationContext.beanFactory
         HibernateDatastore datastore
-        if(dataSource == null) {
+        if (dataSource == null) {
             datastore = new HibernateDatastore(
                     applicationContext.getEnvironment(),
                     new ConfigurableApplicationContextEventPublisher(applicationContext),
@@ -99,14 +99,14 @@ class HibernateGormAutoConfiguration implements ApplicationContextAware,BeanFact
             )
         }
 
-        for(Service service in datastore.getServices()) {
+        for (Service service in datastore.getServices()) {
             Class serviceClass = service.getClass()
             grails.gorm.services.Service ann = serviceClass.getAnnotation(grails.gorm.services.Service)
             String serviceName = ann?.name()
-            if(serviceName == null) {
+            if (serviceName == null) {
                 serviceName = Introspector.decapitalize(serviceClass.simpleName)
             }
-            if(!applicationContext.containsBean(serviceName)) {
+            if (!applicationContext.containsBean(serviceName)) {
                 applicationContext.beanFactory.registerSingleton(
                     serviceName,
                     service
@@ -128,7 +128,7 @@ class HibernateGormAutoConfiguration implements ApplicationContextAware,BeanFact
 
     @Override
     void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        if(!(applicationContext instanceof ConfigurableApplicationContext)) {
+        if (!(applicationContext instanceof ConfigurableApplicationContext)) {
             throw new IllegalArgumentException('Neo4jAutoConfiguration requires an instance of ConfigurableApplicationContext')
         }
         this.applicationContext = (ConfigurableApplicationContext)applicationContext

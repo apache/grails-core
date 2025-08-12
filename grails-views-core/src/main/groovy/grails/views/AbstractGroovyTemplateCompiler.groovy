@@ -68,8 +68,8 @@ abstract class AbstractGroovyTemplateCompiler {
         configuration.compilationCustomizers.clear()
 
         ImportCustomizer importCustomizer = new ImportCustomizer()
-        importCustomizer.addStarImports( viewConfiguration.packageImports )
-        importCustomizer.addStaticStars( viewConfiguration.staticImports )
+        importCustomizer.addStarImports(viewConfiguration.packageImports)
+        importCustomizer.addStaticStars(viewConfiguration.staticImports)
 
         configuration.addCompilationCustomizers(importCustomizer)
         configuration.addCompilationCustomizers(new ASTTransformationCustomizer(newViewsTransform()))
@@ -82,23 +82,23 @@ abstract class AbstractGroovyTemplateCompiler {
 
     void compile(List<File> sources) {
 
-        ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*2)
+        ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2)
         CompletionService completionService = new ExecutorCompletionService(threadPool)
 
         try {
-            Integer collationLevel = Runtime.getRuntime().availableProcessors()*2
-            if(sources.size() < collationLevel) {
+            Integer collationLevel = Runtime.getRuntime().availableProcessors() * 2
+            if (sources.size() < collationLevel) {
                 collationLevel = 1
             }
             configuration.setClasspathList(classpath)
             String pathToSourceDir = sourceDir.canonicalPath
             def collatedSources = sources.collate(collationLevel)
             List<Future<Boolean>> futures = []
-            for(int index=0;index < collatedSources.size();index++) {
+            for (int index = 0; index < collatedSources.size(); index++) {
                 def sourceFiles = collatedSources[index]
                 futures.add(completionService.submit({ ->
                     CompilerConfiguration configuration = new CompilerConfiguration(this.configuration)
-                    for(int viewIndex=0;viewIndex < sourceFiles.size();viewIndex++) {
+                    for (int viewIndex = 0; viewIndex < sourceFiles.size(); viewIndex++) {
                         File source = sourceFiles[viewIndex]
                         configureCompiler(configuration)
                         CompilationUnit unit = new CompilationUnit(configuration)
@@ -137,8 +137,6 @@ abstract class AbstractGroovyTemplateCompiler {
             threadPool.shutdown()
         }
 
-
-
     }
 
     void compile(File...sources) {
@@ -146,7 +144,7 @@ abstract class AbstractGroovyTemplateCompiler {
     }
 
     static void run(String[] args, Class<? extends GenericViewConfiguration> configurationClass, Class<? extends AbstractGroovyTemplateCompiler> compilerClass) {
-        if(args.length != 7) {
+        if (args.length != 7) {
             System.err.println("Invalid arguments: [${args.join(',')}]")
             System.err.println("""
 Usage: java -cp CLASSPATH ${compilerClass.name} [srcDir] [destDir] [targetCompatibility] [packageImports] [packageName] [configFile] [encoding]
@@ -169,10 +167,10 @@ Usage: java -cp CLASSPATH ${compilerClass.name} [srcDir] [destDir] [targetCompat
         configuration.readConfiguration(configFile)
 
         AbstractGroovyTemplateCompiler compiler = compilerClass.getDeclaredConstructor(ViewConfiguration, File).newInstance(configuration, srcDir)
-        compiler.setTargetDirectory( destinationDir )
-        compiler.setSourceEncoding( configuration.encoding )
-        if(targetCompatibility != null) {
-            compiler.setTargetBytecode( targetCompatibility )
+        compiler.setTargetDirectory(destinationDir)
+        compiler.setSourceEncoding(configuration.encoding)
+        if (targetCompatibility != null) {
+            compiler.setTargetBytecode(targetCompatibility)
         }
 
         String fileExtension = configuration.extension
@@ -180,7 +178,7 @@ Usage: java -cp CLASSPATH ${compilerClass.name} [srcDir] [destDir] [targetCompat
 
         List<File> allFiles = []
         srcDir.eachFileRecurse(FileType.FILES) { File f ->
-            if(f.name.endsWith(fileExtension)) {
+            if (f.name.endsWith(fileExtension)) {
                 allFiles.add(f)
             }
         }

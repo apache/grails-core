@@ -38,8 +38,7 @@ import org.grails.taglib.encoder.WithCodecHelper
  * @since 3.0
  */
 @CompileStatic
-trait TagLibraryInvoker extends WebAttributes{
-
+trait TagLibraryInvoker extends WebAttributes {
 
     private TagLibraryLookup tagLibraryLookup
     private boolean developmentMode = Environment.isDevelopmentMode()
@@ -51,9 +50,9 @@ trait TagLibraryInvoker extends WebAttributes{
 
     TagLibraryLookup getTagLibraryLookup() {
         def lookup = this.tagLibraryLookup
-        if(lookup == null) {
+        if (lookup == null) {
             def applicationContext = getGrailsApplication()?.mainContext
-            if(applicationContext?.containsBean('gspTagLibraryLookup')) {
+            if (applicationContext?.containsBean('gspTagLibraryLookup')) {
                 lookup = applicationContext?.getBean('gspTagLibraryLookup', TagLibraryLookup)
                 setTagLibraryLookup(lookup)
             }
@@ -64,7 +63,6 @@ trait TagLibraryInvoker extends WebAttributes{
     String getTaglibNamespace() {
         TagOutput.DEFAULT_NAMESPACE
     }
-
 
     /**
      * Method missing implementation that handles tag invocation by method name
@@ -99,7 +97,7 @@ trait TagLibraryInvoker extends WebAttributes{
     }
 
     private boolean shouldHandleMethodMissing(String methodName, Object[] args) {
-        if('render'.equals(methodName)) {
+        if ('render'.equals(methodName)) {
             // don't add any new metamethod if an existing render method exists, see GRAILS-11581
             return !this.respondsTo('render')
         } else {
@@ -119,7 +117,7 @@ trait TagLibraryInvoker extends WebAttributes{
         NamespacedTagDispatcher namespacedTagDispatcher = lookup?.lookupNamespaceDispatcher(propertyName)
         if (namespacedTagDispatcher) {
             if (!developmentMode) {
-                TagLibraryMetaUtils.registerPropertyMissingForTag(GrailsMetaClassUtils.getMetaClass(this),propertyName, namespacedTagDispatcher)
+                TagLibraryMetaUtils.registerPropertyMissingForTag(GrailsMetaClassUtils.getMetaClass(this), propertyName, namespacedTagDispatcher)
             }
             return namespacedTagDispatcher
         }
@@ -133,6 +131,5 @@ trait TagLibraryInvoker extends WebAttributes{
     def <T> T withCodec(Object codecInfo, Closure<T> body) {
         return WithCodecHelper.withCodec(getGrailsApplication(), codecInfo, body)
     }
-
 
 }

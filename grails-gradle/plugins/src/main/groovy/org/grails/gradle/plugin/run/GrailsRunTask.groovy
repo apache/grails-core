@@ -29,5 +29,4 @@ import org.gradle.api.tasks.JavaExec
  * @since 3.2
  */
 @CompileStatic
-class GrailsRunTask extends JavaExec {
-}
+class GrailsRunTask extends JavaExec {}

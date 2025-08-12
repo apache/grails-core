@@ -70,7 +70,6 @@ class PropertyConfig extends Property {
      */
     String sort
 
-
     /**
      * The default sort order
      */
@@ -80,7 +79,6 @@ class PropertyConfig extends Property {
      * The batch size used for lazy loading
      */
     Integer batchSize
-
 
     /**
      * Whether to ignore ObjectNotFoundException
@@ -127,12 +125,12 @@ class PropertyConfig extends Property {
      * @return This property config
      */
     PropertyConfig column(@DelegatesTo(ColumnConfig) Closure columnDef) {
-        if(columns.size() == 1 && firstColumnIsColumnCopy) {
+        if (columns.size() == 1 && firstColumnIsColumnCopy) {
             firstColumnIsColumnCopy = false
             ColumnConfig.configureExisting(columns[0], columnDef)
         }
         else {
-            columns.add( ColumnConfig.configureNew(columnDef) )
+            columns.add(ColumnConfig.configureNew(columnDef))
         }
         return this
     }
@@ -142,13 +140,13 @@ class PropertyConfig extends Property {
      * @param columnDef The column definition
      * @return This property config
      */
-    PropertyConfig column( Map columnDef ) {
-        if(columns.size() == 1 && firstColumnIsColumnCopy) {
+    PropertyConfig column(Map columnDef) {
+        if (columns.size() == 1 && firstColumnIsColumnCopy) {
             firstColumnIsColumnCopy = false
             ColumnConfig.configureExisting(columns[0], columnDef)
         }
         else {
-            columns.add( ColumnConfig.configureNew(columnDef) )
+            columns.add(ColumnConfig.configureNew(columnDef))
         }
         return this
     }
@@ -158,13 +156,13 @@ class PropertyConfig extends Property {
      * @param columnDef The column definition
      * @return This property config
      */
-    PropertyConfig column( String columnDef ) {
-        if(columns.size() == 1 && firstColumnIsColumnCopy) {
+    PropertyConfig column(String columnDef) {
+        if (columns.size() == 1 && firstColumnIsColumnCopy) {
             firstColumnIsColumnCopy = false
             columns[0].name = columnDef
         }
         else {
-            columns.add( ColumnConfig.configureNew(name: columnDef) )
+            columns.add(ColumnConfig.configureNew(name: columnDef))
         }
         return this
     }
@@ -179,7 +177,7 @@ class PropertyConfig extends Property {
      * @return This mapping
      */
     PropertyConfig cache(@DelegatesTo(CacheConfig) Closure cacheConfig) {
-        if(this.cache == null) {
+        if (this.cache == null) {
             this.cache = new CacheConfig()
         }
         CacheConfig.configureExisting(cache, cacheConfig)
@@ -192,7 +190,7 @@ class PropertyConfig extends Property {
      * @return This mapping
      */
     PropertyConfig cache(Map cacheConfig) {
-        if(this.cache == null) {
+        if (this.cache == null) {
             this.cache = new CacheConfig()
         }
         CacheConfig.configureExisting(cache, cacheConfig)
@@ -223,7 +221,7 @@ class PropertyConfig extends Property {
     @Override
     void setUnique(boolean unique) {
         super.setUnique(unique)
-        if(columns.size() == 1) {
+        if (columns.size() == 1) {
             columns[0].unique = unique
         }
     }
@@ -233,10 +231,10 @@ class PropertyConfig extends Property {
     PropertyConfig joinTable(Map joinTableDef) {
         DataBinder dataBinder = new DataBinder(joinTable)
         dataBinder.bind(new MutablePropertyValues(joinTableDef))
-        if(joinTableDef.key) {
+        if (joinTableDef.key) {
             joinTable.key(joinTableDef.key.toString())
         }
-        if(joinTableDef.column) {
+        if (joinTableDef.column) {
             joinTable.column(joinTableDef.column.toString())
         }
         return this
@@ -246,7 +244,7 @@ class PropertyConfig extends Property {
      * @param fetch The Hibernate {@link FetchMode}
      */
     void setFetch(FetchMode fetch) {
-        if(FetchMode.JOIN.equals(fetch)) {
+        if (FetchMode.JOIN.equals(fetch)) {
             super.setFetchStrategy(FetchType.EAGER)
         }
         else {
@@ -259,7 +257,7 @@ class PropertyConfig extends Property {
      */
     FetchMode getFetchMode() {
         FetchType strategy = super.getFetchStrategy()
-        if(strategy == null) {
+        if (strategy == null) {
             return FetchMode.DEFAULT
         }
         switch (strategy) {
@@ -295,7 +293,6 @@ class PropertyConfig extends Property {
         return configureExisting(property, config)
     }
 
-
     /**
      * Configures a new PropertyConfig instance
      *
@@ -325,7 +322,7 @@ class PropertyConfig extends Property {
             cc = new ColumnConfig()
             property.columns.add cc
         }
-        if(config.column) {
+        if (config.column) {
             config.name = config.column
         }
         ColumnConfig.configureExisting(cc, config)
@@ -352,13 +349,13 @@ class PropertyConfig extends Property {
      */
     String getColumn() {
         checkHasSingleColumn()
-        if(columns.isEmpty()) return null
+        if (columns.isEmpty()) return null
         return columns[0].name
     }
 
     String getEnumType() {
         checkHasSingleColumn()
-        if(columns.isEmpty()) return 'default'
+        if (columns.isEmpty()) return 'default'
         return columns[0].enumType
     }
 
@@ -369,7 +366,7 @@ class PropertyConfig extends Property {
      */
     String getSqlType() {
         checkHasSingleColumn()
-        if(columns.isEmpty()) return null
+        if (columns.isEmpty()) return null
         return columns[0].sqlType
     }
 
@@ -380,7 +377,7 @@ class PropertyConfig extends Property {
      */
     String getIndexName() {
         checkHasSingleColumn()
-        if(columns.isEmpty()) return null
+        if (columns.isEmpty()) return null
         return columns[0].index?.toString()
     }
 
@@ -391,11 +388,11 @@ class PropertyConfig extends Property {
      * column.
      */
     boolean isUnique() {
-        if(columns.size()>1) {
+        if (columns.size() > 1) {
             return super.isUnique()
         }
         else {
-            if(columns.isEmpty()) return super.isUnique()
+            if (columns.isEmpty()) return super.isUnique()
             return columns[0].unique
         }
     }
@@ -407,7 +404,7 @@ class PropertyConfig extends Property {
      */
     int getLength() {
         checkHasSingleColumn()
-        if(columns.isEmpty()) return -1
+        if (columns.isEmpty()) return -1
         return columns[0].length
     }
 
@@ -418,7 +415,7 @@ class PropertyConfig extends Property {
      */
     int getPrecision() {
         checkHasSingleColumn()
-        if(columns.isEmpty()) return -1
+        if (columns.isEmpty()) return -1
         return columns[0].precision
     }
 
@@ -429,7 +426,7 @@ class PropertyConfig extends Property {
      */
     int getScale() {
         checkHasSingleColumn()
-        if(columns.isEmpty()) {
+        if (columns.isEmpty()) {
             return super.getScale()
         }
         return columns[0].scale
@@ -438,7 +435,7 @@ class PropertyConfig extends Property {
     @Override
     void setScale(int scale) {
         checkHasSingleColumn()
-        if(!columns.isEmpty())  {
+        if (!columns.isEmpty())  {
             columns[0].scale = scale
         }
         else {
@@ -464,13 +461,13 @@ class PropertyConfig extends Property {
         pc.indexColumn = indexColumn != null ? (PropertyConfig)indexColumn.clone() : null
         pc.cache = cache != null ? cache.clone() : cache
         pc.joinTable = joinTable.clone()
-        if(typeParams != null) {
+        if (typeParams != null) {
             pc.typeParams = new Properties(typeParams)
         }
 
         List newColumns = new ArrayList<ColumnConfig>(columns.size())
         pc.columns = newColumns
-        for(c in columns) {
+        for (c in columns) {
             newColumns.add(c.clone())
         }
         return pc

@@ -70,19 +70,19 @@ class GenericGroovyTemplateView extends AbstractUrlBasedView {
         def qualifiers = []
         def v = httpServletRequest.getHeader(HttpHeaders.ACCEPT_VERSION)
         MimeType mimeType = GrailsWebRequest.lookup(httpServletRequest) != null ? httpServletResponse.mimeType : null
-        if(mimeType != null && mimeType != MimeType.ALL) {
+        if (mimeType != null && mimeType != MimeType.ALL) {
             qualifiers.add(mimeType.extension)
         }
-        if(v != null) {
+        if (v != null) {
             qualifiers.add(v)
         }
         Template template = templateEngine.resolveTemplate(url, locale, qualifiers as String[])
-        if(template != null) {
+        if (template != null) {
 
             if (!httpServletResponse.contentType) {
-                httpServletResponse.setContentType( getContentType() )
+                httpServletResponse.setContentType(getContentType())
             }
-            httpServletResponse.setCharacterEncoding( defaultEncoding )
+            httpServletResponse.setCharacterEncoding(defaultEncoding)
 
             def writable = template.make(map)
             prepareWritable(writable, httpServletRequest, httpServletResponse, locale)
@@ -92,7 +92,7 @@ class GenericGroovyTemplateView extends AbstractUrlBasedView {
                 // now write the writable
                 writable.writeTo(writer)
             } catch (RuntimeException e) {
-                if(!httpServletResponse.isCommitted()) {
+                if (!httpServletResponse.isCommitted()) {
                     // set back to HTML to errors are rendered correctly
                     httpServletResponse.setContentType(MimeType.HTML.name)
                 }
@@ -130,7 +130,7 @@ class GenericGroovyTemplateView extends AbstractUrlBasedView {
             def httpView = (HttpView) writable
             httpView.setResponse(new HttpViewResponse(httpServletResponse))
             httpView.setRequest(new HttpViewRequest(httpServletRequest))
-            if(webRequest != null) {
+            if (webRequest != null) {
                 httpView.setParams(new DelegatingParameters(webRequest.getParams()))
             }
         }

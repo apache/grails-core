@@ -80,9 +80,8 @@ trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnit
         getArtefactInstance()
     }
 
-
     private void ensureTaglibHasBeenMocked() {
-        if(!hasBeenMocked) {
+        if (!hasBeenMocked) {
             mockTagLib getTagLibTypeUnderTest()
             hasBeenMocked = true
         }

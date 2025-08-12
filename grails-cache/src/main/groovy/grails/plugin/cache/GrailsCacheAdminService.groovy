@@ -32,13 +32,13 @@ class GrailsCacheAdminService implements GrailsCacheManagerAware {
     void clearTemplatesCache() {}
 
     void clearCache(CharSequence cacheName) {
-        if(cacheName) {
+        if (cacheName) {
             grailsCacheManager.getCache(cacheName.toString())?.clear()
         }
     }
 
     void clearAllCaches() {
-        for(CharSequence cacheName in grailsCacheManager.cacheNames) {
+        for (CharSequence cacheName in grailsCacheManager.cacheNames) {
             clearCache(cacheName)
         }
     }

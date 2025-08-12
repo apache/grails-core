@@ -450,5 +450,3 @@ class FindByMethodSpec extends GrailsDataTckSpec {
 //            thrown MissingMethodException
     }
 }
-
-

@@ -52,7 +52,6 @@ abstract class AbstractMongoConnectionSourceSettings extends ConnectionSourceSet
      */
     String databaseName = DEFAULT_DATABASE_NAME
 
-
     /**
      * The host name to use
      */
@@ -107,7 +106,7 @@ abstract class AbstractMongoConnectionSourceSettings extends ConnectionSourceSet
      * @return Obtain the final URL whether from the connection string or the host/port setting
      */
     ConnectionString getUrl() {
-        if(connectionString != null) {
+        if (connectionString != null) {
             return connectionString
         }
         else {
@@ -128,7 +127,7 @@ abstract class AbstractMongoConnectionSourceSettings extends ConnectionSourceSet
      * @return Obtain the database name
      */
     String getDatabase() {
-        if(connectionString != null) {
+        if (connectionString != null) {
             return connectionString.database ?: databaseName
         }
         else {

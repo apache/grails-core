@@ -123,7 +123,7 @@ class WebSetupSpecInterceptor implements IMethodInterceptor {
 
             "${CompositeViewResolver.BEAN_NAME}"(CompositeViewResolver)
 
-            if(ClassUtils.isPresent('org.grails.plugins.web.GroovyPagesGrailsPlugin', classLoader)) {
+            if (ClassUtils.isPresent('org.grails.plugins.web.GroovyPagesGrailsPlugin', classLoader)) {
                 def lazyBean = { bean ->
                     bean.lazyInit = true
                 }

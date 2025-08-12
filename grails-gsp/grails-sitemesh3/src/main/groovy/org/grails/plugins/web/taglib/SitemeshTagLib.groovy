@@ -28,6 +28,7 @@ import org.grails.encoder.Encoder
 
 @TagLib
 class SitemeshTagLib implements TagLibrary {
+
     static String namespace = 'sitemesh'
     CodecLookup codecLookup
     // from org.grails.gsp.compiler.SitemeshPreprocessor
@@ -37,7 +38,7 @@ class SitemeshTagLib implements TagLibrary {
         this.codecLookup = codecLookup
     }
 
-    def captureTagContent(GrailsPrintWriter writer, String tagname, Map attrs, Object body, boolean noEndTagForEmpty=false, boolean useNamespace = false) {
+    def captureTagContent(GrailsPrintWriter writer, String tagname, Map attrs, Object body, boolean noEndTagForEmpty = false, boolean useNamespace = false) {
         def content = null
         if (body != null) {
             if (body instanceof Closure) {
@@ -51,12 +52,12 @@ class SitemeshTagLib implements TagLibrary {
         if (content instanceof StreamCharBuffer) {
             content.setPreferSubChunkWhenWritingToOtherBuffer(true)
         }
-        writer << '<'+(useNamespace? SitemeshTagLib.namespace + ':' : '')
+        writer << '<' + (useNamespace ? SitemeshTagLib.namespace + ':' : '')
         writer << tagname
         def useXmlClosingForEmptyTag = false
         if (attrs) {
             def xmlClosingString = attrs.remove(XML_CLOSING_FOR_EMPTY_TAG_ATTRIBUTE_NAME)
-            if (xmlClosingString=='/') {
+            if (xmlClosingString == '/') {
                 useXmlClosingForEmptyTag = true
             }
             Encoder htmlEncoder = codecLookup?.lookupEncoder('HTML')
@@ -73,7 +74,7 @@ class SitemeshTagLib implements TagLibrary {
             writer << '>'
             // the following row must be written separately (append StreamCharBuffer gets appended as subchunk)
             writer << content
-            writer << '</'+(useNamespace? SitemeshTagLib.namespace + ':' : '')
+            writer << '</' + (useNamespace ? SitemeshTagLib.namespace + ':' : '')
             writer << tagname
             writer << '>'
         }
@@ -84,7 +85,7 @@ class SitemeshTagLib implements TagLibrary {
                 // for empty title, the tag must be closed properly
                 // for empty meta tag shouldn't be closed at all, see GRAILS-5696
                 if (!noEndTagForEmpty) {
-                    writer << '</'+(useNamespace? SitemeshTagLib.namespace + ':' : '')
+                    writer << '</' + (useNamespace ? SitemeshTagLib.namespace + ':' : '')
                     writer << tagname
                     writer << '>'
                 }

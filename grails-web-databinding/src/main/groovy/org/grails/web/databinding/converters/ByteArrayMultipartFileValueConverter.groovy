@@ -33,13 +33,13 @@ class ByteArrayMultipartFileValueConverter implements ValueConverter {
 
     Object convert(Object value) {
         MultipartFile mf
-        if(value instanceof MultipartFile) {
+        if (value instanceof MultipartFile) {
             mf = (MultipartFile)value
-        } else if(value instanceof Collection) {
+        } else if (value instanceof Collection) {
             def coll = (Collection)value
-            if(coll.size() > 0) {
+            if (coll.size() > 0) {
                 def firstElement = coll[0]
-                if(firstElement instanceof MultipartFile) {
+                if (firstElement instanceof MultipartFile) {
                     mf = (MultipartFile)firstElement
                 }
             }
@@ -53,10 +53,10 @@ class ByteArrayMultipartFileValueConverter implements ValueConverter {
 
     boolean canConvert(Object value) {
         def canConvertValue = false
-        if(value instanceof MultipartFile) {
+        if (value instanceof MultipartFile) {
             canConvertValue = true
-        } else if(value instanceof Collection) {
-            if(value.size() > 0 && ((Collection)value)[0] instanceof MultipartFile) {
+        } else if (value instanceof Collection) {
+            if (value.size() > 0 && ((Collection)value)[0] instanceof MultipartFile) {
                 canConvertValue = true
             }
         }

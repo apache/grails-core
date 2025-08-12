@@ -49,6 +49,7 @@ import org.grails.web.util.GrailsApplicationAttributes
  */
 @CompileStatic
 class HttpServletResponseExtension {
+
     // The ACCEPT header will not be used for content negotiation for user agents containing the following strings (defaults to the 4 major rendering engines)
     static Pattern disableForUserAgents
     static boolean useAcceptHeaderXhr
@@ -76,12 +77,12 @@ class HttpServletResponseExtension {
 
     @CompileStatic
     static MimeType[] getMimeTypes() {
-        if(mimeTypes == null) {
+        if (mimeTypes == null) {
 
             final webRequest = GrailsWebRequest.lookup()
 
             def context = webRequest.applicationContext
-            if(context ) {
+            if (context) {
                 try {
                     mimeTypes = context.getBean(MimeUtility).getKnownMimeTypes() as MimeType[]
                     loadMimeTypeConfig(context.getBean(GrailsApplication).config)
@@ -96,7 +97,6 @@ class HttpServletResponseExtension {
 
         mimeTypes
     }
-
 
     /**
      * Obtains the format to use for the response using either the file extension or the ACCEPT header
@@ -236,7 +236,7 @@ class HttpServletResponseExtension {
         }
         if (config.containsKey(Settings.MIME_DISABLE_ACCEPT_HEADER_FOR_USER_AGENTS)) {
             final disableForUserAgentsConfig = config.getProperty(Settings.MIME_DISABLE_ACCEPT_HEADER_FOR_USER_AGENTS, Object)
-            if(disableForUserAgentsConfig instanceof Pattern) {
+            if (disableForUserAgentsConfig instanceof Pattern) {
                 this.disableForUserAgents = (Pattern)disableForUserAgentsConfig
             } else if (disableForUserAgentsConfig instanceof Collection && disableForUserAgentsConfig) {
                 final userAgents = disableForUserAgentsConfig.join('(?i)|')

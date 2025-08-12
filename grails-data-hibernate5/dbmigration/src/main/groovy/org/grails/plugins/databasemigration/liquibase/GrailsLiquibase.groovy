@@ -50,7 +50,7 @@ class GrailsLiquibase extends SpringLiquibase {
 
     @Override
     protected Liquibase createLiquibase(Connection connection) throws LiquibaseException {
-        Liquibase liquibase = new Liquibase(getChangeLog(), createResourceOpener(), createDatabase (connection, null))
+        Liquibase liquibase = new Liquibase(getChangeLog(), createResourceOpener(), createDatabase(connection, null))
         if (parameters != null) {
             for (Map.Entry<String, String> entry : parameters.entrySet()) {
                 liquibase.setChangeLogParameter(entry.getKey(), entry.getValue())
@@ -63,7 +63,6 @@ class GrailsLiquibase extends SpringLiquibase {
 
         return liquibase
     }
-
 
     @Override
     protected Database createDatabase(Connection connection, ResourceAccessor accessor) throws DatabaseException {

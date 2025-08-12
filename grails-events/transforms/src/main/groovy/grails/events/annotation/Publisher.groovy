@@ -44,6 +44,7 @@ import org.grails.datastore.gorm.transform.GormASTTransformationClass
 @GroovyASTTransformationClass('org.grails.datastore.gorm.transform.OrderedGormTransformation')
 @GormASTTransformationClass('org.grails.events.transform.PublisherTransform')
 @interface Publisher {
+
     /**
      * @return The id of the event
      */

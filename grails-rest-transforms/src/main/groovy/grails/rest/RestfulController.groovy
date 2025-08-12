@@ -40,6 +40,7 @@ import static org.springframework.http.HttpStatus.OK
 @Artefact('Controller')
 @ReadOnly
 class RestfulController<T> {
+
     static allowedMethods = [save: 'POST', update: ['PUT', 'POST'], patch: 'PATCH', delete: 'DELETE']
 
     Class<T> resource
@@ -83,7 +84,7 @@ class RestfulController<T> {
      * Displays a form to create a new resource
      */
     def create() {
-        if(handleReadOnly()) {
+        if (handleReadOnly()) {
             return
         }
         respond createResource()
@@ -94,7 +95,7 @@ class RestfulController<T> {
      */
     @Transactional
     def save() {
-        if(handleReadOnly()) {
+        if (handleReadOnly()) {
             return
         }
         def instance = createResource()
@@ -102,7 +103,7 @@ class RestfulController<T> {
         instance.validate()
         if (instance.hasErrors()) {
             transactionStatus.setRollbackOnly()
-            respond instance.errors, view:'create' // STATUS CODE 422
+            respond instance.errors, view: 'create' // STATUS CODE 422
             return
         }
 
@@ -115,15 +116,15 @@ class RestfulController<T> {
             }
             '*' {
                 response.addHeader(HttpHeaders.LOCATION,
-                        grailsLinkGenerator.link( resource: this.controllerName, action: 'show',id: instance.id, absolute: true,
-                                            namespace: hasProperty('namespace') ? this.namespace : null ))
-                respond instance, [status: CREATED, view:'show']
+                        grailsLinkGenerator.link(resource: this.controllerName, action: 'show', id: instance.id, absolute: true,
+                                            namespace: hasProperty('namespace') ? this.namespace : null))
+                respond instance, [status: CREATED, view: 'show']
             }
         }
     }
 
     def edit() {
-        if(handleReadOnly()) {
+        if (handleReadOnly()) {
             return
         }
         respond queryForResource(params.id)
@@ -144,7 +145,7 @@ class RestfulController<T> {
      */
     @Transactional
     def update() {
-        if(handleReadOnly()) {
+        if (handleReadOnly()) {
             return
         }
 
@@ -160,7 +161,7 @@ class RestfulController<T> {
         instance.validate()
         if (instance.hasErrors()) {
             transactionStatus.setRollbackOnly()
-            respond instance.errors, view:'edit' // STATUS CODE 422
+            respond instance.errors, view: 'edit' // STATUS CODE 422
             return
         }
 
@@ -170,10 +171,10 @@ class RestfulController<T> {
                 flash.message = message(code: 'default.updated.message', args: [classMessageArg, instance.id])
                 redirect instance
             }
-            '*'{
+            '*' {
                 response.addHeader(HttpHeaders.LOCATION,
-                        grailsLinkGenerator.link( resource: this.controllerName, action: 'show',id: instance.id, absolute: true,
-                                            namespace: hasProperty('namespace') ? this.namespace : null ))
+                        grailsLinkGenerator.link(resource: this.controllerName, action: 'show', id: instance.id, absolute: true,
+                                            namespace: hasProperty('namespace') ? this.namespace : null))
                 respond instance, [status: OK]
             }
         }
@@ -185,7 +186,7 @@ class RestfulController<T> {
      */
     @Transactional
     def delete() {
-        if(handleReadOnly()) {
+        if (handleReadOnly()) {
             return
         }
 
@@ -203,7 +204,7 @@ class RestfulController<T> {
                 flash.message = message(code: 'default.deleted.message', args: [classMessageArg, instance.id])
                 redirect action: 'index', method: 'GET'
             }
-            '*'{ render status: NO_CONTENT } // NO CONTENT STATUS CODE
+            '*' { render status: NO_CONTENT } // NO CONTENT STATUS CODE
         }
     }
 
@@ -213,7 +214,7 @@ class RestfulController<T> {
      * @return true if controller is read only
      */
     protected boolean handleReadOnly() {
-        if(readOnly) {
+        if (readOnly) {
             render status: HttpStatus.METHOD_NOT_ALLOWED.value()
             return true
         } else {
@@ -290,7 +291,7 @@ class RestfulController<T> {
                 flash.message = message(code: 'default.not.found.message', args: [classMessageArg, params.id])
                 redirect action: 'index', method: 'GET'
             }
-            '*'{ render status: NOT_FOUND }
+            '*' { render status: NOT_FOUND }
         }
     }
 

@@ -91,17 +91,17 @@ class GroovyPageCompiler {
                 generatedGroovyPagesDirectory = new File(System.getProperty('java.io.tmpdir'), 'gspcompile')
                 generatedGroovyPagesDirectory.mkdirs()
             }
-            if(configs) {
+            if (configs) {
                 CodeGenConfig codeGenConfig = new CodeGenConfig()
                 codeGenConfig.classLoader = classLoader
                 configMap = codeGenConfig
-                for(path in configs) {
+                for (path in configs) {
                     def f = new File(path)
-                    if(f.exists()) {
-                        if(f.name.endsWith('.yml')) {
+                    if (f.exists()) {
+                        if (f.name.endsWith('.yml')) {
                             codeGenConfig.loadYml(f)
                         }
-                        else if(f.name.endsWith('.groovy')) {
+                        else if (f.name.endsWith('.groovy')) {
                             codeGenConfig.loadGroovy(f)
                         }
                     }
@@ -109,25 +109,25 @@ class GroovyPageCompiler {
             }
             compilerConfig.setTargetDirectory(targetDir)
             compilerConfig.setSourceEncoding(encoding)
-            ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*2)
+            ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2)
             CompletionService completionService = new ExecutorCompletionService(threadPool)
             List<Future<Map>> futures = []
             try {
-                Integer collationLevel = Runtime.getRuntime().availableProcessors()*2
-                if(srcFiles.size() < collationLevel) {
+                Integer collationLevel = Runtime.getRuntime().availableProcessors() * 2
+                if (srcFiles.size() < collationLevel) {
                     collationLevel = 1
                 }
                 def collatedSrcFiles = srcFiles.collate(collationLevel)
-                for(int index = 0; index < collatedSrcFiles.size(); index++) {
+                for (int index = 0; index < collatedSrcFiles.size(); index++) {
                     def gspFiles = collatedSrcFiles[index]
 
                     futures.add(completionService.submit({ ->
                         def results = [:]
-                        for(int gspIndex = 0; gspIndex < gspFiles.size(); gspIndex++) {
+                        for (int gspIndex = 0; gspIndex < gspFiles.size(); gspIndex++) {
                             File gsp = gspFiles[gspIndex]
                             try {
                                 compileGSP(viewsDir, gsp, viewPrefix, packagePrefix, results)
-                            } catch(Exception ex) {
+                            } catch (Exception ex) {
                                 LOG.error("Error Compiling GSP File: ${gsp.name} - ${ex.message}")
                                 throw ex
                             }
@@ -196,13 +196,13 @@ class GroovyPageCompiler {
             }
             packageDir += generateJavaName(relPackagePath)
         }
-        String className = generateJavaName(packageDir.replace('/','_'))
+        String className = generateJavaName(packageDir.replace('/', '_'))
         className += generateJavaName(gspfile.name)
         // using default package because of GRAILS-5022
         packageDir = ''
 
         File classFile = new File(new File(targetDir, packageDir), "${className}.class")
-        String packageName = packageDir.replace('/','.')
+        String packageName = packageDir.replace('/', '.')
         String fullClassName
         if (packageName) {
             fullClassName = packageName + '.' + className
@@ -237,7 +237,7 @@ class GroovyPageCompiler {
 
                 CompilationUnit unit = new CompilationUnit(compilerConfig, null, classLoader)
                 unit.addPhaseOperation(operation, Phases.CANONICALIZATION)
-                unit.addSource(gspgroovyfile.name,gsptarget.toString())
+                unit.addSource(gspgroovyfile.name, gsptarget.toString())
                 // unit.addSource(gspgroovyfile)
                 unit.compile()
             }
@@ -268,7 +268,7 @@ class GroovyPageCompiler {
         char ch
         while (i < str.length()) {
             ch = str.charAt(i++)
-            if (ch=='/') {
+            if (ch == '/') {
                 nextMustBeStartChar = true
                 sb.append(ch)
             }

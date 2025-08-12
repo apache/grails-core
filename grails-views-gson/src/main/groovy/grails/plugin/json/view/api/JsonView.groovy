@@ -42,6 +42,7 @@ import grails.views.api.GrailsView
  */
 @CompileStatic
 trait JsonView extends GrailsView {
+
     /**
      * The default generator
      */
@@ -96,13 +97,13 @@ trait JsonView extends GrailsView {
 
         def template = arguments.template
 
-        if(template) {
+        if (template) {
             Map model = (Map)arguments.model ?: [:]
             def templateUri = templateEngine
                     .viewUriResolver
                     .resolveTemplateUri(getControllerNamespace(), getControllerName(), template.toString())
             GrailsViewTemplate parentTemplate = (GrailsViewTemplate)templateEngine.resolveTemplate(templateUri, locale)
-            if(parentTemplate != null) {
+            if (parentTemplate != null) {
                 ParentInfo parentInfo = new ParentInfo(
                     parentTemplate: parentTemplate,
                     parentModel: model

@@ -46,6 +46,7 @@ import org.grails.buffer.FastStringWriter
  */
 @CompileStatic
 class JspTagImpl implements JspTag {
+
     static final Log LOG = LogFactory.getLog(JspTagImpl)
     ClassLoader classLoader
     String tagClassName
@@ -67,11 +68,11 @@ class JspTagImpl implements JspTag {
     }
 
     void doTag(Writer targetWriter, Map<String,Object> attributes) {
-        doTag targetWriter,attributes, null
+        doTag targetWriter, attributes, null
     }
 
     protected void checkInitialized() {
-        if(tagClass==null) {
+        if (tagClass == null) {
             synchronized(this) {
                 tagClass = ClassUtils.forName(tagClassName, classLoader)
                 initializeTagClassTypes()
@@ -173,8 +174,8 @@ class JspTagImpl implements JspTag {
             if (key && tagBean.isWritableProperty(key)) {
                 tagBean.setPropertyValue key, value
             }
-            else if(key && tag instanceof DynamicAttributes){
-                ((DynamicAttributes)tag).setDynamicAttribute(null,key,value)
+            else if (key && tag instanceof DynamicAttributes) {
+                ((DynamicAttributes)tag).setDynamicAttribute(null, key, value)
             }
         }
     }
@@ -194,7 +195,7 @@ class JspTagImpl implements JspTag {
         }
     }
 
-    void withJspWriterDelegate(GroovyPagesPageContext pageContext,Writer delegate, Closure callable) {
+    void withJspWriterDelegate(GroovyPagesPageContext pageContext, Writer delegate, Closure callable) {
         pageContext.pushWriter new JspWriterDelegate(delegate)
         try {
             callable()
@@ -204,7 +205,7 @@ class JspTagImpl implements JspTag {
         }
     }
 
-    protected handleSimpleTag(SimpleTag tag, Map attributes,GroovyPagesPageContext pageContext,
+    protected handleSimpleTag(SimpleTag tag, Map attributes, GroovyPagesPageContext pageContext,
             Writer targetWriter, Closure body) {
 
         withJspWriterDelegate pageContext, targetWriter, {

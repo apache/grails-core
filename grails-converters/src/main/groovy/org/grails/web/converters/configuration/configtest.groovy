@@ -52,7 +52,7 @@ def test = { label, jsonConfig ->
     30000.times {
         assert jsonConfig.getMarshaller(new Object())
     }
-    def time = System.currentTimeMillis()-start
+    def time = System.currentTimeMillis() - start
     println "$label --> ${time}ms"
     map[label] = map[label] + time
 }

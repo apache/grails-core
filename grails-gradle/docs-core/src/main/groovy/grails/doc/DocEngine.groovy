@@ -76,7 +76,7 @@ class DocEngine extends BaseRenderEngine implements WikiRenderEngine {
     boolean exists(String name) {
         int barIndex = name.indexOf('|')
         if (barIndex > -1) {
-            def refItem = name[0..barIndex-1]
+            def refItem = name[0..barIndex - 1]
             def refCategory = name[barIndex + 1..-1]
 
             if (refCategory.startsWith('http://') || refCategory.startsWith('https://')) {
@@ -95,7 +95,7 @@ class DocEngine extends BaseRenderEngine implements WikiRenderEngine {
                     return true
                 }
 
-                emitWarning(name,ref, 'page')
+                emitWarning(name, ref, 'page')
             }
             else if (refCategory.startsWith('api:')) {
                 def ref = refCategory[4..-1]
@@ -105,7 +105,7 @@ class DocEngine extends BaseRenderEngine implements WikiRenderEngine {
 
                 ref = ref.replace('.' as char, '/' as char)
                 if (ref.indexOf('#') > -1) {
-                    ref = ref[0..ref.indexOf('#')-1]
+                    ref = ref[0..ref.indexOf('#') - 1]
                 }
 
                 def apiBase = initialContext.get(API_BASE_PATH)
@@ -117,7 +117,7 @@ class DocEngine extends BaseRenderEngine implements WikiRenderEngine {
                     if (apiDocExists) return true
                 }
 
-                emitWarning(name,ref, 'class')
+                emitWarning(name, ref, 'class')
             }
             else {
                 String dir = getNaturalName(refCategory)
@@ -127,7 +127,7 @@ class DocEngine extends BaseRenderEngine implements WikiRenderEngine {
                     return true
                 }
 
-                emitWarning(name,ref, 'page')
+                emitWarning(name, ref, 'page')
             }
         }
 
@@ -145,10 +145,10 @@ class DocEngine extends BaseRenderEngine implements WikiRenderEngine {
     }
 
     protected void init() {
-        engineProperties?.findAll { it.key?.startsWith('api.')}?.each {
+        engineProperties?.findAll { it.key?.startsWith('api.') }?.each {
             EXTERNAL_DOCS[it.key[4..-1]] = it.value
         }
-        engineProperties?.findAll { it.key?.startsWith('alias.')}?.each {
+        engineProperties?.findAll { it.key?.startsWith('alias.') }?.each {
             ALIAS[it.key[6..-1]] = it.value
         }
 
@@ -233,7 +233,7 @@ class DocEngine extends BaseRenderEngine implements WikiRenderEngine {
     }
 
     void appendLink(StringBuffer buffer, String name, String view) {
-        appendLink(buffer,name,view, '')
+        appendLink(buffer, name, view, '')
     }
 
     void appendCreateLink(StringBuffer buffer, String name, String view) {
@@ -272,7 +272,7 @@ class DocEngine extends BaseRenderEngine implements WikiRenderEngine {
                 }
                 else if (w.length() > 1 && Character.isUpperCase(w.charAt(w.length() - 1))) {
                     w = ''
-                    words.add(++i,w)
+                    words.add(++i, w)
                 }
 
                 words.set(i, w + c)
@@ -293,6 +293,7 @@ class DocEngine extends BaseRenderEngine implements WikiRenderEngine {
 }
 
 class WarningMacro extends BaseMacro {
+
     String getName() { 'warning' }
     void execute(Writer writer, MacroParameter params) {
         writer << '<blockquote class="warning">' << params.content << '</blockquote>'
@@ -300,6 +301,7 @@ class WarningMacro extends BaseMacro {
 }
 
 class NoteMacro extends BaseMacro {
+
     String getName() { 'note' }
     void execute(Writer writer, MacroParameter params) {
         writer << '<blockquote class="note">' << params.content << '</blockquote>'
@@ -307,6 +309,7 @@ class NoteMacro extends BaseMacro {
 }
 
 class BlockQuoteFilter extends RegexTokenFilter {
+
     BlockQuoteFilter() {
         super(/(?m)^bc.\s*?(.*?)\n\n/)
     }
@@ -316,6 +319,7 @@ class BlockQuoteFilter extends RegexTokenFilter {
 }
 
 class ItalicFilter extends RegexTokenFilter {
+
     ItalicFilter() {
         super(/\b_([^\n]*?)_\b/)
     }
@@ -325,6 +329,7 @@ class ItalicFilter extends RegexTokenFilter {
 }
 
 class BoldFilter extends RegexTokenFilter {
+
     BoldFilter() {
         super(/\*([^\n]*?)\*/)
     }
@@ -334,6 +339,7 @@ class BoldFilter extends RegexTokenFilter {
 }
 
 class CodeFilter extends RegexTokenFilter {
+
     CodeFilter() {
         super(/@([^\n]*?)@/)
     }
@@ -351,6 +357,7 @@ class CodeFilter extends RegexTokenFilter {
 }
 
 class ImageFilter extends RegexTokenFilter {
+
     ImageFilter() {
         super(/!([^\n<>=]*?\.(jpg|png|gif))!/)
     }
@@ -368,6 +375,7 @@ class ImageFilter extends RegexTokenFilter {
 }
 
 class TextileLinkFilter extends RegexTokenFilter {
+
     TextileLinkFilter() {
         super(/"([^"]+?)":(\S+?)(\s)/)
     }

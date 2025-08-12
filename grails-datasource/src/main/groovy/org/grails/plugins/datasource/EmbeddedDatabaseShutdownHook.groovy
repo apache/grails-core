@@ -38,7 +38,8 @@ import org.grails.core.lifecycle.ShutdownOperations
 
 @CompileStatic
 class EmbeddedDatabaseShutdownHook implements SmartLifecycle, ApplicationContextAware {
-    private static final Log log=LogFactory.getLog(this)
+
+    private static final Log log = LogFactory.getLog(this)
     private boolean running
     private ApplicationContext applicationContext
     private List<String> embeddedDatabaseBeanNames
@@ -47,7 +48,7 @@ class EmbeddedDatabaseShutdownHook implements SmartLifecycle, ApplicationContext
     void start() {
         embeddedDatabaseBeanNames = []
         applicationContext.getBeansOfType(DataSource).each { String beanName, DataSource dataSource ->
-            if(isEmbeddedH2orHsqldb(dataSource)) {
+            if (isEmbeddedH2orHsqldb(dataSource)) {
                 embeddedDatabaseBeanNames.add(beanName)
             }
         }
@@ -93,9 +94,9 @@ class EmbeddedDatabaseShutdownHook implements SmartLifecycle, ApplicationContext
         MetaProperty urlProperty = dataSource.hasProperty('url')
         if (urlProperty) {
             String url = urlProperty.getProperty(dataSource)
-            if(url && (url.startsWith('jdbc:h2:') || url.startsWith('jdbc:hsqldb:'))) {
+            if (url && (url.startsWith('jdbc:h2:') || url.startsWith('jdbc:hsqldb:'))) {
                 // don't shutdown remote servers
-                if(!(url.startsWith('jdbc:hsqldb:h') || url.startsWith('jdbc:h2:tcp:') || url.startsWith('jdbc:h2:ssl:'))) {
+                if (!(url.startsWith('jdbc:hsqldb:h') || url.startsWith('jdbc:h2:tcp:') || url.startsWith('jdbc:h2:ssl:'))) {
                     return true
                 }
             }

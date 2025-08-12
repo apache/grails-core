@@ -186,7 +186,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
         PersistentProperty identity = entity.identity
         String idName = identity?.name
 
-        if(idName != null) {
+        if (idName != null) {
             out.write(JsonOutput.COMMA)
             writeKeyValue(out, 'id', idGenerator.render(object, identity))
         }
@@ -332,7 +332,6 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
             out.write(generator.toJson(prop.name))
             out.write(JsonOutput.COLON)
             out.write(generator.toJson(((GroovyObject) object).getProperty(prop.name)))
-
 
             firstAttribute = false
         }
@@ -481,7 +480,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
                         Object resource = paginationArgs.get(PAGINATION_RESROUCE)
                         Parameters params = defaultPaginateParams(paginationArgs)
                         List<Link> links = getPaginationLinks(resource, total, params)
-                        for(link in links) {
+                        for (link in links) {
                             out.write(JsonOutput.COMMA)
                             writeKeyValue(out, link.rel, link.href)
                         }
@@ -538,7 +537,6 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
         } else {
             return NOOP_OUTPUT
         }
-
 
     }
 

@@ -38,6 +38,7 @@ import org.grails.datastore.mapping.query.Query
  */
 @CompileStatic
 class CodecCustomTypeMarshaller implements CustomTypeMarshaller<Document, Document, Document> {
+
     final Codec codec
     final MappingContext mappingContext
 

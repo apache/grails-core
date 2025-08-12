@@ -61,7 +61,7 @@ abstract class ClassAndMimeTypeRegistry<R extends MimeTypeProvider, K> {
     }
 
     Collection<R> getRegisteredObjects(Class targetType) {
-        if(targetType == null) {
+        if (targetType == null) {
             return null
         }
         def registeredObjects = registeredObjectsByType.get(targetType)
@@ -73,7 +73,7 @@ abstract class ClassAndMimeTypeRegistry<R extends MimeTypeProvider, K> {
     }
 
     R findMatchingObjectForMimeType(MimeType mimeType, object) {
-        if(object == null) return null
+        if (object == null) return null
 
         final clazz = object instanceof Class ? (Class)object : object.getClass()
 
@@ -82,7 +82,7 @@ abstract class ClassAndMimeTypeRegistry<R extends MimeTypeProvider, K> {
         if (registeredObject == null) {
 
             Class currentClass = clazz
-            while(currentClass != null) {
+            while (currentClass != null) {
 
                 registeredObject = findRegisteredObjectForType(currentClass, mimeType)
                 if (registeredObject) {
@@ -94,7 +94,7 @@ abstract class ClassAndMimeTypeRegistry<R extends MimeTypeProvider, K> {
             }
 
             final interfaces = GrailsClassUtils.getAllInterfaces(object)
-            for(i in interfaces) {
+            for (i in interfaces) {
                 registeredObject = findRegisteredObjectForType(i, mimeType)
                 if (registeredObject) break
             }
@@ -107,10 +107,10 @@ abstract class ClassAndMimeTypeRegistry<R extends MimeTypeProvider, K> {
             }
         }
 
-        if(registeredObject == null && !Environment.isDevelopmentMode()) {
+        if (registeredObject == null && !Environment.isDevelopmentMode()) {
             resolvedObjectCache.put(cacheKey, (R)NULL_RESOLVE)
         }
-        else if(NULL_RESOLVE.is(registeredObject)) {
+        else if (NULL_RESOLVE.is(registeredObject)) {
             return null
         }
         return registeredObject
@@ -126,7 +126,7 @@ abstract class ClassAndMimeTypeRegistry<R extends MimeTypeProvider, K> {
                     mt  == mimeType
                 }
             }
-            if(findObject == null) {
+            if (findObject == null) {
                 findObject = (R)objectList.find {
                     MimeTypeProvider r = (MimeTypeProvider)it
                     r.mimeTypes.any { MimeType mt ->

@@ -45,7 +45,7 @@ import org.grails.web.util.GrailsApplicationAttributes
  */
 @CompileStatic
 @TagLib
-class UrlMappingTagLib implements TagLibrary{
+class UrlMappingTagLib implements TagLibrary {
 
     CodecLookup codecLookup
 
@@ -168,7 +168,7 @@ class UrlMappingTagLib implements TagLibrary{
         if (attrs.containsKey('class')) {
             linkTagAttrs.put('class', attrs.get('class'))
         }
-        String activeClass = attrs.activeClass?:'currentStep'
+        String activeClass = attrs.activeClass ?: 'currentStep'
 
         if (attrs.fragment != null) {
             linkTagAttrs.fragment = attrs.fragment
@@ -212,26 +212,26 @@ class UrlMappingTagLib implements TagLibrary{
             // display firststep link when beginstep is not firststep
             if (beginstep > firststep && !attrs.boolean('omitFirst')) {
                 linkParams.offset = 0
-                writer << callLink((Map)stepAttrs.clone()) {firststep.toString()}
+                writer << callLink((Map)stepAttrs.clone()) { firststep.toString() }
             }
             //show a gap if beginstep isn't immediately after firststep, and if were not omitting first or rev
-            if (beginstep > firststep+1 && (!attrs.boolean('omitFirst') || !attrs.boolean('omitPrev')) ) {
+            if (beginstep > firststep + 1 && (!attrs.boolean('omitFirst') || !attrs.boolean('omitPrev'))) {
                 writer << '<span class="step gap">..</span>'
             }
 
             // display paginate steps
             (beginstep..endstep).each { int i ->
                 if (currentstep == i) {
-                    writer << "<span class=\"${[attrs.get('class')?:'',activeClass].join(' ').trim()}\">${i}</span>"
+                    writer << "<span class=\"${[attrs.get('class') ?: '', activeClass].join(' ').trim()}\">${i}</span>"
                 }
                 else {
                     linkParams.offset = (i - 1) * max
-                    writer << callLink((Map)stepAttrs.clone()) {i.toString()}
+                    writer << callLink((Map)stepAttrs.clone()) { i.toString() }
                 }
             }
 
             //show a gap if beginstep isn't immediately before firststep, and if were not omitting first or rev
-            if (endstep+1 < laststep && (!attrs.boolean('omitLast') || !attrs.boolean('omitNext'))) {
+            if (endstep + 1 < laststep && (!attrs.boolean('omitLast') || !attrs.boolean('omitNext'))) {
                 writer << '<span class="step gap">..</span>'
             }
             // display laststep link when endstep is not laststep

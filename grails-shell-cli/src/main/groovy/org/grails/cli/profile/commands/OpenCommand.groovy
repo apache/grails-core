@@ -48,11 +48,11 @@ class OpenCommand implements ProjectCommand, Completer {
     @Override
     boolean handle(ExecutionContext executionContext) {
         def filePath = executionContext.commandLine.remainingArgsString
-        if(filePath) {
-            if(filePath == 'test-report') {
+        if (filePath) {
+            if (filePath == 'test-report') {
                 filePath = 'build/reports/tests/index.html'
             }
-            if(Desktop.isDesktopSupported())  {
+            if (Desktop.isDesktopSupported())  {
                 try {
                     Desktop.desktop.open(new File(filePath))
                     return true

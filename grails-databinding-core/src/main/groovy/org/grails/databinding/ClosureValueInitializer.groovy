@@ -29,7 +29,6 @@ class ClosureValueInitializer implements ValueInitializer {
     Closure initializerClosure
     Class targetType
 
-
     @Override
     Object initialize() {
         initializerClosure.call()

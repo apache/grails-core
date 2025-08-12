@@ -34,7 +34,6 @@ interface TenantService {
      */
     void eachTenant(Closure callable)
 
-
     /**
      * @return The current tenant id
      *

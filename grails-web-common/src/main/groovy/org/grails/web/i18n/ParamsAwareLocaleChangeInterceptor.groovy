@@ -78,7 +78,7 @@ class ParamsAwareLocaleChangeInterceptor extends LocaleChangeInterceptor {
                 localeParam = ((Object[])localeParam)[0]
             }
             def localeResolver = RequestContextUtils.getLocaleResolver(request)
-            if(localeResolver == null) {
+            if (localeResolver == null) {
                 localeResolver = this.localeResolver
                 request.setAttribute(DispatcherServlet.LOCALE_RESOLVER_ATTRIBUTE, localeResolver)
             }

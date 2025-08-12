@@ -65,5 +65,6 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Target([ElementType.TYPE, ElementType.FIELD])
 @GroovyASTTransformationClass('org.grails.async.transform.internal.DelegateAsyncTransformation')
 @interface DelegateAsync {
+
     Class value() default DelegateAsync
 }

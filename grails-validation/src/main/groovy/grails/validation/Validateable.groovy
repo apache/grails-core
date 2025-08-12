@@ -46,6 +46,7 @@ import org.grails.validation.ConstraintEvalUtils
  */
 @CompileStatic
 trait Validateable {
+
     private BeforeValidateHelper beforeValidateHelper = new BeforeValidateHelper()
     private static Map<String, Constrained> constraintsMapInternal
 
@@ -93,7 +94,7 @@ trait Validateable {
             Map<String, ConstrainedProperty> evaluatedConstraints = evaluator.evaluate(this, this.defaultNullable())
 
             Map<String, Constrained> finalConstraints = [:]
-            for(entry in evaluatedConstraints) {
+            for (entry in evaluatedConstraints) {
                 finalConstraints.put(entry.key, new ConstrainedDelegate(entry.value))
             }
 

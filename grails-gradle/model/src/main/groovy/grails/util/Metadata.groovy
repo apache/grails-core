@@ -292,7 +292,6 @@ class Metadata {
         return getProperty(APPLICATION_NAME, String.class, DEFAULT_APPLICATION_NAME)
     }
 
-
     /**
      * @return The version of the servlet spec the application was created for
      */

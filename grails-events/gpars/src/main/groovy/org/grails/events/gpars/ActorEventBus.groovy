@@ -56,7 +56,7 @@ class ActorEventBus extends AbstractEventBus implements Closeable {
                         for (Subscription sub : subscriptions) {
                             try {
                                 EventTrigger eventTrigger = sub.buildTrigger(msg)
-                                replyIfExists( eventTrigger.proceed() )
+                                replyIfExists(eventTrigger.proceed())
                             } catch (Throwable e) {
                                 replyIfExists(e)
                             }

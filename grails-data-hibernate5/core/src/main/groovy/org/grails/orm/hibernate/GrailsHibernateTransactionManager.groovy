@@ -76,7 +76,7 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
             SessionHolder holder = (SessionHolder)TransactionSynchronizationManager.getResource(sessionFactory)
             holder.session.setHibernateFlushMode(FlushMode.MANUAL)
         }
-        else if(defaultFlushMode != FlushMode.AUTO) {
+        else if (defaultFlushMode != FlushMode.AUTO) {
             SessionHolder holder = (SessionHolder)TransactionSynchronizationManager.getResource(sessionFactory)
             holder.session.setHibernateFlushMode(defaultFlushMode)
         }
@@ -85,10 +85,10 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
     @Override
     protected void doRollback(DefaultTransactionStatus status) {
         super.doRollback(status)
-        if(isJdbcBatchVersionedData) {
+        if (isJdbcBatchVersionedData) {
             try {
                 SessionHolder holder = (SessionHolder)TransactionSynchronizationManager.getResource(sessionFactory)
-                if(holder != null) {
+                if (holder != null) {
                     Session session = holder.getSession()
                     JdbcCoordinator jdbcCoordinator = ((SessionImplementor) session).getJdbcCoordinator()
                     jdbcCoordinator.abortBatch()

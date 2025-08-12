@@ -263,7 +263,6 @@ trait ResponseRenderer extends WebAttributes {
         String layoutArg = argMap[ARGUMENT_LAYOUT]?.toString() ?: null
         boolean statusSet = handleStatusArgument(argMap, webRequest, response)
 
-
         def applicationAttributes = webRequest.attributes
         if (argMap.containsKey(ARGUMENT_TEXT)) {
             def textArg = argMap[ARGUMENT_TEXT]
@@ -460,7 +459,6 @@ trait ResponseRenderer extends WebAttributes {
             }
         }
     }
-
 
     private boolean handleStatusArgument(Map argMap, GrailsWebRequest webRequest, HttpServletResponse response) {
         boolean statusSet

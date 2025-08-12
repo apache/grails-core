@@ -53,7 +53,7 @@ class FutureTaskChildPromise<T> implements Promise<T> {
 
     FutureTaskChildPromise(PromiseFactory promiseFactory, Promise<T> parent, Closure<T> callable) {
         this.parent = parent
-        this.callable = promiseFactory.applyDecorators(callable,null)
+        this.callable = promiseFactory.applyDecorators(callable, null)
         this.promiseFactory = promiseFactory
     }
 

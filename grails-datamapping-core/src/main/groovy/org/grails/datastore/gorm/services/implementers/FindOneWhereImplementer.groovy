@@ -42,7 +42,7 @@ class FindOneWhereImplementer extends AbstractWhereImplementer implements Single
 
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
-        if( isAnnotated(domainClass, methodNode )) {
+        if (isAnnotated(domainClass, methodNode)) {
             return isCompatibleReturnType(domainClass, methodNode, methodNode.returnType, methodNode.name)
         }
         return false

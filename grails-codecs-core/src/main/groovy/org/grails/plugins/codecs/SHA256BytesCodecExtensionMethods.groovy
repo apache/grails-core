@@ -21,9 +21,10 @@ package org.grails.plugins.codecs
 import org.codehaus.groovy.runtime.NullObject
 
 class SHA256BytesCodecExtensionMethods {
+
     // Returns the byte[] of the digest
     static encodeAsSHA256Bytes(theTarget) {
-        if(theTarget == null || theTarget instanceof NullObject) {
+        if (theTarget == null || theTarget instanceof NullObject) {
             return null
         }
         DigestUtils.digest('SHA-256', theTarget)

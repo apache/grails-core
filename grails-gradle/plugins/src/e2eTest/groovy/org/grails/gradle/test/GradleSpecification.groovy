@@ -30,6 +30,7 @@ import org.gradle.testkit.runner.TaskOutcome
 import spock.lang.Specification
 
 abstract class GradleSpecification extends Specification {
+
     private static Path basePath
 
     private static GradleRunner gradleRunner

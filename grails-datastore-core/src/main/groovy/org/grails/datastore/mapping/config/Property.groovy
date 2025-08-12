@@ -158,7 +158,7 @@ class Property implements Cloneable {
     Property clone() throws CloneNotSupportedException {
         Property cloned = (Property) super.clone()
         cloned.uniquenessGroup = new ArrayList<>(uniquenessGroup)
-        if(inList != null) {
+        if (inList != null) {
             cloned.inList = new ArrayList<>(inList)
         }
 
@@ -251,7 +251,6 @@ class Property implements Cloneable {
     boolean isUniqueWithinGroup() {
         return !uniquenessGroup.isEmpty()
     }
-
 
     void setUnique(boolean unique) {
         this.unique = unique

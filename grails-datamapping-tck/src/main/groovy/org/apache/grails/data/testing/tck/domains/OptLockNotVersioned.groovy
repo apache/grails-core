@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class OptLockNotVersioned implements Serializable {
+
     Long id
     Long version
 

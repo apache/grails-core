@@ -76,6 +76,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 class PublisherTransform extends AbstractMethodDecoratingTransformation {
+
     /**
      * The position of the transform. Before the transactional transform
      */
@@ -93,7 +94,7 @@ class PublisherTransform extends AbstractMethodDecoratingTransformation {
 
     @Override
     protected void enhanceClassNode(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode) {
-        if(!AstUtils.implementsInterface(classNode, EventPublisher.name)) {
+        if (!AstUtils.implementsInterface(classNode, EventPublisher.name)) {
             classNode.addInterface(ClassHelper.make(EventPublisher))
             if (compilationUnit != null) {
                 TraitComposer.doExtendTraits(classNode, sourceUnit, compilationUnit)
@@ -112,7 +113,7 @@ class PublisherTransform extends AbstractMethodDecoratingTransformation {
         BlockStatement tryBody = new BlockStatement()
         TryCatchStatement tryCatch = new TryCatchStatement(tryBody, new EmptyStatement())
         newMethodBody.addStatement(declS(result, new EmptyExpression()))
-        if(methodNode.returnType != ClassHelper.VOID_TYPE) {
+        if (methodNode.returnType != ClassHelper.VOID_TYPE) {
             tryBody.addStatement(assignS(result, originalMethodCallExpr))
         }
         // otherwise..
@@ -128,33 +129,33 @@ class PublisherTransform extends AbstractMethodDecoratingTransformation {
         AnnotationNode eventsAnn = AstUtils.findAnnotation(classNode, Events)
 
         Expression eventId = annotationNode.getMember('value')
-        if(!eventId?.text) {
+        if (!eventId?.text) {
             eventId = constX(methodNode.name)
         }
 
         Expression namespace = eventsAnn?.getMember('namespace')
         boolean hasNamespace = namespace instanceof ConstantExpression
-        if(hasNamespace) {
-            eventId = new ConstantExpression(namespace.text + ':' + eventId.text )
+        if (hasNamespace) {
+            eventId = new ConstantExpression(namespace.text + ':' + eventId.text)
         }
 
         Expression errorEventId = annotationNode.getMember('error')
-        if(errorEventId == null) {
+        if (errorEventId == null) {
             errorEventId = eventsAnn?.getMember('error')
         }
-        if(!errorEventId?.text) {
+        if (!errorEventId?.text) {
             errorEventId = eventId
         }
-        else if(hasNamespace) {
-            errorEventId = new ConstantExpression(namespace.text + ':' + errorEventId.text )
+        else if (hasNamespace) {
+            errorEventId = new ConstantExpression(namespace.text + ':' + errorEventId.text)
         }
 
         Expression phase = annotationNode.getMember('phase')
-        if(phase == null) {
+        if (phase == null) {
             phase = eventsAnn?.getMember('phase')
         }
         MapExpression params = new MapExpression()
-        for(param in methodNode.parameters) {
+        for (param in methodNode.parameters) {
             params.addMapEntryExpression(
                 constX(param.name),
                 varX(param)
@@ -162,11 +163,11 @@ class PublisherTransform extends AbstractMethodDecoratingTransformation {
         }
         Expression newEvent = ctorX(ClassHelper.make(Event), args(eventId, params, result))
         def eventArgs = args(newEvent)
-        if(phase != null) {
+        if (phase != null) {
             eventArgs.addExpression(phase)
         }
         else {
-            if( AstUtils.hasAnnotation(methodNode, Transactional) ) {
+            if (AstUtils.hasAnnotation(methodNode, Transactional)) {
                 eventArgs.addExpression(propX(classX(TransactionPhase), 'AFTER_COMMIT'))
             }
         }
@@ -174,11 +175,11 @@ class PublisherTransform extends AbstractMethodDecoratingTransformation {
         Parameter exceptionParam = param(ClassHelper.make(Throwable), '$t')
         Expression errorEvent = ctorX(ClassHelper.make(Event), args(errorEventId, params, varX(exceptionParam)))
         def errorArgs = args(errorEvent)
-        if(phase != null) {
+        if (phase != null) {
             errorArgs.addExpression(phase)
         }
         else {
-            if( AstUtils.hasAnnotation(methodNode, Transactional) ) {
+            if (AstUtils.hasAnnotation(methodNode, Transactional)) {
                 errorArgs.addExpression(propX(classX(TransactionPhase), 'AFTER_ROLLBACK'))
             }
         }
@@ -190,7 +191,7 @@ class PublisherTransform extends AbstractMethodDecoratingTransformation {
         CatchStatement catchStatement = new CatchStatement(exceptionParam, catchBody)
         tryCatch.addCatch(catchStatement)
         tryBody.addStatement(
-            stmt( callThisX('publish', eventArgs) )
+            stmt(callThisX('publish', eventArgs))
         )
         return result
     }
@@ -199,7 +200,6 @@ class PublisherTransform extends AbstractMethodDecoratingTransformation {
     protected ClassNode getAnnotationType() {
         return ClassHelper.make(Publisher)
     }
-
 
     @Override
     protected Object getAppliedMarker() {

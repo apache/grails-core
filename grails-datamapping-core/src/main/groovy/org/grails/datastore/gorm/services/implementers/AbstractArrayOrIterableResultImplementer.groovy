@@ -50,7 +50,7 @@ abstract class AbstractArrayOrIterableResultImplementer extends AbstractReadOper
         ClassNode returnType = (ClassNode)newMethodNode.getNodeMetaData(RETURN_TYPE) ?: abstractMethodNode.returnType
         boolean isArray = returnType.isArray()
         ClassNode domainClassForReturnType = resolveDomainClassForReturnType(domainClassNode, isArray, returnType)
-        if(AstUtils.isDomainClass(domainClassForReturnType)) {
+        if (AstUtils.isDomainClass(domainClassForReturnType)) {
             domainClassNode = domainClassForReturnType
         }
         doImplement(domainClassNode, targetClassNode, abstractMethodNode, newMethodNode, isArray)
@@ -65,12 +65,12 @@ abstract class AbstractArrayOrIterableResultImplementer extends AbstractReadOper
      * @return The domain class type
      */
     protected ClassNode resolveDomainClassForReturnType(ClassNode currentDomainClass, boolean isArray, ClassNode returnType) {
-        if(returnType.isArray()) {
+        if (returnType.isArray()) {
             return returnType.componentType
         }
         else {
             GenericsType[] genericTypes = returnType.genericsTypes
-            if(genericTypes) {
+            if (genericTypes) {
                 return genericTypes[0].type
             }
         }

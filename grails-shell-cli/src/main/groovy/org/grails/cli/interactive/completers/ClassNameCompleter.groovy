@@ -60,26 +60,26 @@ class ClassNameCompleter extends StringsCompleter {
     }
 
     private void refresh() {
-        if(!baseDirs) return
+        if (!baseDirs) return
         initialize(baseDirs)
     }
 
     private void initialize(File... baseDirs) {
         try {
-            if(!baseDirs) return
+            if (!baseDirs) return
             this.baseDirs = baseDirs
-            if(!allCompeters.contains(this))
+            if (!allCompeters.contains(this))
                 allCompeters << this
             SortedSet<String> allStrings = new ConcurrentSkipListSet<>()
-            for(File baseDir in baseDirs) {
+            for (File baseDir in baseDirs) {
                 def pattern = "file:${baseDir}/**/*.groovy".toString()
                 SortedSet<String> strings = RESOURCE_SCAN_CACHE[pattern]
-                if(strings == null) {
+                if (strings == null) {
                     strings = new TreeSet<>()
                     RESOURCE_SCAN_CACHE[pattern] = strings
                     def resources = resourcePatternResolver.getResources(pattern)
                     for (res in resources) {
-                        if(isValidResource(res)) {
+                        if (isValidResource(res)) {
                             def path = res.file.canonicalPath
                             def basePath = baseDir.canonicalPath
                             path = (path - basePath)[1..-8]

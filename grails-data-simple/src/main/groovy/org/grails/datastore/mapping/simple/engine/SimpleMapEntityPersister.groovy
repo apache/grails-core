@@ -147,7 +147,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
     }
 
     AssociationIndexer getAssociationIndexer(Map nativeEntry, Association association) {
-        if(association?.associatedEntity == null) {
+        if (association?.associatedEntity == null) {
             return null
         }
 
@@ -250,7 +250,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
         nativeEntry[key] = values
     }
 
-    protected Map getEmbedded( Map nativeEntry, String key) {
+    protected Map getEmbedded(Map nativeEntry, String key) {
         nativeEntry[key]
     }
 

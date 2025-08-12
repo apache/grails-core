@@ -29,6 +29,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class ValidationConfigurationException extends RuntimeException {
+
     ValidationConfigurationException(String var1) {
         super(var1)
     }

@@ -41,20 +41,20 @@ class WhereQueryTypeCheckingExtension extends TypeCheckingDSL {
 
         methodNotFound { ClassNode receiver, String name, ArgumentListExpression argList, ClassNode[] argTypes, MethodCall call ->
             def dynamicCall
-            if(currentScope.processingWhereQueryClosure) {
-                dynamicCall = makeDynamic (call)
+            if (currentScope.processingWhereQueryClosure) {
+                dynamicCall = makeDynamic(call)
             }
             dynamicCall
         }
 
         afterMethodCall { MethodCall call ->
-            if(isWhereQueryCall(call)) {
+            if (isWhereQueryCall(call)) {
                 scopeExit()
             }
         }
 
         beforeMethodCall { MethodCall call ->
-            if(isWhereQueryCall(call)) {
+            if (isWhereQueryCall(call)) {
                 newScope {
                     processingWhereQueryClosure = true
                 }

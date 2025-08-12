@@ -33,6 +33,7 @@ import org.grails.build.parsing.CommandLine
 @CompileStatic
 @Canonical
 class ExecutionContext {
+
     /**
      * The command line instance
      */

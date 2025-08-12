@@ -31,6 +31,7 @@ import org.grails.datastore.mapping.model.types.conversion.DefaultConversionServ
 @CompileStatic
 @Deprecated
 class ConfigUtils {
+
     private static ConversionService conversionService = new DefaultConversionService()
 
     static <T> T read(Class<T> type, String key, Map<String, String> config, T defaultValue) {

@@ -30,7 +30,7 @@ import groovy.transform.InheritConstructors
  */
 @CompileStatic
 @InheritConstructors
-abstract class ListReadingCachedGradleOperation<T> extends CachedGradleOperation<List<T>>{
+abstract class ListReadingCachedGradleOperation<T> extends CachedGradleOperation<List<T>> {
 
     @Override
     List<T> readFromCached(File f) {
@@ -43,6 +43,5 @@ abstract class ListReadingCachedGradleOperation<T> extends CachedGradleOperation
     void writeToCache(PrintWriter writer, List<T> data) {
         for (url in data) writer.println(url.toString())
     }
-
 
 }

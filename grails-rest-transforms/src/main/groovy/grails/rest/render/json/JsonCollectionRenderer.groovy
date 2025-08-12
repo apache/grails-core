@@ -32,6 +32,7 @@ import grails.web.mime.MimeType
  */
 @CompileStatic
 class JsonCollectionRenderer extends JsonRenderer implements ContainerRenderer {
+
     final Class componentType
 
     JsonCollectionRenderer(Class componentType) {

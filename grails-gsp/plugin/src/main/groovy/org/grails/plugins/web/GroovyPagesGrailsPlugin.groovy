@@ -94,7 +94,6 @@ class GroovyPagesGrailsPlugin extends Plugin {
             PluginTagLib,
     ]
 
-
     /**
      * Clear the page cache with the ApplicationContext is loaded
      */
@@ -137,7 +136,6 @@ class GroovyPagesGrailsPlugin extends Plugin {
             gspTagLibraryLookup(TagLibraryLookup) { bean ->
                 bean.lazyInit = true
             }
-
 
             boolean customResourceLoader = false
             // If the development environment is used we need to load GSP files relative to the base directory

@@ -40,6 +40,7 @@ import org.grails.gradle.plugin.core.GrailsGradlePlugin
  */
 @CompileStatic
 class GrailsWebGradlePlugin extends GrailsGradlePlugin {
+
     @Inject
     GrailsWebGradlePlugin(ToolingModelBuilderRegistry registry) {
         super(registry)

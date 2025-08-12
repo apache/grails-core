@@ -25,7 +25,7 @@ import grails.mongodb.geo.MultiLineString
  * @since 3.0
  */
 @CompileStatic
-class MultiLineStringType extends GeoJSONType<MultiLineString>{
+class MultiLineStringType extends GeoJSONType<MultiLineString> {
 
     MultiLineStringType() {
         super(MultiLineString)

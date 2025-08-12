@@ -20,7 +20,6 @@ package grails.config
 
 import groovy.transform.CompileStatic
 
-
 /**
  * Cached access to Config.toProperties to avoid repeated calls
  *
@@ -45,8 +44,8 @@ class ConfigProperties extends Properties {
     Enumeration<?> propertyNames() {
         def i = config.keySet().iterator()
         return ([
-            hasMoreElements: {-> i.hasNext() },
-            nextElement: {-> i.next() }
+            hasMoreElements: { -> i.hasNext() },
+            nextElement: { -> i.next() }
         ]) as Enumeration
     }
 

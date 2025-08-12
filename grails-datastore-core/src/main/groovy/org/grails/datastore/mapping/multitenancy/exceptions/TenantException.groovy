@@ -31,6 +31,7 @@ import org.grails.datastore.mapping.core.DatastoreException
  */
 @CompileStatic
 class TenantException extends DatastoreException {
+
     TenantException(String s) {
         super(s)
     }

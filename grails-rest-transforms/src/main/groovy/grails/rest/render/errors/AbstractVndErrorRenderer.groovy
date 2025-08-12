@@ -41,12 +41,12 @@ import grails.web.mapping.LinkGenerator
  */
 @CompileStatic
 abstract class AbstractVndErrorRenderer  implements ContainerRenderer<Errors, Object> {
+
     public static final String LOGREF_ATTRIBUTE = 'logref'
     public static final String MESSAGE_ATTRIBUTE = 'message'
     public static final String PATH_ATTRIBUTE = 'path'
     public static final String RESOURCE_ATTRIBUTE = 'resource'
     public static final String HREF_ATTRIBUTE = 'href'
-
 
     String encoding = GrailsWebUtil.DEFAULT_ENCODING
     boolean absoluteLinks = true
@@ -66,7 +66,6 @@ abstract class AbstractVndErrorRenderer  implements ContainerRenderer<Errors, Ob
     @Autowired
     LinkGenerator linkGenerator
 
-
     @Override
     Class<Errors> getTargetType() {
         Errors
@@ -82,7 +81,7 @@ abstract class AbstractVndErrorRenderer  implements ContainerRenderer<Errors, Ob
         final objectId = getObjectId(target)
         final name = GrailsNameUtils.getPropertyName(target.class)
         final code = oe.code
-        def logref = "${name}.${code}${objectId ? '.' + objectId: ''}".toString()
+        def logref = "${name}.${code}${objectId ? '.' + objectId : ''}".toString()
         logref
     }
 
@@ -90,7 +89,6 @@ abstract class AbstractVndErrorRenderer  implements ContainerRenderer<Errors, Ob
     protected Object getObjectId(target) {
         target.id
     }
-
 
     @Override
     Class<Object> getComponentType() {

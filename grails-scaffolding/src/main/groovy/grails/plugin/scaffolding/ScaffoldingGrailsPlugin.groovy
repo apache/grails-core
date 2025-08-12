@@ -47,7 +47,6 @@ Plugin that generates scaffolded controllers and views for a Grails application.
     // License: one of 'APACHE', 'GPL2', 'GPL3'
     def license = 'APACHE'
 
-
     // Location of the plugin's issue tracker.
     def issueManagement = [system: 'Github', url: 'https://github.com/grails3-plugins/scaffolding/issues']
 
@@ -58,7 +57,7 @@ Plugin that generates scaffolded controllers and views for a Grails application.
 
     @Override
     Closure doWithSpring() {
-        {->
+        { ->
             Environment env = Environment.current
             boolean reloadEnabled = env.isReloadEnabled() || (Metadata.getCurrent().isDevelopmentEnvironmentAvailable() && env == Environment.DEVELOPMENT)
 

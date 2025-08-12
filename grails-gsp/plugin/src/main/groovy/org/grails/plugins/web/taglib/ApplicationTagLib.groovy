@@ -51,6 +51,7 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
  */
 @TagLib
 class ApplicationTagLib implements ApplicationContextAware, InitializingBean, GrailsApplicationAware, TagLibrary {
+
     static returnObjectForTags = ['createLink', 'resource', 'createLinkTo', 'cookie', 'header', 'img', 'join', 'meta', 'set', 'applyCodec']
 
     ApplicationContext applicationContext
@@ -65,9 +66,9 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
 
     static final SCOPES = [page: 'pageScope',
                            application: 'servletContext',
-                           request:'request',
-                           session:'session',
-                           flash:'flash']
+                           request: 'request',
+                           session: 'session',
+                           flash: 'flash']
 
     boolean useJsessionId = false
     boolean hasResourceProcessor = false
@@ -249,7 +250,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     @CompileStatic
     static String attrsToString(Map attrs) {
         // Output any remaining user-specified attributes
-        StringBuilder sb=new StringBuilder()
+        StringBuilder sb = new StringBuilder()
         // For some strange reason Groovy creates ClassCastExceptions internally in PogoMetaMethodSite.checkCall without this hack
         for (Iterator i = InvokerHelper.asIterator(attrs); i.hasNext();) {
             Map.Entry e = (Map.Entry)i.next()
@@ -286,14 +287,14 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     }
 
     static SUPPORTED_TYPES = [
-        css:[type:'text/css', rel:'stylesheet', media:'screen, projection'],
-        js:[type:'text/javascript', writer:'js'],
+        css: [type: 'text/css', rel: 'stylesheet', media: 'screen, projection'],
+        js: [type: 'text/javascript', writer: 'js'],
 
-        gif:[rel:'shortcut icon'],
-        jpg:[rel:'shortcut icon'],
-        png:[rel:'shortcut icon'],
-        ico:[rel:'shortcut icon'],
-        appleicon:[rel:'apple-touch-icon']
+        gif: [rel: 'shortcut icon'],
+        jpg: [rel: 'shortcut icon'],
+        png: [rel: 'shortcut icon'],
+        ico: [rel: 'shortcut icon'],
+        appleicon: [rel: 'apple-touch-icon']
 
         // @todo add feed link types here too
     ]
@@ -405,7 +406,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     Closure withTag = { attrs, body ->
         def writer = out
         writer << "<${attrs.name}"
-        attrs.attrs?.each { k,v ->
+        attrs.attrs?.each { k, v ->
             if (!v) return
             if (v instanceof Closure) {
                 writer << " $k=\""

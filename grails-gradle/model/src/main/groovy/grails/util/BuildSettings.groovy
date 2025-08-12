@@ -109,7 +109,7 @@ class BuildSettings {
      */
     public static final String PROJECT_WORK_DIR = 'grails.project.work.dir'
 
-    public static final String OFFLINE_MODE= 'grails.offline.mode'
+    public static final String OFFLINE_MODE = 'grails.offline.mode'
 
     /**
      * The name of the system property for {@link #}.
@@ -229,19 +229,19 @@ class BuildSettings {
 
     static {
         boolean grailsAppDirPresent = new File('grails-app').exists() || new File('Application.groovy').exists()
-        if(!grailsAppDirPresent) {
+        if (!grailsAppDirPresent) {
             CLASSES_DIR = null
             BUILD_CLASSES_PATH = 'build/classes/main'
         }
         else {
             String fromSystem = System.getProperty(PROJECT_CLASSES_DIR)
-            if(fromSystem) {
+            if (fromSystem) {
                 CLASSES_DIR = new File(fromSystem)
                 BUILD_CLASSES_PATH = fromSystem
             }
             else  {
                 File groovyDir = new File('build/classes/groovy/main')
-                if(groovyDir.exists()) {
+                if (groovyDir.exists()) {
                     BUILD_CLASSES_PATH = 'build/classes/groovy/main'
                     CLASSES_DIR = groovyDir
                 }
@@ -251,7 +251,7 @@ class BuildSettings {
                 }
             }
         }
-        BASE_DIR = System.getProperty(APP_BASE_DIR) ? new File(System.getProperty(APP_BASE_DIR)) :  ( IOUtils.findApplicationDirectoryFile() ?: new File('.'))
+        BASE_DIR = System.getProperty(APP_BASE_DIR) ? new File(System.getProperty(APP_BASE_DIR)) : (IOUtils.findApplicationDirectoryFile() ?: new File('.'))
         GRAILS_APP_DIR_PRESENT = new File(BASE_DIR, 'grails-app').exists() || new File(BASE_DIR, 'Application.groovy').exists()
         TARGET_DIR = new File(BASE_DIR, 'build')
         RESOURCES_DIR = !GRAILS_APP_DIR_PRESENT ? null : (System.getProperty(PROJECT_RESOURCES_DIR) ? new File(System.getProperty(PROJECT_RESOURCES_DIR)) : new File(TARGET_DIR, 'resources/main'))

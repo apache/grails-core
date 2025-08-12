@@ -91,7 +91,6 @@ interface GormStaticOperations<D> {
      */
     D find(Closure callable)
 
-
     /**
      * Saves a list of objects in one go
      * @param objectsToSave The objects to save
@@ -517,7 +516,6 @@ interface GormStaticOperations<D> {
      */
     <T> T withStatelessSession(Closure<T> callable)
 
-
     /**
      * Executes a query for the given String
      *
@@ -772,7 +770,6 @@ interface GormStaticOperations<D> {
      */
     List<D> findAll(CharSequence query, Collection params, Map args)
 
-
     /**
      * Execute the closure with the given tenantId
      *
@@ -781,7 +778,6 @@ interface GormStaticOperations<D> {
      * @return The result of the closure
      */
     def <T> T withTenant(Serializable tenantId, Closure<T> callable)
-
 
     /**
      * Execute the closure for each tenant

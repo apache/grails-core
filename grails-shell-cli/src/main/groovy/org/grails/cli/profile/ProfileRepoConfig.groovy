@@ -23,6 +23,7 @@ import grails.util.Environment
 import org.grails.cli.GrailsCli
 
 class ProfileRepoConfig {
+
     String name
     String url
     boolean snapshots

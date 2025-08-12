@@ -27,6 +27,7 @@ import groovy.transform.ToString
 @CompileStatic
 @ToString
 class CoordinateHolder {
+
     String groupId
     String artifactId
 

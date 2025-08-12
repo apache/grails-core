@@ -21,6 +21,7 @@ package org.grails.test.support
 import grails.util.GrailsNameUtils
 
 class ControllerNameExtractor {
+
     /**
      * Derive the controller name from the given class name using the list of given suffixes,
      * typically ['Test', 'Tests', 'Spec', 'Specification']. Given something like

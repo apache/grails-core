@@ -57,6 +57,7 @@ import static FormFieldsTemplateService.toPropertyNameFormat
 
 @Slf4j
 class FormFieldsTagLib {
+
     static final namespace = 'f'
 
     static final String STACK_PAGE_SCOPE_VARIABLE = 'f:with:stack'
@@ -75,8 +76,10 @@ class FormFieldsTagLib {
 
     @Value('${grails.plugin.fields.exclusions.list:#{T(java.util.Arrays).asList("id", "dateCreated", "lastUpdated")}}')
     List<String> exclusionsList
+
     @Value('${grails.plugin.fields.exclusions.input:#{T(java.util.Arrays).asList("version", "dateCreated", "lastUpdated")}}')
     List<String> exclusionsInput
+
     @Value('${grails.plugin.fields.exclusions.display:#{T(java.util.Arrays).asList("version", "dateCreated", "lastUpdated")}}')
     List<String> exclusionsDisplay
 
@@ -400,7 +403,6 @@ class FormFieldsTagLib {
                 }
             }
 
-
             String wrapperFolderTouse = displayFolder ?: templatesFolder
             String widgetsFolderToUse = widgetFolder ?: templatesFolder
 
@@ -410,7 +412,6 @@ class FormFieldsTagLib {
             } else {
                 model.widget = renderDisplayWidget(propertyAccessor, model, widgetAttrs, widgetsFolderToUse, theme)
             }
-
 
             def displayWrapperTemplateName = formFieldsTemplateService.getTemplateFor('displayWrapper')
             def template = formFieldsTemplateService.findTemplate(propertyAccessor, displayWrapperTemplateName, wrapperFolderTouse, theme)
@@ -479,17 +480,16 @@ class FormFieldsTagLib {
     private Map buildColumnModel(BeanPropertyAccessor propertyAccessor, Map attrs) {
         def labelText = resolveLabelText(propertyAccessor, attrs)
         return [
-            bean              : propertyAccessor.rootBean,
-            name              : propertyAccessor.pathFromRoot, // To please legacy _table.gsp
-            property          : propertyAccessor.pathFromRoot,
-            type              : propertyAccessor.propertyType,
-            defaultLabel      : labelText, // To please legacy _table.gsp
-            label             : labelText,
-            constraints       : propertyAccessor.constraints,
-            required          : propertyAccessor.required,
+            bean: propertyAccessor.rootBean,
+            name: propertyAccessor.pathFromRoot, // To please legacy _table.gsp
+            property: propertyAccessor.pathFromRoot,
+            type: propertyAccessor.propertyType,
+            defaultLabel: labelText, // To please legacy _table.gsp
+            label: labelText,
+            constraints: propertyAccessor.constraints,
+            required: propertyAccessor.required,
         ]
     }
-
 
     private Map buildModel(BeanPropertyAccessor propertyAccessor, Map attrs, String encoding = null) {
         def value = attrs.containsKey('value') ? attrs.remove('value') : propertyAccessor.value
@@ -499,15 +499,15 @@ class FormFieldsTagLib {
         }
 
         [
-                bean              : propertyAccessor.rootBean,
-                property          : propertyAccessor.pathFromRoot,
-                type              : propertyAccessor.propertyType,
-                beanClass         : propertyAccessor.entity,
-                label             : resolveLabelText(propertyAccessor, attrs),
-                value             : (value instanceof Number || value instanceof Boolean || value) ? value : valueDefault,
-                constraints       : propertyAccessor.constraints,
+                bean: propertyAccessor.rootBean,
+                property: propertyAccessor.pathFromRoot,
+                type: propertyAccessor.propertyType,
+                beanClass: propertyAccessor.entity,
+                label: resolveLabelText(propertyAccessor, attrs),
+                value: (value instanceof Number || value instanceof Boolean || value) ? value : valueDefault,
+                constraints: propertyAccessor.constraints,
                 persistentProperty: propertyAccessor.domainProperty,
-            errors            : propertyAccessor.errors.collect { error ->
+                errors: propertyAccessor.errors.collect { error ->
                 String errorMsg = null
                 try {
                     errorMsg = error instanceof MessageSourceResolvable ? messageSource.getMessage(error, locale) : messageSource.getMessage(error.toString(), null, locale)
@@ -518,9 +518,9 @@ class FormFieldsTagLib {
                 // be escaped as it could be an error message with user input
                 errorMsg && errorMsg == error.defaultMessage ? message(error: error, encodeAs: 'HTML') :  message(error: error)
             },
-            required          : attrs.containsKey('required') ? Boolean.valueOf(attrs.remove('required')) : propertyAccessor.required,
-            invalid           : attrs.containsKey('invalid') ? Boolean.valueOf(attrs.remove('invalid')) : propertyAccessor.invalid,
-            prefix            : resolvePrefix(attrs.remove('prefix')),
+            required: attrs.containsKey('required') ? Boolean.valueOf(attrs.remove('required')) : propertyAccessor.required,
+            invalid: attrs.containsKey('invalid') ? Boolean.valueOf(attrs.remove('invalid')) : propertyAccessor.invalid,
+            prefix: resolvePrefix(attrs.remove('prefix')),
         ]
     }
 
@@ -611,7 +611,7 @@ class FormFieldsTagLib {
             }
         } else {
             properties = list ? domainModelService.getListOutputProperties(domainClass) : domainModelService.getInputProperties(domainClass,
-                    exclusionType == ExclusionType.Input? exclusionsInput : exclusionsDisplay)
+                    exclusionType == ExclusionType.Input ? exclusionsInput : exclusionsDisplay)
             // If 'except' is not set, but 'list' is, exclude 'id', 'dateCreated' and 'lastUpdated' by default
             List<String> blacklist = attrs.containsKey('except') ? getList(attrs.except) : (list ? exclusionsList : [])
 
@@ -758,9 +758,8 @@ class FormFieldsTagLib {
         }
     }
 
-
     CharSequence renderDateTimeInput(Map model, Map attrs) {
-        attrs.precision = model.type in [java.sql.Time, LocalDateTime]? 'minute' : 'day'
+        attrs.precision = model.type in [java.sql.Time, LocalDateTime] ? 'minute' : 'day'
         if (!model.required) {
             attrs.noSelection = ['': '']
             attrs.default = 'none'

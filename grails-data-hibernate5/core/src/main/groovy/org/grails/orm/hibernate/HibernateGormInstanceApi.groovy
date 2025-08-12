@@ -65,7 +65,7 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
         EntityPersister persister = entry.persister
         Object[] values = persister.getPropertyValues(instance)
         def dirtyProperties = findDirty(persister, values, entry, instance, session)
-        if(dirtyProperties == null) {
+        if (dirtyProperties == null) {
             return false
         }
         else {
@@ -143,7 +143,6 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
         }
         return fieldIndex == -1 ? null : entry.loadedState[fieldIndex]
     }
-
 
     protected EntityEntry findEntityEntry(D instance, SessionImplementor session, boolean forDirtyCheck = true) {
         def entry = session.persistenceContext.getEntry(instance)

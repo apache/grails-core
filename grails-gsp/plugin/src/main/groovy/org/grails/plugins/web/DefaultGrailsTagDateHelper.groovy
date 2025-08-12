@@ -122,7 +122,6 @@ class DefaultGrailsTagDateHelper implements GrailsTagDateHelper {
         clazz == Date || TemporalAccessor.isAssignableFrom(clazz)
     }
 
-
     @Override
     GregorianCalendar buildCalendar(Object date) {
         if (date instanceof Date) {

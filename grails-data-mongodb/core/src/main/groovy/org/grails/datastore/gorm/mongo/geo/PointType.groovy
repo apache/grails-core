@@ -22,7 +22,7 @@ import grails.mongodb.geo.Point
  * @author Graeme Rocher
  * @since 2.4
  */
-class PointType extends GeoJSONType<Point>{
+class PointType extends GeoJSONType<Point> {
 
     PointType() {
         super(Point)

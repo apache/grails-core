@@ -30,6 +30,7 @@ import jline.console.completer.Completer
  * @since 2.0
  */
 class RegexCompletor implements Completer {
+
     Pattern pattern
 
     RegexCompletor(String pattern) {

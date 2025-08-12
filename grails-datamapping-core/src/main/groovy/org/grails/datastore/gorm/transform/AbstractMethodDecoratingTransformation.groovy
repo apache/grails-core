@@ -90,19 +90,18 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
 
     @Override
     void visit(SourceUnit source, AnnotationNode annotationNode, AnnotatedNode annotatedNode) {
-        if(annotatedNode instanceof MethodNode) {
+        if (annotatedNode instanceof MethodNode) {
             MethodNode methodNode = (MethodNode)annotatedNode
             Map<String, ClassNode> genericsSpec = GenericsUtils.createGenericsSpec(methodNode.declaringClass)
             weaveNewMethod(source, annotationNode, methodNode.getDeclaringClass(), methodNode, genericsSpec)
         }
-        else if(annotatedNode instanceof ClassNode) {
+        else if (annotatedNode instanceof ClassNode) {
             ClassNode classNode = (ClassNode) annotatedNode
-            if(!classNode.isInterface()) {
-                weaveClassNode( source, annotationNode, classNode)
+            if (!classNode.isInterface()) {
+                weaveClassNode(source, annotationNode, classNode)
             }
         }
     }
-
 
     protected void weaveClassNode(SourceUnit source, AnnotationNode annotationNode, ClassNode classNode) {
         enhanceClassNode(source, annotationNode, classNode)
@@ -191,10 +190,10 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
      */
     protected MethodNode weaveNewMethod(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, MethodNode methodNode, Map<String, ClassNode> genericsSpec) {
         Object appliedMarker = getAppliedMarker()
-        if ( methodNode.getNodeMetaData(appliedMarker) == appliedMarker ) {
+        if (methodNode.getNodeMetaData(appliedMarker) == appliedMarker) {
             return methodNode
         }
-        if( methodNode.isAbstract() ) {
+        if (methodNode.isAbstract()) {
             return methodNode
         }
 
@@ -202,11 +201,10 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
 
         enhanceClassNode(sourceUnit, annotationNode, classNode)
 
-
         // Move the existing logic into a new method called "$tt_methodName()"
         String renamedMethodName
         boolean superMethod = findAnnotation(methodNode, Override) || classNode.getSuperClass()?.getMethod(methodNode.name, methodNode.parameters) != null
-        if(superMethod) {
+        if (superMethod) {
             renamedMethodName = getRenamedMethodPrefix() + Introspector.decapitalize(classNode.nameWithoutPackage) + '_' + methodNode.getName()
         }
         else {
@@ -220,7 +218,6 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
         // Start constructing new method body
         BlockStatement methodBody = block()
 
-
         Expression executeMethodCallExpression = buildDelegatingMethodCall(
                 sourceUnit,
                 annotationNode,
@@ -230,7 +227,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
                 methodBody
         )
 
-        if(methodNode.getReturnType() != VOID_TYPE) {
+        if (methodNode.getReturnType() != VOID_TYPE) {
             methodBody.addStatement(
                     returnS(
                             castX(methodNode.getReturnType(), executeMethodCallExpression)
@@ -244,7 +241,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
 
         methodNode.setCode(methodBody)
         processVariableScopes(sourceUnit, classNode, methodNode)
-        if(!isSpockTest(classNode)) {
+        if (!isSpockTest(classNode)) {
             compileMethodStatically(sourceUnit, methodNode)
         }
         return renamedMethod
@@ -285,7 +282,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
      * @param originalMethodCall The original method call to delegate to
      * @return The MethodCallExpression
      */
-    protected MethodCallExpression makeDelegatingClosureCall(Expression targetObject, String executeMethodName,  Parameter[] closureParameters, MethodCallExpression originalMethodCall, VariableScope variableScope ) {
+    protected MethodCallExpression makeDelegatingClosureCall(Expression targetObject, String executeMethodName,  Parameter[] closureParameters, MethodCallExpression originalMethodCall, VariableScope variableScope) {
         return makeDelegatingClosureCall(targetObject, executeMethodName, new ArgumentListExpression(), closureParameters, originalMethodCall, variableScope)
     }
 
@@ -298,7 +295,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
      * @param originalMethodCall The original method call to delegate to
      * @return The MethodCallExpression
      */
-    protected MethodCallExpression makeDelegatingClosureCall(Expression targetObject, String executeMethodName, ArgumentListExpression arguments, Parameter[] closureParameters, MethodCallExpression originalMethodCall, VariableScope variableScope ) {
+    protected MethodCallExpression makeDelegatingClosureCall(Expression targetObject, String executeMethodName, ArgumentListExpression arguments, Parameter[] closureParameters, MethodCallExpression originalMethodCall, VariableScope variableScope) {
         final ClosureExpression closureExpression = closureX(closureParameters, createDelegingMethodBody(closureParameters, originalMethodCall))
         closureExpression.setVariableScope(
                 variableScope
@@ -320,7 +317,6 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
         return stmt(originalMethodCall)
     }
 
-
     protected MethodNode moveOriginalCodeToNewMethod(MethodNode methodNode, String renamedMethodName, Parameter[] newParameters, ClassNode classNode, SourceUnit source, Map<String, ClassNode> genericsSpec) {
         Statement body = methodNode.code
 
@@ -333,12 +329,11 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
         )
 
         List<MethodNode> decoratedMethods = (List<MethodNode>)methodNode.getNodeMetaData(DECORATED_METHODS)
-        if(decoratedMethods == null) {
+        if (decoratedMethods == null) {
             decoratedMethods = []
             methodNode.putNodeMetaData(DECORATED_METHODS, decoratedMethods)
         }
         decoratedMethods.add(renamedMethodNode)
-
 
         def newVariableScope = new VariableScope()
         for (p in newParameters) {
@@ -390,7 +385,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
     protected boolean hasExcludedAnnotation(MethodNode md, Set<String> excludes) {
         boolean excludedAnnotation = false
         for (AnnotationNode annotation : md.getAnnotations()) {
-            AnnotationNode gormTransform = findAnnotation( annotation.classNode, GormASTTransformationClass)
+            AnnotationNode gormTransform = findAnnotation(annotation.classNode, GormASTTransformationClass)
             if (gormTransform != null || excludes.contains(annotation.getClassNode().getName())) {
                 excludedAnnotation = true
                 break

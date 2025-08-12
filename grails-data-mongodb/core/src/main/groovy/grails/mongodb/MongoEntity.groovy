@@ -53,7 +53,6 @@ import org.grails.datastore.mapping.mongo.engine.MongoEntityPersister
 @CompileStatic
 trait MongoEntity<D> implements GormEntity<D>, DynamicAttributes {
 
-
     /**
      * Allows accessing to dynamic properties with the dot operator
      *
@@ -76,7 +75,6 @@ trait MongoEntity<D> implements GormEntity<D>, DynamicAttributes {
         DynamicAttributes.super.putAt(name, val)
     }
 
-
     /**
      * Return the DBObject instance for the entity
      *
@@ -91,7 +89,7 @@ trait MongoEntity<D> implements GormEntity<D>, DynamicAttributes {
         SessionImplementor<Document> si = (SessionImplementor<Document>) session
         def persistentEntity = session.mappingContext.getPersistentEntity(getClass().name)
         Document dbo = (Document)si.getCachedEntry(persistentEntity, MongoEntityPersister.createEmbeddedCacheEntryKey(this))
-        if(dbo != null) return dbo
+        if (dbo != null) return dbo
         // otherwise check if instance is contained within session
         if (!session.contains(this)) {
             dbo = new Document()

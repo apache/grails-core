@@ -40,6 +40,7 @@ import org.grails.datastore.mapping.multitenancy.TenantResolver
 @CompileStatic
 @Slf4j
 class Tenants {
+
     /**
      * Execute the given closure for each tenant.
      *
@@ -68,7 +69,7 @@ class Tenants {
      */
     static Serializable currentId() {
         Datastore datastore = GormEnhancer.findSingleDatastore()
-        if(datastore instanceof MultiTenantCapableDatastore) {
+        if (datastore instanceof MultiTenantCapableDatastore) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)datastore
             return currentId(multiTenantCapableDatastore)
         }
@@ -103,10 +104,10 @@ class Tenants {
      */
     static Serializable currentId(Class<? extends Datastore> datastoreClass) {
         Datastore datastore = GormEnhancer.findDatastoreByType(datastoreClass)
-        if(datastore instanceof MultiTenantCapableDatastore) {
+        if (datastore instanceof MultiTenantCapableDatastore) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)datastore
             def tenantId = CurrentTenant.get()
-            if(tenantId != null) {
+            if (tenantId != null) {
                 log.debug "Found tenant id [$tenantId] bound to thread local"
                 return tenantId
             }
@@ -131,7 +132,7 @@ class Tenants {
      */
     static <T> T withoutId(Closure<T> callable) {
         Datastore datastore = GormEnhancer.findSingleDatastore()
-        if(datastore instanceof MultiTenantCapableDatastore) {
+        if (datastore instanceof MultiTenantCapableDatastore) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)datastore
             return withoutId(multiTenantCapableDatastore, callable)
         } else {
@@ -148,7 +149,7 @@ class Tenants {
     static <T> T withCurrent(Closure<T> callable) {
         Serializable tenantIdentifier = currentId()
         Datastore datastore = GormEnhancer.findSingleDatastore()
-        if(datastore instanceof MultiTenantCapableDatastore) {
+        if (datastore instanceof MultiTenantCapableDatastore) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)datastore
             return withId(multiTenantCapableDatastore, tenantIdentifier, callable)
         }
@@ -167,7 +168,7 @@ class Tenants {
     static <T> T withCurrent(Class<? extends Datastore> datastoreClass, Closure<T> callable) {
         Serializable tenantIdentifier = currentId(datastoreClass)
         Datastore datastore = GormEnhancer.findDatastoreByType(datastoreClass)
-        if(datastore instanceof MultiTenantCapableDatastore) {
+        if (datastore instanceof MultiTenantCapableDatastore) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)datastore
             return withId(multiTenantCapableDatastore, tenantIdentifier, callable)
         }
@@ -184,7 +185,7 @@ class Tenants {
      */
     static <T> T withId(Serializable tenantId, Closure<T> callable) {
         Datastore datastore = GormEnhancer.findSingleDatastore()
-        if(datastore instanceof MultiTenantCapableDatastore) {
+        if (datastore instanceof MultiTenantCapableDatastore) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)datastore
             return withId(multiTenantCapableDatastore, tenantId, callable)
         }
@@ -200,7 +201,7 @@ class Tenants {
      */
     static <T> T withId(Class<? extends Datastore> datastoreClass, Serializable tenantId, Closure<T> callable) {
         Datastore datastore = GormEnhancer.findDatastoreByType(datastoreClass)
-        if(datastore instanceof MultiTenantCapableDatastore) {
+        if (datastore instanceof MultiTenantCapableDatastore) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)datastore
             return withId(multiTenantCapableDatastore, tenantId, callable)
         }
@@ -218,7 +219,7 @@ class Tenants {
         return CurrentTenant.withoutTenant {
             if (multiTenantCapableDatastore.getMultiTenancyMode().isSharedConnection()) {
                 def i = callable.parameterTypes.length
-                if(i == 0 ) {
+                if (i == 0) {
                     return callable.call()
                 } else {
                     return multiTenantCapableDatastore.withSession { session ->
@@ -254,9 +255,9 @@ class Tenants {
      */
     static <T> T withId(MultiTenantCapableDatastore multiTenantCapableDatastore, Serializable tenantId, Closure<T> callable) {
         return CurrentTenant.withTenant(tenantId) {
-            if(multiTenantCapableDatastore.getMultiTenancyMode().isSharedConnection()) {
+            if (multiTenantCapableDatastore.getMultiTenancyMode().isSharedConnection()) {
                 def i = callable.parameterTypes.length
-                if(i == 2) {
+                if (i == 2) {
                     return multiTenantCapableDatastore.withSession { session ->
                         return callable.call(tenantId, session)
                     }
@@ -377,7 +378,7 @@ class Tenants {
                 set(tenantId)
                 callable.call(tenantId)
             } finally {
-                if(previous == null) {
+                if (previous == null) {
                     remove()
                 }
                 else {
@@ -385,7 +386,6 @@ class Tenants {
                 }
             }
         }
-
 
         /**
          * Execute without current tenant

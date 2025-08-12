@@ -47,7 +47,7 @@ class HalCodeVisitorSupport extends CodeVisitorSupport {
     void visitBlockStatement(BlockStatement block) {
         currentBlock = block
         List<Statement> statements = block.statements
-        for(int i = 0; i < statements.size(); i++) {
+        for (int i = 0; i < statements.size(); i++) {
             statements[i].visit(this)
             if (newStatements.containsKey(block)) {
                 statements.add(i, newStatements.get(block))

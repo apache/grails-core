@@ -27,6 +27,7 @@ import org.grails.encoder.Encoder
 
 @CompileStatic
 class HTMLCodecFactory implements CodecFactory {
+
     Encoder encoder = new HTMLEncoder()
     Decoder decoder = decoder = new HTML4Decoder() {
         @Override

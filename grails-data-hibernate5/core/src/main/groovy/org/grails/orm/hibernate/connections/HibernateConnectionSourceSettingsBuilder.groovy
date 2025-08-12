@@ -34,12 +34,13 @@ import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
  */
 @CompileStatic
 class HibernateConnectionSourceSettingsBuilder extends ConfigurationBuilder<HibernateConnectionSourceSettings, HibernateConnectionSourceSettings> {
+
     HibernateConnectionSourceSettings fallBackHibernateSettings
 
     HibernateConnectionSourceSettingsBuilder(PropertyResolver propertyResolver, String configurationPrefix = '', ConnectionSourceSettings fallBackConfiguration = null) {
         super(propertyResolver, configurationPrefix, fallBackConfiguration)
 
-        if(fallBackConfiguration instanceof HibernateConnectionSourceSettings) {
+        if (fallBackConfiguration instanceof HibernateConnectionSourceSettings) {
             fallBackHibernateSettings = (HibernateConnectionSourceSettings)fallBackConfiguration
         }
     }
@@ -47,8 +48,8 @@ class HibernateConnectionSourceSettingsBuilder extends ConfigurationBuilder<Hibe
     @Override
     protected HibernateConnectionSourceSettings createBuilder() {
         def settings = new HibernateConnectionSourceSettings()
-        if(fallBackHibernateSettings != null) {
-            settings.getHibernate().putAll( fallBackHibernateSettings.getHibernate() )
+        if (fallBackHibernateSettings != null) {
+            settings.getHibernate().putAll(fallBackHibernateSettings.getHibernate())
         }
         return settings
     }
@@ -58,7 +59,7 @@ class HibernateConnectionSourceSettingsBuilder extends ConfigurationBuilder<Hibe
         HibernateConnectionSourceSettings finalSettings = (HibernateConnectionSourceSettings)super.build()
         Map orgHibernateProperties = propertyResolver.getProperty('org.hibernate', Map.class, Collections.emptyMap())
         Properties additionalProperties = finalSettings.getHibernate().getAdditionalProperties()
-        for(key in orgHibernateProperties.keySet()) {
+        for (key in orgHibernateProperties.keySet()) {
             additionalProperties.put("org.hibernate.$key".toString(), orgHibernateProperties.get(key))
         }
         return finalSettings

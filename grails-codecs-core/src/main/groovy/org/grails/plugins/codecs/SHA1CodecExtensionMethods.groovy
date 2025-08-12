@@ -21,9 +21,10 @@ package org.grails.plugins.codecs
 import org.codehaus.groovy.runtime.NullObject
 
 class SHA1CodecExtensionMethods {
+
     // Returns the byte[] of the digest
     static encodeAsSHA1(theTarget) {
-        if(theTarget == null || theTarget instanceof NullObject) {
+        if (theTarget == null || theTarget instanceof NullObject) {
             return null
         }
         theTarget.encodeAsSHA1Bytes().encodeAsHex()

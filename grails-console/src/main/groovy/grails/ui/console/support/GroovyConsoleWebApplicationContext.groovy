@@ -60,13 +60,13 @@ class GroovyConsoleWebApplicationContext extends DevelopmentWebApplicationContex
 
         def interceptors = getBeansOfType(PersistenceContextInterceptor).values()
         groovyConsole.beforeExecution = {
-            for(i in interceptors) {
+            for (i in interceptors) {
                 i.init()
             }
         }
 
         groovyConsole.afterExecution = {
-            for(i in interceptors) {
+            for (i in interceptors) {
                 i.destroy()
             }
         }

@@ -86,7 +86,7 @@ abstract class AbstractJarProfileRepository implements ProfileRepository {
         Map<String, Map> defaultValues = GrailsCli.getSetting('grails.profiles', Map, [:])
         defaultValues.remove('repositories')
         def data = defaultValues.get(profileName)
-        if(data instanceof Map) {
+        if (data instanceof Map) {
             groupId = data.get('groupId')
             version = data.get('version')
         }
@@ -95,7 +95,7 @@ abstract class AbstractJarProfileRepository implements ProfileRepository {
     }
 
     protected void registerProfile(URL url, ClassLoader parent) {
-        if(registeredUrls.contains(url)) return
+        if (registeredUrls.contains(url)) return
 
         def classLoader = new URLClassLoader([url] as URL[], parent)
         def profileYml = classLoader.getResource('META-INF/grails-profile/profile.yml')
@@ -108,7 +108,7 @@ abstract class AbstractJarProfileRepository implements ProfileRepository {
         }
     }
     private void visitTopologicalSort(Profile profile, List<Profile> sortedProfiles, Set<Profile> visitedProfiles) {
-        if(profile != null && !visitedProfiles.contains(profile)) {
+        if (profile != null && !visitedProfiles.contains(profile)) {
             visitedProfiles.add(profile)
             profile.getExtends().each { Profile dependentProfile ->
                 visitTopologicalSort(dependentProfile, sortedProfiles, visitedProfiles)
@@ -120,7 +120,7 @@ abstract class AbstractJarProfileRepository implements ProfileRepository {
     static class JarProfile extends AbstractProfile {
 
         JarProfile(ProfileRepository repository, Resource profileDir, ClassLoader classLoader) {
-            super(profileDir,classLoader)
+            super(profileDir, classLoader)
             this.profileRepository = repository
             initialize()
         }
@@ -133,8 +133,8 @@ abstract class AbstractJarProfileRepository implements ProfileRepository {
         @Override
         Iterable<Command> getCommands(ProjectContext context) {
             super.getCommands(context)
-            for(cmd in internalCommands) {
-                if(cmd instanceof ProjectContextAware) {
+            for (cmd in internalCommands) {
+                if (cmd instanceof ProjectContextAware) {
                     ((ProjectContextAware)cmd).setProjectContext(context)
                 }
                 commandsByName[cmd.name] = cmd

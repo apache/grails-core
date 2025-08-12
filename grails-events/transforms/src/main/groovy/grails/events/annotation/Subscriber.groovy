@@ -40,6 +40,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Documented
 @GroovyASTTransformationClass('org.grails.events.transform.SubscriberTransform')
 @interface Subscriber {
+
     /**
      * @return The id of the event
      */

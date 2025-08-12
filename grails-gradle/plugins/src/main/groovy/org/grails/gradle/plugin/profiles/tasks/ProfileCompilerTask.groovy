@@ -72,6 +72,7 @@ class ProfileCompilerTask extends AbstractCompile {
     public static final String DEFAULT_COMPATIBILITY = JavaVersion.VERSION_17.majorVersion
     public static final String PROFILE_NAME = 'name'
     public static final String PROFILE_COMMANDS = 'commands'
+
     @OutputDirectory
     final DirectoryProperty destinationDirectory
 

@@ -163,7 +163,6 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
         this.enableReloading = configuration.enableReloading
         this.shouldCache = configuration.cache
 
-
         this.extension = configuration.extension
         this.compilerConfiguration = new CompilerConfiguration()
         this.viewUriResolver = new GenericViewUriResolver(".$extension")
@@ -210,10 +209,10 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
 
     private WritableScriptTemplate attemptResolvePath(String path) {
         def url = templateResolver.resolveTemplate(path)
-        if(url == null && !path.endsWith(extension)) {
+        if (url == null && !path.endsWith(extension)) {
             url = templateResolver.resolveTemplate("${path}.${extension}")
         }
-        if(url != null) {
+        if (url != null) {
             log.debug("Found template URL [${url}] for path [$path]")
             WritableScriptTemplate template = createTemplate(path, url)
             template.templatePath = path
@@ -224,7 +223,7 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
 
     private WritableScriptTemplate attemptResolveClass(String path) {
         Class cls = templateResolver.resolveTemplateClass(path)
-        if(cls != null) {
+        if (cls != null) {
             log.debug("Found template class [${cls.name}] for path [$path]")
             WritableScriptTemplate template = createTemplate((Class<? extends Template>) cls)
             template.templatePath = path
@@ -283,7 +282,7 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
      */
     WritableScriptTemplate resolveTemplate(Class type, Locale locale, String...qualifiers) {
         Template t = resolveTemplate(TemplateResolverUtils.fullTemplateNameForClass(type), locale, qualifiers)
-        if(t == null) {
+        if (t == null) {
             t = resolveTemplate(TemplateResolverUtils.shortTemplateNameForClass(type), locale, qualifiers)
         }
         return t
@@ -306,20 +305,20 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
      * @return The template or null if it doesn't exist
      */
     WritableScriptTemplate resolveTemplate(String path, Locale locale, String...qualifiers) {
-        if(locale == null) {
+        if (locale == null) {
             locale = Locale.ENGLISH
         }
         def cacheKey = [path, locale.language]
         cacheKey.addAll(qualifiers)
         WritableScriptTemplate template = null
-        if(shouldCache) {
+        if (shouldCache) {
             template = resolveCache.getIfPresent(cacheKey)
-            if(template != null) {
-                if(template.is(NULL_ENTRY)) {
+            if (template != null) {
+                if (template.is(NULL_ENTRY)) {
                     log.debug("No template found for path [$path] and locale [$locale]")
                     return null
                 }
-                else if( !enableReloading || !((WritableScriptTemplate)template).wasModified()) {
+                else if (!enableReloading || !((WritableScriptTemplate)template).wasModified()) {
                     log.debug("Found cached template for path [$path] and locale [$locale]")
                     return template
                 }
@@ -332,8 +331,6 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
             }
         }
 
-
-
         String extensionSuffix = ".$extension"
         String originalPath = path - extensionSuffix
         String defaultPath = "${originalPath}${extensionSuffix}"
@@ -341,11 +338,11 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
         String defaultLanguageSpecificPath = "${originalPath}_${language}${extensionSuffix}"
 
         List<String> qualifiedPaths = [defaultPath, defaultLanguageSpecificPath]
-        if(qualifiers) {
+        if (qualifiers) {
             Queue<String> qualifierQueue = new ArrayDeque<String>()
             qualifierQueue.addAll(qualifiers)
 
-            while(qualifierQueue.peekLast() != null) {
+            while (qualifierQueue.peekLast() != null) {
                 boolean isEmpty = qualifierQueue.isEmpty()
                 String qualified = !isEmpty ? "_${qualifierQueue.join('_')}" : ''
                 String qualifiedLanguageSpecificPath = "${originalPath}_${language}${qualified}${extensionSuffix}"
@@ -354,9 +351,9 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
                 qualifiedPaths.add qualifiedLanguageSpecificPath
 
                 template = getCachedTemplatesWithDefault(qualifiedLanguageSpecificPath)
-                if(template.is(NULL_ENTRY)) {
+                if (template.is(NULL_ENTRY)) {
                     template = getCachedTemplatesWithDefault(qualifiedPath)
-                    if(template.is(NULL_ENTRY) && !isEmpty) {
+                    if (template.is(NULL_ENTRY) && !isEmpty) {
                         qualifierQueue.removeLast()
                     }
                     else {
@@ -368,9 +365,9 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
                 }
             }
 
-            if(template == null || template.is(NULL_ENTRY)) {
+            if (template == null || template.is(NULL_ENTRY)) {
                 qualifierQueue.addAll(qualifiers.reverse())
-                while(qualifierQueue.peekLast() != null) {
+                while (qualifierQueue.peekLast() != null) {
                     boolean isEmpty = qualifierQueue.isEmpty()
                     String qualified = !isEmpty ? "_${qualifierQueue.join('_')}" : ''
                     String qualifiedLanguageSpecificPath = "${originalPath}_${language}${qualified}${extensionSuffix}"
@@ -379,9 +376,9 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
                     qualifiedPaths.add qualifiedLanguageSpecificPath
 
                     template = getCachedTemplatesWithDefault(qualifiedLanguageSpecificPath)
-                    if(template.is(NULL_ENTRY)) {
+                    if (template.is(NULL_ENTRY)) {
                         template = getCachedTemplatesWithDefault(qualifiedPath)
-                        if(template.is(NULL_ENTRY) && !isEmpty) {
+                        if (template.is(NULL_ENTRY) && !isEmpty) {
                             qualifierQueue.removeLast()
                         }
                         else {
@@ -394,27 +391,27 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
                 }
             }
         }
-        if(template == null || template.is(NULL_ENTRY)) {
+        if (template == null || template.is(NULL_ENTRY)) {
             template = getCachedTemplatesWithDefault(defaultLanguageSpecificPath)
-            if(template.is(NULL_ENTRY)) {
+            if (template.is(NULL_ENTRY)) {
                 template = getCachedTemplatesWithDefault(defaultPath)
             }
         }
-        if(template != null) {
+        if (template != null) {
 
             boolean isNull = template.is(NULL_ENTRY)
-            if(!isNull && ((WritableScriptTemplate)template).wasModified()) {
-                for(p in qualifiedPaths) {
+            if (!isNull && ((WritableScriptTemplate)template).wasModified()) {
+                for (p in qualifiedPaths) {
                     cachedTemplates.invalidate(p)
                     resolveCache.invalidate(cacheKey)
                 }
                 return resolveTemplate(path, locale, qualifiers)
             }
             else {
-                if(shouldCache) {
+                if (shouldCache) {
                     resolveCache.put(cacheKey, template)
                 }
-                if(isNull) {
+                if (isNull) {
                     return null
                 }
                 else {
@@ -462,7 +459,6 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
         }
     }
 
-
     @Override
     WritableScriptTemplate createTemplate(Reader reader) throws CompilationFailedException, ClassNotFoundException, IOException {
         def cc = new CompilerConfiguration(compilerConfiguration)
@@ -483,10 +479,9 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
         // this hack is required because of https://issues.apache.org/jira/browse/GROOVY-7560
         compilerConfiguration.compilationCustomizers.clear()
 
-
         def importCustomizer = new ImportCustomizer()
-        importCustomizer.addStarImports( viewConfiguration.packageImports )
-        importCustomizer.addStaticStars( viewConfiguration.staticImports )
+        importCustomizer.addStarImports(viewConfiguration.packageImports)
+        importCustomizer.addStaticStars(viewConfiguration.staticImports)
         compilerConfiguration.addCompilationCustomizers(
                 importCustomizer,
                 new ASTTransformationCustomizer(newViewsTransform())

@@ -90,14 +90,14 @@ trait JsonViewTest {
     @Lazy JsonViewTemplateEngine templateEngine = {
 
         def templateEngine = new JsonViewTemplateEngine(viewConfiguration, Thread.currentThread().contextClassLoader)
-        if(messageSource != null) {
+        if (messageSource != null) {
             templateEngine.setMessageSource(messageSource)
         }
         templateEngine.setLinkGenerator(linkGenerator)
-        if(mimeUtility != null) {
+        if (mimeUtility != null) {
             templateEngine.setMimeUtility(mimeUtility)
         }
-        if(mappingContext != null) {
+        if (mappingContext != null) {
             templateEngine.setMappingContext(mappingContext)
         }
         templateEngine.setJsonApiIdRenderStrategy(jsonApiIdRenderStrategy)
@@ -177,13 +177,13 @@ trait JsonViewTest {
     JsonRenderResult render(Map arguments, @DelegatesTo(TestRequestConfigurer) Closure configurer) {
 
         String viewUri
-        if( arguments.template ) {
+        if (arguments.template) {
             viewUri = templateEngine
                             .viewUriResolver
                             .resolveTemplateUri(null, arguments.template.toString())
 
         }
-        else if( arguments.view ) {
+        else if (arguments.view) {
             viewUri = arguments.view.toString()
         }
         else {
@@ -192,7 +192,7 @@ trait JsonViewTest {
         }
         def template = templateEngine.resolveTemplate(viewUri)
 
-        if(template == null) {
+        if (template == null) {
             throw new IllegalArgumentException("No view or template found for URI $viewUri")
         }
 

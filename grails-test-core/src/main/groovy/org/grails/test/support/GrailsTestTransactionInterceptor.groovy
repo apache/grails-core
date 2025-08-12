@@ -32,7 +32,6 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
  */
 class GrailsTestTransactionInterceptor {
 
-
     static final String TRANSACTIONAL = 'transactional'
 
     ApplicationContext applicationContext
@@ -71,8 +70,8 @@ class GrailsTestTransactionInterceptor {
      */
     void init() {
         TransactionSynchronizationManager.initSynchronization()
-        transactionManagers.each{ datasourceName, PlatformTransactionManager transactionManager ->
-            if ( transactionStatuses[datasourceName] == null ) {
+        transactionManagers.each { datasourceName, PlatformTransactionManager transactionManager ->
+            if (transactionStatuses[datasourceName] == null) {
                 transactionStatuses[datasourceName] = transactionManager.getTransaction(new DefaultTransactionDefinition())
             } else {
                 throw new RuntimeException("init() called on test transaction interceptor during transaction for datasource $datasourceName")
@@ -84,7 +83,7 @@ class GrailsTestTransactionInterceptor {
      * Rolls back the current transaction.
      */
     void destroy() {
-        transactionManagers.each{ datasourceName, PlatformTransactionManager transactionManager ->
+        transactionManagers.each { datasourceName, PlatformTransactionManager transactionManager ->
             if (transactionStatuses[datasourceName]) {
                 transactionManager.rollback(transactionStatuses[datasourceName])
                 transactionStatuses[datasourceName] = null

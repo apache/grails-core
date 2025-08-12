@@ -52,7 +52,7 @@ class ServletRenderContext extends AbstractRenderContext {
 
     ServletRenderContext(GrailsWebRequest webRequest, Map<String, Object> arguments) {
         this.webRequest = webRequest
-        if(arguments != null) {
+        if (arguments != null) {
             this.arguments = Collections.unmodifiableMap(arguments)
             final argsMap = arguments
             final incObject = argsMap != null ?  argsMap.get(IncludeExcludeSupport.INCLUDES_PROPERTY) : null
@@ -70,7 +70,6 @@ class ServletRenderContext extends AbstractRenderContext {
             this.arguments = Collections.<String, Object> emptyMap()
         }
     }
-
 
     @Override
     String getResourcePath() {

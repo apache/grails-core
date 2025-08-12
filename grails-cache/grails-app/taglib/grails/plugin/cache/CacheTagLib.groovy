@@ -33,7 +33,6 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 @Slf4j
 class CacheTagLib {
 
-
     static namespace = 'cache'
 
     GrailsCacheManager grailsCacheManager

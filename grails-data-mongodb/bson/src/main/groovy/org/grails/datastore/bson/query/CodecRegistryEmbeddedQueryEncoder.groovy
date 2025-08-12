@@ -46,7 +46,7 @@ class CodecRegistryEmbeddedQueryEncoder implements EmbeddedQueryEncoder {
     Object encode(Embedded embedded, Object instance) {
         PersistentEntity associatedEntity = embedded.associatedEntity
         Codec codec = codecRegistry.get(associatedEntity.javaClass)
-        if(codec == null) {
+        if (codec == null) {
             codec = new BsonPersistentEntityCodec(codecRegistry, associatedEntity)
         }
         final BsonDocument doc = new BsonDocument()

@@ -55,7 +55,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
  * @since 6.1.1
  */
 @CompileStatic
-trait IterableInterfaceProjectionBuilder extends InterfaceProjectionBuilder{
+trait IterableInterfaceProjectionBuilder extends InterfaceProjectionBuilder {
 
     /**
      * Is the method an interface projection
@@ -66,19 +66,19 @@ trait IterableInterfaceProjectionBuilder extends InterfaceProjectionBuilder{
      */
     @Override
     boolean isInterfaceProjection(ClassNode domainClass, MethodNode methodNode, ClassNode returnType) {
-        if(AstUtils.isSubclassOfOrImplementsInterface(returnType, Iterable.name) || returnType.isArray()) {
+        if (AstUtils.isSubclassOfOrImplementsInterface(returnType, Iterable.name) || returnType.isArray()) {
             ClassNode genericType = AstGenericsUtils.resolveSingleGenericType(returnType)
-            if(genericType != null && genericType.isInterface() && !genericType.packageName?.startsWith('java.')) {
+            if (genericType != null && genericType.isInterface() && !genericType.packageName?.startsWith('java.')) {
 
                 List<String> interfacePropertyNames = AstPropertyResolveUtils.getPropertyNames(genericType)
 
-                for(prop in interfacePropertyNames) {
+                for (prop in interfacePropertyNames) {
                     ClassNode existingType = AstPropertyResolveUtils.getPropertyType(domainClass, prop)
                     ClassNode propertyType = AstPropertyResolveUtils.getPropertyType(genericType, prop)
-                    if(existingType == null) {
+                    if (existingType == null) {
                         return false
                     }
-                    else if(!AstUtils.isSubclassOfOrImplementsInterface(existingType, propertyType)) {
+                    else if (!AstUtils.isSubclassOfOrImplementsInterface(existingType, propertyType)) {
                         return false
                     }
                 }
@@ -92,7 +92,7 @@ trait IterableInterfaceProjectionBuilder extends InterfaceProjectionBuilder{
         ClassNode declaringClass = newMethodNode.declaringClass
         ClassNode returnType = (ClassNode) newMethodNode.getNodeMetaData(ServiceImplementer.RETURN_TYPE) ?: abstractMethodNode.returnType
         ClassNode interfaceNode = AstGenericsUtils.resolveSingleGenericType(returnType)
-        if(!interfaceNode.isInterface()) {
+        if (!interfaceNode.isInterface()) {
             AstUtils.error(targetDomainClass.module.context, abstractMethodNode, "Cannot implement interface projection, [$interfaceNode.name] is not an interface!")
         }
         MethodNode methodTarget = buildInterfaceImpl(interfaceNode, declaringClass, targetDomainClass, abstractMethodNode)
@@ -100,7 +100,7 @@ trait IterableInterfaceProjectionBuilder extends InterfaceProjectionBuilder{
 
         VariableExpression delegateVar = varX('$delegate', innerClassNode)
         Parameter p = param(ClassHelper.OBJECT_TYPE, '$target')
-        Expression setTargetCall = assignX(propX(delegateVar, '$target'), castX(targetDomainClass, varX(p)) )
+        Expression setTargetCall = assignX(propX(delegateVar, '$target'), castX(targetDomainClass, varX(p)))
         Statement closureBody = block(
                 declS(delegateVar, ctorX(innerClassNode)),
                 stmt(setTargetCall),
@@ -112,9 +112,9 @@ trait IterableInterfaceProjectionBuilder extends InterfaceProjectionBuilder{
         closureExpression.setVariableScope(variableScope)
         Expression collectCall = callX(queryMethodCall, 'collect', closureExpression)
 
-        if(returnType.isArray()) {
+        if (returnType.isArray()) {
             // handle array cast
-            collectCall = castX( returnType.plainNodeReference, collectCall)
+            collectCall = castX(returnType.plainNodeReference, collectCall)
         }
         stmt(collectCall)
 

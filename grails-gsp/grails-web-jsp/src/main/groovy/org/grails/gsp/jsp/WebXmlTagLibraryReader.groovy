@@ -30,6 +30,7 @@ import org.grails.io.support.SpringIOUtils
  */
 @CompileStatic
 class WebXmlTagLibraryReader {
+
     /**
      * Contains a map of URI to tag library locations once the handler has read the web.xml file
      */

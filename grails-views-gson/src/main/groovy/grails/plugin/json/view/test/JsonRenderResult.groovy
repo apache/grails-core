@@ -33,6 +33,7 @@ import org.springframework.http.HttpStatus
 @CompileStatic
 @Canonical
 class JsonRenderResult {
+
     /**
      * The status
      */

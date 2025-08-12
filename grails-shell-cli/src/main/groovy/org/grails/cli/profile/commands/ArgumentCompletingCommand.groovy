@@ -47,7 +47,6 @@ abstract class ArgumentCompletingCommand implements Command, Completer {
 
         def lastOption = commandLine.lastOption()
 
-
         for (arg in desc.flags) {
             def argName = arg.name
             def flag = "-$argName".toString()

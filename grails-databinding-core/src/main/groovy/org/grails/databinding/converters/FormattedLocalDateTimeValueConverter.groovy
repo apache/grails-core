@@ -32,12 +32,12 @@ import grails.databinding.converters.FormattedValueConverter
 class FormattedLocalDateTimeValueConverter implements FormattedValueConverter {
 
     def convert(value, String format) {
-        if(value instanceof LocalDateTime) {
+        if (value instanceof LocalDateTime) {
             return value
         }
-        else if(value instanceof CharSequence) {
+        else if (value instanceof CharSequence) {
             String dateStr = value.toString()
-            if(!dateStr) {
+            if (!dateStr) {
                 return null
             }
             else {

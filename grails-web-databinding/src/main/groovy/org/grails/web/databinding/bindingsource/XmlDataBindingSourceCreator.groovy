@@ -49,7 +49,7 @@ class XmlDataBindingSourceCreator extends AbstractRequestBodyDataBindingSourceCr
 
     @Override
     DataBindingSource createDataBindingSource(MimeType mimeType, Class bindingTargetType, Object bindingSource) {
-        if(bindingSource instanceof GPathResult) {
+        if (bindingSource instanceof GPathResult) {
             def gpathMap = new GPathResultMap((GPathResult)bindingSource)
             return new SimpleMapDataBindingSource(gpathMap)
         }
@@ -65,7 +65,7 @@ class XmlDataBindingSourceCreator extends AbstractRequestBodyDataBindingSourceCr
 
     @Override
     CollectionDataBindingSource createCollectionDataBindingSource(MimeType mimeType, Class bindingTargetType, Object bindingSource) {
-        if(bindingSource instanceof GPathResult) {
+        if (bindingSource instanceof GPathResult) {
             new GPathResultCollectionDataBindingSource(bindingSource)
         }
         else {
@@ -81,7 +81,7 @@ class XmlDataBindingSourceCreator extends AbstractRequestBodyDataBindingSourceCr
 
     @Override
     protected DataBindingSourceCreationException createBindingSourceCreationException(Exception e) {
-        if(e instanceof SAXParseException) {
+        if (e instanceof SAXParseException) {
             return new InvalidRequestBodyException(e)
         }
         return super.createBindingSourceCreationException(e)

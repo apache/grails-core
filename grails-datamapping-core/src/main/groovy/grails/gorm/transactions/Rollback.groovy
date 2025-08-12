@@ -43,6 +43,7 @@ import org.grails.datastore.gorm.transform.GormASTTransformationClass
 @GroovyASTTransformationClass('org.grails.datastore.gorm.transform.OrderedGormTransformation')
 @GormASTTransformationClass('org.grails.datastore.gorm.transactions.transform.RollbackTransform')
 @interface Rollback {
+
     /**
      * The connection to rollback for
      */

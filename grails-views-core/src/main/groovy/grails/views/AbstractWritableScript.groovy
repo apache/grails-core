@@ -60,7 +60,7 @@ abstract class AbstractWritableScript extends Script implements WritableScript, 
         try {
             return doWrite(out)
         } catch (Throwable e) {
-            if(ViewsEnvironment.isDevelopmentMode() && sourceFile != null) {
+            if (ViewsEnvironment.isDevelopmentMode() && sourceFile != null) {
                 throw new ViewRenderException("Error rendering view: ${e.message}", e, this)
             }
             else {
@@ -75,7 +75,6 @@ abstract class AbstractWritableScript extends Script implements WritableScript, 
      * @return The original writer or a wrapped version
      */
     abstract Writer doWrite(Writer writer)
-
 
     void setModelTypes(Map<String, Class> modelTypes) {
         this.modelTypes = modelTypes

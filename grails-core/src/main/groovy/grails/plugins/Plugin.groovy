@@ -70,7 +70,7 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
     /**
      * The {@link GrailsPluginManager} instance
      */
-    GrailsPluginManager getManager() { pluginManager}
+    GrailsPluginManager getManager() { pluginManager }
 
     /**
      * Whether the plugin is enabled
@@ -82,7 +82,6 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
      */
     final List<ArtefactHandler> artefacts = []
 
-
     /**
      * The {@link ApplicationContext} instance
      */
@@ -92,7 +91,7 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
      * @return The ApplicationContext
      */
     ConfigurableApplicationContext getApplicationContext() {
-        if(applicationContext instanceof ConfigurableApplicationContext) {
+        if (applicationContext instanceof ConfigurableApplicationContext) {
             return (ConfigurableApplicationContext)applicationContext
         }
         return null

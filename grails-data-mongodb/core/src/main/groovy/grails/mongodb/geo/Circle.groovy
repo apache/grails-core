@@ -27,7 +27,8 @@ import org.springframework.util.Assert
  */
 @EqualsAndHashCode
 @CompileStatic
-class Circle extends Shape{
+class Circle extends Shape {
+
     /**
      * The center of the circle
      */
@@ -63,15 +64,15 @@ class Circle extends Shape{
      * @return The Circle instance
      */
     static Circle valueOf(List<Object> coords) {
-        if(coords.size() < 2) throw new IllegalArgumentException('Coordinates should contain at least 2 entries for a Circle: The center point and the radius')
+        if (coords.size() < 2) throw new IllegalArgumentException('Coordinates should contain at least 2 entries for a Circle: The center point and the radius')
 
         Point center = Point.getPointAtIndex(coords, 0)
         def ro = coords.get(1)
         Number radius = null
-        if(ro instanceof Number)
+        if (ro instanceof Number)
             radius = (Number) ro
 
-        if(center && radius != null) {
+        if (center && radius != null) {
             return new Circle(center, radius.doubleValue())
         }
         else {

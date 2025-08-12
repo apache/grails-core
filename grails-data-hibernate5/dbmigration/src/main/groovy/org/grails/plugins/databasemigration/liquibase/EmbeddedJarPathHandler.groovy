@@ -33,6 +33,7 @@ import java.nio.file.Paths
 
 @CompileStatic
 class EmbeddedJarPathHandler extends ZipPathHandler {
+
     @Override
     int getPriority(String root) {
         if (root.startsWith('jar:file:') && root.endsWith('!/')) { //only can handle `jar:` urls for the entire jar
@@ -56,6 +57,7 @@ class EmbeddedJarPathHandler extends ZipPathHandler {
 
 @CompileStatic
 class EmbeddedJarResourceAccessor extends AbstractPathResourceAccessor {
+
     private FileSystem fileSystem
 
     EmbeddedJarResourceAccessor(List<String> jarPaths) {
@@ -63,7 +65,7 @@ class EmbeddedJarResourceAccessor extends AbstractPathResourceAccessor {
             Path firstPath = Paths.get(jarPaths.pop())
             fileSystem = FileSystems.newFileSystem(firstPath, null as ClassLoader)
 
-            while(jarPaths) {
+            while (jarPaths) {
                 Path innerPath = fileSystem.getPath(jarPaths.pop())
                 fileSystem = FileSystems.newFileSystem(innerPath, null as ClassLoader)
             }

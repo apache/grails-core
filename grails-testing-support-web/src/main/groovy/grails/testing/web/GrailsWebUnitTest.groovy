@@ -112,7 +112,6 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         GrailsTagLibClass tagLib = grailsApplication.addArtefact(TagLibArtefactHandler.TYPE, tagLibClass)
         final tagLookup = applicationContext.getBean(TagLibraryLookup)
 
-
         defineBeans {
             "${tagLib.fullName}"(tagLibClass) { bean ->
                 bean.autowire = true
@@ -122,7 +121,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         tagLookup.registerTagLib(tagLib)
 
         def taglibObject = applicationContext.getBean(tagLib.fullName)
-        if(taglibObject instanceof TagLibrary) {
+        if (taglibObject instanceof TagLibrary) {
             ((TagLibrary)taglibObject).setTagLibraryLookup(tagLookup)
         }
         taglibObject
@@ -156,9 +155,8 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         return controllerArtefact
     }
 
-
     void mockTagLibs(Class<?>... tagLibClasses) {
-        for(Class c : tagLibClasses) {
+        for (Class c : tagLibClasses) {
             mockTagLib c
         }
     }

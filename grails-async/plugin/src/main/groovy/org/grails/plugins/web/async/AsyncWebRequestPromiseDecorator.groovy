@@ -42,6 +42,7 @@ import java.util.concurrent.TimeoutException
  */
 @CompileStatic
 class AsyncWebRequestPromiseDecorator implements PromiseDecorator {
+
     GrailsWebRequest webRequest
     final AsyncGrailsWebRequest asyncRequest
     final AsyncContext asyncContext
@@ -52,15 +53,15 @@ class AsyncWebRequestPromiseDecorator implements PromiseDecorator {
         HttpServletRequest currentServletRequest = webRequest.currentRequest
         WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(currentServletRequest)
         AsyncGrailsWebRequest newWebRequest
-        if(asyncManager.isConcurrentHandlingStarted()) {
+        if (asyncManager.isConcurrentHandlingStarted()) {
             newWebRequest = AsyncGrailsWebRequest.lookup(currentServletRequest)
             asyncContext = newWebRequest.asyncContext
-            if( newWebRequest == null || newWebRequest.isAsyncComplete() ) {
+            if (newWebRequest == null || newWebRequest.isAsyncComplete()) {
                 throw new IllegalStateException('Cannot start a task once asynchronous request processing has completed')
             }
         }
         else {
-            newWebRequest = new AsyncGrailsWebRequest(currentServletRequest, webRequest.currentResponse, webRequest.servletContext,webRequest.applicationContext)
+            newWebRequest = new AsyncGrailsWebRequest(currentServletRequest, webRequest.currentResponse, webRequest.servletContext, webRequest.applicationContext)
             asyncManager.setAsyncWebRequest(newWebRequest)
             newWebRequest.startAsync()
             asyncContext = newWebRequest.asyncContext
@@ -75,11 +76,11 @@ class AsyncWebRequestPromiseDecorator implements PromiseDecorator {
     @Override
     def <D> Closure<D> decorate(Closure<D> c) {
         return (Closure<D>) {  args ->
-            if(timeoutReached) {
+            if (timeoutReached) {
                 throw new TimeoutException('Asynchronous request processing timeout reached')
             }
             HttpServletRequest request = (HttpServletRequest) asyncContext.request
-            if(request.isAsyncStarted()) {
+            if (request.isAsyncStarted()) {
 
                 WebUtils.storeGrailsWebRequest(new GrailsWebRequest(request, (HttpServletResponse)asyncContext.response, webRequest.attributes))
                 try {
@@ -100,7 +101,7 @@ class AsyncWebRequestPromiseDecorator implements PromiseDecorator {
         if (args == null) {
             c.call(null)
         }
-        else if(args && args.getClass().isArray()) {
+        else if (args && args.getClass().isArray()) {
             c.call(*args)
         }
         else if (args instanceof List) {

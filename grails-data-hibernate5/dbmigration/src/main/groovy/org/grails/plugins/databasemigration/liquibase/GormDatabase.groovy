@@ -77,15 +77,9 @@ class GormDatabase extends HibernateDatabase {
         //no op
     }
 
-
     @Override
     boolean isCorrectDatabaseImplementation(DatabaseConnection conn) throws DatabaseException {
         return false
     }
 
 }
-
-
-
-
-

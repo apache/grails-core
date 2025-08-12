@@ -139,7 +139,7 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
             project.rootProject.subprojects.each { p ->
                 project.evaluationDependsOn(p.path)
                 String artifactId = p.findProperty('pomArtifactId')
-                if(artifactId) {
+                if (artifactId) {
                     artifactIdMappings[p.name] = artifactId
                 }
             }

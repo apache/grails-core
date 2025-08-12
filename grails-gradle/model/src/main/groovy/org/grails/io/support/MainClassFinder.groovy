@@ -64,7 +64,7 @@ class MainClassFinder {
         def pathStr = path.toString()
         if (supportCaching && mainClasses.containsKey(pathStr)) {
             def holder = mainClasses.get(pathStr)
-            if(holder.classFile.exists()) {
+            if (holder.classFile.exists()) {
                 return holder.className
             }
             else {
@@ -144,7 +144,7 @@ class MainClassFinder {
         final String rootFolderCanonicalPath = rootFolder.canonicalPath
         if (supportCaching && mainClasses.containsKey(rootFolderCanonicalPath)) {
             def holder = mainClasses.get(rootFolderCanonicalPath)
-            if(holder.classFile.exists()) {
+            if (holder.classFile.exists()) {
                 return holder
             }
         }
@@ -162,7 +162,7 @@ class MainClassFinder {
                         holder.className = classReader.getClassName().replace('/', '.').replace('\\', '.')
                         holder.classFile = file
 
-                        if(supportCaching) {
+                        if (supportCaching) {
                             mainClasses.put(rootFolderCanonicalPath, holder)
                         }
 
@@ -185,7 +185,6 @@ class MainClassFinder {
         (f.isDirectory() && !f.name.startsWith('.') && !f.hidden) ||
                 (f.isFile() && f.name.endsWith(GrailsResourceUtils.CLASS_EXTENSION))
     }
-
 
     protected static boolean isMainClass(ClassReader classReader) {
         if (classReader.superName?.startsWith('grails/boot/config/')) {
@@ -212,13 +211,11 @@ class MainClassFinder {
                         && MAIN_METHOD_NAME.equals(name)
                         && MAIN_METHOD_TYPE.getDescriptor().equals(desc)) {
 
-
                     this.found = true
                 }
             }
             return null
         }
-
 
         private boolean isAccess(int access, int ... requiredOpsCodes) {
             return !requiredOpsCodes.any { int requiredOpsCode -> (access & requiredOpsCode) == 0 }

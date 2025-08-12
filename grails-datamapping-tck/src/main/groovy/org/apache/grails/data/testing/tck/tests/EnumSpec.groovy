@@ -47,7 +47,6 @@ class EnumSpec extends GrailsDataTckSpec {
         TestEnum.V1 == t.en
     }
 
-
     @Issue('GPMONGODB-248')
     void "Test findByInList()"() {
         given:

@@ -51,7 +51,6 @@ import org.grails.datastore.mapping.reflect.EntityReflector
 @CompileStatic
 trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D> {
 
-
     /**
      * Allow access to datasource by name
      *
@@ -265,15 +264,15 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
         MappingContext mappingContext = entity.mappingContext
         EntityReflector entityReflector = mappingContext.getEntityReflector(entity)
         def association = entity.getPropertyByName(associationName)
-        if(association instanceof ToOne) {
+        if (association instanceof ToOne) {
             def proxyHandler = mappingContext.getProxyHandler()
             def value = entityReflector.getProperty(this, associationName)
-            if(proxyHandler.isProxy(value)) {
+            if (proxyHandler.isProxy(value)) {
                 return proxyHandler.getIdentifier(value)
             }
             else {
                 PersistentEntity associatedEntity = ((ToOne)association).getAssociatedEntity()
-                if(associatedEntity != null) {
+                if (associatedEntity != null) {
                     return associatedEntity.getReflector().getIdentifier(value)
                 }
             }
@@ -294,11 +293,11 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
         final MappingContext mappingContext = entity.mappingContext
         final EntityReflector entityReflector = mappingContext.getEntityReflector(entity)
 
-        if(prop instanceof Association) {
+        if (prop instanceof Association) {
             Association association = (Association)prop
             Class javaClass = association.associatedEntity?.javaClass
             final boolean isBasic = association instanceof Basic
-            if(isBasic) {
+            if (isBasic) {
                 javaClass = ((Basic)association).componentType
             }
 
@@ -347,7 +346,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
 
         final MappingContext mappingContext = entity.mappingContext
         final EntityReflector reflector = mappingContext.getEntityReflector(entity)
-        if(reflector != null && (prop instanceof Association)) {
+        if (reflector != null && (prop instanceof Association)) {
 
             final Association association = (Association)prop
             final propertyName = association.name
@@ -361,7 +360,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
 
             Class javaClass = association.associatedEntity?.javaClass
             final boolean isBasic = association instanceof Basic
-            if(isBasic) {
+            if (isBasic) {
                 javaClass = ((Basic)association).componentType
             }
 
@@ -373,7 +372,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
             }
             else {
                 def conversionService = mappingContext.conversionService
-                if(conversionService.canConvert(arg.getClass(), javaClass)) {
+                if (conversionService.canConvert(arg.getClass(), javaClass)) {
                     obj = conversionService.convert(arg, javaClass)
                 }
                 else {
@@ -397,18 +396,18 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
 
                     Collection otherSideValue = (Collection)associationReflector.getProperty(obj, name)
                     if (otherSideValue == null) {
-                        otherSideValue =  (Collection)( [].asType(otherSide.type) )
+                        otherSideValue =  (Collection)([].asType(otherSide.type))
                         associationReflector.setProperty(obj, name, otherSideValue)
                     }
                     otherSideValue.add(targetObject)
-                    if(obj instanceof DirtyCheckable) {
+                    if (obj instanceof DirtyCheckable) {
                         ((DirtyCheckable)obj).markDirty(name)
                     }
                 }
 
                 else {
                     associationReflector?.setProperty(obj, name, targetObject)
-                    if(obj instanceof DirtyCheckable) {
+                    if (obj instanceof DirtyCheckable) {
                         ((DirtyCheckable)obj).markDirty(name)
                     }
                 }
@@ -422,7 +421,6 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     private MappingContext lookupMappingContext() {
         currentGormStaticApi().datastore.mappingContext
     }
-
 
     /**
      * @return The PersistentEntity for this class
@@ -491,7 +489,6 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     static D find(Closure callable) {
         currentGormStaticApi().find callable
     }
-
 
     /**
      * Saves a list of objects in one go
@@ -1038,7 +1035,6 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     static <T> T withStatelessSession(Closure<T> callable) {
         currentGormStaticApi().withStatelessSession callable
     }
-
 
     /**
      * Executes a query for the given String

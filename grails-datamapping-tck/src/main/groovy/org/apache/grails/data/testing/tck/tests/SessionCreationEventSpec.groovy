@@ -32,7 +32,7 @@ import org.grails.datastore.mapping.core.SessionCreationEvent
  * Test case that session creation events are fired.
  */
 // TODO: the application context is null on hibernate tck tests, so this test errors on the add of the application listener
-@IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate6.gorm.suite')  || System.getProperty('mongodb.gorm.suite')})
+@IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate6.gorm.suite')  || System.getProperty('mongodb.gorm.suite') })
 class SessionCreationEventSpec extends GrailsDataTckSpec {
 
     Listener listener
@@ -61,7 +61,6 @@ class SessionCreationEventSpec extends GrailsDataTckSpec {
         !isDatastoreSession || listener.events.size() == 1
         !isDatastoreSession || listener.events[0].session == newSession
     }
-
 
     static class Listener implements SmartApplicationListener {
         List<SessionCreationEvent> events = []

@@ -36,6 +36,7 @@ import org.grails.datastore.mapping.model.DatastoreConfigurationException
  */
 @CompileStatic
 class PropertyDefinitionDelegate {
+
     PropertyConfig config
 
     private int index = 0
@@ -52,7 +53,7 @@ class PropertyDefinitionDelegate {
 
         // Create a new column configuration based on the mapping for this column.
         ColumnConfig column
-        if(index < config.columns.size()) {
+        if (index < config.columns.size()) {
             // configure existing
             column = config.columns[0]
         }

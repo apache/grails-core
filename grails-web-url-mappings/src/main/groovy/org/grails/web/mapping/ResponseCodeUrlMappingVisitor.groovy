@@ -25,10 +25,11 @@ import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.control.SourceUnit
 
 class ResponseCodeUrlMappingVisitor extends ClassCodeVisitorSupport {
+
     boolean insideMapping = false
     List<String> responseCodes = []
 
-    void visitProperty(PropertyNode node){
+    void visitProperty(PropertyNode node) {
         if (node?.name == 'mappings') {
             insideMapping = true
         }

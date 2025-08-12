@@ -39,6 +39,7 @@ import org.springframework.transaction.event.TransactionPhase
 @Inherited
 @Documented
 @interface Events {
+
     /**
      * @return The transaction phase to subscribe on
      */

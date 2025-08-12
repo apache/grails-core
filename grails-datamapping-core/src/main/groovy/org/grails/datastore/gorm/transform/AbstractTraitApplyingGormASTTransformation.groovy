@@ -42,7 +42,7 @@ abstract class AbstractTraitApplyingGormASTTransformation extends AbstractGormAS
     @Override
     void visit(SourceUnit source, AnnotationNode annotationNode, AnnotatedNode annotatedNode) {
         this.sourceUnit = source
-        if(annotatedNode instanceof ClassNode) {
+        if (annotatedNode instanceof ClassNode) {
             visit(source, annotationNode, (ClassNode)annotatedNode)
         }
     }
@@ -50,7 +50,7 @@ abstract class AbstractTraitApplyingGormASTTransformation extends AbstractGormAS
     void visit(SourceUnit source, AnnotationNode annotationNode, ClassNode classNode) {
         this.sourceUnit = source
         Class traitJavaClass = getTraitClass()
-        if(shouldWeave(annotationNode, classNode)) {
+        if (shouldWeave(annotationNode, classNode)) {
             weaveTrait(classNode, source, traitJavaClass)
         }
         visitAfterTraitApplied(source, annotationNode, classNode)

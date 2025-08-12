@@ -110,7 +110,7 @@ abstract class GroovyScriptCommand extends Script implements ProfileCommand, Pro
      * @return The flag information, or null if it isn't set by the user
      */
     def flag(String name) {
-        if(commandLine.hasOption(name)) {
+        if (commandLine.hasOption(name)) {
             return commandLine.optionValue(name)
         }
         else {
@@ -155,7 +155,7 @@ abstract class GroovyScriptCommand extends Script implements ProfileCommand, Pro
         notify("${name}Start", executionContext)
         def result = run()
         notify("${name}End", executionContext)
-        if(result instanceof Boolean) {
+        if (result instanceof Boolean) {
             return ((Boolean)result)
         }
         return true
@@ -171,7 +171,7 @@ abstract class GroovyScriptCommand extends Script implements ProfileCommand, Pro
         Object[] argsArray = (Object[])args
         def commandName = GrailsNameUtils.getScriptName(name)
         def context = executionContext
-        if(profile?.hasCommand(context, commandName )) {
+        if (profile?.hasCommand(context, commandName)) {
             def commandLine = context.commandLine
             def newArgs = [commandName]
             newArgs.addAll argsArray.collect() { it.toString() }
@@ -189,7 +189,7 @@ abstract class GroovyScriptCommand extends Script implements ProfileCommand, Pro
         this.templateRenderer = new TemplateRendererImpl(executionContext, profile, profileRepository)
         this.fileSystemInteraction = new FileSystemInteractionImpl(executionContext)
         this.gradle = new GradleInvoker(executionContext)
-        setDefaultPackage( executionContext.navigateConfig('grails', 'codegen', 'defaultPackage') )
+        setDefaultPackage(executionContext.navigateConfig('grails', 'codegen', 'defaultPackage'))
     }
 
     ExecutionContext getExecutionContext() {

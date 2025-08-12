@@ -61,12 +61,11 @@ class SimpleEncoder implements PropertyEncoder<Simple> {
     public static final TypeEncoder DEFAULT_ENCODER = new TypeEncoder() {
         @Override
         void encode(BsonWriter writer, PersistentProperty property, Object value) {
-            writer.writeString( value.toString() )
+            writer.writeString(value.toString())
         }
     }
 
     static {
-
 
         SIMPLE_TYPE_ENCODERS = new HashMap<Class, TypeEncoder>().withDefault { Class c ->
             DEFAULT_ENCODER
@@ -75,7 +74,7 @@ class SimpleEncoder implements PropertyEncoder<Simple> {
         TypeEncoder smallNumberEncoder = new TypeEncoder() {
             @Override
             void encode(BsonWriter writer, PersistentProperty property, Object value) {
-                writer.writeInt32( ((Number)value).intValue() )
+                writer.writeInt32(((Number)value).intValue())
             }
         }
         SIMPLE_TYPE_ENCODERS[CharSequence] = DEFAULT_ENCODER
@@ -91,7 +90,7 @@ class SimpleEncoder implements PropertyEncoder<Simple> {
         TypeEncoder doubleEncoder = new TypeEncoder() {
             @Override
             void encode(BsonWriter writer, PersistentProperty property, Object value) {
-                writer.writeDouble( (Double)value )
+                writer.writeDouble((Double)value)
             }
         }
         SIMPLE_TYPE_ENCODERS[Double] = doubleEncoder
@@ -99,7 +98,7 @@ class SimpleEncoder implements PropertyEncoder<Simple> {
         TypeEncoder longEncoder = new TypeEncoder() {
             @Override
             void encode(BsonWriter writer, PersistentProperty property, Object value) {
-                writer.writeInt64( (Long)value )
+                writer.writeInt64((Long)value)
             }
         }
         SIMPLE_TYPE_ENCODERS[Long] = longEncoder
@@ -107,7 +106,7 @@ class SimpleEncoder implements PropertyEncoder<Simple> {
         TypeEncoder booleanEncoder = new TypeEncoder() {
             @Override
             void encode(BsonWriter writer, PersistentProperty property, Object value) {
-                writer.writeBoolean( (Boolean)value )
+                writer.writeBoolean((Boolean)value)
             }
         }
         SIMPLE_TYPE_ENCODERS[Boolean] = booleanEncoder
@@ -115,19 +114,19 @@ class SimpleEncoder implements PropertyEncoder<Simple> {
         SIMPLE_TYPE_ENCODERS[Calendar] = new TypeEncoder() {
             @Override
             void encode(BsonWriter writer, PersistentProperty property, Object value) {
-                writer.writeDateTime( ((Calendar)value).timeInMillis )
+                writer.writeDateTime(((Calendar)value).timeInMillis)
             }
         }
         SIMPLE_TYPE_ENCODERS[Date] = new TypeEncoder() {
             @Override
             void encode(BsonWriter writer, PersistentProperty property, Object value) {
-                writer.writeDateTime( ((Date)value).time )
+                writer.writeDateTime(((Date)value).time)
             }
         }
         SIMPLE_TYPE_ENCODERS[TimeZone] = new TypeEncoder() {
             @Override
             void encode(BsonWriter writer, PersistentProperty property, Object value) {
-                writer.writeString( ((TimeZone)value).ID )
+                writer.writeString(((TimeZone)value).ID)
             }
         }
 
@@ -143,13 +142,13 @@ class SimpleEncoder implements PropertyEncoder<Simple> {
         SIMPLE_TYPE_ENCODERS[([] as byte[]).getClass()] = new TypeEncoder() {
             @Override
             void encode(BsonWriter writer, PersistentProperty property, Object value) {
-                writer.writeBinaryData( new BsonBinary((byte[])value))
+                writer.writeBinaryData(new BsonBinary((byte[])value))
             }
         }
         SIMPLE_TYPE_ENCODERS[Binary] = new TypeEncoder() {
             @Override
             void encode(BsonWriter writer, PersistentProperty property, Object value) {
-                writer.writeBinaryData( new BsonBinary(((Binary)value).data))
+                writer.writeBinaryData(new BsonBinary(((Binary)value).data))
             }
         }
         SIMPLE_TYPE_ENCODERS[ObjectId] = new TypeEncoder() {
@@ -160,19 +159,18 @@ class SimpleEncoder implements PropertyEncoder<Simple> {
         }
     }
 
-
     @Override
     void encode(BsonWriter writer, Simple property, Object value, EntityAccess parentAccess, EncoderContext encoderContext, CodecRegistry codecRegistry) {
         def type = property.type
         def encoder = SIMPLE_TYPE_ENCODERS[type]
-        writer.writeName( MappingUtils.getTargetKey(property) )
-        if(type.isArray()) {
-            if(!encoder.is(DEFAULT_ENCODER)) {
+        writer.writeName(MappingUtils.getTargetKey(property))
+        if (type.isArray()) {
+            if (!encoder.is(DEFAULT_ENCODER)) {
                 encoder.encode(writer, property, value)
             }
             else {
                 writer.writeStartArray()
-                for( o in value ) {
+                for (o in value) {
                     encoder = SIMPLE_TYPE_ENCODERS[type.componentType]
                     encoder.encode(writer, property, o)
                 }

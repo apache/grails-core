@@ -41,7 +41,7 @@ class TenantIdEncoder implements PropertyEncoder<TenantId> {
 
     @Override
     void encode(BsonWriter writer, TenantId property, Object id, EntityAccess parentAccess, EncoderContext encoderContext, CodecRegistry codecRegistry) {
-        writer.writeName( MappingUtils.getTargetKey(property) )
+        writer.writeName(MappingUtils.getTargetKey(property))
         SimpleEncoder.SIMPLE_TYPE_ENCODERS.get(property.type).encode(writer, property, id)
     }
 

@@ -36,6 +36,7 @@ import org.springframework.validation.DataBinder
 @CompileStatic
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 class ColumnConfig {
+
     /**
      * The column name
      */

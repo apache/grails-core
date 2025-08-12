@@ -46,16 +46,17 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
  */
 @CompileStatic
 class UpdateOneImplementer extends AbstractSaveImplementer implements SingleResultServiceImplementer<GormEntity> {
+
     static final List<String> HANDLED_PREFIXES = ['update']
 
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
         Parameter[] parameters = methodNode.parameters
-        if( parameters.length < 2 ) {
+        if (parameters.length < 2) {
             return false
         }
         // first parameter should be the id
-        else if(parameters[0].name != GormProperties.IDENTITY) {
+        else if (parameters[0].name != GormProperties.IDENTITY) {
             return false
         }
         else {
@@ -86,13 +87,13 @@ class UpdateOneImplementer extends AbstractSaveImplementer implements SingleResu
         //    $entity.save()
         // }
         body.addStatement(
-            declS( entityVar, lookupCall)
+            declS(entityVar, lookupCall)
         )
         BlockStatement ifBody = block()
         Statement saveStmt = bindParametersAndSave(domainClassNode, abstractMethodNode, parameters[1..-1] as Parameter[], ifBody, entityVar)
         ifBody.addStatement(saveStmt)
         body.addStatement(
-            ifS( notNullX(entityVar),
+            ifS(notNullX(entityVar),
                 ifBody
             )
         )

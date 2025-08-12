@@ -112,7 +112,7 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
 
     @Override
     protected void enhanceClassNode(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode) {
-        if(!classNode.getAllInterfaces().contains(make(GrailsCacheManagerAware))) {
+        if (!classNode.getAllInterfaces().contains(make(GrailsCacheManagerAware))) {
             AbstractTraitApplyingGormASTTransformation.weaveTraitWithGenerics(classNode, GrailsCacheManagerAware)
             if (compilationUnit != null) {
                 TraitComposer.doExtendTraits(classNode, sourceUnit, compilationUnit)
@@ -121,7 +121,7 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
     }
 
     protected VariableExpression declareAndInitializeParameterValueMap(AnnotationNode annotationNode, MethodNode methodToCache, BlockStatement codeBlock) {
-        if(annotationNode.getMember('key') instanceof ClosureExpression) {
+        if (annotationNode.getMember('key') instanceof ClosureExpression) {
             // if a key generator is specified don't do anything
             return null
         }
@@ -145,7 +145,7 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
                 codeBlock.addStatement(new ExpressionStatement(mce))
             }
 
-            if(TenantTransform.hasTenantAnnotation(methodToCache)) {
+            if (TenantTransform.hasTenantAnnotation(methodToCache)) {
                 ArgumentListExpression putArgs = args(
                         constX(GormProperties.TENANT_IDENTITY),
                         callD(classX(Tenants), 'currentId')
@@ -204,7 +204,6 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
         )
         return cacheKeyVariableExpression
     }
-
 
     @Override
     protected Object getAppliedMarker() {

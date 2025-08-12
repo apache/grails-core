@@ -28,7 +28,8 @@ import org.grails.datastore.mapping.model.PersistentProperty
  * @since 2.0
  */
 @CompileStatic
-class BoxType extends AbstractShapeCoordsType<Box>{
+class BoxType extends AbstractShapeCoordsType<Box> {
+
     BoxType() {
         super(Box)
     }
@@ -36,7 +37,7 @@ class BoxType extends AbstractShapeCoordsType<Box>{
     @Override
     protected Box readInternal(PersistentProperty property, String key, Document nativeSource) {
         def coords = nativeSource.get(key)
-        if(coords instanceof List) {
+        if (coords instanceof List) {
             return Box.valueOf(coords)
         }
     }

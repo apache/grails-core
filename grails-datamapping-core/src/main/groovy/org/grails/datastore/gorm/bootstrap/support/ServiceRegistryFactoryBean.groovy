@@ -41,6 +41,7 @@ import org.grails.datastore.mapping.services.ServiceRegistry
  */
 @CompileStatic
 class ServiceRegistryFactoryBean implements FactoryBean<ServiceRegistry>, BeanFactoryAware {
+
     final Datastore datastore
 
     ServiceRegistryFactoryBean(Datastore datastore) {
@@ -64,27 +65,27 @@ class ServiceRegistryFactoryBean implements FactoryBean<ServiceRegistry>, BeanFa
 
     @Override
     void setBeanFactory(BeanFactory beanFactory) throws BeansException {
-        if(beanFactory instanceof ConfigurableListableBeanFactory) {
+        if (beanFactory instanceof ConfigurableListableBeanFactory) {
             AutowireCapableBeanFactory autowireCapableBeanFactory = beanFactory instanceof AutowireCapableBeanFactory ? (AutowireCapableBeanFactory)beanFactory : null
             ConfigurableListableBeanFactory configurableListableBeanFactory = (ConfigurableListableBeanFactory)beanFactory
 
-            for(org.grails.datastore.mapping.services.Service service in datastore.services) {
+            for (org.grails.datastore.mapping.services.Service service in datastore.services) {
                 def serviceClass = service.getClass()
                 Service ann = serviceClass.getAnnotation(Service)
                 String serviceName = ann?.name()
-                if(serviceName == null) {
+                if (serviceName == null) {
                     serviceName = Introspector.decapitalize(serviceClass.simpleName)
                 }
 
-                if(!configurableListableBeanFactory.containsBean(serviceName)) {
+                if (!configurableListableBeanFactory.containsBean(serviceName)) {
                     autowireCapableBeanFactory?.autowireBean(service)
                     service.setDatastore(datastore)
                     configurableListableBeanFactory.registerSingleton(serviceName, service)
                 }
                 else {
-                    String root = Introspector.decapitalize( datastore.getClass().simpleName - 'Datastore' )
+                    String root = Introspector.decapitalize(datastore.getClass().simpleName - 'Datastore')
                     serviceName = "${root}${NameUtils.capitalize(serviceName)}"
-                    if(!configurableListableBeanFactory.containsBean(serviceName)) {
+                    if (!configurableListableBeanFactory.containsBean(serviceName)) {
                         autowireCapableBeanFactory?.autowireBean(service)
                         service.setDatastore(datastore)
                         configurableListableBeanFactory.registerSingleton(serviceName, service)

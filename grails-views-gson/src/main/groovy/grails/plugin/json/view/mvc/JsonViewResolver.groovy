@@ -68,7 +68,7 @@ class JsonViewResolver extends SmartViewResolver {
 
     @PostConstruct
     void initialize() {
-        if(rendererRegistry != null) {
+        if (rendererRegistry != null) {
             def errorsRenderer = new ErrorsJsonViewRenderer((Class)Errors)
             errorsRenderer.setJsonViewResolver(this)
             rendererRegistry.addRenderer(errorsRenderer)

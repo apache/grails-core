@@ -56,7 +56,7 @@ abstract class GeoJSONType<T extends Shape> extends AbstractMappingAwareCustomTy
 
     @Override
     protected Object writeInternal(PersistentProperty property, String key, T value, Document nativeTarget) {
-        if(value != null) {
+        if (value != null) {
             Document pointData = convertToGeoDocument((Shape)value)
             nativeTarget.put(key, pointData)
             return pointData
@@ -73,11 +73,11 @@ abstract class GeoJSONType<T extends Shape> extends AbstractMappingAwareCustomTy
     @Override
     protected T readInternal(PersistentProperty property, String key, Document nativeSource) {
         def obj = nativeSource.get(key)
-        if(obj instanceof Document) {
+        if (obj instanceof Document) {
             Document pointData = (Document)obj
             def coords = pointData.get(COORDINATES)
 
-            if(coords instanceof List) {
+            if (coords instanceof List) {
                 return createFromCoords(coords)
             }
         }
@@ -88,15 +88,15 @@ abstract class GeoJSONType<T extends Shape> extends AbstractMappingAwareCustomTy
 
     @Override
     protected void queryInternal(PersistentProperty property, String key, Query.PropertyCriterion value, Document nativeQuery) {
-        if(value instanceof Query.Equals) {
+        if (value instanceof Query.Equals) {
             def v = value.getValue()
-            if(v instanceof GeoJSON) {
+            if (v instanceof GeoJSON) {
                 Shape shape = (Shape) v
 
                 def geoJson = convertToGeoDocument(shape)
                 nativeQuery.put(key, geoJson)
             }
-            else if( v instanceof Shape) {
+            else if (v instanceof Shape) {
                 nativeQuery.put(key, v.asList())
             }
             else {

@@ -33,23 +33,24 @@ import org.springframework.context.MessageSource
 
 @CompileStatic
 class GrailsMessageSourceUtils {
-    static MessageSource findPreferredMessageSource(List<MessageSource> messageSources){
-        if(!messageSources) {
+
+    static MessageSource findPreferredMessageSource(List<MessageSource> messageSources) {
+        if (!messageSources) {
             return null
         }
 
-        if(messageSources.size() == 1) {
+        if (messageSources.size() == 1) {
             return messageSources.get(0)
         }
 
-        MessageSource firstGrailsSpring = messageSources.find {messageSource ->
+        MessageSource firstGrailsSpring = messageSources.find { messageSource ->
             String className = messageSource.class.name
             // use the first Grails or Spring MessageSource
             className.startsWith('org.grails') || className.startsWith('grails') || className.startsWith('org.springframework')
         }
 
         // return the first Grails or Spring MessageSource
-        if(firstGrailsSpring) {
+        if (firstGrailsSpring) {
             return firstGrailsSpring
         }
 

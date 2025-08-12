@@ -69,9 +69,8 @@ import static java.util.Arrays.asList
 @CompileStatic
 class MongoExtensions {
 
-
     static <T> T asType(Document document, Class<T> cls) {
-        if(Document.isAssignableFrom(cls)) {
+        if (Document.isAssignableFrom(cls)) {
             return (T)document
         }
         else {
@@ -80,8 +79,8 @@ class MongoExtensions {
             if (session != null) {
                 return session.decode(cls, document)
             }
-            else if(cls.name == 'grails.converters.JSON') {
-                return cls.newInstance( document )
+            else if (cls.name == 'grails.converters.JSON') {
+                return cls.newInstance(document)
             }
             else {
                 throw new IllegalArgumentException("Cannot convert DBOject [$document] to writer type $cls. Type is not a persistent entity")
@@ -90,7 +89,7 @@ class MongoExtensions {
     }
 
     static <T> T asType(FindIterable iterable, Class<T> cls) {
-        if(FindIterable.isAssignableFrom(cls)) {
+        if (FindIterable.isAssignableFrom(cls)) {
             return (T)iterable
         }
         else {
@@ -112,7 +111,7 @@ class MongoExtensions {
 
         MongoEntityPersister p = (MongoEntityPersister)session.getPersister(cls)
         if (p)
-            return new MongoQuery.MongoResultList(((FindIterable<Document>)iterable).iterator(),0,p)
+            return new MongoQuery.MongoResultList(((FindIterable<Document>)iterable).iterator(), 0, p)
         else {
             throw new IllegalArgumentException("Cannot convert DBCursor [$iterable] to writer type $cls. Type is not a persistent entity")
         }
@@ -121,16 +120,16 @@ class MongoExtensions {
     @CompileStatic
     static DBObject toDBObject(Document document) {
         def object = new BasicDBObject()
-        for(key in document.keySet()) {
+        for (key in document.keySet()) {
             def value = document.get(key)
-            if(value instanceof Document) {
+            if (value instanceof Document) {
                 value = toDBObject((Document)value)
             }
-            else if(value instanceof Collection) {
+            else if (value instanceof Collection) {
                 Collection col = (Collection)value
                 Collection newCol = []
-                for(i in col) {
-                    if(i instanceof Document) {
+                for (i in col) {
+                    if (i instanceof Document) {
                         newCol << toDBObject((Document)i)
                     }
                     else {
@@ -179,7 +178,6 @@ class MongoExtensions {
         }
         list.collect { toBson(it) }
     }
-
 
     /************** FindIterable Extensions *************/
 
@@ -598,27 +596,27 @@ class MongoExtensions {
     }
 
     static Document findOneAndDelete(MongoCollection<Document> collection, Map<String, Object> filter) {
-        collection.findOneAndDelete( toBson(filter) )
+        collection.findOneAndDelete(toBson(filter))
     }
 
     static Document findOneAndDelete(MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> options) {
-        collection.findOneAndDelete( toBson(filter), MongoConstants.mapToObject(FindOneAndDeleteOptions, options) )
+        collection.findOneAndDelete(toBson(filter), MongoConstants.mapToObject(FindOneAndDeleteOptions, options))
     }
 
     static Document findOneAndReplace(MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> replacement) {
-        collection.findOneAndReplace( toBson(filter), new Document(replacement) )
+        collection.findOneAndReplace(toBson(filter), new Document(replacement))
     }
 
     static Document findOneAndReplace(MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> replacement, Map<String, Object> options) {
-        collection.findOneAndReplace( toBson(filter), new Document(replacement), MongoConstants.mapToObject(FindOneAndReplaceOptions, options) )
+        collection.findOneAndReplace(toBson(filter), new Document(replacement), MongoConstants.mapToObject(FindOneAndReplaceOptions, options))
     }
 
     static Document findOneAndUpdate(MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> update) {
-        collection.findOneAndUpdate( toBson(filter), new Document(update) )
+        collection.findOneAndUpdate(toBson(filter), new Document(update))
     }
 
     static Document findOneAndUpdate(MongoCollection<Document> collection, Map<String, Object> filter, Map<String, Object> update, Map<String, Object> options) {
-        collection.findOneAndUpdate( toBson(filter), new Document(update), MongoConstants.mapToObject(FindOneAndUpdateOptions, options) )
+        collection.findOneAndUpdate(toBson(filter), new Document(update), MongoConstants.mapToObject(FindOneAndUpdateOptions, options))
     }
 
 }

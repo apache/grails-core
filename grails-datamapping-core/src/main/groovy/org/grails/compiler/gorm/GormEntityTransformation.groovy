@@ -100,6 +100,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 class GormEntityTransformation extends AbstractASTTransformation implements CompilationUnitAware, ASTTransformation, TransformWithPriority {
+
     private static final ClassNode MY_TYPE = new ClassNode(Entity.class)
     protected static final ClassNode JPA_ENTITY_CLASS_NODE = ClassHelper.make(jakarta.persistence.Entity)
     public static final AnnotationNode JPA_ENTITY_ANNOTATION_NODE = new AnnotationNode(JPA_ENTITY_CLASS_NODE)
@@ -206,7 +207,6 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
             }
         }
 
-
         def rxEntityClassNode = AstUtils.findInterface(classNode, 'grails.gorm.rx.RxEntity')
         boolean isRxEntity = rxEntityClassNode != null
 
@@ -250,7 +250,6 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         def dirtyCheckTransformer = new DirtyCheckingTransformer()
         dirtyCheckTransformer.performInjectionOnAnnotatedClass(sourceUnit, classNode, GormEntityDirtyCheckable)
 
-
         // convert the methodMissing and propertyMissing implementations to $static_methodMissing and $static_propertyMissing for the static versions
         def methodMissingBody = new BlockStatement()
         def methodNameParam = new Parameter(ClassHelper.make(String), 'name')
@@ -263,7 +262,6 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
 
         def methodMissingParameters = [methodNameParam, methodArgsParam] as Parameter[]
         classNode.addMethod('$static_methodMissing', Modifier.PUBLIC | Modifier.STATIC, AstUtils.OBJECT_CLASS_NODE, methodMissingParameters, null, methodMissingBody)
-
 
         // $static_propertyMissing setter
         def propertyMissingSetBody = new BlockStatement()
@@ -287,7 +285,6 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         )
         def propertyMissingGetParameters = [propertyMissingGetNameParam] as Parameter[]
         classNode.addMethod('$static_propertyMissing', Modifier.PUBLIC | Modifier.STATIC, AstUtils.OBJECT_CLASS_NODE, propertyMissingGetParameters, null, propertyMissingGetBody)
-
 
         // now process named query associations
         // see https://grails.github.io/grails-doc/latest/ref/Domain%20Classes/namedQueries.html
@@ -385,7 +382,6 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
 
     protected Class pickGormEntityTrait(ClassNode classNode, SourceUnit source) {
         def classLoader = getClass().classLoader
-
 
         // first try the `mapWithValue`
         def mapWith = AstUtils.getPropertyFromHierarchy(classNode, GormProperties.MAPPING_STRATEGY)
@@ -510,7 +506,6 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         }
         injectAssociationProperties(classNode, propertiesToAdd)
 
-
         ListExpression listExpression = getOrCreateListProperty(classNode, GormProperties.TRANSIENT)
         for (PropertyNode pn in classNode.getProperties()) {
             def type = pn.getType()
@@ -607,7 +602,6 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
                 String propertyName = mee.keyExpression.text
                 addAssociationForKey(propertyName, properties, classNode, findPropertyType(mee.valueExpression))
             }
-
 
         }
         return properties

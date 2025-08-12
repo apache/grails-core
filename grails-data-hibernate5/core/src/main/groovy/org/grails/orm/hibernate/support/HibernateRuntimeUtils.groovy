@@ -46,6 +46,7 @@ import org.grails.orm.hibernate.proxy.HibernateProxyHandler
  */
 @CompileStatic
 class HibernateRuntimeUtils {
+
     private static ProxyHandler proxyHandler = new HibernateProxyHandler()
 
     private static final String DYNAMIC_FILTER_ENABLER = 'dynamicFilterEnabler'
@@ -88,7 +89,7 @@ class HibernateRuntimeUtils {
             }
         }
 
-        if(isGormValidateable) {
+        if (isGormValidateable) {
             ((GormValidateable)target).setErrors(errors)
         }
         else {
@@ -115,7 +116,6 @@ class HibernateRuntimeUtils {
                 continue
             }
 
-
             def entityReflector = mappingContext.getEntityReflector(entity)
             Object inverseObject = entityReflector.getProperty(target, propertyName)
             if (inverseObject == null) {
@@ -138,23 +138,23 @@ class HibernateRuntimeUtils {
     static Object convertValueToType(Object passedValue, Class targetType, ConversionService conversionService) {
         // workaround for GROOVY-6127, do not assign directly in parameters before it's fixed
         Object value = passedValue
-        if(targetType != null && value != null && !(value in targetType)) {
+        if (targetType != null && value != null && !(value in targetType)) {
             if (value instanceof CharSequence) {
                 value = value.toString()
-                if(value in targetType) {
+                if (value in targetType) {
                     return value
                 }
             }
             try {
-                if (value instanceof Number && (targetType==Long || targetType==Integer)) {
-                    if(targetType == Long) {
+                if (value instanceof Number && (targetType == Long || targetType == Integer)) {
+                    if (targetType == Long) {
                         value = ((Number)value).toLong()
                     } else {
                         value = ((Number)value).toInteger()
                     }
                 } else if (value instanceof String && targetType in Number) {
                     String strValue = value.trim()
-                    if(targetType == Long) {
+                    if (targetType == Long) {
                         value = Long.parseLong(strValue)
                     } else if (targetType == Integer) {
                         value = Integer.parseInt(strValue)

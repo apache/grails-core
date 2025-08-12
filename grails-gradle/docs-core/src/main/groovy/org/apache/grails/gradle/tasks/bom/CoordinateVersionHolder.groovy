@@ -29,6 +29,7 @@ import org.gradle.api.GradleException
 @CompileStatic
 @ToString
 class CoordinateVersionHolder extends CoordinateHolder {
+
     String version
 
     CoordinateHolder toCoordinateHolder() {

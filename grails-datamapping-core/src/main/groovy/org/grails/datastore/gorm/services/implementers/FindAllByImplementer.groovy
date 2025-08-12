@@ -59,7 +59,8 @@ import static org.grails.datastore.mapping.reflect.AstUtils.mapX
  */
 @CompileStatic
 class FindAllByImplementer extends AbstractArrayOrIterableResultImplementer implements Ordered, IterableServiceImplementer<GormEntity> {
-    static final List<String> HANDLED_PREFIXES = ['listBy','findBy', 'findAllBy']
+
+    static final List<String> HANDLED_PREFIXES = ['listBy', 'findBy', 'findAllBy']
     public static final int POSITION = -100
 
     // position before FindAllImplementer
@@ -70,11 +71,11 @@ class FindAllByImplementer extends AbstractArrayOrIterableResultImplementer impl
 
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
-        if(super.doesImplement(domainClass, methodNode)) {
+        if (super.doesImplement(domainClass, methodNode)) {
             String methodName = methodNode.name
             int parameterCount = methodNode.parameters.length
-            for(String prefix in getHandledPrefixes()) {
-                if(methodName.startsWith(prefix) && buildMatchSpec(prefix, methodName, parameterCount) != null) {
+            for (String prefix in getHandledPrefixes()) {
+                if (methodName.startsWith(prefix) && buildMatchSpec(prefix, methodName, parameterCount) != null) {
                     return true
                 }
             }
@@ -100,20 +101,20 @@ class FindAllByImplementer extends AbstractArrayOrIterableResultImplementer impl
         Parameter[] parameters = newMethodNode.parameters
         int parameterCount = parameters.length
         MatchSpec matchSpec = null
-        for(String prefix in getHandledPrefixes()) {
+        for (String prefix in getHandledPrefixes()) {
             matchSpec = buildMatchSpec(prefix, methodName, parameterCount)
-            if(methodName.startsWith(prefix) &&  matchSpec != null) {
+            if (methodName.startsWith(prefix) &&  matchSpec != null) {
                 break
             }
         }
 
-        if(matchSpec == null) {
+        if (matchSpec == null) {
             AstUtils.error(abstractMethodNode.declaringClass.module.context, abstractMethodNode, ServiceTransformation.NO_IMPLEMENTATIONS_MESSAGE)
         }
         else {
             // validate the properties
-            for(String propertyName in matchSpec.propertyNames) {
-                if(!hasProperty(domainClassNode, propertyName)) {
+            for (String propertyName in matchSpec.propertyNames) {
+                if (!hasProperty(domainClassNode, propertyName)) {
                     error(abstractMethodNode.declaringClass.module.context, abstractMethodNode, "Cannot implement finder for non-existent property [$propertyName] of class [$domainClassNode.name]")
                 }
             }
@@ -123,9 +124,9 @@ class FindAllByImplementer extends AbstractArrayOrIterableResultImplementer impl
             String finderCallName = "${methodPrefix}${matchSpec.queryExpression}"
             ArgumentListExpression argList = buildArgs(parameters, abstractMethodNode, body)
             Expression findCall = callX(findStaticApiForConnectionId(domainClassNode, newMethodNode), finderCallName, argList)
-            if(isArray || ClassHelper.isNumberType(returnType)) {
+            if (isArray || ClassHelper.isNumberType(returnType)) {
                 // handle array cast
-                findCall = castX( returnType.plainNodeReference, findCall)
+                findCall = castX(returnType.plainNodeReference, findCall)
             }
             body.addStatement(
                     buildReturnStatement(domainClassNode, abstractMethodNode, newMethodNode, findCall)
@@ -161,7 +162,6 @@ class FindAllByImplementer extends AbstractArrayOrIterableResultImplementer impl
             queryExpression
         )
     }
-
 
     protected String getDynamicFinderPrefix() {
         return 'findAllBy'

@@ -41,13 +41,13 @@ abstract class AbstractConnectionSources <T, S extends ConnectionSourceSettings>
     protected final Collection<ConnectionSourcesListener<T,S>> listeners = []
 
     AbstractConnectionSources(ConnectionSource<T, S> defaultConnectionSource, ConnectionSourceFactory<T, S> connectionSourceFactory, PropertyResolver configuration) {
-        if(connectionSourceFactory == null) {
+        if (connectionSourceFactory == null) {
             throw new IllegalArgumentException('Argument [connectionSourceFactory] cannot be null')
         }
-        if(defaultConnectionSource == null) {
+        if (defaultConnectionSource == null) {
             throw new IllegalStateException('The default ConnectionSource cannot be null!')
         }
-        if(configuration == null) {
+        if (configuration == null) {
             this.configuration = DatastoreUtils.createPropertyResolver(Collections.emptyMap())
         }
         else {
@@ -79,8 +79,8 @@ abstract class AbstractConnectionSources <T, S extends ConnectionSourceSettings>
         Set<String> newNames = new LinkedHashSet<>()
         for (String name : names) {
             int i = name.indexOf('.')
-            if(i > -1) {
-                newNames.add( name.substring(0,i) )
+            if (i > -1) {
+                newNames.add(name.substring(0, i))
             }
             else {
                 newNames.add(name)
@@ -101,7 +101,7 @@ abstract class AbstractConnectionSources <T, S extends ConnectionSourceSettings>
 
     @Override
     void close() throws IOException {
-        for(ConnectionSource connectionSource : allConnectionSources) {
+        for (ConnectionSource connectionSource : allConnectionSources) {
             connectionSource.close()
         }
     }

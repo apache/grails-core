@@ -90,7 +90,7 @@ class RenderSitemeshTagLib implements TagLibrary {
         }
         String propertyName = attrs.name as String
         ContentProperty contentProperty = getContentProperty(propertyName)
-        def propertyValue = contentProperty?.hasValue()? contentProperty.getValue() : attrs.'default' ?: null
+        def propertyValue = contentProperty?.hasValue() ? contentProperty.getValue() : attrs.'default' ?: null
 
         if (propertyValue) {
             if (attrs.writeEntireProperty) {
@@ -145,7 +145,7 @@ class RenderSitemeshTagLib implements TagLibrary {
     }
 
     Closure layoutTitle = { attrs ->
-        out << """<sitemesh:write property="title">${attrs.default?:''}</sitemesh:write>""".toString()
+        out << """<sitemesh:write property="title">${attrs.default ?: ''}</sitemesh:write>""".toString()
     }
 
     Closure layoutHead = { attrs, body ->

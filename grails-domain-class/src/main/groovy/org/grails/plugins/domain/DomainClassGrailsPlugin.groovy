@@ -39,11 +39,11 @@ class DomainClassGrailsPlugin extends Plugin {
                             'file:./plugins/*/grails-app/domain/**/*.groovy']
 
     def version = GrailsUtil.getGrailsVersion()
-    def dependsOn = [i18n:version]
+    def dependsOn = [i18n: version]
     def loadAfter = ['controllers', 'dataSource']
 
     Closure doWithSpring() {
-        {->
+        { ->
             GrailsApplication application = grailsApplication
             validateableConstraintsEvaluator(DefaultConstraintEvaluatorFactoryBean) { bean ->
                 bean.lazyInit = true

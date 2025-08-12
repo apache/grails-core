@@ -105,7 +105,6 @@ class ConnectionSourceSettings implements Settings {
         this.defaults = defaults
     }
 
-
     /**
      * Represents the default settings
      */

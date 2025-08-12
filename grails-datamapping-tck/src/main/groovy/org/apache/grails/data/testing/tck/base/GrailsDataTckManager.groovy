@@ -49,6 +49,7 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 
 abstract class GrailsDataTckManager {
+
     static final CURRENT_TEST_NAME = 'current.gorm.test'
 
     Session session

@@ -95,7 +95,7 @@ class MimeTypesApiSupport {
     protected Object resolveAllFormat(formatProvider, LinkedHashMap<String, Object> formats) {
         def formatKey
         def format
-        if(formats.containsKey('*')) {
+        if (formats.containsKey('*')) {
             formatKey = '*'
             format = 'all'
         } else {

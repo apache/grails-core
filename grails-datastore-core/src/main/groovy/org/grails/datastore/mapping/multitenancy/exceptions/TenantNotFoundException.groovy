@@ -29,6 +29,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class TenantNotFoundException extends TenantException {
+
     TenantNotFoundException(String s) {
         super(s)
     }

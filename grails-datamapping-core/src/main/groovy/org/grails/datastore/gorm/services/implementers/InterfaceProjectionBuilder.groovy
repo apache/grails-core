@@ -56,16 +56,16 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 trait InterfaceProjectionBuilder {
 
     boolean isInterfaceProjection(ClassNode domainClass, MethodNode methodNode, ClassNode returnType) {
-        if(returnType.isInterface() && !returnType.packageName?.startsWith('java.')) {
+        if (returnType.isInterface() && !returnType.packageName?.startsWith('java.')) {
             List<String> interfacePropertyNames = AstPropertyResolveUtils.getPropertyNames(returnType)
 
-            for(prop in interfacePropertyNames) {
+            for (prop in interfacePropertyNames) {
                 ClassNode existingType = AstPropertyResolveUtils.getPropertyType(domainClass, prop)
                 ClassNode propertyType = AstPropertyResolveUtils.getPropertyType(returnType, prop)
-                if(existingType == null) {
+                if (existingType == null) {
                     return false
                 }
-                else if(!AstUtils.isSubclassOfOrImplementsInterface(existingType, propertyType)) {
+                else if (!AstUtils.isSubclassOfOrImplementsInterface(existingType, propertyType)) {
                     return false
                 }
             }

@@ -34,5 +34,4 @@ import groovy.transform.CompileStatic
                            'org.grails.compiler.DynamicFinderTypeCheckingExtension',
                            'org.grails.compiler.DomainMappingTypeCheckingExtension',
                            'org.grails.compiler.RelationshipManagementMethodTypeCheckingExtension'])
-@interface GrailsCompileStatic {
-}
+@interface GrailsCompileStatic {}

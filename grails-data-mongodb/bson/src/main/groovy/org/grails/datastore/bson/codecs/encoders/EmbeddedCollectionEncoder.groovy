@@ -56,20 +56,20 @@ class EmbeddedCollectionEncoder implements PropertyEncoder<EmbeddedCollection> {
         def isToOne = inverseSide instanceof ToOne
         def mappingContext = parentAccess.persistentEntity.mappingContext
 
-        if(Collection.isInstance(value)) {
+        if (Collection.isInstance(value)) {
             writer.writeStartArray()
 
-            for(v in value) {
-                if(v != null) {
+            for (v in value) {
+                if (v != null) {
                     BsonPersistentEntityCodec codec = associatedCodec
                     PersistentEntity entity = associatedEntity
 
                     def cls = v.getClass()
-                    if(cls != associatedEntity.javaClass) {
+                    if (cls != associatedEntity.javaClass) {
                         // try subclass
 
                         def childEntity = mappingContext.getPersistentEntity(cls.name)
-                        if(childEntity != null) {
+                        if (childEntity != null) {
                             entity = childEntity
                             codec = (BsonPersistentEntityCodec)codecRegistry.get(cls)
                         }
@@ -80,8 +80,8 @@ class EmbeddedCollectionEncoder implements PropertyEncoder<EmbeddedCollection> {
 
                     def ea = mappingContext.getEntityReflector(entity)
                     def id = ea.getIdentifier(v)
-                    if(isBidirectional) {
-                        if(isToOne) {
+                    if (isBidirectional) {
+                        if (isToOne) {
                             ea.setProperty(v, inverseProperty, parentAccess.entity)
                         }
                     }
@@ -91,14 +91,13 @@ class EmbeddedCollectionEncoder implements PropertyEncoder<EmbeddedCollection> {
             }
             writer.writeEndArray()
         }
-        else if(Map.isInstance(value)) {
+        else if (Map.isInstance(value)) {
             writer.writeStartDocument()
 
-            for(e in value) {
+            for (e in value) {
                 Map.Entry<String, Object> entry = (Map.Entry<String, Object>)e
 
                 writer.writeName entry.key
-
 
                 def v = entry.value
                 def ea = mappingContext.getEntityReflector(associatedEntity)
@@ -109,7 +108,6 @@ class EmbeddedCollectionEncoder implements PropertyEncoder<EmbeddedCollection> {
             }
             writer.writeEndDocument()
         }
-
 
     }
 

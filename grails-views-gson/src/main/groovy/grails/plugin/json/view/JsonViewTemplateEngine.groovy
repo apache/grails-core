@@ -55,7 +55,6 @@ import grails.views.compiler.ViewsTransform
 @CompileStatic
 class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
 
-
     private final boolean compileStatic
 
     final JsonGenerator generator
@@ -127,7 +126,7 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
     @Override
     protected void prepareCustomizers(CompilerConfiguration compilerConfiguration) {
         super.prepareCustomizers(compilerConfiguration)
-        if(compileStatic) {
+        if (compileStatic) {
             compilerConfiguration.addCompilationCustomizers(
                     new ASTTransformationCustomizer(Collections.singletonMap('extensions', JsonTemplateTypeCheckingExtension.name), CompileStatic.class))
         }

@@ -44,7 +44,6 @@ class NamedCriteriaProxy<D> implements GormQueryOperations<D> {
     private previousInChain
     private queryBuilder
 
-
     NamedCriteriaProxy(Closure criteriaClosure, PersistentEntity entity, List finders) {
         this.criteriaClosure = (Closure)criteriaClosure.clone()
         this.criteriaClosure.delegate = this
@@ -109,7 +108,7 @@ class NamedCriteriaProxy<D> implements GormQueryOperations<D> {
     @Override
     D get(Map paramsMap = Collections.emptyMap(), Closure additionalCriteria = null) {
         def conversionService = entity.mappingContext.conversionService
-        return (D) entity.javaClass.createCriteria().get( {
+        return (D) entity.javaClass.createCriteria().get({
             queryBuilder = delegate
             maxResults 1
             uniqueResult = true
@@ -117,9 +116,8 @@ class NamedCriteriaProxy<D> implements GormQueryOperations<D> {
             if (paramsMap && queryBuilder instanceof CriteriaBuilder) {
                 DynamicFinder.populateArgumentsForCriteria(entity.javaClass, queryBuilder.query, paramsMap)
             }
-        } )
+        })
     }
-
 
     List<D> list(Closure additionalCriteria) {
         list(Collections.emptyMap(), additionalCriteria)
@@ -132,7 +130,7 @@ class NamedCriteriaProxy<D> implements GormQueryOperations<D> {
             queryBuilder = delegate
             invokeCriteriaClosure(additionalCriteria)
         }
-        if(paramsMap.isEmpty()) {
+        if (paramsMap.isEmpty()) {
             return entity.javaClass.createCriteria().list(callable)
         }
         else {
@@ -173,16 +171,15 @@ class NamedCriteriaProxy<D> implements GormQueryOperations<D> {
         entity.javaClass.createCriteria().count(countClosure)
     }
 
-    Number count(Closure additionalCriteria ) {
+    Number count(Closure additionalCriteria) {
         count(Collections.emptyMap(), additionalCriteria)
     }
-
 
     D findWhere(Map params) {
         def queryClosure = {
             queryBuilder = delegate
             invokeCriteriaClosure()
-            params.each {key, val ->
+            params.each { key, val ->
                 eq key, val
             }
             maxResults 1
@@ -195,7 +192,7 @@ class NamedCriteriaProxy<D> implements GormQueryOperations<D> {
         def queryClosure = {
             queryBuilder = delegate
             invokeCriteriaClosure()
-            params.each {key, val ->
+            params.each { key, val ->
                 eq key, val
             }
         }
@@ -228,7 +225,7 @@ class NamedCriteriaProxy<D> implements GormQueryOperations<D> {
 
         if (queryBuilder == null) {
             NamedCriteriaProxy nextInChain = GormEnhancer.createNamedQuery(javaClass, methodName)
-            if(nextInChain != null) {
+            if (nextInChain != null) {
                 nextInChain.previousInChain = this
                 return nextInChain.call(args)
             }
@@ -285,6 +282,5 @@ class NamedCriteriaProxy<D> implements GormQueryOperations<D> {
         c.delegate = this
         return c
     }
-
 
 }

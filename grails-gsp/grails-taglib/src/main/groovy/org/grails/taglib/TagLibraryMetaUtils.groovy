@@ -31,6 +31,7 @@ import grails.util.GrailsClassUtils
 import org.grails.taglib.encoder.OutputContextLookupHelper
 
 class TagLibraryMetaUtils {
+
     // used for testing (GroovyPageUnitTestMixin.mockTagLib) and "nonEnhancedTagLibClasses" in GroovyPagesGrailsPlugin
     private final static Object[] EMPTY_OBJECT_ARRAY = new Object[0]
 
@@ -49,45 +50,45 @@ class TagLibraryMetaUtils {
 
     @CompileStatic
     static void registerNamespaceMetaProperties(MetaClass mc, TagLibraryLookup gspTagLibraryLookup) {
-        for(String ns : gspTagLibraryLookup.getAvailableNamespaces()) {
+        for (String ns : gspTagLibraryLookup.getAvailableNamespaces()) {
             registerNamespaceMetaProperty(mc, gspTagLibraryLookup, ns)
         }
     }
 
     @CompileStatic
     static void registerNamespaceMetaProperty(MetaClass metaClass, TagLibraryLookup gspTagLibraryLookup, String namespace) {
-        if(!metaClass.hasProperty(namespace) && !doesMethodExist(metaClass, GrailsClassUtils.getGetterName(namespace), [] as Class[])) {
+        if (!metaClass.hasProperty(namespace) && !doesMethodExist(metaClass, GrailsClassUtils.getGetterName(namespace), [] as Class[])) {
             registerPropertyMissingForTag(metaClass, namespace, gspTagLibraryLookup.lookupNamespaceDispatcher(namespace))
         }
     }
 
     @CompileStatic
-    static registerMethodMissingForTags(MetaClass metaClass, TagLibraryLookup gspTagLibraryLookup, String namespace, String name, boolean addAll=true, boolean overrideMethods=true) {
+    static registerMethodMissingForTags(MetaClass metaClass, TagLibraryLookup gspTagLibraryLookup, String namespace, String name, boolean addAll = true, boolean overrideMethods = true) {
         GroovyObject mc = (GroovyObject)metaClass
 
-        if(overrideMethods || !doesMethodExist(metaClass, name, [Map, Closure] as Class[])) {
-            mc.setProperty(name) {Map attrs, Closure body ->
+        if (overrideMethods || !doesMethodExist(metaClass, name, [Map, Closure] as Class[])) {
+            mc.setProperty(name) { Map attrs, Closure body ->
                 TagOutput.captureTagOutput(gspTagLibraryLookup, namespace, name, attrs, body, OutputContextLookupHelper.lookupOutputContext())
             }
         }
-        if(overrideMethods || !doesMethodExist(metaClass, name, [Map, CharSequence] as Class[])) {
-            mc.setProperty(name) {Map attrs, CharSequence body ->
+        if (overrideMethods || !doesMethodExist(metaClass, name, [Map, CharSequence] as Class[])) {
+            mc.setProperty(name) { Map attrs, CharSequence body ->
                 TagOutput.captureTagOutput(gspTagLibraryLookup, namespace, name, attrs, new TagOutput.ConstantClosure(body), OutputContextLookupHelper.lookupOutputContext())
             }
         }
-        if(overrideMethods || !doesMethodExist(metaClass, name, [Map] as Class[])) {
-            mc.setProperty(name) {Map attrs ->
+        if (overrideMethods || !doesMethodExist(metaClass, name, [Map] as Class[])) {
+            mc.setProperty(name) { Map attrs ->
                 TagOutput.captureTagOutput(gspTagLibraryLookup, namespace, name, attrs, null, OutputContextLookupHelper.lookupOutputContext())
             }
         }
         if (addAll) {
-            if(overrideMethods || !doesMethodExist(metaClass, name, [Closure] as Class[])) {
-                mc.setProperty(name) {Closure body ->
+            if (overrideMethods || !doesMethodExist(metaClass, name, [Closure] as Class[])) {
+                mc.setProperty(name) { Closure body ->
                     TagOutput.captureTagOutput(gspTagLibraryLookup, namespace, name, [:], body, OutputContextLookupHelper.lookupOutputContext())
                 }
             }
-            if(overrideMethods || !doesMethodExist(metaClass, name, [] as Class[])) {
-                mc.setProperty(name) {->
+            if (overrideMethods || !doesMethodExist(metaClass, name, [] as Class[])) {
+                mc.setProperty(name) { ->
                     TagOutput.captureTagOutput(gspTagLibraryLookup, namespace, name, [:], null, OutputContextLookupHelper.lookupOutputContext())
                 }
             }
@@ -104,12 +105,12 @@ class TagLibraryMetaUtils {
     @CompileStatic
     static void registerPropertyMissingForTag(MetaClass metaClass, String name, Object result) {
         GroovyObject mc = (GroovyObject)metaClass
-        mc.setProperty(GrailsClassUtils.getGetterName(name)) {-> result }
+        mc.setProperty(GrailsClassUtils.getGetterName(name)) { -> result }
     }
 
     @CompileStatic
     static void registerTagMetaMethods(MetaClass emc, TagLibraryLookup lookup, String namespace) {
-        for(String tagName : lookup.getAvailableTags(namespace)) {
+        for (String tagName : lookup.getAvailableTags(namespace)) {
             boolean addAll = !(namespace == TagOutput.DEFAULT_NAMESPACE && tagName == 'hasErrors')
             registerMethodMissingForTags(emc, lookup, namespace, tagName, addAll, false)
         }
@@ -119,17 +120,17 @@ class TagLibraryMetaUtils {
     }
 
     @CompileStatic
-    protected static boolean doesMethodExist(final MetaClass mc, final String methodName, final Class[] parameterTypes, boolean staticScope=false, boolean onlyReal=false) {
+    protected static boolean doesMethodExist(final MetaClass mc, final String methodName, final Class[] parameterTypes, boolean staticScope = false, boolean onlyReal = false) {
         boolean methodExists = false
         try {
             MetaMethod existingMethod = mc.pickMethod(methodName, parameterTypes)
-            if(existingMethod && existingMethod.isStatic()==staticScope && (!onlyReal || isRealMethod(existingMethod)) && parameterTypes.length==existingMethod.parameterTypes.length)  {
+            if (existingMethod && existingMethod.isStatic() == staticScope && (!onlyReal || isRealMethod(existingMethod)) && parameterTypes.length == existingMethod.parameterTypes.length)  {
                 methodExists = true
             }
         } catch (MethodSelectionException mse) {
             // the metamethod already exists with multiple signatures, must check if the exact method exists
             methodExists = mc.methods.contains { MetaMethod existingMethod ->
-                existingMethod.name == methodName && existingMethod.isStatic()==staticScope && (!onlyReal || isRealMethod(existingMethod)) && ((!parameterTypes && !existingMethod.parameterTypes) || Arrays.equals(parameterTypes, existingMethod.getNativeParameterTypes()))
+                existingMethod.name == methodName && existingMethod.isStatic() == staticScope && (!onlyReal || isRealMethod(existingMethod)) && ((!parameterTypes && !existingMethod.parameterTypes) || Arrays.equals(parameterTypes, existingMethod.getNativeParameterTypes()))
             }
         }
     }
@@ -149,7 +150,7 @@ class TagLibraryMetaUtils {
         final GroovyObject tagBean = gspTagLibraryLookup.lookupTagLibrary(namespace, name)
         if (tagBean != null) {
             MetaClass tagBeanMc = tagBean.getMetaClass()
-            final MetaMethod method=tagBeanMc.respondsTo(tagBean, name, args).find{ it }
+            final MetaMethod method = tagBeanMc.respondsTo(tagBean, name, args).find { it }
             if (method != null) {
                 if (addMethodsToMetaClass) {
                     // add all methods with the same name to metaclass at once to prevent "wrong number of arguments" exception
@@ -166,9 +167,9 @@ class TagLibraryMetaUtils {
     static addTagLibMethodToMetaClass(final GroovyObject tagBean, final MetaMethod method, final MetaClass mc) {
         Class[] paramTypes = method.nativeParameterTypes
         Closure methodMissingClosure = null
-        switch(paramTypes.length) {
+        switch (paramTypes.length) {
             case 0:
-                methodMissingClosure = {->
+                methodMissingClosure = { ->
                     method.invoke(tagBean, EMPTY_OBJECT_ARRAY)
                 }
                 break
@@ -177,12 +178,12 @@ class TagLibraryMetaUtils {
                     methodMissingClosure = { Closure body ->
                         method.invoke(tagBean, body)
                     }
-                } else if (paramTypes[0]==Map) {
-                    methodMissingClosure = { Map attrs->
+                } else if (paramTypes[0] == Map) {
+                    methodMissingClosure = { Map attrs ->
                         method.invoke(tagBean, attrs)
                     }
                 } else {
-                    methodMissingClosure = { Object attrs->
+                    methodMissingClosure = { Object attrs ->
                         method.invoke(tagBean, attrs)
                     }
                 }

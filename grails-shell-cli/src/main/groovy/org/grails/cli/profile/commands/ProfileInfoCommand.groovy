@@ -48,7 +48,7 @@ class ProfileInfoCommand extends ArgumentCompletingCommand implements ProfileRep
     ProfileRepository profileRepository
 
     ProfileInfoCommand() {
-        description.argument(name:'Profile Name', description: 'The name or coordinates of the profile', required:true)
+        description.argument(name: 'Profile Name', description: 'The name or coordinates of the profile', required: true)
     }
 
     void setProfileRepository(ProfileRepository profileRepository) {
@@ -58,7 +58,7 @@ class ProfileInfoCommand extends ArgumentCompletingCommand implements ProfileRep
     @Override
     boolean handle(ExecutionContext executionContext) {
         def console = executionContext.console
-        if(profileRepository == null) {
+        if (profileRepository == null) {
             console.error('No profile repository provided')
             return false
         }
@@ -67,7 +67,7 @@ class ProfileInfoCommand extends ArgumentCompletingCommand implements ProfileRep
             def profileName = executionContext.commandLine.remainingArgs[0]
 
             def profile = profileRepository.getProfile(profileName)
-            if(profile == null) {
+            if (profile == null) {
                 console.error("Profile not found for name [$profileName]")
             }
             else {
@@ -77,9 +77,9 @@ class ProfileInfoCommand extends ArgumentCompletingCommand implements ProfileRep
                 console.log('')
                 console.log('Provided Commands:')
                 console.log('--------------------')
-                Iterable<Command> commands = findCommands(profile, console).toUnique { Command c -> c.name}
+                Iterable<Command> commands = findCommands(profile, console).toUnique { Command c -> c.name }
 
-                for(cmd in commands) {
+                for (cmd in commands) {
                     def description = cmd.description
                     console.log("* ${description.name} - ${description.description}")
                 }
@@ -88,7 +88,7 @@ class ProfileInfoCommand extends ArgumentCompletingCommand implements ProfileRep
                 console.log('--------------------')
                 def features = profile.features
 
-                for(feature in features) {
+                for (feature in features) {
                     console.log("* ${feature.name} - ${feature.description}")
                 }
             }

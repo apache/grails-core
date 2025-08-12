@@ -37,7 +37,6 @@ import grails.web.mime.MimeType
 @CompileStatic
 class JsonViewJsonRenderer<T> extends DefaultViewRenderer<T> {
 
-
     JsonViewJsonRenderer(Class<T> targetType, SmartViewResolver viewResolver, ProxyHandler proxyHandler, RendererRegistry rendererRegistry, Renderer defaultRenderer) {
         super(targetType, MimeType.JSON, viewResolver, proxyHandler, rendererRegistry, defaultRenderer)
     }

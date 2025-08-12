@@ -53,27 +53,27 @@ trait AnnotatedSubscriber extends EventBusAware {
     @PostConstruct
     void registerMethods() {
         Events events = getClass().getAnnotation(Events)
-        for(Method m in subscribedMethods) {
+        for (Method m in subscribedMethods) {
             ReflectionUtils.makeAccessible(m)
             Subscriber sub = m.getAnnotation(Subscriber)
-            if(sub != null) {
+            if (sub != null) {
                 String eventId = sub.value()
-                if(!eventId) {
+                if (!eventId) {
                     eventId = EventIdUtils.eventIdForMethodName(m.name)
                 }
 
                 String namespace = events?.namespace()
-                if(namespace) {
+                if (namespace) {
                     eventId = namespace + ':' + eventId
                 }
 
                 Class[] parameterTypes = m.parameterTypes
                 boolean hasArgument = parameterTypes.length == 1
-                if(hasArgument && AbstractPersistenceEvent.isAssignableFrom(parameterTypes[0])) {
+                if (hasArgument && AbstractPersistenceEvent.isAssignableFrom(parameterTypes[0])) {
                     eventId = "gorm:${Introspector.decapitalize(parameterTypes[0].simpleName)}" - 'Event'
                     eventBus.subscribe(eventId, new MethodSubscriber(this, m))
                 }
-                else if(hasArgument && parameterTypes[0].isAssignableFrom(Event)) {
+                else if (hasArgument && parameterTypes[0].isAssignableFrom(Event)) {
                     eventBus.subscribe(eventId, new MethodEventSubscriber(this, m))
                 }
                 else {

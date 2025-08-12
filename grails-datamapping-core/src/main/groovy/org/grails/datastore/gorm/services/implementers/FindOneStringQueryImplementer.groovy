@@ -44,20 +44,21 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
  */
 @CompileStatic
 class FindOneStringQueryImplementer extends AbstractStringQueryImplementer implements SingleResultServiceImplementer<GormEntity> {
+
     @Override
     protected Statement buildQueryReturnStatement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, Expression queryArg) {
         ClassNode returnType = (ClassNode)newMethodNode.getNodeMetaData(RETURN_TYPE) ?: abstractMethodNode.returnType
         String methodToExecute = getFindMethodToInvoke(domainClassNode, newMethodNode, returnType)
 
-        if(methodToExecute != 'find') {
-            queryArg = args(queryArg, AstUtils.mapX(max:constX(1)))
+        if (methodToExecute != 'find') {
+            queryArg = args(queryArg, AstUtils.mapX(max: constX(1)))
         }
 
-        Expression queryCall = callX(  findStaticApiForConnectionId(domainClassNode, newMethodNode),
+        Expression queryCall = callX(findStaticApiForConnectionId(domainClassNode, newMethodNode),
                 methodToExecute,
                 queryArg)
 
-        if(!AstUtils.isDomainClass(returnType)) {
+        if (!AstUtils.isDomainClass(returnType)) {
             queryCall = callX(queryCall, 'first')
         }
         returnS(
@@ -66,7 +67,7 @@ class FindOneStringQueryImplementer extends AbstractStringQueryImplementer imple
     }
 
     protected String getFindMethodToInvoke(ClassNode classNode, MethodNode methodNode, ClassNode returnType) {
-        if(AstUtils.isDomainClass(returnType)) {
+        if (AstUtils.isDomainClass(returnType)) {
             return 'find'
         }
         else {
@@ -76,17 +77,17 @@ class FindOneStringQueryImplementer extends AbstractStringQueryImplementer imple
 
     @Override
     protected boolean isCompatibleReturnType(ClassNode domainClass, MethodNode methodNode, ClassNode returnType, String prefix) {
-        if(AstUtils.isDomainClass(returnType)) {
+        if (AstUtils.isDomainClass(returnType)) {
             return true
         }
-        else if(!AstUtils.isSubclassOfOrImplementsInterface(returnType, Iterable.name) && !returnType.isArray() && !returnType.packageName?.startsWith('rx.')) {
+        else if (!AstUtils.isSubclassOfOrImplementsInterface(returnType, Iterable.name) && !returnType.isArray() && !returnType.packageName?.startsWith('rx.')) {
             def queryAnnotation = AstUtils.findAnnotation(methodNode, getAnnotationType())
             def query = queryAnnotation.getMember('value')
-            if(query instanceof GStringExpression) {
+            if (query instanceof GStringExpression) {
                 GStringExpression gstring = (GStringExpression)query
                 List<ConstantExpression> strings = gstring.strings
                 ConstantExpression stem = strings.first()
-                if(stem.text.toLowerCase(Locale.ENGLISH).contains('select')) {
+                if (stem.text.toLowerCase(Locale.ENGLISH).contains('select')) {
                     return returnType != ClassHelper.VOID_TYPE
                 }
             }

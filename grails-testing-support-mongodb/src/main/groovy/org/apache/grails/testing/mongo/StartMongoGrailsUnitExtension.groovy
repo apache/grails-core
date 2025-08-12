@@ -19,7 +19,6 @@
 
 package org.apache.grails.testing.mongo
 
-
 import org.spockframework.runtime.extension.IGlobalExtension
 import org.spockframework.runtime.model.FieldInfo
 import org.spockframework.runtime.model.SpecInfo
@@ -34,6 +33,7 @@ import org.testcontainers.utility.DockerImageName
  * @author James Daugherty
  */
 class StartMongoGrailsUnitExtension extends AbstractMongoGrailsExtension implements IGlobalExtension {
+
     DockerImageName desiredDockerImage = getDesiredMongoDockerName()
     MongoContainerHolder containerHolder
 

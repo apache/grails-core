@@ -66,7 +66,6 @@ class DirtyCheckTransformation implements ASTTransformation, CompilationUnitAwar
 
         ClassNode cNode = (ClassNode) parent
 
-
         def dirtyCheckingTransformer = new DirtyCheckingTransformer()
         dirtyCheckingTransformer.compilationUnit = compilationUnit
         dirtyCheckingTransformer.performInjection(source, cNode)

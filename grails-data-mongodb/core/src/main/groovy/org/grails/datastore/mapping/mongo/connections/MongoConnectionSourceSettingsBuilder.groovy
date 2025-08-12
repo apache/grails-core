@@ -39,7 +39,7 @@ import org.grails.datastore.mapping.mongo.config.MongoSettings
  * @since 6.0
  */
 @CompileStatic
-class MongoConnectionSourceSettingsBuilder extends ConfigurationBuilder<MongoConnectionSourceSettings, MongoConnectionSourceSettings>{
+class MongoConnectionSourceSettingsBuilder extends ConfigurationBuilder<MongoConnectionSourceSettings, MongoConnectionSourceSettings> {
 
     MongoClientSettings.Builder clientOptionsBuilder
 
@@ -67,7 +67,7 @@ class MongoConnectionSourceSettingsBuilder extends ConfigurationBuilder<MongoCon
 
     @Override
     protected void newChildBuilder(Object builder, String configurationPath) {
-        if(builder instanceof MongoClientSettings.Builder) {
+        if (builder instanceof MongoClientSettings.Builder) {
             clientOptionsBuilder = (MongoClientSettings.Builder)builder
         }
         applyConnectionString(builder)
@@ -76,7 +76,7 @@ class MongoConnectionSourceSettingsBuilder extends ConfigurationBuilder<MongoCon
 
     @Override
     Object newChildBuilderForFallback(Object childBuilder, Object fallbackConfig) {
-        if(( childBuilder instanceof MongoClientSettings.Builder) && (fallbackConfig instanceof MongoClientSettings.Builder)) {
+        if ((childBuilder instanceof MongoClientSettings.Builder) && (fallbackConfig instanceof MongoClientSettings.Builder)) {
             return MongoClientSettings.builder(((MongoClientSettings.Builder)fallbackConfig).build())
         }
         return childBuilder

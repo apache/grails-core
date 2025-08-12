@@ -390,7 +390,7 @@ class LinkGeneratorSpec extends Specification {
         generator.grailsUrlConverter = new CamelCaseUrlConverter()
         def urlMappingsHolder = [getReverseMapping: callable,getReverseMappingNoDefault: callable] as UrlMappingsHolder
 
-        if(resourcePath != null) {
+        if (resourcePath != null) {
             generator.resourcePath = resourcePath
         }
         generator.urlMappingsHolder = urlMappingsHolder

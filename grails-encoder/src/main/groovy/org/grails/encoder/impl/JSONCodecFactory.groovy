@@ -28,6 +28,7 @@ import org.grails.encoder.Encoder
 
 @CompileStatic
 class JSONCodecFactory implements CodecFactory {
+
     Encoder encoder = new BasicJSONEncoder()
 
     Decoder decoder = new Decoder() {

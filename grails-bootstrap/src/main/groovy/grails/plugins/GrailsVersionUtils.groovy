@@ -22,8 +22,12 @@ import groovy.transform.CompileStatic
 
 import grails.plugins.metadata.GrailsPlugin
 
+import java.util.regex.Pattern
+
 @CompileStatic
 class GrailsVersionUtils {
+
+    private static final Pattern DIGITS_PATTERN = ~/\d+/
 
     /**
      * Get the name of the a plugin for a particular class.
@@ -54,7 +58,7 @@ class GrailsVersionUtils {
         def vc = new VersionComparator()
         pluginVersion = trimTag(pluginVersion)
 
-        if (requiredVersion.indexOf('>') >- 1) {
+        if (requiredVersion.indexOf('>') > -1) {
             def tokens = requiredVersion.split('>')*.trim()
             tokens = tokens.stream().collect({ String it -> trimTag(it) })
             tokens << pluginVersion
@@ -113,13 +117,11 @@ class GrailsVersionUtils {
 
     private static String trimTag(String pluginVersion) {
         def i = pluginVersion.indexOf('-')
-        if (i >- 1) {
-            pluginVersion = pluginVersion[0..i-1]
+        if (i > -1) {
+            pluginVersion = pluginVersion[0..i - 1]
         }
         def tokens = pluginVersion.split(/\./)
 
-        return tokens.findAll { String it -> it ==~ /\d+/ || it =='*'}.join('.')
+        return tokens.findAll { String it -> DIGITS_PATTERN.matcher(it).matches() || it == '*' }.join('.')
     }
 }
-
-

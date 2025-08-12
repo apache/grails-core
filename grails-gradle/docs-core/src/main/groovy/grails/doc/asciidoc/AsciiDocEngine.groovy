@@ -39,11 +39,12 @@ import static org.asciidoctor.Asciidoctor.Factory.create
  */
 @InheritConstructors
 class AsciiDocEngine extends DocEngine {
+
     Asciidoctor asciidoctor = create()
     Map attributes = [
         'imagesdir': '../img',
-        'source-highlighter':'coderay',
-        'icons':'font'
+        'source-highlighter': 'coderay',
+        'icons': 'font'
     ]
     @Override
     String render(String content, RenderContext context) {

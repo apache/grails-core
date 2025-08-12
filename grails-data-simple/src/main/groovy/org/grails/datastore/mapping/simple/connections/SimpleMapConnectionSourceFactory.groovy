@@ -39,6 +39,7 @@ import org.grails.datastore.mapping.core.connections.DefaultConnectionSource
  */
 @CompileStatic
 class SimpleMapConnectionSourceFactory extends AbstractConnectionSourceFactory<Map<String,Map>, ConnectionSourceSettings> {
+
     @Override
     ConnectionSource<Map<String, Map>, ConnectionSourceSettings> create(String name, ConnectionSourceSettings settings) {
         return new DefaultConnectionSource<Map<String,Map>, ConnectionSourceSettings>(name, new ConcurrentHashMap<String, Map>(), settings)

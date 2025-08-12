@@ -34,6 +34,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
  */
 @CompileStatic
 class FindAllInterfaceProjectionImplementer extends FindAllImplementer implements IterableInterfaceProjectionBuilder, IterableProjectionServiceImplementer {
+
     @Override
     protected ClassNode resolveDomainClassFromSignature(ClassNode currentDomainClassNode, MethodNode methodNode) {
         return currentDomainClassNode
@@ -48,7 +49,7 @@ class FindAllInterfaceProjectionImplementer extends FindAllImplementer implement
     void implementWithQuery(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode, BlockStatement body, VariableExpression detachedCriteriaVar, Expression queryArgs) {
         ClassNode returnType = (ClassNode)newMethodNode.getNodeMetaData(RETURN_TYPE) ?: newMethodNode.returnType
         Expression methodCall = callX(detachedCriteriaVar, 'list', queryArgs)
-        if(returnType.isArray()) {
+        if (returnType.isArray()) {
             methodCall = castX(returnType.plainNodeReference, methodCall)
         }
 

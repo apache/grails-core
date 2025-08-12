@@ -33,7 +33,7 @@ import org.grails.datastore.mapping.model.PersistentProperty
  * @author Graeme Rocher
  * @since 2.0
  */
-class ShapeType extends GeoJSONType<Shape>{
+class ShapeType extends GeoJSONType<Shape> {
 
     static Map<String, Class> geoJsonTypeMap = [Polygon: Polygon, LineString: LineString, Point: Point]
     ShapeType() {
@@ -42,7 +42,7 @@ class ShapeType extends GeoJSONType<Shape>{
 
     @Override
     protected Object writeInternal(PersistentProperty property, String key, Shape value, Document nativeTarget) {
-        if(value instanceof GeoJSON) {
+        if (value instanceof GeoJSON) {
             return super.writeInternal(property, key, value, nativeTarget)
         }
         else {
@@ -53,12 +53,12 @@ class ShapeType extends GeoJSONType<Shape>{
     @Override
     protected Shape readInternal(PersistentProperty property, String key, Document nativeSource) {
         def geoData = nativeSource.get(key)
-        if(geoData && (geoData instanceof Map) ) {
+        if (geoData && (geoData instanceof Map)) {
             def geoType = geoData.get(GEO_TYPE)
             def coords = geoData.get(COORDINATES)
-            if(geoType) {
+            if (geoType) {
                 def cls = geoJsonTypeMap.get(geoType.toString())
-                if(cls && coords) {
+                if (cls && coords) {
                     return cls.valueOf(coords)
                 }
             }

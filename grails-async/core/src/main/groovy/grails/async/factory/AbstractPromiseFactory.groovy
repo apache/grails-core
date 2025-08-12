@@ -59,13 +59,13 @@ abstract class AbstractPromiseFactory implements PromiseFactory {
     }
 
     <T> Closure<T> applyDecorators(Closure<T> closure, List<PromiseDecorator> decorators) {
-        List<PromiseDecorator> allDecorators = decorators != null ? new ArrayList<PromiseDecorator>(decorators): new ArrayList<PromiseDecorator>()
+        List<PromiseDecorator> allDecorators = decorators != null ? new ArrayList<PromiseDecorator>(decorators) : new ArrayList<PromiseDecorator>()
         for (PromiseDecoratorLookupStrategy lookupStrategy : lookupStrategies) {
             allDecorators.addAll(lookupStrategy.findDecorators())
         }
         def decoratedClosure = closure
         if (!allDecorators.empty) {
-            for(PromiseDecorator decorator : allDecorators) {
+            for (PromiseDecorator decorator : allDecorators) {
                 decoratedClosure = decorator.decorate(decoratedClosure)
             }
         }
@@ -76,7 +76,7 @@ abstract class AbstractPromiseFactory implements PromiseFactory {
      * @see PromiseFactory#createPromise(java.util.List)
      */
     <T> Promise<List<T>> createPromise(List<Closure<T>> closures) {
-        return createPromise(closures,null)
+        return createPromise(closures, null)
     }
 
     /**
@@ -99,7 +99,7 @@ abstract class AbstractPromiseFactory implements PromiseFactory {
      */
     <T> Promise<List<T>> createPromise(Promise<T>... promises) {
         PromiseList<T> promiseList = new PromiseList<>()
-        for(Promise<T> promise : promises) {
+        for (Promise<T> promise : promises) {
             promiseList.add(promise)
         }
         return promiseList

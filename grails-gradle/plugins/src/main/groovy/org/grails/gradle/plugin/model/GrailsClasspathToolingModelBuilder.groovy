@@ -31,6 +31,7 @@ import org.gradle.tooling.provider.model.ToolingModelBuilder
  */
 @CompileStatic
 class GrailsClasspathToolingModelBuilder implements ToolingModelBuilder {
+
     public static final String PROFILE_CONFIGURATION_NAME = 'profile'
 
     @Override

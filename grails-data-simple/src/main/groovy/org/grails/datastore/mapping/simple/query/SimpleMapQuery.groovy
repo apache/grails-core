@@ -106,11 +106,11 @@ class SimpleMapQuery extends Query {
                     results.add(entityList.size())
                 }
                 else if (p instanceof Query.CountDistinctProjection) {
-                    final uniqueList = new ArrayList(entityList).unique { it."$p.propertyName"}
-                    results.add(uniqueList.size() )
+                    final uniqueList = new ArrayList(entityList).unique { it."$p.propertyName" }
+                    results.add(uniqueList.size())
                 }
                 else if (p instanceof Query.PropertyProjection) {
-                    def propertyValues = entityList.collect { it."$p.propertyName"}
+                    def propertyValues = entityList.collect { it."$p.propertyName" }
                     if (p instanceof Query.MaxProjection) {
                         results.add(propertyValues.max())
                     }
@@ -181,9 +181,9 @@ class SimpleMapQuery extends Query {
     }
 
     def associationQueryHandlers = [
-        (AssociationQuery): { allEntities, Association association, AssociationQuery aq->
+        (AssociationQuery): { allEntities, Association association, AssociationQuery aq ->
             Query.Junction queryCriteria = aq.criteria
-            return executeAssociationSubQuery(datastore[getFamily(association.associatedEntity)], association.associatedEntity,queryCriteria, aq.association)
+            return executeAssociationSubQuery(datastore[getFamily(association.associatedEntity)], association.associatedEntity, queryCriteria, aq.association)
         },
 
         (FunctionCallingCriterion): { allEntities, Association association, FunctionCallingCriterion fcc ->
@@ -192,9 +192,9 @@ class SimpleMapQuery extends Query {
             def function = functionHandlers[fcc.functionName]
             if (handler != null && function != null) {
                 try {
-                   return handler.call(allEntities, association,criterion, function)
+                   return handler.call(allEntities, association, criterion, function)
                 }
-                catch(MissingMethodException ignored) {
+                catch (MissingMethodException ignored) {
                     throw new InvalidDataAccessResourceUsageException("Unsupported function '$function' used in query")
                 }
             }
@@ -232,18 +232,18 @@ class SimpleMapQuery extends Query {
                 function(resolveIfEmbedded(eq.property, it)) == null
             }
         },
-        (Query.NotEquals): { allEntities, Association association, Query.NotEquals eq , Closure function = {it}->
+        (Query.NotEquals): { allEntities, Association association, Query.NotEquals eq , Closure function = {it} ->
             queryAssociation(allEntities, association) {
                 final value = subqueryIfNecessary(eq)
                 function(resolveIfEmbedded(eq.property, it)) != value
             }
         },
-        (Query.IsNotNull): { allEntities, Association association, Query.IsNotNull eq , Closure function = {it}->
+        (Query.IsNotNull): { allEntities, Association association, Query.IsNotNull eq , Closure function = {it} ->
             queryAssociation(allEntities, association) {
                 function(resolveIfEmbedded(eq.property, it)) != null
             }
         },
-        (Query.IdEquals): { allEntities, Association association, Query.IdEquals eq , Closure function = {it}->
+        (Query.IdEquals): { allEntities, Association association, Query.IdEquals eq , Closure function = {it} ->
             queryAssociation(allEntities, association) {
                 function(resolveIfEmbedded(eq.property, it)) == eq.value
             }
@@ -255,31 +255,31 @@ class SimpleMapQuery extends Query {
                 function(resolveIfEmbedded(between.property, it)) >= from && function(resolveIfEmbedded(between.property, it)) <= to
             }
         },
-        (Query.GreaterThan):{ allEntities, Association association, Query.GreaterThan gt, Closure function = {it} ->
+        (Query.GreaterThan): { allEntities, Association association, Query.GreaterThan gt, Closure function = {it} ->
             queryAssociation(allEntities, association) {
                 final value = subqueryIfNecessary(gt)
                 function(resolveIfEmbedded(gt.property, it)) > value
             }
         },
-        (Query.LessThan):{ allEntities, Association association, Query.LessThan lt, Closure function = {it} ->
+        (Query.LessThan): { allEntities, Association association, Query.LessThan lt, Closure function = {it} ->
             queryAssociation(allEntities, association) {
                 final value = subqueryIfNecessary(lt)
                 function(resolveIfEmbedded(lt.property, it)) < value
             }
         },
-        (Query.GreaterThanEquals):{ allEntities, Association association, Query.GreaterThanEquals gt, Closure function = {it} ->
+        (Query.GreaterThanEquals): { allEntities, Association association, Query.GreaterThanEquals gt, Closure function = {it} ->
             queryAssociation(allEntities, association) {
                 final value = subqueryIfNecessary(gt)
                 function(resolveIfEmbedded(gt.property, it)) >= value
             }
         },
-        (Query.LessThanEquals):{ allEntities, Association association, Query.LessThanEquals lt, Closure function = {it} ->
+        (Query.LessThanEquals): { allEntities, Association association, Query.LessThanEquals lt, Closure function = {it} ->
             queryAssociation(allEntities, association) {
                 final value = subqueryIfNecessary(lt)
                 function(resolveIfEmbedded(lt.property, it)) <= value
             }
         },
-        (Query.In):{ allEntities, Association association, Query.In inList, Closure function = {it} ->
+        (Query.In): { allEntities, Association association, Query.In inList, Closure function = {it} ->
             queryAssociation(allEntities, association) {
                 inList.values?.contains function(resolveIfEmbedded(inList.property, it))
             }
@@ -295,7 +295,7 @@ class SimpleMapQuery extends Query {
 
                 // If the entity isn't mocked properly this will happen and can cause a NPE.
                 PersistentEntity associatedEntity = association.associatedEntity
-                if( associatedEntity == null ) {
+                if (associatedEntity == null) {
                     throw new IllegalStateException("No associated entity found for ${association.owner}.${association.name}")
                 }
 
@@ -333,7 +333,7 @@ class SimpleMapQuery extends Query {
             }
             else if (criterion instanceof Query.Junction) {
                 Query.Junction junction = criterion
-                resultList << executeAssociationSubQuery(allEntities,associatedEntity, junction, property)
+                resultList << executeAssociationSubQuery(allEntities, associatedEntity, junction, property)
             }
         }
         return applyJunctionToResults(queryCriteria, resultList)
@@ -360,7 +360,7 @@ class SimpleMapQuery extends Query {
                 try {
                     handler.call(criterion, property, function, fcc.onValue)
                 }
-                catch(MissingMethodException e) {
+                catch (MissingMethodException e) {
                     throw new InvalidDataAccessResourceUsageException("Unsupported function '$function' used in query")
                 }
             }
@@ -372,7 +372,7 @@ class SimpleMapQuery extends Query {
             Query.Junction queryCriteria = aq.criteria
             return executeAssociationSubQuery(datastore[family], aq.association.associatedEntity, queryCriteria, property)
         },
-        (Query.EqualsAll):{ Query.EqualsAll equalsAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
+        (Query.EqualsAll): { Query.EqualsAll equalsAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
             def name = equalsAll.property
             final values = subqueryIfNecessary(equalsAll, false)
             Assert.isTrue(values.every { property.type.isInstance(it) }, "Subquery returned values that are not compatible with the type of property '$name': $values")
@@ -382,7 +382,7 @@ class SimpleMapQuery extends Query {
             }
             .collect { it.key }
         },
-        (Query.NotEqualsAll):{ Query.NotEqualsAll notEqualsAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
+        (Query.NotEqualsAll): { Query.NotEqualsAll notEqualsAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
             def name = notEqualsAll.property
             final values = subqueryIfNecessary(notEqualsAll, false)
             Assert.isTrue(values.every { property.type.isInstance(it) }, "Subquery returned values that are not compatible with the type of property '$name': $values")
@@ -392,7 +392,7 @@ class SimpleMapQuery extends Query {
             }
             .collect { it.key }
         },
-        (Query.GreaterThanAll):{ Query.GreaterThanAll greaterThanAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
+        (Query.GreaterThanAll): { Query.GreaterThanAll greaterThanAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
             def name = greaterThanAll.property
             final values = subqueryIfNecessary(greaterThanAll, false)
             Assert.isTrue(values.every { property.type.isInstance(it) }, "Subquery returned values that are not compatible with the type of property '$name': $values")
@@ -402,7 +402,7 @@ class SimpleMapQuery extends Query {
             }
             .collect { it.key }
         },
-        (Query.LessThanAll):{ Query.LessThanAll lessThanAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
+        (Query.LessThanAll): { Query.LessThanAll lessThanAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
             def name = lessThanAll.property
             final values = subqueryIfNecessary(lessThanAll, false)
             Assert.isTrue(values.every { property.type.isInstance(it) }, "Subquery returned values that are not compatible with the type of property '$name': $values")
@@ -412,7 +412,7 @@ class SimpleMapQuery extends Query {
             }
             .collect { it.key }
         },
-        (Query.LessThanEqualsAll):{ Query.LessThanEqualsAll lessThanEqualsAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
+        (Query.LessThanEqualsAll): { Query.LessThanEqualsAll lessThanEqualsAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
             def name = lessThanEqualsAll.property
             final values = subqueryIfNecessary(lessThanEqualsAll, false)
             Assert.isTrue(values.every { property.type.isInstance(it) }, "Subquery returned values that are not compatible with the type of property '$name': $values")
@@ -422,7 +422,7 @@ class SimpleMapQuery extends Query {
             }
             .collect { it.key }
         },
-        (Query.GreaterThanEqualsAll):{ Query.GreaterThanEqualsAll greaterThanAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
+        (Query.GreaterThanEqualsAll): { Query.GreaterThanEqualsAll greaterThanAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
             def name = greaterThanAll.property
             final values = subqueryIfNecessary(greaterThanAll, false)
             Assert.isTrue(values.every { property.type.isInstance(it) }, "Subquery returned values that are not compatible with the type of property '$name': $values")
@@ -436,7 +436,7 @@ class SimpleMapQuery extends Query {
             def indexer = entityPersister.getPropertyIndexer(property)
             def value = subqueryIfNecessary(equals)
 
-            if(value && property instanceof ToOne && property.type.isInstance(value)) {
+            if (value && property instanceof ToOne && property.type.isInstance(value)) {
                value = entityPersister.getObjectIdentifier(value)
             }
 
@@ -457,7 +457,7 @@ class SimpleMapQuery extends Query {
                 }
             }
         },
-        (Query.IsNull): { Query.IsNull equals, PersistentProperty property, Closure function = null , boolean onValue = false->
+        (Query.IsNull): { Query.IsNull equals, PersistentProperty property, Closure function = null , boolean onValue = false ->
             handlers[Query.Equals].call(new Query.Equals(equals.property, null), property, function)
         },
         (Query.IdEquals): { Query.IdEquals equals, PersistentProperty property ->
@@ -643,7 +643,7 @@ class SimpleMapQuery extends Query {
      * @return
      */
     protected resolveIfEmbedded(propertyName, obj) {
-        if( propertyName.contains('.') ) {
+        if (propertyName.contains('.')) {
             def (embeddedProperty, nestedProperty) = propertyName.tokenize('.')
             obj?."${embeddedProperty}"?."${nestedProperty}"
         }
@@ -707,7 +707,7 @@ class SimpleMapQuery extends Query {
                 }
             }
         }
-        return applyJunctionToResults(criteria,resultList.results)
+        return applyJunctionToResults(criteria, resultList.results)
     }
 
     private List applyJunctionToResults(Query.Junction criteria, List resultList) {

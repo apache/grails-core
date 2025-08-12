@@ -62,7 +62,7 @@ class DefaultConstraintFactory implements ConstraintFactory {
 
     @Override
     boolean supports(Class targetType) {
-        if(NullableConstraint.isAssignableFrom(type)) {
+        if (NullableConstraint.isAssignableFrom(type)) {
             return !targetType.isPrimitive()
         }
         else {

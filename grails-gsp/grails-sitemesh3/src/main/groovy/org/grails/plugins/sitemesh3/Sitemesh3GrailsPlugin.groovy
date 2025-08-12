@@ -73,7 +73,6 @@ class Sitemesh3GrailsPlugin extends Plugin {
         return new MapPropertySource('sitemesh3Properties', props)
     }
 
-
     Closure doWithSpring() {
         { ->
             ConfigurableEnvironment configurableEnvironment = application.mainContext.environment

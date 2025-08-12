@@ -53,7 +53,7 @@ class IdentityEncoder implements PropertyEncoder<Identity> {
 
     protected String getIdentifierName(Identity property) {
         String[] identifierName = property.getOwner().mapping.identifier?.identifierName
-        if(identifierName != null) {
+        if (identifierName != null) {
             return identifierName[0]
         }
         else {

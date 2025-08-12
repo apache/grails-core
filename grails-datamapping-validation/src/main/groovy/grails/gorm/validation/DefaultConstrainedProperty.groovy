@@ -113,8 +113,6 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
 
     }
 
-
-
     /**
      * @return Returns the appliedConstraints.
      */
@@ -182,7 +180,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
         }
 
         if (!propertyType.equals(max.getClass())) {
-            throw new MissingPropertyException(constraintName,propertyType)
+            throw new MissingPropertyException(constraintName, propertyType)
         }
 
         Range r = getRange()
@@ -233,7 +231,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
         }
 
         if (!propertyType.equals(min.getClass())) {
-            throw new MissingPropertyException(MIN_CONSTRAINT,propertyType)
+            throw new MissingPropertyException(MIN_CONSTRAINT, propertyType)
         }
 
         Range r = getRange()
@@ -564,13 +562,12 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
         return appliedConstraints.containsKey(URL_CONSTRAINT)
     }
 
-
     /**
      * @param url The url to set.
      */
     void setUrl(boolean url) {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException('URL constraint can only be applied to a String property',URL_CONSTRAINT, this.owningClass)
+            throw new MissingPropertyException('URL constraint can only be applied to a String property', URL_CONSTRAINT, this.owningClass)
         }
 
         Constraint c = appliedConstraints.get(URL_CONSTRAINT)
@@ -588,7 +585,6 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     Map getAttributes() {
         return attributes
     }
-
 
     @SuppressWarnings('rawtypes')
     void setAttributes(Map attributes) {
@@ -639,8 +635,8 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
 
         try {
 
-            for(ConstraintFactory cf in constraintFactories) {
-                if(cf.supports(propertyType)) {
+            for (ConstraintFactory cf in constraintFactories) {
+                if (cf.supports(propertyType)) {
                     return true
                 }
             }

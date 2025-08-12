@@ -44,6 +44,7 @@ import static org.fusesource.jansi.Ansi.ansi
  */
 @CompileStatic
 class AnsiConsoleUrlMappingsRenderer implements UrlMappingsRenderer {
+
     public static final String DEFAULT_ACTION = '(default action)'
     PrintStream targetStream = System.out
     boolean isAnsiEnabled = GrailsConsole.getInstance().isAnsiEnabled()
@@ -101,7 +102,7 @@ class AnsiConsoleUrlMappingsRenderer implements UrlMappingsRenderer {
 
     protected String establishUrlPattern(UrlMapping urlMapping, boolean withAnsi = isAnsiEnabled, int padding = -1) {
         if (urlMapping instanceof ResponseCodeUrlMapping) {
-            def errorCode = 'ERROR: '+ ((ResponseCodeMappingData)urlMapping.urlData).responseCode
+            def errorCode = 'ERROR: ' + ((ResponseCodeMappingData)urlMapping.urlData).responseCode
             if (withAnsi) {
                 return padAnsi(error(errorCode), errorCode, padding)
             }
@@ -115,7 +116,7 @@ class AnsiConsoleUrlMappingsRenderer implements UrlMappingsRenderer {
             boolean hasTokens = token.contains(UrlMapping.CAPTURED_WILDCARD) || token.contains(UrlMapping.CAPTURED_DOUBLE_WILDCARD)
             if (hasTokens) {
                 String finalToken = token
-                while(hasTokens) {
+                while (hasTokens) {
                     if (finalToken.contains(UrlMapping.CAPTURED_WILDCARD)) {
                         ConstrainedProperty constraint = (ConstrainedProperty)constraints[constraintIndex++]
                         def prop = '\\${' + constraint.propertyName + '}'
@@ -134,7 +135,7 @@ class AnsiConsoleUrlMappingsRenderer implements UrlMappingsRenderer {
                 urlPattern << token
             }
 
-            if (i < (tokens.length-1)) {
+            if (i < (tokens.length - 1)) {
                 urlPattern << UrlMapping.SLASH
             }
         }

@@ -65,7 +65,7 @@ class CoreGrailsPlugin extends Plugin {
 
     @Override
     Closure doWithSpring() {
-        {->
+        { ->
 
             def application = grailsApplication
 
@@ -100,10 +100,9 @@ class CoreGrailsPlugin extends Plugin {
                 packagesToScan += beanPackages
             }
 
-
             if (packagesToScan) {
                 xmlns grailsContext: 'http://grails.org/schema/context'
-                grailsContext.'component-scan'('base-package':packagesToScan.join(','))
+                grailsContext.'component-scan'('base-package': packagesToScan.join(','))
             }
 
             grailsApplicationAwarePostProcessor(GrailsApplicationAwareBeanPostProcessor, ref('grailsApplication'))
@@ -137,17 +136,17 @@ class CoreGrailsPlugin extends Plugin {
         GenericApplicationContext applicationContext = (GenericApplicationContext)this.applicationContext
         if (event.source instanceof Resource) {
             Resource res = (Resource)event.source
-            if(res.filename.endsWith('.xml')) {
+            if (res.filename.endsWith('.xml')) {
                 def xmlBeans = new DefaultListableBeanFactory()
                 new XmlBeanDefinitionReader(xmlBeans).loadBeanDefinitions(res)
-                for(String beanName in xmlBeans.beanDefinitionNames) {
+                for (String beanName in xmlBeans.beanDefinitionNames) {
                     applicationContext.registerBeanDefinition(beanName, xmlBeans.getBeanDefinition(beanName))
                 }
             }
         }
         else if (event.source instanceof Class) {
             def clazz = (Class) event.source
-            if(Script.isAssignableFrom(clazz)) {
+            if (Script.isAssignableFrom(clazz)) {
                 RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration(applicationContext)
                 RuntimeSpringConfigUtilities.reloadSpringResourcesConfig(springConfig, grailsApplication, clazz)
                 springConfig.registerBeansWithContext(applicationContext)

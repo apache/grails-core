@@ -34,11 +34,11 @@ class CustomCacheKeyGenerator implements KeyGenerator, GrailsCacheKeyGenerator {
 
     private final KeyGenerator innerKeyGenerator
 
-    CustomCacheKeyGenerator(KeyGenerator innerKeyGenerator){
+    CustomCacheKeyGenerator(KeyGenerator innerKeyGenerator) {
         this.innerKeyGenerator = innerKeyGenerator
     }
 
-    CustomCacheKeyGenerator(){
+    CustomCacheKeyGenerator() {
         this.innerKeyGenerator = new SimpleKeyGenerator()
     }
 
@@ -83,7 +83,7 @@ class CustomCacheKeyGenerator implements KeyGenerator, GrailsCacheKeyGenerator {
                     return false
             } else if (!simpleKey.equals(other.simpleKey))
                 return false
-            else if ( simpleKey.equals(other.simpleKey) && !(simpleKey instanceof Map && ((Map)simpleKey).size() == 0 ) ) {
+            else if (simpleKey.equals(other.simpleKey) && !(simpleKey instanceof Map && ((Map)simpleKey).size() == 0)) {
                 return true // equal if simpleKey is identical but not an empty map
             }
 
@@ -123,7 +123,6 @@ class CustomCacheKeyGenerator implements KeyGenerator, GrailsCacheKeyGenerator {
         final Object simpleKey = methodParams
         return new TemporaryGrailsCacheKey(className, methodName, objHashCode, simpleKey)
     }
-
 
     @CompileStatic
     private static class TemporaryGrailsCacheKey implements Serializable {
@@ -168,7 +167,7 @@ class CustomCacheKeyGenerator implements KeyGenerator, GrailsCacheKeyGenerator {
                     return false
             } else if (!simpleKey.equals(other.simpleKey))
                 return false
-            else if ( simpleKey.equals(other.simpleKey) && !(simpleKey instanceof Map && ((Map)simpleKey).size() == 0 ) ) {
+            else if (simpleKey.equals(other.simpleKey) && !(simpleKey instanceof Map && ((Map)simpleKey).size() == 0)) {
                 return true // equal if simpleKey is identical but not an empty map
             }
 

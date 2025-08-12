@@ -45,7 +45,7 @@ class ConnectionSourcesInitializer {
         ConnectionSource defaultConnectionSource = connectionSourceFactory.create(ConnectionSource.DEFAULT, configuration)
         Class<ConnectionSources> connectionSourcesClass = defaultConnectionSource.getSettings().getConnectionSourcesClass()
 
-        if(connectionSourcesClass == null) {
+        if (connectionSourcesClass == null) {
             return new InMemoryConnectionSources(defaultConnectionSource, connectionSourceFactory, configuration)
         }
         else {

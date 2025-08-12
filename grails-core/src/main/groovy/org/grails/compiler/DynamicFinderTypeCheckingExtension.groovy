@@ -41,14 +41,14 @@ class DynamicFinderTypeCheckingExtension extends TypeCheckingDSL {
     Object run() {
         methodNotFound { ClassNode receiver, String name, ArgumentListExpression argList, ClassNode[] argTypes, MethodCall call ->
             def dynamicCall = null
-            if(receiver == CLASS_Type) {
+            if (receiver == CLASS_Type) {
                 def genericsTypes = receiver.genericsTypes
-                if(genericsTypes) {
+                if (genericsTypes) {
                     def staticMethodCallTargetType = genericsTypes[0].type
-                    if(staticMethodCallTargetType) {
+                    if (staticMethodCallTargetType) {
                         def sourceUnit = staticMethodCallTargetType?.module?.context
-                        if(GrailsASTUtils.isDomainClass(staticMethodCallTargetType, sourceUnit)) {
-                            switch(name) {
+                        if (GrailsASTUtils.isDomainClass(staticMethodCallTargetType, sourceUnit)) {
+                            switch (name) {
                                 case ~/countBy[A-Z].*/:
                                     dynamicCall = makeDynamicGormCall(call, Integer_TYPE, staticMethodCallTargetType)
                                     break

@@ -25,6 +25,7 @@ package org.grails.cli.profile
  * @since 3.0
  */
 interface ProfileCommand extends Command {
+
     /**
      * @return The profile of the command
      */

@@ -576,7 +576,6 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         'One Hundred Day Old Paperback' == result?.title
     }
 
-
     void 'Test named query passing multiple parameters to a nested query'() {
         given:
         def now = new Date()
@@ -602,7 +601,6 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         then:
         2 == results?.size()
     }
-
 
     void testChainingQueriesWithParams() {
         def Publication = ga.getDomainClass('Publication').clazz

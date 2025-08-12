@@ -85,6 +85,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 class HibernateEntityTransformation implements ASTTransformation, CompilationUnitAware, TransformWithPriority {
+
     private static final ClassNode MY_TYPE = new ClassNode(grails.gorm.hibernate.annotation.ManagedEntity.class)
     private static final Object APPLIED_MARKER = new Object()
 
@@ -122,7 +123,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         def mapWith = AstUtils.getPropertyFromHierarchy(classNode, GormProperties.MAPPING_STRATEGY)
         String mapWithValue = mapWith?.initialExpression?.text
 
-        if(mapWithValue != null && (mapWithValue != ('hibernate') || mapWithValue != GormProperties.DEFAULT_MAPPING_STRATEGY)) {
+        if (mapWithValue != null && (mapWithValue != ('hibernate') || mapWithValue != GormProperties.DEFAULT_MAPPING_STRATEGY)) {
             return
         }
 
@@ -159,8 +160,6 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         interceptorField
                  .addAnnotation(transientAnnotationNode)
 
-
-
         // add method: PersistentAttributeInterceptor $$_hibernate_getInterceptor()
         def getInterceptorMethod = new MethodNode(
                 '$$_hibernate_getInterceptor',
@@ -182,7 +181,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 ClassHelper.VOID_TYPE,
                 params(p1),
                 null,
-                assignS( varX(interceptorField), varX(p1) )
+                assignS(varX(interceptorField), varX(p1))
         )
         classNode.addMethod(setInterceptorMethod)
         AnnotatedNodeUtils.markAsGenerated(classNode, setInterceptorMethod)
@@ -200,7 +199,6 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         classNode.addMethod(getEntityInstanceMethod)
         AnnotatedNodeUtils.markAsGenerated(classNode, getEntityInstanceMethod)
         staticCompilationVisitor.visitMethod(getEntityInstanceMethod)
-
 
         // add method: EntityEntry $$_hibernate_getEntityEntry()
         def getEntityEntryMethod = new MethodNode(
@@ -223,7 +221,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 ClassHelper.VOID_TYPE,
                 params(entityEntryParam),
                 null,
-                assignS( varX(entityEntryHolderField), varX(entityEntryParam) )
+                assignS(varX(entityEntryHolderField), varX(entityEntryParam))
         )
         classNode.addMethod(setEntityEntryMethod)
         AnnotatedNodeUtils.markAsGenerated(classNode, setEntityEntryMethod)
@@ -263,7 +261,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 ClassHelper.VOID_TYPE,
                 params(previousParam),
                 null,
-                assignS( varX(previousManagedEntityField), varX(previousParam) )
+                assignS(varX(previousManagedEntityField), varX(previousParam))
         )
         classNode.addMethod(setPreviousManagedEntityMethod)
         AnnotatedNodeUtils.markAsGenerated(classNode, setPreviousManagedEntityMethod)
@@ -277,16 +275,16 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 ClassHelper.VOID_TYPE,
                 params(nextParam),
                 null,
-                assignS( varX(nextManagedEntityField), varX(nextParam) )
+                assignS(varX(nextManagedEntityField), varX(nextParam))
         )
         classNode.addMethod(setNextManagedEntityMethod)
         AnnotatedNodeUtils.markAsGenerated(classNode, setNextManagedEntityMethod)
         staticCompilationVisitor.visitMethod(setNextManagedEntityMethod)
 
         List<MethodNode> allMethods = classNode.getMethods()
-        for(MethodNode methodNode in allMethods) {
-            if(methodNode.getAnnotations(ClassHelper.make(DirtyCheckedProperty))) {
-                if(AstUtils.isGetter(methodNode)) {
+        for (MethodNode methodNode in allMethods) {
+            if (methodNode.getAnnotations(ClassHelper.make(DirtyCheckedProperty))) {
+                if (AstUtils.isGetter(methodNode)) {
                     def codeVisitor = new ClassCodeVisitorSupport() {
                         @Override
                         protected SourceUnit getSourceUnit() {
@@ -317,7 +315,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 }
                 else {
                     Statement code = methodNode.code
-                    if(code instanceof BlockStatement) {
+                    if (code instanceof BlockStatement) {
                         BlockStatement bs = (BlockStatement)code
                         Parameter parameter = methodNode.getParameters()[0]
                         ClassNode parameterType = parameter.type
@@ -325,10 +323,10 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                         String writeMethodName = isPrimitive ? "write${NameUtils.capitalize(parameterType.getName())}" : 'writeObject'
                         String propertyName = NameUtils.getPropertyNameForGetterOrSetter(methodNode.getName())
                         def interceptorFieldExpr = fieldX(interceptorField)
-                        def ifStatement = ifS( neX(interceptorFieldExpr, constX(null) ),
+                        def ifStatement = ifS(neX(interceptorFieldExpr, constX(null)),
                             assignS(
                                 varX(parameter),
-                                callX( interceptorFieldExpr, writeMethodName, args( varX('this'), constX(propertyName), propX(varX('this'), propertyName), varX(parameter)))
+                                callX(interceptorFieldExpr, writeMethodName, args(varX('this'), constX(propertyName), propX(varX('this'), propertyName), varX(parameter)))
                             )
                         )
                         staticCompilationVisitor.visitIfElse((IfStatement)ifStatement)

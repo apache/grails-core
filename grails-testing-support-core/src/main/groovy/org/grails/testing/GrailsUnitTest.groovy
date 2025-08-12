@@ -149,7 +149,7 @@ trait GrailsUnitTest {
             ApplicationContext applicationContext = _grailsApplication.getParentContext()
             if (applicationContext instanceof ConfigurableApplicationContext) {
                 if (((ConfigurableApplicationContext) applicationContext).isActive()) {
-                    if(_grailsApplication.mainContext instanceof Closeable) {
+                    if (_grailsApplication.mainContext instanceof Closeable) {
                         ((Closeable)_grailsApplication.mainContext).close()
                     }
                     if (applicationContext instanceof Closeable) {

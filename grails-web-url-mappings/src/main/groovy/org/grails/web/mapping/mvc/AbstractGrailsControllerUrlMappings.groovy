@@ -56,7 +56,7 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
         this.urlMappingsHolderDelegate = urlMappingsHolderDelegate
         this.urlConverter = urlConverter
         def controllerArtefacts = grailsApplication.getArtefacts(ControllerArtefactHandler.TYPE)
-        for(GrailsClass gc in controllerArtefacts) {
+        for (GrailsClass gc in controllerArtefacts) {
             registerController((GrailsControllerClass)gc)
         }
 
@@ -126,30 +126,28 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
 
     @Override
     UrlMappingInfo matchStatusCode(int responseCode) {
-        return collectControllerMapping( urlMappingsHolderDelegate.matchStatusCode(responseCode) )
+        return collectControllerMapping(urlMappingsHolderDelegate.matchStatusCode(responseCode))
     }
 
     @Override
     UrlMappingInfo matchStatusCode(int responseCode, Throwable e) {
-        return collectControllerMapping( urlMappingsHolderDelegate.matchStatusCode(responseCode, e) )
+        return collectControllerMapping(urlMappingsHolderDelegate.matchStatusCode(responseCode, e))
     }
-
 
     void registerController(GrailsControllerClass controller) {
         boolean hasUrlConverter = urlConverter != null
-        if(hasUrlConverter) {
+        if (hasUrlConverter) {
             controller.registerUrlConverter(urlConverter)
         }
-        def namespace = hasUrlConverter ? urlConverter.toUrlElement( controller.namespace ) : controller.namespace
-        def plugin = hasUrlConverter ? urlConverter.toUrlElement( controller.pluginName ) : controller.pluginName
+        def namespace = hasUrlConverter ? urlConverter.toUrlElement(controller.namespace) : controller.namespace
+        def plugin = hasUrlConverter ? urlConverter.toUrlElement(controller.pluginName) : controller.pluginName
         final boolean hasNamespace = namespace != null
         final boolean hasPlugin = plugin != null
 
-        def controllerName = hasUrlConverter ? urlConverter.toUrlElement( controller.logicalPropertyName ) : controller.logicalPropertyName
+        def controllerName = hasUrlConverter ? urlConverter.toUrlElement(controller.logicalPropertyName) : controller.logicalPropertyName
         String pluginNameToRegister = hasPlugin ? GrailsNameUtils.getPropertyNameForLowerCaseHyphenSeparatedName(plugin) : null
 
         def defaultActionKey = new ControllerKey(namespace, controllerName, null, pluginNameToRegister)
-
 
         mappingsToGrailsControllerMap.put(defaultActionKey, controller)
 

@@ -160,7 +160,7 @@ class GroovyChange extends AbstractChange {
         if (shouldRun() && changeClosure) {
             changeClosure.delegate = this
             try {
-                if(!changeClosureCalled) {
+                if (!changeClosureCalled) {
                     withNewTransaction(changeClosure)
                 }
             } finally {

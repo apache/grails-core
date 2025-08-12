@@ -58,7 +58,7 @@ class LocaleAwareNumberConverter implements ValueConverter {
         def trimmedValue = value.toString().trim()
         def parsePosition = new ParsePosition(0)
         def result = numberFormatter.parse((String)value, parsePosition).asType(getTargetType())
-        if(parsePosition.index != trimmedValue.size()) {
+        if (parsePosition.index != trimmedValue.size()) {
             throw new NumberFormatException("Unable to parse number [${value}]")
         }
         result
@@ -71,10 +71,10 @@ class LocaleAwareNumberConverter implements ValueConverter {
     protected Locale getLocale() {
         def locale
         def request = GrailsWebRequest.lookup()?.currentRequest
-        if(request instanceof HttpServletRequest) {
+        if (request instanceof HttpServletRequest) {
             locale = localeResolver?.resolveLocale(request)
         }
-        if(locale == null) {
+        if (locale == null) {
             locale = Locale.default
         }
         return locale

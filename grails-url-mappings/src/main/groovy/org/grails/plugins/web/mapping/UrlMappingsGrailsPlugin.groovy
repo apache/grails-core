@@ -49,13 +49,13 @@ class UrlMappingsGrailsPlugin extends Plugin {
     def watchedResources = ['file:./grails-app/controllers/*UrlMappings.groovy']
 
     def version = GrailsUtil.getGrailsVersion()
-    def dependsOn = [core:version]
+    def dependsOn = [core: version]
     def loadAfter = ['controllers']
 
     Closure doWithSpring() {
-        {->
+        { ->
             def application = grailsApplication
-            if(!application.getArtefacts(UrlMappingsArtefactHandler.TYPE)) {
+            if (!application.getArtefacts(UrlMappingsArtefactHandler.TYPE)) {
                 application.addArtefact(UrlMappingsArtefactHandler.TYPE, DefaultUrlMappings )
             }
 

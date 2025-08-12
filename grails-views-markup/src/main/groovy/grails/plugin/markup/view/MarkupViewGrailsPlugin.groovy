@@ -62,7 +62,7 @@ class MarkupViewGrailsPlugin extends Plugin {
     def scm = [ url: 'https://github.com/grails/grails-views']
 
     Closure doWithSpring() {
-        {->
+        { ->
             markupViewConfiguration(MarkupViewConfiguration)
             markupTemplateEngine(MarkupViewTemplateEngine, markupViewConfiguration, applicationContext.classLoader)
             smartMarkupViewResolver(MarkupViewResolver, markupTemplateEngine) {

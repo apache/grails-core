@@ -63,7 +63,7 @@ class FindAllImplementer extends AbstractDetachedCriteriaServiceImplementor impl
     @Override
     protected ClassNode resolveDomainClassFromSignature(ClassNode currentDomainClassNode, MethodNode methodNode) {
         ClassNode returnType = methodNode.returnType
-        if(returnType.isArray()) {
+        if (returnType.isArray()) {
             return returnType.componentType
         }
         else {
@@ -80,7 +80,7 @@ class FindAllImplementer extends AbstractDetachedCriteriaServiceImplementor impl
     void implementWithQuery(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode, BlockStatement body, VariableExpression detachedCriteriaVar, Expression queryArgs) {
         ClassNode returnType = (ClassNode)newMethodNode.getNodeMetaData(RETURN_TYPE) ?: newMethodNode.returnType
         Expression methodCall = callX(detachedCriteriaVar, 'list', queryArgs)
-        if(returnType.isArray()) {
+        if (returnType.isArray()) {
             methodCall = castX(returnType.plainNodeReference, methodCall)
         }
         body.addStatement(

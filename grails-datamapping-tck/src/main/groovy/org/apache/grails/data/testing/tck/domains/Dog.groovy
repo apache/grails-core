@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class Dog implements Serializable {
+
     Long id
     int age
     int deathAge

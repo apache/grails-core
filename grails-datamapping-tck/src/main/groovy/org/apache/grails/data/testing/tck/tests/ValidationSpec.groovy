@@ -38,6 +38,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
  * Tests validation semantics.
  */
 class ValidationSpec extends GrailsDataTckSpec {
+
     void setupSpec() {
         manager.domainClasses = [ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
                                  ClassWithOverloadedBeforeValidate, TestEntity, ChildEntity, Task]

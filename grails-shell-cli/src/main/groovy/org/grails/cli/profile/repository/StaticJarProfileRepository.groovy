@@ -33,19 +33,18 @@ import org.grails.cli.profile.Profile
 @CompileStatic
 class StaticJarProfileRepository extends AbstractJarProfileRepository {
 
-
     final URL[] urls
 
     StaticJarProfileRepository(ClassLoader parent, URL...urls) {
         this.urls = urls
-        for(url in urls) {
+        for (url in urls) {
             registerProfile(url, parent)
         }
     }
 
     Profile getProfile(String profileName) {
         def profile = super.getProfile(profileName)
-        if(profile == null && profileName.contains(':')) {
+        if (profile == null && profileName.contains(':')) {
             def art = new DefaultArtifact(profileName)
             profile = super.getProfile(art.artifactId)
         }

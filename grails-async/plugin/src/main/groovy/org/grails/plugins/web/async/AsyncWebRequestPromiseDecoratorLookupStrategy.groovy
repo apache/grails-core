@@ -31,6 +31,7 @@ import grails.async.decorator.PromiseDecoratorLookupStrategy
  */
 @CompileStatic
 class AsyncWebRequestPromiseDecoratorLookupStrategy implements PromiseDecoratorLookupStrategy {
+
     @Override
     List<PromiseDecorator> findDecorators() {
         final webRequest = GrailsWebRequest.lookup()

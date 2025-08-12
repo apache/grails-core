@@ -172,7 +172,7 @@ class DirtyCheckingSpec extends GrailsDataTckSpec {
         TestAuthor.deleteAll()
     }
 
-    @IgnoreIf({ !Boolean.getBoolean('mongodb.gorm.suite')})
+    @IgnoreIf({ !Boolean.getBoolean('mongodb.gorm.suite') })
     void 'test initialized proxy is not marked as dirty'() {
 
         given:

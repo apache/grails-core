@@ -63,8 +63,8 @@ class VersionComparator implements Comparator<String> {
                     if (result != 0) {
                         break
                     }
-                    if (i == (nums1.size()-1) && bigRight) {
-                        if (nums2[i+1] != 0)
+                    if (i == (nums1.size() - 1) && bigRight) {
+                        if (nums2[i + 1] != 0)
                             result = -1
                         break
                     }

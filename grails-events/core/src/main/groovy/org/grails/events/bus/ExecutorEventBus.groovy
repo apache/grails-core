@@ -51,7 +51,7 @@ class ExecutorEventBus extends AbstractEventBus {
     @Override
     protected Callable buildNotificationCallable(Event event, Collection<Subscription> eventSubscriptions, Closure reply) {
         Executor executor = this.executor
-        if(executor instanceof ExecutorService) {
+        if (executor instanceof ExecutorService) {
             ExecutorService executorService = (ExecutorService)this.executor
             return {
                 executorService.submit {

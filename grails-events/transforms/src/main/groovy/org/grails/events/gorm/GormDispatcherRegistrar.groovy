@@ -68,22 +68,22 @@ class GormDispatcherRegistrar implements FactoryBean<GormDispatcherRegistrar>, I
 
     @Override
     void afterPropertiesSet() throws Exception {
-        if(datastores && subscribers && eventBus != null) {
+        if (datastores && subscribers && eventBus != null) {
             Set<Class<? extends AbstractPersistenceEvent>> subscribedEvents = []
             List<GormAnnotatedListener> listeners = []
-            for(sub in subscribers) {
-                if(sub instanceof GormAnnotatedListener) {
+            for (sub in subscribers) {
+                if (sub instanceof GormAnnotatedListener) {
                     listeners.add((GormAnnotatedListener)sub)
                 }
                 else {
                     subscribedEvents.addAll(sub.getSubscribedEvents())
                 }
             }
-            for(Datastore datastore in datastores) {
+            for (Datastore datastore in datastores) {
                 ApplicationEventPublisher applicationEventPublisher = datastore.getApplicationEventPublisher()
-                if(applicationEventPublisher instanceof ConfigurableApplicationEventPublisher) {
+                if (applicationEventPublisher instanceof ConfigurableApplicationEventPublisher) {
 
-                    GormEventDispatcher eventDispatcher = new GormEventDispatcher(eventBus, datastore, subscribedEvents, listeners )
+                    GormEventDispatcher eventDispatcher = new GormEventDispatcher(eventBus, datastore, subscribedEvents, listeners)
                     ((ConfigurableApplicationEventPublisher)applicationEventPublisher).addApplicationListener(
                             eventDispatcher
                     )

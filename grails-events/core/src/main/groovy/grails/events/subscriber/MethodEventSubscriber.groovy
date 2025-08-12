@@ -38,7 +38,7 @@ class MethodEventSubscriber<T> extends MethodSubscriber<Event,T> implements Even
 
     MethodEventSubscriber(Object target, Method method) {
         super(target, method)
-        if( !(parameterTypes.length == 1 && parameterTypes[0].isAssignableFrom(Event)) ) {
+        if (!(parameterTypes.length == 1 && parameterTypes[0].isAssignableFrom(Event))) {
             throw new IllegalArgumentException('Specified method must accept an Event as an argument')
         }
     }

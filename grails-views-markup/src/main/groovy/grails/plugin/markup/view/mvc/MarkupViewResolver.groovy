@@ -43,7 +43,6 @@ class MarkupViewResolver extends SmartViewResolver {
 
     public static final String MARKUP_VIEW_SUFFIX = ".${MarkupViewTemplate.EXTENSION}"
 
-
     @Autowired(required = false)
     ProxyHandler proxyHandler
 
@@ -67,7 +66,7 @@ class MarkupViewResolver extends SmartViewResolver {
 
     @PostConstruct
     void initialize() {
-        if(rendererRegistry != null) {
+        if (rendererRegistry != null) {
             def defaultXmlRenderer = rendererRegistry.findRenderer(MimeType.XML, Object.class)
             viewConfiguration.mimeTypes.each { String mimeTypeString ->
                 MimeType mimeType = new MimeType(mimeTypeString, 'xml')

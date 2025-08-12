@@ -51,25 +51,25 @@ class GroovyConfigPropertySourceLoader implements PropertySourceLoader {
         if (!loadedFiles.contains(name)) {
             def env = Environment.current.name
 
-            if(resource.exists()) {
+            if (resource.exists()) {
                 ConfigSlurper configSlurper = env ? new ConfigSlurper(env) : new ConfigSlurper()
 
                 configSlurper.setBinding(userHome: System.getProperty('user.home'),
                         appName: Metadata.getCurrent().getApplicationName(),
-                        appVersion: Metadata.getCurrent().getApplicationVersion() )
+                        appVersion: Metadata.getCurrent().getApplicationVersion())
                 try {
                     def configObject = configSlurper.parse(resource.URL)
 
-                    for(key in filteredKeys) {
+                    for (key in filteredKeys) {
                         configObject.remove(key)
                     }
 
                     def propertySource = new NavigableMap()
                     propertySource.merge(configObject, false)
 
-                    Resource runtimeResource = resource.createRelative( resource.filename.replace('application', 'runtime') )
-                    if(runtimeResource.exists()) {
-                        def runtimeConfig = configSlurper.parse( runtimeResource.getURL() )
+                    Resource runtimeResource = resource.createRelative(resource.filename.replace('application', 'runtime'))
+                    if (runtimeResource.exists()) {
+                        def runtimeConfig = configSlurper.parse(runtimeResource.getURL())
                         propertySource.merge(runtimeConfig, false)
                     }
                     final NavigableMapPropertySource navigableMapPropertySource = new NavigableMapPropertySource(name, propertySource)

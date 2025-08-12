@@ -60,6 +60,7 @@ import org.grails.taglib.encoder.OutputContextLookupHelper
 @CompileStatic
 @TagLib
 class RenderGrailsLayoutTagLib implements RequestConstants, TagLibrary, GrailsApplicationAware {
+
     GroovyPagesTemplateEngine groovyPagesTemplateEngine
     TagLibraryLookup gspTagLibraryLookup
     GroovyPageLayoutFinder groovyPageLayoutFinder
@@ -77,7 +78,6 @@ class RenderGrailsLayoutTagLib implements RequestConstants, TagLibrary, GrailsAp
     protected boolean isGrailsLayoutPreprocessMode() {
         grailsLayoutPreprocessMode
     }
-
 
     /**
      * Apply a layout to a particular block of text or to the given view or template.<br/>

@@ -31,6 +31,7 @@ import grails.views.api.http.Parameters
  */
 @CompileStatic
 class EmptyParameters implements Parameters {
+
     @Override
     Set<String> keySet() {
         return Collections.emptySet()
@@ -80,7 +81,6 @@ class EmptyParameters implements Parameters {
     Character "char"(String name, Character defaultValue) {
         return defaultValue
     }
-
 
     @Override
     Integer "int"(String name) {

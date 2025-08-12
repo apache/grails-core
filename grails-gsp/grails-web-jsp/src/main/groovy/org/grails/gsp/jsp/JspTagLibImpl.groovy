@@ -30,6 +30,7 @@ import org.grails.buffer.FastStringPrintWriter
  */
 @CompileStatic
 class JspTagLibImpl implements JspTagLib {
+
     private String uri
     private Map<String, JspTagImpl> tags = [:]
 
@@ -57,7 +58,7 @@ class JspTagLibImpl implements JspTagLib {
 
         if (tag) {
             Object[] args = (Object[])argsParam
-            if(args == null || args.length==0) {
+            if (args == null || args.length == 0) {
                 args = [[:]] as Object[]
             }
 

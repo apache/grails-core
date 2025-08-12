@@ -43,7 +43,7 @@ class FindAllWhereImplementer extends AbstractWhereImplementer implements Iterab
 
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
-        if( isAnnotated(domainClass, methodNode )) {
+        if (isAnnotated(domainClass, methodNode)) {
             return isCompatibleReturnType(domainClass, methodNode, methodNode.returnType, methodNode.name)
         }
         return false
@@ -62,7 +62,7 @@ class FindAllWhereImplementer extends AbstractWhereImplementer implements Iterab
     @Override
     protected ClassNode resolveDomainClassFromSignature(ClassNode currentDomainClassNode, MethodNode methodNode) {
         ClassNode returnType = methodNode.returnType
-        if(returnType.isArray()) {
+        if (returnType.isArray()) {
             return returnType.componentType
         }
         else {

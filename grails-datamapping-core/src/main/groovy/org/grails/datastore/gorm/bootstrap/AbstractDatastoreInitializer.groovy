@@ -66,12 +66,11 @@ import org.grails.datastore.mapping.transactions.DatastoreTransactionManager
  * @since 3.0.3
  */
 @CompileStatic
-abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
+abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
 
     public static final String TRANSACTION_MANAGER_BEAN = 'transactionManager'
     public static final String ENTITY_CLASS_RESOURCE_PATTERN = '/**/*.class'
     public static final String OSIV_CLASS_NAME = 'org.grails.datastore.mapping.web.support.OpenSessionInViewInterceptor'
-
 
     PathMatchingResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver()
     Collection<Class> persistentClasses = []
@@ -133,10 +132,10 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
      */
     ApplicationEventPublisher findEventPublisher(BeanDefinitionRegistry beanDefinitionRegistry) {
         ApplicationEventPublisher eventPublisher
-        if(beanDefinitionRegistry instanceof ConfigurableApplicationContext){
+        if (beanDefinitionRegistry instanceof ConfigurableApplicationContext) {
             eventPublisher = new ConfigurableApplicationContextEventPublisher((ConfigurableApplicationContext)beanDefinitionRegistry)
         }
-        else if(resourcePatternResolver.resourceLoader instanceof ConfigurableApplicationContext) {
+        else if (resourcePatternResolver.resourceLoader instanceof ConfigurableApplicationContext) {
             eventPublisher = new ConfigurableApplicationContextEventPublisher((ConfigurableApplicationContext)resourcePatternResolver.resourceLoader)
         }
         else {
@@ -152,10 +151,10 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
      */
     MessageSource findMessageSource(BeanDefinitionRegistry beanDefinitionRegistry) {
         MessageSource messageSource
-        if(beanDefinitionRegistry instanceof MessageSource){
+        if (beanDefinitionRegistry instanceof MessageSource) {
             messageSource = (MessageSource)beanDefinitionRegistry
         }
-        else if(resourcePatternResolver.resourceLoader instanceof MessageSource) {
+        else if (resourcePatternResolver.resourceLoader instanceof MessageSource) {
             messageSource = (MessageSource)resourcePatternResolver.resourceLoader
         }
         else {
@@ -201,9 +200,8 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
             scanUsingPattern(pattern, readerFactory)
         }
 
-
         def entityNames = AstUtils.getKnownEntityNames()
-        if(entityNames) {
+        if (entityNames) {
             // only works at development time
             for (entityName in entityNames) {
                 try {
@@ -240,7 +238,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
     @CompileStatic
     void configureForBeanDefinitionRegistry(BeanDefinitionRegistry beanDefinitionRegistry) {
 
-        if(configuration instanceof ConfigurableEnvironment && beanDefinitionRegistry instanceof ConfigurableApplicationContext) {
+        if (configuration instanceof ConfigurableEnvironment && beanDefinitionRegistry instanceof ConfigurableApplicationContext) {
             def env = (ConfigurableEnvironment) configuration
 
             def conversionService = ((ConfigurableApplicationContext) beanDefinitionRegistry).getEnvironment().getConversionService()
@@ -252,10 +250,10 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
 
         scanForPersistentClasses()
 
-        if( GroovyBeanReaderInit.isAvailable() ) {
+        if (GroovyBeanReaderInit.isAvailable()) {
             GroovyBeanReaderInit.registerBeans(beanDefinitionRegistry, getBeanDefinitions(beanDefinitionRegistry))
         }
-        else if (GrailsBeanBuilderInit.isAvailable() ) {
+        else if (GrailsBeanBuilderInit.isAvailable()) {
             GrailsBeanBuilderInit.registerBeans(beanDefinitionRegistry, getBeanDefinitions(beanDefinitionRegistry))
         }
         else {
@@ -268,7 +266,6 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
         return {}
     }
 
-
     protected Collection<Class> collectMappedClasses(String datastoreType) {
         def classes = !secondaryDatastore ? persistentClasses : persistentClasses.findAll() { Class cls ->
             isMappedClass(datastoreType, cls)
@@ -279,7 +276,6 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
     protected boolean isMappedClass(String datastoreType, Class cls) {
         datastoreType.equals(ClassPropertyFetcher.getStaticPropertyValue(cls, GormProperties.MAPPING_STRATEGY, String))
     }
-
 
     abstract Closure getBeanDefinitions(BeanDefinitionRegistry beanDefinitionRegistry)
 
@@ -293,7 +289,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
      */
     @CompileDynamic
     Closure getAdditionalBeansConfiguration(BeanDefinitionRegistry registry, String type) {
-        {->
+        { ->
             "${type}TransactionManager"(DatastoreTransactionManager) {
                 datastore = ref("${type}Datastore")
             }
@@ -307,7 +303,6 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
 
             "${type}PersistenceContextInterceptorAggregator"(PersistenceContextInterceptorAggregator)
 
-
             def classLoader = Thread.currentThread().contextClassLoader
             if (registry.containsBeanDefinition('dispatcherServlet') && ClassUtils.isPresent(OSIV_CLASS_NAME, classLoader)) {
                 String interceptorName = "${type}OpenSessionInViewInterceptor"
@@ -316,7 +311,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
                 }
             }
             loadDataServices(null)
-                    .each {serviceName, serviceClass->
+                    .each { serviceName, serviceClass ->
                         "$serviceName"(DatastoreServiceMethodInvokingFactoryBean, serviceClass) {
                             targetObject = ref("${type}Datastore")
                             targetMethod = 'getService'
@@ -373,7 +368,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
     @CompileStatic
     protected Class getGrailsApplicationClass() {
         ClassLoader cl = getClass().getClassLoader()
-        if(ClassUtils.isPresent('grails.core.DefaultGrailsApplication', cl)) {
+        if (ClassUtils.isPresent('grails.core.DefaultGrailsApplication', cl)) {
             return ClassUtils.forName('grails.core.DefaultGrailsApplication', cl)
         }
         throw new IllegalStateException('No version of Grails found on classpath')
@@ -382,7 +377,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware{
 
     protected boolean isGrailsPresent() {
         ClassLoader cl = getClass().getClassLoader()
-        if(ClassUtils.isPresent('grails.core.DefaultGrailsApplication', cl)) {
+        if (ClassUtils.isPresent('grails.core.DefaultGrailsApplication', cl)) {
             return true
         }
         return false

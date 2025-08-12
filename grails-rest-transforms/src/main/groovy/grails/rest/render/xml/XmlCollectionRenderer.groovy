@@ -34,6 +34,7 @@ import grails.web.mime.MimeType
  */
 @CompileStatic
 class XmlCollectionRenderer extends XmlRenderer implements ContainerRenderer {
+
     final Class componentType
 
     XmlCollectionRenderer(Class componentType) {

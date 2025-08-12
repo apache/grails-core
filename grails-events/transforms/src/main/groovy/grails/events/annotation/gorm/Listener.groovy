@@ -40,6 +40,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Documented
 @GroovyASTTransformationClass('org.grails.events.transform.SubscriberTransform')
 @interface Listener {
+
     /**
      * @return The types this listener listens for
      */

@@ -211,7 +211,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         def name = attrs.remove('name')
         def formName = attrs.get('form')
 
-        if(!name){
+        if (!name) {
             throwTagError('Tag [checkBox] missing required attribute [name]')
         }
 
@@ -238,13 +238,13 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         hiddenValue = processFormFieldValueIfNecessary("_${name}", hiddenValue, 'hidden')
 
         def hiddenFieldName
-        if(name.indexOf('.') == -1) {
+        if (name.indexOf('.') == -1) {
             hiddenFieldName = "_${name}"
         } else {
             def lastDot = name.lastIndexOf('.')
             hiddenFieldName = name[0..lastDot] + '_'
-            if (lastDot+1 != name.length()) {
-                hiddenFieldName += name[(lastDot+1)..-1]
+            if (lastDot + 1 != name.length()) {
+                hiddenFieldName += name[(lastDot + 1)..-1]
             }
         }
 
@@ -305,7 +305,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         // Add textarea field to requestDataValueProcessor
         def content = (escapeHtml ? value.encodeAsHTML() : value)
         if (attrs.name) {
-            content = processFormFieldValueIfNecessary(attrs.name,content, 'textarea')
+            content = processFormFieldValueIfNecessary(attrs.name, content, 'textarea')
         }
         out << '<textarea '
         outputAttributes(attrs, out, true)
@@ -348,7 +348,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         def val = attrs.remove('bean')
         if (val) {
             if (attrs.name.indexOf('.')) {
-                attrs.name.split('\\.').each {val = val?."$it"}
+                attrs.name.split('\\.').each { val = val?."$it" }
             }
             else {
                 val = val[name]
@@ -543,7 +543,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         def value = attrs.remove('value')
         def action = attrs.remove('action') ?: value
         // Change value if necessary in requestDataValueProcessor
-        value = processFormFieldValueIfNecessary("_action_${action}",value, 'submit')
+        value = processFormFieldValueIfNecessary("_action_${action}", value, 'submit')
         booleanToAttribute(attrs, 'disabled')
 
         out << "<input type=\"submit\" name=\"_action_${action}\" value=\"${value}\" "
@@ -645,7 +645,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         def value = attrs.remove('value')
         def action = attrs.remove('action') ?: value
         //Change this button to use requestDataValueProcessor
-        value = processFormFieldValueIfNecessary("_action_${action}","${value}", 'image')
+        value = processFormFieldValueIfNecessary("_action_${action}", "${value}", 'image')
         booleanToAttribute(attrs, 'disabled')
 
         out << "<input type=\"image\" name=\"_action_${action}\" value=\"${value}\" "
@@ -803,7 +803,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 out << ' readonly="readonly"'
             }
             if (attrs.selectDateClass) {
-                out << ' class="'+attrs.selectDateClass+'"'
+                out << ' class="' + attrs.selectDateClass + '"'
             }
             out << '>'
 
@@ -814,7 +814,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
 
             for (i in 1..31) {
                 // Change this option to use requestDataValueProcessor
-                def dayIndex = processFormFieldValueIfNecessary("${name}_day","${i}", 'option')
+                def dayIndex = processFormFieldValueIfNecessary("${name}_day", "${i}", 'option')
                 out.println "<option value=\"${dayIndex}\"${i == day ? ' selected="selected"' : ''}>${i}</option>"
             }
             out.println '</select>'
@@ -830,7 +830,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 out << ' readonly="readonly"'
             }
             if (attrs.selectDateClass) {
-                out << ' class="'+attrs.selectDateClass+'"'
+                out << ' class="' + attrs.selectDateClass + '"'
             }
             out << '>'
 
@@ -839,10 +839,10 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 out.println()
             }
 
-            dfs.months.eachWithIndex {m, i ->
+            dfs.months.eachWithIndex { m, i ->
                 if (m) {
                     def monthIndex = i + 1
-                    monthIndex = processFormFieldValueIfNecessary("${name}_month","${monthIndex}", 'option')
+                    monthIndex = processFormFieldValueIfNecessary("${name}_month", "${monthIndex}", 'option')
                     out.println "<option value=\"${monthIndex}\"${i == month ? ' selected="selected"' : ''}>$m</option>"
                 }
             }
@@ -859,7 +859,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 out << ' readonly="readonly"'
             }
             if (attrs.selectDateClass) {
-                out << ' class="'+attrs.selectDateClass+'"'
+                out << ' class="' + attrs.selectDateClass + '"'
             }
             out << '>'
 
@@ -870,7 +870,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
 
             for (i in years) {
                 // Change this year option to use requestDataValueProcessor
-                def yearIndex  = processFormFieldValueIfNecessary("${name}_year","${i}", 'option')
+                def yearIndex  = processFormFieldValueIfNecessary("${name}_year", "${i}", 'option')
                 out.println "<option value=\"${yearIndex}\"${i == year ? ' selected="selected"' : ''}>${i}</option>"
             }
             out.println '</select>'
@@ -886,7 +886,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 out << ' readonly="readonly"'
             }
             if (attrs.selectDateClass) {
-                out << ' class="'+attrs.selectDateClass+'"'
+                out << ' class="' + attrs.selectDateClass + '"'
             }
             out << '>'
 
@@ -899,7 +899,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 def h = '' + i
                 if (i < 10) h = '0' + h
                 // This option add hour to requestDataValueProcessor
-                h  = processFormFieldValueIfNecessary("${name}_hour","${h}", 'option')
+                h  = processFormFieldValueIfNecessary("${name}_hour", "${h}", 'option')
                 out.println "<option value=\"${h}\"${i == hour ? ' selected="selected"' : ''}>$h</option>"
             }
             out.println '</select> :'
@@ -920,7 +920,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 out << 'readonly="readonly"'
             }
             if (attrs.selectDateClass) {
-                out << ' class="'+attrs.selectDateClass+'"'
+                out << ' class="' + attrs.selectDateClass + '"'
             }
             out << '>'
 
@@ -932,14 +932,14 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
             for (i in 0..59) {
                 def m = '' + i
                 if (i < 10) m = '0' + m
-                m  = processFormFieldValueIfNecessary("${name}_minute","${m}", 'option')
+                m  = processFormFieldValueIfNecessary("${name}_minute", "${m}", 'option')
                 out.println "<option value=\"${m}\"${i == minute ? ' selected="selected"' : ''}>$m</option>"
             }
             out.println '</select>'
         }
     }
 
-    Closure renderNoSelectionOption = {noSelectionKey, noSelectionValue, value ->
+    Closure renderNoSelectionOption = { noSelectionKey, noSelectionValue, value ->
         renderNoSelectionOptionImpl(out, noSelectionKey, noSelectionValue, value)
     }
 
@@ -998,7 +998,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         // set the key as a closure that formats the locale
         attrs.optionKey = { it.country ? "${it.language}_${it.country}" : it.language }
         // set the option value as a closure that formats the locale for display
-        attrs.optionValue = {it.country ? "${it.language}, ${it.country},  ${it.displayName}" : "${it.language}, ${it.displayName}" }
+        attrs.optionValue = { it.country ? "${it.language}, ${it.country},  ${it.displayName}" : "${it.language}, ${it.displayName}" }
 
         // use generic select
         out << select(attrs)
@@ -1073,7 +1073,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         if (value instanceof Collection && attrs.multiple == null) {
             attrs.multiple = 'multiple'
         }
-        if(attrs.multiple == false){
+        if (attrs.multiple == false) {
             attrs.remove('multiple')
         }
         if (value instanceof CharSequence) {
@@ -1100,7 +1100,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         }
 
         // create options from list
-        from.eachWithIndex {el, i ->
+        from.eachWithIndex { el, i ->
             def keyDisabled
             def keyValue
             def dataAttrsMap = getDataAttr(el, dataAttrs, i)
@@ -1122,7 +1122,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                     keyValue = el[optionKey]
                     keyValueObject = el
                 }
-                if(optionDisabled) {
+                if (optionDisabled) {
                     if (optionDisabled instanceof Closure) {
                         keyDisabled = optionDisabled(el)
                     }
@@ -1214,27 +1214,27 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         keyValue = processFormFieldValueIfNecessary(selectName, "${keyValue}", 'option')
         writer << "value=\"${keyValue.toString().encodeAsHTML()}\" "
 
-        if(dataAttrsMap) {
-            dataAttrsMap.each {key, val->
+        if (dataAttrsMap) {
+            dataAttrsMap.each { key, val ->
                 writer << "data-${key.toString().encodeAsHTML()}=\"${val.toString().encodeAsHTML()}\""
             }
         }
         if (selected) {
             writer << 'selected="selected" '
         }
-        if(keyDisabled && !selected) {
+        if (keyDisabled && !selected) {
             writer << 'disabled="disabled" '
         }
     }
 
     private static Map getDataAttr(el, dataAttrs, index) {
         Map ret = [:]
-        if(dataAttrs) {
+        if (dataAttrs) {
             dataAttrs.each { k, v ->
                 if (v instanceof CharSequence) {
                     //in case of bean property
                     ret[k] = el[v]
-                } else if(v instanceof Closure) {
+                } else if (v instanceof Closure) {
                     ret[k] = v(el)
                 } else {
                     //in case of collection
@@ -1294,7 +1294,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         booleanToAttribute(attrs, 'disabled')
         booleanToAttribute(attrs, 'readonly')
 
-        values.eachWithIndex {val, idx ->
+        values.eachWithIndex { val, idx ->
             def it = new Expando()
             def radioWriter = new FastStringWriter()
             radioWriter << "<input type=\"radio\" name=\"${name}\" "

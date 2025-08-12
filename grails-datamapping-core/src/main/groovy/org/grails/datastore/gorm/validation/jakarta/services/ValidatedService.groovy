@@ -64,10 +64,10 @@ trait ValidatedService<T> extends Service<T> {
      * @return The validator factory for this service
      */
     ValidatorFactory getValidatorFactory() {
-        if(validatorFactoryInstance == null) {
+        if (validatorFactoryInstance == null) {
 
             Configuration configuration
-            if(datastore != null) {
+            if (datastore != null) {
                 configuration = JakartaValidatorRegistry.buildConfigurationFor(
                         datastore.mappingContext,
                         datastore.mappingContext.validatorRegistry.messageSource
@@ -78,7 +78,7 @@ trait ValidatedService<T> extends Service<T> {
                                             .configure()
                 configuration = configuration.ignoreXmlConfiguration()
             }
-            if(parameterNameProvider != null) {
+            if (parameterNameProvider != null) {
                 configuration = configuration.parameterNameProvider(parameterNameProvider)
             }
             validatorFactoryInstance = configuration.buildValidatorFactory()
@@ -98,7 +98,7 @@ trait ValidatedService<T> extends Service<T> {
     void jakartaValidate(Object instance, Method method, Object...args) throws ConstraintViolationException {
         ExecutableValidator validator = executableValidatorMap.get(method)
         Set<ConstraintViolation<Object>> constraintViolations = validator.validateParameters(instance, method, args)
-        if(!constraintViolations.isEmpty()) {
+        if (!constraintViolations.isEmpty()) {
             throw new ConstraintViolationException(constraintViolations)
         }
     }
@@ -115,7 +115,7 @@ trait ValidatedService<T> extends Service<T> {
     void validate(Object instance, Method method, Object...args) throws ValidationException {
         ExecutableValidator validator = executableValidatorMap.get(method)
         Set<ConstraintViolation<Object>> constraintViolations = validator.validateParameters(instance, method, args)
-        if(!constraintViolations.isEmpty()) {
+        if (!constraintViolations.isEmpty()) {
             throw ValidationException.newInstance("Validation failed for method: $method.name ", asErrors(instance, constraintViolations))
         }
     }

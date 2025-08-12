@@ -36,6 +36,7 @@ import org.grails.datastore.gorm.plugin.support.ConfigSupport
 import org.grails.datastore.mapping.mongo.MongoDatastore
 
 class MongodbGrailsPlugin extends Plugin {
+
     def license = 'Apache 2.0 License'
     def organization = [name: 'Grails', url: 'https://grails.org/']
     def issueManagement = [system: 'Github', url: 'https://github.com/grails/gorm-mongodb']
@@ -55,7 +56,7 @@ class MongodbGrailsPlugin extends Plugin {
         initializer.registerApplicationIfNotPresent = false
 
         def applicationName = Metadata.getCurrent().getApplicationName()
-        if(!applicationName.contains('@')) {
+        if (!applicationName.contains('@')) {
             initializer.databaseName = applicationName
         }
         initializer.setSecondaryDatastore(hasHibernatePlugin())
@@ -65,7 +66,7 @@ class MongodbGrailsPlugin extends Plugin {
 
     @CompileStatic
     protected boolean hasHibernatePlugin() {
-        manager.allPlugins.any() { GrailsPlugin plugin -> plugin.name ==~ /hibernate\d*/}
+        manager.allPlugins.any() { GrailsPlugin plugin -> plugin.name ==~ /hibernate\d*/ }
     }
 
     @Override

@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class EnumThing {
+
     Long id
     Long version
     String name

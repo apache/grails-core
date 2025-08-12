@@ -68,9 +68,9 @@ class EventBusFactoryBean extends EventBusBuilder implements FactoryBean<EventBu
 
     @Override
     protected EventBus createDefaultEventBus() {
-        if(applicationContext.containsBean('grailsPromiseFactory')) {
+        if (applicationContext.containsBean('grailsPromiseFactory')) {
             Object promiseFactory = applicationContext.getBean('grailsPromiseFactory')
-            if(promiseFactory instanceof ExecutorService) {
+            if (promiseFactory instanceof ExecutorService) {
                 log.debug('Creating event bus from PromiseFactory {}', promiseFactory)
                 return new ExecutorEventBus((ExecutorService)promiseFactory)
             }

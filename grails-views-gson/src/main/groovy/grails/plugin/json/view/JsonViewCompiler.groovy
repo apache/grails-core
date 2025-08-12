@@ -41,7 +41,7 @@ class JsonViewCompiler extends AbstractGroovyTemplateCompiler {
     @Override
     protected CompilerConfiguration configureCompiler(CompilerConfiguration configuration) {
         CompilerConfiguration compiler = super.configureCompiler(configuration)
-        if(viewConfiguration.compileStatic) {
+        if (viewConfiguration.compileStatic) {
             configuration.addCompilationCustomizers(
                     new ASTTransformationCustomizer(
                             Collections.singletonMap(

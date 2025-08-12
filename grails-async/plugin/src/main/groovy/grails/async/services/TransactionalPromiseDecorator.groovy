@@ -78,7 +78,7 @@ class TransactionalPromiseDecorator implements PromiseDecorator, TransactionDefi
     @Override
     <D> Closure<D> decorate(Closure<D> original) {
         if (transactionManager != null) {
-            return (Closure<D>){ args ->
+            return (Closure<D>) { args ->
                 def transactionTemplate = transactionDefinition != null ? new TransactionTemplate(transactionManager, transactionDefinition) : new TransactionTemplate(transactionManager)
                 transactionTemplate.execute({
                     original.call(args)

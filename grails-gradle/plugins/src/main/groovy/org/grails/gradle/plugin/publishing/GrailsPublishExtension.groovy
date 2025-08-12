@@ -215,22 +215,22 @@ class GrailsPublishExtension {
         static final License MIT = new License(name: 'The MIT License (MIT)', url: 'https://opensource.org/licenses/MIT')
         static final License BSD = new License(name: 'The BSD 3-Clause License', url: 'https://opensource.org/licenses/BSD-3-Clause')
         static final Map<String, License> LICENSES = [
-                'Apache-2.0'  : APACHE2,
-                'Apache'      : APACHE2,
-                'AGPL'        : AGPL,
-                'AGPL-3.0'    : AGPL,
-                'GPL-3.0'     : GPL,
-                'GPL'         : GPL,
-                'EPL'         : EPL1,
-                'EPL-1.0'     : EPL1,
-                'CPL'         : CPL,
-                'CPL-1.0'     : CPL,
-                'LGPL'        : LGPL,
-                'LGPL-3.0'    : LGPL,
-                'LGPL-2.1'    : LGPL21,
-                'BSD'         : BSD,
-                'BSD 3-Clause': BSD,
-                'MIT'         : MIT
+            'Apache-2.0': APACHE2,
+            'Apache': APACHE2,
+            'AGPL': AGPL,
+            'AGPL-3.0': AGPL,
+            'GPL-3.0': GPL,
+            'GPL': GPL,
+            'EPL': EPL1,
+            'EPL-1.0': EPL1,
+            'CPL': CPL,
+            'CPL-1.0': CPL,
+            'LGPL': LGPL,
+            'LGPL-3.0': LGPL,
+            'LGPL-2.1': LGPL21,
+            'BSD': BSD,
+            'BSD 3-Clause': BSD,
+            'MIT': MIT
         ]
     }
 }

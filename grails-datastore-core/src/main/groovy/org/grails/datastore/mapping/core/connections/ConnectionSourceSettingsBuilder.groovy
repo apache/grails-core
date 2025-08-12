@@ -34,6 +34,7 @@ import org.grails.datastore.mapping.config.Settings
  */
 @CompileStatic
 class ConnectionSourceSettingsBuilder extends ConfigurationBuilder<ConnectionSourceSettings, ConnectionSourceSettings> {
+
     ConnectionSourceSettingsBuilder(PropertyResolver propertyResolver, String configurationPrefix = Settings.PREFIX) {
         super(propertyResolver, configurationPrefix)
     }

@@ -83,6 +83,7 @@ import static org.grails.datastore.mapping.reflect.AstUtils.isDomainClass
  */
 @CompileStatic
 class DirtyCheckingTransformer implements CompilationUnitAware {
+
     private static final String VOID = 'void'
     private static final Class<?>[] EMPTY_JAVA_CLASS_ARRAY = []
     private static final Class<?>[] OBJECT_CLASS_ARG = [Object.class]
@@ -95,7 +96,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
     public static final AnnotationNode DIRTY_CHECKED_PROPERTY_ANNOTATION_NODE = new AnnotationNode(DIRTY_CHECKED_PROPERTY_CLASS_NODE)
 
     static {
-        if(ClassUtils.isPresent('jakarta.validation.Constraint')) {
+        if (ClassUtils.isPresent('jakarta.validation.Constraint')) {
             try {
                 VALIDATION_CONSTRAINT_NODE = ClassHelper.make(Class.forName('jakarta.validation.Constraint'))
             } catch (Throwable e) {
@@ -106,7 +107,6 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
             VALIDATION_CONSTRAINT_NODE = null
         }
     }
-
 
     protected CompilationUnit compilationUnit
 
@@ -123,7 +123,6 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
         }
         final MethodNode markDirtyMethodNode = changeTrackableClassNode.getMethod(METHOD_NAME_MARK_DIRTY, new Parameter(ClassHelper.STRING_TYPE, 'propertyName'), new Parameter(ClassHelper.OBJECT_TYPE, 'newValue'))
 
-
         ClassNode superClass = classNode.getSuperClass()
         boolean shouldWeave = superClass.equals(OBJECT_CLASS_NODE)
 
@@ -132,21 +131,21 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
             dirtyCheckableTrait.setSuperClass(new ClassNode(DirtyCheckable).getPlainNodeReference())
         }
 
-        while(!shouldWeave) {
-            if(isDomainClass(superClass) || !superClass.getAnnotations(DIRTY_CHECK_CLASS_NODE).isEmpty()) {
+        while (!shouldWeave) {
+            if (isDomainClass(superClass) || !superClass.getAnnotations(DIRTY_CHECK_CLASS_NODE).isEmpty()) {
                 break
             }
             superClass = superClass.getSuperClass()
-            if(superClass == null || superClass.equals(OBJECT_CLASS_NODE)) {
+            if (superClass == null || superClass.equals(OBJECT_CLASS_NODE)) {
                 shouldWeave = true
                 break
             }
         }
 
-        if(shouldWeave ) {
+        if (shouldWeave) {
 
             classNode.addInterface(dirtyCheckableTrait)
-            if(compilationUnit != null) {
+            if (compilationUnit != null) {
                 org.codehaus.groovy.transform.trait.TraitComposer.doExtendTraits(classNode, source, compilationUnit)
             }
 
@@ -163,7 +162,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
 
         for (MethodNode mn in classNode.methods) {
             final methodName = mn.name
-            if(!mn.isPublic() || mn.isStatic() || mn.isSynthetic() || mn.isAbstract()) continue
+            if (!mn.isPublic() || mn.isStatic() || mn.isSynthetic() || mn.isAbstract()) continue
 
             if (isSetter(methodName, mn)) {
                 String propertyName = NameUtils.getPropertyNameForGetterOrSetter(methodName)
@@ -174,7 +173,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
 
                 // if there are any jakarta.validation constraints present
                 def annotationNodes = mn.annotations
-                if(!isJavaValidateable && isAnnotatedWithJavaValidationApi(annotationNodes)) {
+                if (!isJavaValidateable && isAnnotatedWithJavaValidationApi(annotationNodes)) {
                     addAnnotationIfNecessary(classNode, Validated)
                     isJavaValidateable = true
                 }
@@ -188,13 +187,13 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
         for (PropertyNode pn in propertyNodes) {
             final propertyName = pn.name
             if (!pn.isStatic() && pn.isPublic() && !NameUtils.isConfigurational(propertyName)) {
-                if(isTransient(pn.modifiers) || isDefinedInTransientsNode(propertyName, transientPropertyNode) || isFinal(pn.modifiers)) continue
+                if (isTransient(pn.modifiers) || isDefinedInTransientsNode(propertyName, transientPropertyNode) || isFinal(pn.modifiers)) continue
 
                 // don't dirty check id or version
-                if(propertyName == GormProperties.IDENTITY) {
+                if (propertyName == GormProperties.IDENTITY) {
                     continue
                 }
-                else if(propertyName == GormProperties.VERSION) {
+                else if (propertyName == GormProperties.VERSION) {
                     hasVersion = true
                     continue
                 }
@@ -202,15 +201,14 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                 final GetterAndSetter getterAndSetter = gettersAndSetters[propertyName]
                 final FieldNode propertyField = pn.getField()
                 final List<AnnotationNode> allAnnotationNodes = pn.annotations + propertyField.annotations
-                if(getterAndSetter?.getter != null) {
+                if (getterAndSetter?.getter != null) {
                     allAnnotationNodes.addAll(getterAndSetter.getter.annotations)
                 }
 
-
-                if(hasAnnotation(allAnnotationNodes, GormEntityTransformation.JPA_ID_ANNOTATION_NODE)) {
-                    if(!propertyName.equals(GormProperties.IDENTITY) ) {
+                if (hasAnnotation(allAnnotationNodes, GormEntityTransformation.JPA_ID_ANNOTATION_NODE)) {
+                    if (!propertyName.equals(GormProperties.IDENTITY)) {
                         // if the property is a JPA @Id but the property name is not id add a transient getter to retrieve the id called getId
-                        if(classNode.getField(GormProperties.IDENTITY) == null && gettersAndSetters[GormProperties.IDENTITY] == null) {
+                        if (classNode.getField(GormProperties.IDENTITY) == null && gettersAndSetters[GormProperties.IDENTITY] == null) {
                             def getIdMethod = new MethodNode(
                                     'getId',
                                     Modifier.PUBLIC,
@@ -227,10 +225,10 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                     // skip dirty checking for JPA @Id
                     continue
                 }
-                if(hasAnnotation( allAnnotationNodes, GormEntityTransformation.JPA_VERSION_ANNOTATION_NODE)) {
+                if (hasAnnotation(allAnnotationNodes, GormEntityTransformation.JPA_VERSION_ANNOTATION_NODE)) {
                     hasVersion = true
                     // if the property is a JPA @Version but the property name is not version add a transient getter to retrieve the version called getVersion
-                    if(classNode.getField(GormProperties.VERSION) == null && gettersAndSetters[GormProperties.VERSION] == null) {
+                    if (classNode.getField(GormProperties.VERSION) == null && gettersAndSetters[GormProperties.VERSION] == null) {
                         def getVersionMethod = new MethodNode(
                                 'getVersion',
                                 Modifier.PUBLIC,
@@ -247,13 +245,12 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                 }
 
                 // if there is no explicit getter and setter then one will be generated by Groovy, so we must add these to track changes
-                if(getterAndSetter == null) {
+                if (getterAndSetter == null) {
 
-                    if(!isJavaValidateable && isAnnotatedWithJavaValidationApi(allAnnotationNodes)) {
+                    if (!isJavaValidateable && isAnnotatedWithJavaValidationApi(allAnnotationNodes)) {
                         addAnnotationIfNecessary(classNode, Validated)
                         isJavaValidateable = true
                     }
-
 
                     // first add the getter
                     ClassNode returnType = resolvePropertyReturnType(pn, classNode)
@@ -262,7 +259,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                     String getterName = NameUtils.getGetterName(propertyName, false)
 
                     MethodNode getter = classNode.getMethod(getterName, ZERO_PARAMETERS)
-                    if(getter == null) {
+                    if (getter == null) {
 
                         getter = classNode.addMethod(getterName, PUBLIC, returnType, ZERO_PARAMETERS, null, returnS(varX(fieldName)))
 
@@ -270,7 +267,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                         staticCompilationVisitor.visitMethod(
                                 getter
                         )
-                        if(booleanProperty) {
+                        if (booleanProperty) {
                             classNode.addMethod(NameUtils.getGetterName(propertyName, true), PUBLIC, returnType, ZERO_PARAMETERS, null, returnS(varX(fieldName)))
                         }
                     }
@@ -279,18 +276,18 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                     // void setFoo(String foo) { markDirty("foo", foo); this.foo = foo }
                     addDirtyCheckingSetter(classNode, propertyName, fieldName, returnType, markDirtyMethodNode, staticCompilationVisitor)
                 }
-                else if(getterAndSetter.hasBoth()) {
+                else if (getterAndSetter.hasBoth()) {
                     // if both a setter and getter are present, we get hold of the setter and weave the markDirty method call into it
                     weaveIntoExistingSetter(propertyName, getterAndSetter, markDirtyMethodNode)
                     gettersAndSetters.remove(propertyName)
                 }
                 else {
-                    if(getterAndSetter.setter != null) {
+                    if (getterAndSetter.setter != null) {
                         weaveIntoExistingSetter(propertyName, getterAndSetter, markDirtyMethodNode)
                         // there isn't both a getter and a setter then this is not a candidate for persistence, so we eliminate it from change tracking
                         gettersAndSetters.remove(propertyName)
                     }
-                    else if(getterAndSetter.getter != null) {
+                    else if (getterAndSetter.getter != null) {
                         String fieldName = propertyField.getName()
                         ClassNode returnType = resolvePropertyReturnType(pn, classNode)
                         addDirtyCheckingSetter(classNode, propertyName, fieldName, returnType, markDirtyMethodNode, staticCompilationVisitor)
@@ -302,7 +299,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
             }
         }
 
-        if(!hasVersion && ClassUtils.isPresent('grails.artefact.Artefact') && !classNode.getAnnotations(GormEntityTransformation.JPA_ENTITY_CLASS_NODE).isEmpty()) {
+        if (!hasVersion && ClassUtils.isPresent('grails.artefact.Artefact') && !classNode.getAnnotations(GormEntityTransformation.JPA_ENTITY_CLASS_NODE).isEmpty()) {
             // if the entity is a JPA and has no version property then add a transient one as a stub, this is more to satisfy Grails
             def getVersionMethod = new MethodNode(
                     'getVersion',
@@ -318,7 +315,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
 
         // We also need to search properties that are represented as getters with setters. This requires going through all the methods and finding getter/setter pairs that are public
         gettersAndSetters.each { String propertyName, GetterAndSetter getterAndSetter ->
-            if(!NameUtils.isConfigurational(propertyName) && getterAndSetter.hasBoth()) {
+            if (!NameUtils.isConfigurational(propertyName) && getterAndSetter.hasBoth()) {
                 weaveIntoExistingSetter(propertyName, getterAndSetter, markDirtyMethodNode)
             }
         }
@@ -377,7 +374,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
     }
 
     void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode) {
-        if (classNode.annotations.any { AnnotationNode an -> an.classNode.name == 'grails.artefact.Artefact'}) return
+        if (classNode.annotations.any { AnnotationNode an -> an.classNode.name == 'grails.artefact.Artefact' }) return
 
         performInjectionOnAnnotatedClass(source, classNode)
     }
@@ -394,12 +391,11 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
         performInjectionOnAnnotatedClass(null, classNode)
     }
 
-
     private static ClassNode alignReturnType(final ClassNode receiver, final ClassNode originalReturnType) {
         ClassNode copiedReturnType
-        if(originalReturnType.isGenericsPlaceHolder()) {
+        if (originalReturnType.isGenericsPlaceHolder()) {
             copiedReturnType = originalReturnType.getPlainNodeReference()
-            copiedReturnType.setName( originalReturnType.getName() )
+            copiedReturnType.setName(originalReturnType.getName())
             copiedReturnType.setGenericsPlaceHolder(true)
         }
         else {
@@ -410,7 +406,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
         if (genericTypes) {
             List<GenericsType> newGenericTypes = []
 
-            for(GenericsType gt in genericTypes) {
+            for (GenericsType gt in genericTypes) {
                 ClassNode[] upperBounds = null
                 if (gt.upperBounds) {
                     upperBounds = gt.upperBounds.collect { ClassNode cn -> cn.plainNodeReference } as ClassNode[]
@@ -423,9 +419,9 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
     }
     protected void weaveIntoExistingSetter(String propertyName, GetterAndSetter getterAndSetter, MethodNode markDirtyMethodNode) {
         final MethodNode setterMethod = getterAndSetter.setter
-        if(setterMethod.annotations.any { AnnotationNode an -> an.classNode.name == 'grails.persistence.PersistenceMethod'} ) return
+        if (setterMethod.annotations.any { AnnotationNode an -> an.classNode.name == 'grails.persistence.PersistenceMethod' }) return
 
-        if(!setterMethod.getAnnotations(DIRTY_CHECKED_PROPERTY_CLASS_NODE)) {
+        if (!setterMethod.getAnnotations(DIRTY_CHECKED_PROPERTY_CLASS_NODE)) {
             setterMethod.addAnnotation(DIRTY_CHECKED_PROPERTY_ANNOTATION_NODE)
         }
         else {
@@ -433,14 +429,14 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
             return
         }
         MethodNode getter = getterAndSetter.getter
-        if(getter != null && !getter.getAnnotations(DIRTY_CHECKED_PROPERTY_CLASS_NODE)) {
+        if (getter != null && !getter.getAnnotations(DIRTY_CHECKED_PROPERTY_CLASS_NODE)) {
             getter.addAnnotation(DIRTY_CHECKED_PROPERTY_ANNOTATION_NODE)
         }
         final currentBody = setterMethod.code
         final setterParameter = setterMethod.getParameters()[0]
         MethodCallExpression markDirtyMethodCall = createMarkDirtyMethodCall(markDirtyMethodNode, propertyName, setterParameter)
         final newBody = block(
-            stmt( markDirtyMethodCall ),
+            stmt(markDirtyMethodCall),
             currentBody
         )
         setterMethod.code = newBody
@@ -461,8 +457,6 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
         }
         return getterAndSetter
     }
-
-
 
     private boolean isSetter(String methodName, MethodNode declaredMethod) {
         return declaredMethod.getParameters().length == 1 && ReflectionUtils.isSetter(methodName, OBJECT_CLASS_ARG)

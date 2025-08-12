@@ -264,8 +264,7 @@ trait DatabaseMigrationCommand {
                 .addArgumentValue(GenerateChangelogCommandStep.RUN_ON_CHANGE_TYPES_ARG, AbstractChangelogCommandStep.RUN_ON_CHANGE_TYPES_ARG.getDefaultValue())
                 .addArgumentValue(GenerateChangelogCommandStep.REPLACE_IF_EXISTS_TYPES_ARG, AbstractChangelogCommandStep.REPLACE_IF_EXISTS_TYPES_ARG.getDefaultValue())
 
-
-        if(diffOutputControl.isReplaceIfExistsSet()) {
+        if (diffOutputControl.isReplaceIfExistsSet()) {
             command.addArgumentValue(GenerateChangelogCommandStep.USE_OR_REPLACE_OPTION, true)
         }
         command.setOutput(System.out)
@@ -291,7 +290,7 @@ trait DatabaseMigrationCommand {
                 .addArgumentValue(GenerateChangelogCommandStep.RUN_ON_CHANGE_TYPES_ARG, AbstractChangelogCommandStep.RUN_ON_CHANGE_TYPES_ARG.getDefaultValue())
                 .addArgumentValue(GenerateChangelogCommandStep.REPLACE_IF_EXISTS_TYPES_ARG, AbstractChangelogCommandStep.REPLACE_IF_EXISTS_TYPES_ARG.getDefaultValue())
 
-        if(diffOutputControl.isReplaceIfExistsSet()) {
+        if (diffOutputControl.isReplaceIfExistsSet()) {
             command.addArgumentValue(GenerateChangelogCommandStep.USE_OR_REPLACE_OPTION, true)
         }
         command.setOutput(System.out)
@@ -419,7 +418,7 @@ trait DatabaseMigrationCommand {
 
         int i = fileName.lastIndexOf('.')
         if (i > 0) {
-            extension = fileName.substring(i+1)
+            extension = fileName.substring(i + 1)
         }
         extension
     }

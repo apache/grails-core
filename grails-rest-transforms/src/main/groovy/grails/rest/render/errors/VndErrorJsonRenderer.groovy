@@ -40,6 +40,7 @@ import grails.web.mime.MimeType
  */
 @CompileStatic
 class VndErrorJsonRenderer extends AbstractVndErrorRenderer {
+
     public static final MimeType MIME_TYPE = new MimeType('application/vnd.error+json', 'json')
     public static final String LINKS_ATTRIBUTE = '_links'
     public static final String FOUR_SPACES = '    '
@@ -78,7 +79,7 @@ class VndErrorJsonRenderer extends AbstractVndErrorRenderer {
             }
 
             targetWriter.flush()
-            if(prettyPrint) {
+            if (prettyPrint) {
                 responseWriter.write(JsonOutput.prettyPrint(targetWriter.toString()))
             }
         }

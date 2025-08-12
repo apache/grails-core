@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class Task implements Serializable {
+
     Long id
     Long version
     Set tasks

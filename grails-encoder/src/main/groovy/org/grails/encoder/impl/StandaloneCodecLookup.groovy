@@ -27,6 +27,7 @@ import org.grails.encoder.CodecMetaClassSupport
 
 @CompileStatic
 class StandaloneCodecLookup extends BasicCodecLookup {
+
     boolean registerMetaMethods = true
     boolean cacheLookupsInMetaMethods = true
     Collection<Class<? extends Object>> targetClassesForMetaMethods = [
@@ -60,7 +61,7 @@ class StandaloneCodecLookup extends BasicCodecLookup {
     }
 
     protected registerMetaMethods(CodecFactory codecFactory) {
-        if(registerMetaMethods && targetClassesForMetaMethods) {
+        if (registerMetaMethods && targetClassesForMetaMethods) {
             new CodecMetaClassSupport().configureCodecMethods(codecFactory, cacheLookupsInMetaMethods, resolveMetaClasses())
         }
     }

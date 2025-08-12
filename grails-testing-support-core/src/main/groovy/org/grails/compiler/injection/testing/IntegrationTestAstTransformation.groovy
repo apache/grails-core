@@ -175,7 +175,7 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
                 GrailsASTUtils.addAnnotationOrGetExisting(
                         classNode, SpringBootTest, [
                         webEnvironment: propX(classX(SpringBootTest.WebEnvironment), 'RANDOM_PORT'),
-                        useMainMethod : propX(classX(SpringBootTest.UseMainMethod), 'ALWAYS')
+                        useMainMethod: propX(classX(SpringBootTest.UseMainMethod), 'ALWAYS')
                 ] as Map<String, Object>
                 )
 

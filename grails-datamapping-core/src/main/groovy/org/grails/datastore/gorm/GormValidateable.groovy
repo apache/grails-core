@@ -61,8 +61,6 @@ trait GormValidateable {
         return this.skipValidate
     }
 
-
-
     /**
      * Validates an instance for the given arguments
      *
@@ -98,7 +96,7 @@ trait GormValidateable {
      */
     @Transient
     Errors getErrors() {
-        if(errors == null) {
+        if (errors == null) {
             errors = new ValidationErrors(this)
         }
         errors

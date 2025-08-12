@@ -522,9 +522,9 @@ Note: if project properties are used, the properties must be defined prior to ap
 
         String pluginXml = "${sourceSets.main.groovy.getClassesDirectory().get().getAsFile()}/META-INF/grails-plugin.xml".toString()
         new File(pluginXml).exists() ? [
-                source    : pluginXml,
-                classifier: getDefaultClassifier(),
-                extension : 'xml'
+            source: pluginXml,
+            classifier: getDefaultClassifier(),
+            extension: 'xml'
         ] : null
     }
 

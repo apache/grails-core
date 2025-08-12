@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class Location implements Serializable {
+
 //    Long id
     Long version
     String name

@@ -54,7 +54,6 @@ class MongoCollection extends Collection {
         return new MongoAttribute()
     }
 
-
     Query.Order getSort() {
         return (Query.Order)super.getSort()
     }
@@ -66,7 +65,7 @@ class MongoCollection extends Collection {
      */
     MongoCollection setSort(Object s) {
         if (s instanceof Query.Order) {
-            super.setSort( (Query.Order) s )
+            super.setSort((Query.Order) s)
         }
         if (s instanceof Map) {
             Map m = (Map) s
@@ -74,15 +73,15 @@ class MongoCollection extends Collection {
                 Map.Entry entry = (Map.Entry) m.entrySet().iterator().next()
                 Object key = entry.getKey()
                 if ('desc'.equalsIgnoreCase(entry.getValue().toString())) {
-                    super.setSort( Query.Order.desc(key.toString()) )
+                    super.setSort(Query.Order.desc(key.toString()))
                 }
                 else {
-                    super.setSort( Query.Order.asc(key.toString()) )
+                    super.setSort(Query.Order.asc(key.toString()))
                 }
             }
         }
         else {
-            super.setSort( Query.Order.asc(s.toString()) )
+            super.setSort(Query.Order.asc(s.toString()))
         }
         return this
     }
@@ -120,7 +119,7 @@ class MongoCollection extends Collection {
      * @param options The index options
      */
     void index(Map<String, Object> definition, Map<String, Object> options) {
-        if(definition != null && !definition.isEmpty()) {
+        if (definition != null && !definition.isEmpty()) {
             indices.add(new Index(definition, options))
         }
     }
@@ -189,7 +188,6 @@ class MongoCollection extends Collection {
     static class Index {
         Map<String, Object> definition = new HashMap<String, Object>()
         Map<String, Object> options = new HashMap<String, Object>()
-
 
         Index(Map<String, Object> definition) {
             this.definition = definition

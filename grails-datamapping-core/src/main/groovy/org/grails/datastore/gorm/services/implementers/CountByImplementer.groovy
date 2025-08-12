@@ -33,8 +33,8 @@ import org.grails.datastore.mapping.reflect.AstUtils
  */
 @CompileStatic
 class CountByImplementer extends FindAllByImplementer implements SingleResultServiceImplementer<Number> {
-    static final List<String> HANDLED_PREFIXES = ['countBy']
 
+    static final List<String> HANDLED_PREFIXES = ['countBy']
 
     @Override
     protected boolean isCompatibleReturnType(ClassNode domainClass, MethodNode methodNode, ClassNode returnType, String prefix) {

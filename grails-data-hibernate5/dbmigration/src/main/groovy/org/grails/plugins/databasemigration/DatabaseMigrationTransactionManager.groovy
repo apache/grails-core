@@ -114,7 +114,7 @@ class DatabaseMigrationTransactionManager {
     void  withTransaction(Map transactionProperties, Closure callable) {
         def transactionDefinition = new DefaultTransactionDefinition()
         transactionProperties.each { k, v ->
-            if(v instanceof CharSequence && !(v instanceof String)) {
+            if (v instanceof CharSequence && !(v instanceof String)) {
                 v = v.toString()
             }
             try {

@@ -53,7 +53,7 @@ class ControllersGrailsPlugin extends Plugin {
     def dependsOn = [core: version, i18n: version, urlMappings: version]
 
     @Override
-    Closure doWithSpring(){
+    Closure doWithSpring() {
         { ->
             def application = grailsApplication
             def config = application.config
@@ -106,7 +106,7 @@ class ControllersGrailsPlugin extends Plugin {
     }
 
     @Override
-    void onChange( Map<String, Object> event) {
+    void onChange(Map<String, Object> event) {
         if (!(event.source instanceof Class)) {
             return
         }

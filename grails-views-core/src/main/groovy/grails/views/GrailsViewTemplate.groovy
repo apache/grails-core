@@ -38,6 +38,7 @@ import org.grails.datastore.mapping.model.MappingContext
 @InheritConstructors
 @CompileStatic
 class GrailsViewTemplate extends WritableScriptTemplate {
+
     /**
      * The GORM mapping context
      */
@@ -46,10 +47,10 @@ class GrailsViewTemplate extends WritableScriptTemplate {
     /**
      * Handlers for proxies
      */
-    @Lazy ProxyHandler proxyHandler =  {
-        if(mappingContext != null ) {
+    @Lazy ProxyHandler proxyHandler = {
+        if (mappingContext != null) {
             def proxyHandler = mappingContext.getProxyHandler()
-            if(proxyHandler != null) {
+            if (proxyHandler != null) {
                 return (ProxyHandler)new ProxyHandlerAdapter(proxyHandler)
             }
             else {

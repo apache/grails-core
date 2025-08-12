@@ -58,14 +58,14 @@ class MappingContextTraversableResolver implements TraversableResolver {
     boolean isCascadable(Object traversableObject, Path.Node traversableProperty, Class<?> rootBeanType, Path pathToTraversableObject, ElementType elementType) {
         Class type = proxyHandler.getProxiedClass(traversableObject)
         PersistentEntity entity = mappingContext.getPersistentEntity(type.name)
-        if(entity != null) {
+        if (entity != null) {
             PersistentEntity currentEntity = entity
-            for(Path.Node n in pathToTraversableObject) {
-                if(currentEntity == null) break
+            for (Path.Node n in pathToTraversableObject) {
+                if (currentEntity == null) break
                 PersistentProperty prop = currentEntity.getPropertyByName(n.name)
-                if(prop instanceof Association) {
+                if (prop instanceof Association) {
                     Association association = (Association)prop
-                    if(association.isOwningSide()) {
+                    if (association.isOwningSide()) {
                         currentEntity = association.associatedEntity
                     }
                     else {
@@ -76,7 +76,7 @@ class MappingContextTraversableResolver implements TraversableResolver {
                     currentEntity = null
                 }
             }
-            if(currentEntity != null) {
+            if (currentEntity != null) {
                 return true
             }
         }

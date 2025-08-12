@@ -40,7 +40,6 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
     public static final String ARGUMENT_DEEP_VALIDATE = 'deepValidate'
     private static final String ARGUMENT_EVICT = 'evict'
 
-
     protected ClassLoader classLoader
     protected AbstractHibernateDatastore datastore
     protected IHibernateTemplate hibernateTemplate
@@ -51,7 +50,6 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
         this.datastore = datastore
     }
 
-
     @Override
     boolean validate(D instance, Map arguments = Collections.emptyMap()) {
         validate(instance, null, arguments)
@@ -61,14 +59,14 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
         Errors errors = setupErrorsProperty(instance)
 
         Validator validator = getValidator()
-        if(validator == null) return true
+        if (validator == null) return true
 
         Boolean valid = Boolean.TRUE
         // should evict?
         boolean evict = false
         boolean deepValidate = true
         Set validatedFields = null
-        if(validatedFieldsList != null) {
+        if (validatedFieldsList != null) {
             validatedFields = new HashSet(validatedFieldsList)
         }
 
@@ -79,7 +77,6 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
         evict = ClassUtils.getBooleanFromMap(ARGUMENT_EVICT, arguments)
 
         fireEvent instance, validatedFieldsList
-
 
         hibernateTemplate.execute { Session session ->
 
@@ -94,13 +91,12 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
                     validator.validate instance, errors
                 }
             } finally {
-                if(!errors.hasErrors()) {
+                if (!errors.hasErrors()) {
                     restoreFlushMode(session, previous)
                 }
             }
 
         }
-
 
         int oldErrorCount = errors.errorCount
         errors = filterErrors(errors, validatedFields, instance)

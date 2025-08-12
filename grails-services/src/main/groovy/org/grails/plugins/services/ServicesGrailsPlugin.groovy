@@ -40,15 +40,14 @@ class ServicesGrailsPlugin extends Plugin  {
     def version = GrailsUtil.getGrailsVersion()
     def loadAfter = ['hibernate']
 
-
     def watchedResources = ['file:./grails-app/services/**/*Service.groovy',
                             'file:./plugins/*/grails-app/services/**/*Service.groovy']
 
     Closure doWithSpring() {
-        {->
+        { ->
             GrailsApplication application = grailsApplication
             final boolean springTransactionManagement = config.getProperty(Settings.SPRING_TRANSACTION_MANAGEMENT, Boolean.class, false)
-            if(springTransactionManagement) {
+            if (springTransactionManagement) {
                 throw new GrailsConfigurationException('Spring proxy-based transaction management no longer supported. Yes the @grails.gorm.transactions.Transactional annotation instead')
             }
 
@@ -66,7 +65,7 @@ class ServicesGrailsPlugin extends Plugin  {
 
                 "${beanName}"(serviceClass.getClazz()) { bean ->
                     bean.autowire =  true
-                    if(lazyInit instanceof Boolean) {
+                    if (lazyInit instanceof Boolean) {
                         bean.lazyInit = lazyInit
                     }
                     if (scope) {

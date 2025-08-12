@@ -59,7 +59,7 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
         }
         else {
             GrailsWebRequest webRequest = (GrailsWebRequest) previousAttributes
-            if(webRequest.isActive()) {
+            if (webRequest.isActive()) {
                 return webRequest
             }
             else {
@@ -77,11 +77,11 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
     @Override
     protected HttpServletRequest checkMultipart(HttpServletRequest request) throws MultipartException {
         boolean shouldProcessMultiPart = !WebUtils.isError(request) && !WebUtils.isForwardOrInclude(request)
-        if(shouldProcessMultiPart) {
+        if (shouldProcessMultiPart) {
             HttpServletRequest processedRequest = super.checkMultipart(request)
-            if(!processedRequest.is(request)) {
+            if (!processedRequest.is(request)) {
                 def webRequest = GrailsWebRequest.lookup(request)
-                if(webRequest != null) {
+                if (webRequest != null) {
                     webRequest.multipartRequest = processedRequest
                 }
             }

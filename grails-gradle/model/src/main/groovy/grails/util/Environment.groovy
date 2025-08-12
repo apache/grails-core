@@ -274,7 +274,6 @@ enum Environment {
             }
         }
 
-
         Environment current = cachedCurrentEnvironment.get()
         if (current != null) {
             return current

@@ -58,7 +58,6 @@ class GrailsShell extends GrailsApp {
         }
     }
 
-
     /**
      * Static helper that can be used to run a {@link GrailsApp} from the
      * specified source using default settings.
@@ -87,7 +86,7 @@ class GrailsShell extends GrailsApp {
      * @param args The first argument is the Application class name
      */
     static void main(String[] args) {
-        if(args) {
+        if (args) {
             def applicationClass = Thread.currentThread().contextClassLoader.loadClass(args[0])
             new GrailsShell(applicationClass).run(args)
         }

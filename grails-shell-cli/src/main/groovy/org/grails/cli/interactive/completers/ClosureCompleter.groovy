@@ -28,6 +28,7 @@ import jline.console.completer.Completer
  */
 @CompileStatic
 class ClosureCompleter implements Completer {
+
     private Closure<Collection<String>> closure
     private Completer completer
 
@@ -36,7 +37,7 @@ class ClosureCompleter implements Completer {
     }
 
     Completer getCompleter() {
-        if(completer == null) {
+        if (completer == null) {
             completer = new jline.console.completer.StringsCompleter(closure.call())
         }
         completer

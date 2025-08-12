@@ -29,7 +29,8 @@ import org.springframework.util.Assert
  */
 @CompileStatic
 @EqualsAndHashCode
-class MultiLineString extends Shape implements GeoJSON{
+class MultiLineString extends Shape implements GeoJSON {
+
     final List<LineString> coordinates
 
     MultiLineString(LineString... coordinates) {
@@ -53,10 +54,10 @@ class MultiLineString extends Shape implements GeoJSON{
 
     static MultiLineString valueOf(List coords) {
         List<LineString> lineStrings = (List<LineString>) coords.collect() {
-            if(it instanceof LineString) {
+            if (it instanceof LineString) {
                 return it
             }
-            else if(it instanceof List) {
+            else if (it instanceof List) {
                 return LineString.valueOf((List)it)
             }
             throw new IllegalArgumentException("Invalid coordinates: $coords")

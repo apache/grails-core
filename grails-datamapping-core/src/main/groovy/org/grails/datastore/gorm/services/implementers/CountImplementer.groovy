@@ -40,6 +40,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
  */
 @CompileStatic
 class CountImplementer extends AbstractDetachedCriteriaServiceImplementor implements SingleResultServiceImplementer<Number> {
+
     static final List<String> HANDLED_PREFIXES = ['count']
 
     @Override
@@ -71,7 +72,7 @@ class CountImplementer extends AbstractDetachedCriteriaServiceImplementor implem
     void implementWithQuery(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode, BlockStatement body, VariableExpression detachedCriteriaVar, Expression queryArgs) {
         Expression callCount = callX(detachedCriteriaVar, 'count', queryArgs)
         body.addStatement(
-            returnS( castX(newMethodNode.returnType, callCount) )
+            returnS(castX(newMethodNode.returnType, callCount))
         )
     }
 }

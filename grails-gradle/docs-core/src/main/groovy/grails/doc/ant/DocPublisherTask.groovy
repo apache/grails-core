@@ -112,6 +112,7 @@ class DocPublisherTask extends Task {
 }
 
 class AntLogAdapter {
+
     private antProject
     private task
 

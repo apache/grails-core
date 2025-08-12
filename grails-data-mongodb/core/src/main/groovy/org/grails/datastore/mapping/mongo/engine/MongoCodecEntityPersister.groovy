@@ -85,7 +85,6 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
     public static final String INC_OPERATOR = MongoConstants.INC_OPERATOR
     public static final String ASSIGNED_IDENTIFIER_MAPPING = MongoConstants.ASSIGNED_IDENTIFIER_MAPPING
 
-
     protected final MongoCodecSession mongoSession
     protected final MongoDatastore mongoDatastore
     protected boolean hasNumericalIdentifier = false
@@ -179,7 +178,6 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
     @Override
     protected Serializable persistEntity(PersistentEntity entity, Object obj, boolean isInsert) {
 
-
         ProxyFactory proxyFactory = getProxyFactory()
         // if called internally, obj can potentially be a proxy, which won't work.
         obj = proxyFactory.unwrap(obj)
@@ -191,7 +189,6 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
         if (si.isPendingAlready(obj)) {
             return (Serializable) id
         }
-
 
         final boolean idIsNull = id == null
         boolean isUpdate = !idIsNull && !isInsert
@@ -426,7 +423,6 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
         return objectId.toString()
     }
 
-
     @Override
     protected void deleteEntity(PersistentEntity pe, Object obj) {
 
@@ -544,7 +540,6 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
                 .withDocumentClass(pe.javaClass)
         return mongoCollection
     }
-
 
     protected String getCollectionName(PersistentEntity pe) {
         mongoSession.getCollectionName(pe)

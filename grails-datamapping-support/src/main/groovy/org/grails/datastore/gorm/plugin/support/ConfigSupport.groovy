@@ -41,7 +41,7 @@ class ConfigSupport {
      * @param applicationContext The application context
      */
     static void prepareConfig(PropertyResolver config, ConfigurableApplicationContext applicationContext) {
-        if(config instanceof PropertySourcesConfig) {
+        if (config instanceof PropertySourcesConfig) {
             ConfigurableConversionService conversionService = applicationContext.getEnvironment().getConversionService()
             conversionService.addConverter(new Converter<String, Class>() {
                 @Override

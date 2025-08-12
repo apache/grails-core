@@ -37,6 +37,7 @@ import org.grails.datastore.mapping.engine.event.ValidationEvent
  * @author Tom Widmer
  */
 class PersistenceEventListenerSpec extends GrailsDataTckSpec {
+
     SpecPersistenceListener listener
 
     void setupSpec() {

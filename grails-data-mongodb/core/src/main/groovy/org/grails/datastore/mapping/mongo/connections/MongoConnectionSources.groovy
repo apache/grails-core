@@ -42,6 +42,7 @@ import org.grails.datastore.mapping.core.connections.InMemoryConnectionSources
  */
 @CompileStatic
 class MongoConnectionSources extends InMemoryConnectionSources<MongoClient, MongoConnectionSourceSettings> {
+
     private static final String CONNECTION_NAME = 'name'
 
     MongoConnectionSources(ConnectionSource<MongoClient, MongoConnectionSourceSettings> defaultConnectionSource, ConnectionSourceFactory<MongoClient, MongoConnectionSourceSettings> connectionSourceFactory, PropertyResolver configuration) {
@@ -55,9 +56,9 @@ class MongoConnectionSources extends InMemoryConnectionSources<MongoClient, Mong
         FindIterable findIterable = mongoCollection
                                               .find()
 
-        for(Document d in findIterable) {
+        for (Document d in findIterable) {
             String connectionName = d.getString(CONNECTION_NAME)
-            if(connectionName) {
+            if (connectionName) {
                 super.addConnectionSource(connectionName, DatastoreUtils.createPropertyResolver(d))
             }
         }

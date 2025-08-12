@@ -136,7 +136,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
 
     @CompileStatic
     protected void configureSourcesJarTask(Project project) {
-        if(!project.tasks.names.contains('sourcesJar')) {
+        if (!project.tasks.names.contains('sourcesJar')) {
             project.tasks.register('sourcesJar', Jar).configure { Jar jarTask ->
                 jarTask.archiveClassifier.set('sources')
                 jarTask.from SourceSets.findMainSourceSet(project).allSource
@@ -186,7 +186,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         }
 
         taskContainer.whenTaskAdded {
-            if(it.name == 'compileWebappGroovyPages') {
+            if (it.name == 'compileWebappGroovyPages') {
                 it.configure {
                     it.dependsOn(copyAstClasses)
                 }

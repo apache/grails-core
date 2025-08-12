@@ -49,7 +49,7 @@ class ConvertersGrailsPlugin extends Plugin {
 
     @Override
     Closure doWithSpring() {
-        {->
+        { ->
             jsonErrorsMarshaller(JsonErrorsMarshaller)
 
             xmlErrorsMarshaller(XmlErrorsMarshaller)

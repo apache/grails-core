@@ -38,8 +38,8 @@ class ApplicationContextExtension {
      * @param name The bean name
      * @return
      */
-    static Object propertyMissing(ApplicationContext applicationContext, String name ) {
-        if(applicationContext.containsBean(name)) {
+    static Object propertyMissing(ApplicationContext applicationContext, String name) {
+        if (applicationContext.containsBean(name)) {
             return applicationContext.getBean(name)
         }
         else {

@@ -101,7 +101,6 @@ class GormEnhancer implements Closeable {
      */
     final boolean dynamicEnhance
 
-
     GormEnhancer(Datastore datastore) {
         this(datastore, null)
     }
@@ -124,13 +123,13 @@ class GormEnhancer implements Closeable {
         this.markDirty = markDirty == null ? true : markDirty
         this.transactionManager = transactionManager
         this.dynamicEnhance = false
-        if(datastore != null) {
+        if (datastore != null) {
             registerConstraints(datastore)
         }
         NAMED_QUERIES.clear()
         DATASTORES_BY_TYPE.put(datastore.getClass(), datastore)
 
-        for(entity in datastore.mappingContext.persistentEntities) {
+        for (entity in datastore.mappingContext.persistentEntities) {
             registerEntity(entity)
         }
     }
@@ -146,7 +145,7 @@ class GormEnhancer implements Closeable {
             def cls = entity.javaClass
 
             List<String> qualifiers = allQualifiers(this.datastore, entity)
-            if(!qualifiers.contains(ConnectionSource.DEFAULT)) {
+            if (!qualifiers.contains(ConnectionSource.DEFAULT)) {
                 def firstQualifier = qualifiers.first()
                 def staticApi = getStaticApi(cls, firstQualifier)
                 def name = entity.name
@@ -181,7 +180,7 @@ class GormEnhancer implements Closeable {
     List<String> allQualifiers(Datastore datastore, PersistentEntity entity) {
         List<String> qualifiers = new ArrayList<>()
         qualifiers.addAll ConnectionSourcesSupport.getConnectionSourceNames(entity)
-        if((MultiTenant.isAssignableFrom(entity.javaClass) || qualifiers.contains(ConnectionSource.ALL)) && (datastore instanceof ConnectionSourcesProvider)) {
+        if ((MultiTenant.isAssignableFrom(entity.javaClass) || qualifiers.contains(ConnectionSource.ALL)) && (datastore instanceof ConnectionSourcesProvider)) {
             qualifiers.clear()
             qualifiers.add(ConnectionSource.DEFAULT)
 
@@ -224,14 +223,14 @@ class GormEnhancer implements Closeable {
     static GormQueryOperations createNamedQuery(Class entity, String queryName, Object... args) {
         def className = entity.getName()
         def namedQueries = NAMED_QUERIES.get(className)
-        if(namedQueries == null) {
+        if (namedQueries == null) {
             synchronized (NAMED_QUERIES) {
                 namedQueries = NAMED_QUERIES.get(className)
-                if(namedQueries == null) {
+                if (namedQueries == null) {
 
                     ClassPropertyFetcher cpf = ClassPropertyFetcher.forClass(entity)
                     Closure closure = cpf.getStaticPropertyValue(GormProperties.NAMED_QUERIES, Closure.class)
-                    if(closure != null) {
+                    if (closure != null) {
                         closure = (Closure)closure.clone()
                         def evaluator = new NamedQueriesBuilder()
                         namedQueries = evaluator.evaluate(closure)
@@ -267,13 +266,13 @@ class GormEnhancer implements Closeable {
      * @return
      */
     protected static String findTenantId(Class entity) {
-        if(MultiTenant.isAssignableFrom(entity)) {
+        if (MultiTenant.isAssignableFrom(entity)) {
             Datastore defaultDatastore = findDatastore(entity, ConnectionSource.DEFAULT)
-            if((defaultDatastore instanceof MultiTenantCapableDatastore)) {
+            if ((defaultDatastore instanceof MultiTenantCapableDatastore)) {
 
                 MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)defaultDatastore
-                if(multiTenantCapableDatastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
-                    return Tenants.currentId( multiTenantCapableDatastore )
+                if (multiTenantCapableDatastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
+                    return Tenants.currentId(multiTenantCapableDatastore)
                 }
                 else {
                     return ConnectionSource.DEFAULT
@@ -302,7 +301,7 @@ class GormEnhancer implements Closeable {
     static <D> GormStaticApi<D> findStaticApi(Class<D> entity, String qualifier = findTenantId(entity)) {
         String className = NameUtils.getClassName(entity)
         def staticApi = STATIC_APIS.get(qualifier)?.get(className)
-        if(staticApi == null) {
+        if (staticApi == null) {
             throw stateException(entity)
         }
         return staticApi
@@ -319,7 +318,7 @@ class GormEnhancer implements Closeable {
      */
     static <D> GormInstanceApi<D> findInstanceApi(Class<D> entity, String qualifier = findTenantId(entity)) {
         def instanceApi = INSTANCE_APIS.get(qualifier)?.get(NameUtils.getClassName(entity))
-        if(instanceApi == null) {
+        if (instanceApi == null) {
             throw stateException(entity)
         }
         return instanceApi
@@ -336,7 +335,7 @@ class GormEnhancer implements Closeable {
      */
     static <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier = findTenantId(entity)) {
         def instanceApi = VALIDATION_APIS.get(qualifier)?.get(NameUtils.getClassName(entity))
-        if(instanceApi == null) {
+        if (instanceApi == null) {
             throw stateException(entity)
         }
         return instanceApi
@@ -353,7 +352,7 @@ class GormEnhancer implements Closeable {
      */
     static Datastore findDatastore(Class entity, String qualifier = findTenantId(entity)) {
         def datastore = DATASTORES.get(qualifier)?.get(entity.name)
-        if(datastore == null) {
+        if (datastore == null) {
             throw stateException(entity)
         }
         return datastore
@@ -369,7 +368,7 @@ class GormEnhancer implements Closeable {
      */
     static Datastore findDatastoreByType(Class<? extends Datastore> datastoreType) {
         Datastore datastore = DATASTORES_BY_TYPE.get(datastoreType)
-        if(datastore == null) {
+        if (datastore == null) {
             throw new IllegalStateException("No GORM implementation configured for type [$datastoreType]. Ensure GORM has been initialized correctly")
         }
         return datastore
@@ -382,10 +381,10 @@ class GormEnhancer implements Closeable {
      */
     static Datastore findSingleDatastore() {
         Collection<Datastore> allDatastores = DATASTORES_BY_TYPE.values()
-        if(allDatastores.isEmpty()) {
+        if (allDatastores.isEmpty()) {
             throw new IllegalStateException('No GORM implementations configured. Ensure GORM has been initialized correctly')
         }
-        else if(allDatastores.size() > 1) {
+        else if (allDatastores.size() > 1) {
             throw new IllegalStateException('More than one GORM implementation is configured. Specific the datastore type!')
         }
         else {
@@ -443,12 +442,12 @@ class GormEnhancer implements Closeable {
         removeConstraints()
         DATASTORES_BY_TYPE.clear()
         def registry = GroovySystem.metaClassRegistry
-        for(entity in datastore.mappingContext.persistentEntities) {
+        for (entity in datastore.mappingContext.persistentEntities) {
 
             List<String> qualifiers = allQualifiers(datastore, entity)
             def cls = entity.javaClass
             def className = cls.name
-            for(q in qualifiers) {
+            for (q in qualifiers) {
                 NAMED_QUERIES.remove(className)
                 STATIC_APIS.get(q)?.remove(className)
                 INSTANCE_APIS.get(q)?.remove(className)
@@ -480,7 +479,7 @@ class GormEnhancer implements Closeable {
         try {
             String className = 'org.apache.groovy.grails.validation.ConstrainedProperty'
             ClassLoader classLoader = getClass().getClassLoader()
-            if(ClassUtils.isPresent(className, classLoader)) {
+            if (ClassUtils.isPresent(className, classLoader)) {
                 classLoader.loadClass(className).removeConstraint('unique')
             }
         } catch (Throwable e) {
@@ -492,7 +491,7 @@ class GormEnhancer implements Closeable {
         try {
             String className = 'org.grails.datastore.gorm.support.ConstraintRegistrar'
             ClassLoader classLoader = getClass().getClassLoader()
-            if(ClassUtils.isPresent(className, classLoader)) {
+            if (ClassUtils.isPresent(className, classLoader)) {
                 classLoader.loadClass(className).newInstance(datastore)
             }
         } catch (Throwable e) {
@@ -515,9 +514,9 @@ class GormEnhancer implements Closeable {
      */
     @CompileStatic
     void enhance(boolean onlyExtendedMethods = false) {
-        if(dynamicEnhance) {
+        if (dynamicEnhance) {
             for (PersistentEntity e in datastore.mappingContext.persistentEntities) {
-                if(e.external && !includeExternal) continue
+                if (e.external && !includeExternal) continue
                 enhance e, onlyExtendedMethods
             }
         }
@@ -533,7 +532,7 @@ class GormEnhancer implements Closeable {
     void enhance(PersistentEntity e, boolean onlyExtendedMethods = false) {
         registerEntity(e)
 
-        if(!(GroovyObject.isAssignableFrom(e.javaClass) ) || dynamicEnhance) {
+        if (!(GroovyObject.isAssignableFrom(e.javaClass)) || dynamicEnhance) {
             addInstanceMethods(e, onlyExtendedMethods)
 
             addStaticMethods(e, onlyExtendedMethods)
@@ -552,7 +551,7 @@ class GormEnhancer implements Closeable {
                 def parameterTypes = method.parameterTypes
                 if (parameterTypes != null) {
                     boolean realMethodExists = doesRealMethodExist(mc, methodName, parameterTypes, true)
-                    if(!realMethodExists) {
+                    if (!realMethodExists) {
                         registerStaticMethod(mc, methodName, parameterTypes, staticApiProvider)
                     }
                 }
@@ -569,8 +568,6 @@ class GormEnhancer implements Closeable {
     protected boolean appliesToDatastore(Datastore datastore, PersistentEntity entity) {
         !entity.isExternal()
     }
-
-
 
     @CompileDynamic
     protected <D> List<AbstractGormApi<D>> getInstanceMethodApiProviders(Class<D> cls) {
@@ -592,7 +589,7 @@ class GormEnhancer implements Closeable {
 
                     boolean realMethodExists = doesRealMethodExist(mc, methodName, parameterTypes, false)
 
-                    if(!realMethodExists) {
+                    if (!realMethodExists) {
                         registerInstanceMethod(cls, mc, apiProvider, methodName, parameterTypes)
                     }
                 }
@@ -617,13 +614,13 @@ class GormEnhancer implements Closeable {
         boolean realMethodExists = false
         try {
             MetaMethod existingMethod = mc.pickMethod(methodName, parameterTypes)
-            if(existingMethod && existingMethod.isStatic()==staticScope && isRealMethod(existingMethod) && parameterTypes.length==existingMethod.parameterTypes.length)  {
+            if (existingMethod && existingMethod.isStatic() == staticScope && isRealMethod(existingMethod) && parameterTypes.length == existingMethod.parameterTypes.length)  {
                 realMethodExists = true
             }
         } catch (MethodSelectionException mse) {
             // the metamethod already exists with multiple signatures, must check if the exact method exists
             realMethodExists = mc.methods.contains { MetaMethod existingMethod ->
-                existingMethod.name == methodName && existingMethod.isStatic()==staticScope && isRealMethod(existingMethod) && ((!parameterTypes && !existingMethod.parameterTypes) || parameterTypes==existingMethod.parameterTypes)
+                existingMethod.name == methodName && existingMethod.isStatic() == staticScope && isRealMethod(existingMethod) && ((!parameterTypes && !existingMethod.parameterTypes) || parameterTypes == existingMethod.parameterTypes)
             }
         }
         return realMethodExists

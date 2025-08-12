@@ -26,6 +26,7 @@ package grails.config
  * @since 3.0
  */
 interface Settings {
+
     /**
      *  The active Grails profile
      */

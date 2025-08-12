@@ -35,9 +35,7 @@ class ExecuteStep extends AbstractStep {
     public static final String NAME = 'execute'
     public static final String CLASS_NAME = 'class'
 
-
     Command target
-
 
     ExecuteStep(ProfileCommand command, Map<String, Object> parameters) {
         super(command, parameters)
@@ -46,8 +44,8 @@ class ExecuteStep extends AbstractStep {
             String className = parameters.get(CLASS_NAME)
             def cmd = className ? Class.forName(className, true, Thread.currentThread().contextClassLoader)
                                   .getDeclaredConstructor().newInstance() : null
-            if(cmd instanceof Command) {
-                if(cmd instanceof ProfileCommand) {
+            if (cmd instanceof Command) {
+                if (cmd instanceof ProfileCommand) {
                     ((ProfileCommand)cmd).profile = command.profile
                 }
                 this.target = cmd

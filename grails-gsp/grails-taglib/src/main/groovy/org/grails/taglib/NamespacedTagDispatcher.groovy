@@ -32,6 +32,7 @@ import grails.util.Environment
  */
 @CompileStatic
 class NamespacedTagDispatcher extends GroovyObjectSupport {
+
     protected String namespace
     protected GrailsApplication application
     protected Class type

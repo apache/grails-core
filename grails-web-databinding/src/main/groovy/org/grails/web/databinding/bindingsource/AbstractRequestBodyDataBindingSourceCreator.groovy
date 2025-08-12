@@ -43,7 +43,7 @@ abstract class AbstractRequestBodyDataBindingSourceCreator extends DefaultDataBi
     @Override
     DataBindingSource createDataBindingSource(MimeType mimeType, Class bindingTargetType, Object bindingSource) throws DataBindingSourceCreationException {
         try {
-            if(bindingSource instanceof HttpServletRequest) {
+            if (bindingSource instanceof HttpServletRequest) {
                 def req = (HttpServletRequest)bindingSource
                 HttpMethod method = HttpMethod.valueOf(req.method)
                 if (req.contentLength != 0 && !ignoredRequestBodyMethods.contains(method)) {
@@ -51,11 +51,11 @@ abstract class AbstractRequestBodyDataBindingSourceCreator extends DefaultDataBi
                     return createBindingSource(is, req.getCharacterEncoding())
                 }
             }
-            if(bindingSource instanceof InputStream) {
+            if (bindingSource instanceof InputStream) {
                 def is = (InputStream)bindingSource
                 return createBindingSource(is, 'UTF-8')
             }
-            if(bindingSource instanceof Reader) {
+            if (bindingSource instanceof Reader) {
                 def is = (Reader)bindingSource
                 return createBindingSource(is)
             }
@@ -73,21 +73,21 @@ abstract class AbstractRequestBodyDataBindingSourceCreator extends DefaultDataBi
     @Override
     CollectionDataBindingSource createCollectionDataBindingSource(MimeType mimeType, Class bindingTargetType, Object bindingSource) throws DataBindingSourceCreationException {
         try {
-            if(bindingSource instanceof GrailsParameterMap) {
+            if (bindingSource instanceof GrailsParameterMap) {
                 def req = bindingSource.getRequest()
                 def is = req.getInputStream()
                 return createCollectionBindingSource(is, req.getCharacterEncoding())
             }
-            if(bindingSource instanceof HttpServletRequest) {
+            if (bindingSource instanceof HttpServletRequest) {
                 def req = (HttpServletRequest)bindingSource
                 def is = req.getInputStream()
                 return createCollectionBindingSource(is, req.getCharacterEncoding())
             }
-            if(bindingSource instanceof InputStream) {
+            if (bindingSource instanceof InputStream) {
                 def is = (InputStream)bindingSource
                 return createCollectionBindingSource(is, 'UTF-8')
             }
-            if(bindingSource instanceof Reader) {
+            if (bindingSource instanceof Reader) {
                 def is = (Reader)bindingSource
                 return createCollectionBindingSource(is)
             }
@@ -98,14 +98,14 @@ abstract class AbstractRequestBodyDataBindingSourceCreator extends DefaultDataBi
         }
     }
 
-    protected DataBindingSource createBindingSource(InputStream inputStream, String charsetName){
-        return createBindingSource(new InputStreamReader(inputStream, charsetName?:'UTF-8'))
+    protected DataBindingSource createBindingSource(InputStream inputStream, String charsetName) {
+        return createBindingSource(new InputStreamReader(inputStream, charsetName ?: 'UTF-8'))
     }
 
     protected abstract DataBindingSource createBindingSource(Reader reader)
 
-    protected CollectionDataBindingSource createCollectionBindingSource(InputStream inputStream, String charsetName){
-        return createCollectionBindingSource(new InputStreamReader(inputStream, charsetName?:'UTF-8'))
+    protected CollectionDataBindingSource createCollectionBindingSource(InputStream inputStream, String charsetName) {
+        return createCollectionBindingSource(new InputStreamReader(inputStream, charsetName ?: 'UTF-8'))
     }
 
     protected abstract CollectionDataBindingSource createCollectionBindingSource(Reader reader)

@@ -27,6 +27,7 @@ import groovy.transform.PackageScope
  */
 @CompileStatic
 class EnvironmentBlockEvaluator extends GroovyObjectSupport {
+
     private Environment current
     private Closure<?> callable
 

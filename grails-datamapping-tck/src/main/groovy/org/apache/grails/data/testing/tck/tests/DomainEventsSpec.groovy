@@ -78,7 +78,6 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         manager.session.clear()
         p = PersonEvent.get(p.id)
 
-
         then: 'The person exists'
         p != null
 

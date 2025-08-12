@@ -58,6 +58,7 @@ import org.grails.orm.hibernate.support.HibernateRuntimeUtils
  */
 @CompileStatic
 abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
+
     private static final String ARGUMENT_VALIDATE = 'validate'
     private static final String ARGUMENT_DEEP_VALIDATE = 'deepValidate'
     private static final String ARGUMENT_FLUSH = 'flush'
@@ -83,8 +84,6 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
      * flushed when a domain instance is saved without validation.
      */
     static final ThreadLocal<Boolean> insertActiveThreadLocal = new ThreadLocal<Boolean>()
-
-
 
     protected SessionFactory sessionFactory
     protected ClassLoader classLoader
@@ -136,7 +135,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 }
 
                 if (errors.hasErrors()) {
-                    handleValidationError(domainClass,target,errors)
+                    handleValidationError(domainClass, target, errors)
                     if (shouldFail(arguments)) {
                         throw validationException.newInstance('Validation Error(s) occurred during save()', errors)
                     }
@@ -161,7 +160,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             if (shouldInsert(arguments)) {
                 return performInsert(target, shouldFlush)
             }
-            else if(shouldMerge(arguments)) {
+            else if (shouldMerge(arguments)) {
                 return performMerge(target, shouldFlush)
             }
             else {
@@ -208,7 +207,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         try {
             hibernateTemplate.execute { Session session ->
                 session.delete instance
-                if(flush) {
+                if (flush) {
                     session.flush()
                 }
             }
@@ -309,7 +308,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         EntityReflector reflector = datastore.mappingContext.getEntityReflector(entity)
         IHibernateTemplate t = this.hibernateTemplate
         for (PersistentProperty prop in entity.associations) {
-            if(prop instanceof ToOne && !(prop instanceof Embedded)) {
+            if (prop instanceof ToOne && !(prop instanceof Embedded)) {
                 ToOne toOne = (ToOne)prop
 
                 def propertyName = prop.name
@@ -324,7 +323,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 }
 
                 def identity = otherSide.identity
-                if(identity == null) {
+                if (identity == null) {
                     continue
                 }
 
@@ -371,7 +370,6 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         ClassUtils.getBooleanFromMap(ARGUMENT_MERGE, arguments)
     }
 
-
     protected boolean shouldFlush(Map map) {
         if (map?.containsKey(ARGUMENT_FLUSH)) {
             return ClassUtils.getBooleanFromMap(ARGUMENT_FLUSH, map)
@@ -401,7 +399,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         if (entity) {
             for (Association association in entity.associations) {
                 if (association instanceof ToOne && !association instanceof Embedded) {
-                    if(proxyHandler.isInitialized(target, association.name)) {
+                    if (proxyHandler.isInitialized(target, association.name)) {
                         def bean = new BeanWrapperImpl(target)
                         def propertyValue = bean.getPropertyValue(association.name)
                         if (propertyValue != null) {
@@ -450,7 +448,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
      */
     @CompileDynamic
     protected void setErrorsOnInstance(Object target, Errors errors) {
-        if(target instanceof GormValidateable) {
+        if (target instanceof GormValidateable) {
             ((GormValidateable)target).setErrors(errors)
         }
         else {

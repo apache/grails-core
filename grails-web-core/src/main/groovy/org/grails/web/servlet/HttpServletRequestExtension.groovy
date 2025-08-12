@@ -47,7 +47,7 @@ class HttpServletRequestExtension {
 
     static void setProperty(HttpServletRequest request, String name, val) {
         def mp = request.getClass().metaClass.getMetaProperty(name)
-        if(mp != null) {
+        if (mp != null) {
             mp.setProperty(request, val)
         }
         else {
@@ -79,14 +79,14 @@ class HttpServletRequestExtension {
 
     static each(HttpServletRequest request, Closure c) {
         def attributeNames = request.getAttributeNames()
-        while(attributeNames.hasMoreElements()) {
+        while (attributeNames.hasMoreElements()) {
             String name = attributeNames.nextElement()
             switch (c.parameterTypes.length) {
                 case 0:
                     c.call()
                     break
                 case 1:
-                    c.call([key:name, value:request.getAttribute(name)])
+                    c.call([key: name, value: request.getAttribute(name)])
                     break
                 default:
                     c.call(name, request.getAttribute(name))
@@ -98,7 +98,7 @@ class HttpServletRequestExtension {
         def result = [:]
 
         def attributeNames = request.getAttributeNames()
-        while(attributeNames.hasMoreElements()) {
+        while (attributeNames.hasMoreElements()) {
             String name = attributeNames.nextElement()
             boolean match = false
             switch (c.parameterTypes.length) {
@@ -106,7 +106,7 @@ class HttpServletRequestExtension {
                     match = c.call()
                     break
                 case 1:
-                    match = c.call([key:name, value:request.getAttribute(name)])
+                    match = c.call([key: name, value: request.getAttribute(name)])
                     break
                 default:
                     match =  c.call(name, request.getAttribute(name))
@@ -122,7 +122,7 @@ class HttpServletRequestExtension {
     static findAll(HttpServletRequest request, Closure c) {
         def results = [:]
         def attributeNames = request.getAttributeNames()
-        while(attributeNames.hasMoreElements()) {
+        while (attributeNames.hasMoreElements()) {
             String name = attributeNames.nextElement()
 
             boolean match = false
@@ -131,7 +131,7 @@ class HttpServletRequestExtension {
                     match = c.call()
                     break
                 case 1:
-                    match = c.call([key:name, value:request.getAttribute(name)])
+                    match = c.call([key: name, value: request.getAttribute(name)])
                     break
                 default:
                     match =  c.call(name, request.getAttribute(name))

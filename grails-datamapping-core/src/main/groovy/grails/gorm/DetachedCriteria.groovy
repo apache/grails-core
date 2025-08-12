@@ -53,7 +53,6 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
         super(targetClass, alias)
     }
 
-
     /**
      * Where method derives a new query from this query. This method will not mutate the original query, but instead return a new one.
      *
@@ -639,7 +638,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      * @return This criteria instance
      */
     DetachedCriteria<T> sort(String property, String direction) {
-        (DetachedCriteria<T>)super.sort(property,direction)
+        (DetachedCriteria<T>)super.sort(property, direction)
     }
 
     /**
@@ -712,7 +711,6 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
         (DetachedCriteria<T>)super.distinct(property)
     }
 
-
     @Override
     protected DetachedCriteria newInstance() {
         new DetachedCriteria(targetClass, alias)
@@ -745,7 +743,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
         staticApi.withDatastoreSession { Session session ->
             applyLazyCriteria()
             Query query
-            if(alias && (session instanceof QueryAliasAwareSession)) {
+            if (alias && (session instanceof QueryAliasAwareSession)) {
                 query = session.createQuery(targetClass, alias)
             }
             else {
@@ -760,7 +758,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
             }
             DynamicFinder.applyDetachedCriteria(query, this)
 
-            if(query instanceof QueryArgumentsAware) {
+            if (query instanceof QueryArgumentsAware) {
                 ((QueryArgumentsAware)query).arguments = args
             }
 

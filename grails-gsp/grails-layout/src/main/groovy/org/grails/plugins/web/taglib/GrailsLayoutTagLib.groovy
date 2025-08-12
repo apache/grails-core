@@ -44,6 +44,7 @@ import org.grails.gsp.compiler.GrailsLayoutPreprocessor
 @CompileStatic
 @TagLib
 class GrailsLayoutTagLib implements RequestConstants, TagLibrary {
+
     protected static final String GSP_GRAILS_LAYOUT_PAGE = 'org.apache.grails.web.layout.EmbeddedGrailsLayoutView.GSP_GRAILS_LAYOUT_PAGE'
 
     static String namespace = 'grailsLayout'

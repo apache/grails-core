@@ -26,6 +26,7 @@ package org.grails.datastore.gorm.services
  * @since 6.1.1
  */
 interface ServiceImplementerAdapter {
+
     /**
      * Adapt the implementer, returning a new implementer if possible, otherwise null
      *

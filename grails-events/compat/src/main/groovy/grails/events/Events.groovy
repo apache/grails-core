@@ -70,7 +70,7 @@ trait Events {
      */
     def <E extends Event<?> > Registration<Object, Consumer<E>> on(key, Consumer<E> consumer) {
         LoggerFactory.getLogger(getClass()).warn("The class [${getClass()}] used the legacy Reactor 2 event bus and needs to be re-compiled")
-        if(key instanceof CharSequence) {
+        if (key instanceof CharSequence) {
             key = key.toString()
         }
         on(key) {
@@ -109,9 +109,9 @@ trait Events {
     @CompileDynamic
     Bus notify(Object key, Event<?> ev) {
         LoggerFactory.getLogger(getClass()).warn("The class [${getClass()}] used the legacy Reactor 2 event bus and needs to be re-compiled")
-        if(eventBus == null) throw new IllegalStateException('EventBus not present. Event notification attempted outside of application context.')
-        if(ev.replyTo) {
-            eventBus.sendAndReceive( ev ) {
+        if (eventBus == null) throw new IllegalStateException('EventBus not present. Event notification attempted outside of application context.')
+        if (ev.replyTo) {
+            eventBus.sendAndReceive(ev) {
                 eventBus.notify(ev.replyTo.toString(), it)
             }
         }
@@ -131,9 +131,9 @@ trait Events {
     }
 
     def <E extends Event<?>> Bus notify(Object key, Closure<E> supplier) {
-        if(eventBus == null) throw new IllegalStateException('EventBus not present. Event notification attempted outside of application context.')
+        if (eventBus == null) throw new IllegalStateException('EventBus not present. Event notification attempted outside of application context.')
         LoggerFactory.getLogger(getClass()).warn("The class [${getClass()}] used the legacy Reactor 2 event bus and needs to be re-compiled")
-        eventBus.notify( (CharSequence)key.toString(), supplier.call() )
+        eventBus.notify((CharSequence)key.toString(), supplier.call())
         return eventBus
     }
 
@@ -148,8 +148,6 @@ trait Events {
         eventBus.sendAndReceive key.toString(), new grails.events.Event(key.toString(), new Object[0]), reply
         return eventBus
     }
-
-
 
     /**
      * Creates an {@link Event} for the given data
@@ -191,7 +189,7 @@ trait Events {
      */
     boolean clearEventConsumers(key) {
         LoggerFactory.getLogger(getClass()).warn("The class [${getClass()}] used the legacy Reactor 2 event bus and needs to be re-compiled")
-        if(eventBus) {
+        if (eventBus) {
             eventBus.unsubscribeAll(key.toString())
             return true
         }

@@ -40,6 +40,7 @@ import org.grails.datastore.mapping.query.api.Criteria
  */
 @CompileStatic
 class TenantDelegatingGormOperations<D> implements GormAllOperations<D> {
+
     final Datastore datastore
     final Serializable tenantId
     final GormAllOperations<D> allOperations

@@ -37,6 +37,7 @@ import grails.ui.support.DevelopmentGrailsApplication
  */
 @CompileStatic
 class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
+
     List<File> scripts
 
     private GrailsApplicationScriptRunner(List<File> scripts, Class<?>... sources) {
@@ -73,11 +74,11 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
         try {
             scripts.each {
                 try {
-                    for(i in interceptors) {
+                    for (i in interceptors) {
                         i.init()
                     }
                     sh.evaluate(it)
-                    for(i in interceptors) {
+                    for (i in interceptors) {
                         i.destroy()
                     }
                 } catch (Throwable e) {
@@ -87,7 +88,7 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
             }
         } finally {
             try {
-                for(i in interceptors) {
+                for (i in interceptors) {
                     i.destroy()
                 }
                 ctx?.close()
@@ -95,7 +96,6 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
                 // ignore
             }
         }
-
 
         return ctx
     }
@@ -105,7 +105,7 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
      * @param args The last argument is the Application class name. All other args are script names
      */
     static void main(String[] args) {
-        if(args.size() > 1) {
+        if (args.size() > 1) {
             Class applicationClass = null
             String className = args.last()
             try {
