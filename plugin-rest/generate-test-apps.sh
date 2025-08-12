@@ -34,5 +34,5 @@ sdk use grails $grailsVersion
 cd build
 
 for feature in `ls ../spring-security-rest-testapp-profile/features/`; do
-     grails create-app -profile org.apache.grails:spring-security-rest-testapp-profile:$pluginVersion -features $feature $feature
+     grails create-app -profile org.apache.grails:grails-spring-security-rest-testapp-profile:$pluginVersion -features $feature $feature
 done

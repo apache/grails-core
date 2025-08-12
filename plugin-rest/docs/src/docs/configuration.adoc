@@ -28,7 +28,7 @@ dependencies {
 
     //Other dependencies
 
-    implementation "org.apache.grails:spring-security-rest:{version}"
+    implementation "org.apache.grails:grails-spring-security-rest:{version}"
 
 }
 ----
@@ -46,18 +46,18 @@ dependencies {
 
     //Other dependencies
 
-    implementation "org.apache.grails:spring-security-rest:${springSecurityRestVersion}"
-    implementation "org.apache.grails:spring-security-rest-memcached:${springSecurityRestVersion}"
+    implementation "org.apache.grails:grails-spring-security-rest:${springSecurityRestVersion}"
+    implementation "org.apache.grails:grails-spring-security-rest-memcached:${springSecurityRestVersion}"
 
 }
 ----
 
 The Maven coordinates are the following:
 
-. Grails Cache: `org.apache.grails:spring-security-rest-grailscache`.
-. Memcached: `org.apache.grails:spring-security-rest-memcached`.
-. GORM: `org.apache.grails:spring-security-rest-gorm`.
-. Redis: `org.apache.grails:spring-security-rest-redis`.
+. Grails Cache: `org.apache.grails:grails-spring-security-rest-grailscache`.
+. Memcached: `org.apache.grails:grails-spring-security-rest-memcached`.
+. GORM: `org.apache.grails:grails-spring-security-rest-gorm`.
+. Redis: `org.apache.grails:grails-spring-security-rest-redis`.
 
 Note that configuration properties such as `grails.plugin.springsecurity.rest.token.storage.useMemcached` are no longer
 used. Every submodule of the above list will automatically configure the token store appropriately

@@ -33,7 +33,7 @@ $ cd bookstore
 ----
 dependencies {
    ...
-   implementation 'org.apache.grails:spring-security-core:{project-version}'
+   implementation 'org.apache.grails:grails-spring-security-core:{project-version}'
    ...
 }
 ----
