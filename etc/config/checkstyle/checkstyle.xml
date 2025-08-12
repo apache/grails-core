@@ -42,7 +42,7 @@
             <property name="processJavadoc" value="false"/>
         </module>
         <module name="ImportOrderCheck">
-            <property name="groups" value="java,javax,/^(groovy|org\.apache\.groovy|org\.codehaus\.groovy)\..+/,jakarta,*,org.springframework,/^(grails|org\.apache\.grails|org\.grails)\..+/"/>
+            <property name="groups" value="java,javax,/^(groovy|org\.apache\.groovy|org\.codehaus\.groovy)\..+/,jakarta,*,/(^io\.spring|org\.springframework)\..+/,/^(grails|org\.apache\.grails|org\.grails)\..+/"/>
             <property name="ordered" value="true"/>
             <property name="option" value="bottom"/>
             <property name="separated" value="true"/>
