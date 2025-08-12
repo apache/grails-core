@@ -40,7 +40,7 @@ Ensure you have the following set up:
 ----
 dependencies {
     // ... other dependencies
-    implementation 'org.apache.grails.plugins:spring-security-core:{revnumber}'
+    implementation 'org.apache.grails:spring-security-core:{revnumber}'
 }
 ----
 +

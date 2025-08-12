@@ -35,7 +35,7 @@ There isn't much that you need to do in your application to use LDAP. Add a depe
 ----
 dependencies {
    ...
-   implementation 'org.apache.grails.plugins:spring-security-ldap:{version}'
+   implementation 'org.apache.grails:spring-security-ldap:{version}'
 }
 ----
 
@@ -45,8 +45,8 @@ Grails Spring Security LDAP plugin has a transitive dependency to Grails Spring 
 ----
 dependencies {
     ...
-    implementation "org.apache.grails.plugins:spring-security-core:{version}"
-    implementation "org.apache.grails.plugins:spring-security-ldap:{version}"
+    implementation "org.apache.grails:spring-security-core:{version}"
+    implementation "org.apache.grails:spring-security-ldap:{version}"
 }
 ----
 

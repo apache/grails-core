@@ -36,8 +36,8 @@ Add the following dependencies in `build.gradle`
 ```groovy
 dependencies {
 ...
-    implementation 'org.apache.grails.plugins:spring-security-core:{revnumber}'
-    implementation 'org.apache.grails.plugins:spring-security-oauth2:{revnumber}'
+    implementation 'org.apache.grails:spring-security-core:{revnumber}'
+    implementation 'org.apache.grails:spring-security-oauth2:{revnumber}'
 ...
 }
 ```
@@ -82,8 +82,8 @@ How to create a new provider plugin
 -----------------------------------
 1. Create a new plugin with `grails create-plugin spring-security-oauth2-myProvider`
 2. Add the following plugins as dependency in `build.gradle`:
-    * `compileOnly 'org.apache.grails.plugins:spring-security-core:{revnumber}'`
-    * `compileOnly 'org.apache.grails.plugins:spring-security-oauth2:{revnumber}'`
+    * `compileOnly 'org.apache.grails:spring-security-core:{revnumber}'`
+    * `compileOnly 'org.apache.grails:spring-security-oauth2:{revnumber}'`
 3. Create a service in your plugin that extends `OAuth2AbstractProviderService` and implement the abstract methods. You can override the other methods for fine-tuning if needed.
 
 

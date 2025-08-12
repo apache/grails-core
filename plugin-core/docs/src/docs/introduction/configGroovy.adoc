@@ -44,6 +44,6 @@ If your application incorporates the CXF Grails plugin, it's crucial to arrange 
 dependencies {
     implementation 'org.grails.plugins:cxf:3.1.1'
     // CXF above security.
-    implementation 'org.apache.grails.plugins:spring-security-core:{revnumber}'
+    implementation 'org.apache.grails:spring-security-core:{revnumber}'
 }
 ----

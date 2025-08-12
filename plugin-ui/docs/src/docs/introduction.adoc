@@ -41,7 +41,7 @@ Add an entry in the `dependencies` block of your `build.gradle` file, changing t
 [subs="attributes"]
 .`build.gradle`
 ----
-implementation 'org.apache.grails.plugins:spring-security-ui:{projectVersion}'
+implementation 'org.apache.grails:spring-security-ui:{projectVersion}'
 ----
 
 Also be sure to update the version when new releases are available.
