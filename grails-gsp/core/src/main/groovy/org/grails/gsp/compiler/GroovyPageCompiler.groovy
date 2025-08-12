@@ -37,7 +37,7 @@ import org.apache.commons.logging.LogFactory
 import org.springframework.core.CollectionFactory
 
 import grails.config.ConfigMap
-import org.apache.grails.common.properties.PropertyFileUtils
+import org.apache.grails.gradle.common.PropertyFileUtils
 import org.grails.config.CodeGenConfig
 import org.grails.gsp.GroovyPageMetaInfo
 import org.grails.gsp.compiler.transform.GroovyPageInjectionOperation

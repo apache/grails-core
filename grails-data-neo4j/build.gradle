@@ -24,7 +24,6 @@ buildscript {
     }
     dependencies {
         classpath "org.codehaus.groovy.modules.http-builder:http-builder:0.7.2"
-        classpath "io.github.gradle-nexus:publish-plugin:1.3.0"
         classpath "org.apache.grails:grails-gradle-plugins:$grailsGradlePluginVersion"
         classpath "org.asciidoctor:asciidoctor-gradle-jvm:4.0.2"
         classpath "com.github.erdi:webdriver-binaries-gradle-plugin:3.2"

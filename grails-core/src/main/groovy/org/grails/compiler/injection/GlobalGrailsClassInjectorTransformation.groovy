@@ -51,7 +51,7 @@ import grails.io.IOUtils
 import grails.plugins.metadata.GrailsPlugin
 import grails.util.GrailsNameUtils
 import org.apache.grails.common.compiler.GroovyTransformOrder
-import org.apache.grails.common.properties.PropertyFileUtils
+import org.apache.grails.gradle.common.PropertyFileUtils
 import org.grails.core.io.support.GrailsFactoriesLoader
 import org.grails.io.support.AntPathMatcher
 import org.grails.io.support.GrailsResourceUtils

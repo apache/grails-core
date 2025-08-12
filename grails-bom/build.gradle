@@ -74,6 +74,8 @@ dependencies {
         api "org.apache.grails:grails-gradle-plugins:${projectVersion}"
         api "org.apache.grails.gradle:grails-gradle-model:${projectVersion}"
         api "org.apache.grails:grails-docs-core:${projectVersion}"
+        api "org.apache.grails.gradle:grails-gradle-common:${projectVersion}"
+        api "org.apache.grails:grails-gradle-tasks:${projectVersion}"
 
         // because we are not yet publishing hibernate6, just force the hibernate5 version for now
         api("org.liquibase:liquibase-core") {

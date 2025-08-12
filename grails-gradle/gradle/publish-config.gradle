@@ -20,6 +20,8 @@
 import org.gradle.crypto.checksum.Checksum
 import org.apache.grails.gradle.publish.GrailsPublishExtension
 
+apply plugin: 'org.gradle.crypto.checksum'
+
 extensions.configure(GrailsPublishExtension) {
     // Explicit `it` is required here
     it.artifactId = findProperty('pomArtifactId') ?: project.name
@@ -27,48 +29,24 @@ extensions.configure(GrailsPublishExtension) {
     it.license.name = 'Apache-2.0'
     it.title = findProperty('pomTitle') ?: 'Grails® framework'
     it.desc = findProperty('pomDescription') ?: 'Grails Web Application Framework'
-    it.developers = findProperty('pomDevelopers') as Map<String, String> ?: [graemerocher: 'Graeme Rocher']
+    it.developers = findProperty('pomDevelopers') as Map<String, String> ?: [graemerocher: 'Graeme Rocher', jeffscottbrown: 'Jeff Scott Brown', puneetbehl: 'Puneet Behl']
     it.pomCustomization = findProperty('pomCustomization') as Closure
     it.publishTestSources = findProperty('pomPublishTestSources') ?: false
-    it.testRepositoryPath = rootProject.layout.buildDirectory.dir('local-maven')
+    it.testRepositoryPath = rootProject.layout.projectDirectory.dir('../build/local-maven')
+    it.publicationName = findProperty('pomMavenPublicationName') ?: 'maven'
+    it.addComponents = project.name != 'grails-gradle-plugins'
 }
-
-tasks.withType(Jar).configureEach {
-    if(it.archiveClassifier.getOrNull() != 'javadoc') {
-        from(rootProject.layout.projectDirectory.file('DISCLAIMER')) {
-            into('META-INF')
-        }
-
-        def projectLicense = layout.projectDirectory.file('src/main/resources/META-INF/LICENSE')
-        if (!projectLicense.asFile.exists()) {
-            def basicLicense = rootProject.layout.projectDirectory.file('licenses/LICENSE-Apache-2.0.txt')
-            from(basicLicense) {
-                into('META-INF')
-                rename { 'LICENSE' }
-            }
-        }
-
-        def projectNotice = layout.projectDirectory.file('src/main/resources/META-INF/NOTICE')
-        if (!projectNotice.asFile.exists()) {
-            def basicNotice = rootProject.layout.projectDirectory.file('grails-core/src/main/resources/META-INF/NOTICE')
-            from(basicNotice) {
-                into('META-INF')
-            }
-        }
-    }
-}
-
-apply plugin: 'org.gradle.crypto.checksum'
 
 afterEvaluate {
     if (plugins.hasPlugin('signing')) {
-        if(System.getenv('TEST_BUILD_REPRODUCIBLE')) {
+        if (System.getenv('TEST_BUILD_REPRODUCIBLE')) {
             logger.lifecycle('Signing is disabled for this build to test build reproducibility.')
             tasks.withType(Sign).configureEach {
                 enabled = false
             }
         }
     }
+
     if (plugins.hasPlugin('maven-publish')) {
         def checksumTask = tasks.register('publishedChecksums', Checksum)
         checksumTask.configure { Checksum check ->
@@ -91,7 +69,7 @@ afterEvaluate {
             extensions.configure(PublishingExtension) {
                 it.publications.withType(MavenPublication).configureEach {
                     artifacts.each {
-                        if (it.file.name in ['grails-plugin.xml', 'profile.yml']) {
+                        if (it.file.name == 'grails-plugin.xml') {
                             return
                         }
                         filesToChecksum << it.file
