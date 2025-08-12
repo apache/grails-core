@@ -31,5 +31,4 @@ import org.openqa.selenium.remote.FileDetector
  * @see GebRecordingTestListener
  */
 @CompileStatic
-interface ContainerFileDetector extends FileDetector {
-}
+interface ContainerFileDetector extends FileDetector {}

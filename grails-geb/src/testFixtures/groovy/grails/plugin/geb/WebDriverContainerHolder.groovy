@@ -113,9 +113,9 @@ class WebDriverContainerHolder {
         )
 
         Map prefs = [
-                'credentials_enable_service'             : false,
-                'profile.password_manager_enabled'       : false,
-                'profile.password_manager_leak_detection': false
+            'credentials_enable_service': false,
+            'profile.password_manager_enabled': false,
+            'profile.password_manager_leak_detection': false
         ]
 
         ChromeOptions chromeOptions = new ChromeOptions()
@@ -255,4 +255,3 @@ class WebDriverContainerHolder {
         }
     }
 }
-
