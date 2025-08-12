@@ -169,7 +169,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             grailsDomainClassMappingContext(hibernateDatastore: 'getMappingContext')
 
             loadDataServices(null)
-                    .each { ServiceName, serviceClass ->
+                    .each { serviceName, serviceClass ->
                         "$serviceName"(DatastoreServiceMethodInvokingFactoryBean, serviceClass) {
                             targetObject = ref('hibernateDatastore')
                             targetMethod = 'getService'
