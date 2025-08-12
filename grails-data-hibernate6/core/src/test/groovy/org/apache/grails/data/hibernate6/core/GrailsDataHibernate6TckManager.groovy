@@ -62,6 +62,7 @@ class GrailsDataHibernate6TckManager extends GrailsDataTckManager {
         System.setProperty('hibernate6.gorm.suite', "true")
         grailsApplication = new DefaultGrailsApplication(domainClasses as Class[], new GroovyClassLoader(GrailsDataHibernate6TckManager.getClassLoader()))
         grailsConfig.dataSource.dbCreate = "create-drop"
+        grailsConfig.hibernate.proxy_factory_class = "yakworks.hibernate.proxy.ByteBuddyGroovyProxyFactory"
         if (grailsConfig) {
             grailsApplication.config.putAll(grailsConfig)
         }
