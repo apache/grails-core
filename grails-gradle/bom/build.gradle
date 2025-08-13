@@ -122,8 +122,8 @@ Closure determinePropertyName = { String groupId, String artifactId, String vers
 
 ext {
     pomDescription = 'Grails Gradle BOM (Bill of Materials) for managing dependency versions used in Gradle builds for Grails Projects'
-    pomCustomization = { ->
-        def root = asNode()
+    pomCustomization = { xml ->
+        def root = xml.asNode()
 
         def propertiesNode = root.properties ? root.properties[0] : root.appendNode('properties')
 

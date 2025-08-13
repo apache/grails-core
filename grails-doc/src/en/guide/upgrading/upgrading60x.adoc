@@ -244,7 +244,7 @@ jakartaeeMigration {
 5. `AbstractGrailsClass#getPropertyDescriptors` - use `getMetaProperties` instead.
 6. `org.grails.core.metaclass.BaseApiProvider` - use traits instead.
 7. Several static variables on `ClosureEventTriggeringInterceptor` - use the variables on `AbstractPersistentEvent` instead.
-8. `grails.testing.gorm.DataTest#dataSource` - use `DataTest#datasource` instead.
+8. `grails.testing.gorm.DataTest#dataStore` - use `DataTest#datastore` instead.
 
 - The following deprecated classes were removed, please use the suggested replacement:
 

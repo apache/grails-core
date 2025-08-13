@@ -150,8 +150,8 @@ if (ext.isReleaseBuild && ext.isPublishedExternal) {
 
 ext {
     pomDescription = 'Grails BOM (Bill of Materials) for managing dependency versions used by Grails Projects'
-    pomCustomization = { ->
-        def root = asNode()
+    pomCustomization = { xml ->
+        def root = xml.asNode()
 
         def propertiesNode = root.properties ? root.properties[0] : root.appendNode('properties')
 
