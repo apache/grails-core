@@ -38,9 +38,9 @@ public class GrailsCompilerAutoConfiguration extends CompilerAutoConfiguration {
         dependencies.ifAnyMissingClasses("grails.boot.config.GrailsAutoConfiguration").add("grails-boot");
         dependencies.ifAnyMissingClasses("grails.core.DefaultGrailsApplication").add("grails-core");
         dependencies.add("grails-web");
-        dependencies.add("grails-plugin-i18n", "grails-plugin-codecs", "grails-plugin-controllers",
-                "grails-plugin-converters", "grails-plugin-databinding", "grails-plugin-interceptors", "grails-plugin-mimetypes",
-                "grails-plugin-rest", "grails-plugin-url-mappings");
+        dependencies.add("grails-i18n", "grails-codecs", "grails-controllers",
+                "grails-converters", "grails-databinding", "grails-interceptors", "grails-mimetypes",
+                "grails-rest-transforms", "grails-url-mappings");
         dependencies.add("gsp", "plain", "jar", true);
     }
 

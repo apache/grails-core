@@ -408,3 +408,11 @@ These limits can be customized using `server.tomcat.max-part-count` and `server.
 `server.tomcat.max-part-header-size` defalt is 512B
 
 https://docs.spring.io/spring-boot/appendix/application-properties/index.html#application-properties.server.server.tomcat.max-part-count[Spring Boot Common Application Properties]
+
+===== 12.16 servletContext no longer included by default in generated Bootstrap init{}
+
+The `servletContext` is no longer included by default in the generated `Bootstrap` class. If you need access to the `servletContext`, you can inject it into your `Bootstrap` class using:
+
+```console
+ServletContext servletContext
+```

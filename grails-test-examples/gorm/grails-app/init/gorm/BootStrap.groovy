@@ -19,11 +19,7 @@
 
 package gorm
 
-import jakarta.servlet.ServletContext
-
 class BootStrap {
-
-    ServletContext servletContext
 
     def init = {
         Book.withTransaction {

@@ -117,6 +117,10 @@ For further information, please consult the [documentation](https://docs.grails.
 Apache Grails is licensed under the Apache License, Version 2.0. For details, see
 the [LICENSE](./LICENSE).
 
+## Versioning
+
+The Apache Grails versioning scheme is defined in [RELEASE.md Appendix: Versioning](RELEASE.md#appendix-versioning).
+
 ## Performing a Release
 
 See [RELEASE.md](RELEASE.md).
