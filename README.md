@@ -90,7 +90,7 @@ Otherwise, you can modify this (as well as any other pool config options) by add
             }
             timeout = 2000 //default in milliseconds
             password = "somepassword" //defaults to no password
-	    useSSL = false //or true to use SSL
+	        useSSL = false //or true to use SSL
 
             // requires either host & port combo, or a sentinels and masterName combo
 
@@ -106,7 +106,7 @@ Otherwise, you can modify this (as well as any other pool config options) by add
 
     }
 
-The poolConfig section will let you tweak any of the [setter values made available by the JedisPoolConfig][jedispoolconfig].  It implements the Apache Commons [GenericObjectPool][genericobjectpool].
+The `poolConfig` section will let you tweak any of the [setter values made available by the JedisPoolConfig][jedispoolconfig].  It implements the Apache Commons [GenericObjectPool][genericobjectpool].
 
 NOTE: Please see [Redis Sentinel - Documentation](http://redis.io/topics/sentinel) for more info on using redis-sentinel for high availability
 
@@ -676,7 +676,7 @@ Release Notes Grails 2.x
 [addredisstack]:http://antirez.com/post/take-advantage-of-redis-adding-it-to-your-stack.html
 [jedis]:https://github.com/xetorthio/jedis/wiki
 [jedispoolconfig]:https://github.com/xetorthio/jedis/blob/master/src/main/java/redis/clients/jedis/JedisPoolConfig.java
-[genericobjectpool]:http://commons.apache.org/pool/apidocs/org/apache/commons/pool/impl/GenericObjectPool.html
-[redisservicecode]:https://github.com/grails-plugins/grails-redis/blob/master/grails-app/services/grails/plugin/redis/RedisService.groovy
-[redisannotationservicespeccode]:https://github.com/grails-plugins/grails-redis/blob/master/test/projects/default/test/integration/grails/plugin/redis/RedisMemoizeServiceSpec.groovy
-[redisannotationdomainspeccode]:https://github.com/grails-plugins/grails-redis/blob/master/test/projects/default/test/integration/grails/plugin/redis/RedisMemoizeDomainSpec.groovy
+[genericobjectpool]:https://commons.apache.org/proper/commons-pool/apidocs/org/apache/commons/pool2/impl/GenericObjectPool.html
+[redisservicecode]:https://github.com/apache/grails-redis/blob/5.0.x/plugin/src/main/groovy/grails/plugins/redis/RedisService.groovy
+[redisannotationservicespeccode]:https://github.com/apache/grails-redis/blob/5.0.x/examples/redis-demo/src/test/groovy/com/example/RedisMemoizeServiceSpec.groovy
+[redisannotationdomainspeccode]:https://github.com/apache/grails-redis/blob/5.0.x/examples/redis-demo/src/test/groovy/com/example/RedisMemoizeDomainSpec.groovy
