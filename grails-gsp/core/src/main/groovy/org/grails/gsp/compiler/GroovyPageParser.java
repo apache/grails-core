@@ -662,7 +662,6 @@ public class GroovyPageParser implements Tokens {
         }
     }
 
-
     private void html() {
         if (!finalPass) return;
 

@@ -18,7 +18,6 @@
  */
 package org.grails.config.yaml;
 
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -90,11 +89,10 @@ public class YamlPropertySourceLoader extends YamlProcessor implements PropertyS
             propertySource.merge(map, true);
         });
         propertySources.add(
-                new NavigableMapPropertySource(name ,propertySource));
+                new NavigableMapPropertySource(name, propertySource));
 
         return propertySources;
     }
-
 
     public List<Map<String, Object>> load() {
         final List<Map<String, Object>> result = new ArrayList<>();

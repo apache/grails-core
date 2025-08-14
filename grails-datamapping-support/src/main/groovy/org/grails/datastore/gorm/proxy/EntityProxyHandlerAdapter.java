@@ -38,7 +38,6 @@ public class EntityProxyHandlerAdapter implements ProxyFactory {
         this.proxyHandler = proxyHandler;
     }
 
-
     @Override
     public boolean isProxy(Object object) {
         return proxyHandler.isProxy(object);
@@ -51,7 +50,7 @@ public class EntityProxyHandlerAdapter implements ProxyFactory {
 
     @Override
     public boolean isInitialized(Object object, String associationName) {
-        return proxyHandler.isInitialized(object,associationName);
+        return proxyHandler.isInitialized(object, associationName);
     }
 
     @Override

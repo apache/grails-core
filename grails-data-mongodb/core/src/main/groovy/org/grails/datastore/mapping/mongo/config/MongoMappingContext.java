@@ -149,7 +149,7 @@ public class MongoMappingContext extends DocumentMappingContext {
      * @param defaultMapping The default database mapping configuration
      * @param classes The persistent classes
      */
-    public MongoMappingContext(String defaultDatabaseName, Closure defaultMapping, Class...classes) {
+    public MongoMappingContext(String defaultDatabaseName, Closure defaultMapping, Class... classes) {
         super(defaultDatabaseName, defaultMapping);
         initialize(classes);
 
@@ -164,7 +164,7 @@ public class MongoMappingContext extends DocumentMappingContext {
      *
      */
     @Deprecated
-    public MongoMappingContext(PropertyResolver configuration, Class...classes) {
+    public MongoMappingContext(PropertyResolver configuration, Class... classes) {
         this(getDefaultDatabaseName(configuration), configuration.getProperty(MongoSettings.SETTING_DEFAULT_MAPPING, Closure.class, null), classes);
     }
 
@@ -193,14 +193,13 @@ public class MongoMappingContext extends DocumentMappingContext {
         AbstractMongoConnectionSourceSettings mongoConnectionSourceSettings = (AbstractMongoConnectionSourceSettings) settings;
         List<Class<? extends Codec>> codecClasses = mongoConnectionSourceSettings.getCodecs();
 
-        if(mongoConnectionSourceSettings.isDecimalType() && ClassUtils.isPresent(DECIMAL_TYPE_CLASS_NAME)) {
+        if (mongoConnectionSourceSettings.isDecimalType() && ClassUtils.isPresent(DECIMAL_TYPE_CLASS_NAME)) {
             MONGO_NATIVE_TYPES.add(BigDecimal.class.getName());
             MONGO_NATIVE_TYPES.add(BigInteger.class.getName());
             SimpleEncoder.enableBigDecimalEncoding();
 
             codecClasses.add(BigDecimalCodec.class);
         }
-
 
         Iterable<Codec> codecList = ConfigurationUtils.findServices(codecClasses, Codec.class);
         List<Codec<?>> codecs = new ArrayList<>();
@@ -217,7 +216,7 @@ public class MongoMappingContext extends DocumentMappingContext {
             codecs.add(codec);
         }
 
-        if(mongoConnectionSourceSettings.getCodecRegistry() != null) {
+        if (mongoConnectionSourceSettings.getCodecRegistry() != null) {
             this.codecRegistry = CodecRegistries.fromRegistries(
                     mongoConnectionSourceSettings.getCodecRegistry(),
                     CodecRegistries.fromCodecs(codecs)
@@ -234,7 +233,7 @@ public class MongoMappingContext extends DocumentMappingContext {
 
         converterRegistry.addConverter(new Converter<String, ObjectId>() {
             public ObjectId convert(String source) {
-                if(ObjectId.isValid(source)) {
+                if (ObjectId.isValid(source)) {
                     return new ObjectId(source);
                 }
                 else {
@@ -268,7 +267,7 @@ public class MongoMappingContext extends DocumentMappingContext {
             }
         });
 
-        converterRegistry.addConverter(new Converter<BigDecimal,Decimal128>() {
+        converterRegistry.addConverter(new Converter<BigDecimal, Decimal128>() {
             @Override
             public Decimal128 convert(BigDecimal source) {
                 return new Decimal128(source);
@@ -282,13 +281,12 @@ public class MongoMappingContext extends DocumentMappingContext {
             }
         });
 
-        converterRegistry.addConverter(new Converter<BigInteger,Decimal128>() {
+        converterRegistry.addConverter(new Converter<BigInteger, Decimal128>() {
             @Override
             public Decimal128 convert(BigInteger source) {
                 return new Decimal128(new BigDecimal(source.toString()));
             }
         });
-
 
         for (Converter converter : CodecExtensions.getBsonConverters()) {
             converterRegistry.addConverter(converter);
@@ -305,7 +303,7 @@ public class MongoMappingContext extends DocumentMappingContext {
      */
     public static boolean isMongoNativeType(Class clazz) {
         return MongoMappingContext.MONGO_NATIVE_TYPES.contains(clazz.getName()) ||
-                Bson.class.isAssignableFrom(clazz.getClass()) ;
+                Bson.class.isAssignableFrom(clazz.getClass());
     }
 
     public static String getDefaultDatabaseName(PropertyResolver configuration) {
@@ -313,7 +311,7 @@ public class MongoMappingContext extends DocumentMappingContext {
 
         if (connectionString != null) {
             String database = new ConnectionString(connectionString).getDatabase();
-            if(database != null) {
+            if (database != null) {
                 return database;
             }
         }
@@ -332,7 +330,6 @@ public class MongoMappingContext extends DocumentMappingContext {
             return MongoCollection.class;
         }
 
-
         @Override
         public Identity<MongoAttribute> createIdentity(PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
             Identity<MongoAttribute> identity = super.createIdentity(owner, context, pd);
@@ -347,7 +344,7 @@ public class MongoMappingContext extends DocumentMappingContext {
 
         @Override
         public Custom<MongoAttribute> createCustom(PersistentEntity owner, MappingContext context, final PropertyDescriptor pd) {
-            if(hasCodecForType(pd.getPropertyType())) {
+            if (hasCodecForType(pd.getPropertyType())) {
                 CodecCustomTypeMarshaller customTypeMarshaller = new CodecCustomTypeMarshaller(codecRegistry.get(pd.getPropertyType()), MongoMappingContext.this);
                 return new Custom<MongoAttribute>(owner, context, pd, customTypeMarshaller) {
                     PropertyMapping<MongoAttribute> propertyMapping = createPropertyMapping(this, owner);
@@ -367,12 +364,12 @@ public class MongoMappingContext extends DocumentMappingContext {
             if (propType.isArray()) {
                 return isSimpleType(propType.getComponentType()) || super.isSimpleType(propType);
             }
-            return isMongoNativeType(propType)  || super.isSimpleType(propType);
+            return isMongoNativeType(propType) || super.isSimpleType(propType);
         }
     }
 
     private boolean hasCodecForType(Class propType) {
-        if(hasCodecCache.containsKey(propType)) {
+        if (hasCodecCache.containsKey(propType)) {
             return hasCodecCache.get(propType);
         }
         else {
@@ -386,7 +383,6 @@ public class MongoMappingContext extends DocumentMappingContext {
             return hasCodec;
         }
     }
-
 
     protected void registerMongoTypes() {
         MappingFactory<Collection, Attribute> mappingFactory = getMappingFactory();
@@ -441,9 +437,10 @@ public class MongoMappingContext extends DocumentMappingContext {
                 super(entity, context);
                 this.mappedForm = (Collection) context.getMappingFactory().createMappedForm(DocumentEmbeddedPersistentEntity.this);
             }
+
             @Override
             public Collection getMappedForm() {
-                return mappedForm ;
+                return mappedForm;
             }
         }
     }

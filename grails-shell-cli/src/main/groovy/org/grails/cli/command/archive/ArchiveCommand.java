@@ -116,8 +116,8 @@ abstract class ArchiveCommand extends OptionParsingCommand {
                 .withRequiredArg()
                 .withValuesSeparatedBy(",")
                 .defaultsTo("");
-            this.excludeOption = option("exclude", "Pattern applied to directories on the classpath to find files to "
-                    + "exclude from the resulting " + this.type)
+            this.excludeOption = option("exclude", "Pattern applied to directories on the classpath to find files to " +
+                    "exclude from the resulting " + this.type)
                 .withRequiredArg()
                 .withValuesSeparatedBy(",")
                 .defaultsTo("");

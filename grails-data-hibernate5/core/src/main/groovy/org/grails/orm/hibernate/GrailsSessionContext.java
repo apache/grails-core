@@ -150,13 +150,14 @@ public class GrailsSessionContext implements CurrentSessionContext {
             registerJtaSynchronization(session, sessionHolder);
         }
 
-/*        // Check whether we are allowed to return the Session.
+        /*
+        // Check whether we are allowed to return the Session.
         if (!allowCreate && !isSessionTransactional(session, sessionFactory)) {
            closeSession(session);
            throw new IllegalStateException("No Hibernate Session bound to thread, " +
               "and configuration does not allow creation of non-transactional one here");
         }
-*/
+        */
         return session;
     }
 

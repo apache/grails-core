@@ -56,5 +56,6 @@ public interface GrailsTagLibClass extends InjectableGrailsClass {
     String getNamespace();
 
     Object getEncodeAsForTag(String tagName);
+
     Object getDefaultEncodeAs();
 }

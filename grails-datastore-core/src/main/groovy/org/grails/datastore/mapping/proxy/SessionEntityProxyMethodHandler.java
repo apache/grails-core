@@ -44,7 +44,6 @@ public class SessionEntityProxyMethodHandler extends EntityProxyMethodHandler {
     private final Serializable id;
     protected Object target;
 
-
     public SessionEntityProxyMethodHandler(Class proxyClass, Session session, Class cls, Serializable id) {
         super(proxyClass);
         this.session = session;
@@ -59,15 +58,15 @@ public class SessionEntityProxyMethodHandler extends EntityProxyMethodHandler {
 
             // This tends to happen during unit testing if the proxy class is not properly mocked
             // and therefore can't be found in the session.
-            if( target == null ) {
-                throw new DataIntegrityViolationException("Proxy for ["+ cls.getName()+":"+ id +"] could not be initialized");
+            if (target == null) {
+                throw new DataIntegrityViolationException("Proxy for [" + cls.getName() + ":" + id + "] could not be initialized");
             }
         }
         return target;
     }
 
     protected void initializeTarget() {
-        if(LOG.isDebugEnabled()) {
+        if (LOG.isDebugEnabled()) {
             LOG.debug("Lazy loading proxy for class {} with id {}", cls.getName(), id);
         }
         target = session.retrieve(cls, id);
@@ -92,16 +91,16 @@ public class SessionEntityProxyMethodHandler extends EntityProxyMethodHandler {
 
     protected Object handleInvocationFallback(Object self, Method thisMethod, Object[] args) {
         Object actualTarget = getProxyTarget(self);
-        if(!thisMethod.getDeclaringClass().isInstance(actualTarget)) {
-            if(Modifier.isPublic(thisMethod.getModifiers())) {
+        if (!thisMethod.getDeclaringClass().isInstance(actualTarget)) {
+            if (Modifier.isPublic(thisMethod.getModifiers())) {
                 final Method method = ReflectionUtils.findMethod(actualTarget.getClass(), thisMethod.getName(), thisMethod.getParameterTypes());
-                if(method != null) {
+                if (method != null) {
                     ReflectionUtils.makeAccessible(method);
                     thisMethod = method;
                 }
             } else {
                 final Method method = ReflectionUtils.findMethod(actualTarget.getClass(), thisMethod.getName(), thisMethod.getParameterTypes());
-                if(method != null) {
+                if (method != null) {
                     thisMethod = method;
                 }
             }

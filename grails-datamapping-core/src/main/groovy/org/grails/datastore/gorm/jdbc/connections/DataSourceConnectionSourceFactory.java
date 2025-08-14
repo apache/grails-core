@@ -50,10 +50,10 @@ public class DataSourceConnectionSourceFactory extends AbstractConnectionSourceF
     protected <F extends ConnectionSourceSettings> DataSourceSettings buildSettings(String name, PropertyResolver configuration, F fallbackSettings, boolean isDefaultDataSource) {
         String configurationPrefix = isDefaultDataSource ? Settings.SETTING_DATASOURCE : Settings.SETTING_DATASOURCES + '.' + name;
         DataSourceSettingsBuilder builder;
-        if(isDefaultDataSource) {
+        if (isDefaultDataSource) {
             String qualified = Settings.SETTING_DATASOURCES + '.' + Settings.SETTING_DATASOURCE;
             Map config = configuration.getProperty(qualified, Map.class, Collections.emptyMap());
-            if(!config.isEmpty()) {
+            if (!config.isEmpty()) {
                 builder = new DataSourceSettingsBuilder(configuration, qualified);
             }
             else {
@@ -71,7 +71,7 @@ public class DataSourceConnectionSourceFactory extends AbstractConnectionSourceF
     public ConnectionSource<DataSource, DataSourceSettings> create(String name, DataSourceSettings settings) {
 
         DataSource dataSource;
-        if(settings.getJndiName() != null && !settings.getJndiName().isEmpty()) {
+        if (settings.getJndiName() != null && !settings.getJndiName().isEmpty()) {
             JndiObjectFactoryBean jndiObjectFactoryBean = new JndiObjectFactoryBean();
             jndiObjectFactoryBean.setExpectedType(DataSource.class);
             jndiObjectFactoryBean.setJndiName(settings.getJndiName());
@@ -80,7 +80,7 @@ public class DataSourceConnectionSourceFactory extends AbstractConnectionSourceF
             } catch (NamingException e) {
                 throw new ConfigurationException("Unable to configure JNDI data source: " + e.getMessage(), e);
             }
-            dataSource = (DataSource)jndiObjectFactoryBean.getObject();
+            dataSource = (DataSource) jndiObjectFactoryBean.getObject();
             dataSource = proxy(dataSource, settings);
             return new DefaultConnectionSource<>(name, dataSource, settings);
         }
@@ -96,15 +96,15 @@ public class DataSourceConnectionSourceFactory extends AbstractConnectionSourceF
             String url = settings.getUrl();
             Class type = settings.getType();
 
-            if(properties != null && !properties.isEmpty()) {
+            if (properties != null && !properties.isEmpty()) {
                 dataSourceBuilder.properties(settings.toProperties());
             }
             dataSourceBuilder.url(url);
 
-            if(driverClassName != null) {
+            if (driverClassName != null) {
                 dataSourceBuilder.driverClassName(driverClassName);
             }
-            if(username != null && password != null) {
+            if (username != null && password != null) {
                 dataSourceBuilder.username(username);
                 dataSourceBuilder.password(password);
             }
@@ -120,10 +120,10 @@ public class DataSourceConnectionSourceFactory extends AbstractConnectionSourceF
     }
 
     protected DataSource proxy(DataSource dataSource, DataSourceSettings settings) {
-        if(settings.isLazy()) {
+        if (settings.isLazy()) {
             dataSource = new LazyConnectionDataSourceProxy(dataSource);
         }
-        if(settings.isTransactionAware()) {
+        if (settings.isTransactionAware()) {
             dataSource = new TransactionAwareDataSourceProxy(dataSource);
         }
         return dataSource;

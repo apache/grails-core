@@ -98,7 +98,7 @@ public abstract class AbstractEncodedAppender implements EncodedAppender {
         if (shouldEncode(encoder, encodingState)) {
             EncodingState newEncoders = createNewEncodingState(encoder, encodingState);
             if (encoder instanceof StreamingEncoder) {
-                ((StreamingEncoder)encoder).encodeToStream(encoder, CharSequences.createCharSequence(b, off, len), 0, len, this,
+                ((StreamingEncoder) encoder).encodeToStream(encoder, CharSequences.createCharSequence(b, off, len), 0, len, this,
                         newEncoders);
             }
             else {
@@ -133,7 +133,7 @@ public abstract class AbstractEncodedAppender implements EncodedAppender {
         if (shouldEncode(encoder, encodingState)) {
             EncodingState newEncoders = createNewEncodingState(encoder, encodingState);
             if (encoder instanceof StreamingEncoder) {
-                ((StreamingEncoder)encoder).encodeToStream(encoder, str, off, len, this, newEncoders);
+                ((StreamingEncoder) encoder).encodeToStream(encoder, str, off, len, this, newEncoders);
             }
             else {
                 CharSequence source;
@@ -171,8 +171,8 @@ public abstract class AbstractEncodedAppender implements EncodedAppender {
      * @return true, if should encode
      */
     public boolean shouldEncode(Encoder encoderToApply, EncodingState encodingState) {
-        return ignoreEncodingState || (encoderToApply != null
-                && (encodingState == null || shouldEncodeWith(encoderToApply, encodingState)));
+        return ignoreEncodingState || (encoderToApply != null &&
+                (encodingState == null || shouldEncodeWith(encoderToApply, encodingState)));
     }
 
     protected boolean shouldEncodeWith(Encoder encoderToApply, EncodingState encodingState) {

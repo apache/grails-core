@@ -60,16 +60,16 @@ class RelaxedConversionService implements ConversionService {
 
     @Override
     public boolean canConvert(Class<?> sourceType, Class<?> targetType) {
-        return (this.conversionService != null
-                && this.conversionService.canConvert(sourceType, targetType))
-                || this.additionalConverters.canConvert(sourceType, targetType);
+        return (this.conversionService != null &&
+                this.conversionService.canConvert(sourceType, targetType)) ||
+                this.additionalConverters.canConvert(sourceType, targetType);
     }
 
     @Override
     public boolean canConvert(TypeDescriptor sourceType, TypeDescriptor targetType) {
-        return (this.conversionService != null
-                && this.conversionService.canConvert(sourceType, targetType))
-                || this.additionalConverters.canConvert(sourceType, targetType);
+        return (this.conversionService != null &&
+                this.conversionService.canConvert(sourceType, targetType)) ||
+                this.additionalConverters.canConvert(sourceType, targetType);
     }
 
     @Override
@@ -108,8 +108,8 @@ class RelaxedConversionService implements ConversionService {
             while (enumType != null && !enumType.isEnum()) {
                 enumType = enumType.getSuperclass();
             }
-            Assert.notNull(enumType, "The target type " + targetType.getName()
-                    + " does not refer to an enum");
+            Assert.notNull(enumType, "The target type " + targetType.getName() +
+                    " does not refer to an enum");
             return new StringToEnum(enumType);
         }
 
@@ -128,7 +128,7 @@ class RelaxedConversionService implements ConversionService {
                     return null;
                 }
                 source = source.trim();
-                for (T candidate : (Set<T>)EnumSet.allOf(this.enumType)) {
+                for (T candidate : (Set<T>) EnumSet.allOf(this.enumType)) {
                     RelaxedNames names = new RelaxedNames(
                             candidate.name().replace("_", "-").toLowerCase());
                     for (String name : names) {
@@ -140,8 +140,8 @@ class RelaxedConversionService implements ConversionService {
                         return candidate;
                     }
                 }
-                throw new IllegalArgumentException("No enum constant "
-                        + this.enumType.getCanonicalName() + "." + source);
+                throw new IllegalArgumentException("No enum constant " +
+                        this.enumType.getCanonicalName() + "." + source);
             }
 
         }

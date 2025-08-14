@@ -52,7 +52,7 @@ public class SpringMVCViewDecorator extends DefaultDecorator implements com.open
     private View view;
 
     public SpringMVCViewDecorator(String name, View view) {
-        super(name, (view instanceof AbstractUrlBasedView) ? ((AbstractUrlBasedView)view).getUrl() : view.toString(), Collections.emptyMap());
+        super(name, (view instanceof AbstractUrlBasedView) ? ((AbstractUrlBasedView) view).getUrl() : view.toString(), Collections.emptyMap());
         this.view = view;
     }
 
@@ -80,8 +80,8 @@ public class SpringMVCViewDecorator extends DefaultDecorator implements com.open
                 } catch (Exception e) {
                     cleanRequestAttributes(request);
                     String message = "Error applying layout : " + getName();
-                    if(view instanceof AbstractGrailsView) {
-                        ((AbstractGrailsView)view).rethrowRenderException(e, message);
+                    if (view instanceof AbstractGrailsView) {
+                        ((AbstractGrailsView) view).rethrowRenderException(e, message);
                     } else {
                         throw new RuntimeException(message, e);
                     }
@@ -107,8 +107,8 @@ public class SpringMVCViewDecorator extends DefaultDecorator implements com.open
     }
 
     public Template getTemplate() {
-        if(view instanceof AbstractGrailsView) {
-            return ((AbstractGrailsView)view).getTemplate();
+        if (view instanceof AbstractGrailsView) {
+            return ((AbstractGrailsView) view).getTemplate();
         }
         return null;
     }

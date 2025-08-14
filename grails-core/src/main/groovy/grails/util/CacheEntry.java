@@ -41,12 +41,12 @@ import org.slf4j.LoggerFactory;
  */
 public class CacheEntry<V> {
     private static final Logger LOG = LoggerFactory.getLogger(CacheEntry.class);
-    private final AtomicReference<V> valueRef=new AtomicReference<V>(null);
+    private final AtomicReference<V> valueRef = new AtomicReference<V>(null);
     private long createdMillis;
-    private final ReadWriteLock lock=new ReentrantReadWriteLock();
-    private final Lock readLock=lock.readLock();
-    private final Lock writeLock=lock.writeLock();
-    private volatile boolean initialized=false;
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    private final Lock readLock = lock.readLock();
+    private final Lock writeLock = lock.writeLock();
+    private volatile boolean initialized = false;
 
     public CacheEntry() {
         expire();
@@ -79,7 +79,7 @@ public class CacheEntry<V> {
                                     boolean returnExpiredWhileUpdating,
                                     Object cacheRequestObject) {
         CacheEntry<V> cacheEntry = map.get(key);
-        if(cacheEntry==null) {
+        if (cacheEntry == null) {
             try {
                 cacheEntry = cacheEntryFactory.call();
             }
@@ -87,7 +87,7 @@ public class CacheEntry<V> {
                 throw new UpdateException(e);
             }
             CacheEntry<V> previousEntry = map.putIfAbsent(key, cacheEntry);
-            if(previousEntry != null) {
+            if (previousEntry != null) {
                 cacheEntry = previousEntry;
             }
         }
@@ -137,12 +137,12 @@ public class CacheEntry<V> {
             boolean lockAcquired = false;
             try {
                 long beforeLockingCreatedMillis = createdMillis;
-                if(returnExpiredWhileUpdating) {
-                    if(!writeLock.tryLock()) {
-                        if(isInitialized()) {
+                if (returnExpiredWhileUpdating) {
+                    if (!writeLock.tryLock()) {
+                        if (isInitialized()) {
                             return getValueWhileUpdating(cacheRequestObject);
                         } else {
-                            if(LOG.isDebugEnabled()) {
+                            if (LOG.isDebugEnabled()) {
                                 LOG.debug("Locking cache for update");
                             }
                             writeLock.lock();
@@ -157,7 +157,7 @@ public class CacheEntry<V> {
                 if (!isInitialized() || shouldUpdate(beforeLockingCreatedMillis, cacheRequestObject)) {
                     try {
                         value = updateValue(getValue(), updater, cacheRequestObject);
-                        if(LOG.isDebugEnabled()) {
+                        if (LOG.isDebugEnabled()) {
                             LOG.debug("Updating cache for value [{}]", value);
                         }
                         setValue(value);
@@ -171,8 +171,8 @@ public class CacheEntry<V> {
                 }
                 return value;
             } finally {
-                if(lockAcquired) {
-                    if(LOG.isDebugEnabled()) {
+                if (lockAcquired) {
+                    if (LOG.isDebugEnabled()) {
                         LOG.debug("Unlocking cache for update");
                     }
                     writeLock.unlock();
@@ -201,7 +201,7 @@ public class CacheEntry<V> {
     }
 
     public void setValue(V val) {
-        try{
+        try {
             writeLock.lock();
             valueRef.set(val);
             setInitialized(true);
@@ -220,7 +220,7 @@ public class CacheEntry<V> {
     }
 
     protected void resetTimestamp(boolean updated) {
-        if(updated) {
+        if (updated) {
             createdMillis = System.currentTimeMillis();
         }
     }
@@ -254,7 +254,7 @@ public class CacheEntry<V> {
 
         public void rethrowCause() throws Exception {
             if (getCause() instanceof Exception) {
-                throw (Exception)getCause();
+                throw (Exception) getCause();
             }
 
             throw this;
@@ -262,7 +262,7 @@ public class CacheEntry<V> {
 
         public void rethrowRuntimeException() {
             if (getCause() instanceof RuntimeException) {
-                throw (RuntimeException)getCause();
+                throw (RuntimeException) getCause();
             }
             throw this;
         }

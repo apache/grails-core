@@ -37,8 +37,8 @@ public class JmsCompilerAutoConfiguration extends CompilerAutoConfiguration {
 
     @Override
     public boolean matches(ClassNode classNode) {
-        return AstUtils.hasAtLeastOneAnnotation(classNode, "EnableJms")
-                || AstUtils.hasAtLeastOneAnnotation(classNode, "EnableJmsMessaging");
+        return AstUtils.hasAtLeastOneAnnotation(classNode, "EnableJms") ||
+                AstUtils.hasAtLeastOneAnnotation(classNode, "EnableJmsMessaging");
     }
 
     @Override

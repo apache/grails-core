@@ -18,7 +18,6 @@
  */
 package org.grails.build.interactive;
 
-
 import java.io.IOException;
 import java.util.List;
 

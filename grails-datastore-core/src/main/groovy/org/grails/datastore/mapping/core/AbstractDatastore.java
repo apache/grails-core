@@ -62,19 +62,18 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
     protected final PropertyResolver connectionDetails;
     protected final TPCacheAdapterRepository cacheAdapterRepository;
 
-
     public AbstractDatastore(MappingContext mappingContext) {
-        this(mappingContext,(PropertyResolver) null, null);
+        this(mappingContext, (PropertyResolver) null, null);
     }
 
     public AbstractDatastore(MappingContext mappingContext, Map<String, Object> connectionDetails,
               ConfigurableApplicationContext ctx) {
-        this(mappingContext, connectionDetails,  ctx, null);
+        this(mappingContext, connectionDetails, ctx, null);
     }
 
     public AbstractDatastore(MappingContext mappingContext, PropertyResolver connectionDetails,
                              ConfigurableApplicationContext ctx) {
-        this(mappingContext, connectionDetails,  ctx, null);
+        this(mappingContext, connectionDetails, ctx, null);
     }
 
     public AbstractDatastore(MappingContext mappingContext, PropertyResolver connectionDetails,
@@ -93,7 +92,7 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
         this(mappingContext, mapToPropertyResolver(connectionDetails), ctx, cacheAdapterRepository);
     }
 
-    protected static PropertyResolver mapToPropertyResolver(Map<String,Object> connectionDetails) {
+    protected static PropertyResolver mapToPropertyResolver(Map<String, Object> connectionDetails) {
         return DatastoreUtils.createPropertyResolver(connectionDetails);
     }
 
@@ -116,7 +115,7 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
             try {
                 registry.removeMetaClass(cls);
             } catch (Exception e) {
-                LOG.error("There was an error shutting down GORM for entity ["+cls.getName()+"]: " + e.getMessage(), e);
+                LOG.error("There was an error shutting down GORM for entity [" + cls.getName() + "]: " + e.getMessage(), e);
             }
         }
     }
@@ -137,7 +136,7 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
 
     private void publishSessionCreationEvent(Session session) {
         ApplicationEventPublisher applicationEventPublisher = getApplicationEventPublisher();
-        if(applicationEventPublisher != null) {
+        if (applicationEventPublisher != null) {
             applicationEventPublisher.publishEvent(new SessionCreationEvent(session));
         }
     }
@@ -148,7 +147,6 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
         publishSessionCreationEvent(session);
         return session;
     }
-
 
     /**
      * Creates the native session
@@ -167,7 +165,6 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
     protected Session createStatelessSession(PropertyResolver connectionDetails) {
         return createSession(connectionDetails);
     }
-
 
     public Session getCurrentSession() throws ConnectionNotFoundException {
         return DatastoreUtils.doGetSession(this, false);
@@ -222,14 +219,12 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
      */
     @Deprecated
     public ConfigurableApplicationContext getApplicationContext() {
-        return (ConfigurableApplicationContext)applicationContext;
+        return (ConfigurableApplicationContext) applicationContext;
     }
-
 
     public ApplicationEventPublisher getApplicationEventPublisher() {
         return getApplicationContext();
     }
-
 
     protected void initializeConverters(MappingContext mappingContext) {
         final ConverterRegistry conversionService = mappingContext.getConverterRegistry();
@@ -246,7 +241,6 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
     public boolean isSchemaless() {
         return false;
     }
-
 
     @Override
     public <T> T withSession(final Closure<T> callable) {

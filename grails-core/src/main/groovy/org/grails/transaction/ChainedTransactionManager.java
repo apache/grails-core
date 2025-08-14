@@ -182,8 +182,8 @@ public class ChainedTransactionManager implements PlatformTransactionManager {
 
         if (commitException != null) {
             boolean firstTransactionManagerFailed = commitExceptionTransactionManager == getLastTransactionManager();
-            int transactionState = firstTransactionManagerFailed ? HeuristicCompletionException.STATE_ROLLED_BACK
-                    : HeuristicCompletionException.STATE_MIXED;
+            int transactionState = firstTransactionManagerFailed ? HeuristicCompletionException.STATE_ROLLED_BACK :
+                    HeuristicCompletionException.STATE_MIXED;
             throw new HeuristicCompletionException(transactionState, commitException);
         }
     }
@@ -217,8 +217,8 @@ public class ChainedTransactionManager implements PlatformTransactionManager {
         }
 
         if (rollbackException != null) {
-            throw new UnexpectedRollbackException("Rollback exception, originated at (" + rollbackExceptionTransactionManager
-                    + ") " + rollbackException.getMessage(), rollbackException);
+            throw new UnexpectedRollbackException("Rollback exception, originated at (" + rollbackExceptionTransactionManager +
+                    ") " + rollbackException.getMessage(), rollbackException);
         }
     }
 

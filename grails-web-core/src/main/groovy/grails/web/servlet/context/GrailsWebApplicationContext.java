@@ -180,7 +180,7 @@ public class GrailsWebApplicationContext extends GrailsApplicationContext
     protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
         if (configLocations.length > 0) {
             for (String configLocation : configLocations) {
-                BeanBuilder beanBuilder = new BeanBuilder(getParent(),getClassLoader());
+                BeanBuilder beanBuilder = new BeanBuilder(getParent(), getClassLoader());
                 final ServletContextResource resource = new ServletContextResource(getServletContext(), configLocation);
                 beanBuilder.loadBeans(resource);
                 beanBuilder.registerBeans(this);

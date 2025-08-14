@@ -73,14 +73,13 @@ public class MinConstraint extends AbstractConstraint {
         }
 
         Class<?> propertyClass = ClassPropertyFetcher.getPropertyType(constraintOwningClass, constraintPropertyName);
-        if (!ClassUtils.isAssignableOrConvertibleFrom(constraintParameter.getClass(),propertyClass)) {
+        if (!ClassUtils.isAssignableOrConvertibleFrom(constraintParameter.getClass(), propertyClass)) {
             throw new IllegalArgumentException("Parameter for constraint [" + ConstrainedProperty.MIN_CONSTRAINT +
                     "] of property [" + constraintPropertyName + "] of class [" + constraintOwningClass +
                     "] must be the same type as property: [" + propertyClass.getName() + "]");
         }
         return constraintParameter;
     }
-
 
     public String getName() {
         return ConstrainedProperty.MIN_CONSTRAINT;

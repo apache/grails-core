@@ -32,8 +32,8 @@ public class StreamingEncoderWriter extends FilterWriter implements EncodedAppen
     public StreamingEncoderWriter(Writer out, StreamingEncoder encoder, EncodingStateRegistry encodingStateRegistry) {
         super(out);
         this.encoder = encoder;
-        if(encoder instanceof EncodesToWriter) {
-            this.encodesToWriter = ((EncodesToWriter)encoder);
+        if (encoder instanceof EncodesToWriter) {
+            this.encodesToWriter = ((EncodesToWriter) encoder);
         } else {
             this.encodesToWriter = new EncodesToWriterAdapter(encoder, true);
         }
@@ -48,7 +48,7 @@ public class StreamingEncoderWriter extends FilterWriter implements EncodedAppen
     @Override
     public void write(String str, int off, int len) throws IOException {
         final EncodingState encodingState = lookupEncodingState(str, off, len);
-        if(shouldEncodeWith(encoder, encodingState)) {
+        if (shouldEncodeWith(encoder, encodingState)) {
             encodesToWriter.encodeToWriter(str, off, len, out, encodingState);
         } else {
             out.write(str, off, len);
@@ -61,7 +61,7 @@ public class StreamingEncoderWriter extends FilterWriter implements EncodedAppen
     }
 
     protected EncodingState lookupEncodingState(String str, int off, int len) {
-        if(encodingStateRegistry != null) {
+        if (encodingStateRegistry != null) {
             return encodingStateRegistry.getEncodingStateFor(str);
         } else {
             return null;

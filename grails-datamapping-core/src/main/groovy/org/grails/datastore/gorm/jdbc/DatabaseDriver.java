@@ -18,8 +18,6 @@
  */
 package org.grails.datastore.gorm.jdbc;
 
-
-
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -112,8 +110,8 @@ public enum DatabaseDriver {
 
         @Override
         protected boolean matchProductName(String productName) {
-            return super.matchProductName(productName)
-                    || productName.toLowerCase().startsWith("firebird");
+            return super.matchProductName(productName) ||
+                    productName.toLowerCase().startsWith("firebird");
         }
     },
 
@@ -125,8 +123,8 @@ public enum DatabaseDriver {
 
         @Override
         protected boolean matchProductName(String productName) {
-            return super.matchProductName(productName)
-                    || productName.toLowerCase().startsWith("db2/");
+            return super.matchProductName(productName) ||
+                    productName.toLowerCase().startsWith("db2/");
         }
     },
 
@@ -139,8 +137,8 @@ public enum DatabaseDriver {
 
         @Override
         protected boolean matchProductName(String productName) {
-            return super.matchProductName(productName)
-                    || productName.toLowerCase().contains("as/400");
+            return super.matchProductName(productName) ||
+                    productName.toLowerCase().contains("as/400");
         }
     },
 

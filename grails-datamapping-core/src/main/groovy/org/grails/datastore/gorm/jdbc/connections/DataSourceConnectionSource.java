@@ -48,7 +48,7 @@ public class DataSourceConnectionSource extends DefaultConnectionSource<DataSour
     @Override
     public void close() throws IOException {
         super.close();
-        if(!closed) {
+        if (!closed) {
 
             DataSource source = getSource();
             Method closeMethod = ReflectionUtils.findMethod(source.getClass(), "close");
@@ -58,7 +58,7 @@ public class DataSourceConnectionSource extends DefaultConnectionSource<DataSour
                 closeMethod = ReflectionUtils.findMethod(source.getClass(), "close");
             }
 
-            if(closeMethod != null) {
+            if (closeMethod != null) {
                 try {
                     ReflectionUtils.invokeMethod(closeMethod, source);
                     this.closed = true;

@@ -62,11 +62,11 @@ public abstract class AbstractConnectionSourceFactory<T, S extends ConnectionSou
     public ConnectionSource<T, S> create(String name, PropertyResolver configuration) {
         ConnectionSourceSettingsBuilder builder = new ConnectionSourceSettingsBuilder(configuration);
         ConnectionSourceSettings fallbackSettings = builder.build();
-        if(tenantResolver != null) {
+        if (tenantResolver != null) {
             fallbackSettings.getMultiTenancy().setTenantResolver(tenantResolver);
         }
-        if(customTypes != null) {
-            fallbackSettings.getCustom().getTypes().addAll( this.customTypes );
+        if (customTypes != null) {
+            fallbackSettings.getCustom().getTypes().addAll(this.customTypes);
         }
         return create(name, configuration, fallbackSettings);
     }

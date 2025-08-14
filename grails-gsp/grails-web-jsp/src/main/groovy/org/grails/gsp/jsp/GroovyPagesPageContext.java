@@ -165,6 +165,7 @@ public class GroovyPagesPageContext extends PageContext {
             public ServletConfig getServletConfig() {
                 return this;
             }
+
             @Override
             public void service(ServletRequest servletRequest, ServletResponse servletResponse) {
                 // do nothing;
@@ -262,7 +263,7 @@ public class GroovyPagesPageContext extends PageContext {
                 setAttribute(name, value);
                 break;
             case REQUEST_SCOPE:
-                request.setAttribute(name,value);
+                request.setAttribute(name, value);
                 break;
             case SESSION_SCOPE:
                 request.getSession(true).setAttribute(name, value);
@@ -291,11 +292,11 @@ public class GroovyPagesPageContext extends PageContext {
         Assert.notNull(name, "Attribute name cannot be null");
 
         switch (scope) {
-            case PAGE_SCOPE:        return getAttribute(name);
-            case REQUEST_SCOPE:     return request.getAttribute(name);
-            case SESSION_SCOPE:     return request.getSession(true).getAttribute(name);
+            case PAGE_SCOPE: return getAttribute(name);
+            case REQUEST_SCOPE: return request.getAttribute(name);
+            case SESSION_SCOPE: return request.getSession(true).getAttribute(name);
             case APPLICATION_SCOPE: return servletContext.getAttribute(name);
-            default:                return getAttribute(name);
+            default: return getAttribute(name);
         }
     }
 
@@ -359,7 +360,7 @@ public class GroovyPagesPageContext extends PageContext {
             return SESSION_SCOPE;
         }
 
-        if (servletContext.getAttribute(name) !=null) {
+        if (servletContext.getAttribute(name) != null) {
             return APPLICATION_SCOPE;
         }
 
@@ -370,7 +371,7 @@ public class GroovyPagesPageContext extends PageContext {
     public Enumeration<String> getAttributeNamesInScope(int scope) {
         switch (scope) {
             case PAGE_SCOPE:
-                final var i = ((Map<String,Object>) pageScope.getVariables()).keySet().iterator();
+                final var i = ((Map<String, Object>) pageScope.getVariables()).keySet().iterator();
                 return new Enumeration<>() {
                     @Override
                     public boolean hasMoreElements() {
@@ -402,35 +403,37 @@ public class GroovyPagesPageContext extends PageContext {
     public JspWriter getOut() {
         Writer out = webRequest.getOut();
         if (out instanceof JspWriter) {
-            return (JspWriter)out;
+            return (JspWriter) out;
         }
 
         out = new JspWriterDelegate(out);
         webRequest.setOut(out);
-        return (JspWriter)out;
+        return (JspWriter) out;
     }
 
-//    public ExpressionFactory getExpressionEvaluator() {
-//        try {
-//            Class<?> type = AccessController.doPrivileged((PrivilegedAction<ClassLoader>) () -> Thread.currentThread().getContextClassLoader()).loadClass("jakarta.el.ExpressionFactory");
-//            return (ExpressionFactory) type.getDeclaredConstructor().newInstance();
-//        }
-//        catch (Exception e) {
-//            throw new UnsupportedOperationException("In order for the getExpressionEvaluator() " +
-//                    "method to work, you must have downloaded the apache commons-el jar and " +
-//                    "made it available in the classpath.");
-//        }
-//    }
+    /*
+    public ExpressionFactory getExpressionEvaluator() {
+        try {
+            Class<?> type = AccessController.doPrivileged((PrivilegedAction<ClassLoader>) () -> Thread.currentThread().getContextClassLoader()).loadClass("jakarta.el.ExpressionFactory");
+            return (ExpressionFactory) type.getDeclaredConstructor().newInstance();
+        }
+        catch (Exception e) {
+            throw new UnsupportedOperationException("In order for the getExpressionEvaluator() " +
+                    "method to work, you must have downloaded the apache commons-el jar and " +
+                    "made it available in the classpath.");
+        }
+    }
 
-//    @Override
-//    public VariableResolver getVariableResolver() {
-//        final PageContext ctx = this;
-//        return new VariableResolver() {
-//            public Object resolveVariable(String name) throws ELException {
-//                return ctx.findAttribute(name);
-//            }
-//        };
-//    }
+    @Override
+    public VariableResolver getVariableResolver() {
+        final PageContext ctx = this;
+        return new VariableResolver() {
+            public Object resolveVariable(String name) throws ELException {
+                return ctx.findAttribute(name);
+            }
+        };
+    }
+    */
 
     static {
         if (JspFactory.getDefaultFactory() == null) {
@@ -444,9 +447,9 @@ public class GroovyPagesPageContext extends PageContext {
     public ELContext getELContext() {
         if (elContext == null) {
             JspApplicationContext jspContext = JspFactory.getDefaultFactory().getJspApplicationContext(getServletContext());
-            if  (jspContext instanceof GroovyPagesJspApplicationContext) {
-                elContext = ((GroovyPagesJspApplicationContext)jspContext).createELContext(this);
-                elContext.putContext( JspContext.class, this );
+            if (jspContext instanceof GroovyPagesJspApplicationContext) {
+                elContext = ((GroovyPagesJspApplicationContext) jspContext).createELContext(this);
+                elContext.putContext(JspContext.class, this);
             }
             else {
                 throw new IllegalStateException("Unable to create ELContext for a JspApplicationContext. It must be an instance of [GroovyPagesJspApplicationContext] do not override JspFactory.setDefaultFactory()!");

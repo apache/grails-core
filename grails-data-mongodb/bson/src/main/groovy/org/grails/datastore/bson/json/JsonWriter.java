@@ -101,6 +101,7 @@ public class JsonWriter extends AbstractBsonWriter {
         }
 
     }
+
     @Override
     protected void doWriteEndArray() {
         try {
@@ -143,7 +144,7 @@ public class JsonWriter extends AbstractBsonWriter {
             writeNameHelper(getName());
             writer.write(JsonToken.QUOTE);
             Date date = new Date(value);
-            writer.write( df.format(date) );
+            writer.write(df.format(date));
             writer.write(JsonToken.QUOTE);
             setState(getNextState());
         } catch (IOException e) {
@@ -412,7 +413,6 @@ public class JsonWriter extends AbstractBsonWriter {
         }
         writer.write('"');
     }
-
 
     /**
      * The context for the writer, inheriting all the values from {@link org.bson.AbstractBsonWriter.Context}, and additionally providing

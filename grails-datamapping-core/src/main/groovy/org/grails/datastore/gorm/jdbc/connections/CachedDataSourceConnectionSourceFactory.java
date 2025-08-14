@@ -39,7 +39,7 @@ public class CachedDataSourceConnectionSourceFactory extends DataSourceConnectio
 
     @Override
     public ConnectionSource<DataSource, DataSourceSettings> create(String name, PropertyResolver configuration) {
-        if(dataSources.containsKey(name)) {
+        if (dataSources.containsKey(name)) {
             return dataSources.get(name);
         }
         else {
@@ -51,7 +51,7 @@ public class CachedDataSourceConnectionSourceFactory extends DataSourceConnectio
 
     @Override
     public ConnectionSource<DataSource, DataSourceSettings> create(String name, DataSourceSettings settings) {
-        if(dataSources.containsKey(name)) {
+        if (dataSources.containsKey(name)) {
             return dataSources.get(name);
         }
         else {

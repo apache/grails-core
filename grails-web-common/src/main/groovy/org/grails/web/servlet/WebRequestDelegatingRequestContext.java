@@ -44,7 +44,7 @@ public class WebRequestDelegatingRequestContext implements GrailsRequestContext 
     private GrailsWebRequest webRequest;
 
     public WebRequestDelegatingRequestContext() {
-        webRequest = (GrailsWebRequest)RequestContextHolder.currentRequestAttributes();
+        webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes();
     }
 
     /**
@@ -95,7 +95,7 @@ public class WebRequestDelegatingRequestContext implements GrailsRequestContext 
 
     public String getRequestURI() {
         HttpServletRequest request = getRequest();
-        String uri = (String)request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE);
+        String uri = (String) request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE);
         if (uri == null) {
             uri = request.getRequestURI();
         }

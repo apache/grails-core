@@ -52,10 +52,11 @@ public class ChainedConverterConfiguration<C extends Converter> implements Conve
     private final boolean cacheObjectMarshallerByClass;
     private Map<Integer, ObjectMarshaller<C>> objectMarshallerForClassCache;
     private final boolean developmentMode = Environment.isDevelopmentMode();
-    private final ObjectMarshaller<C> NULL_HOLDER=new ObjectMarshaller<C>() {
+    private final ObjectMarshaller<C> NULL_HOLDER = new ObjectMarshaller<C>() {
         public boolean supports(Object object) {
             return false;
         }
+
         public void marshalObject(Object object, C converter) throws ConverterException {
         }
     };

@@ -49,21 +49,21 @@ public class LazyTagLibraryLookup extends TagLibraryLookup {
     public LazyTagLibraryLookup() {
         List<Class> mockedClasses = new ArrayList<>((List<Class>) new GroovyPagesGrailsPlugin().getProvidedArtefacts());
         ClassLoader classLoader = LazyTagLibraryLookup.class.getClassLoader();
-        if(ClassUtils.isPresent("org.apache.grails.web.layout.LayoutGrailsPlugin", classLoader)) {
+        if (ClassUtils.isPresent("org.apache.grails.web.layout.LayoutGrailsPlugin", classLoader)) {
             // sitemesh2 support
             try {
                 mockedClasses.add(Class.forName("org.grails.plugins.web.taglib.GrailsLayoutTagLib"));
                 mockedClasses.add(Class.forName("org.grails.plugins.web.taglib.RenderGrailsLayoutTagLib"));
             }
-            catch(Exception ignored) {
+            catch (Exception ignored) {
             }
         }
-        if(ClassUtils.isPresent("org.grails.plugins.sitemesh3.Sitemesh3GrailsPlugin", classLoader)) {
+        if (ClassUtils.isPresent("org.grails.plugins.sitemesh3.Sitemesh3GrailsPlugin", classLoader)) {
             try {
                 mockedClasses.add(Class.forName("org.grails.plugins.web.taglib.SitemeshTagLib"));
                 mockedClasses.add(Class.forName("org.grails.plugins.web.taglib.RenderSitemeshTagLib"));
             }
-            catch(Exception ignored) {
+            catch (Exception ignored) {
             }
         }
         tagLibClasses = mockedClasses;
@@ -93,7 +93,7 @@ public class LazyTagLibraryLookup extends TagLibraryLookup {
         }
 
         try {
-            grailsTagLibClass = (GrailsTagLibClass)defaultTagLibClass.getConstructor(Class.class).newInstance(tagLibClass);
+            grailsTagLibClass = (GrailsTagLibClass) defaultTagLibClass.getConstructor(Class.class).newInstance(tagLibClass);
         } catch (Exception e) {
         }
 

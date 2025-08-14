@@ -42,7 +42,7 @@ import org.grails.web.util.GrailsApplicationAttributes;
  *
  * @author Graeme Rocher
  */
-@SuppressWarnings({"unchecked","rawtypes"})
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class GrailsFlashScope implements FlashScope {
 
     private static final long serialVersionUID = 1457772347769500476L;
@@ -84,7 +84,7 @@ public class GrailsFlashScope implements FlashScope {
 
     private void reassociateObjectWithErrors(Map scope, Object value) {
         if (value instanceof Collection) {
-            Collection values = (Collection)value;
+            Collection values = (Collection) value;
             for (Object val : values) {
                 reassociateObjectWithErrors(scope, val);
             }
@@ -92,7 +92,7 @@ public class GrailsFlashScope implements FlashScope {
         else {
             String errorsKey = ERRORS_PREFIX + System.identityHashCode(value);
             Object errors = scope.get(errorsKey);
-            if (value!=null && errors != null) {
+            if (value != null && errors != null) {
                 MetaClass mc = GroovySystem.getMetaClassRegistry().getMetaClass(value.getClass());
                 if (mc.hasProperty(value, ERRORS_PROPERTY) != null) {
                     mc.setProperty(value, ERRORS_PROPERTY, errors);
@@ -174,28 +174,28 @@ public class GrailsFlashScope implements FlashScope {
         if (current.containsKey(key)) {
             current.remove(key);
         }
-        storeErrorsIfPossible(next,value);
+        storeErrorsIfPossible(next, value);
 
         if (value == null) {
             return next.remove(key);
         }
 
-        return next.put(key,value);
+        return next.put(key, value);
     }
 
-    private void storeErrorsIfPossible(Map scope,Object value) {
+    private void storeErrorsIfPossible(Map scope, Object value) {
         if (value == null) {
             return;
         }
 
         if (value instanceof Collection) {
-            Collection values = (Collection)value;
+            Collection values = (Collection) value;
             for (Object val : values) {
                 storeErrorsIfPossible(scope, val);
             }
         }
         else if (value instanceof Map) {
-            Map map = (Map)value;
+            Map map = (Map) value;
             Collection keys = new LinkedList(map.keySet());
             for (Object key : keys) {
                 Object val = map.get(key);
@@ -215,7 +215,7 @@ public class GrailsFlashScope implements FlashScope {
 
     private void registerWithSessionIfNecessary() {
         if (registerWithSession) {
-            GrailsWebRequest webRequest = (GrailsWebRequest)RequestContextHolder.currentRequestAttributes();
+            GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes();
             HttpSession session = webRequest.getCurrentRequest().getSession(true);
             if (session.getAttribute(GrailsApplicationAttributes.FLASH_SCOPE) == null) {
                 session.setAttribute(GrailsApplicationAttributes.FLASH_SCOPE, this);

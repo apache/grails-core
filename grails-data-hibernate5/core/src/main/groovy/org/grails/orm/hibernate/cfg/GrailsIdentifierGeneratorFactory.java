@@ -37,7 +37,7 @@ public class GrailsIdentifierGeneratorFactory extends DefaultIdentifierGenerator
     @Override
     public Class getIdentifierGeneratorClass(String strategy) {
         Class generatorClass = super.getIdentifierGeneratorClass(strategy);
-        if("native".equals(strategy) && generatorClass == SequenceGenerator.class) {
+        if ("native".equals(strategy) && generatorClass == SequenceGenerator.class) {
             generatorClass = super.getIdentifierGeneratorClass("sequence-identity");
         }
         return generatorClass;

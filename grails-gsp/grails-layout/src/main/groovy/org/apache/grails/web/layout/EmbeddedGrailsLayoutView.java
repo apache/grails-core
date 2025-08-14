@@ -101,7 +101,6 @@ public class EmbeddedGrailsLayoutView extends AbstractGrailsView {
             }
         }
 
-
     }
 
     protected void beforeDecorating(Content content, Map<String, Object> model, GrailsWebRequest webRequest,

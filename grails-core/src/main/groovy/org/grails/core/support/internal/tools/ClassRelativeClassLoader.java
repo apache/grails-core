@@ -44,7 +44,7 @@ class ClassRelativeClassLoader extends URLClassLoader {
 
     private static URL[] createClassLoaderUrls(Class targetClass) {
         URL root = IOUtils.findRootResource(targetClass);
-        if(BuildSettings.RESOURCES_DIR != null && BuildSettings.RESOURCES_DIR.exists()) {
+        if (BuildSettings.RESOURCES_DIR != null && BuildSettings.RESOURCES_DIR.exists()) {
             try {
                 return new URL[] {root, new FileSystemResource(BuildSettings.RESOURCES_DIR.getCanonicalFile()).getURL() };
             } catch (IOException e) {
@@ -63,7 +63,7 @@ class ClassRelativeClassLoader extends URLClassLoader {
 
     @Override
     public Enumeration<URL> getResources(String name) throws IOException {
-        if("".equals(name)) {
+        if ("".equals(name)) {
             final URL[] urls = getURLs();
             final int l = urls.length;
             return new Enumeration<URL>() {
@@ -83,6 +83,4 @@ class ClassRelativeClassLoader extends URLClassLoader {
             return findResources(name);
         }
     }
-
-
 }

@@ -222,7 +222,6 @@ public class JSONWriter {
         throw new JSONException("Misplaced key: expected mode of KEY but was " + this.mode);
     }
 
-
     /**
      * Begin appending a new object. All keys and values until the balancing
      * <code>endObject</code> will be appended to this object. The
@@ -243,7 +242,6 @@ public class JSONWriter {
         throw new JSONException("Misplaced object: expected mode of INIT, OBJECT or ARRAY but was " + this.mode);
 
     }
-
 
     /**
      * Pop an array or object scope.
@@ -270,7 +268,6 @@ public class JSONWriter {
         this.stack.push(c);
         this.mode = c;
     }
-
 
     /**
      * Append either the value <code>true</code> or the value
@@ -335,7 +332,7 @@ public class JSONWriter {
      * @return this
      */
     public JSONWriter value(Object o) {
-        return  o != null ? append(new QuotedWritable(o)) : valueNull();
+        return o != null ? append(new QuotedWritable(o)) : valueNull();
     }
 
     private static class QuotedWritable implements Writable {

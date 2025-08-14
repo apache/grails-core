@@ -52,8 +52,8 @@ public class StandaloneTagLibraryLookup extends TagLibraryLookup implements Appl
     }
 
     protected void registerTagLibraries() {
-        if(tagLibInstancesSet != null) {
-            for(Object tagLibInstance : tagLibInstancesSet) {
+        if (tagLibInstancesSet != null) {
+            for (Object tagLibInstance : tagLibInstancesSet) {
                 registerTagLib(new DefaultGrailsTagLibClass(tagLibInstance.getClass()));
             }
         }
@@ -61,8 +61,8 @@ public class StandaloneTagLibraryLookup extends TagLibraryLookup implements Appl
 
     @Override
     protected void putTagLib(Map<String, Object> tags, String name, GrailsTagLibClass taglib) {
-        for(Object tagLibInstance : tagLibInstancesSet) {
-            if(tagLibInstance.getClass() == taglib.getClazz()) {
+        for (Object tagLibInstance : tagLibInstancesSet) {
+            if (tagLibInstance.getClass() == taglib.getClazz()) {
                 tags.put(name, tagLibInstance);
                 break;
             }
@@ -80,12 +80,12 @@ public class StandaloneTagLibraryLookup extends TagLibraryLookup implements Appl
     }
 
     public void detectAndRegisterTabLibBeans() {
-        if(tagLibInstancesSet==null) {
+        if (tagLibInstancesSet == null) {
             tagLibInstancesSet = new LinkedHashSet<Object>();
         }
         Collection<Object> detectedInstances = applicationContext.getBeansWithAnnotation(TagLib.class).values();
-        for(Object instance : detectedInstances) {
-            if(!tagLibInstancesSet.contains(instance)) {
+        for (Object instance : detectedInstances) {
+            if (!tagLibInstancesSet.contains(instance)) {
                 tagLibInstancesSet.add(instance);
                 registerTagLib(new DefaultGrailsTagLibClass(instance.getClass()));
             }

@@ -183,12 +183,12 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                 writer.value(o);
             }
             else if (o instanceof Class<?>) {
-                writer.value(((Class<?>)o).getName());
+                writer.value(((Class<?>) o).getName());
             }
             else if (o instanceof Number) {
-                writer.value((Number)o);
+                writer.value((Number) o);
             } else if (o instanceof Boolean) {
-                writer.value((Boolean)o);
+                writer.value((Boolean) o);
             } else if (o.getClass().isPrimitive() && !o.getClass().equals(byte[].class)) {
                 writer.value(o);
             }
@@ -363,7 +363,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                     value(props);
                 }
                 else {
-                    if(isMap) {
+                    if (isMap) {
                         writer.object(); writer.endObject();
                     }
                     else {
@@ -497,7 +497,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
 
         public void execute(Closure<?> callable) {
             callable.setDelegate(this);
-//            callable.setDelegate(Closure.DELEGATE_FIRST);
+            // callable.setDelegate(Closure.DELEGATE_FIRST);
             invokeMethod("json", new Object[] { callable });
         }
 
@@ -542,7 +542,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                 writer.object();
                 for (Object o : valueMap.entrySet()) {
                     Map.Entry element = (Map.Entry) o;
-                    writer.key(String.valueOf(element.getKey()));//.value(element.getValue());
+                    writer.key(String.valueOf(element.getKey())); //.value(element.getValue());
                     json.convertAnother(element.getValue());
                 }
                 writer.endObject();
@@ -562,7 +562,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
         @SuppressWarnings("rawtypes")
         @Override
         protected Object createNode(Object key, Object value) {
-            if (getCurrent() == null && stack.peek()== BuilderMode.OBJECT) {
+            if (getCurrent() == null && stack.peek() == BuilderMode.OBJECT) {
                 throw new IllegalArgumentException("only call to [element { }] is allowed when creating array");
             }
 
@@ -573,7 +573,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                     retVal = 1;
                 }
                 if (value instanceof Collection) {
-                    Collection c = (Collection)value;
+                    Collection c = (Collection) value;
                     writer.key(String.valueOf(key));
                     handleCollectionRecurse(c);
                 }
@@ -611,7 +611,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
             }
 
             try {
-                int i = ((Integer)node);
+                int i = ((Integer) node);
                 while (i-- > 0) {
                     last = stack.pop();
                     if (BuilderMode.ARRAY == last) {

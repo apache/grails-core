@@ -75,14 +75,14 @@ public class HibernateSession extends AbstractHibernateSession {
 
     @Override
     public Serializable getObjectIdentifier(Object instance) {
-        if(instance == null) return null;
-        if(proxyHandler.isProxy(instance)) {
-            return ((HibernateProxy)instance).getHibernateLazyInitializer().getIdentifier();
+        if (instance == null) return null;
+        if (proxyHandler.isProxy(instance)) {
+            return ((HibernateProxy) instance).getHibernateLazyInitializer().getIdentifier();
         }
         Class<?> type = instance.getClass();
         ClassPropertyFetcher cpf = ClassPropertyFetcher.forClass(type);
         final PersistentEntity persistentEntity = getMappingContext().getPersistentEntity(type.getName());
-        if(persistentEntity != null) {
+        if (persistentEntity != null) {
             return (Serializable) cpf.getPropertyValue(instance, persistentEntity.getIdentity().getName());
         }
         return null;
@@ -107,7 +107,7 @@ public class HibernateSession extends AbstractHibernateSession {
             List parameters = jpaQueryInfo.getParameters();
             if (parameters != null) {
                 for (int i = 0, count = parameters.size(); i < count; i++) {
-                    query.setParameter(JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i+1), parameters.get(i));
+                    query.setParameter(JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i + 1), parameters.get(i));
                 }
             }
 
@@ -134,7 +134,7 @@ public class HibernateSession extends AbstractHibernateSession {
             builder.setHibernateCompatible(true);
             PersistentEntity targetEntity = criteria.getPersistentEntity();
             PersistentProperty lastUpdated = targetEntity.getPropertyByName(GormProperties.LAST_UPDATED);
-            if(lastUpdated != null && targetEntity.getMapping().getMappedForm().isAutoTimestamp()) {
+            if (lastUpdated != null && targetEntity.getMapping().getMappedForm().isAutoTimestamp()) {
                 if (timestampProvider == null) {
                     timestampProvider = new DefaultTimestampProvider();
                 }
@@ -148,7 +148,7 @@ public class HibernateSession extends AbstractHibernateSession {
             List parameters = jpaQueryInfo.getParameters();
             if (parameters != null) {
                 for (int i = 0, count = parameters.size(); i < count; i++) {
-                    query.setParameter(JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i+1), parameters.get(i));
+                    query.setParameter(JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i + 1), parameters.get(i));
                 }
             }
 
@@ -195,7 +195,7 @@ public class HibernateSession extends AbstractHibernateSession {
     }
 
     protected GrailsHibernateTemplate getHibernateTemplate() {
-        return (GrailsHibernateTemplate)getNativeInterface();
+        return (GrailsHibernateTemplate) getNativeInterface();
     }
 
     public void setFlushMode(FlushModeType flushMode) {
@@ -207,13 +207,12 @@ public class HibernateSession extends AbstractHibernateSession {
         }
     }
 
-
     public FlushModeType getFlushMode() {
         switch (hibernateTemplate.getFlushMode()) {
-            case GrailsHibernateTemplate.FLUSH_AUTO:   return FlushModeType.AUTO;
+            case GrailsHibernateTemplate.FLUSH_AUTO: return FlushModeType.AUTO;
             case GrailsHibernateTemplate.FLUSH_COMMIT: return FlushModeType.COMMIT;
             case GrailsHibernateTemplate.FLUSH_ALWAYS: return FlushModeType.AUTO;
-            default:                                   return FlushModeType.AUTO;
+            default: return FlushModeType.AUTO;
         }
     }
 }

@@ -167,7 +167,7 @@ public abstract class GroovyPage extends Script {
     }
 
     private void applyModelFieldsFromBinding(Iterable<Field> modelFields) {
-        for(Field field : modelFields) {
+        for (Field field : modelFields) {
             try {
                 Object value = getProperty(field.getName());
                 if (value != null) {
@@ -190,7 +190,7 @@ public abstract class GroovyPage extends Script {
     private void setVariableDirectly(String name, Object value) {
         Binding binding = getBinding();
         if (binding instanceof AbstractTemplateVariableBinding) {
-            ((AbstractTemplateVariableBinding)binding).setVariableDirectly(name, value);
+            ((AbstractTemplateVariableBinding) binding).setVariableDirectly(name, value);
         } else {
             binding.getVariables().put(name, value);
         }
@@ -377,7 +377,7 @@ public abstract class GroovyPage extends Script {
                     Object tagLibClosure = tagLib.getProperty(tagName);
                     if (tagLibClosure instanceof Closure) {
                         Map<String, Object> encodeAsForTag = gspTagLibraryLookup.getEncodeAsForTag(tagNamespace, tagName);
-                        invokeTagLibClosure(tagName, tagNamespace, (Closure)tagLibClosure, attrs, body, returnsObject, encodeAsForTag);
+                        invokeTagLibClosure(tagName, tagNamespace, (Closure) tagLibClosure, attrs, body, returnsObject, encodeAsForTag);
                     } else {
                         throw new GrailsTagException("Tag [" + tagName + "] does not exist in tag library [" + tagLib.getClass().getName() + "]", getGroovyPageFileName(), lineNumber);
                     }
@@ -435,19 +435,19 @@ public abstract class GroovyPage extends Script {
 
     private void invokeTagLibClosure(String tagName, String tagNamespace, Closure<?> tagLibClosure, Map<?, ?> attrs, Closure<?> body,
             boolean returnsObject, Map<String, Object> defaultEncodeAs) {
-        Closure<?> tag = (Closure<?>)tagLibClosure.clone();
+        Closure<?> tag = (Closure<?>) tagLibClosure.clone();
 
         if (!(attrs instanceof GroovyPageAttributes)) {
             attrs = new GroovyPageAttributes(attrs);
         }
-        ((GroovyPageAttributes)attrs).setGspTagSyntaxCall(true);
+        ((GroovyPageAttributes) attrs).setGspTagSyntaxCall(true);
 
-        boolean encodeAsPushedToStack=false;
+        boolean encodeAsPushedToStack = false;
         try {
             Map<String, Object> codecSettings = TagOutput.createCodecSettings(tagNamespace, tagName, attrs, defaultEncodeAs);
             if (codecSettings != null) {
                 outputStack.push(WithCodecHelper.createOutputStackAttributesBuilder(codecSettings, outputContext.getGrailsApplication()).build());
-                encodeAsPushedToStack=true;
+                encodeAsPushedToStack = true;
             }
             Object tagresult = null;
             switch (tag.getParameterTypes().length) {
@@ -470,7 +470,7 @@ public abstract class GroovyPage extends Script {
 
     private void outputTagResult(boolean returnsObject, Object tagresult) {
         if (returnsObject && tagresult != null && !(tagresult instanceof Writer)) {
-            if (tagresult instanceof String && isHtmlPart((String)tagresult)) {
+            if (tagresult instanceof String && isHtmlPart((String) tagresult)) {
                 staticOut.print(tagresult);
             } else {
                 outputStack.getTaglibWriter().print(tagresult);
@@ -529,7 +529,7 @@ public abstract class GroovyPage extends Script {
         this.htmlParts = htmlParts;
         this.htmlPartsSet = new HashSet<Integer>();
         if (htmlParts != null) {
-            for(String htmlPart : htmlParts) {
+            for (String htmlPart : htmlParts) {
                 if (htmlPart != null) {
                     htmlPartsSet.add(System.identityHashCode(htmlPart));
                 }

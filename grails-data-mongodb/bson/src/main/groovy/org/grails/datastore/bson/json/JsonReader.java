@@ -229,7 +229,6 @@ public class JsonReader extends AbstractBsonReader {
         }
     }
 
-
     @Override
     protected void doReadEndDocument() {
         setContext(getContext().getParentContext());
@@ -493,7 +492,6 @@ public class JsonReader extends AbstractBsonReader {
             mark = null;
         }
     }
-
 
     protected class Context extends AbstractBsonReader.Context {
         protected Context(final AbstractBsonReader.Context parentContext, final BsonContextType contextType) {

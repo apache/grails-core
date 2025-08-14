@@ -37,7 +37,6 @@ import org.grails.datastore.mapping.core.grailsversion.GrailsVersion;
  */
 public class HibernateVersionSupport {
 
-
     /**
      * Get the native Hibernate FlushMode, adapting between Hibernate 5.0/5.1 and 5.2+.
      * @param session the Hibernate Session to get the flush mode from

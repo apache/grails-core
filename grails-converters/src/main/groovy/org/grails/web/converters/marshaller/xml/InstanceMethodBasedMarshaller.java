@@ -44,9 +44,9 @@ public class InstanceMethodBasedMarshaller implements ObjectMarshaller<XML> {
                 converter.convertAnother(result);
             }
         }
-        catch(Throwable e) {
-            throw e instanceof ConverterException ? (ConverterException)e :
-                new ConverterException("Error invoking toXML method of object with class " + object.getClass().getName(),e);
+        catch (Throwable e) {
+            throw e instanceof ConverterException ? (ConverterException) e :
+                new ConverterException("Error invoking toXML method of object with class " + object.getClass().getName(), e);
         }
     }
 

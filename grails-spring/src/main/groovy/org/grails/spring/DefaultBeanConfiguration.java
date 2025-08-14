@@ -110,7 +110,7 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
         // constructorArgs
         else if (CONSTRUCTOR_ARGS.equals(property) && newValue instanceof List<?>) {
             ConstructorArgumentValues cav = new ConstructorArgumentValues();
-            for (Object e : (List<?>)newValue) {
+            for (Object e : (List<?>) newValue) {
                 cav.addGenericArgumentValue(e);
             }
             bd.setConstructorArgumentValues(cav);
@@ -139,8 +139,8 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
                 bd.setInitMethodName(newValue.toString());
             }
         }
-         // singleton property
-        else if(SINGLETON.equals(property)) {
+        // singleton property
+        else if (SINGLETON.equals(property)) {
             bd.setScope(Boolean.TRUE.equals(newValue) ? BeanDefinition.SCOPE_SINGLETON : BeanDefinition.SCOPE_PROTOTYPE);
         }
         else if (wrapper.isWritableProperty(property)) {
@@ -165,12 +165,12 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
     }
 
     public DefaultBeanConfiguration(String name, Class<?> clazz, boolean prototype) {
-        this(name,clazz, Collections.emptyList());
+        this(name, clazz, Collections.emptyList());
         singleton = !prototype;
     }
 
     public DefaultBeanConfiguration(String name) {
-        this(name,null, Collections.emptyList());
+        this(name, null, Collections.emptyList());
     }
 
     public DefaultBeanConfiguration(Class<?> clazz2) {
@@ -184,7 +184,7 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
     }
 
     public DefaultBeanConfiguration(String name2, boolean prototype) {
-        this(name2,null, Collections.emptyList());
+        this(name2, null, Collections.emptyList());
         singleton = !prototype;
     }
 
@@ -209,7 +209,7 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
     }
 
     public void setBeanDefinition(BeanDefinition definition) {
-        this.definition = (AbstractBeanDefinition)definition;
+        this.definition = (AbstractBeanDefinition) definition;
     }
 
     protected AbstractBeanDefinition createBeanDefinition() {
@@ -221,8 +221,8 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
             }
             bd.setConstructorArgumentValues(cav);
         }
-        if(clazz != null) {
-            bd.setLazyInit( clazz.getAnnotation(Lazy.class) != null);
+        if (clazz != null) {
+            bd.setLazyInit(clazz.getAnnotation(Lazy.class) != null);
             bd.setBeanClass(clazz);
         }
         bd.setScope(singleton ? AbstractBeanDefinition.SCOPE_SINGLETON : AbstractBeanDefinition.SCOPE_PROTOTYPE);
@@ -235,11 +235,11 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
 
     public BeanConfiguration addProperty(String propertyName, Object propertyValue) {
         if (propertyValue instanceof BeanConfiguration) {
-            propertyValue = ((BeanConfiguration)propertyValue).getBeanDefinition();
+            propertyValue = ((BeanConfiguration) propertyValue).getBeanDefinition();
         }
         getBeanDefinition()
             .getPropertyValues()
-            .addPropertyValue(propertyName,propertyValue);
+            .addPropertyValue(propertyName, propertyValue);
 
         return this;
     }
@@ -306,13 +306,13 @@ public class DefaultBeanConfiguration extends GroovyObjectSupport implements Bea
         Assert.notNull(obj, "Parent bean cannot be set to a null runtime bean reference!");
 
         if (obj instanceof String) {
-            parentName = (String)obj;
+            parentName = (String) obj;
         }
         else if (obj instanceof RuntimeBeanReference) {
-            parentName = ((RuntimeBeanReference)obj).getBeanName();
+            parentName = ((RuntimeBeanReference) obj).getBeanName();
         }
         else if (obj instanceof BeanConfiguration) {
-            parentName = ((BeanConfiguration)obj).getName();
+            parentName = ((BeanConfiguration) obj).getName();
         }
         getBeanDefinition().setParentName(parentName);
         setAbstract(false);

@@ -79,7 +79,7 @@ public class CountByFinder extends DynamicFinder implements QueryBuildingFinder 
         }
         else {
             for (MethodExpression expression : invocation.getExpressions()) {
-                q.add( expression.createCriterion() );
+                q.add(expression.createCriterion());
             }
         }
 

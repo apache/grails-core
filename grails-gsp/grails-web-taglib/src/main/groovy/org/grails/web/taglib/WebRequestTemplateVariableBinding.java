@@ -41,9 +41,10 @@ public class WebRequestTemplateVariableBinding extends AbstractTemplateVariableB
     private static Log log = LogFactory.getLog(WebRequestTemplateVariableBinding.class);
     private GrailsWebRequest webRequest;
     private boolean developmentMode = Environment.isDevelopmentMode();
-    private Set<String> requestAttributeVariables=new HashSet<String>();
+    private Set<String> requestAttributeVariables = new HashSet<String>();
 
     private static Map<String, LazyRequestBasedValue> lazyRequestBasedValuesMap = new HashMap<String, LazyRequestBasedValue>();
+
     static {
         Map<String, LazyRequestBasedValue> m = lazyRequestBasedValuesMap;
         m.put("webRequest", new LazyRequestBasedValue() {
@@ -114,13 +115,13 @@ public class WebRequestTemplateVariableBinding extends AbstractTemplateVariableB
 
     public Binding findBindingForVariable(String name) {
         Binding binding = super.findBindingForVariable(name);
-        if(binding == null) {
-            if(webRequest.getCurrentRequest().getAttribute(name) != null) {
+        if (binding == null) {
+            if (webRequest.getCurrentRequest().getAttribute(name) != null) {
                 requestAttributeVariables.add(name);
                 binding = this;
             }
         }
-        if(binding == null && lazyRequestBasedValuesMap.containsKey(name)) {
+        if (binding == null && lazyRequestBasedValuesMap.containsKey(name)) {
             binding = this;
         }
         return binding;

@@ -160,7 +160,7 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
 
     protected Class getClassForAssociationType(Attribute<?, ?> type) {
         if (type instanceof PluralAttribute) {
-            return ((PluralAttribute)type).getElementType().getJavaType();
+            return ((PluralAttribute) type).getElementType().getJavaType();
         }
         return type.getJavaType();
     }
@@ -196,7 +196,7 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
         {
             if (TransactionSynchronizationManager.hasResource(sessionFactory)) {
                 participate = true;
-                hibernateSession = ((SessionHolder)TransactionSynchronizationManager.getResource(sessionFactory)).getSession();
+                hibernateSession = ((SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)).getSession();
             }
             else {
                 hibernateSession = sessionFactory.openSession();
@@ -223,13 +223,13 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
         Class targetClass = persistentEntity.getJavaClass();
         org.hibernate.criterion.DetachedCriteria detachedCriteria;
 
-        if(alias != null) {
+        if (alias != null) {
             detachedCriteria = org.hibernate.criterion.DetachedCriteria.forClass(targetClass, alias);
         }
         else {
             detachedCriteria = org.hibernate.criterion.DetachedCriteria.forClass(targetClass);
         }
-        populateHibernateDetachedCriteria(new HibernateQuery(detachedCriteria,persistentEntity), detachedCriteria, queryableCriteria);
+        populateHibernateDetachedCriteria(new HibernateQuery(detachedCriteria, persistentEntity), detachedCriteria, queryableCriteria);
         return detachedCriteria;
     }
 

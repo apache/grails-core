@@ -45,7 +45,7 @@ import org.grails.datastore.mapping.reflect.NameUtils;
  *
  * @author Graeme Rocher
  */
-@SuppressWarnings({"unchecked","rawtypes"})
+@SuppressWarnings({"unchecked", "rawtypes"})
 @CompileStatic
 public class LazyMetaPropertyMap implements Map {
 
@@ -116,7 +116,7 @@ public class LazyMetaPropertyMap implements Map {
 
         if (propertyName instanceof List) {
             Map submap = new HashMap();
-            List propertyNames = (List)propertyName;
+            List propertyNames = (List) propertyName;
             for (Object currentName : propertyNames) {
                 if (currentName != null) {
                     currentName = currentName.toString();
@@ -146,11 +146,11 @@ public class LazyMetaPropertyMap implements Map {
         }
 
         Object old = null;
-        MetaProperty mp = metaClass.getMetaProperty((String)propertyName);
+        MetaProperty mp = metaClass.getMetaProperty((String) propertyName);
         if (mp != null && !isExcluded(mp)) {
             old = mp.getProperty(instance);
             if (propertyValue instanceof Map) {
-                propertyValue = ((Map)propertyValue).get(propertyName);
+                propertyValue = ((Map) propertyValue).get(propertyName);
             }
             mp.setProperty(instance, propertyValue);
         }
@@ -203,7 +203,7 @@ public class LazyMetaPropertyMap implements Map {
     @Override
     public boolean equals(Object o) {
         if (o instanceof LazyMetaPropertyMap) {
-            LazyMetaPropertyMap other = (LazyMetaPropertyMap)o;
+            LazyMetaPropertyMap other = (LazyMetaPropertyMap) o;
             return instance.equals(other.getInstance());
         }
         return false;

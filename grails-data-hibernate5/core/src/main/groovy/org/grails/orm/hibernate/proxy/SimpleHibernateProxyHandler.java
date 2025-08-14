@@ -18,7 +18,6 @@
  */
 package org.grails.orm.hibernate.proxy;
 
-
 import java.io.Serializable;
 
 import groovy.lang.GroovyObject;
@@ -82,7 +81,7 @@ public class SimpleHibernateProxyHandler extends JavassistProxyFactory implement
 
     public Object unwrapIfProxy(Object instance) {
         if (instance instanceof HibernateProxy) {
-            final HibernateProxy proxy = (HibernateProxy)instance;
+            final HibernateProxy proxy = (HibernateProxy) instance;
             return unwrapProxy(proxy);
         }
         else {
@@ -110,13 +109,12 @@ public class SimpleHibernateProxyHandler extends JavassistProxyFactory implement
      */
     private static void ensureCorrectGroovyMetaClass(Object target, Class<?> persistentClass) {
         if (target instanceof GroovyObject) {
-            GroovyObject go = ((GroovyObject)target);
+            GroovyObject go = ((GroovyObject) target);
             if (!go.getMetaClass().getTheClass().equals(persistentClass)) {
                 go.setMetaClass(GroovySystem.getMetaClassRegistry().getMetaClass(persistentClass));
             }
         }
     }
-
 
     public HibernateProxy getAssociationProxy(Object obj, String associationName) {
         try {
@@ -137,7 +135,7 @@ public class SimpleHibernateProxyHandler extends JavassistProxyFactory implement
 
     public void initialize(Object o) {
         if (o instanceof HibernateProxy) {
-            final LazyInitializer hibernateLazyInitializer = ((HibernateProxy)o).getHibernateLazyInitializer();
+            final LazyInitializer hibernateLazyInitializer = ((HibernateProxy) o).getHibernateLazyInitializer();
             if (hibernateLazyInitializer.isUninitialized()) {
                 hibernateLazyInitializer.initialize();
             }
@@ -149,13 +147,13 @@ public class SimpleHibernateProxyHandler extends JavassistProxyFactory implement
 
     public Object getProxyIdentifier(Object o) {
         if (o instanceof HibernateProxy) {
-            return ((HibernateProxy)o).getHibernateLazyInitializer().getIdentifier();
+            return ((HibernateProxy) o).getHibernateLazyInitializer().getIdentifier();
         }
         return super.getIdentifier(o);
     }
 
     public Class<?> getProxiedClass(Object o) {
-        if(o instanceof HibernateProxy) {
+        if (o instanceof HibernateProxy) {
             return HibernateProxyHelper.getClassWithoutInitializingProxy(o);
         }
         else {

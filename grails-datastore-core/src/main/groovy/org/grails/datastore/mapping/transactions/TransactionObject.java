@@ -75,7 +75,6 @@ public class TransactionObject implements SmartTransactionObject {
         return newSession;
     }
 
-
     @Override
     public boolean isRollbackOnly() {
         return sessionHolder.isRollbackOnly();

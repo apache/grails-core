@@ -64,7 +64,6 @@ import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.datastore.mapping.transactions.Transaction;
 
-
 /**
  * Abstract implementation of the {@link org.grails.datastore.mapping.core.Session} interface that uses
  * a list of {@link org.grails.datastore.mapping.engine.Persister} instances
@@ -140,7 +139,6 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
 
     protected boolean stateless = false;
     protected boolean flushActive = false;
-
 
     public AbstractSession(Datastore datastore, MappingContext mappingContext,
                            ApplicationEventPublisher publisher) {
@@ -381,7 +379,6 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
             return false;
         }
 
-
         EntityPersister persister = (EntityPersister) getPersister(instance);
         if (persister == null) {
             return false;
@@ -414,7 +411,6 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
         }
         return null;
     }
-
 
     /**
      * The default implementation of flushPendingUpdates is to iterate over each update operation
@@ -762,7 +758,6 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
         if (p == null) {
             return;
         }
-
 
         p.delete(obj);
         clear(obj);

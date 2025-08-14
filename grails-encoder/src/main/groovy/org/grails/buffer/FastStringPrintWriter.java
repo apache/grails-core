@@ -36,6 +36,7 @@ public class FastStringPrintWriter extends GrailsPrintWriterAdapter {
     private static final Logger LOG = LoggerFactory.getLogger(FastStringPrintWriter.class);
 
     private static ObjectInstantiator instantiator;
+
     static {
         try {
             instantiator = new ObjenesisStd(false).getInstantiatorOf(FastStringPrintWriter.class);
@@ -68,7 +69,7 @@ public class FastStringPrintWriter extends GrailsPrintWriterAdapter {
             return new FastStringPrintWriter();
         }
 
-        FastStringPrintWriter instance = (FastStringPrintWriter)instantiator.newInstance();
+        FastStringPrintWriter instance = (FastStringPrintWriter) instantiator.newInstance();
         if (initialChunkSize > 0) {
             instance.streamBuffer = new StreamCharBuffer(initialChunkSize);
         } else {

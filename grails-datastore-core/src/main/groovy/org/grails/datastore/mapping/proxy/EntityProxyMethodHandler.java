@@ -65,7 +65,7 @@ public abstract class EntityProxyMethodHandler extends GroovyObjectMethodHandler
     @Override
     public Object invokeMethodBeforeResolving(Object self, String methodName, Object[] args) {
         Object result = invokeEntityProxyMethods(self, methodName, args);
-        if(!wasHandled(result)) {
+        if (!wasHandled(result)) {
             return super.invokeMethodBeforeResolving(self, methodName, args);
         } else {
             return result;
@@ -75,9 +75,9 @@ public abstract class EntityProxyMethodHandler extends GroovyObjectMethodHandler
     @Override
     public Object handleInvocation(Object self, Method thisMethod, Object[] args) {
         Object result = invokeEntityProxyMethods(self, thisMethod.getName(), args);
-        if(!wasHandled(result)) {
+        if (!wasHandled(result)) {
             result = super.handleInvocation(self, thisMethod, args);
-            if(!wasHandled(result)) {
+            if (!wasHandled(result)) {
                 return handleInvocationFallback(self, thisMethod, args);
             }
         }
@@ -104,7 +104,6 @@ public abstract class EntityProxyMethodHandler extends GroovyObjectMethodHandler
             return INVOKE_IMPLEMENTATION;
         }
     }
-
 
     protected void initializeProxyTarget(Object self) {
         getProxyTarget(self);

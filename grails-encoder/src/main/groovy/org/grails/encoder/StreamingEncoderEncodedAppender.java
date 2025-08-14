@@ -67,9 +67,9 @@ public class StreamingEncoderEncodedAppender extends AbstractEncodedAppender {
     protected void appendCharSequence(EncodingState encodingState, CharSequence str, int start, int end)
             throws IOException {
         if (shouldEncode(encoder, encodingState.getPreviousEncodingState())) {
-            encoder.encodeToStream(encoder, str, start, end-start, target, encodingState);
+            encoder.encodeToStream(encoder, str, start, end - start, target, encodingState);
         } else {
-            target.appendEncoded(null, encodingState, str, start, end-start);
+            target.appendEncoded(null, encodingState, str, start, end - start);
         }
     }
 }

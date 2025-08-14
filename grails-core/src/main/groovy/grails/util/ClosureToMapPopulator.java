@@ -32,7 +32,7 @@ import groovy.lang.GroovyObjectSupport;
  * @author Graeme Rocher
  * @since 1.2
  */
-@SuppressWarnings({"unchecked","rawtypes"})
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class ClosureToMapPopulator extends GroovyObjectSupport {
 
     private Map map;
@@ -63,7 +63,7 @@ public class ClosureToMapPopulator extends GroovyObjectSupport {
     public Object invokeMethod(String name, Object o) {
         if (o != null) {
             if (o.getClass().isArray()) {
-                Object[] args = (Object[])o;
+                Object[] args = (Object[]) o;
                 if (args.length == 1) {
                     map.put(name, args[0]);
                 }
@@ -72,7 +72,7 @@ public class ClosureToMapPopulator extends GroovyObjectSupport {
                 }
             }
             else {
-                map.put(name,o);
+                map.put(name, o);
             }
         }
         return null;

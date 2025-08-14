@@ -91,12 +91,12 @@ public class OutputEncodingStackAttributes {
         private Encoder expressionEncoder;
         private Encoder taglibEncoder;
         private Encoder defaultTaglibEncoder;
-        private boolean allowCreate=true;
-        private boolean pushTop=true;
-        private boolean autoSync=true;
+        private boolean allowCreate = true;
+        private boolean pushTop = true;
+        private boolean autoSync = true;
         private OutputContext outputContext;
-        private boolean inheritPreviousEncoders=false;
-        private boolean replaceOnly=false;
+        private boolean inheritPreviousEncoders = false;
+        private boolean replaceOnly = false;
 
         public Builder() {
         }

@@ -46,16 +46,16 @@ public abstract class AbstractArtefactTypeAstTransformation implements ASTTransf
             if (!injectors.isEmpty()) {
                 AbstractGrailsArtefactTransformer.addToTransformedClasses(cNode.getName());
                 for (ClassInjector injector : injectors) {
-                    if(injector instanceof AllArtefactClassInjector) {
-                        injector.performInjection(sourceUnit,cNode);
+                    if (injector instanceof AllArtefactClassInjector) {
+                        injector.performInjection(sourceUnit, cNode);
                     }
-                    else if(injector instanceof AnnotatedClassInjector) {
-                        ((AnnotatedClassInjector)injector).performInjectionOnAnnotatedClass(sourceUnit,null, cNode);
+                    else if (injector instanceof AnnotatedClassInjector) {
+                        ((AnnotatedClassInjector) injector).performInjectionOnAnnotatedClass(sourceUnit, null, cNode);
                     }
                 }
             }
         } catch (RuntimeException e) {
-            System.err.println("Error occurred calling AST injector ["+getClass()+"]: " + e.getMessage());
+            System.err.println("Error occurred calling AST injector [" + getClass() + "]: " + e.getMessage());
             throw e;
         }
     }

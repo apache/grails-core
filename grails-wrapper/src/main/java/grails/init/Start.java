@@ -67,7 +67,7 @@ public class Start {
                 }
             }
 
-            if(updated) {
+            if (updated) {
                 System.out.println("Updated wrapper to version: " + updater.getSelectedVersion().toString());
             }
 
@@ -84,7 +84,7 @@ public class Start {
     private static GrailsVersion getPreferredGrailsVersion() {
         // Check for a properties file in case inside a grails project
         File gradleProperties = new File("gradle.properties");
-        if(!gradleProperties.exists()) {
+        if (!gradleProperties.exists()) {
             return null;
         }
 
@@ -92,18 +92,18 @@ public class Start {
         try (InputStream in = new FileInputStream(gradleProperties)) {
             properties.load(in);
         }
-        catch(Exception e) {
-            System.err.println("Failed to load gradle.properties from "+ gradleProperties);
+        catch (Exception e) {
+            System.err.println("Failed to load gradle.properties from " + gradleProperties);
             e.printStackTrace();
             System.exit(1);
         }
 
-        if(!properties.containsKey("grailsVersion")) {
+        if (!properties.containsKey("grailsVersion")) {
             return null;
         }
 
         String grailsVersion = properties.getProperty("grailsVersion");
-        if(grailsVersion == null) {
+        if (grailsVersion == null) {
             System.out.println("gradle.properties does not contain grailsVersion; downloading latest Grails Version");
 
             String overrideGrailsVersion = System.getenv("PREFERRED_GRAILS_VERSION");
@@ -123,7 +123,7 @@ public class Start {
         try {
             return new GrailsVersion(grailsVersion);
         }
-        catch(Exception e) {
+        catch (Exception e) {
             System.out.println("An invalid Grails Version [" + grailsVersion + "] was specified in gradle.properties");
             e.printStackTrace();
             System.exit(1);

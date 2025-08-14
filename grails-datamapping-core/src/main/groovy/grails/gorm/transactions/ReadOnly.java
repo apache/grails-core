@@ -125,7 +125,6 @@ public @interface ReadOnly {
      */
     String[] noRollbackForClassName() default {};
 
-
     /**
      * In Spring, when there are nested transaction calls, the execution of the outermost callback will throw UnexpectedRollbackException if TransactionStatus.setRollbackOnly() was called in a nested transaction callback.
      *

@@ -42,7 +42,7 @@ public abstract class AbstractFinder implements FinderMethod {
     }
 
     protected <T> T execute(final SessionCallback<T> callback) {
-        if(datastore != null) {
+        if (datastore != null) {
             return DatastoreUtils.execute(datastore, callback);
         }
         else {
@@ -51,7 +51,7 @@ public abstract class AbstractFinder implements FinderMethod {
     }
 
     protected void execute(final VoidSessionCallback callback) {
-        if(datastore != null) {
+        if (datastore != null) {
             DatastoreUtils.execute(datastore, callback);
         }
         else {

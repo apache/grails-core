@@ -84,7 +84,7 @@ import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
  * @since 1.0
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
-public abstract class MappingFactory<R extends Entity,T extends Property> {
+public abstract class MappingFactory<R extends Entity, T extends Property> {
 
     public static final String IDENTITY_PROPERTY = GormProperties.IDENTITY;
     public static final Set<String> SIMPLE_TYPES;
@@ -145,7 +145,7 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
 
     public void registerCustomType(CustomTypeMarshaller marshallerCustom) {
         Collection<CustomTypeMarshaller> marshallers = typeConverterMap.get(marshallerCustom.getTargetType());
-        if(marshallers == null) {
+        if (marshallers == null) {
             marshallers = new ConcurrentLinkedQueue<>();
             typeConverterMap.put(marshallerCustom.getTargetType(), marshallers);
         }
@@ -263,9 +263,9 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
 
     protected CustomTypeMarshaller findCustomType(MappingContext context, Class<?> propertyType) {
         final Collection<CustomTypeMarshaller> allMarshallers = typeConverterMap.get(propertyType);
-        if(allMarshallers != null) {
+        if (allMarshallers != null) {
             for (CustomTypeMarshaller marshaller : allMarshallers) {
-                if(marshaller.supports(context)) {
+                if (marshaller.supports(context)) {
                     return marshaller;
                 }
             }
@@ -303,9 +303,11 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
     protected PropertyMapping<T> createPropertyMapping(final PersistentProperty<T> property, final PersistentEntity owner) {
         return new PropertyMapping<T>() {
             private T mappedForm = createMappedForm(property);
+
             public ClassMapping getClassMapping() {
                 return owner.getMapping();
             }
+
             public T getMappedForm() {
                 return mappedForm;
             }
@@ -317,15 +319,16 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
         mappedFormObject.setDerived(true);
         return new PropertyMapping<T>() {
             private T mappedForm = mappedFormObject;
+
             public ClassMapping getClassMapping() {
                 return owner.getMapping();
             }
+
             public T getMappedForm() {
                 return mappedForm;
             }
         };
     }
-
 
     /**
      * Creates a one-to-one association type used for mapping a one-to-one association between entities
@@ -408,9 +411,11 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
     public ManyToMany createManyToMany(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         return new ManyToMany<T>(entity, context, property) {
             PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
+
             public PropertyMapping getMapping() {
                 return propertyMapping;
             }
+
             @Override
             public String toString() {
                 return associationtoString("many-to-many: ", this);
@@ -430,9 +435,11 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
             MappingContext context, PropertyDescriptor property) {
         return new Embedded<T>(entity, context, property) {
             PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
+
             public PropertyMapping getMapping() {
                 return propertyMapping;
             }
+
             @Override
             public String toString() {
                 return associationtoString("embedded: ", this);
@@ -452,9 +459,11 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
             MappingContext context, PropertyDescriptor property) {
         return new EmbeddedCollection<T>(entity, context, property) {
             PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
+
             public PropertyMapping getMapping() {
                 return propertyMapping;
             }
+
             @Override
             public String toString() {
                 return associationtoString("embedded: ", this);
@@ -484,16 +493,16 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
 
         // This is to allow using custom marshaller for list of enum.
         // If no custom type marshaller for current enum.
-        if(collectionType != null && collectionType.isEnum()) {
+        if (collectionType != null && collectionType.isEnum()) {
             // First look custom marshaller for related type of collection.
             customTypeMarshaller = findCustomType(context, collectionType);
-            if(customTypeMarshaller == null) {
+            if (customTypeMarshaller == null) {
                 // If null, look for enum class itself.
                 customTypeMarshaller = findCustomType(context, Enum.class);
             }
         }
 
-        if(customTypeMarshaller != null) {
+        if (customTypeMarshaller != null) {
             basic.setCustomTypeMarshaller(customTypeMarshaller);
         }
 
@@ -505,10 +514,10 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
     }
 
     public boolean isCustomType(Class<?> propertyType) {
-        if(typeConverterMap.containsKey(propertyType)) {
+        if (typeConverterMap.containsKey(propertyType)) {
             return true;
         }
-        if(propertyType.isEnum()) {
+        if (propertyType.isEnum()) {
             // Check if enum itself supports custom type.
             return typeConverterMap.containsKey(Enum.class);
         }
@@ -525,7 +534,7 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
             public String[] getIdentifierName() {
                 PersistentProperty identity = classMapping.getEntity().getIdentity();
                 String propertyName = identity != null ? identity.getMapping().getMappedForm().getName() : null;
-                if(propertyName != null) {
+                if (propertyName != null) {
                     return new String[] { propertyName };
                 }
                 else {
@@ -554,7 +563,7 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
         return new IdentityMapping() {
 
             public String[] getIdentifierName() {
-                if(targetName != null) {
+                if (targetName != null) {
                     return new String[] { targetName };
                 }
                 else {
@@ -577,10 +586,7 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
         };
     }
 
-
     public static String associationtoString(String desc, Association a) {
         return desc + a.getOwner().getName() + "-> " + a.getName() + " ->" + a.getAssociatedEntity().getName();
     }
-
-
 }

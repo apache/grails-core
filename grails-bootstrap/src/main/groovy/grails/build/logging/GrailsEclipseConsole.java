@@ -65,7 +65,7 @@ public class GrailsEclipseConsole extends GrailsConsole {
 
     private static Boolean boolProp(String propName) {
         try {
-            String prop =  System.getProperty(propName);
+            String prop = System.getProperty(propName);
             return prop != null && Boolean.valueOf(prop);
         } catch (Exception e) {
             return false;

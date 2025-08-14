@@ -35,7 +35,7 @@ public class ValidationException extends DataIntegrityViolationException {
 
     static {
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
-        if(ClassUtils.isPresent("grails.validation.ValidationException", cl)) {
+        if (ClassUtils.isPresent("grails.validation.ValidationException", cl)) {
             Class<? extends RuntimeException> validationExceptionType;
             try {
                 validationExceptionType = (Class<? extends RuntimeException>) ClassUtils.forName("grails.validation.ValidationException", cl);
@@ -49,7 +49,6 @@ public class ValidationException extends DataIntegrityViolationException {
             VALIDATION_EXCEPTION_TYPE = ValidationException.class;
         }
     }
-
 
     private final String fullMessage;
     private final Errors errors;
@@ -73,7 +72,7 @@ public class ValidationException extends DataIntegrityViolationException {
         return fullMessage;
     }
 
-    public static String formatErrors(Errors errors, String msg ) {
+    public static String formatErrors(Errors errors, String msg) {
         String ls = System.getProperty("line.separator");
         StringBuilder b = new StringBuilder();
         if (msg != null) {

@@ -48,7 +48,7 @@ public class ResourceLocator {
     protected List<String> resourceSearchDirectories = new ArrayList<String>();
     protected Map<String, Resource> classNameToResourceCache = new ConcurrentHashMap<String, Resource>();
     protected Map<String, Resource> uriToResourceCache = new ConcurrentHashMap<String, Resource>();
-    protected ResourceLoader defaultResourceLoader =  new FileSystemResourceLoader();
+    protected ResourceLoader defaultResourceLoader = new FileSystemResourceLoader();
     protected boolean warDeployed = Environment.isWarDeployed();
 
     public void setSearchLocation(String searchLocation) {
@@ -124,7 +124,6 @@ public class ResourceLocator {
                 }
             }
 
-
             if (resource == null || !resource.exists()) {
                 Resource tmp = defaultResourceLoader != null ? defaultResourceLoader.getResource(uri) : null;
                 if (tmp != null && tmp.exists()) {
@@ -141,7 +140,6 @@ public class ResourceLocator {
         }
         return resource == NULL_RESOURCE ? null : resource;
     }
-
 
     private PluginResourceInfo inferPluginNameFromURI(String uri) {
         if (uri.startsWith("/plugins/")) {
@@ -173,7 +171,7 @@ public class ResourceLocator {
                 }
             }
             if (resource == null || !resource.exists()) {
-                for(String ext : new String[]{".groovy", ".java"}) {
+                for (String ext : new String[]{".groovy", ".java"}) {
                     resource = resolveExceptionSafe(GrailsResourceUtils.DOMAIN_DIR_PATH + "**/" + className + ext);
                     if (resource != null && resource.exists()) {
                         classNameToResourceCache.put(className, resource);
@@ -213,7 +211,6 @@ public class ResourceLocator {
     public void setResourceLoader(ResourceLoader resourceLoader) {
         defaultResourceLoader = resourceLoader;
     }
-
 
     class PluginResourceInfo {
         String pluginName;

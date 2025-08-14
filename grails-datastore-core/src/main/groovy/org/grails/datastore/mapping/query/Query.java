@@ -55,7 +55,7 @@ import org.grails.datastore.mapping.query.event.PreQueryEvent;
  * @since 1.0
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
-public abstract class Query implements Cloneable{
+public abstract class Query implements Cloneable {
 
     protected final PersistentEntity entity;
     protected final Session session;
@@ -79,7 +79,7 @@ public abstract class Query implements Cloneable{
     @Override
     public Object clone() {
         Session session = getSession();
-        if(session == null) throw new IllegalStateException("Cannot clone a stateless query");
+        if (session == null) throw new IllegalStateException("Cannot clone a stateless query");
         Query newQuery = session.createQuery(entity.getJavaClass());
         for (Criterion criterion : criteria.getCriteria()) {
             newQuery.add(criterion);
@@ -303,7 +303,7 @@ public abstract class Query implements Cloneable{
             criteria.add(Restrictions.eq(property, value));
         }
         else {
-            criteria.add(Restrictions.eq(property,resolved));
+            criteria.add(Restrictions.eq(property, resolved));
         }
         return this;
     }
@@ -311,7 +311,7 @@ public abstract class Query implements Cloneable{
     Object resolvePropertyValue(PersistentEntity entity, String property, Object value) {
         PersistentProperty persistentProperty = entity.getPropertyByName(property);
         Object resolved;
-        if(persistentProperty instanceof Embedded) {
+        if (persistentProperty instanceof Embedded) {
             resolved = value;
         }
         else {
@@ -548,7 +548,7 @@ public abstract class Query implements Cloneable{
      * @param b The right hand side
      * @return This query instance
      */
-    public Query and( Criterion a, Criterion b) {
+    public Query and(Criterion a, Criterion b) {
         Assert.notNull(a, "Left hand side of AND cannot be null");
         Assert.notNull(b, "Right hand side of AND cannot be null");
         criteria.add(Restrictions.and(a, b));
@@ -562,7 +562,7 @@ public abstract class Query implements Cloneable{
      * @param b The right hand side
      * @return This query instance
      */
-    public Query or( Criterion a, Criterion b) {
+    public Query or(Criterion a, Criterion b) {
         Assert.notNull(a, "Left hand side of AND cannot be null");
         Assert.notNull(b, "Right hand side of AND cannot be null");
         criteria.add(Restrictions.or(a, b));
@@ -593,18 +593,17 @@ public abstract class Query implements Cloneable{
         flushBeforeQuery();
 
         ApplicationEventPublisher publisher = session.getDatastore().getApplicationEventPublisher();
-        if(publisher != null) {
+        if (publisher != null) {
             publisher.publishEvent(new PreQueryEvent(this));
         }
 
         List results = executeQuery(entity, criteria);
 
-        if(publisher != null) {
+        if (publisher != null) {
             PostQueryEvent postQueryEvent = new PostQueryEvent(this, results);
             publisher.publishEvent(postQueryEvent);
             results = postQueryEvent.getResults();
         }
-
 
         return results;
     }
@@ -628,12 +627,12 @@ public abstract class Query implements Cloneable{
      */
     protected FetchType fetchStrategy(String property) {
         final FetchType fetchType = fetchStrategies.get(property);
-        if(fetchType != null) {
+        if (fetchType != null) {
             return fetchType;
         }
         else {
             final PersistentProperty prop = entity.getPropertyByName(property);
-            if(prop != null) {
+            if (prop != null) {
                 return prop.getMapping().getMappedForm().getFetchStrategy();
             }
         }
@@ -733,12 +732,12 @@ public abstract class Query implements Cloneable{
             Junction j = (Junction) criterion;
             Junction newj;
             if (j instanceof Disjunction) {
-                newj= disjunction(currentJunction);
+                newj = disjunction(currentJunction);
             } else if (j instanceof Negation) {
-                newj= negation(currentJunction);
+                newj = negation(currentJunction);
             }
             else {
-                newj= conjunction(currentJunction);
+                newj = conjunction(currentJunction);
             }
             for (Criterion c : j.getCriteria()) {
                 addToJunction(newj, c);
@@ -881,7 +880,7 @@ public abstract class Query implements Cloneable{
     /**
      * A Criterion that compares to properties
      */
-    public static class PropertyComparisonCriterion extends PropertyNameCriterion{
+    public static class PropertyComparisonCriterion extends PropertyNameCriterion {
         protected String otherProperty;
 
         public PropertyComparisonCriterion(String property, String otherProperty) {
@@ -961,14 +960,14 @@ public abstract class Query implements Cloneable{
 
         @Override
         public QueryableCriteria getValue() {
-            return (QueryableCriteria)super.getValue();
+            return (QueryableCriteria) super.getValue();
         }
     }
 
     /**
      * Restricts a value to be equal to all the given values
      */
-    public static class EqualsAll extends SubqueryCriterion{
+    public static class EqualsAll extends SubqueryCriterion {
         public EqualsAll(String name, QueryableCriteria value) {
             super(name, value);
         }
@@ -977,7 +976,7 @@ public abstract class Query implements Cloneable{
     /**
      * Restricts a value to be not equal to all the given values
      */
-    public static class NotEqualsAll extends SubqueryCriterion{
+    public static class NotEqualsAll extends SubqueryCriterion {
         public NotEqualsAll(String name, QueryableCriteria value) {
             super(name, value);
         }
@@ -986,7 +985,7 @@ public abstract class Query implements Cloneable{
     /**
      * Restricts a value to be greater than all the given values
      */
-    public static class GreaterThanAll extends SubqueryCriterion{
+    public static class GreaterThanAll extends SubqueryCriterion {
         public GreaterThanAll(String name, QueryableCriteria value) {
             super(name, value);
         }
@@ -995,7 +994,7 @@ public abstract class Query implements Cloneable{
     /**
      * Restricts a value to be greater than some of the given values
      */
-    public static class GreaterThanSome extends SubqueryCriterion{
+    public static class GreaterThanSome extends SubqueryCriterion {
         public GreaterThanSome(String name, QueryableCriteria value) {
             super(name, value);
         }
@@ -1004,7 +1003,7 @@ public abstract class Query implements Cloneable{
     /**
      * Restricts a value to be greater than some of the given values
      */
-    public static class GreaterThanEqualsSome extends SubqueryCriterion{
+    public static class GreaterThanEqualsSome extends SubqueryCriterion {
         public GreaterThanEqualsSome(String name, QueryableCriteria value) {
             super(name, value);
         }
@@ -1013,7 +1012,7 @@ public abstract class Query implements Cloneable{
     /**
      * Restricts a value to be less than some of the given values
      */
-    public static class LessThanSome extends SubqueryCriterion{
+    public static class LessThanSome extends SubqueryCriterion {
         public LessThanSome(String name, QueryableCriteria value) {
             super(name, value);
         }
@@ -1022,7 +1021,7 @@ public abstract class Query implements Cloneable{
     /**
      * Restricts a value to be less than some of the given values
      */
-    public static class LessThanEqualsSome extends SubqueryCriterion{
+    public static class LessThanEqualsSome extends SubqueryCriterion {
         public LessThanEqualsSome(String name, QueryableCriteria value) {
             super(name, value);
         }
@@ -1031,7 +1030,7 @@ public abstract class Query implements Cloneable{
     /**
      * Restricts a value to be less than all the given values
      */
-    public static class LessThanAll extends SubqueryCriterion{
+    public static class LessThanAll extends SubqueryCriterion {
         public LessThanAll(String name, QueryableCriteria value) {
             super(name, value);
         }
@@ -1040,7 +1039,7 @@ public abstract class Query implements Cloneable{
     /**
      * Restricts a value to be greater than or equal to all the given values
      */
-    public static class GreaterThanEqualsAll extends SubqueryCriterion{
+    public static class GreaterThanEqualsAll extends SubqueryCriterion {
         public GreaterThanEqualsAll(String name, QueryableCriteria value) {
             super(name, value);
         }
@@ -1049,7 +1048,7 @@ public abstract class Query implements Cloneable{
     /**
      * Restricts a value to be less than or equal to all the given values
      */
-    public static class LessThanEqualsAll extends SubqueryCriterion{
+    public static class LessThanEqualsAll extends SubqueryCriterion {
         public LessThanEqualsAll(String name, QueryableCriteria value) {
             super(name, value);
         }
@@ -1070,37 +1069,37 @@ public abstract class Query implements Cloneable{
         }
     }
 
-    public static class SizeEquals extends PropertyCriterion{
+    public static class SizeEquals extends PropertyCriterion {
         public SizeEquals(String name, int value) {
             super(name, value);
         }
     }
 
-    public static class SizeNotEquals extends PropertyCriterion{
+    public static class SizeNotEquals extends PropertyCriterion {
         public SizeNotEquals(String name, int value) {
             super(name, value);
         }
     }
 
-    public static class SizeGreaterThan extends PropertyCriterion{
+    public static class SizeGreaterThan extends PropertyCriterion {
         public SizeGreaterThan(String name, int value) {
             super(name, value);
         }
     }
 
-    public static class SizeGreaterThanEquals extends PropertyCriterion{
+    public static class SizeGreaterThanEquals extends PropertyCriterion {
         public SizeGreaterThanEquals(String name, int value) {
             super(name, value);
         }
     }
 
-    public static class SizeLessThanEquals extends PropertyCriterion{
+    public static class SizeLessThanEquals extends PropertyCriterion {
         public SizeLessThanEquals(String name, int value) {
             super(name, value);
         }
     }
 
-    public static class SizeLessThan extends PropertyCriterion{
+    public static class SizeLessThan extends PropertyCriterion {
         public SizeLessThan(String name, int value) {
             super(name, value);
         }
@@ -1151,10 +1150,10 @@ public abstract class Query implements Cloneable{
         }
 
         private static Collection convertCharSequenceValuesIfNecessary(Collection values) {
-            boolean requiresConversion=false;
+            boolean requiresConversion = false;
             for (Object val : values) {
                 if (!(val instanceof String) && val instanceof CharSequence) {
-                    requiresConversion=true;
+                    requiresConversion = true;
                     break;
                 }
             }
@@ -1192,7 +1191,6 @@ public abstract class Query implements Cloneable{
      */
     public static class NotIn extends SubqueryCriterion {
         private QueryableCriteria subquery;
-
 
         public NotIn(String name, QueryableCriteria subquery) {
             super(name, subquery);
@@ -1426,19 +1424,19 @@ public abstract class Query implements Cloneable{
         }
     }
 
-    public static class DistinctPropertyProjection extends PropertyProjection{
+    public static class DistinctPropertyProjection extends PropertyProjection {
         protected DistinctPropertyProjection(String propertyName) {
             super(propertyName);
         }
     }
 
-    public static class CountDistinctProjection extends PropertyProjection{
+    public static class CountDistinctProjection extends PropertyProjection {
         public CountDistinctProjection(String property) {
             super(property);
         }
     }
 
-    public static class GroupPropertyProjection extends PropertyProjection{
+    public static class GroupPropertyProjection extends PropertyProjection {
         public GroupPropertyProjection(String property) {
             super(property);
         }
@@ -1479,7 +1477,6 @@ public abstract class Query implements Cloneable{
             super(propertyName);
         }
     }
-
 
     /**
      * A list of projections

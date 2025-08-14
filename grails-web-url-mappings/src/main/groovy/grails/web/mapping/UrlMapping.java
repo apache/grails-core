@@ -94,7 +94,6 @@ public interface UrlMapping extends Comparable, UrlCreator {
      */
     String NAMESPACE = "namespace";
 
-
     String VIEW = "view";
 
     String RESOURCES = "resources";
@@ -205,7 +204,7 @@ public interface UrlMapping extends Comparable, UrlCreator {
      * Sets any parameter values that should be populated into the request
      * @param parameterValues The parameter values to set
      */
-    void setParameterValues(Map<String,Object> parameterValues);
+    void setParameterValues(Map<String, Object> parameterValues);
 
     /**
      * Sets whether this UrlMapping should parse the request

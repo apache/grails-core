@@ -60,6 +60,6 @@ public class ConvertersApi implements ApplicationContextAware {
     }
 
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext =applicationContext;
+        this.applicationContext = applicationContext;
     }
 }

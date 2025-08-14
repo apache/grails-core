@@ -37,6 +37,7 @@ public class WrappedResponseHolder {
             }
         }, true);
     }
+
     private static ThreadLocal<HttpServletResponse> wrappedResponseHolder =
         new ThreadLocal<HttpServletResponse>();
 

@@ -77,7 +77,7 @@ public class ShutdownOperations {
      */
     public static synchronized void addOperation(Runnable runnable, boolean preserveForNextShutdown) {
         shutdownOperations.add(runnable);
-        if(preserveForNextShutdown) {
+        if (preserveForNextShutdown) {
             preservedShutdownOperations.add(runnable);
         }
     }

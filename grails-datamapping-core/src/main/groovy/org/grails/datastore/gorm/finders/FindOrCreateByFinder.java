@@ -47,7 +47,6 @@ public class FindOrCreateByFinder extends AbstractFindByFinder {
         this(METHOD_PATTERN, datastore);
     }
 
-
     public FindOrCreateByFinder(MappingContext mappingContext) {
         super(Pattern.compile(METHOD_PATTERN), mappingContext);
     }
@@ -55,7 +54,6 @@ public class FindOrCreateByFinder extends AbstractFindByFinder {
     public FindOrCreateByFinder(final String methodPattern, MappingContext mappingContext) {
         super(Pattern.compile(methodPattern), mappingContext);
     }
-
 
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})

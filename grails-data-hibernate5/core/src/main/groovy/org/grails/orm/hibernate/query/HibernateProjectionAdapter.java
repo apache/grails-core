@@ -79,7 +79,7 @@ public class HibernateProjectionAdapter {
 
     public Projection toHibernateProjection() {
         ProjectionAdapter projectionAdapter = adapterMap.get(projection.getClass());
-        if(projectionAdapter == null) throw new UnsupportedOperationException("Unsupported projection used: " + projection.getClass().getName());
+        if (projectionAdapter == null) throw new UnsupportedOperationException("Unsupported projection used: " + projection.getClass().getName());
         return projectionAdapter.toHibernateProjection(projection);
     }
 

@@ -59,9 +59,9 @@ public class ValidatorRegistries {
      * @param messageSource the message source
      * @return The registry
      */
-    public static ValidatorRegistry createValidatorRegistry(MappingContext mappingContext, ConnectionSourceSettings settings, MessageSource messageSource ) {
+    public static ValidatorRegistry createValidatorRegistry(MappingContext mappingContext, ConnectionSourceSettings settings, MessageSource messageSource) {
         ValidatorRegistry validatorRegistry;
-        if(isJakartaValidationAvailable()) {
+        if (isJakartaValidationAvailable()) {
             validatorRegistry = new JakartaValidatorRegistry(mappingContext, settings, messageSource);
         }
         else {

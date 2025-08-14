@@ -45,9 +45,9 @@ public class InstanceMethodBasedMarshaller implements ObjectMarshaller<JSON> {
                 converter.convertAnother(result);
             }
         }
-        catch(Throwable e) {
-            throw e instanceof ConverterException ? (ConverterException)e :
-                new ConverterException("Error invoking toJSON method of object with class " + object.getClass().getName(),e);
+        catch (Throwable e) {
+            throw e instanceof ConverterException ? (ConverterException) e :
+                new ConverterException("Error invoking toJSON method of object with class " + object.getClass().getName(), e);
         }
     }
 

@@ -37,7 +37,7 @@ import org.apache.grails.common.compiler.GroovyTransformOrder;
  * @author Graeme Rocher
  * @since 1.0
  */
-@GroovyASTTransformation(phase= CompilePhase.CANONICALIZATION)
+@GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 public class GlobalDetachedCriteriaASTTransformation implements ASTTransformation, TransformWithPriority {
     /**
      * The method is invoked when an AST Transformation is active. For local transformations, it is invoked once

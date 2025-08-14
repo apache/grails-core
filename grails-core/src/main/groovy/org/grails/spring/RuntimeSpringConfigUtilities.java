@@ -46,7 +46,6 @@ public class RuntimeSpringConfigUtilities {
 
     private static final String DEVELOPMENT_SPRING_RESOURCES_XML = "file:./grails-app/conf/spring/resources.xml";
 
-
     private static volatile BeanBuilder springGroovyResourcesBeanBuilder = null;
 
     private RuntimeSpringConfigUtilities() {
@@ -97,14 +96,14 @@ public class RuntimeSpringConfigUtilities {
     }
 
     public static BeanBuilder reloadSpringResourcesConfig(RuntimeSpringConfiguration config, GrailsApplication application, Class<?> groovySpringResourcesClass) throws InstantiationException, IllegalAccessException {
-        springGroovyResourcesBeanBuilder = new BeanBuilder(null, config,Thread.currentThread().getContextClassLoader());
+        springGroovyResourcesBeanBuilder = new BeanBuilder(null, config, Thread.currentThread().getContextClassLoader());
         springGroovyResourcesBeanBuilder.setBinding(new Binding(CollectionUtils.newMap(
             "application", application,
             "grailsApplication", application))); // GRAILS-7550
         Script script = (Script) groovySpringResourcesClass.newInstance();
         script.run();
         Object beans = script.getProperty("beans");
-        springGroovyResourcesBeanBuilder.beans((Closure<?>)beans);
+        springGroovyResourcesBeanBuilder.beans((Closure<?>) beans);
         return springGroovyResourcesBeanBuilder;
     }
 
@@ -117,7 +116,6 @@ public class RuntimeSpringConfigUtilities {
         loadExternalSpringConfig(config, application);
         doLoadSpringGroovyResources(config, application, context);
     }
-
 
     /**
      * Resets the GrailsRumtimeConfigurator.

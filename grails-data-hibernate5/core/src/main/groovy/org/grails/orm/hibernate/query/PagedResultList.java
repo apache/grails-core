@@ -66,7 +66,7 @@ public class PagedResultList extends grails.gorm.PagedResultList {
                     final CriteriaQuery finalQuery = criteriaQuery.select(criteriaBuilder.count(queryRoot)).distinct(true).orderBy();
                     final Query query = session.createQuery(finalQuery);
                     hibernateTemplate.applySettings(query);
-                    return ((Number)query.uniqueResult()).intValue();
+                    return ((Number) query.uniqueResult()).intValue();
                 }
             });
         }

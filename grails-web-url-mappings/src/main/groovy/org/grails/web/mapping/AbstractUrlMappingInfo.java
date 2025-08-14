@@ -65,8 +65,8 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
                 return 0;
             }
         });
-        Map<String,Object> sortedParams = new LinkedHashMap<String,Object>();
-        for(Object key : keys) {
+        Map<String, Object> sortedParams = new LinkedHashMap<String, Object>();
+        for (Object key : keys) {
             sortedParams.put(String.valueOf(key), newParams.get(key));
         }
         this.params = Collections.unmodifiableMap(sortedParams);
@@ -117,7 +117,7 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
     }
 
     protected String evaluateNameForValue(Object value) {
-        if(value instanceof CharSequence) {
+        if (value instanceof CharSequence) {
             return value.toString().trim();
         }
         else {

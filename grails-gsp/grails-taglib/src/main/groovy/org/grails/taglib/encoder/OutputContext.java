@@ -31,17 +31,22 @@ public interface OutputContext {
     EncodingStateRegistry getEncodingStateRegistry();
 
     OutputEncodingStack getCurrentOutputEncodingStack();
+
     void setCurrentOutputEncodingStack(OutputEncodingStack outputEncodingStack);
 
     Writer getCurrentWriter();
+
     void setCurrentWriter(Writer writer);
 
     AbstractTemplateVariableBinding createAndRegisterRootBinding();
+
     AbstractTemplateVariableBinding getBinding();
+
     void setBinding(AbstractTemplateVariableBinding binding);
 
     GrailsApplication getGrailsApplication();
 
     void setContentType(String contentType);
+
     boolean isContentTypeAlreadySet();
 }

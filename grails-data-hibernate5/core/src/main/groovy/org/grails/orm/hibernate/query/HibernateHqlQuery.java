@@ -56,7 +56,7 @@ public class HibernateHqlQuery extends Query {
         PreQueryEvent preQueryEvent = new PreQueryEvent(datastore, this);
         applicationEventPublisher.publishEvent(preQueryEvent);
 
-        if(uniqueResult) {
+        if (uniqueResult) {
             query.setMaxResults(1);
             List results = query.list();
             applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, this, results));

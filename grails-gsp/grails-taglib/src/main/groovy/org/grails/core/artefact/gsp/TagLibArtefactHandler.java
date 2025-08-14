@@ -93,7 +93,7 @@ public class TagLibArtefactHandler extends ArtefactHandlerAdapter {
     @Override
     public GrailsClass getArtefactForFeature(Object feature) {
         final Object tagLib = tag2libMap.get(feature);
-        if (tagLib!= null) {
+        if (tagLib != null) {
             return (GrailsClass) tagLib;
         }
 

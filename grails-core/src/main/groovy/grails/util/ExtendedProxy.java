@@ -44,7 +44,7 @@ public class ExtendedProxy extends Proxy {
     public Object getProperty(String property) {
         Object propertyValue = propertyMap.get(property);
         if (propertyValue == null) {
-            propertyValue = InvokerHelper.getMetaClass(getAdaptee()).getProperty(getAdaptee(),property);
+            propertyValue = InvokerHelper.getMetaClass(getAdaptee()).getProperty(getAdaptee(), property);
         }
         return propertyValue;
     }
@@ -52,10 +52,10 @@ public class ExtendedProxy extends Proxy {
     @Override
     public void setProperty(String property, Object newValue) {
         if (propertyMap.containsKey(property)) {
-            super.setProperty(property,newValue);
+            super.setProperty(property, newValue);
         }
         else {
-            InvokerHelper.getMetaClass(getAdaptee()).setProperty(getAdaptee(),property,newValue);
+            InvokerHelper.getMetaClass(getAdaptee()).setProperty(getAdaptee(), property, newValue);
         }
     }
 

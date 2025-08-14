@@ -124,18 +124,18 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
         Class<? extends SchemaHandler> schemaHandlerClass = settings.getDataSource().getSchemaHandler();
         this.schemaHandler = BeanUtils.instantiateClass(schemaHandlerClass);
         this.tenantResolver = multiTenantResolver;
-        if(multiTenantResolver instanceof DatastoreAware) {
+        if (multiTenantResolver instanceof DatastoreAware) {
             ((DatastoreAware) multiTenantResolver).setDatastore(this);
         }
     }
 
     protected AbstractHibernateDatastore(MappingContext mappingContext, SessionFactory sessionFactory, PropertyResolver config, ApplicationContext applicationContext, String dataSourceName) {
         super(mappingContext, config, (ConfigurableApplicationContext) applicationContext);
-        this.connectionSources = new SingletonConnectionSources<>(new HibernateConnectionSource(dataSourceName, sessionFactory, null, null ), config);
+        this.connectionSources = new SingletonConnectionSources<>(new HibernateConnectionSource(dataSourceName, sessionFactory, null, null), config);
         this.sessionFactory = sessionFactory;
         this.dataSourceName = dataSourceName;
         initializeConverters(mappingContext);
-        if(applicationContext != null) {
+        if (applicationContext != null) {
             setApplicationContext(applicationContext);
         }
 
@@ -143,7 +143,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
         passReadOnlyToHibernate = config.getProperty(CONFIG_PROPERTY_PASS_READONLY_TO_HIBERNATE, Boolean.class, false);
         isCacheQueries = config.getProperty(CONFIG_PROPERTY_CACHE_QUERIES, Boolean.class, false);
 
-        if( config.getProperty(SETTING_AUTO_FLUSH, Boolean.class, false) ) {
+        if (config.getProperty(SETTING_AUTO_FLUSH, Boolean.class, false)) {
             this.defaultFlushModeName = FlushMode.AUTO.name();
             defaultFlushMode = FlushMode.AUTO.level;
         }
@@ -182,7 +182,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
 
     @Override
     public Datastore getDatastoreForTenantId(Serializable tenantId) {
-        if(getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
+        if (getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
             return getDatastoreForConnection(tenantId.toString());
         }
         else {
@@ -206,16 +206,16 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
      * @param connectionName The name of the connection
      * @return The child data store
      */
-    public abstract  AbstractHibernateDatastore getDatastoreForConnection(String connectionName);
+    public abstract AbstractHibernateDatastore getDatastoreForConnection(String connectionName);
 
     public Iterable<Serializable> resolveTenantIds() {
-        if(this.tenantResolver instanceof AllTenantsResolver) {
-            return ((AllTenantsResolver)tenantResolver).resolveTenantIds();
+        if (this.tenantResolver instanceof AllTenantsResolver) {
+            return ((AllTenantsResolver) tenantResolver).resolveTenantIds();
         }
-        else if(this.multiTenantMode == MultiTenancySettings.MultiTenancyMode.DATABASE) {
+        else if (this.multiTenantMode == MultiTenancySettings.MultiTenancyMode.DATABASE) {
             List<Serializable> tenantIds = new ArrayList<>();
             for (ConnectionSource connectionSource : this.connectionSources.getAllConnectionSources()) {
-                if(!ConnectionSource.DEFAULT.equals(connectionSource.getName())) {
+                if (!ConnectionSource.DEFAULT.equals(connectionSource.getName())) {
                     tenantIds.add(connectionSource.getName());
                 }
             }
@@ -275,7 +275,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
      * @return The {@link DataSource} being used by this datastore instance
      */
     public DataSource getDataSource() {
-        return ((HibernateConnectionSource)this.connectionSources.getDefaultConnectionSource()).getDataSource();
+        return ((HibernateConnectionSource) this.connectionSources.getDefaultConnectionSource()).getDataSource();
     }
 
     // for testing
@@ -381,17 +381,16 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
 
     @Override
     public <T1> T1 withNewSession(Serializable tenantId, Closure<T1> callable) {
-        if(getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
+        if (getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
             AbstractHibernateDatastore datastore = getDatastoreForConnection(tenantId.toString());
             SessionFactory sessionFactory = datastore.getSessionFactory();
 
-            return datastore.getHibernateTemplate().executeWithExistingOrCreateNewSession( sessionFactory, callable);
+            return datastore.getHibernateTemplate().executeWithExistingOrCreateNewSession(sessionFactory, callable);
         }
         else {
             return withNewSession(callable);
         }
     }
-
 
     /**
      * Enable the tenant id filter for the given datastore and entity
@@ -399,7 +398,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
      */
     public void enableMultiTenancyFilter() {
         Serializable currentId = Tenants.currentId(this);
-        if(ConnectionSource.DEFAULT.equals(currentId)) {
+        if (ConnectionSource.DEFAULT.equals(currentId)) {
             disableMultiTenancyFilter();
         }
         else {
@@ -410,7 +409,6 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
                     .setParameter(GormProperties.TENANT_IDENTITY, currentId);
         }
     }
-
 
     /**
      * Disable the tenant id filter for the given datastore and entity
@@ -425,7 +423,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
     protected <T> Closure<T> prepareMultiTenantClosure(final Closure<T> callable) {
         final boolean isMultiTenant = getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR;
         Closure<T> multiTenantCallable;
-        if(isMultiTenant) {
+        if (isMultiTenant) {
             multiTenantCallable = new Closure<T>(this) {
                 @Override
                 public T call(Object... args) {

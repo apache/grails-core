@@ -116,7 +116,7 @@ public abstract class AbstractAttributeStoringSession implements Session {
             attributes.clear();
         }
         finally {
-            SessionHolder sessionHolder = (SessionHolder)TransactionSynchronizationManager.getResource(getDatastore());
+            SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(getDatastore());
             if (sessionHolder != null) {
                 sessionHolder.removeSession(this);
                 if (sessionHolder.isEmpty()) {

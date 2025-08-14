@@ -50,7 +50,7 @@ public class CollectionUtils {
 
         Map<K, V> map = new HashMap<K, V>();
         for (int i = 0; i < keysAndValues.length; i += 2) {
-            map.put((K)keysAndValues[i], (V)keysAndValues[i + 1]);
+            map.put((K) keysAndValues[i], (V) keysAndValues[i + 1]);
         }
         return map;
     }
@@ -80,8 +80,8 @@ public class CollectionUtils {
      */
     public static Map getOrCreateChildMap(Map parent, String key) {
         Object o = parent.get(key);
-        if(o instanceof Map) {
-            return (Map)o;
+        if (o instanceof Map) {
+            return (Map) o;
         }
         return new LinkedHashMap();
     }

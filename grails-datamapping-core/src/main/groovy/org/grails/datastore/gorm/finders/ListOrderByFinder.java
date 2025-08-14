@@ -73,15 +73,15 @@ public class ListOrderByFinder extends AbstractFinder {
 
                 boolean ascending = true;
                 if (arguments.length > 0 && (arguments[0] instanceof Map)) {
-                    final Map args = new LinkedHashMap( (Map) arguments[0] );
+                    final Map args = new LinkedHashMap((Map) arguments[0]);
                     final Object order = args.remove(DynamicFinder.ARGUMENT_ORDER);
-                    if(order != null && "desc".equalsIgnoreCase(order.toString())) {
+                    if (order != null && "desc".equalsIgnoreCase(order.toString())) {
                         ascending = false;
                     }
                     DynamicFinder.populateArgumentsForCriteria(clazz, q, args);
                 }
 
-                q.order( ascending ? Query.Order.asc(propertyName) : Query.Order.desc(propertyName));
+                q.order(ascending ? Query.Order.asc(propertyName) : Query.Order.desc(propertyName));
                 q.projections().distinct();
                 return invokeQuery(q);
             }

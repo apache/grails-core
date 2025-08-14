@@ -134,7 +134,7 @@ public class StreamByteBuffer {
                 int len = charbuffer.remaining();
                 char[] ch = charbuffer.array();
                 if (len != ch.length) {
-                    ch = (char[])GrailsArrayUtils.subarray(ch, 0, len);
+                    ch = (char[]) GrailsArrayUtils.subarray(ch, 0, len);
                 }
                 str = StringCharArrayAccessor.createString(ch);
             }
@@ -410,7 +410,7 @@ public class StreamByteBuffer {
 
         @Override
         public synchronized void reset() throws IOException {
-            if (readMode==ReadMode.RETAIN_AFTER_READING) {
+            if (readMode == ReadMode.RETAIN_AFTER_READING) {
                 StreamByteBuffer.this.reset();
             }
             else {

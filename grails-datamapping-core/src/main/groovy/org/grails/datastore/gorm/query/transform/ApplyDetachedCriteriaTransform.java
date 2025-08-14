@@ -32,5 +32,5 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})
 @GroovyASTTransformationClass("org.grails.datastore.gorm.query.transform.DetachedCriteriaASTTransformation")
-public @interface  ApplyDetachedCriteriaTransform {
+public @interface ApplyDetachedCriteriaTransform {
 }

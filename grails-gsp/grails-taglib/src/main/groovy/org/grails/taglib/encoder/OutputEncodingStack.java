@@ -41,7 +41,7 @@ import org.grails.encoder.StreamingEncoderWriter;
 public final class OutputEncodingStack {
     public static final Log log = LogFactory.getLog(OutputEncodingStack.class);
 
-    private static final String ATTRIBUTE_NAME_OUTPUT_STACK="org.grails.taglib.encoder.OUTPUT_ENCODING_STACK";
+    private static final String ATTRIBUTE_NAME_OUTPUT_STACK = "org.grails.taglib.encoder.OUTPUT_ENCODING_STACK";
 
     private final OutputContext outputContext;
 
@@ -91,7 +91,7 @@ public final class OutputEncodingStack {
 
     private static final OutputEncodingStack createNew(OutputEncodingStackAttributes attributes) {
         if (attributes.getTopWriter() == null) {
-            attributes=new OutputEncodingStackAttributes.Builder(attributes).topWriter(lookupCurrentWriter(attributes.getOutputContext())).build();
+            attributes = new OutputEncodingStackAttributes.Builder(attributes).topWriter(lookupCurrentWriter(attributes.getOutputContext())).build();
         }
         OutputEncodingStack instance = new OutputEncodingStack(attributes);
         attributes.getOutputContext().setCurrentOutputEncodingStack(instance);
@@ -104,7 +104,7 @@ public final class OutputEncodingStack {
     }
 
     public static final Writer currentWriter() {
-        OutputEncodingStack outputStack=currentStack(false);
+        OutputEncodingStack outputStack = currentStack(false);
         if (outputStack != null) {
             return outputStack.getOutWriter();
         }
@@ -113,7 +113,7 @@ public final class OutputEncodingStack {
     }
 
     private static Writer lookupCurrentWriter() {
-        OutputContext outputContext=OutputContextLookupHelper.lookupOutputContext();
+        OutputContext outputContext = OutputContextLookupHelper.lookupOutputContext();
         return lookupCurrentWriter(outputContext);
     }
 
@@ -201,10 +201,10 @@ public final class OutputEncodingStack {
         @Override
         public EncodedAppender getEncodedAppender() {
             Writer out = getOut();
-            if(out instanceof EncodedAppenderFactory) {
-                return ((EncodedAppenderFactory)out).getEncodedAppender();
-            } else if(out instanceof EncodedAppender) {
-                return (EncodedAppender)getOut();
+            if (out instanceof EncodedAppenderFactory) {
+                return ((EncodedAppenderFactory) out).getEncodedAppender();
+            } else if (out instanceof EncodedAppender) {
+                return (EncodedAppender) getOut();
             } else {
                 return null;
             }
@@ -213,8 +213,8 @@ public final class OutputEncodingStack {
         @Override
         public Encoder getEncoder() {
             Writer out = getOut();
-            if(out instanceof EncoderAware) {
-                return ((EncoderAware)out).getEncoder();
+            if (out instanceof EncoderAware) {
+                return ((EncoderAware) out).getEncoder();
             }
             return null;
         }
@@ -254,12 +254,12 @@ public final class OutputEncodingStack {
             applyWriterThreadLocals(outWriter);
         }
         this.encodingStateRegistry = attributes.getOutputContext().getEncodingStateRegistry();
-        this.outputContext = attributes.getOutputContext() != null ?  attributes.getOutputContext() : OutputContextLookupHelper.lookupOutputContext();
+        this.outputContext = attributes.getOutputContext() != null ? attributes.getOutputContext() : OutputContextLookupHelper.lookupOutputContext();
     }
 
     private Writer unwrapTargetWriter(Writer targetWriter) {
-        if (targetWriter instanceof GrailsWrappedWriter && ((GrailsWrappedWriter)targetWriter).isAllowUnwrappingOut()) {
-            return ((GrailsWrappedWriter)targetWriter).unwrap();
+        if (targetWriter instanceof GrailsWrappedWriter && ((GrailsWrappedWriter) targetWriter).isAllowUnwrappingOut()) {
+            return ((GrailsWrappedWriter) targetWriter).unwrap();
         }
         return targetWriter;
     }
@@ -269,7 +269,7 @@ public final class OutputEncodingStack {
     }
 
     public void push(final Writer newWriter, final boolean checkExisting) {
-        OutputEncodingStackAttributes.Builder attributesBuilder=new OutputEncodingStackAttributes.Builder();
+        OutputEncodingStackAttributes.Builder attributesBuilder = new OutputEncodingStackAttributes.Builder();
         attributesBuilder.inheritPreviousEncoders(true);
         attributesBuilder.topWriter(newWriter);
         push(attributesBuilder.build(), checkExisting);
@@ -291,9 +291,9 @@ public final class OutputEncodingStack {
 
         Writer topWriter = attributes.getTopWriter();
         Writer unwrappedWriter = null;
-        if (topWriter!=null) {
+        if (topWriter != null) {
             if (topWriter instanceof OutputProxyWriter) {
-                topWriter = ((OutputProxyWriter)topWriter).getOut();
+                topWriter = ((OutputProxyWriter) topWriter).getOut();
             }
             unwrappedWriter = unwrapTargetWriter(topWriter);
         } else if (previousStackEntry != null) {
@@ -320,7 +320,7 @@ public final class OutputEncodingStack {
     }
 
     private Encoder applyEncoder(Encoder newEncoder, Encoder previousEncoder, boolean allowInheriting, boolean replaceOnly) {
-        if (newEncoder != null && (!replaceOnly || previousEncoder==null || replaceOnly && previousEncoder.isSafe())) {
+        if (newEncoder != null && (!replaceOnly || previousEncoder == null || replaceOnly && previousEncoder.isSafe())) {
             return newEncoder;
         }
         if (allowInheriting) {
@@ -350,11 +350,11 @@ public final class OutputEncodingStack {
     private Writer createEncodingWriter(Writer out, Encoder encoder, EncodingStateRegistry encodingStateRegistry, String codecWriterName) {
         Writer encodingWriter;
         if (out instanceof EncodedAppenderWriterFactory) {
-            encodingWriter=((EncodedAppenderWriterFactory)out).getWriterForEncoder(encoder, encodingStateRegistry);
+            encodingWriter = ((EncodedAppenderWriterFactory) out).getWriterForEncoder(encoder, encodingStateRegistry);
         } else if (encoder instanceof StreamingEncoder) {
-            encodingWriter=new StreamingEncoderWriter(out, (StreamingEncoder)encoder, encodingStateRegistry);
+            encodingWriter = new StreamingEncoderWriter(out, (StreamingEncoder) encoder, encodingStateRegistry);
         } else {
-            encodingWriter=new CodecPrintWriter(out, encoder, encodingStateRegistry);
+            encodingWriter = new CodecPrintWriter(out, encoder, encodingStateRegistry);
         }
         return encodingWriter;
     }
@@ -421,7 +421,7 @@ public final class OutputEncodingStack {
     }
 
     private void applyWriterThreadLocals(Writer writer) {
-        if(outputContext != null) {
+        if (outputContext != null) {
             outputContext.setCurrentWriter(writer);
         }
     }

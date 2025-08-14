@@ -73,7 +73,7 @@ public class FetchAllTaskSelectorsBuildAction implements BuildAction<AllTasksMod
             allTasks.put(project.getName(), taskNames);
 
             projectPaths.put(project.getName(), project.getPath());
-            if(project.getProjectDirectory().getAbsolutePath().equals(currentProjectPath)) {
+            if (project.getProjectDirectory().getAbsolutePath().equals(currentProjectPath)) {
                 model.currentProject = project.getName();
             }
         }

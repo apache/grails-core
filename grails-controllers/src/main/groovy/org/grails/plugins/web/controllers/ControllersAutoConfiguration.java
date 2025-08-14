@@ -164,8 +164,8 @@ public class ControllersAutoConfiguration {
         private static final String[] RESOURCE_LOCATIONS;
 
         static {
-            RESOURCE_LOCATIONS = new String[CLASSPATH_RESOURCE_LOCATIONS.length
-                    + SERVLET_RESOURCE_LOCATIONS.length];
+            RESOURCE_LOCATIONS = new String[CLASSPATH_RESOURCE_LOCATIONS.length +
+                    SERVLET_RESOURCE_LOCATIONS.length];
             System.arraycopy(SERVLET_RESOURCE_LOCATIONS, 0, RESOURCE_LOCATIONS, 0,
                     SERVLET_RESOURCE_LOCATIONS.length);
             System.arraycopy(CLASSPATH_RESOURCE_LOCATIONS, 0, RESOURCE_LOCATIONS,

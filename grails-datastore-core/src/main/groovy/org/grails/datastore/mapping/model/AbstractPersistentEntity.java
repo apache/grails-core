@@ -60,8 +60,8 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
     protected List<PersistentProperty> persistentProperties;
     protected List<Association> associations;
     protected List<Embedded> embedded;
-    protected Map<String, PersistentProperty> propertiesByName = new HashMap<String,PersistentProperty>();
-    protected Map<String, PersistentProperty> mappedPropertiesByName = new HashMap<String,PersistentProperty>();
+    protected Map<String, PersistentProperty> propertiesByName = new HashMap<String, PersistentProperty>();
+    protected Map<String, PersistentProperty> mappedPropertiesByName = new HashMap<String, PersistentProperty>();
     protected PersistentProperty identity;
     protected PersistentProperty version;
     protected List<String> persistentPropertyNames;
@@ -105,7 +105,6 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
         return this.isMultiTenant;
     }
 
-
     public boolean isExternal() {
         return external;
     }
@@ -117,6 +116,7 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
     public String getMappingStrategy() {
         return this.mappingStrategy;
     }
+
     public void setExternal(boolean external) {
         this.external = external;
     }
@@ -131,8 +131,7 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
 
     public void initialize() {
         ClassMapping<T> mapping = getMapping();
-        if(!initialized) {
-
+        if (!initialized) {
 
             initialized = true;
 
@@ -140,9 +139,9 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
             owners = mappingSyntaxStrategy.getOwningEntities(javaClass, context);
             Class superClass = javaClass.getSuperclass();
             if (superClass != null &&
-                    !superClass.equals(Object.class) ) {
+                    !superClass.equals(Object.class)) {
 
-                if(mappingSyntaxStrategy.isPersistentEntity(superClass)) {
+                if (mappingSyntaxStrategy.isPersistentEntity(superClass)) {
                     parentEntity = context.addPersistentEntity(superClass);
                 }
             }
@@ -151,21 +150,20 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
 
             persistentPropertyNames = new ArrayList<>();
             associations = new ArrayList();
-            embedded  = new ArrayList();
-
+            embedded = new ArrayList();
 
             boolean multiTenancyEnabled = isMultiTenant && context.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR;
             for (PersistentProperty persistentProperty : persistentProperties) {
-                if(multiTenancyEnabled && persistentProperty instanceof TenantId) {
+                if (multiTenancyEnabled && persistentProperty instanceof TenantId) {
                     this.tenantId = (TenantId) persistentProperty;
                 }
-                if(persistentProperty instanceof Identity) {
-                    if(compositeIdentity != null) {
+                if (persistentProperty instanceof Identity) {
+                    if (compositeIdentity != null) {
                         int l = compositeIdentity.length;
-                        compositeIdentity = Arrays.copyOf(compositeIdentity, l +1);
+                        compositeIdentity = Arrays.copyOf(compositeIdentity, l + 1);
                         compositeIdentity[l] = identity;
                     }
-                    else if(identity != null) {
+                    else if (identity != null) {
                         compositeIdentity = new PersistentProperty[] { identity, persistentProperty };
                         identity = null;
                     }
@@ -181,37 +179,37 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
                 if (persistentProperty instanceof Association) {
                     associations.add((Association) persistentProperty);
                 }
-                if( persistentProperty instanceof Embedded) {
-                    embedded.add((Embedded)persistentProperty);
+                if (persistentProperty instanceof Embedded) {
+                    embedded.add((Embedded) persistentProperty);
                 }
                 propertiesByName.put(persistentProperty.getName(), persistentProperty);
                 final String targetName = persistentProperty.getMapping().getMappedForm().getTargetName();
-                if(targetName != null) {
+                if (targetName != null) {
                     mappedPropertiesByName.put(targetName, persistentProperty);
                 }
             }
-            if(associations.isEmpty()) {
+            if (associations.isEmpty()) {
                 associations = Collections.emptyList();
             }
-            if(embedded.isEmpty()) {
+            if (embedded.isEmpty()) {
                 embedded = Collections.emptyList();
             }
 
-            if(identity == null && compositeIdentity == null) {
+            if (identity == null && compositeIdentity == null) {
                 identity = resolveIdentifier();
             }
 
-            if(multiTenancyEnabled && tenantId == null) {
-                throw new ConfigurationException("Class ["+javaClass.getName()+"] is multi tenant but does not specify a tenant identifier property");
+            if (multiTenancyEnabled && tenantId == null) {
+                throw new ConfigurationException("Class [" + javaClass.getName() + "] is multi tenant but does not specify a tenant identifier property");
             }
 
-            if(!isExternal()) {
+            if (!isExternal()) {
 
-                final T mappedForm = mapping.getMappedForm();// initialize mapping
+                final T mappedForm = mapping.getMappedForm(); // initialize mapping
 
                 if (mappedForm.isVersioned()) {
                     version = propertiesByName.get(GormProperties.VERSION);
-                    if(version == null) {
+                    if (version == null) {
                         versioned = false;
                     }
                 }
@@ -221,37 +219,36 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
             }
 
             final PersistentProperty v = getVersion();
-            if(v != null) {
+            if (v != null) {
                 final Class type = v.getType();
                 this.versionCompatibleType = Number.class.isAssignableFrom(type) || Date.class.isAssignableFrom(type);
             }
 
-
-            if(identity != null) {
+            if (identity != null) {
                 String idName = identity.getName();
                 PersistentProperty idProp = propertiesByName.get(idName);
-                if(idProp == null) {
+                if (idProp == null) {
                     propertiesByName.put(idName, identity);
                 }
                 else {
                     persistentProperties.remove(idProp);
                     persistentPropertyNames.remove(idProp.getName());
-                    if(!idProp.getName().equals(GormProperties.IDENTITY)) {
+                    if (!idProp.getName().equals(GormProperties.IDENTITY)) {
                         disableDefaultId();
                     }
                 }
             }
             IdentityMapping identifier = mapping != null ? mapping.getIdentifier() : null;
-            if(identity == null && identifier != null) {
+            if (identity == null && identifier != null) {
 
                 final String[] identifierName = identifier.getIdentifierName();
                 final MappingContext mappingContext = getMappingContext();
-                if(identifierName.length > 1) {
+                if (identifierName.length > 1) {
                     compositeIdentity = mappingContext.getMappingSyntaxStrategy().getCompositeIdentity(javaClass, mappingContext);
                 }
                 for (String in : identifierName) {
                     final PersistentProperty p = propertiesByName.get(in);
-                    if(p != null) {
+                    if (p != null) {
                         persistentProperties.remove(p);
                     }
                     persistentPropertyNames.remove(in);
@@ -260,15 +257,13 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
             }
         }
 
-
-
         propertiesInitialized = true;
         this.entityReflector = getMappingContext().getEntityReflector(this);
     }
 
     private void disableDefaultId() {
         PersistentProperty otherId = getPropertyByName(GormProperties.IDENTITY);
-        if(otherId != null) {
+        if (otherId != null) {
             persistentProperties.remove(otherId);
             persistentPropertyNames.remove(GormProperties.IDENTITY);
         }
@@ -284,7 +279,7 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
         Annotation[] annotations = superClass.getAnnotations();
         for (Annotation annotation : annotations) {
             String name = annotation.annotationType().getName();
-            if(name.equals("grails.persistence.Entity") || name.equals("grails.gorm.annotation.Entity")) {
+            if (name.equals("grails.persistence.Entity") || name.equals("grails.gorm.annotation.Entity")) {
                 return true;
             }
         }
@@ -320,7 +315,7 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
         PersistentEntity root = this;
         PersistentEntity parent = getParentEntity();
         while (parent != null) {
-            if(!parent.isInitialized()) {
+            if (!parent.isInitialized()) {
                 parent.initialize();
             }
             root = parent;
@@ -405,7 +400,7 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
 
     public PersistentProperty getPropertyByName(String name) {
         PersistentProperty pp = propertiesByName.get(name);
-        if(pp != null) {
+        if (pp != null) {
             return pp;
         }
         return mappedPropertiesByName.get(name);
@@ -413,10 +408,9 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
 
     private static class MappingProperties {
 
-
-
         private Boolean version = true;
         private boolean intialized = false;
+
         public boolean isIntialized() {
             return intialized;
         }
@@ -434,6 +428,7 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
         }
 
     }
+
     @Override
     public int hashCode() {
         return javaClass.hashCode();

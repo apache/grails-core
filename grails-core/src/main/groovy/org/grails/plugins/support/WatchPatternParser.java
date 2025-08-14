@@ -55,10 +55,10 @@ public class WatchPatternParser {
 
             if (pattern.contains(WILD_CARD)) {
                 String dirPath = pattern.substring(0, pattern.indexOf(WILD_CARD));
-                if(!GrailsStringUtils.isBlank(dirPath)) {
+                if (!GrailsStringUtils.isBlank(dirPath)) {
                     watchPattern.setDirectory(new File(dirPath));
                 }
-                else if(isClasspath && BuildSettings.BASE_DIR != null) {
+                else if (isClasspath && BuildSettings.BASE_DIR != null) {
                     watchPattern.setDirectory(new File(BuildSettings.BASE_DIR, "src/main/resources"));
                 }
 

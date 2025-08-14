@@ -76,8 +76,8 @@ public class DefaultGrailsApplicationAttributes implements GrailsApplicationAttr
     public DefaultGrailsApplicationAttributes(ServletContext context) {
         this.context = context;
         if (context != null) {
-            appContext = (ApplicationContext)context.getAttribute(APPLICATION_CONTEXT);
-            if(appContext == null) {
+            appContext = (ApplicationContext) context.getAttribute(APPLICATION_CONTEXT);
+            if (appContext == null) {
                 appContext = Holders.findApplicationContext();
             }
         }
@@ -88,7 +88,7 @@ public class DefaultGrailsApplicationAttributes implements GrailsApplicationAttr
     }
 
     private GrailsPluginManager getPluginManager() {
-        if(pluginManager==null) {
+        if (pluginManager == null) {
             pluginManager = fetchBeanFromAppCtx(GrailsPluginManager.BEAN_NAME);
         }
         return pluginManager;
@@ -96,17 +96,17 @@ public class DefaultGrailsApplicationAttributes implements GrailsApplicationAttr
 
     @SuppressWarnings("unchecked")
     private <T> T fetchBeanFromAppCtx(String name) {
-        if(appContext==null) {
+        if (appContext == null) {
             return null;
         }
         try {
-            if(appContext.containsBean(name)) {
-                return (T)appContext.getBean(name);
+            if (appContext.containsBean(name)) {
+                return (T) appContext.getBean(name);
             } else {
                 return null;
             }
         }
-        catch(BeansException e) {
+        catch (BeansException e) {
             LOG.warn("Bean named '" + name + "' is missing.");
             return null;
         }
@@ -123,7 +123,7 @@ public class DefaultGrailsApplicationAttributes implements GrailsApplicationAttr
     }
 
     public GroovyObject getController(ServletRequest request) {
-        return (GroovyObject)request.getAttribute(CONTROLLER);
+        return (GroovyObject) request.getAttribute(CONTROLLER);
     }
 
     public String getControllerUri(ServletRequest request) {
@@ -135,11 +135,11 @@ public class DefaultGrailsApplicationAttributes implements GrailsApplicationAttr
         if (controllerName == null || controllerName.length() == 0) {
             GroovyObject controller = getController(request);
             if (controller != null) {
-                controllerName = (String)controller.getProperty("controllerName");
+                controllerName = (String) controller.getProperty("controllerName");
                 request.setAttribute(GrailsApplicationAttributes.CONTROLLER_NAME_ATTRIBUTE, controllerName);
-                if(controller instanceof GrailsControllerClass) {
-                    String namespace = ((GrailsControllerClass)controller).getNamespace();
-                    if(namespace != null) {
+                if (controller instanceof GrailsControllerClass) {
+                    String namespace = ((GrailsControllerClass) controller).getNamespace();
+                    if (namespace != null) {
                         request.setAttribute(GrailsApplicationAttributes.CONTROLLER_NAMESPACE_ATTRIBUTE, namespace);
                     }
                 }
@@ -158,7 +158,7 @@ public class DefaultGrailsApplicationAttributes implements GrailsApplicationAttr
     public String getApplicationUri(ServletRequest request) {
         String appUri = (String) request.getAttribute(GrailsApplicationAttributes.APP_URI_ATTRIBUTE);
         if (appUri == null) {
-            appUri = urlHelper.getContextPath((HttpServletRequest)request);
+            appUri = urlHelper.getContextPath((HttpServletRequest) request);
         }
         return appUri;
     }
@@ -176,18 +176,18 @@ public class DefaultGrailsApplicationAttributes implements GrailsApplicationAttr
         HttpSession session = servletRequest.getSession(false);
         FlashScope fs;
         if (session != null) {
-            fs = (FlashScope)session.getAttribute(FLASH_SCOPE);
+            fs = (FlashScope) session.getAttribute(FLASH_SCOPE);
         }
         else {
-            fs = (FlashScope)request.getAttribute(FLASH_SCOPE);
+            fs = (FlashScope) request.getAttribute(FLASH_SCOPE);
         }
         if (fs == null) {
             fs = new GrailsFlashScope();
-            if (session!=null) {
-                session.setAttribute(FLASH_SCOPE,fs);
+            if (session != null) {
+                session.setAttribute(FLASH_SCOPE, fs);
             }
             else {
-                request.setAttribute(FLASH_SCOPE,fs);
+                request.setAttribute(FLASH_SCOPE, fs);
             }
         }
         return fs;
@@ -205,11 +205,11 @@ public class DefaultGrailsApplicationAttributes implements GrailsApplicationAttr
 
     public String getControllerActionUri(ServletRequest request) {
         GroovyObject controller = getController(request);
-        return (String)controller.getProperty("actionUri");
+        return (String) controller.getProperty("actionUri");
     }
 
     public Errors getErrors(ServletRequest request) {
-        return (Errors)request.getAttribute(ERRORS);
+        return (Errors) request.getAttribute(ERRORS);
     }
 
     public ResourceAwareTemplateEngine getPagesTemplateEngine() {
@@ -223,7 +223,7 @@ public class DefaultGrailsApplicationAttributes implements GrailsApplicationAttr
     }
 
     public GrailsApplication getGrailsApplication() {
-        if(grailsApplication==null) {
+        if (grailsApplication == null) {
             grailsApplication = fetchBeanFromAppCtx(GrailsApplication.APPLICATION_ID);
             if (grailsApplication == null) {
                 grailsApplication = Holders.findApplication();
@@ -233,7 +233,7 @@ public class DefaultGrailsApplicationAttributes implements GrailsApplicationAttr
     }
 
     public Writer getOut(HttpServletRequest request) {
-        return (Writer)request.getAttribute(OUT);
+        return (Writer) request.getAttribute(OUT);
     }
 
     public void setOut(HttpServletRequest request, Writer out2) {
@@ -264,7 +264,7 @@ public class DefaultGrailsApplicationAttributes implements GrailsApplicationAttr
     }
 
     public MessageSource getMessageSource() {
-        if(messageSource==null) {
+        if (messageSource == null) {
             messageSource = fetchBeanFromAppCtx("messageSource");
         }
         return messageSource;

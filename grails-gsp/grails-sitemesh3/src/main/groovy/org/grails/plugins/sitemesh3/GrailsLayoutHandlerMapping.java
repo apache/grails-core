@@ -54,7 +54,7 @@ public class GrailsLayoutHandlerMapping extends AbstractHandlerMapping {
             ParameterizableViewController pvc = layoutCache.get(servletPath);
             if (pvc == null) {
                 if (groovyPageLocator.findViewByPath(servletPath) == null) {
-                    throw new ResponseStatusException(NOT_FOUND, "Unable to find resource "+servletPath);
+                    throw new ResponseStatusException(NOT_FOUND, "Unable to find resource " + servletPath);
                 }
                 pvc = new ParameterizableViewController();
                 pvc.setSupportedMethods(HttpMethod.GET.name(), HttpMethod.HEAD.name(), HttpMethod.POST.name());

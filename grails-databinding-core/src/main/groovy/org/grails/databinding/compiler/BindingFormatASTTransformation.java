@@ -47,9 +47,9 @@ public class BindingFormatASTTransformation implements ASTTransformation, Transf
         final AnnotationNode annotationNode = (AnnotationNode) astNodes[0];
         final FieldNode fieldNode = (FieldNode) astNodes[1];
         final Map<String, Expression> members = annotationNode.getMembers();
-        if(members == null || (!members.containsKey("code") && !members.containsKey("value"))) {
-            final String message = "The @BindingFormat annotation on the field ["
-                    + fieldNode.getName() +
+        if (members == null || (!members.containsKey("code") && !members.containsKey("value"))) {
+            final String message = "The @BindingFormat annotation on the field [" +
+                    fieldNode.getName() +
                     "] in class [" +
                     fieldNode.getDeclaringClass().getName() +
                     "] must provide a value for either the value() or code() attribute.";

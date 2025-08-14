@@ -99,9 +99,9 @@ public class DependencyResolutionContext {
             this.managedDependencies.add(0, aetherDependency);
             this.managedDependencyByGroupAndArtifact.put(getIdentifier(aetherDependency), aetherDependency);
         }
-        this.dependencyManagement = (this.dependencyManagement != null)
-                ? new CompositeDependencyManagement(dependencyManagement, this.dependencyManagement)
-                : dependencyManagement;
+        this.dependencyManagement = (this.dependencyManagement != null) ?
+                new CompositeDependencyManagement(dependencyManagement, this.dependencyManagement) :
+                dependencyManagement;
         this.artifactCoordinatesResolver = new DependencyManagementArtifactCoordinatesResolver(
                 this.dependencyManagement);
     }

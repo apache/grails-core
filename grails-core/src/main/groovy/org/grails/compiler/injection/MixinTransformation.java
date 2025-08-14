@@ -86,6 +86,7 @@ public class MixinTransformation implements ASTTransformation, TransformWithPrio
         weaveMixinsIntoClass(classNode, values);
 
     }
+
     public void weaveMixinsIntoClass(ClassNode classNode, ListExpression values) {
         if (values != null) {
             for (Expression current : values.getExpressions()) {
@@ -100,14 +101,14 @@ public class MixinTransformation implements ASTTransformation, TransformWithPrio
                         boolean isTargetAware = GrailsASTUtils.findInterface(mixinClassNode, new ClassNode(MixinTargetAware.class)) != null;
 
                         ConstructorCallExpression initialValue;
-                        if(isTargetAware) {
+                        if (isTargetAware) {
                             initialValue = new ConstructorCallExpression(mixinClassNode, new MapExpression(
                                     Arrays.asList(new MapEntryExpression(new ConstantExpression("target"), new VariableExpression("this")))
                             ));
-                        }  else {
+                        } else {
                             initialValue = new ConstructorCallExpression(mixinClassNode, GrailsASTUtils.ZERO_ARGUMENTS);
                         }
-                        classNode.addField(fieldName, Modifier.PRIVATE, mixinClassNode,initialValue);
+                        classNode.addField(fieldName, Modifier.PRIVATE, mixinClassNode, initialValue);
                     }
 
                     VariableExpression fieldReference = new VariableExpression(fieldName, mixinClassNode);
@@ -136,6 +137,7 @@ public class MixinTransformation implements ASTTransformation, TransformWithPrio
     protected boolean hasDeclaredMethod(ClassNode classNode, MethodNode mixinMethod) {
         return classNode.hasDeclaredMethod(mixinMethod.getName(), mixinMethod.getParameters());
     }
+
     protected ListExpression getListOfClasses(AnnotationNode node) {
         Expression value = node.getMember("value");
         ListExpression values = null;

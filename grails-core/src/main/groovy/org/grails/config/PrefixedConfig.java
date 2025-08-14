@@ -88,7 +88,6 @@ public class PrefixedConfig implements Config {
         return properties;
     }
 
-
     @Override
     public Object getAt(Object key) {
         return get(key);
@@ -242,7 +241,6 @@ public class PrefixedConfig implements Config {
         throw new UnsupportedOperationException("Config cannot be modified");
     }
 
-
     @Override
     public Config merge(Map<String, Object> toMerge) {
         throw new UnsupportedOperationException("Config cannot be modified");
@@ -250,7 +248,7 @@ public class PrefixedConfig implements Config {
 
     @Override
     public <T> T getProperty(String key, Class<T> targetType, T defaultValue, List<T> allowedValues) {
-        return delegate.getProperty(key,targetType,defaultValue,allowedValues);
+        return delegate.getProperty(key, targetType, defaultValue, allowedValues);
     }
 
     @Override

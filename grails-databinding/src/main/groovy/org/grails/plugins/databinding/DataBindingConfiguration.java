@@ -91,7 +91,7 @@ public class DataBindingConfiguration {
         dataBinder.setStructuredBindingEditors(GrailsArrayUtils.concat(structuredBindingEditors, mainContextStructuredBindingEditors));
         final DataBindingListener[] mainContextDataBindingListeners = mainContext
                 .getBeansOfType(DataBindingListener.class).values().toArray(new DataBindingListener[0]);
-        dataBinder.setDataBindingListeners(GrailsArrayUtils.concat(dataBindingListeners,mainContextDataBindingListeners));
+        dataBinder.setDataBindingListeners(GrailsArrayUtils.concat(dataBindingListeners, mainContextDataBindingListeners));
         dataBinder.setMessageSource(mainContext.getBean("messageSource", MessageSource.class));
         return dataBinder;
     }

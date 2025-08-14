@@ -155,7 +155,7 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
             final Expression constraintsInitialExpression = constraintsFieldNode.getInitialExpression();
             if (constraintsInitialExpression instanceof ClosureExpression) {
 
-                final Map<String, Map<String, Expression>> constraintsInfo = GrailsASTUtils.getConstraintMetadata((ClosureExpression)constraintsInitialExpression);
+                final Map<String, Map<String, Expression>> constraintsInfo = GrailsASTUtils.getConstraintMetadata((ClosureExpression) constraintsInitialExpression);
 
                 for (Entry<String, Map<String, Expression>> constraintConfig : constraintsInfo.entrySet()) {
                     final String propertyName = constraintConfig.getKey();

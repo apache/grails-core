@@ -186,12 +186,12 @@ public class GrailsHibernateQueryUtils {
                 Map sortMap = (Map) sortObj;
                 for (Object sort : sortMap.keySet()) {
                     final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(query,queryRoot, criteriaBuilder, entity, (String) sort, order, ignoreCase);
+                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, order, ignoreCase);
                 }
             } else {
                 final String sort = (String) sortObj;
                 final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase(orderParam) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                addOrderPossiblyNested(query, queryRoot, criteriaBuilder,entity, sort, order, ignoreCase);
+                addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, sort, order, ignoreCase);
             }
         } else if (useDefaultMapping) {
             Mapping m = AbstractGrailsDomainBinder.getMapping(entity.getJavaClass());
@@ -199,7 +199,7 @@ public class GrailsHibernateQueryUtils {
                 Map sortMap = m.getSort().getNamesAndDirections();
                 for (Object sort : sortMap.keySet()) {
                     final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(query,queryRoot, criteriaBuilder, entity, (String) sort, order, true);
+                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, order, true);
                 }
             }
         }
@@ -285,7 +285,6 @@ public class GrailsHibernateQueryUtils {
             }
         }
     }
-
 
     /**
      * Add order to criteria, creating necessary subCriteria if nested sort property (ie. sort:'nested.property').

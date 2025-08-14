@@ -88,15 +88,15 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
             if (ExpressionFactory.class.isAssignableFrom(cl)) {
                 LOG.info("Using " + className + " as implementation of " +
                         ExpressionFactory.class.getName());
-                return (ExpressionFactory)cl.newInstance();
+                return (ExpressionFactory) cl.newInstance();
             }
             LOG.warn("Class " + className + " does not implement " +
                     ExpressionFactory.class.getName());
         }
-        catch(ClassNotFoundException e) {
+        catch (ClassNotFoundException e) {
             // ignored
         }
-        catch(Exception e) {
+        catch (Exception e) {
             LOG.error("Failed to instantiate " + className, e);
         }
         return null;
@@ -111,7 +111,7 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
     }
 
     public void addELContextListener(ELContextListener elContextListener) {
-        synchronized(listeners) {
+        synchronized (listeners) {
             listeners.addLast(elContextListener);
         }
     }
@@ -119,7 +119,7 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
     ELContext createELContext(GroovyPagesPageContext pageCtx) {
         ELContext ctx = new GroovyPagesELContext(pageCtx);
         ELContextEvent event = new ELContextEvent(ctx);
-        synchronized(listeners) {
+        synchronized (listeners) {
             for (Iterator<ELContextListener> iter = listeners.iterator(); iter.hasNext();) {
                 iter.next().contextCreated(event);
             }

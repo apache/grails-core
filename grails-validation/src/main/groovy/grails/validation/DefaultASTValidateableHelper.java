@@ -62,7 +62,7 @@ import org.grails.web.plugins.support.ValidationSupport;
 import static grails.compiler.ast.GrailsArtefactClassInjector.EMPTY_CLASS_ARRAY;
 import static grails.compiler.ast.GrailsArtefactClassInjector.ZERO_PARAMETERS;
 
-public class DefaultASTValidateableHelper implements ASTValidateableHelper{
+public class DefaultASTValidateableHelper implements ASTValidateableHelper {
 
     private static final String CONSTRAINED_PROPERTIES_PROPERTY_NAME = "$constraints";
     private static final String VALIDATE_METHOD_NAME = "validate";
@@ -110,7 +110,7 @@ public class DefaultASTValidateableHelper implements ASTValidateableHelper{
             final Statement ifConstraintsPropertyIsNullStatement = new IfStatement(isConstraintsPropertyNull, ifConstraintsPropertyIsNullBlockStatement, new ExpressionStatement(new EmptyExpression()));
 
             ifConstraintsPropertyIsNullBlockStatement.addStatement(new ExpressionStatement(initializeConstraintsFieldExpression));
-            if(!defaultNullable) {
+            if (!defaultNullable) {
                 final Map<String, ClassNode> propertiesToConstrain = getPropertiesToEnsureConstraintsFor(classNode);
                 for (final Map.Entry<String, ClassNode> entry : propertiesToConstrain.entrySet()) {
                     final String propertyName = entry.getKey();
@@ -186,7 +186,7 @@ public class DefaultASTValidateableHelper implements ASTValidateableHelper{
         for (final FieldNode field : allFields) {
             if (!field.isStatic()) {
                 final PropertyNode property = classNode.getProperty(field.getName());
-                if(property != null) {
+                if (property != null) {
                     fieldsToConstrain.put(field.getName(), field.getType());
                 }
             }
@@ -234,7 +234,7 @@ public class DefaultASTValidateableHelper implements ASTValidateableHelper{
             classNode.addMethod(methodNode);
             AnnotatedNodeUtils.markAsGenerated(classNode, methodNode);
         }
-        final MethodNode noArgValidateMethod = classNode.getMethod(VALIDATE_METHOD_NAME,ZERO_PARAMETERS);
+        final MethodNode noArgValidateMethod = classNode.getMethod(VALIDATE_METHOD_NAME, ZERO_PARAMETERS);
         if (noArgValidateMethod == null) {
             final BlockStatement validateMethodCode = new BlockStatement();
 

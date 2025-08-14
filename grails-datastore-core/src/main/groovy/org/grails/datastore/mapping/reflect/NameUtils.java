@@ -38,7 +38,7 @@ public class NameUtils {
     public static final String DOLLAR_SEPARATOR = "$";
 
     static {
-        Set<String> configurational = new HashSet<String>( Arrays.asList(
+        Set<String> configurational = new HashSet<String>(Arrays.asList(
                 GormProperties.META_CLASS,
                 GormProperties.CLASS,
                 GormProperties.TRANSIENT,
@@ -56,7 +56,7 @@ public class NameUtils {
                 "sessionFactory",
                 "messageSource",
                 "applicationContext",
-                "properties") );
+                "properties"));
         CONFIGURATIONAL_PROPERTIES = Collections.unmodifiableSet(configurational);
     }
 
@@ -105,7 +105,7 @@ public class NameUtils {
      */
     public static String getClassName(Class clazz) {
         final String sn = clazz.getSimpleName();
-        if(sn.contains(DOLLAR_SEPARATOR)) {
+        if (sn.contains(DOLLAR_SEPARATOR)) {
             return clazz.getSuperclass().getName();
         }
         return clazz.getName();

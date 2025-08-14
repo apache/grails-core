@@ -117,7 +117,6 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
 
     public void setServletContext(ServletContext servletContext) {
 
-
         this.servletContext = servletContext;
     }
 
@@ -125,6 +124,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
         this.grailsApplication = grailsApplication;
         createStackFilterer();
     }
+
     /**
      * Obtains the root cause of the given exception
      * @param ex The exception
@@ -169,11 +169,11 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
         Map params = new HashMap();
         try {
             UrlMappingInfo requestInfo = urlMappings.match(request.getRequestURI());
-            if ( requestInfo != null ) {
+            if (requestInfo != null) {
                 params.putAll(UrlMappingUtils.findAllParamsNotInUrlMappingKeywords(requestInfo.getParameters()));
             }
-        } catch( UrlMappingException ulrMappingException) {
-            logger.debug("Could not find urlMapping which matches: " + request.getRequestURI() );
+        } catch (UrlMappingException ulrMappingException) {
+            logger.debug("Could not find urlMapping which matches: " + request.getRequestURI());
         }
         return params;
     }
@@ -183,9 +183,9 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
 
         UrlMappingInfo info = matchStatusCode(ex, urlMappings);
 
-        if ( info != null ) {
+        if (info != null) {
             Map params = extractRequestParamsWithUrlMappingHolder(urlMappings, request);
-            if ( params != null && !params.isEmpty() ) {
+            if (params != null && !params.isEmpty()) {
                 Map infoParams = info.getParameters();
                 if (infoParams != null) {
                     params.putAll(info.getParameters());
@@ -230,7 +230,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     }
 
     protected String determineUri(HttpServletRequest request) {
-        String uri = (String)request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE);
+        String uri = (String) request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE);
         if (uri == null) {
             uri = request.getRequestURI();
         }
@@ -262,7 +262,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     }
 
     protected Exception findWrappedException(Exception e) {
-        if ((e instanceof InvokerInvocationException)||(e instanceof GrailsMVCException)) {
+        if ((e instanceof InvokerInvocationException) || (e instanceof GrailsMVCException)) {
             Throwable t = getRootCause(e);
             if (t instanceof Exception) {
                 e = (Exception) t;
@@ -270,8 +270,6 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
         }
         return e;
     }
-
-
 
     protected String getRequestLogMessage(String exceptionName, HttpServletRequest request, String message) {
         StringBuilder sb = new StringBuilder();

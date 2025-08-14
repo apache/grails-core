@@ -117,7 +117,7 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
             for (Method method : superClass.getMethods()) {
                 if (Modifier.isPublic(method.getModifiers()) && method.getAnnotation(Action.class) != null) {
                     String methodName = method.getName();
-                    if(Environment.isDevelopmentMode()) {
+                    if (Environment.isDevelopmentMode()) {
                         methodNames.put(methodName, new ReflectionInvoker(method));
                     }
                     else {
@@ -142,14 +142,14 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
 
     @Override
     public boolean mapsToURI(String uri) {
-        if(uri.startsWith("/")) {
+        if (uri.startsWith("/")) {
             String[] tokens = uri.substring(1).split("\\/");
-            if(tokens.length>0) {
+            if (tokens.length > 0) {
                 String controllerName = tokens[0];
-                if(getLogicalPropertyName().equals(controllerName)) {
-                    if(tokens.length>1) {
+                if (getLogicalPropertyName().equals(controllerName)) {
+                    if (tokens.length > 1) {
                         String actionName = tokens[1];
-                        if(actions.containsKey(actionName) || defaultActionName.equals(actionName)) {
+                        if (actions.containsKey(actionName) || defaultActionName.equals(actionName)) {
                             return true;
                         }
                     }
@@ -171,7 +171,7 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
     public void registerUrlConverter(UrlConverter urlConverter) {
         for (String actionName : new ArrayList<String>(actions.keySet())) {
             actionUriToViewName.put(urlConverter.toUrlElement(actionName), actionName);
-            actions.put( urlConverter.toUrlElement(actionName), actions.remove(actionName));
+            actions.put(urlConverter.toUrlElement(actionName), actions.remove(actionName));
         }
         defaultActionName = urlConverter.toUrlElement(defaultActionName);
     }
@@ -186,9 +186,9 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
      */
     @Override
     public Object invoke(Object controller, String action) throws Throwable {
-        if(action == null) action = this.defaultActionName;
+        if (action == null) action = this.defaultActionName;
         ActionInvoker handle = actions.get(action);
-        if(handle == null) throw new IllegalArgumentException("Invalid action name: " + action);
+        if (handle == null) throw new IllegalArgumentException("Invalid action name: " + action);
         return handle.invoke(controller);
     }
 
@@ -215,6 +215,7 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
             return method.invoke(controller);
         }
     }
+
     private class MethodHandleInvoker implements ActionInvoker {
         private final MethodHandle handle;
 
@@ -223,7 +224,7 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
         }
 
         @Override
-        public Object invoke(Object controller) throws Throwable{
+        public Object invoke(Object controller) throws Throwable {
             return handle.invoke(controller);
         }
     }

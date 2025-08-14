@@ -76,6 +76,7 @@ public class HTML4Encoder extends AbstractCharReplacementEncoder {
         private static Object instance;
         private static Method mapMethod;
         private static boolean disabled = false;
+
         static {
             try {
                 Field instanceField = ReflectionUtils.findField(HtmlUtils.class, "characterEntityReferences");
@@ -99,7 +100,7 @@ public class HTML4Encoder extends AbstractCharReplacementEncoder {
          */
         public static final String convertToReference(char c) {
             if (!disabled) {
-                return (String)ReflectionUtils.invokeMethod(mapMethod, instance, c);
+                return (String) ReflectionUtils.invokeMethod(mapMethod, instance, c);
             }
 
             String charAsString = String.valueOf(c);

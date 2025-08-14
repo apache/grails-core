@@ -51,7 +51,7 @@ public class Holder<T> {
             return t;
         }
 
-//        t = instances.get(System.identityHashCode(getClass().getClassLoader()));
+        // t = instances.get(System.identityHashCode(getClass().getClassLoader()));
         if (!mappedOnly) {
             t = singleton;
         }

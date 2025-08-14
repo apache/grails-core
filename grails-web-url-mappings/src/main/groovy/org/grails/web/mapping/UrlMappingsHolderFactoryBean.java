@@ -123,7 +123,7 @@ public class UrlMappingsHolderFactoryBean implements FactoryBean<UrlMappings>, I
         UrlConverter urlConverter = applicationContext.containsBean(UrlConverter.BEAN_NAME) ? applicationContext.getBean(UrlConverter.BEAN_NAME, UrlConverter.class) : null;
         final GrailsControllerUrlMappings grailsControllerUrlMappings = new GrailsControllerUrlMappings(grailsApplication, defaultUrlMappingsHolder, urlConverter);
         //noinspection Convert2Lambda - https://github.com/apache/grails-core/issues/14068
-        ((ConfigurableApplicationContext)applicationContext).addApplicationListener(new ApplicationListener<ArtefactAdditionEvent>() {
+        ((ConfigurableApplicationContext) applicationContext).addApplicationListener(new ApplicationListener<ArtefactAdditionEvent>() {
             @Override
             public void onApplicationEvent(ArtefactAdditionEvent event) {
                 GrailsClass artefact = event.getArtefact();

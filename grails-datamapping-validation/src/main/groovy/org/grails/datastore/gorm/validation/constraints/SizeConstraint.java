@@ -74,7 +74,6 @@ public class SizeConstraint extends AbstractConstraint {
         return constraintParameter;
     }
 
-
     public String getName() {
         return ConstrainedProperty.SIZE_CONSTRAINT;
     }
@@ -89,10 +88,10 @@ public class SizeConstraint extends AbstractConstraint {
             size = Array.getLength(propertyValue);
         }
         else if (propertyValue instanceof Collection<?>) {
-            size = ((Collection<?>)propertyValue).size();
+            size = ((Collection<?>) propertyValue).size();
         }
         else { // String
-            size = ((String)propertyValue).length();
+            size = ((String) propertyValue).length();
         }
 
         if (!range.contains(size)) {
@@ -106,7 +105,7 @@ public class SizeConstraint extends AbstractConstraint {
     }
 
     private void rejectValue(Object[] args, Errors errors, Object target, String suffix) {
-        rejectValue(target,errors, ConstrainedProperty.DEFAULT_INVALID_SIZE_MESSAGE_CODE,
+        rejectValue(target, errors, ConstrainedProperty.DEFAULT_INVALID_SIZE_MESSAGE_CODE,
                 ConstrainedProperty.SIZE_CONSTRAINT + suffix, args);
     }
 }

@@ -59,47 +59,47 @@ public class MultiTenantEventListener implements PersistenceEventListener {
 
     @Override
     public void onApplicationEvent(ApplicationEvent event) {
-        if(supportsEventType(event.getClass())) {
+        if (supportsEventType(event.getClass())) {
             Datastore hibernateDatastore = (Datastore) event.getSource();
-            if(event instanceof  PreQueryEvent) {
+            if (event instanceof PreQueryEvent) {
                 PreQueryEvent preQueryEvent = (PreQueryEvent) event;
                 Query query = preQueryEvent.getQuery();
 
                 PersistentEntity entity = query.getEntity();
-                if(entity.isMultiTenant()) {
-                    if(hibernateDatastore == null) {
+                if (entity.isMultiTenant()) {
+                    if (hibernateDatastore == null) {
                         hibernateDatastore = GormEnhancer.findDatastore(entity.getJavaClass());
                     }
-                    if(supportsSourceType(hibernateDatastore.getClass())) {
-                        ((AbstractHibernateDatastore)hibernateDatastore).enableMultiTenancyFilter();
+                    if (supportsSourceType(hibernateDatastore.getClass())) {
+                        ((AbstractHibernateDatastore) hibernateDatastore).enableMultiTenancyFilter();
                     }
                 }
             }
-            else if((event instanceof ValidationEvent) || (event instanceof PreInsertEvent) || (event instanceof PreUpdateEvent)) {
+            else if ((event instanceof ValidationEvent) || (event instanceof PreInsertEvent) || (event instanceof PreUpdateEvent)) {
                 AbstractPersistenceEvent preInsertEvent = (AbstractPersistenceEvent) event;
                 PersistentEntity entity = preInsertEvent.getEntity();
-                if(entity.isMultiTenant()) {
+                if (entity.isMultiTenant()) {
                     TenantId tenantId = entity.getTenantId();
-                    if(hibernateDatastore == null) {
+                    if (hibernateDatastore == null) {
                         hibernateDatastore = GormEnhancer.findDatastore(entity.getJavaClass());
                     }
-                    if(supportsSourceType(hibernateDatastore.getClass())) {
+                    if (supportsSourceType(hibernateDatastore.getClass())) {
                         Serializable currentId;
 
-                        if(hibernateDatastore instanceof MultiTenantCapableDatastore) {
+                        if (hibernateDatastore instanceof MultiTenantCapableDatastore) {
                             currentId = Tenants.currentId((MultiTenantCapableDatastore) hibernateDatastore);
                         }
                         else {
                             currentId = Tenants.currentId(hibernateDatastore.getClass());
                         }
-                        if(currentId != null) {
+                        if (currentId != null) {
                             try {
-                                if(currentId == ConnectionSource.DEFAULT) {
+                                if (currentId == ConnectionSource.DEFAULT) {
                                     currentId = (Serializable) preInsertEvent.getEntityAccess().getProperty(tenantId.getName());
                                 }
                                 preInsertEvent.getEntityAccess().setProperty(tenantId.getName(), currentId);
                             } catch (Exception e) {
-                                throw new TenantException("Could not assigned tenant id ["+currentId+"] to property ["+tenantId+"], probably due to a type mismatch. You should return a type from the tenant resolver that matches the property type of the tenant id!: " + e.getMessage(), e);
+                                throw new TenantException("Could not assigned tenant id [" + currentId + "] to property [" + tenantId + "], probably due to a type mismatch. You should return a type from the tenant resolver that matches the property type of the tenant id!: " + e.getMessage(), e);
                             }
                         }
                     }

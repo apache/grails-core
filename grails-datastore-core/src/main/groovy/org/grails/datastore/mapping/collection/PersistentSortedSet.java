@@ -59,11 +59,11 @@ public class PersistentSortedSet extends AbstractPersistentCollection implements
 
     private SortedSet getSortedSet() {
         initialize();
-        return ((SortedSet)collection);
+        return ((SortedSet) collection);
     }
 
     public SortedSet subSet(Object o, Object o1) {
-        return getSortedSet().subSet(o,o1);
+        return getSortedSet().subSet(o, o1);
     }
 
     public SortedSet headSet(Object o) {

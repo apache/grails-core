@@ -90,8 +90,8 @@ public class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, En
     }
 
     protected Writer unwrapWriter(Writer writer) {
-        if (writer instanceof GrailsWrappedWriter ) {
-            return ((GrailsWrappedWriter)writer).unwrap();
+        if (writer instanceof GrailsWrappedWriter) {
+            return ((GrailsWrappedWriter) writer).unwrap();
         }
         return writer;
     }
@@ -112,16 +112,16 @@ public class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, En
 
         Class<?> clazz = obj.getClass();
         if (clazz == String.class) {
-            write((String)obj);
+            write((String) obj);
         }
         else if (clazz == StreamCharBuffer.class) {
-            write((StreamCharBuffer)obj);
+            write((StreamCharBuffer) obj);
         }
         else if (clazz == GStringImpl.class) {
-            write((Writable)obj);
+            write((Writable) obj);
         }
         else if (obj instanceof Writable) {
-            write((Writable)obj);
+            write((Writable) obj);
         }
         else if (obj instanceof CharSequence) {
             try {
@@ -214,21 +214,21 @@ public class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, En
 
         Class<?> clazz = obj.getClass();
         if (clazz == String.class) {
-            write((String)obj);
+            write((String) obj);
         }
         else if (clazz == StreamCharBuffer.class) {
-            write((StreamCharBuffer)obj);
+            write((StreamCharBuffer) obj);
         }
         else if (clazz == GStringImpl.class) {
-            write((Writable)obj);
+            write((Writable) obj);
         }
         else if (obj instanceof Writable) {
-            write((Writable)obj);
+            write((Writable) obj);
         }
         else if (obj instanceof CharSequence) {
             try {
                 usageFlag = true;
-                CharSequences.writeCharSequence(getOut(), (CharSequence)obj);
+                CharSequences.writeCharSequence(getOut(), (CharSequence) obj);
             }
             catch (IOException e) {
                 handleIOException(e);
@@ -506,7 +506,7 @@ public class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, En
 
         Writer target = currentOut;
         while (target instanceof GrailsWrappedWriter) {
-            GrailsWrappedWriter gpr = ((GrailsWrappedWriter)target);
+            GrailsWrappedWriter gpr = ((GrailsWrappedWriter) target);
             if (gpr.isAllowUnwrappingOut()) {
                 if (markUsed) {
                     gpr.markUsed();
@@ -559,8 +559,8 @@ public class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, En
     }
 
     protected void writeWritable(final Writable writable) {
-        if(writable.getClass() == StreamCharBuffer.class) {
-            write((StreamCharBuffer)writable);
+        if (writable.getClass() == StreamCharBuffer.class) {
+            write((StreamCharBuffer) writable);
             return;
         }
 
@@ -606,7 +606,7 @@ public class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, En
 
         Writer target = findStreamCharBufferTarget(false);
         if (target instanceof StreamCharBuffer.StreamCharBufferWriter) {
-            StreamCharBuffer buffer = ((StreamCharBuffer.StreamCharBufferWriter)target).getBuffer();
+            StreamCharBuffer buffer = ((StreamCharBuffer.StreamCharBufferWriter) target).getBuffer();
             if (!buffer.isEmpty()) {
                 return true;
             }
@@ -662,16 +662,16 @@ public class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, En
             target = findStreamCharBufferTarget(false);
         }
         if (target instanceof EncodedAppenderWriterFactory && target != this) {
-            return ((EncodedAppenderWriterFactory)target).getWriterForEncoder(encoder, encodingStateRegistry);
+            return ((EncodedAppenderWriterFactory) target).getWriterForEncoder(encoder, encodingStateRegistry);
         } else if (target instanceof EncodedAppenderFactory) {
-            EncodedAppender encodedAppender=((EncodedAppenderFactory)target).getEncodedAppender();
+            EncodedAppender encodedAppender = ((EncodedAppenderFactory) target).getEncodedAppender();
             if (encodedAppender != null) {
                 return new EncodedAppenderWriter(encodedAppender, encoder, encodingStateRegistry);
             }
         }
         if (target != null) {
             if (encoder instanceof StreamingEncoder) {
-                return new StreamingEncoderWriter(target, (StreamingEncoder)encoder, encodingStateRegistry);
+                return new StreamingEncoderWriter(target, (StreamingEncoder) encoder, encodingStateRegistry);
             } else {
                 return new CodecPrintWriter(target, encoder, encodingStateRegistry);
             }

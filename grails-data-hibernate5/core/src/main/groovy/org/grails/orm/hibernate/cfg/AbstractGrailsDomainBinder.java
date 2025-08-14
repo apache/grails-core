@@ -34,7 +34,6 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 public abstract class AbstractGrailsDomainBinder {
     protected static final Map<Class<?>, Mapping> MAPPING_CACHE = new HashMap<>();
 
-
     /**
      * Obtains a mapping object for the given domain class nam
      *
@@ -71,7 +70,7 @@ public abstract class AbstractGrailsDomainBinder {
 
     public static void clearMappingCache(Class<?> theClass) {
         String className = theClass.getName();
-        for(Iterator<Map.Entry<Class<?>, Mapping>> it = MAPPING_CACHE.entrySet().iterator(); it.hasNext();) {
+        for (Iterator<Map.Entry<Class<?>, Mapping>> it = MAPPING_CACHE.entrySet().iterator(); it.hasNext();) {
             Map.Entry<Class<?>, Mapping> entry = it.next();
             if (className.equals(entry.getKey().getName())) {
                 it.remove();

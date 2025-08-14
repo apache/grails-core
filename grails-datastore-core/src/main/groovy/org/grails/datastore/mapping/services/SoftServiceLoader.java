@@ -54,7 +54,6 @@ public final class SoftServiceLoader<S> implements Iterable<ServiceDefinition<S>
 
     private static final boolean ENABLE_CLASS_LOADER_LOGGING = Boolean.getBoolean(PROPERTY_GRAILS_CLASSLOADER_LOGGING);
 
-
     private final Class<S> serviceType;
     private final ClassLoader classLoader;
     private final Map<String, ServiceDefinition<S>> loadedServices = new LinkedHashMap<>();
@@ -64,7 +63,6 @@ public final class SoftServiceLoader<S> implements Iterable<ServiceDefinition<S>
     static {
         REFLECTION_LOGGER = getLogger(ClassUtils.class);
     }
-
 
     private SoftServiceLoader(Class<S> serviceType, ClassLoader classLoader) {
         this(serviceType, classLoader, (String name) -> true);

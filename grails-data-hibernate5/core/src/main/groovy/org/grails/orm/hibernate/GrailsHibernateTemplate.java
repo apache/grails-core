@@ -93,14 +93,15 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     protected GrailsHibernateTemplate() {
         // for testing
     }
+
     public GrailsHibernateTemplate(SessionFactory sessionFactory) {
         Assert.notNull(sessionFactory, "Property 'sessionFactory' is required");
         this.sessionFactory = sessionFactory;
 
         ConnectionProvider connectionProvider = ((SessionFactoryImplementor) sessionFactory).getServiceRegistry().getService(ConnectionProvider.class);
-        if(connectionProvider instanceof DatasourceConnectionProviderImpl) {
+        if (connectionProvider instanceof DatasourceConnectionProviderImpl) {
             this.dataSource = ((DatasourceConnectionProviderImpl) connectionProvider).getDataSource();
-            if(dataSource instanceof TransactionAwareDataSourceProxy) {
+            if (dataSource instanceof TransactionAwareDataSourceProxy) {
                 this.dataSource = ((TransactionAwareDataSourceProxy) dataSource).getTargetDataSource();
             }
             jdbcExceptionTranslator = new SQLErrorCodeSQLExceptionTranslator(dataSource);
@@ -119,14 +120,13 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
 
     public GrailsHibernateTemplate(SessionFactory sessionFactory, HibernateDatastore datastore, int defaultFlushMode) {
         this(sessionFactory);
-        if(datastore != null) {
+        if (datastore != null) {
             cacheQueries = datastore.isCacheQueries();
             this.osivReadOnly = datastore.isOsivReadOnly();
             this.passReadOnlyToHibernate = datastore.isPassReadOnlyToHibernate();
         }
         this.flushMode = defaultFlushMode;
     }
-
 
     @Override
     public <T> T execute(Closure<T> callable) {
@@ -136,15 +136,15 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
 
     @Override
     public <T> T executeWithNewSession(final Closure<T> callable) {
-        SessionHolder sessionHolder = (SessionHolder)TransactionSynchronizationManager.getResource(sessionFactory);
+        SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory);
         SessionHolder previousHolder = sessionHolder;
-        ConnectionHolder previousConnectionHolder = (ConnectionHolder)TransactionSynchronizationManager.getResource(dataSource);
+        ConnectionHolder previousConnectionHolder = (ConnectionHolder) TransactionSynchronizationManager.getResource(dataSource);
         Session newSession = null;
         boolean previousActiveSynchronization = TransactionSynchronizationManager.isSynchronizationActive();
         List<TransactionSynchronization> transactionSynchronizations = previousActiveSynchronization ? TransactionSynchronizationManager.getSynchronizations() : null;
         try {
             // if there are any previous synchronizations active we need to clear them and restore them later (see finally block)
-            if(previousActiveSynchronization) {
+            if (previousActiveSynchronization) {
                 TransactionSynchronizationManager.clearSynchronization();
                 // init a new synchronization to ensure that any opened database connections are closed by the synchronization
                 TransactionSynchronizationManager.initSynchronization();
@@ -153,7 +153,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
             // if there are already bound holders, unbind them so they can be restored later
             if (sessionHolder != null) {
                 TransactionSynchronizationManager.unbindResource(sessionFactory);
-                if(previousConnectionHolder != null) {
+                if (previousConnectionHolder != null) {
                     TransactionSynchronizationManager.unbindResource(dataSource);
                 }
             }
@@ -169,11 +169,11 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         finally {
             try {
                 // if an active synchronization was registered during the life time of the new session clear it
-                if(TransactionSynchronizationManager.isSynchronizationActive()) {
+                if (TransactionSynchronizationManager.isSynchronizationActive()) {
                     TransactionSynchronizationManager.clearSynchronization();
                 }
                 // If there is a synchronization active then leave it to the synchronization to close the session
-                if(newSession != null) {
+                if (newSession != null) {
                     SessionFactoryUtils.closeSession(newSession);
                 }
 
@@ -182,20 +182,20 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
                 ConnectionHolder connectionHolder = (ConnectionHolder) TransactionSynchronizationManager.unbindResourceIfPossible(dataSource);
                 // if there is a connection holder and it holds an open connection close it
                 try {
-                    if(connectionHolder != null && !connectionHolder.getConnection().isClosed()) {
+                    if (connectionHolder != null && !connectionHolder.getConnection().isClosed()) {
                         Connection conn = connectionHolder.getConnection();
                         DataSourceUtils.releaseConnection(conn, dataSource);
                     }
                 } catch (SQLException e) {
                     // ignore, connection closed already?
-                    if(LOG.isDebugEnabled()) {
+                    if (LOG.isDebugEnabled()) {
                         LOG.debug("Could not close opened JDBC connection. Did the application close the connection manually?: " + e.getMessage());
                     }
                 }
             }
             finally {
                 // if there were previously active synchronizations then register those again
-                if(previousActiveSynchronization) {
+                if (previousActiveSynchronization) {
                     TransactionSynchronizationManager.initSynchronization();
                     for (TransactionSynchronization transactionSynchronization : transactionSynchronizations) {
                         TransactionSynchronizationManager.registerSynchronization(transactionSynchronization);
@@ -203,9 +203,9 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
                 }
 
                 // now restore any previous state
-                if(previousHolder != null) {
+                if (previousHolder != null) {
                     TransactionSynchronizationManager.bindResource(sessionFactory, previousHolder);
-                    if(previousConnectionHolder != null) {
+                    if (previousConnectionHolder != null) {
                         TransactionSynchronizationManager.bindResource(dataSource, previousConnectionHolder);
                     }
                 }
@@ -217,7 +217,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     @Override
     public <T1> T1 executeWithExistingOrCreateNewSession(SessionFactory sessionFactory, Closure<T1> callable) {
         SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory);
-        if(sessionHolder == null) {
+        if (sessionHolder == null) {
             return executeWithNewSession(callable);
         }
         else {
@@ -264,8 +264,8 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     }
 
     protected boolean shouldPassReadOnlyToHibernate() {
-        if((passReadOnlyToHibernate || osivReadOnly) && TransactionSynchronizationManager.hasResource(getSessionFactory())) {
-            if(TransactionSynchronizationManager.isActualTransactionActive()) {
+        if ((passReadOnlyToHibernate || osivReadOnly) && TransactionSynchronizationManager.hasResource(getSessionFactory())) {
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
                 return passReadOnlyToHibernate && TransactionSynchronizationManager.isCurrentTransactionReadOnly();
             } else {
                 return osivReadOnly;
@@ -428,7 +428,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
 
     public void lock(final Object entity, final LockMode lockMode) throws DataAccessException {
         doExecute(session -> {
-            session.buildLockRequest(new LockOptions(lockMode)).lock(entity);//LockMode.PESSIMISTIC_WRITE
+            session.buildLockRequest(new LockOptions(lockMode)).lock(entity); //LockMode.PESSIMISTIC_WRITE
             return null;
         }, true);
     }
@@ -514,7 +514,6 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
             jpaQuery.setTimeout(sessionHolder.getTimeToLiveInSeconds());
         }
     }
-
 
     /**
      * Invocation handler that suppresses close calls on Hibernate Sessions.
@@ -665,7 +664,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
      * @see org.hibernate.Session#setFlushMode
      */
     protected FlushMode applyFlushMode(Session session, boolean existingTransaction) {
-        if(isApplyFlushModeOnlyToNonExistingTransactions() && existingTransaction) {
+        if (isApplyFlushModeOnlyToNonExistingTransactions() && existingTransaction) {
             return null;
         }
 

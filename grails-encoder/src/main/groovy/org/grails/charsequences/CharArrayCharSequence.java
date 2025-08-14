@@ -70,7 +70,7 @@ class CharArrayCharSequence implements CharSequence, CharArrayAccessible {
     public void getChars(int srcBegin, int srcEnd, char[] dst, int dstBegin) {
         if (srcBegin < 0)
             throw new StringIndexOutOfBoundsException(srcBegin);
-        if ((srcEnd < 0) || (srcEnd > start+count))
+        if ((srcEnd < 0) || (srcEnd > start + count))
             throw new StringIndexOutOfBoundsException(srcEnd);
         if (srcBegin > srcEnd)
             throw new StringIndexOutOfBoundsException("srcBegin > srcEnd");

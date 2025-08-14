@@ -34,7 +34,6 @@ import org.grails.datastore.mapping.model.PersistentEntity;
  */
 public abstract class ToMany<T extends Property> extends Association<T> {
 
-
     public ToMany(PersistentEntity owner, MappingContext context, PropertyDescriptor descriptor) {
         super(owner, context, descriptor);
     }

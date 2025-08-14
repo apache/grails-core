@@ -70,12 +70,12 @@ public class CustomizableRollbackTransactionAttribute extends RuleBasedTransacti
     }
 
     public CustomizableRollbackTransactionAttribute(CustomizableRollbackTransactionAttribute other) {
-        this((RuleBasedTransactionAttribute)other);
+        this((RuleBasedTransactionAttribute) other);
     }
 
     public CustomizableRollbackTransactionAttribute(RuleBasedTransactionAttribute other) {
-        if(other instanceof CustomizableRollbackTransactionAttribute) {
-            this.inheritRollbackOnly = ((CustomizableRollbackTransactionAttribute)other).inheritRollbackOnly;
+        if (other instanceof CustomizableRollbackTransactionAttribute) {
+            this.inheritRollbackOnly = ((CustomizableRollbackTransactionAttribute) other).inheritRollbackOnly;
         }
     }
 
@@ -100,7 +100,7 @@ public class CustomizableRollbackTransactionAttribute extends RuleBasedTransacti
         }
 
         if (log.isTraceEnabled()) {
-            log.trace("Winning rollback rule is: $winner" );
+            log.trace("Winning rollback rule is: $winner");
         }
 
         // User superclass behavior (rollback on unchecked) if no rule matches.
@@ -113,6 +113,7 @@ public class CustomizableRollbackTransactionAttribute extends RuleBasedTransacti
 
         return !(winner instanceof NoRollbackRuleAttribute);
     }
+
     public boolean isInheritRollbackOnly() {
         return inheritRollbackOnly;
     }

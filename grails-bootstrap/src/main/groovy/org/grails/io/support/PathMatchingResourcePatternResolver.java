@@ -31,7 +31,6 @@ import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-
 /**
  * A ResourcePatternResolver implementation that is able to resolve a
  * specified resource location path into one or more matching Resources.
@@ -148,7 +147,6 @@ import java.util.jar.JarFile;
 public class PathMatchingResourcePatternResolver {
 
     private static final String CLASSPATH_ALL_URL_PREFIX = "classpath*:";
-
 
     private final ResourceLoader resourceLoader;
 
@@ -500,7 +498,7 @@ public class PathMatchingResourcePatternResolver {
         if (!rootDir.canRead()) {
             return Collections.emptySet();
         }
-        String fullPattern = rootDir.getAbsolutePath().replace( File.separator, "/");
+        String fullPattern = rootDir.getAbsolutePath().replace(File.separator, "/");
         if (!pattern.startsWith("/")) {
             fullPattern += "/";
         }
@@ -525,7 +523,7 @@ public class PathMatchingResourcePatternResolver {
             return;
         }
         for (File content : dirContents) {
-            String currPath = content.getAbsolutePath().replace( File.separator, "/");
+            String currPath = content.getAbsolutePath().replace(File.separator, "/");
             if (content.isDirectory() && getPathMatcher().matchStart(fullPattern, currPath + "/")) {
                 if (content.canRead()) {
                     doRetrieveMatchingFiles(fullPattern, content, result);

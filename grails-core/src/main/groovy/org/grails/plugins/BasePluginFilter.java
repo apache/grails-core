@@ -93,7 +93,7 @@ public abstract class BasePluginFilter implements PluginFilter {
     /**
      * Template method shared by subclasses of <code>BasePluginFilter</code>.
      */
-    public List<GrailsPlugin>  filterPluginList(List<GrailsPlugin> original) {
+    public List<GrailsPlugin> filterPluginList(List<GrailsPlugin> original) {
 
         originalPlugins = Collections.unmodifiableList(original);
         addedNames = new HashSet<String>();
@@ -166,7 +166,7 @@ public abstract class BasePluginFilter implements PluginFilter {
         // included set
 
         for (GrailsPlugin plugin : originalPlugins) {
-        // find explicitly included plugins
+            // find explicitly included plugins
             String name = plugin.getName();
             if (suppliedNames.contains(name)) {
                 explicitlyNamedPlugins.add(plugin);

@@ -32,7 +32,7 @@ public class CompositeEditor extends PropertyEditorSupport {
 
     List<PropertyEditor> propertyEditors = new ArrayList<PropertyEditor>();
 
-    public CompositeEditor(PropertyEditor...editors) {
+    public CompositeEditor(PropertyEditor... editors) {
         propertyEditors.addAll(Arrays.asList(editors));
     }
 

@@ -117,14 +117,14 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
         String contextPath = resolveContextPath(pluginName, uri, binding);
         String fullURI = GrailsResourceUtils.appendPiecesForUri(contextPath, uri);
 
-        if(pluginManager != null) {
+        if (pluginManager != null) {
             GrailsPlugin grailsPlugin = pluginManager.getGrailsPlugin(pluginName);
-            if(grailsPlugin instanceof BinaryGrailsPlugin) {
+            if (grailsPlugin instanceof BinaryGrailsPlugin) {
                 BinaryGrailsPlugin binaryGrailsPlugin = (BinaryGrailsPlugin) grailsPlugin;
                 File projectDirectory = binaryGrailsPlugin.getProjectDirectory();
-                if(projectDirectory != null) {
+                if (projectDirectory != null) {
                     File f = new File(projectDirectory, GrailsResourceUtils.VIEWS_DIR_PATH + uri);
-                    if(f.exists()) {
+                    if (f.exists()) {
                         scriptSource = new GroovyPageResourceScriptSource(uri, new FileSystemResource(f));
                     }
                 }
@@ -134,14 +134,13 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
             }
         }
 
-        if(scriptSource == null) {
+        if (scriptSource == null) {
             scriptSource = findPageInBinding(fullURI, binding);
         }
 
         if (scriptSource == null) {
             scriptSource = findResourceScriptSource(uri);
         }
-
 
         //last effort to resolve and force name of plugin to use camel case
         if (scriptSource == null) {
@@ -249,9 +248,9 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
                 }
                 return scriptSource;
             }
-            else if(binaryPlugin.getProjectDirectory() != null) {
+            else if (binaryPlugin.getProjectDirectory() != null) {
                 scriptSource = resolveViewInPluginProjectDirectory(binaryPlugin, uri);
-                if(scriptSource != null) {
+                if (scriptSource != null) {
                     return scriptSource;
                 }
             }
@@ -263,7 +262,7 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
     private GroovyPageScriptSource resolveViewInPluginProjectDirectory(BinaryGrailsPlugin binaryPlugin, String uri) {
         File projectDirectory = binaryPlugin.getProjectDirectory();
         File f = new File(projectDirectory, "grails-app/views" + uri);
-        if(f.exists()) {
+        if (f.exists()) {
             return new GroovyPageResourceScriptSource(uri, new FileSystemResource(f));
         }
         return null;

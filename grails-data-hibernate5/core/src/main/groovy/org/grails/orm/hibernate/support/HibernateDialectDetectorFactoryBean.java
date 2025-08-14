@@ -94,7 +94,7 @@ public class HibernateDialectDetectorFactoryBean implements FactoryBean<String>,
 
         Connection connection = null;
 
-        String dbName = (String)JdbcUtils.extractDatabaseMetaData(dataSource, "getDatabaseProductName");
+        String dbName = (String) JdbcUtils.extractDatabaseMetaData(dataSource, "getDatabaseProductName");
 
         try {
             connection = DataSourceUtils.getConnection(dataSource);
@@ -124,7 +124,7 @@ public class HibernateDialectDetectorFactoryBean implements FactoryBean<String>,
                         "Could not determine Hibernate dialect for database name [" + dbName + "]!");
             }
         } finally {
-            DataSourceUtils.releaseConnection(connection,dataSource);
+            DataSourceUtils.releaseConnection(connection, dataSource);
         }
     }
 

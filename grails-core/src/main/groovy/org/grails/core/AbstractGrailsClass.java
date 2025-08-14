@@ -124,7 +124,7 @@ public abstract class AbstractGrailsClass implements GrailsClass {
         catch (Exception e) {
             Throwable targetException;
             if (e instanceof InvocationTargetException) {
-                targetException = ((InvocationTargetException)e).getTargetException();
+                targetException = ((InvocationTargetException) e).getTargetException();
             }
             else {
                 targetException = e;
@@ -161,14 +161,13 @@ public abstract class AbstractGrailsClass implements GrailsClass {
     public Object getReferenceInstance() {
         Object obj = BeanUtils.instantiateClass(clazz);
         if (obj instanceof GroovyObject) {
-            ((GroovyObject)obj).setMetaClass(getMetaClass());
+            ((GroovyObject) obj).setMetaClass(getMetaClass());
         }
         return obj;
     }
 
-
     private ClassPropertyFetcher resolvePropertyFetcher() {
-        if(classPropertyFetcher == null) {
+        if (classPropertyFetcher == null) {
             classPropertyFetcher = ClassPropertyFetcher.forClass(clazz);
         }
         return classPropertyFetcher;
@@ -187,7 +186,7 @@ public abstract class AbstractGrailsClass implements GrailsClass {
     }
 
     public boolean isActionMethod(String methodName) {
-        Method m =  ReflectionUtils.findMethod(getClazz(), methodName, new Class[0]);
+        Method m = ReflectionUtils.findMethod(getClazz(), methodName, new Class[0]);
         if (m != null) {
             ReflectionUtils.makeAccessible(m);
         }
@@ -205,7 +204,6 @@ public abstract class AbstractGrailsClass implements GrailsClass {
     public boolean hasMetaProperty(String propName) {
         return (getMetaClass().getMetaProperty(propName) != null);
     }
-
 
     /**
      * <p>Looks for a property of the reference instance with a given name and type.</p>
@@ -246,11 +244,9 @@ public abstract class AbstractGrailsClass implements GrailsClass {
         return ClassPropertyFetcher.getStaticPropertyValue(getClazz(), propName, type);
     }
 
-
     public Object getPropertyValueObject(String propertyNAme) {
         return getPropertyValue(propertyNAme, Object.class);
     }
-
 
     /* (non-Javadoc)
      * @see grails.core.GrailsClass#getPropertyValue(java.lang.String)

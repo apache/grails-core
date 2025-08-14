@@ -81,7 +81,7 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
     }
 
     protected boolean isCacheable(Map attrs) {
-        if(attrs.get(LinkGenerator.ATTRIBUTE_PARAMS) instanceof GrailsParameterMap) {
+        if (attrs.get(LinkGenerator.ATTRIBUTE_PARAMS) instanceof GrailsParameterMap) {
             return false;
         }
         Object urlAttr = attrs.get(ATTRIBUTE_URL);
@@ -97,7 +97,7 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
 
     // Based on DGM toMapString, but with StringBuilder instead of StringBuffer
     protected void appendMapKey(StringBuilder buffer, Map<String, Object> params) {
-        if (params==null || params.isEmpty()) {
+        if (params == null || params.isEmpty()) {
             buffer.append(EMPTY_MAP_STRING);
             buffer.append(OPENING_BRACKET);
         } else {
@@ -135,7 +135,7 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
         StringBuilder builder = new StringBuilder(o.getClass().getName());
         builder.append("->");
         Object idValue = GrailsMetaClassUtils.invokeMethodIfExists(o, "ident", new Object[0]);
-        if(idValue != null) {
+        if (idValue != null) {
             builder.append(idValue.toString());
         } else {
             builder.append(o);
@@ -174,14 +174,14 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
     }
 
     protected String makeKey(String prefix, Map attrs) {
-        StringBuilder sb=new StringBuilder();
+        StringBuilder sb = new StringBuilder();
         sb.append(prefix);
-        if (getConfiguredServerBaseURL()==null && isAbsolute(attrs)) {
+        if (getConfiguredServerBaseURL() == null && isAbsolute(attrs)) {
             if (attrs.get(ATTRIBUTE_BASE) != null) {
                 sb.append(attrs.get(ATTRIBUTE_BASE));
             } else {
                 GrailsWebRequest webRequest = GrailsWebRequest.lookup();
-                if(webRequest != null) {
+                if (webRequest != null) {
                     sb.append(webRequest.getBaseUrl());
                 }
             }

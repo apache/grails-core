@@ -100,14 +100,14 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
         }
 
         Resource[] resources;
-        if(Environment.isDevelopmentEnvironmentAvailable()) {
+        if (Environment.isDevelopmentEnvironmentAvailable()) {
             File[] propertiesFiles = new File(BuildSettings.BASE_DIR, GRAILS_APP_I18N_PATH_COMPONENT).listFiles(new FilenameFilter() {
                 @Override
                 public boolean accept(File dir, String name) {
                     return name.endsWith(".properties");
                 }
             });
-            if(propertiesFiles != null && propertiesFiles.length > 0) {
+            if (propertiesFiles != null && propertiesFiles.length > 0) {
                 List<Resource> resourceList = new ArrayList<Resource>(propertiesFiles.length);
                 for (File propertiesFile : propertiesFiles) {
                     resourceList.add(new FileSystemResource(propertiesFile));
@@ -119,14 +119,14 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
             }
         }
         else {
-            if(searchClasspath) {
+            if (searchClasspath) {
                 resources = resourceResolver.getResources(messageBundleLocationPattern);
             }
             else {
                 DefaultGrailsApplication defaultGrailsApplication = (DefaultGrailsApplication) application;
-                if(defaultGrailsApplication != null) {
+                if (defaultGrailsApplication != null) {
                     GrailsApplicationClass applicationClass = defaultGrailsApplication.getApplicationClass();
-                    if(applicationClass != null) {
+                    if (applicationClass != null) {
                         ResourcePatternResolver resourcePatternResolver = new ClassRelativeResourcePatternResolver(applicationClass.getClass());
                         resources = resourcePatternResolver.getResources(messageBundleLocationPattern);
                     }
@@ -145,17 +145,16 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
             String filename = resource.getFilename();
             String baseName = GrailsStringUtils.getFileBasename(filename);
             int i = baseName.indexOf('_');
-            if(i > -1) {
+            if (i > -1) {
                 baseName = baseName.substring(0, i);
             }
-            if(!basenames.contains(baseName) && !baseName.equals(""))
+            if (!basenames.contains(baseName) && !baseName.equals(""))
                 basenames.add(baseName);
         }
 
-        setBasenames(basenames.toArray( new String[basenames.size()]));
+        setBasenames(basenames.toArray(new String[basenames.size()]));
 
     }
-
 
     @Override
     protected String resolveCodeWithoutArguments(String code, Locale locale) {
@@ -277,7 +276,6 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
             resourceResolver = new CachingPathMatchingResourcePatternResolver(localResourceLoader);
         }
     }
-
 
     /**
      * Set the number of seconds to cache the list of matching properties files loaded from plugin.

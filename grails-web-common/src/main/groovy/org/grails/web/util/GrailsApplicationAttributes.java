@@ -54,7 +54,7 @@ public interface GrailsApplicationAttributes extends ApplicationAttributes {
     String PARAMS_OBJECT = "org.grails.PARAMS_OBJECT";
     String CONTROLLER = "org.grails.CONTROLLER";
     String PROPERTY_REGISTRY = "org.grails.PROPERTY_REGISTRY";
-    String ERRORS =  "org.grails.ERRORS";
+    String ERRORS = "org.grails.ERRORS";
     String MODEL_AND_VIEW = "org.grails.MODEL_AND_VIEW";
     String TEMPLATE_MODEL = "org.grails.TEMPLATE_MODEL";
     String OUT = "org.grails.RESPONSE_OUT";
@@ -173,7 +173,6 @@ public interface GrailsApplicationAttributes extends ApplicationAttributes {
      * @return Retrieves the shared GSP template engine
      */
     ResourceAwareTemplateEngine getPagesTemplateEngine();
-
 
     /**
      * Holds the current response write for the request

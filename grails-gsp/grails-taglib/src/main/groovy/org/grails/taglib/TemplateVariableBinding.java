@@ -37,7 +37,7 @@ public class TemplateVariableBinding extends AbstractTemplateVariableBinding {
 
     private Binding parent;
     private Object owner;
-    private Set<String> cachedParentVariableNames=new HashSet<String>();
+    private Set<String> cachedParentVariableNames = new HashSet<String>();
     private boolean root;
 
     public TemplateVariableBinding() {
@@ -73,7 +73,7 @@ public class TemplateVariableBinding extends AbstractTemplateVariableBinding {
             if (variableBinding != null) {
                 val = variableBinding.getVariable(name);
                 if (val != null) {
-                    if (!(variableBinding instanceof AbstractTemplateVariableBinding) || ((AbstractTemplateVariableBinding)variableBinding).isVariableCachingAllowed(name)) {
+                    if (!(variableBinding instanceof AbstractTemplateVariableBinding) || ((AbstractTemplateVariableBinding) variableBinding).isVariableCachingAllowed(name)) {
                         // cache variable in this context since parent context cannot change during usage of this context
                         getVariablesMap().put(name, val);
                         cachedParentVariableNames.add(name);
@@ -98,7 +98,7 @@ public class TemplateVariableBinding extends AbstractTemplateVariableBinding {
     public Binding findBindingForVariable(String name) {
         if (cachedParentVariableNames.contains(name)) {
             if (parent instanceof AbstractTemplateVariableBinding) {
-                return ((AbstractTemplateVariableBinding)parent).findBindingForVariable(name);
+                return ((AbstractTemplateVariableBinding) parent).findBindingForVariable(name);
             }
             return parent;
         }
@@ -108,7 +108,7 @@ public class TemplateVariableBinding extends AbstractTemplateVariableBinding {
         }
 
         if (parent instanceof AbstractTemplateVariableBinding) {
-            return ((AbstractTemplateVariableBinding)parent).findBindingForVariable(name);
+            return ((AbstractTemplateVariableBinding) parent).findBindingForVariable(name);
         }
 
         if (parent != null && parent.getVariables().containsKey(name)) {
@@ -128,12 +128,12 @@ public class TemplateVariableBinding extends AbstractTemplateVariableBinding {
         if (!isReservedName(name)) {
             if (bindingToUse == null) {
                 bindingToUse = findBindingForVariable(name);
-                if (bindingToUse == null || (bindingToUse instanceof TemplateVariableBinding && ((TemplateVariableBinding)bindingToUse).shouldUseChildBinding(this))) {
+                if (bindingToUse == null || (bindingToUse instanceof TemplateVariableBinding && ((TemplateVariableBinding) bindingToUse).shouldUseChildBinding(this))) {
                     bindingToUse = this;
                 }
             }
             if (bindingToUse instanceof AbstractTemplateVariableBinding) {
-                ((AbstractTemplateVariableBinding)bindingToUse).getVariablesMap().put(name, value);
+                ((AbstractTemplateVariableBinding) bindingToUse).getVariablesMap().put(name, value);
             } else {
                 bindingToUse.getVariables().put(name, value);
             }
@@ -188,10 +188,10 @@ public class TemplateVariableBinding extends AbstractTemplateVariableBinding {
     @SuppressWarnings("unchecked")
     @Override
     public Set<String> getVariableNames() {
-        Set<String> variableNames=new HashSet<String>();
+        Set<String> variableNames = new HashSet<String>();
         if (parent != null) {
             if (parent instanceof AbstractTemplateVariableBinding) {
-                variableNames.addAll(((AbstractTemplateVariableBinding)parent).getVariableNames());
+                variableNames.addAll(((AbstractTemplateVariableBinding) parent).getVariableNames());
             } else {
                 variableNames.addAll(parent.getVariables().keySet());
             }
@@ -202,8 +202,8 @@ public class TemplateVariableBinding extends AbstractTemplateVariableBinding {
 
     @Override
     public boolean hasVariable(String name) {
-        return super.hasVariable(name)
-                || cachedParentVariableNames.contains(name)
-                || (parent != null && parent.hasVariable(name));
+        return super.hasVariable(name) ||
+                cachedParentVariableNames.contains(name) ||
+                (parent != null && parent.hasVariable(name));
     }
 }

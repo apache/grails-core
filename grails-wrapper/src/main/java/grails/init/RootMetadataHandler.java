@@ -40,7 +40,7 @@ public class RootMetadataHandler extends DefaultHandler {
     }
 
     @Override
-    public void startElement(String uri, String localName,String qName,
+    public void startElement(String uri, String localName, String qName,
                             Attributes attributes) {
         if (qName.equalsIgnoreCase("VERSIONS")) {
             foundVersions = true;

@@ -46,7 +46,7 @@ public abstract class AbstractResultList extends AbstractList implements Closeab
     public AbstractResultList(int offset, Integer size, Iterator<Object> cursor) {
         this.offset = offset;
         boolean hasSize = size != null && size > -1;
-        if(hasSize) {
+        if (hasSize) {
             this.size = size;
         }
         this.cursor = cursor;
@@ -58,7 +58,6 @@ public abstract class AbstractResultList extends AbstractList implements Closeab
         return cursor;
     }
 
-
     protected void initializeFully() {
         if (initialized) return;
 
@@ -67,7 +66,6 @@ public abstract class AbstractResultList extends AbstractList implements Closeab
         }
         initialized = true;
     }
-
 
     @Override
     public boolean isEmpty() {
@@ -92,7 +90,7 @@ public abstract class AbstractResultList extends AbstractList implements Closeab
                 if (index == internalIndex) {
                     return o;
                 }
-                else if(index < initializedSize) {
+                else if (index < initializedSize) {
                     return initializedObjects.get(index);
                 }
 
@@ -104,7 +102,7 @@ public abstract class AbstractResultList extends AbstractList implements Closeab
 
     protected Object convertObject() {
         final Object next = convertObject(nextDecoded());
-        if(!cursor.hasNext()) {
+        if (!cursor.hasNext()) {
             initialized = true;
         }
         initializedObjects.add(next);
@@ -156,21 +154,20 @@ public abstract class AbstractResultList extends AbstractList implements Closeab
     @Override
     public Iterator iterator() {
         if (initialized || !initializedObjects.isEmpty()) {
-            if(!initialized) {
+            if (!initialized) {
                 initializeFully();
             }
             return initializedObjects.iterator();
         }
 
-
         return new Iterator() {
             int iteratorIndex = 0;
             Object current;
             public boolean hasNext() {
-                if(iteratorIndex < internalIndex) {
+                if (iteratorIndex < internalIndex) {
                     return true;
                 }
-                else if(!initialized) {
+                else if (!initialized) {
 
                     boolean hasMore = cursor.hasNext();
                     if (!hasMore) {
@@ -183,7 +180,7 @@ public abstract class AbstractResultList extends AbstractList implements Closeab
 
             @SuppressWarnings("unchecked")
             public Object next() {
-                if(iteratorIndex < internalIndex) {
+                if (iteratorIndex < internalIndex) {
                     current = initializedObjects.get(iteratorIndex);
                 }
                 else {
@@ -197,7 +194,7 @@ public abstract class AbstractResultList extends AbstractList implements Closeab
             }
 
             public void remove() {
-                if(current != null) {
+                if (current != null) {
                     initializedObjects.remove(current);
                 }
             }
@@ -215,6 +212,4 @@ public abstract class AbstractResultList extends AbstractList implements Closeab
         }
         return size;
     }
-
-
 }

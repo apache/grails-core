@@ -42,13 +42,48 @@
             <property name="processJavadoc" value="false"/>
         </module>
         <module name="ImportOrderCheck">
+            <!-- Import groups: JAVA, JAVAX, GROOVY, JAKARTA, OTHER, SPRING, GRAILS, STATIC -->
             <property name="groups" value="java,javax,/^(groovy|org\.apache\.groovy|org\.codehaus\.groovy)\..+/,jakarta,*,/(^io\.spring|org\.springframework)\..+/,/^(grails|org\.apache\.grails|org\.grails)\..+/"/>
             <property name="ordered" value="true"/>
             <property name="option" value="bottom"/>
             <property name="separated" value="true"/>
             <property name="sortStaticImportsAlphabetically" value="true"/>
         </module>
+
+        <!-- Whitespace -->
+        <module name="CommentsIndentation"/>
+        <module name="EmptyLineSeparator">
+            <property name="allowMultipleEmptyLines" value="false"/>
+            <property name="allowMultipleEmptyLinesInsideClassMembers" value="false"/>
+            <property name="allowNoEmptyLineBetweenFields" value="true"/>
+            <property name="tokens" value="IMPORT, STATIC_IMPORT, CLASS_DEF, INTERFACE_DEF, ENUM_DEF, STATIC_INIT, INSTANCE_INIT, METHOD_DEF, CTOR_DEF, VARIABLE_DEF, RECORD_DEF, COMPACT_CTOR_DEF"/><!-- PACKAGE_DEF removed from defaults -->
+        </module>
+        <module name="GenericWhitespace"/>
         <module name="Indentation"/>
+        <module name="NoLineWrap"/>
+        <module name="MethodParamPad"/>
+        <module name="NoWhitespaceAfter">
+            <property name="tokens" value="AT, INC, DEC, UNARY_MINUS, UNARY_PLUS, BNOT, LNOT, DOT, ARRAY_DECLARATOR, INDEX_OP"/><!-- ARRAY_INIT removed from defaults -->
+        </module>
+        <module name="NoWhitespaceBefore"/>
+        <module name="NoWhitespaceBeforeCaseDefaultColon"/>
+        <module name="OperatorWrap">
+            <property name="option" value="eol"/>
+        </module>
+        <module name="ParenPad"/>
+        <module name="SeparatorWrap">
+            <property name="option" value="nl"/>
+            <property name="tokens" value="DOT"/>
+        </module>
+        <module name="SingleSpaceSeparator"/>
+        <module name="TypecastParenPad"/>
+        <module name="WhitespaceAfter"/>
+        <module name="WhitespaceAround">
+            <property name="allowEmptyCatches" value="true"/>
+            <property name="allowEmptyConstructors" value="true"/>
+            <property name="allowEmptyMethods" value="true"/>
+            <property name="allowEmptyTypes" value="true"/>
+        </module>
     </module>
 
 </module>

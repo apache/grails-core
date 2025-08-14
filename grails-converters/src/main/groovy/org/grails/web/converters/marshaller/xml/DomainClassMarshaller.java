@@ -110,13 +110,13 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<XML>
 
         PersistentEntity domainClass = findDomainClass(value);
 
-        if ( domainClass == null ) {
+        if (domainClass == null) {
             throw new GrailsConfigurationException("Could not retrieve the respective entity for domain " + value.getClass().getName() + " in the mapping context API");
         }
         BeanWrapper beanWrapper = new BeanWrapperImpl(value);
 
         PersistentProperty id = domainClass.getIdentity();
-        if(shouldInclude(includeExcludeSupport, includes, excludes,value, id.getName())) {
+        if (shouldInclude(includeExcludeSupport, includes, excludes, value, id.getName())) {
             Object idValue = beanWrapper.getPropertyValue(id.getName());
 
             if (idValue != null) xml.attribute("id", String.valueOf(idValue));
@@ -131,8 +131,8 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<XML>
                 }
             }
         }
-        if(includeClass && shouldInclude(includeExcludeSupport, includes, excludes, value, "class")) {
-            xml.attribute("class",domainClass.getJavaClass().getName());
+        if (includeClass && shouldInclude(includeExcludeSupport, includes, excludes, value, "class")) {
+            xml.attribute("class", domainClass.getJavaClass().getName());
         }
 
         List<PersistentProperty> properties = domainClass.getPersistentProperties();
@@ -143,7 +143,7 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<XML>
                 continue;
             }
 
-            if(!shouldInclude(includeExcludeSupport, includes, excludes, value, property.getName())) continue;
+            if (!shouldInclude(includeExcludeSupport, includes, excludes, value, property.getName())) continue;
 
             xml.startNode(propertyName);
             if (!(property instanceof Association)) {
@@ -180,10 +180,10 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<XML>
                         PersistentEntity referencedDomainClass = ((Association) property).getAssociatedEntity();
 
                         // Embedded are now always fully rendered
-                        if (referencedDomainClass == null || ((Association)property).isEmbedded() || property.getType().isEnum()) {
+                        if (referencedDomainClass == null || ((Association) property).isEmbedded() || property.getType().isEnum()) {
                             xml.convertAnother(referenceObject);
                         }
-                        else if ((property instanceof OneToOne) || (property instanceof ManyToOne)|| ((Association)property).isEmbedded()) {
+                        else if ((property instanceof OneToOne) || (property instanceof ManyToOne) || ((Association) property).isEmbedded()) {
                             asShortObject(referenceObject, xml, referencedDomainClass.getIdentity(), referencedDomainClass);
                         }
                         else {
@@ -217,7 +217,7 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<XML>
     }
 
     private boolean shouldInclude(IncludeExcludeSupport<String> includeExcludeSupport, List<String> includes, List<String> excludes, Object object, String name) {
-        return includeExcludeSupport.shouldInclude(includes, excludes, name) && shouldInclude(object,name);
+        return includeExcludeSupport.shouldInclude(includes, excludes, name) && shouldInclude(object, name);
     }
 
     private boolean shouldInitializeProxy(Object object) {
@@ -227,7 +227,6 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<XML>
     protected boolean shouldInitializeProxies() {
         return true;
     }
-
 
     protected void asShortObject(Object refObj, XML xml, PersistentProperty idProperty, PersistentEntity referencedDomainClass) throws ConverterException {
         Object idValue;
@@ -242,7 +241,7 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<XML>
             ClassPropertyFetcher propertyFetcher = ClassPropertyFetcher.forClass(refObj.getClass());
             idValue = propertyFetcher.getPropertyValue(refObj, idProperty.getName());
         }
-        xml.attribute(GormProperties.IDENTITY,String.valueOf(idValue));
+        xml.attribute(GormProperties.IDENTITY, String.valueOf(idValue));
     }
 
     protected boolean isRenderDomainClassRelations() {
@@ -250,9 +249,9 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<XML>
     }
 
     private PersistentEntity findDomainClass(Object value) {
-        for ( DomainClassFetcher fetcher : domainClassFetchers) {
+        for (DomainClassFetcher fetcher : domainClassFetchers) {
             PersistentEntity domain = fetcher.findDomainClass(value);
-            if ( domain != null ) {
+            if (domain != null) {
                 return domain;
             }
         }

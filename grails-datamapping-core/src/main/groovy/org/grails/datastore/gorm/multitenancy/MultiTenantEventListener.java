@@ -68,58 +68,58 @@ public class MultiTenantEventListener implements PersistenceEventListener {
     @Override
     public void onApplicationEvent(ApplicationEvent event) {
         Class<? extends ApplicationEvent> eventClass = event.getClass();
-        if(supportsEventType(eventClass)) {
+        if (supportsEventType(eventClass)) {
             Datastore datastore = (Datastore) event.getSource();
-            if(event instanceof PreQueryEvent) {
+            if (event instanceof PreQueryEvent) {
                 PreQueryEvent preQueryEvent = (PreQueryEvent) event;
                 Query query = preQueryEvent.getQuery();
 
                 PersistentEntity entity = query.getEntity();
-                if(entity.isMultiTenant()) {
-                    if(datastore == null) {
+                if (entity.isMultiTenant()) {
+                    if (datastore == null) {
                         datastore = GormEnhancer.findDatastore(entity.getJavaClass());
                     }
-                    if(supportsSourceType(datastore.getClass()) && this.datastore.equals(datastore)) {
+                    if (supportsSourceType(datastore.getClass()) && this.datastore.equals(datastore)) {
                         TenantId tenantId = entity.getTenantId();
-                        if(tenantId != null) {
+                        if (tenantId != null) {
                             Serializable currentId;
 
-                            if(datastore instanceof MultiTenantCapableDatastore) {
+                            if (datastore instanceof MultiTenantCapableDatastore) {
                                 currentId = Tenants.currentId((MultiTenantCapableDatastore) datastore);
                             }
                             else {
                                 currentId = Tenants.currentId(datastore.getClass());
                             }
-                            query.eq(tenantId.getName(), currentId );
+                            query.eq(tenantId.getName(), currentId);
                         }
                     }
                 }
             }
-            else if((event instanceof ValidationEvent) || (event instanceof PreInsertEvent) || (event instanceof PreUpdateEvent)) {
+            else if ((event instanceof ValidationEvent) || (event instanceof PreInsertEvent) || (event instanceof PreUpdateEvent)) {
                 AbstractPersistenceEvent preInsertEvent = (AbstractPersistenceEvent) event;
                 PersistentEntity entity = preInsertEvent.getEntity();
-                if(entity.isMultiTenant()) {
+                if (entity.isMultiTenant()) {
                     TenantId tenantId = entity.getTenantId();
-                    if(datastore == null) {
+                    if (datastore == null) {
                         datastore = GormEnhancer.findDatastore(entity.getJavaClass());
                     }
-                    if(supportsSourceType(datastore.getClass()) && this.datastore.equals(datastore)) {
+                    if (supportsSourceType(datastore.getClass()) && this.datastore.equals(datastore)) {
                         Serializable currentId;
 
-                        if(datastore instanceof MultiTenantCapableDatastore) {
+                        if (datastore instanceof MultiTenantCapableDatastore) {
                             currentId = Tenants.currentId((MultiTenantCapableDatastore) datastore);
                         }
                         else {
                             currentId = Tenants.currentId(datastore.getClass());
                         }
-                        if(currentId != null) {
+                        if (currentId != null) {
                             try {
-                                if(currentId == ConnectionSource.DEFAULT) {
+                                if (currentId == ConnectionSource.DEFAULT) {
                                     currentId = (Serializable) preInsertEvent.getEntityAccess().getProperty(tenantId.getName());
                                 }
                                 preInsertEvent.getEntityAccess().setProperty(tenantId.getName(), currentId);
                             } catch (Exception e) {
-                                throw new TenantException("Could not assigned tenant id ["+currentId+"] to property ["+tenantId+"], probably due to a type mismatch. You should return a type from the tenant resolver that matches the property type of the tenant id!: " + e.getMessage(), e);
+                                throw new TenantException("Could not assigned tenant id [" + currentId + "] to property [" + tenantId + "], probably due to a type mismatch. You should return a type from the tenant resolver that matches the property type of the tenant id!: " + e.getMessage(), e);
                             }
                         }
                     }

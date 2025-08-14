@@ -44,7 +44,7 @@ public class DefaultMimeUtility implements MimeUtility {
         for (MimeType mimeType : mimeTypes) {
             final String ext = mimeType.getExtension();
             if (!extensionToMimeMap.containsKey(ext)) {
-                extensionToMimeMap.put(ext,mimeType);
+                extensionToMimeMap.put(ext, mimeType);
             }
         }
     }

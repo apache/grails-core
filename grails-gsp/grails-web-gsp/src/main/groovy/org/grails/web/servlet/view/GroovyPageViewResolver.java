@@ -64,7 +64,7 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
 
     private ConcurrentMap<String, CacheEntry<View>> viewCache = new ConcurrentHashMap<String, CacheEntry<View>>();
     private boolean allowGrailsViewCaching = !GrailsUtil.isDevelopmentEnv();
-    private long cacheTimeout=-1;
+    private long cacheTimeout = -1;
     private boolean resolveJspView = false;
 
     /**
@@ -107,7 +107,7 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
         CacheEntry<View> entry = viewCache.get(viewCacheKey);
 
         final String lookupViewName = viewName;
-        Callable<View> updater=new Callable<View>() {
+        Callable<View> updater = new Callable<View>() {
             public View call() throws Exception {
                 try {
                     return createGrailsView(lookupViewName);
@@ -147,7 +147,7 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
         String namespace;
         String controller;
         GrailsWebRequest webRequest = GrailsWebRequest.lookup();
-        if(webRequest != null) {
+        if (webRequest != null) {
             StringBuilder stringBuilder = new StringBuilder();
             namespace = webRequest.getControllerNamespace();
             controller = webRequest.getControllerName();
@@ -168,13 +168,14 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
 
     private static class WrappedInitializationException extends RuntimeException {
         private static final long serialVersionUID = 1L;
+
         public WrappedInitializationException(Throwable cause) {
             super(cause);
         }
 
         public void rethrowCause() throws Exception {
             if (getCause() instanceof Exception) {
-                throw (Exception)getCause();
+                throw (Exception) getCause();
             }
 
             throw this;
@@ -187,7 +188,7 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
         GroovyObject controller = null;
 
         GrailsWebRequest webRequest = GrailsWebRequest.lookup();
-        if(webRequest != null) {
+        if (webRequest != null) {
             HttpServletRequest request = webRequest.getCurrentRequest();
             controller = webRequest.getAttributes().getController(request);
         }
@@ -210,7 +211,6 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
 
         return createFallbackView(viewName);
     }
-
 
     private View createGroovyPageView(String gspView, ScriptSource scriptSource) {
         if (LOG.isDebugEnabled()) {
@@ -250,7 +250,7 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
         return view;
     }
 
-    @Autowired(required=true)
+    @Autowired(required = true)
     @Qualifier(GroovyPagesTemplateEngine.BEAN_ID)
     public void setTemplateEngine(GroovyPagesTemplateEngine templateEngine) {
         this.templateEngine = templateEngine;

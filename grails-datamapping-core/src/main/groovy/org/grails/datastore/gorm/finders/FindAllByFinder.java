@@ -87,7 +87,7 @@ public class FindAllByFinder extends DynamicFinder {
         }
         else {
             for (MethodExpression expression : invocation.getExpressions()) {
-                query.add( expression.createCriterion() );
+                query.add(expression.createCriterion());
             }
         }
         query.projections().distinct();

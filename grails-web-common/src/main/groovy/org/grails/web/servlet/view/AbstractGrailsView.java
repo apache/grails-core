@@ -64,16 +64,16 @@ public abstract class AbstractGrailsView extends AbstractUrlBasedView {
         boolean attributesChanged = false;
         try {
             GrailsWebRequest webRequest;
-            if(!(requestAttributes instanceof GrailsWebRequest)) {
+            if (!(requestAttributes instanceof GrailsWebRequest)) {
                 webRequest = createGrailsWebRequest(request, response, request.getServletContext());
                 attributesChanged = true;
                 WebUtils.storeGrailsWebRequest(webRequest);
             } else {
-                webRequest = (GrailsWebRequest)requestAttributes;
+                webRequest = (GrailsWebRequest) requestAttributes;
             }
             renderTemplate(model, webRequest, request, response);
         } finally {
-            if(attributesChanged) {
+            if (attributesChanged) {
                 request.removeAttribute(GrailsApplicationAttributes.WEB_REQUEST);
                 RequestContextHolder.setRequestAttributes(requestAttributes);
             }

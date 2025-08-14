@@ -93,7 +93,7 @@ public class ManualProjections {
         }
 
         final List sorted = order.applyOrder(new ArrayList(results), Query.Order.asc(property));
-        final Object o = sorted.get(results.size()-1);
+        final Object o = sorted.get(results.size() - 1);
         if (entity.isInstance(o)) {
             return FieldEntityAccess.getOrIntializeReflector(entity).getProperty(o, property);
         }

@@ -88,8 +88,8 @@ public class DataSourceBuilder {
     }
 
     private void maybeGetDriverClassName() {
-        if (!this.properties.containsKey("driverClassName")
-                && this.properties.containsKey("url")) {
+        if (!this.properties.containsKey("driverClassName") &&
+                this.properties.containsKey("url")) {
             String url = this.properties.get("url");
             String driverClass = DatabaseDriver.fromJdbcUrl(url).getDriverClassName();
             this.properties.put("driverClassName", driverClass);
@@ -98,7 +98,7 @@ public class DataSourceBuilder {
     }
 
     private void bind(DataSource result) {
-        if(properties.containsKey("dbProperties")) {
+        if (properties.containsKey("dbProperties")) {
             coerceDbProperties();
         }
         MutablePropertyValues properties = new MutablePropertyValues(this.properties);
@@ -106,7 +106,7 @@ public class DataSourceBuilder {
                 .withAlias("username", "user").bind(properties);
     }
 
-    public DataSourceBuilder properties( Map<String, String> properties) {
+    public DataSourceBuilder properties(Map<String, String> properties) {
         this.properties.putAll(properties);
         return this;
     }
@@ -114,12 +114,12 @@ public class DataSourceBuilder {
     private void coerceDbProperties() {
         Map propertiesMap = this.properties;
         Object dbPropertiesObject = propertiesMap.get("dbProperties");
-        if(dbPropertiesObject instanceof Map) {
+        if (dbPropertiesObject instanceof Map) {
             Map dbProperties = (Map) dbPropertiesObject;
             Properties properties = new Properties();
             for (Object key : dbProperties.keySet()) {
                 Object value = dbProperties.get(key);
-                if(value != null) {
+                if (value != null) {
                     properties.put(key.toString(), value.toString());
                 }
             }
@@ -158,8 +158,8 @@ public class DataSourceBuilder {
         if (this.type != null) {
             return this.type;
         }
-        else if(!pooled) {
-            if(this.readOnly) {
+        else if (!pooled) {
+            if (this.readOnly) {
                 return ReadOnlyDriverManagerDataSource.class;
             }
             else {

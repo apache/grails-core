@@ -148,6 +148,7 @@ public interface Profile {
      * @return True if the command does exist
      */
     boolean hasCommand(ProjectContext context, String name);
+
     /**
      * Obtains a {@link Command}
      *

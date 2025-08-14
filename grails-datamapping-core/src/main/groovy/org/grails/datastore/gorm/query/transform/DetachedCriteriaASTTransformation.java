@@ -32,7 +32,7 @@ import org.apache.grails.common.compiler.GroovyTransformOrder;
 /**
  * Transforms regular Groovy-style finders into detached criteria
  */
-@GroovyASTTransformation(phase= CompilePhase.CANONICALIZATION)
+@GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 public class DetachedCriteriaASTTransformation implements ASTTransformation, TransformWithPriority {
 
     /**

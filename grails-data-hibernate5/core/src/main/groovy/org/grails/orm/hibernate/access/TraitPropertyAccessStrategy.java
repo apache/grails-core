@@ -47,47 +47,46 @@ public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
     @Override
     public PropertyAccess buildPropertyAccess(Class containerJavaType, String propertyName) {
         Method readMethod = ReflectionUtils.findMethod(containerJavaType, NameUtils.getGetterName(propertyName));
-        if(readMethod == null) {
+        if (readMethod == null) {
             // See https://issues.apache.org/jira/browse/GROOVY-11512
             readMethod = ReflectionUtils.findMethod(containerJavaType, NameUtils.getGetterName(propertyName, true));
-            if(readMethod != null && readMethod.getReturnType() != Boolean.class && readMethod.getReturnType() != boolean.class) {
+            if (readMethod != null && readMethod.getReturnType() != Boolean.class && readMethod.getReturnType() != boolean.class) {
                 readMethod = null;
             }
         }
 
-        if(readMethod == null) {
-            throw new IllegalStateException("TraitPropertyAccessStrategy used on property ["+propertyName+"] of class ["+containerJavaType.getName()+"] that is not provided by a trait!");
+        if (readMethod == null) {
+            throw new IllegalStateException("TraitPropertyAccessStrategy used on property [" + propertyName + "] of class [" + containerJavaType.getName() + "] that is not provided by a trait!");
         }
         else {
 
             Traits.Implemented traitImplemented = readMethod.getAnnotation(Traits.Implemented.class);
             final String traitFieldName;
-            if(traitImplemented == null) {
+            if (traitImplemented == null) {
                 Traits.TraitBridge traitBridge = readMethod.getAnnotation(Traits.TraitBridge.class);
-                if(traitBridge != null) {
+                if (traitBridge != null) {
                     traitFieldName = getTraitFieldName(traitBridge.traitClass(), propertyName);
                 }
                 else {
-                    throw new IllegalStateException("TraitPropertyAccessStrategy used on property ["+propertyName+"] of class ["+containerJavaType.getName()+"] that is not provided by a trait!");
+                    throw new IllegalStateException("TraitPropertyAccessStrategy used on property [" + propertyName + "] of class [" + containerJavaType.getName() + "] that is not provided by a trait!");
                 }
             }
             else {
                 traitFieldName = getTraitFieldName(readMethod.getDeclaringClass(), propertyName);
             }
 
-
-            Field field = ReflectionUtils.findField(containerJavaType, traitFieldName );
+            Field field = ReflectionUtils.findField(containerJavaType, traitFieldName);
             final Getter getter;
             final Setter setter;
-            if(field == null) {
+            if (field == null) {
                 getter = new GetterMethodImpl(containerJavaType, propertyName, readMethod);
                 Method writeMethod = ReflectionUtils.findMethod(containerJavaType, NameUtils.getSetterName(propertyName), readMethod.getReturnType());
                 setter = new SetterMethodImpl(containerJavaType, propertyName, writeMethod);
             }
             else {
 
-                getter = new GetterFieldImpl(containerJavaType, propertyName, field );
-                setter = new SetterFieldImpl(containerJavaType, propertyName,field);
+                getter = new GetterFieldImpl(containerJavaType, propertyName, field);
+                setter = new SetterFieldImpl(containerJavaType, propertyName, field);
             }
 
             return new PropertyAccess() {
@@ -110,6 +109,6 @@ public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
     }
 
     private String getTraitFieldName(Class traitClass, String fieldName) {
-        return traitClass.getName().replace('.','_') + "__" + fieldName;
+        return traitClass.getName().replace('.', '_') + "__" + fieldName;
     }
 }

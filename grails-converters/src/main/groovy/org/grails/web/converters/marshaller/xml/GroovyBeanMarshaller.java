@@ -54,17 +54,17 @@ public class GroovyBeanMarshaller extends IncludeExcludePropertyMarshaller<XML> 
             List<String> includes = xml.getIncludes(clazz);
             IncludeExcludeSupport<String> includeExcludeSupport = new IncludeExcludeSupport<String>();
 
-            boolean isEntity = o.getClass().getAnnotation(Entity.class)!=null;
+            boolean isEntity = o.getClass().getAnnotation(Entity.class) != null;
             for (PropertyDescriptor property : BeanUtils.getPropertyDescriptors(o.getClass())) {
                 String name = property.getName();
 
-                if(!shouldInclude(includeExcludeSupport,includes,excludes,o, name)) continue;
+                if (!shouldInclude(includeExcludeSupport, includes, excludes, o, name)) continue;
 
-                if(isEntity && (name.equals(GormProperties.ATTACHED) || name.equals(GormProperties.ERRORS))) continue;
+                if (isEntity && (name.equals(GormProperties.ATTACHED) || name.equals(GormProperties.ERRORS))) continue;
                 Method readMethod = property.getReadMethod();
-                if (readMethod != null && !(name.equals("metaClass"))&& !(name.equals("class"))) {
-                    if(readMethod.getAnnotation(PersistenceMethod.class) != null) continue;
-                    if(readMethod.getAnnotation(ControllerMethod.class) != null) continue;
+                if (readMethod != null && !(name.equals("metaClass")) && !(name.equals("class"))) {
+                    if (readMethod.getAnnotation(PersistenceMethod.class) != null) continue;
+                    if (readMethod.getAnnotation(ControllerMethod.class) != null) continue;
                     Object value = readMethod.invoke(o, (Object[]) null);
                     xml.startNode(name);
                     xml.convertAnother(value);
@@ -75,8 +75,8 @@ public class GroovyBeanMarshaller extends IncludeExcludePropertyMarshaller<XML> 
                 int modifiers = field.getModifiers();
                 if (Modifier.isPublic(modifiers) && !(Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers))) {
                     String name = field.getName();
-                    if(!shouldInclude(includeExcludeSupport,includes,excludes,o, name)) continue;
-                    if(isEntity && (name.equals(GormProperties.ATTACHED) || name.equals(GormProperties.ERRORS))) continue;
+                    if (!shouldInclude(includeExcludeSupport, includes, excludes, o, name)) continue;
+                    if (isEntity && (name.equals(GormProperties.ATTACHED) || name.equals(GormProperties.ERRORS))) continue;
                     xml.startNode(name);
                     xml.convertAnother(field.get(o));
                     xml.end();
@@ -92,6 +92,6 @@ public class GroovyBeanMarshaller extends IncludeExcludePropertyMarshaller<XML> 
     }
 
     private boolean shouldInclude(IncludeExcludeSupport<String> includeExcludeSupport, List<String> includes, List<String> excludes, Object o, String name) {
-        return includeExcludeSupport.shouldInclude(includes,excludes, name) && shouldInclude(o,name);
+        return includeExcludeSupport.shouldInclude(includes, excludes, name) && shouldInclude(o, name);
     }
 }

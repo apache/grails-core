@@ -196,7 +196,6 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
      */
     void doWithRuntimeConfiguration(RuntimeSpringConfiguration springConfig);
 
-
     /**
      * Makes the plugin excluded for a particular Environment
      * @param env The Environment
@@ -263,7 +262,6 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
      * @return The version
      */
     String getDependentVersion(String name);
-
 
     PropertySource<?> getPropertySource();
 

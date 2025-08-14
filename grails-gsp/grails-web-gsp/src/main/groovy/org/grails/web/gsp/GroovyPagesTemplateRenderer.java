@@ -77,7 +77,7 @@ import org.grails.web.util.GrailsApplicationAttributes;
 public class GroovyPagesTemplateRenderer implements InitializingBean {
     private GrailsConventionGroovyPageLocator groovyPageLocator;
     private GroovyPagesTemplateEngine groovyPagesTemplateEngine;
-    private ConcurrentMap<String,CacheEntry<Template>> templateCache = new ConcurrentHashMap<String,CacheEntry<Template>>();
+    private ConcurrentMap<String, CacheEntry<Template>> templateCache = new ConcurrentHashMap<String, CacheEntry<Template>>();
     private Object scaffoldingTemplateGenerator;
     private Map<String, Collection<String>> scaffoldedActionMap;
     private Map<String, GrailsDomainClass> controllerToScaffoldedDomainClassMap;
@@ -142,7 +142,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         final GroovyPageScriptSource scriptSource;
         if (pluginName == null) {
             scriptSource = groovyPageLocator.findTemplateInBinding(controller, templatePath, pageScope);
-        }  else {
+        } else {
             scriptSource = groovyPageLocator.findTemplateInBinding(controller, pluginName, templatePath, pageScope);
         }
 
@@ -150,7 +150,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         if (scriptSource == null) {
             cacheKey = contextPath + pluginName + uri;
         } else {
-            if(pluginName != null) {
+            if (pluginName != null) {
                 cacheKey = contextPath + pluginName + scriptSource.getURI();
             }
             else {
@@ -177,7 +177,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
 
                             @Override
                             public void setValue(Template val) {
-                                if(allowCaching) {
+                                if (allowCaching) {
                                     super.setValue(val);
                                 }
                             }
@@ -215,7 +215,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         Map b = new LinkedHashMap<String, Object>();
         b.put("body", body);
         if (attrs.get("model") instanceof Map) {
-            b.putAll((Map)attrs.get("model"));
+            b.putAll((Map) attrs.get("model"));
         }
         if (attrs.containsKey("bean")) {
             if (GrailsStringUtils.isNotBlank(var)) {
@@ -256,14 +256,14 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
     private Writer wrapWriterWithEncoder(GrailsWebRequest webRequest, Map<String, Object> attrs, Writer out) {
         Object encodeAs = attrs.get(GroovyPage.ENCODE_AS_ATTRIBUTE_NAME);
         if (encodeAs != null) {
-            Map<String, Object> codecSettings= WithCodecHelper.makeSettingsCanonical(encodeAs);
-            String codecForTaglibs = (String)codecSettings.get(OutputEncodingSettings.TAGLIB_CODEC_NAME);
+            Map<String, Object> codecSettings = WithCodecHelper.makeSettingsCanonical(encodeAs);
+            String codecForTaglibs = (String) codecSettings.get(OutputEncodingSettings.TAGLIB_CODEC_NAME);
             if (codecForTaglibs != null) {
                 Encoder encoder = WithCodecHelper.lookupEncoder(webRequest.getAttributes().getGrailsApplication(), codecForTaglibs);
                 if (out instanceof EncodedAppenderWriterFactory) {
-                    out = ((EncodedAppenderWriterFactory)out).getWriterForEncoder(encoder, webRequest.getEncodingStateRegistry());
+                    out = ((EncodedAppenderWriterFactory) out).getWriterForEncoder(encoder, webRequest.getEncodingStateRegistry());
                 } else if (encoder instanceof StreamingEncoder) {
-                    out=new StreamingEncoderWriter(out, (StreamingEncoder)encoder, webRequest.getEncodingStateRegistry());
+                    out = new StreamingEncoderWriter(out, (StreamingEncoder) encoder, webRequest.getEncodingStateRegistry());
                 } else {
                     out = new CodecPrintWriter(out, encoder, webRequest.getEncodingStateRegistry());
                 }

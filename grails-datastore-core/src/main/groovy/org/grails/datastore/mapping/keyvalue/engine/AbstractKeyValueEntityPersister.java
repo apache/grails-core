@@ -38,7 +38,7 @@ import org.grails.datastore.mapping.model.PropertyMapping;
  * @since 1.0
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
-public abstract class AbstractKeyValueEntityPersister<T,K> extends NativeEntryEntityPersister<T,K> {
+public abstract class AbstractKeyValueEntityPersister<T, K> extends NativeEntryEntityPersister<T, K> {
     protected String entityFamily;
 
     protected AbstractKeyValueEntityPersister(MappingContext context, PersistentEntity entity,
@@ -61,7 +61,7 @@ public abstract class AbstractKeyValueEntityPersister<T,K> extends NativeEntryEn
     protected String getNativePropertyKey(PersistentProperty prop) {
         PropertyMapping<KeyValue> pm = prop.getMapping();
         String propKey = null;
-        if (pm.getMappedForm()!=null) {
+        if (pm.getMappedForm() != null) {
             propKey = pm.getMappedForm().getKey();
         }
         if (propKey == null) {

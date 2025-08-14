@@ -95,7 +95,7 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
         this.pluginClass = pluginClass;
         Resource resource = readPluginConfiguration(pluginClass);
 
-        if(resource != null && resource.exists()) {
+        if (resource != null && resource.exists()) {
             final String filename = resource.getFilename();
             try {
                 if (filename.equals(PLUGIN_YML)) {
@@ -106,7 +106,7 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
                     this.propertySource = propertySourceLoader.load(GrailsNameUtils.getLogicalPropertyName(pluginClass.getSimpleName(), "GrailsPlugin") + "-" + PLUGIN_GROOVY, resource, DEFAULT_CONFIG_IGNORE_LIST).stream().findFirst().orElse(null);
                 }
             } catch (IOException e) {
-                LOG.warn("Error loading " + filename + " for plugin: " + pluginClass.getName() +": " + e.getMessage(), e);
+                LOG.warn("Error loading " + filename + " for plugin: " + pluginClass.getName() + ": " + e.getMessage(), e);
             }
         }
     }
@@ -123,7 +123,6 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
         // do nothing
     }
 
-
     @Override
     public boolean isEnabled(String[] profiles) {
         return true;
@@ -135,13 +134,13 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
 
         Boolean groovyResourceExists = groovyResource != null && groovyResource.exists();
 
-        if(ymlResource != null && ymlResource.exists()) {
+        if (ymlResource != null && ymlResource.exists()) {
             if (groovyResourceExists) {
                 throw new RuntimeException("A plugin [" + pluginClass.getName() + "] may define a plugin.yml or a plugin.groovy, but not both");
             }
             return ymlResource;
         }
-        if(groovyResourceExists) {
+        if (groovyResourceExists) {
             return groovyResource;
         }
         return null;
@@ -179,7 +178,6 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
     public boolean hasInterestInChange(String path) {
         return false;
     }
-
 
     public String[] getDependencyNames() {
         return dependencyNames;

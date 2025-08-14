@@ -92,7 +92,7 @@ public abstract class AbstractTemplateVariableBinding extends Binding {
         AbstractTemplateVariableBinding binding;
 
         public TemplateVariableBindingMap(AbstractTemplateVariableBinding binding) {
-            this.binding=binding;
+            this.binding = binding;
         }
 
         public int size() {
@@ -127,7 +127,7 @@ public abstract class AbstractTemplateVariableBinding extends Binding {
 
         public void putAll(Map m) {
             for (Object entryObj : m.entrySet()) {
-                Map.Entry entry=(Map.Entry)entryObj;
+                Map.Entry entry = (Map.Entry) entryObj;
                 binding.setVariable(String.valueOf(entry.getKey()), entry.getValue());
             }
         }
@@ -167,14 +167,17 @@ public abstract class AbstractTemplateVariableBinding extends Binding {
         private Iterator entryIterator() {
             final Iterator iter = keySet().iterator();
             return new Iterator() {
+
                 public boolean hasNext() {
                     return iter.hasNext();
                 }
+
                 public Object next() {
                     Object key = iter.next();
                     Object value = get(key);
                     return new BindingMapEntry(binding, key, value);
                 }
+
                 public void remove() {
                     throw new UnsupportedOperationException("remove() not supported");
                 }
@@ -187,6 +190,7 @@ public abstract class AbstractTemplateVariableBinding extends Binding {
 
         private Object key;
         private Object value;
+
         protected BindingMapEntry(AbstractTemplateVariableBinding binding, Object key, Object value) {
             this.binding = binding;
             this.key = key;

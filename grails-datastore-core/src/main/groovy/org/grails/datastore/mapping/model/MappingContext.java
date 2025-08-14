@@ -77,6 +77,7 @@ public interface MappingContext {
      * @return True if it is
      */
     boolean isInInheritanceHierarchy(PersistentEntity entity);
+
     /**
      * Obtains a child of the given root entity using the given discriminator
      * @param root The root entity
@@ -107,7 +108,8 @@ public interface MappingContext {
      * @param javaClasses The Java class representing the entity
      * @return The PersistentEntity instance
      */
-    Collection<PersistentEntity> addPersistentEntities(Class...javaClasses);
+    Collection<PersistentEntity> addPersistentEntities(Class... javaClasses);
+
     /**
      * Adds a PersistentEntity instance
      *
@@ -243,7 +245,6 @@ public interface MappingContext {
      * @return The class data
      */
     EntityReflector getEntityReflector(PersistentEntity entity);
-
 
     /**
      * Creates an {@link EntityAccess} instance for the given entity and instance of said entity

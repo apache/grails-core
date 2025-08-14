@@ -37,7 +37,7 @@ import org.springframework.util.ReflectionUtils;
 public abstract class EventTriggerCaller {
     private static final Log LOG = LogFactory.getLog(EventTriggerCaller.class);
     private static final Object[] EMPTY_ARRAY = {};
-    private boolean invertBooleanReturnValue=true;
+    private boolean invertBooleanReturnValue = true;
     private static final EventTriggerCaller noopCaller = new NoopCaller();
 
     public static EventTriggerCaller buildCaller(String eventMethodName, Class<?> clazz) {
@@ -46,21 +46,21 @@ public abstract class EventTriggerCaller {
 
     public static EventTriggerCaller buildCaller(String eventMethodName, Class<?> clazz, MetaClass metaClass, Class<?>[] preferredArgumentTypes) {
         EventTriggerCaller caller = resolveMethodCaller(eventMethodName, clazz, preferredArgumentTypes);
-        if(caller==null) {
-            caller=resolveFieldClosureCaller(eventMethodName, clazz);
+        if (caller == null) {
+            caller = resolveFieldClosureCaller(eventMethodName, clazz);
         }
-        if(caller==null) {
-            caller=resolveMetaClassCallers(eventMethodName, clazz, metaClass);
+        if (caller == null) {
+            caller = resolveMetaClassCallers(eventMethodName, clazz, metaClass);
         }
         return caller;
     }
 
     private static EventTriggerCaller resolveMetaClassCallers(String eventMethodName, Class<?> clazz, MetaClass metaClass) {
-        if(metaClass==null) {
-            metaClass=GroovySystem.getMetaClassRegistry().getMetaClass(clazz);
+        if (metaClass == null) {
+            metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(clazz);
         }
         EventTriggerCaller caller = resolveMetaMethodCaller(eventMethodName, metaClass);
-        if(caller==null) {
+        if (caller == null) {
             caller = resolveMetaPropertyClosureCaller(eventMethodName, metaClass);
         }
         return caller;
@@ -95,8 +95,8 @@ public abstract class EventTriggerCaller {
         Method method = ReflectionUtils.findMethod(clazz, eventMethodName, preferredArgumentTypes);
         if (method == null && preferredArgumentTypes != null) {
             method = ReflectionUtils.findMethod(clazz, eventMethodName);
-            if(method == null) {
-                method = ReflectionUtils.findMethod(clazz, eventMethodName, (Class<?>[])null);
+            if (method == null) {
+                method = ReflectionUtils.findMethod(clazz, eventMethodName, (Class<?>[]) null);
             }
         }
         if (method != null) {
@@ -126,7 +126,7 @@ public abstract class EventTriggerCaller {
 
     boolean resolveReturnValue(Object retval) {
         if (retval instanceof Boolean) {
-            boolean returnValue = (Boolean)retval;
+            boolean returnValue = (Boolean) retval;
             return invertBooleanReturnValue ? !returnValue : returnValue;
         }
         return false;
@@ -163,8 +163,8 @@ public abstract class EventTriggerCaller {
         @Override
         public boolean call(Object entity, Object[] argumentArray) {
             Object[] arguments = new Object[numberOfParameters];
-            if(argumentArray != null) {
-                for(int i=0;i < argumentArray.length && i < arguments.length;i++) {
+            if (argumentArray != null) {
+                for (int i = 0; i < argumentArray.length && i < arguments.length; i++) {
                     arguments[i] = argumentArray[i];
                 }
             }
@@ -194,7 +194,7 @@ public abstract class EventTriggerCaller {
 
         Object callClosure(Object entity, Closure<?> callable, Object[] argumentArray) {
             if (cloneFirst) {
-                callable = (Closure<?>)callable.clone();
+                callable = (Closure<?>) callable.clone();
             }
             callable.setResolveStrategy(Closure.DELEGATE_FIRST);
             callable.setDelegate(entity);

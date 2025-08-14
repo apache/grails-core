@@ -44,8 +44,8 @@ public class WithinCircle extends MethodExpression {
     @Override
     public Criterion createCriterion() {
         Object argument = arguments[0];
-        if(argument instanceof Circle) {
-            return new MongoQuery.WithinCircle(propertyName, ((Circle)argument).asList());
+        if (argument instanceof Circle) {
+            return new MongoQuery.WithinCircle(propertyName, ((Circle) argument).asList());
         }
         else {
             return new MongoQuery.WithinCircle(propertyName, (List<?>) argument);
@@ -63,7 +63,7 @@ public class WithinCircle extends MethodExpression {
         Assert.isTrue((isList || (arg instanceof Circle)),
                 "Only a list of elements is supported in a 'withinBox' query");
 
-        if(isList) {
+        if (isList) {
             Collection<?> argument = (Collection<?>) arguments[0];
             Assert.isTrue(argument.size() == 2,
                     "A 'WithinCircle' query requires a two dimensional list of values");

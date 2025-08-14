@@ -79,7 +79,7 @@ public abstract class LockableEntityPersister extends EntityPersister {
     public Object proxy(Serializable key) {
         PersistentEntity entity = getPersistentEntity();
         PersistentProperty identity = entity.getIdentity();
-        if(identity != null) {
+        if (identity != null) {
             key = (Serializable) getMappingContext().getConversionService().convert(key, identity.getType());
         }
         return getProxyFactory().createProxy(session, entity.getJavaClass(), key);

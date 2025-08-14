@@ -43,9 +43,9 @@ public class EnumMarshaller implements ObjectMarshaller<JSON> {
             writer.object();
             Class<?> enumClass = en.getClass();
             json.property("enumType", enumClass.getName());
-            Method nameMethod = BeanUtils.findDeclaredMethod(enumClass, "name" );
+            Method nameMethod = BeanUtils.findDeclaredMethod(enumClass, "name");
             try {
-                json.property("name",nameMethod.invoke(en));
+                json.property("name", nameMethod.invoke(en));
             }
             catch (Exception e) {
                 json.property("name", "");

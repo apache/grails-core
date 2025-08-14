@@ -65,7 +65,7 @@ public class BinaryGrailsPluginDescriptor {
      * @return The parsed descriptor
      */
     public GPathResult getParsedXml() {
-        if(parsedXml == null) {
+        if (parsedXml == null) {
             InputStream inputStream;
             try {
                 inputStream = resource.getInputStream();

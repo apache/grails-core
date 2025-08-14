@@ -7,13 +7,16 @@ public class JsonParserTokenManager implements JsonParserConstants
 {
 
     /** Debug output. */
-    public  java.io.PrintStream debugStream = System.out;
+    public java.io.PrintStream debugStream = System.out;
+
     /** Set debug output. */
-    public  void setDebugStream(java.io.PrintStream ds) { debugStream = ds; }
+    public void setDebugStream(java.io.PrintStream ds) { debugStream = ds; }
+
     private int jjMoveStringLiteralDfa0_3()
     {
         return jjMoveNfa_3(0, 0);
     }
+
     private int jjMoveNfa_3(int startState, int curPos)
     {
         int startsAt = 0;
@@ -30,7 +33,7 @@ public class JsonParserTokenManager implements JsonParserConstants
                 long l = 1L << curChar;
                 do
                 {
-                    switch(jjstateSet[--i])
+                    switch (jjstateSet[--i])
                     {
                         case 0:
                             if ((0x3ff000000000000L & l) != 0L)
@@ -48,16 +51,16 @@ public class JsonParserTokenManager implements JsonParserConstants
                             if ((0x3ff000000000000L & l) != 0L && kind > 19)
                                 kind = 19;
                             break;
-                        default : break;
+                        default: break;
                     }
-                } while(i != startsAt);
+                } while (i != startsAt);
             }
             else if (curChar < 128)
             {
                 long l = 1L << (curChar & 077);
                 do
                 {
-                    switch(jjstateSet[--i])
+                    switch (jjstateSet[--i])
                     {
                         case 0:
                             if ((0x7e0000007eL & l) != 0L)
@@ -75,9 +78,9 @@ public class JsonParserTokenManager implements JsonParserConstants
                             if ((0x7e0000007eL & l) != 0L && kind > 19)
                                 kind = 19;
                             break;
-                        default : break;
+                        default: break;
                     }
-                } while(i != startsAt);
+                } while (i != startsAt);
             }
             else
             {
@@ -88,11 +91,11 @@ public class JsonParserTokenManager implements JsonParserConstants
                 long l2 = 1L << (curChar & 077);
                 do
                 {
-                    switch(jjstateSet[--i])
+                    switch (jjstateSet[--i])
                     {
-                        default : break;
+                        default: break;
                     }
-                } while(i != startsAt);
+                } while (i != startsAt);
             }
             if (kind != 0x7fffffff)
             {
@@ -104,9 +107,10 @@ public class JsonParserTokenManager implements JsonParserConstants
             if ((i = jjnewStateCnt) == (startsAt = 4 - (jjnewStateCnt = startsAt)))
                 return curPos;
             try { curChar = input_stream.readChar(); }
-            catch(java.io.IOException e) { return curPos; }
+            catch (java.io.IOException e) { return curPos; }
         }
     }
+
     private final int jjStopStringLiteralDfa_0(int pos, long active0)
     {
         switch (pos)
@@ -115,23 +119,26 @@ public class JsonParserTokenManager implements JsonParserConstants
                 if ((active0 & 0x1000L) != 0L)
                     return 31;
                 return -1;
-            default :
+            default:
                 return -1;
         }
     }
+
     private final int jjStartNfa_0(int pos, long active0)
     {
         return jjMoveNfa_0(jjStopStringLiteralDfa_0(pos, active0), pos + 1);
     }
+
     private int jjStopAtPos(int pos, int kind)
     {
         jjmatchedKind = kind;
         jjmatchedPos = pos;
         return pos + 1;
     }
+
     private int jjMoveStringLiteralDfa0_0()
     {
-        switch(curChar)
+        switch (curChar)
         {
             case 34:
                 return jjStartNfaWithStates_0(0, 12, 31);
@@ -157,18 +164,19 @@ public class JsonParserTokenManager implements JsonParserConstants
                 return jjStopAtPos(0, 20);
             case 125:
                 return jjStopAtPos(0, 21);
-            default :
+            default:
                 return jjMoveNfa_0(0, 0);
         }
     }
+
     private int jjMoveStringLiteralDfa1_0(long active0)
     {
         try { curChar = input_stream.readChar(); }
-        catch(java.io.IOException e) {
+        catch (java.io.IOException e) {
             jjStopStringLiteralDfa_0(0, active0);
             return 1;
         }
-        switch(curChar)
+        switch (curChar)
         {
             case 97:
                 return jjMoveStringLiteralDfa2_0(active0, 0x10000000L);
@@ -176,41 +184,43 @@ public class JsonParserTokenManager implements JsonParserConstants
                 return jjMoveStringLiteralDfa2_0(active0, 0x8000000L);
             case 117:
                 return jjMoveStringLiteralDfa2_0(active0, 0x400000L);
-            default :
+            default:
                 break;
         }
         return jjStartNfa_0(0, active0);
     }
+
     private int jjMoveStringLiteralDfa2_0(long old0, long active0)
     {
         if (((active0 &= old0)) == 0L)
             return jjStartNfa_0(0, old0);
         try { curChar = input_stream.readChar(); }
-        catch(java.io.IOException e) {
+        catch (java.io.IOException e) {
             jjStopStringLiteralDfa_0(1, active0);
             return 2;
         }
-        switch(curChar)
+        switch (curChar)
         {
             case 108:
                 return jjMoveStringLiteralDfa3_0(active0, 0x10400000L);
             case 117:
                 return jjMoveStringLiteralDfa3_0(active0, 0x8000000L);
-            default :
+            default:
                 break;
         }
         return jjStartNfa_0(1, active0);
     }
+
     private int jjMoveStringLiteralDfa3_0(long old0, long active0)
     {
         if (((active0 &= old0)) == 0L)
             return jjStartNfa_0(1, old0);
         try { curChar = input_stream.readChar(); }
-        catch(java.io.IOException e) {
+        catch (java.io.IOException e) {
             jjStopStringLiteralDfa_0(2, active0);
             return 3;
         }
-        switch(curChar)
+        switch (curChar)
         {
             case 101:
                 if ((active0 & 0x8000000L) != 0L)
@@ -222,45 +232,49 @@ public class JsonParserTokenManager implements JsonParserConstants
                 break;
             case 115:
                 return jjMoveStringLiteralDfa4_0(active0, 0x10000000L);
-            default :
+            default:
                 break;
         }
         return jjStartNfa_0(2, active0);
     }
+
     private int jjMoveStringLiteralDfa4_0(long old0, long active0)
     {
         if (((active0 &= old0)) == 0L)
             return jjStartNfa_0(2, old0);
         try { curChar = input_stream.readChar(); }
-        catch(java.io.IOException e) {
+        catch (java.io.IOException e) {
             jjStopStringLiteralDfa_0(3, active0);
             return 4;
         }
-        switch(curChar)
+        switch (curChar)
         {
             case 101:
                 if ((active0 & 0x10000000L) != 0L)
                     return jjStopAtPos(4, 28);
                 break;
-            default :
+            default:
                 break;
         }
         return jjStartNfa_0(3, active0);
     }
+
     private int jjStartNfaWithStates_0(int pos, int kind, int state)
     {
         jjmatchedKind = kind;
         jjmatchedPos = pos;
         try { curChar = input_stream.readChar(); }
-        catch(java.io.IOException e) { return pos + 1; }
+        catch (java.io.IOException e) { return pos + 1; }
         return jjMoveNfa_0(state, pos + 1);
     }
+
     static final long[] jjbitVec0 = {
         0xfffffffffffffffeL, 0xffffffffffffffffL, 0xffffffffffffffffL, 0xffffffffffffffffL
     };
     static final long[] jjbitVec2 = {
         0x0L, 0x0L, 0xffffffffffffffffL, 0xffffffffffffffffL
     };
+
     private int jjMoveNfa_0(int startState, int curPos)
     {
         int startsAt = 0;
@@ -277,7 +291,7 @@ public class JsonParserTokenManager implements JsonParserConstants
                 long l = 1L << curChar;
                 do
                 {
-                    switch(jjstateSet[--i])
+                    switch (jjstateSet[--i])
                     {
                         case 31:
                             if ((0xfffffffbffffdbffL & l) != 0L)
@@ -391,16 +405,16 @@ public class JsonParserTokenManager implements JsonParserConstants
                             if (curChar == 34 && kind > 11)
                                 kind = 11;
                             break;
-                        default : break;
+                        default: break;
                     }
-                } while(i != startsAt);
+                } while (i != startsAt);
             }
             else if (curChar < 128)
             {
                 long l = 1L << (curChar & 077);
                 do
                 {
-                    switch(jjstateSet[--i])
+                    switch (jjstateSet[--i])
                     {
                         case 31:
                             if ((0xffffffffefffffffL & l) != 0L)
@@ -516,9 +530,9 @@ public class JsonParserTokenManager implements JsonParserConstants
                             if (curChar == 92)
                                 jjstateSet[jjnewStateCnt++] = 24;
                             break;
-                        default : break;
+                        default: break;
                     }
-                } while(i != startsAt);
+                } while (i != startsAt);
             }
             else
             {
@@ -529,7 +543,7 @@ public class JsonParserTokenManager implements JsonParserConstants
                 long l2 = 1L << (curChar & 077);
                 do
                 {
-                    switch(jjstateSet[--i])
+                    switch (jjstateSet[--i])
                     {
                         case 31:
                         case 21:
@@ -540,9 +554,9 @@ public class JsonParserTokenManager implements JsonParserConstants
                             if (jjCanMove_0(hiByte, i1, i2, l1, l2))
                                 jjAddStates(4, 7);
                             break;
-                        default : break;
+                        default: break;
                     }
-                } while(i != startsAt);
+                } while (i != startsAt);
             }
             if (kind != 0x7fffffff)
             {
@@ -554,31 +568,35 @@ public class JsonParserTokenManager implements JsonParserConstants
             if ((i = jjnewStateCnt) == (startsAt = 31 - (jjnewStateCnt = startsAt)))
                 return curPos;
             try { curChar = input_stream.readChar(); }
-            catch(java.io.IOException e) { return curPos; }
+            catch (java.io.IOException e) { return curPos; }
         }
     }
+
     private final int jjStopStringLiteralDfa_2(int pos, long active0)
     {
         switch (pos)
         {
-            default :
+            default:
                 return -1;
         }
     }
+
     private final int jjStartNfa_2(int pos, long active0)
     {
         return jjMoveNfa_2(jjStopStringLiteralDfa_2(pos, active0), pos + 1);
     }
+
     private int jjMoveStringLiteralDfa0_2()
     {
-        switch(curChar)
+        switch (curChar)
         {
             case 117:
                 return jjStopAtPos(0, 17);
-            default :
+            default:
                 return jjMoveNfa_2(0, 0);
         }
     }
+
     private int jjMoveNfa_2(int startState, int curPos)
     {
         int startsAt = 0;
@@ -595,30 +613,30 @@ public class JsonParserTokenManager implements JsonParserConstants
                 long l = 1L << curChar;
                 do
                 {
-                    switch(jjstateSet[--i])
+                    switch (jjstateSet[--i])
                     {
                         case 0:
                             if ((0x800400000000L & l) != 0L)
                                 kind = 16;
                             break;
-                        default : break;
+                        default: break;
                     }
-                } while(i != startsAt);
+                } while (i != startsAt);
             }
             else if (curChar < 128)
             {
                 long l = 1L << (curChar & 077);
                 do
                 {
-                    switch(jjstateSet[--i])
+                    switch (jjstateSet[--i])
                     {
                         case 0:
                             if ((0x14404410000000L & l) != 0L)
                                 kind = 16;
                             break;
-                        default : break;
+                        default: break;
                     }
-                } while(i != startsAt);
+                } while (i != startsAt);
             }
             else
             {
@@ -629,11 +647,11 @@ public class JsonParserTokenManager implements JsonParserConstants
                 long l2 = 1L << (curChar & 077);
                 do
                 {
-                    switch(jjstateSet[--i])
+                    switch (jjstateSet[--i])
                     {
-                        default : break;
+                        default: break;
                     }
-                } while(i != startsAt);
+                } while (i != startsAt);
             }
             if (kind != 0x7fffffff)
             {
@@ -645,31 +663,35 @@ public class JsonParserTokenManager implements JsonParserConstants
             if ((i = jjnewStateCnt) == (startsAt = 1 - (jjnewStateCnt = startsAt)))
                 return curPos;
             try { curChar = input_stream.readChar(); }
-            catch(java.io.IOException e) { return curPos; }
+            catch (java.io.IOException e) { return curPos; }
         }
     }
+
     private final int jjStopStringLiteralDfa_1(int pos, long active0)
     {
         switch (pos)
         {
-            default :
+            default:
                 return -1;
         }
     }
+
     private final int jjStartNfa_1(int pos, long active0)
     {
         return jjMoveNfa_1(jjStopStringLiteralDfa_1(pos, active0), pos + 1);
     }
+
     private int jjMoveStringLiteralDfa0_1()
     {
-        switch(curChar)
+        switch (curChar)
         {
             case 92:
                 return jjStopAtPos(0, 13);
-            default :
+            default:
                 return jjMoveNfa_1(0, 0);
         }
     }
+
     private int jjMoveNfa_1(int startState, int curPos)
     {
         int startsAt = 0;
@@ -686,7 +708,7 @@ public class JsonParserTokenManager implements JsonParserConstants
                 long l = 1L << curChar;
                 do
                 {
-                    switch(jjstateSet[--i])
+                    switch (jjstateSet[--i])
                     {
                         case 0:
                             if ((0xfffffffbffffffffL & l) != 0L)
@@ -704,24 +726,24 @@ public class JsonParserTokenManager implements JsonParserConstants
                             if ((0xfffffffbffffffffL & l) != 0L)
                                 kind = 15;
                             break;
-                        default : break;
+                        default: break;
                     }
-                } while(i != startsAt);
+                } while (i != startsAt);
             }
             else if (curChar < 128)
             {
                 long l = 1L << (curChar & 077);
                 do
                 {
-                    switch(jjstateSet[--i])
+                    switch (jjstateSet[--i])
                     {
                         case 0:
                             if ((0xffffffffefffffffL & l) != 0L)
                                 kind = 15;
                             break;
-                        default : break;
+                        default: break;
                     }
-                } while(i != startsAt);
+                } while (i != startsAt);
             }
             else
             {
@@ -732,15 +754,15 @@ public class JsonParserTokenManager implements JsonParserConstants
                 long l2 = 1L << (curChar & 077);
                 do
                 {
-                    switch(jjstateSet[--i])
+                    switch (jjstateSet[--i])
                     {
                         case 0:
                             if (jjCanMove_0(hiByte, i1, i2, l1, l2) && kind > 15)
                                 kind = 15;
                             break;
-                        default : break;
+                        default: break;
                     }
-                } while(i != startsAt);
+                } while (i != startsAt);
             }
             if (kind != 0x7fffffff)
             {
@@ -752,19 +774,21 @@ public class JsonParserTokenManager implements JsonParserConstants
             if ((i = jjnewStateCnt) == (startsAt = 2 - (jjnewStateCnt = startsAt)))
                 return curPos;
             try { curChar = input_stream.readChar(); }
-            catch(java.io.IOException e) { return curPos; }
+            catch (java.io.IOException e) { return curPos; }
         }
     }
+
     static final int[] jjnextStates = {
         21, 22, 29, 30, 10, 11, 18, 19,
     };
+
     private static final boolean jjCanMove_0(int hiByte, int i1, int i2, long l1, long l2)
     {
-        switch(hiByte)
+        switch (hiByte)
         {
             case 0:
                 return ((jjbitVec2[i2] & l2) != 0L);
-            default :
+            default:
                 if ((jjbitVec0[i1] & l1) != 0L)
                     return true;
                 return false;
@@ -803,15 +827,16 @@ public class JsonParserTokenManager implements JsonParserConstants
     private final int[] jjrounds = new int[31];
     private final int[] jjstateSet = new int[62];
     protected char curChar;
+
     /** Constructor. */
-    public JsonParserTokenManager(SimpleCharStream stream){
+    public JsonParserTokenManager(SimpleCharStream stream) {
         if (SimpleCharStream.staticFlag)
             throw new Error("ERROR: Cannot use a static CharStream class with a non-static lexical analyzer.");
         input_stream = stream;
     }
 
     /** Constructor. */
-    public JsonParserTokenManager(SimpleCharStream stream, int lexState){
+    public JsonParserTokenManager(SimpleCharStream stream, int lexState) {
         this(stream);
         SwitchTo(lexState);
     }
@@ -824,6 +849,7 @@ public class JsonParserTokenManager implements JsonParserConstants
         input_stream = stream;
         ReInitRounds();
     }
+
     private void ReInitRounds()
     {
         int i;
@@ -884,14 +910,14 @@ public class JsonParserTokenManager implements JsonParserConstants
         Token matchedToken;
         int curPos = 0;
 
-        EOFLoop :
+        EOFLoop:
         for (;;)
         {
             try
             {
                 curChar = input_stream.BeginToken();
             }
-            catch(java.io.IOException e)
+            catch (java.io.IOException e)
             {
                 jjmatchedKind = 0;
                 matchedToken = jjFillToken();
@@ -900,7 +926,7 @@ public class JsonParserTokenManager implements JsonParserConstants
 
             for (;;)
             {
-                switch(curLexState)
+                switch (curLexState)
                 {
                     case 0:
                         try {
@@ -988,12 +1014,14 @@ public class JsonParserTokenManager implements JsonParserConstants
             jjrounds[state] = jjround;
         }
     }
+
     private void jjAddStates(int start, int end)
     {
         do {
             jjstateSet[jjnewStateCnt++] = jjnextStates[start];
         } while (start++ != end);
     }
+
     private void jjCheckNAddTwoStates(int state1, int state2)
     {
         jjCheckNAdd(state1);

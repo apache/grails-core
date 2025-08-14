@@ -51,7 +51,7 @@ public class TraitInjectionUtils {
     }
 
     private static void extendTraits(CompilationUnit unit, SourceUnit source, ClassNode classNode) {
-        if(unit.getPhase() != CompilePhase.SEMANTIC_ANALYSIS.getPhaseNumber()) {
+        if (unit.getPhase() != CompilePhase.SEMANTIC_ANALYSIS.getPhaseNumber()) {
             TraitComposer.doExtendTraits(classNode, source, unit);
         }
     }
@@ -70,8 +70,8 @@ public class TraitInjectionUtils {
         if (!implementsTrait && !traitNotLoaded) {
             final GenericsType[] genericsTypes = traitClassNode.getGenericsTypes();
             final Map<String, ClassNode> parameterNameToParameterValue = new LinkedHashMap<String, ClassNode>();
-            if(genericsTypes != null) {
-                for(GenericsType gt : genericsTypes) {
+            if (genericsTypes != null) {
+                for (GenericsType gt : genericsTypes) {
                     parameterNameToParameterValue.put(gt.getName(), classNode);
                 }
             }
@@ -83,7 +83,7 @@ public class TraitInjectionUtils {
 
     public static void injectTrait(CompilationUnit unit, SourceUnit source, ClassNode classNode, Class trait) {
         boolean traitsAdded = addTrait(classNode, trait);
-        if(traitsAdded) {
+        if (traitsAdded) {
             extendTraits(unit, source, classNode);
         }
     }
@@ -98,18 +98,18 @@ public class TraitInjectionUtils {
                 traitsAdded = true;
             }
         }
-        if(traitsAdded) {
+        if (traitsAdded) {
             extendTraits(unit, source, classNode);
         }
     }
 
     private static List<TraitInjector> getTraitInjectors() {
-        if(traitInjectors == null) {
+        if (traitInjectors == null) {
             traitInjectors = GrailsFactoriesLoader.loadFactories(TraitInjector.class);
 
             traitInjectors = TraitInjectionSupport.resolveTraitInjectors(traitInjectors);
         }
-        if(traitInjectors != null) {
+        if (traitInjectors != null) {
             return Collections.unmodifiableList(traitInjectors);
         }
         else {
@@ -129,7 +129,7 @@ public class TraitInjectionUtils {
             boolean supportsClassNode = true;
 
             if (injector instanceof SupportsClassNode) {
-                supportsClassNode = ((SupportsClassNode)injector).supports(cNode);
+                supportsClassNode = ((SupportsClassNode) injector).supports(cNode);
             }
 
             if (artefactTypes.contains(artefactType) && supportsClassNode) {
@@ -137,13 +137,13 @@ public class TraitInjectionUtils {
             }
         }
         try {
-            if(injectorsToUse.size() > 0) {
+            if (injectorsToUse.size() > 0) {
                 doInjectionInternal(compilationUnit, sourceUnit, cNode, injectorsToUse);
             }
         } catch (RuntimeException e) {
             try {
-                System.err.println("Error occurred calling Trait injector ["+TraitInjectionUtils.class.getName()+"]: "
-                        + e.getMessage());
+                System.err.println("Error occurred calling Trait injector [" + TraitInjectionUtils.class.getName() + "]: " +
+                        e.getMessage());
                 e.printStackTrace();
             } catch (Throwable t) {
                 // ignore it

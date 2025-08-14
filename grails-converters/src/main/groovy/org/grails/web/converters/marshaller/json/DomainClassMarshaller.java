@@ -132,38 +132,36 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON
         List<String> includes = json.getIncludes(clazz);
         IncludeExcludeSupport<String> includeExcludeSupport = new IncludeExcludeSupport<String>();
 
-
         BeanWrapper beanWrapper = new BeanWrapperImpl(value);
 
         writer.object();
 
-        if(includeClass && shouldInclude(includeExcludeSupport, includes, excludes, value, "class")) {
+        if (includeClass && shouldInclude(includeExcludeSupport, includes, excludes, value, "class")) {
             writer.key("class").value(clazz.getName());
         }
 
         PersistentEntity domainClass = findDomainClass(value);
 
-        if ( domainClass == null ) {
+        if (domainClass == null) {
             throw new GrailsConfigurationException("Could not retrieve the respective entity for domain " + value.getClass().getName() + " in the mapping context API");
         }
 
         PersistentProperty id = domainClass.getIdentity();
-        if(id != null) {
+        if (id != null) {
             //Composite keys dont return an identity. They also do not render in the JSON.
             //If using Composite keys, it may be advisable to use a customer Marshaller.
-            if(shouldInclude(includeExcludeSupport, includes, excludes, value, id.getName())) {
+            if (shouldInclude(includeExcludeSupport, includes, excludes, value, id.getName())) {
                 Object idValue = extractValue(value, id);
-                if(idValue != null) {
+                if (idValue != null) {
                     json.property(id.getName(), idValue);
                 }
             }
         }
 
-
         if (shouldInclude(includeExcludeSupport, includes, excludes, value, GormProperties.VERSION) && isIncludeVersion()) {
             PersistentProperty versionProperty = domainClass.getVersion();
             Object version = extractValue(value, versionProperty);
-            if(version != null) {
+            if (version != null) {
                 json.property(GormProperties.VERSION, version);
             }
         }
@@ -175,10 +173,10 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON
                 continue;
             }
 
-            if(!shouldInclude(includeExcludeSupport, includes, excludes, value, property.getName())) continue;
+            if (!shouldInclude(includeExcludeSupport, includes, excludes, value, property.getName())) continue;
 
             writer.key(property.getName());
-            if ( !(property instanceof Association) ) {
+            if (!(property instanceof Association)) {
                 // Write non-relation property
                 Object val = beanWrapper.getPropertyValue(property.getName());
                 json.convertAnother(val);
@@ -218,10 +216,10 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON
                         PersistentEntity referencedDomainClass = ((Association) property).getAssociatedEntity();
 
                         // Embedded are now always fully rendered
-                        if (referencedDomainClass == null || ((Association)property).isEmbedded() || property.getType().isEnum()) {
+                        if (referencedDomainClass == null || ((Association) property).isEmbedded() || property.getType().isEnum()) {
                             json.convertAnother(referenceObject);
                         }
-                        else if ( (property instanceof OneToOne) || (property instanceof ManyToOne)|| ((Association)property).isEmbedded()) {
+                        else if ((property instanceof OneToOne) || (property instanceof ManyToOne) || ((Association) property).isEmbedded()) {
                             asShortObject(referenceObject, json, referencedDomainClass.getIdentity(), referencedDomainClass);
                         }
                         else {
@@ -256,9 +254,9 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON
     }
 
     private PersistentEntity findDomainClass(Object value) {
-        for ( DomainClassFetcher fetcher : domainClassFetchers) {
+        for (DomainClassFetcher fetcher : domainClassFetchers) {
             PersistentEntity domain = fetcher.findDomainClass(value);
-            if ( domain != null ) {
+            if (domain != null) {
                 return domain;
             }
         }
@@ -266,7 +264,7 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON
     }
 
     private boolean shouldInclude(IncludeExcludeSupport<String> includeExcludeSupport, List<String> includes, List<String> excludes, Object object, String propertyName) {
-        return includeExcludeSupport.shouldInclude(includes,excludes,propertyName) && shouldInclude(object,propertyName);
+        return includeExcludeSupport.shouldInclude(includes, excludes, propertyName) && shouldInclude(object, propertyName);
     }
 
     protected void asShortObject(Object refObj, JSON json, PersistentProperty idProperty, PersistentEntity referencedDomainClass) throws ConverterException {
@@ -284,21 +282,21 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON
         }
         JSONWriter writer = json.getWriter();
         writer.object();
-        if(isIncludeClass()) {
+        if (isIncludeClass()) {
             writer.key("class").value(referencedDomainClass.getName());
         }
-        if(idValue != null) {
+        if (idValue != null) {
             writer.key("id").value(idValue);
         }
         writer.endObject();
     }
 
     protected Object extractValue(Object domainObject, PersistentProperty property) {
-        if(property == null) {
+        if (property == null) {
             return null;
         }
-        if(domainObject instanceof GroovyObject) {
-            return ((GroovyObject)domainObject).getProperty(property.getName());
+        if (domainObject instanceof GroovyObject) {
+            return ((GroovyObject) domainObject).getProperty(property.getName());
         }
         else {
             ClassPropertyFetcher propertyFetcher = ClassPropertyFetcher.forClass(domainObject.getClass());

@@ -65,11 +65,11 @@ public class StructuredDateEditor extends CustomDateEditor implements Structured
         String dayString = (String) fieldValues.get("day");
         String hourString = (String) fieldValues.get("hour");
         String minuteString = (String) fieldValues.get("minute");
-        if (GrailsStringUtils.isBlank(yearString)
-                && GrailsStringUtils.isBlank(monthString)
-                && GrailsStringUtils.isBlank(dayString)
-                && GrailsStringUtils.isBlank(hourString)
-                && GrailsStringUtils.isBlank(minuteString)) {
+        if (GrailsStringUtils.isBlank(yearString) &&
+                GrailsStringUtils.isBlank(monthString) &&
+                GrailsStringUtils.isBlank(dayString) &&
+                GrailsStringUtils.isBlank(hourString) &&
+                GrailsStringUtils.isBlank(minuteString)) {
             return null;
         }
         int year;
@@ -83,7 +83,7 @@ public class StructuredDateEditor extends CustomDateEditor implements Structured
             int hour = getIntegerValue(fieldValues, "hour", 0);
             int minute = getIntegerValue(fieldValues, "minute", 0);
 
-            Calendar c = new GregorianCalendar(year,month - 1,day,hour,minute);
+            Calendar c = new GregorianCalendar(year, month - 1, day, hour, minute);
             if (type == Date.class) {
                 return c.getTime();
             }

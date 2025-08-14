@@ -45,7 +45,7 @@ public class BeforeValidateHelper implements Serializable {
         }
 
         public void call(final Object target, final List<?> validatedFieldsList) {
-            if(validatedFieldsList != null && eventTriggerCaller != null) {
+            if (validatedFieldsList != null && eventTriggerCaller != null) {
                 eventTriggerCaller.call(target, new Object[]{validatedFieldsList});
             } else if (eventTriggerCallerNoArgs != null) {
                 eventTriggerCallerNoArgs.call(target);
@@ -56,7 +56,7 @@ public class BeforeValidateHelper implements Serializable {
     public void invokeBeforeValidate(final Object target, final List<?> validatedFieldsList) {
         Class<?> domainClass = target.getClass();
         BeforeValidateEventTriggerCaller eventTriggerCaller = eventTriggerCallerCache.get(domainClass);
-        if(eventTriggerCaller==null) {
+        if (eventTriggerCaller == null) {
             eventTriggerCaller = new BeforeValidateEventTriggerCaller(domainClass, null);
             eventTriggerCallerCache.put(domainClass, eventTriggerCaller);
         }

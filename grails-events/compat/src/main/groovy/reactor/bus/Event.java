@@ -24,7 +24,7 @@ package reactor.bus;
  */
 @Deprecated
 public class Event<T> extends grails.events.Event<T> {
-    private volatile        Object              replyTo = null;
+    private volatile Object replyTo = null;
 
     public Event(String id, T data, Object replyTo) {
         super(id, data);

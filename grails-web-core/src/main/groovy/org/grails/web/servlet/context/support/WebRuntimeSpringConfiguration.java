@@ -39,7 +39,6 @@ import org.grails.spring.DefaultRuntimeSpringConfiguration;
  */
 public class WebRuntimeSpringConfiguration extends DefaultRuntimeSpringConfiguration implements ServletContextAware {
 
-
     private GrailsApplication grailsApplication;
 
     public WebRuntimeSpringConfiguration(ApplicationContext parent) {
@@ -91,7 +90,7 @@ public class WebRuntimeSpringConfiguration extends DefaultRuntimeSpringConfigura
         initialiseApplicationContext();
 
         if (context instanceof ConfigurableWebApplicationContext) {
-            ((ConfigurableWebApplicationContext)context).setServletContext(servletContext);
+            ((ConfigurableWebApplicationContext) context).setServletContext(servletContext);
         }
     }
 }

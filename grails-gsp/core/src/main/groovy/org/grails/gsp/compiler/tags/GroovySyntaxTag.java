@@ -61,7 +61,7 @@ public abstract class GroovySyntaxTag implements GrailsTag {
         parser = (GroovyPageParser) context.get(GroovyPageParser.class);
         Object outObj = context.get(GroovyPage.OUT);
         if (outObj instanceof PrintWriter) {
-            out = (PrintWriter)context.get(GroovyPage.OUT);
+            out = (PrintWriter) context.get(GroovyPage.OUT);
         }
     }
 
@@ -71,21 +71,21 @@ public abstract class GroovySyntaxTag implements GrailsTag {
 
     public void setWriter(Writer w) {
         Assert.isInstanceOf(PrintWriter.class, w, "A GroovySynax tag requires a java.io.PrintWriter instance");
-        out = (PrintWriter)w;
+        out = (PrintWriter) w;
     }
 
     @SuppressWarnings("rawtypes")
     public void setAttributes(Map attributes) {
         for (Iterator i = attributes.keySet().iterator(); i.hasNext();) {
             String attrName = (String) i.next();
-            setAttribute(attrName,attributes.get(attrName));
+            setAttribute(attrName, attributes.get(attrName));
         }
     }
 
     public void setAttribute(String name, Object value) {
         Assert.isInstanceOf(String.class, value, "A GroovySyntax tag requires only string valued attributes");
 
-        attributes.put(name.substring(1,name.length()-1), (String)value);
+        attributes.put(name.substring(1, name.length() - 1), (String) value);
     }
 
     /**
@@ -111,11 +111,11 @@ public abstract class GroovySyntaxTag implements GrailsTag {
         expr = expr.trim();
         if ((expr.startsWith("\"") && expr.endsWith("\"")) ||
                 (expr.startsWith("\'") && expr.endsWith("\'"))) {
-            expr = expr.substring(1,expr.length()-1);
+            expr = expr.substring(1, expr.length() - 1);
             expr = expr.trim();
         }
         if (expr.startsWith("${") && expr.endsWith("}")) {
-            expr = expr.substring(2,expr.length()-1);
+            expr = expr.substring(2, expr.length() - 1);
             expr = expr.trim();
         }
         return expr;
@@ -143,13 +143,13 @@ public abstract class GroovySyntaxTag implements GrailsTag {
 
         if (hasStatus) {
             out.println("loop:{");
-            out.println("int "+ status +" = 0");
+            out.println("int " + status + " = 0");
         }
         if (!hasVar) {
             if (isCompileStaticMode()) {
                 throw new GrailsTagException(ERROR_NO_VAR_WITH_COMPILE_STATIC, parser.getPageName(), parser.getCurrentOutputLineNumber());
             }
-            var = "_it"+ Math.abs(System.identityHashCode(this));
+            var = "_it" + Math.abs(System.identityHashCode(this));
             foreachRenamedIt = var;
         }
 
@@ -166,7 +166,7 @@ public abstract class GroovySyntaxTag implements GrailsTag {
         out.print(" {"); // start closure
         out.println();
         if (!hasVar) {
-            out.println("changeItVariable(" + foreachRenamedIt +")" );
+            out.println("changeItVariable(" + foreachRenamedIt + ")");
         } else if (entryVars != null) {
             out.println("def " + entryVars[0].trim() + "=" + var + ".getKey()");
             out.println("def " + entryVars[1].trim() + "=" + var + ".getValue()");
@@ -179,7 +179,7 @@ public abstract class GroovySyntaxTag implements GrailsTag {
         boolean hasStatus = !GrailsStringUtils.isBlank(status);
 
         if (hasStatus) {
-            out.println(status +"++");
+            out.println(status + "++");
             out.println("}");
         }
         out.println("}");
@@ -190,10 +190,10 @@ public abstract class GroovySyntaxTag implements GrailsTag {
             return "";
         }
         if (((attr.startsWith("\"") && attr.endsWith("\"")) || (attr.startsWith("'") && attr.endsWith("'"))) && attr.length() > 1) {
-            attr = attr.substring(1,attr.length()-1);
+            attr = attr.substring(1, attr.length() - 1);
         }
         if (attr.endsWith("?") && attr.length() > 1) {
-            attr = attr.substring(0,attr.length()-1);
+            attr = attr.substring(0, attr.length() - 1);
         }
         return attr;
     }

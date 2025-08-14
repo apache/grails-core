@@ -129,7 +129,7 @@ public class DataBindingUtils {
                     if ((whiteListField.getModifiers() & Modifier.STATIC) != 0) {
                         final Object whiteListValue = whiteListField.get(objectClass);
                         if (whiteListValue instanceof List) {
-                            includeList = (List)whiteListValue;
+                            includeList = (List) whiteListValue;
                         }
                     }
                 }
@@ -178,7 +178,7 @@ public class DataBindingUtils {
             }
         }
         final List<DataBindingSource> dataBindingSources = collectionBindingSource.getDataBindingSources();
-        for(final DataBindingSource dataBindingSource : dataBindingSources) {
+        for (final DataBindingSource dataBindingSource : dataBindingSources) {
             final T newObject = targetType.newInstance();
             bindObjectToDomainInstance(entity, newObject, dataBindingSource, getBindingIncludeList(newObject), Collections.emptyList(), null);
             collectionToPopulate.add(newObject);
@@ -258,7 +258,7 @@ public class DataBindingUtils {
             BindingResult newResult = new ValidationErrors(object);
             for (Object error : bindingResult.getAllErrors()) {
                 if (error instanceof FieldError) {
-                    FieldError fieldError = (FieldError)error;
+                    FieldError fieldError = (FieldError) error;
                     final boolean isBlank = BLANK.equals(fieldError.getRejectedValue());
                     if (!isBlank) {
                         newResult.addError(fieldError);
@@ -277,16 +277,16 @@ public class DataBindingUtils {
                     }
                 }
                 else {
-                    newResult.addError((ObjectError)error);
+                    newResult.addError((ObjectError) error);
                 }
             }
             bindingResult = newResult;
         }
         MetaClass mc = GroovySystem.getMetaClassRegistry().getMetaClass(object.getClass());
-        if (mc.hasProperty(object, "errors")!=null && bindingResult!=null) {
+        if (mc.hasProperty(object, "errors") != null && bindingResult != null) {
             ValidationErrors errors = new ValidationErrors(object);
             errors.addAllErrors(bindingResult);
-            mc.setProperty(object,"errors", errors);
+            mc.setProperty(object, "errors", errors);
         }
         return bindingResult;
     }
@@ -299,15 +299,15 @@ public class DataBindingUtils {
 
     public static DataBindingSourceRegistry getDataBindingSourceRegistry(GrailsApplication grailsApplication) {
         DataBindingSourceRegistry registry = null;
-        if(grailsApplication != null) {
+        if (grailsApplication != null) {
             ApplicationContext context = grailsApplication.getMainContext();
-            if(context != null) {
-                if(context.containsBean(DataBindingSourceRegistry.BEAN_NAME)) {
+            if (context != null) {
+                if (context.containsBean(DataBindingSourceRegistry.BEAN_NAME)) {
                     registry = context.getBean(DataBindingSourceRegistry.BEAN_NAME, DataBindingSourceRegistry.class);
                 }
             }
         }
-        if(registry == null) {
+        if (registry == null) {
             registry = new DefaultDataBindingSourceRegistry();
         }
 
@@ -335,10 +335,10 @@ public class DataBindingUtils {
     public static MimeTypeResolver getMimeTypeResolver(
             GrailsApplication grailsApplication) {
         MimeTypeResolver mimeTypeResolver = null;
-        if(grailsApplication != null) {
+        if (grailsApplication != null) {
             ApplicationContext context = grailsApplication.getMainContext();
-            if(context != null) {
-                if(context.containsBean(MimeTypeResolver.BEAN_NAME)) {
+            if (context != null) {
+                if (context.containsBean(MimeTypeResolver.BEAN_NAME)) {
                     mimeTypeResolver = context.getBean(MimeTypeResolver.BEAN_NAME, MimeTypeResolver.class);
                 }
             }

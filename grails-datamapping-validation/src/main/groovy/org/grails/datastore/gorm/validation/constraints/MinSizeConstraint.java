@@ -82,10 +82,10 @@ public class MinSizeConstraint extends AbstractConstraint {
             length = Array.getLength(propertyValue);
         }
         else if (propertyValue instanceof Collection<?>) {
-            length = ((Collection<?>)propertyValue).size();
+            length = ((Collection<?>) propertyValue).size();
         }
         else { // String
-            length = ((String)propertyValue).length();
+            length = ((String) propertyValue).length();
         }
 
         if (length < minSize) {

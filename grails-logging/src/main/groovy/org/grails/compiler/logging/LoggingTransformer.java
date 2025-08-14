@@ -43,7 +43,7 @@ import grails.compiler.ast.AstTransformer;
  * @since 2.0
  */
 @AstTransformer
-public class LoggingTransformer implements AllArtefactClassInjector{
+public class LoggingTransformer implements AllArtefactClassInjector {
 
     @Override
     public void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode) {
@@ -57,19 +57,19 @@ public class LoggingTransformer implements AllArtefactClassInjector{
 
     @Override
     public void performInjectionOnAnnotatedClass(SourceUnit source, ClassNode classNode) {
-        if( classNode.getNodeMetaData(Slf4j.class) != null) return;
+        if (classNode.getNodeMetaData(Slf4j.class) != null) return;
         String packageName = Slf4j.class.getPackage().getName();
 
         // if already annotated skip
         for (AnnotationNode annotationNode : classNode.getAnnotations()) {
-            if(annotationNode.getClassNode().getPackageName().equals(packageName)) {
+            if (annotationNode.getClassNode().getPackageName().equals(packageName)) {
                 return;
             }
         }
 
         FieldNode logField = classNode.getField("log");
-        if(logField != null) {
-            if(!Modifier.isPrivate(logField.getModifiers())) {
+        if (logField != null) {
+            if (!Modifier.isPrivate(logField.getModifiers())) {
                 return;
             }
         }
@@ -80,7 +80,7 @@ public class LoggingTransformer implements AllArtefactClassInjector{
 
         AnnotationNode annotationNode = new AnnotationNode(ClassHelper.make(Slf4j.class));
         LogASTTransformation logASTTransformation = new LogASTTransformation();
-        logASTTransformation.setCompilationUnit( new CompilationUnit(new GroovyClassLoader(getClass().getClassLoader())) );
+        logASTTransformation.setCompilationUnit(new CompilationUnit(new GroovyClassLoader(getClass().getClassLoader())));
         logASTTransformation.visit(new ASTNode[]{ annotationNode, classNode}, source);
         classNode.putNodeMetaData(Slf4j.class, annotationNode);
     }

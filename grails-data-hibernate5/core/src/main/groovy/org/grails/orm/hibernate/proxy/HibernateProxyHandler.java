@@ -86,7 +86,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
     @Override
     public Serializable getIdentifier(Object o) {
         if (o instanceof HibernateProxy) {
-            return ((HibernateProxy)o).getHibernateLazyInitializer().getIdentifier();
+            return ((HibernateProxy) o).getHibernateLazyInitializer().getIdentifier();
         }
         else {
             //TODO seems we can get the id here if its has normal getId
@@ -120,7 +120,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
      */
     @Override
     public boolean isProxy(Object o) {
-        return (o instanceof HibernateProxy)  || (o instanceof PersistentCollection);
+        return (o instanceof HibernateProxy) || (o instanceof PersistentCollection);
     }
 
     /**

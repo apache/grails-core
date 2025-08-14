@@ -79,7 +79,6 @@ public interface Datastore extends ServiceRegistry {
      */
     ConfigurableApplicationContext getApplicationContext();
 
-
     /**
      * Whether the datastore is schema-less. That is it allows changes to the schema runtime, dynamic attributes etc.
      *

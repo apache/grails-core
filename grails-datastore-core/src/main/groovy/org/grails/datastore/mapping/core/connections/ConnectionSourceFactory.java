@@ -93,5 +93,5 @@ public interface ConnectionSourceFactory<T, S extends ConnectionSourceSettings> 
      * @param fallbackSettings The fallback settings
      * @return The new connection source
      */
-    ConnectionSource<T,S> createRuntime(String name, PropertyResolver configuration, S fallbackSettings);
+    ConnectionSource<T, S> createRuntime(String name, PropertyResolver configuration, S fallbackSettings);
 }

@@ -105,7 +105,6 @@ public class ScaleConstraint extends AbstractConstraint {
         return constraintParameter;
     }
 
-
     /**
      * {@inheritDoc}
      * @see AbstractConstraint#processValidate(

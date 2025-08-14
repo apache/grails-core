@@ -23,7 +23,7 @@ package org.grails.datastore.mapping.cache.exception;
  * Top-level exception used to report problems with third-party cache operations
  * @author Roman Stepanenko
  */
-public class CacheException extends RuntimeException{
+public class CacheException extends RuntimeException {
     private static final long serialVersionUID = 1;
 
     public CacheException() {

@@ -25,7 +25,6 @@ import java.lang.reflect.Array;
 import grails.util.GrailsStringUtils;
 import org.grails.gsp.GroovyPage;
 
-
 /**
  * A PrintWriter used in the generation of GSP pages that allows printing to the target output
  * stream and maintains a record of the current line number during usage.
@@ -68,7 +67,7 @@ public class GSPWriter extends PrintWriter {
 
     public void printlnToBuffer(String s, int index) {
         if (s == null) s = "''";
-        super.print("buf"+index+" << ");
+        super.print("buf" + index + " << ");
         super.print(s);
         println();
     }
@@ -81,7 +80,7 @@ public class GSPWriter extends PrintWriter {
 
     private void addLineNumber() {
         if (lineNumber >= lineNumbers.length) {
-            lineNumbers = (int[])resizeArray(lineNumbers, lineNumbers.length * 2);
+            lineNumbers = (int[]) resizeArray(lineNumbers, lineNumbers.length * 2);
         }
         else {
             lineNumbers[lineNumber - 1] = parse.getCurrentOutputLineNumber();
@@ -89,13 +88,13 @@ public class GSPWriter extends PrintWriter {
         }
     }
 
-    private Object resizeArray (Object oldArray, int newSize) {
+    private Object resizeArray(Object oldArray, int newSize) {
         int oldSize = java.lang.reflect.Array.getLength(oldArray);
         Class<?> elementType = oldArray.getClass().getComponentType();
-        Object newArray = Array.newInstance(elementType,newSize);
-        int preserveLength = Math.min(oldSize,newSize);
+        Object newArray = Array.newInstance(elementType, newSize);
+        int preserveLength = Math.min(oldSize, newSize);
         if (preserveLength > 0) {
-            System.arraycopy (oldArray,0,newArray,0,preserveLength);
+            System.arraycopy(oldArray, 0, newArray, 0, preserveLength);
         }
         return newArray;
     }

@@ -75,7 +75,7 @@ public abstract class EntityPersister implements Persister {
     public Object proxy(Serializable key) {
         PersistentEntity entity = getPersistentEntity();
         PersistentProperty identity = entity.getIdentity();
-        if(identity != null) {
+        if (identity != null) {
             key = (Serializable) mappingContext.getConversionService().convert(key, identity.getType());
         }
         return getProxyFactory().createProxy(session, entity.getJavaClass(), key);
@@ -118,12 +118,12 @@ public abstract class EntityPersister implements Persister {
         if (pf.isProxy(obj)) {
             return pf.getIdentifier(obj);
         }
-        if(persistentEntity.getJavaClass().equals(obj.getClass())) {
+        if (persistentEntity.getJavaClass().equals(obj.getClass())) {
             return reflector.getIdentifier(obj);
         }
         else {
             EntityPersister persister = (EntityPersister) getSession().getPersister(obj);
-            if(persister != null) {
+            if (persister != null) {
                 return persister.getObjectIdentifier(obj);
             }
             else {
@@ -205,7 +205,7 @@ public abstract class EntityPersister implements Persister {
     public Object getCurrentVersion(final EntityAccess ea) {
         Object currentVersion = ea.getProperty(GormProperties.VERSION);
         if (Number.class.isAssignableFrom(ea.getPropertyType(GormProperties.VERSION))) {
-            currentVersion = currentVersion != null ? ((Number)currentVersion).longValue() : currentVersion;
+            currentVersion = currentVersion != null ? ((Number) currentVersion).longValue() : currentVersion;
         }
         return currentVersion;
     }
@@ -241,7 +241,7 @@ public abstract class EntityPersister implements Persister {
     protected boolean isAssignedId(PersistentEntity persistentEntity) {
         boolean assignedId = false;
         PersistentProperty identity = persistentEntity.getIdentity();
-        if(identity != null) {
+        if (identity != null) {
             PropertyMapping mapping = identity.getMapping();
             if (mapping != null) {
                 Property p = mapping.getMappedForm();
@@ -281,7 +281,7 @@ public abstract class EntityPersister implements Persister {
     protected abstract void deleteEntities(PersistentEntity pe, @SuppressWarnings("rawtypes") Iterable objects);
 
     protected EntityAccess createEntityAccess(PersistentEntity pe, Object obj) {
-        final SessionImplementor si = (SessionImplementor)getSession();
+        final SessionImplementor si = (SessionImplementor) getSession();
         return si.createEntityAccess(pe, obj);
     }
 
@@ -292,12 +292,12 @@ public abstract class EntityPersister implements Persister {
         return o;
     }
 
-   /**
-    * Fire the beforeInsert even on an entityAccess object and return true if the operation should be cancelled
-    * @param persistentEntity The entity
-    * @param entityAccess The entity access
-    * @return true if the operation should be cancelled
-    */
+    /**
+     * Fire the beforeInsert even on an entityAccess object and return true if the operation should be cancelled
+     * @param persistentEntity The entity
+     * @param entityAccess The entity access
+     * @return true if the operation should be cancelled
+     */
     public boolean cancelInsert(final PersistentEntity persistentEntity, final EntityAccess entityAccess) {
         PreInsertEvent event = new PreInsertEvent(session.getDatastore(), persistentEntity, entityAccess);
         publisher.publishEvent(event);
@@ -309,12 +309,12 @@ public abstract class EntityPersister implements Persister {
                 session.getDatastore(), persistentEntity, entityAccess));
     }
 
-   /**
-    * Fire the beforeUpdate event on an entityAccess object and return true if the operation should be cancelled
-    * @param persistentEntity The entity
-    * @param entityAccess The entity access
-    * @return true if the operation should be cancelled
-    */
+    /**
+     * Fire the beforeUpdate event on an entityAccess object and return true if the operation should be cancelled
+     * @param persistentEntity The entity
+     * @param entityAccess The entity access
+     * @return true if the operation should be cancelled
+     */
     public boolean cancelUpdate(final PersistentEntity persistentEntity, final EntityAccess entityAccess) {
         PreUpdateEvent event = new PreUpdateEvent(session.getDatastore(), persistentEntity, entityAccess);
         publisher.publishEvent(event);
@@ -327,7 +327,7 @@ public abstract class EntityPersister implements Persister {
      * @param entityAccess The entity access
      * @return true if the operation should be cancelled
      */
-    public boolean cancelDelete( final PersistentEntity persistentEntity, final EntityAccess entityAccess) {
+    public boolean cancelDelete(final PersistentEntity persistentEntity, final EntityAccess entityAccess) {
         PreDeleteEvent event = new PreDeleteEvent(session.getDatastore(), persistentEntity, entityAccess);
         publisher.publishEvent(event);
         return event.isCancelled();
@@ -339,7 +339,7 @@ public abstract class EntityPersister implements Persister {
      * @param entityAccess The entity access
      * @return true if the operation should be cancelled
      */
-    public boolean cancelLoad( final PersistentEntity persistentEntity, final EntityAccess entityAccess) {
+    public boolean cancelLoad(final PersistentEntity persistentEntity, final EntityAccess entityAccess) {
         PreLoadEvent event = new PreLoadEvent(session.getDatastore(), persistentEntity, entityAccess);
         publisher.publishEvent(event);
         return event.isCancelled();

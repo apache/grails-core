@@ -25,8 +25,7 @@ package reactor.bus.selector;
  * @deprecated Here for compatibility only. Do not use directly
  */
 @Deprecated
-public interface Selector<T>  {
-
+public interface Selector<T> {
 
     /**
      * Get the object being used for comparisons and equals checks.

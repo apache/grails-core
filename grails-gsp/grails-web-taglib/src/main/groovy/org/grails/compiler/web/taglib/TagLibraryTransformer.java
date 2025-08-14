@@ -94,7 +94,6 @@ public class TagLibraryTransformer implements GrailsArtefactClassInjector, Annot
     private static final String NAMESPACE_PROPERTY = "namespace";
     private static final ClassNode CLOSURE_CLASS_NODE = new ClassNode(Closure.class);
 
-
     @Override
     public String[] getArtefactTypes() {
         return new String[] { getArtefactType(), "TagLibrary" };
@@ -131,7 +130,6 @@ public class TagLibraryTransformer implements GrailsArtefactClassInjector, Annot
                 namespace = initialExpression.getText();
             }
         }
-
 
         addGetTagLibNamespaceMethod(classNode, namespace);
 
@@ -182,26 +180,26 @@ public class TagLibraryTransformer implements GrailsArtefactClassInjector, Annot
                  .addExpression(includeBody ? BODY_EXPRESSION : NULL_EXPRESSION)
                  .addExpression(CURRENT_OUTPUT_CONTEXT_METHOD_CALL);
 
-        methodBody.addStatement(new ExpressionStatement(new MethodCallExpression(new ClassExpression(TAG_OUTPUT_CLASS_NODE),"captureTagOutput", arguments)));
+        methodBody.addStatement(new ExpressionStatement(new MethodCallExpression(new ClassExpression(TAG_OUTPUT_CLASS_NODE), "captureTagOutput", arguments)));
 
         if (includeBody && includeAttrs) {
             if (!methodExists(classNode, tagName, MAP_CLOSURE_PARAMETERS)) {
-                classNode.addMethod(new MethodNode(tagName, Modifier.PUBLIC,GrailsASTUtils.OBJECT_CLASS_NODE, MAP_CLOSURE_PARAMETERS, null, methodBody));
+                classNode.addMethod(new MethodNode(tagName, Modifier.PUBLIC, GrailsASTUtils.OBJECT_CLASS_NODE, MAP_CLOSURE_PARAMETERS, null, methodBody));
             }
         }
         else if (includeAttrs) {
             if (!methodExists(classNode, tagName, MAP_PARAMETERS)) {
-                classNode.addMethod(new MethodNode(tagName, Modifier.PUBLIC,GrailsASTUtils.OBJECT_CLASS_NODE, MAP_PARAMETERS, null, methodBody));
+                classNode.addMethod(new MethodNode(tagName, Modifier.PUBLIC, GrailsASTUtils.OBJECT_CLASS_NODE, MAP_PARAMETERS, null, methodBody));
             }
         }
         else if (includeBody) {
             if (!methodExists(classNode, tagName, CLOSURE_PARAMETERS)) {
-                classNode.addMethod(new MethodNode(tagName, Modifier.PUBLIC,GrailsASTUtils.OBJECT_CLASS_NODE, CLOSURE_PARAMETERS, null, methodBody));
+                classNode.addMethod(new MethodNode(tagName, Modifier.PUBLIC, GrailsASTUtils.OBJECT_CLASS_NODE, CLOSURE_PARAMETERS, null, methodBody));
             }
         }
         else {
             if (!methodExists(classNode, tagName, Parameter.EMPTY_ARRAY)) {
-                classNode.addMethod(new MethodNode(tagName, Modifier.PUBLIC,GrailsASTUtils.OBJECT_CLASS_NODE, Parameter.EMPTY_ARRAY, null, methodBody));
+                classNode.addMethod(new MethodNode(tagName, Modifier.PUBLIC, GrailsASTUtils.OBJECT_CLASS_NODE, Parameter.EMPTY_ARRAY, null, methodBody));
             }
         }
     }

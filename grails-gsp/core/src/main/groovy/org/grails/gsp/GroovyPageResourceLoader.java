@@ -18,7 +18,6 @@
  */
 package org.grails.gsp;
 
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -66,6 +65,4 @@ public class GroovyPageResourceLoader extends StaticResourceLoader {
         }
         return resource;
     }
-
-
 }

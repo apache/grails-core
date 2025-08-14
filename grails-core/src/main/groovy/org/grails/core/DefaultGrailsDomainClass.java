@@ -49,7 +49,6 @@ public class DefaultGrailsDomainClass extends AbstractGrailsClass implements Gra
 
     private static final Logger log = LoggerFactory.getLogger(DefaultGrailsDomainClass.class);
 
-
     private PersistentEntity persistentEntity;
     private MappingContext mappingContext;
     private Map<String, Constrained> constrainedProperties;
@@ -69,7 +68,6 @@ public class DefaultGrailsDomainClass extends AbstractGrailsClass implements Gra
         super(clazz, "");
     }
 
-
     private void verifyContextIsInitialized() {
         if (mappingContext == null) {
             throw new GrailsConfigurationException("That API cannot be accessed before the spring context is initialized");
@@ -81,7 +79,7 @@ public class DefaultGrailsDomainClass extends AbstractGrailsClass implements Gra
                 persistentEntity = mappingContext.getPersistentEntity(this.getFullName());
                 if (persistentEntity == null) {
                     MappingContext concreteMappingContext = getApplication().getMappingContext();
-                    if(concreteMappingContext.getClass() == KeyValueMappingContext.class) {
+                    if (concreteMappingContext.getClass() == KeyValueMappingContext.class) {
                         // In a unit testing context, allow
                         persistentEntity = concreteMappingContext.addPersistentEntity(getClazz());
                     }
@@ -95,7 +93,7 @@ public class DefaultGrailsDomainClass extends AbstractGrailsClass implements Gra
 
     @Override
     public boolean isAutowire() {
-        if(autowire == null) {
+        if (autowire == null) {
             verifyContextIsInitialized();
             autowire = persistentEntity.getMapping().getMappedForm().isAutowire();
         }
@@ -131,9 +129,9 @@ public class DefaultGrailsDomainClass extends AbstractGrailsClass implements Gra
     @Override
     public Map getConstrainedProperties() {
         verifyContextIsInitialized();
-        if(constrainedProperties == null) {
+        if (constrainedProperties == null) {
             ConstrainedDiscovery constrainedDiscovery = GrailsFactoriesLoader.loadFactory(ConstrainedDiscovery.class);
-            if(constrainedDiscovery == null) {
+            if (constrainedDiscovery == null) {
                 constrainedProperties = Collections.emptyMap();
             }
             else {

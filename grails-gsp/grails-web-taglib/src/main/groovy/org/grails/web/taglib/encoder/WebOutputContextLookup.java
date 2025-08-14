@@ -41,7 +41,7 @@ import org.grails.web.util.WebUtils;
 
 public class WebOutputContextLookup implements OutputContextLookup, Ordered {
     private static final WebOutputContext webOutputContext = new WebOutputContext();
-    static final String ATTRIBUTE_NAME_OUTPUT_STACK="org.grails.web.encoder.OUTPUT_ENCODING_STACK";
+    static final String ATTRIBUTE_NAME_OUTPUT_STACK = "org.grails.web.encoder.OUTPUT_ENCODING_STACK";
 
     @Override
     public OutputContext lookupOutputContext() {
@@ -61,7 +61,7 @@ public class WebOutputContextLookup implements OutputContextLookup, Ordered {
         @Override
         public EncodingStateRegistry getEncodingStateRegistry() {
             GrailsWebRequest grailsWebRequest = lookupWebRequest();
-            if(grailsWebRequest != null)
+            if (grailsWebRequest != null)
                 return grailsWebRequest.getEncodingStateRegistry();
             return null;
         }
@@ -69,14 +69,14 @@ public class WebOutputContextLookup implements OutputContextLookup, Ordered {
         @Override
         public void setCurrentOutputEncodingStack(OutputEncodingStack outputEncodingStack) {
             GrailsWebRequest grailsWebRequest = lookupWebRequest();
-            if(grailsWebRequest != null)
+            if (grailsWebRequest != null)
                 grailsWebRequest.setAttribute(ATTRIBUTE_NAME_OUTPUT_STACK, outputEncodingStack, RequestAttributes.SCOPE_REQUEST);
         }
 
         @Override
         public OutputEncodingStack getCurrentOutputEncodingStack() {
             GrailsWebRequest grailsWebRequest = lookupWebRequest();
-            if(grailsWebRequest != null) {
+            if (grailsWebRequest != null) {
                 return (OutputEncodingStack) grailsWebRequest.getAttribute(ATTRIBUTE_NAME_OUTPUT_STACK, RequestAttributes.SCOPE_REQUEST);
             }
             return null;
@@ -90,7 +90,7 @@ public class WebOutputContextLookup implements OutputContextLookup, Ordered {
         @Override
         public void setCurrentWriter(Writer currentWriter) {
             GrailsWebRequest grailsWebRequest = lookupWebRequest();
-            if(grailsWebRequest != null) {
+            if (grailsWebRequest != null) {
                 grailsWebRequest.setOut(currentWriter);
             }
         }
@@ -106,7 +106,7 @@ public class WebOutputContextLookup implements OutputContextLookup, Ordered {
         @Override
         public AbstractTemplateVariableBinding getBinding() {
             GrailsWebRequest grailsWebRequest = lookupWebRequest();
-            if(grailsWebRequest == null) {
+            if (grailsWebRequest == null) {
                 return null;
             }
             return (AbstractTemplateVariableBinding) grailsWebRequest.getAttribute(GrailsApplicationAttributes.PAGE_SCOPE, RequestAttributes.SCOPE_REQUEST);
@@ -115,7 +115,7 @@ public class WebOutputContextLookup implements OutputContextLookup, Ordered {
         @Override
         public void setBinding(AbstractTemplateVariableBinding binding) {
             GrailsWebRequest grailsWebRequest = lookupWebRequest();
-            if(grailsWebRequest != null) {
+            if (grailsWebRequest != null) {
                 grailsWebRequest.setAttribute(GrailsApplicationAttributes.PAGE_SCOPE, binding, RequestAttributes.SCOPE_REQUEST);
             }
         }
@@ -123,7 +123,7 @@ public class WebOutputContextLookup implements OutputContextLookup, Ordered {
         @Override
         public GrailsApplication getGrailsApplication() {
             GrailsWebRequest grailsWebRequest = lookupWebRequest();
-            if(grailsWebRequest != null)
+            if (grailsWebRequest != null)
                 return grailsWebRequest.getAttributes().getGrailsApplication();
             return null;
         }
@@ -131,7 +131,7 @@ public class WebOutputContextLookup implements OutputContextLookup, Ordered {
         @Override
         public void setContentType(String contentType) {
             HttpServletResponse httpServletResponse = lookupResponse();
-            if(httpServletResponse != null) {
+            if (httpServletResponse != null) {
                 httpServletResponse.setContentType(contentType);
             }
         }
@@ -149,12 +149,12 @@ public class WebOutputContextLookup implements OutputContextLookup, Ordered {
 
         protected HttpServletResponse lookupResponse() {
             HttpServletResponse wrapped = WrappedResponseHolder.getWrappedResponse();
-            if(wrapped != null) {
+            if (wrapped != null) {
                 return wrapped;
             }
             else {
                 GrailsWebRequest grailsWebRequest = lookupWebRequest();
-                if(grailsWebRequest != null) {
+                if (grailsWebRequest != null) {
                     return grailsWebRequest.getCurrentResponse();
                 }
             }

@@ -40,7 +40,7 @@ public class GrailsUrlPathHelper extends UrlPathHelper {
             uri = uri.substring(GRAILS_SERVLET_PATH.length());
         }
         if (uri.endsWith(GRAILS_DISPATCH_EXTENSION)) {
-            return uri.substring(0,uri.length()- GRAILS_DISPATCH_EXTENSION.length());
+            return uri.substring(0, uri.length() - GRAILS_DISPATCH_EXTENSION.length());
         }
         return uri;
     }

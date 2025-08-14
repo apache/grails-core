@@ -102,7 +102,7 @@ public class ProxyInstanceMetaClass extends DelegatingMetaClass {
         } else if (methodName.equals("getClass") || methodName.equals("getDomainClass")) {
             // return correct class only if loaded, otherwise hope for the best
             resolveTarget = isProxyInitiated();
-        } else if (methodName.equals("setMetaClass") && arguments.length == 1 && (arguments[0]==null || arguments[0] instanceof MetaClass)) {
+        } else if (methodName.equals("setMetaClass") && arguments.length == 1 && (arguments[0] == null || arguments[0] instanceof MetaClass)) {
             resolveTarget = false;
         }
         return delegate.invokeMethod(resolveTarget ? getProxyTarget() : o, methodName, arguments);
@@ -139,7 +139,7 @@ public class ProxyInstanceMetaClass extends DelegatingMetaClass {
     @Override
     public void setProperty(Object object, String property, Object newValue) {
         boolean resolveTarget = true;
-        if(property.equals("metaClass") && (newValue == null || newValue instanceof MetaClass)) {
+        if (property.equals("metaClass") && (newValue == null || newValue instanceof MetaClass)) {
             resolveTarget = false;
         }
         delegate.setProperty(resolveTarget ? getProxyTarget() : object, property, newValue);

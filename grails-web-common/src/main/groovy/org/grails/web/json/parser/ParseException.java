@@ -154,7 +154,7 @@ public class ParseException extends Exception {
         for (int i = 0; i < str.length(); i++) {
             switch (str.charAt(i))
             {
-                case 0 :
+                case 0:
                     break;
                 case '\b':
                     retval.append("\\b");

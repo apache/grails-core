@@ -69,7 +69,6 @@ public abstract class AbstractHibernateCriterionAdapter {
             //add simple size criterions (sizeEq, sizeGt, sizeLt, sizeGe, sizeLe)
             addSizeComparisonCriterionAdapters();
 
-
             //add simple criterions (isNull, isNotNull, isEmpty, isNotEmpty)
             addSimpleCriterionAdapters();
 
@@ -82,14 +81,12 @@ public abstract class AbstractHibernateCriterionAdapter {
             // add subquery adapters (gtAll, geAll, gtSome, ltAll, leAll)
             addSubqueryCriterionAdapters();
 
-
             // add junctions (conjunction, disjunction, negation)
             addJunctionCriterionAdapters();
 
             // add association query adapters
             addAssociationQueryCriterionAdapters();
         }
-
 
         initialized = true;
     }
@@ -108,21 +105,21 @@ public abstract class AbstractHibernateCriterionAdapter {
         criterionAdaptors.put(Query.GreaterThanEqualsAll.class, new CriterionAdaptor<Query.GreaterThanEqualsAll>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.GreaterThanEqualsAll criterion, String alias) {
-                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery,criterion.getValue());
+                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery, criterion.getValue());
                 return Property.forName(getPropertyName(criterion, alias)).geAll(detachedCriteria);
             }
         });
         criterionAdaptors.put(Query.LessThanAll.class, new CriterionAdaptor<Query.LessThanAll>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.LessThanAll criterion, String alias) {
-                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery,criterion.getValue());
+                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery, criterion.getValue());
                 return Property.forName(getPropertyName(criterion, alias)).ltAll(detachedCriteria);
             }
         });
         criterionAdaptors.put(Query.LessThanEqualsAll.class, new CriterionAdaptor<Query.LessThanEqualsAll>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.LessThanEqualsAll criterion, String alias) {
-                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery,criterion.getValue());
+                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery, criterion.getValue());
                 return Property.forName(getPropertyName(criterion, alias)).leAll(detachedCriteria);
             }
         });
@@ -130,28 +127,28 @@ public abstract class AbstractHibernateCriterionAdapter {
         criterionAdaptors.put(Query.GreaterThanSome.class, new CriterionAdaptor<Query.GreaterThanSome>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.GreaterThanSome criterion, String alias) {
-                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery,criterion.getValue());
+                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery, criterion.getValue());
                 return Property.forName(getPropertyName(criterion, alias)).gtSome(detachedCriteria);
             }
         });
         criterionAdaptors.put(Query.GreaterThanEqualsSome.class, new CriterionAdaptor<Query.GreaterThanEqualsSome>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.GreaterThanEqualsSome criterion, String alias) {
-                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery,criterion.getValue());
+                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery, criterion.getValue());
                 return Property.forName(getPropertyName(criterion, alias)).geSome(detachedCriteria);
             }
         });
         criterionAdaptors.put(Query.LessThanSome.class, new CriterionAdaptor<Query.LessThanSome>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.LessThanSome criterion, String alias) {
-                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery,criterion.getValue());
+                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery, criterion.getValue());
                 return Property.forName(getPropertyName(criterion, alias)).ltSome(detachedCriteria);
             }
         });
         criterionAdaptors.put(Query.LessThanEqualsSome.class, new CriterionAdaptor<Query.LessThanEqualsSome>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.LessThanEqualsSome criterion, String alias) {
-                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery,criterion.getValue());
+                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery, criterion.getValue());
                 return Property.forName(getPropertyName(criterion, alias)).leSome(detachedCriteria);
             }
         });
@@ -159,7 +156,7 @@ public abstract class AbstractHibernateCriterionAdapter {
         criterionAdaptors.put(Query.NotIn.class, new CriterionAdaptor<Query.NotIn>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.NotIn criterion, String alias) {
-                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery,criterion.getSubquery());
+                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery, criterion.getSubquery());
                 return Property.forName(getPropertyName(criterion, alias)).notIn(detachedCriteria);
             }
         });
@@ -172,7 +169,7 @@ public abstract class AbstractHibernateCriterionAdapter {
                 if (subquery.getAlias() == null) {
                     subqueryAlias = criterion.getSubquery().getPersistentEntity().getJavaClass().getSimpleName() + ALIAS;
                 }
-                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery,subquery, subqueryAlias);
+                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery, subquery, subqueryAlias);
                 return Subqueries.exists(detachedCriteria);
             }
         });
@@ -180,7 +177,7 @@ public abstract class AbstractHibernateCriterionAdapter {
         criterionAdaptors.put(Query.NotExists.class, new CriterionAdaptor<Query.NotExists>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.NotExists criterion, String alias) {
-                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery,criterion.getSubquery());
+                DetachedCriteria detachedCriteria = toHibernateDetachedCriteria(hibernateQuery, criterion.getSubquery());
                 return Subqueries.notExists(detachedCriteria);
             }
         });
@@ -191,10 +188,10 @@ public abstract class AbstractHibernateCriterionAdapter {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.Criterion criterion, String alias) {
                 DetachedAssociationCriteria<?> existing = (DetachedAssociationCriteria<?>) criterion;
-                if(existing.getAlias() == null) {
+                if (existing.getAlias() == null) {
                     alias = hibernateQuery.handleAssociationQuery(existing.getAssociation(), existing.getCriteria());
                 }
-                else{
+                else {
                     alias = hibernateQuery.handleAssociationQuery(existing.getAssociation(), existing.getCriteria(), existing.getAlias());
                 }
                 Association association = existing.getAssociation();
@@ -246,7 +243,7 @@ public abstract class AbstractHibernateCriterionAdapter {
         criterionAdaptors.put(Query.Negation.class, new CriterionAdaptor<Query.Negation>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.Negation criterion, String alias) {
-                CriterionAdaptor<Query.Disjunction> adapter = (CriterionAdaptor<Query.Disjunction>)criterionAdaptors.get(Query.Disjunction.class);
+                CriterionAdaptor<Query.Disjunction> adapter = (CriterionAdaptor<Query.Disjunction>) criterionAdaptors.get(Query.Disjunction.class);
                 return Restrictions.not(adapter.toHibernateCriterion(hibernateQuery, new Query.Disjunction(criterion.getCriteria()), alias));
             }
         });
@@ -261,14 +258,13 @@ public abstract class AbstractHibernateCriterionAdapter {
             }
         });
 
-
         criterionAdaptors.put(Query.In.class, new CriterionAdaptor() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.Criterion criterion, String alias) {
                 Query.In inListQuery = (Query.In) criterion;
                 QueryableCriteria subquery = inListQuery.getSubquery();
-                if(subquery != null) {
-                    return Property.forName(getPropertyName(criterion,alias)).in( toHibernateDetachedCriteria(hibernateQuery, subquery) );
+                if (subquery != null) {
+                    return Property.forName(getPropertyName(criterion, alias)).in(toHibernateDetachedCriteria(hibernateQuery, subquery));
                 }
                 else {
                     return Restrictions.in(getPropertyName(criterion, alias), inListQuery.getValues());
@@ -384,7 +380,7 @@ public abstract class AbstractHibernateCriterionAdapter {
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.SizeEquals criterion, String alias) {
                 String propertyName = getPropertyName(criterion, alias);
                 Object value = criterion.getValue();
-                int size = value instanceof Number ? ((Number)value).intValue() : Integer.parseInt(value.toString());
+                int size = value instanceof Number ? ((Number) value).intValue() : Integer.parseInt(value.toString());
                 return Restrictions.sizeEq(propertyName, size);
             }
         });
@@ -394,7 +390,7 @@ public abstract class AbstractHibernateCriterionAdapter {
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.SizeGreaterThan criterion, String alias) {
                 String propertyName = getPropertyName(criterion, alias);
                 Object value = criterion.getValue();
-                int size = value instanceof Number ? ((Number)value).intValue() : Integer.parseInt(value.toString());
+                int size = value instanceof Number ? ((Number) value).intValue() : Integer.parseInt(value.toString());
                 return Restrictions.sizeGt(propertyName, size);
             }
         });
@@ -404,7 +400,7 @@ public abstract class AbstractHibernateCriterionAdapter {
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.SizeGreaterThanEquals criterion, String alias) {
                 String propertyName = getPropertyName(criterion, alias);
                 Object value = criterion.getValue();
-                int size = value instanceof Number ? ((Number)value).intValue() : Integer.parseInt(value.toString());
+                int size = value instanceof Number ? ((Number) value).intValue() : Integer.parseInt(value.toString());
                 return Restrictions.sizeGe(propertyName, size);
             }
         });
@@ -414,7 +410,7 @@ public abstract class AbstractHibernateCriterionAdapter {
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.SizeLessThan criterion, String alias) {
                 String propertyName = getPropertyName(criterion, alias);
                 Object value = criterion.getValue();
-                int size = value instanceof Number ? ((Number)value).intValue() : Integer.parseInt(value.toString());
+                int size = value instanceof Number ? ((Number) value).intValue() : Integer.parseInt(value.toString());
                 return Restrictions.sizeLt(propertyName, size);
             }
         });
@@ -424,7 +420,7 @@ public abstract class AbstractHibernateCriterionAdapter {
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.SizeLessThanEquals criterion, String alias) {
                 String propertyName = getPropertyName(criterion, alias);
                 Object value = criterion.getValue();
-                int size = value instanceof Number ? ((Number)value).intValue() : Integer.parseInt(value.toString());
+                int size = value instanceof Number ? ((Number) value).intValue() : Integer.parseInt(value.toString());
                 return Restrictions.sizeLe(propertyName, size);
             }
         });
@@ -442,7 +438,7 @@ public abstract class AbstractHibernateCriterionAdapter {
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.Equals criterion, String alias) {
                 String propertyName = getPropertyName(criterion, alias);
                 Object value = criterion.getValue();
-                if(value instanceof DetachedCriteria) {
+                if (value instanceof DetachedCriteria) {
                     return Property.forName(propertyName).eq((DetachedCriteria) value);
                 }
                 return Restrictions.eq(propertyName, value);
@@ -475,7 +471,7 @@ public abstract class AbstractHibernateCriterionAdapter {
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.GreaterThanEquals criterion, String alias) {
                 String propertyName = getPropertyName(criterion, alias);
                 Object value = criterion.getValue();
-                if(value instanceof DetachedCriteria) {
+                if (value instanceof DetachedCriteria) {
                     return Property.forName(propertyName).ge((DetachedCriteria) value);
                 }
                 return Restrictions.ge(propertyName, value);
@@ -507,7 +503,6 @@ public abstract class AbstractHibernateCriterionAdapter {
 
     /** utility methods to group and clean up the initialization of the Criterion Adapters**/
     protected abstract Criterion createRlikeExpression(String propertyName, String pattern);
-
 
     protected String getPropertyName(Query.Criterion criterion, String alias) {
         return calculatePropertyName(((Query.PropertyNameCriterion) criterion).getProperty(), alias);
@@ -548,7 +543,6 @@ public abstract class AbstractHibernateCriterionAdapter {
         }
     }
 
-
     public org.hibernate.criterion.Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.Criterion criterion, String alias) {
         final CriterionAdaptor criterionAdaptor = criterionAdaptors.get(criterion.getClass());
         if (criterionAdaptor != null) {
@@ -556,7 +550,6 @@ public abstract class AbstractHibernateCriterionAdapter {
         }
         return null;
     }
-
 
     protected abstract org.hibernate.criterion.DetachedCriteria toHibernateDetachedCriteria(AbstractHibernateQuery query, QueryableCriteria<?> queryableCriteria);
 

@@ -33,7 +33,6 @@ import jakarta.persistence.criteria.JoinType;
  */
 public interface BuildableCriteria extends Criteria {
 
-
     /**
      * @return The class the criteria applies to
      */
@@ -71,6 +70,7 @@ public interface BuildableCriteria extends Criteria {
      * @return This criteria
      */
     BuildableCriteria join(String property, JoinType joinType);
+
     /**
      * Whether to select on an association
      *

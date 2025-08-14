@@ -19,7 +19,6 @@
 
 package org.grails.datastore.gorm.validation.constraints;
 
-
 import org.apache.commons.validator.routines.EmailValidator;
 
 import org.springframework.context.MessageSource;
@@ -62,7 +61,6 @@ public class EmailConstraint extends AbstractConstraint {
 
         return constraintParameter;
     }
-
 
     public String getName() {
         return ConstrainedProperty.EMAIL_CONSTRAINT;

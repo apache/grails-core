@@ -110,7 +110,6 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
 
     private static final String XML_SUFFIX = ".xml";
 
-
     private String[] basenames = new String[0];
 
     private String defaultEncoding;
@@ -139,7 +138,6 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
 
     private final ConcurrentMap<String, CacheEntry<Resource>> cachedResources = new ConcurrentHashMap<String, CacheEntry<Resource>>();
 
-
     /**
      * Set a single basename, following the basic ResourceBundle convention of
      * not specifying file extension or language codes, but in contrast to
@@ -163,14 +161,14 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
      * @param basenames the basenames of the bundle
      * @return a list with all codes from valid registered bundles
      */
-    public Set<String> getBundleCodes(Locale locale,String...basenames){
+    public Set<String> getBundleCodes(Locale locale, String... basenames) {
         List<String> validBaseNames = getValidBasenames(basenames);
 
         Set<String> codes = new HashSet<>();
-        for(String basename: validBaseNames){
-            List<Pair<String, Resource>> filenamesAndResources = calculateAllFilenames(basename,locale);
+        for (String basename: validBaseNames) {
+            List<Pair<String, Resource>> filenamesAndResources = calculateAllFilenames(basename, locale);
             for (Pair<String, Resource> filenameAndResource : filenamesAndResources) {
-                if(filenameAndResource.getbValue() != null) {
+                if (filenameAndResource.getbValue() != null) {
                     PropertiesHolder propHolder = getProperties(filenameAndResource.getaValue(), filenameAndResource.getbValue());
                     codes.addAll(propHolder.getProperties().stringPropertyNames());
                 }
@@ -179,11 +177,11 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
         return codes;
     }
 
-    protected List<String> getValidBasenames(String[] basenames){
+    protected List<String> getValidBasenames(String[] basenames) {
         List<String> validBaseNames = new LinkedList<>();
-        for(String basename:basenames){
-            for(int i=0;i<this.basenames.length;i++){
-                if(basenames[i].equals(basename)){
+        for (String basename:basenames) {
+            for (int i = 0; i < this.basenames.length; i++) {
+                if (basenames[i].equals(basename)) {
                     validBaseNames.add(basename);
                     break;
                 }
@@ -276,7 +274,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
      */
     public void setCacheSeconds(int cacheSeconds) {
         this.cacheMillis = (cacheSeconds * 1000);
-        if(fileCacheMillis==Long.MIN_VALUE) {
+        if (fileCacheMillis == Long.MIN_VALUE) {
             this.fileCacheMillis = this.cacheMillis;
         }
     }
@@ -321,7 +319,6 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
         this.resourceLoader = (resourceLoader != null ? resourceLoader : new DefaultResourceLoader());
     }
 
-
     /**
      * Resolves the given message code as key in the retrieved bundle files,
      * returning the value found in the bundle as-is (without MessageFormat parsing).
@@ -339,7 +336,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
             for (String basename : this.basenames) {
                 List<Pair<String, Resource>> filenamesAndResources = calculateAllFilenames(basename, locale);
                 for (Pair<String, Resource> filenameAndResource : filenamesAndResources) {
-                    if(filenameAndResource.getbValue() != null) {
+                    if (filenameAndResource.getbValue() != null) {
                         PropertiesHolder propHolder = getProperties(filenameAndResource.getaValue(), filenameAndResource.getbValue());
                         String result = propHolder.getProperty(code);
                         if (result != null) {
@@ -369,7 +366,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
             for (String basename : this.basenames) {
                 List<Pair<String, Resource>> filenamesAndResources = calculateAllFilenames(basename, locale);
                 for (Pair<String, Resource> filenameAndResource : filenamesAndResources) {
-                    if(filenameAndResource.getbValue() != null) {
+                    if (filenameAndResource.getbValue() != null) {
                         PropertiesHolder propHolder = getProperties(filenameAndResource.getaValue(), filenameAndResource.getbValue());
                         MessageFormat result = propHolder.getMessageFormat(code, locale);
                         if (result != null) {
@@ -381,7 +378,6 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
         }
         return null;
     }
-
 
     /**
      * Get a PropertiesHolder that contains the actually visible properties
@@ -401,7 +397,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
                     List<Pair<String, Resource>> filenamesAndResources = calculateAllFilenames(basenames[i], locale);
                     for (int j = filenamesAndResources.size() - 1; j >= 0; j--) {
                         Pair<String, Resource> filenameAndResource = filenamesAndResources.get(j);
-                        if(filenameAndResource.getbValue() != null) {
+                        if (filenameAndResource.getbValue() != null) {
                             PropertiesHolder propHolder = getProperties(filenameAndResource.getaValue(), filenameAndResource.getbValue());
                             mergedProps.putAll(propHolder.getProperties());
                         }
@@ -439,8 +435,8 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
                     }
                 }
                 filenames.add(basename);
-                List<Pair<String, Resource>> filenamesAndResources = new ArrayList<Pair<String,Resource>>(filenames.size());
-                for(String filename : filenames) {
+                List<Pair<String, Resource>> filenamesAndResources = new ArrayList<Pair<String, Resource>>(filenames.size());
+                for (String filename : filenames) {
                     filenamesAndResources.add(new Pair<String, Resource>(filename, locateResource(filename)));
                 }
                 return filenamesAndResources;
@@ -485,7 +481,6 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
         return result;
     }
 
-
     /**
      * Get a PropertiesHolder for the given filename, either from the
      * cache or freshly loaded.
@@ -515,14 +510,13 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
         @Override
         protected PropertiesHolder updateValue(PropertiesHolder oldValue, Callable<PropertiesHolder> updater, Object cacheRequestObject)
                 throws Exception {
-            if(oldValue != null) {
+            if (oldValue != null) {
                 oldValue.update();
                 return oldValue;
             }
             return updater.call();
         }
     }
-
 
     /**
      * Load the properties from the given resource.
@@ -569,7 +563,6 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
         }
     }
 
-
     /**
      * Clear the resource bundle cache.
      * Subsequent resolve calls will lead to reloading of the properties files.
@@ -611,7 +604,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
 
     protected Resource locateResourceWithoutCache(String filename) {
         Resource resource = resourceLoader.getResource(org.grails.io.support.ResourceLoader.CLASSPATH_URL_PREFIX + filename + PROPERTIES_SUFFIX);
-        if(!resource.exists()) {
+        if (!resource.exists()) {
             resource = resourceLoader.getResource(filename + PROPERTIES_SUFFIX);
         }
         if (!resource.exists()) {
@@ -657,13 +650,13 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
         }
 
         private boolean doUpdate(boolean initialization) {
-            if(filename == null) {
+            if (filename == null) {
                 return false;
             }
-            if(!initialization && cacheMillis >= 0) {
+            if (!initialization && cacheMillis >= 0) {
                 resource = locateResource(filename);
             }
-            if(resource != null) {
+            if (resource != null) {
                 long newFileTimestamp;
                 try {
                     newFileTimestamp = resource.lastModified();

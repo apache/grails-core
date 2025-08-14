@@ -35,7 +35,7 @@ import org.grails.web.converters.marshaller.ObjectMarshaller;
  * @author Siegfried Puchbauer
  * @since 1.1
  */
-@SuppressWarnings({"unchecked","rawtypes"})
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class ConvertersConfigurationHolder {
 
     public static final String CONVERTERS_DEFAULT_ENCODING = "UTF-8";
@@ -62,7 +62,7 @@ public class ConvertersConfigurationHolder {
         return new ThreadLocal<Map<Class<? extends Converter>, ConverterConfiguration>>() {
             protected Map<java.lang.Class<? extends Converter>, ConverterConfiguration> initialValue() {
                 return new HashMap<Class<? extends Converter>, ConverterConfiguration>();
-            };
+            }
         };
     }
 
@@ -85,7 +85,7 @@ public class ConvertersConfigurationHolder {
         getInstance().defaultConfiguration.put(c, new DefaultConverterConfiguration<C>(om));
     }
 
-    private static ConvertersConfigurationHolder getInstance() throws ConverterException{
+    private static ConvertersConfigurationHolder getInstance() throws ConverterException {
         return INSTANCE;
     }
 
@@ -96,7 +96,7 @@ public class ConvertersConfigurationHolder {
             if (cfg == null) {
                 cfg = new DefaultConverterConfiguration();
                 ConverterConfiguration<C> existing = getInstance().defaultConfiguration.putIfAbsent(converterClass, cfg);
-                if(existing != null) {
+                if (existing != null) {
                     cfg = existing;
                 }
             }

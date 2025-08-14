@@ -46,7 +46,7 @@ public class GrailsNameUtils {
      */
     public static String getSetterName(String propertyName) {
         final String suffix = getSuffixForGetterOrSetter(propertyName);
-        return PROPERTY_SET_PREFIX+suffix;
+        return PROPERTY_SET_PREFIX + suffix;
     }
 
     /**
@@ -83,7 +83,7 @@ public class GrailsNameUtils {
             throw new IllegalArgumentException("Argument [logicalName] cannot be null or blank");
         }
 
-        String className = logicalName.substring(0,1).toUpperCase(Locale.ENGLISH) + logicalName.substring(1);
+        String className = logicalName.substring(0, 1).toUpperCase(Locale.ENGLISH) + logicalName.substring(1);
         if (trailingName != null) {
             className = className + trailingName;
         }
@@ -108,7 +108,7 @@ public class GrailsNameUtils {
      */
     public static String getFullClassName(String className) {
         final int i = className.indexOf('$');
-        if(i > -1) {
+        if (i > -1) {
             className = className.substring(0, i);
         }
         return className;
@@ -162,7 +162,7 @@ public class GrailsNameUtils {
         if (isBlank(name)) return name;
 
         if (name.indexOf('-') == -1) {
-            return name.substring(0,1).toUpperCase() + name.substring(1);
+            return name.substring(0, 1).toUpperCase() + name.substring(1);
         }
 
         StringBuilder buf = new StringBuilder();
@@ -199,7 +199,7 @@ public class GrailsNameUtils {
         }
 
         String shortName = getShortName(name);
-        if (shortName.indexOf(trailingName) == - 1) {
+        if (shortName.indexOf(trailingName) == -1) {
             return name;
         }
 
@@ -266,7 +266,7 @@ public class GrailsNameUtils {
             return name;
         }
 
-        String propertyName = name.substring(0,1).toLowerCase(Locale.ENGLISH) + name.substring(1);
+        String propertyName = name.substring(0, 1).toLowerCase(Locale.ENGLISH) + name.substring(1);
         if (propertyName.indexOf(' ') > -1) {
             propertyName = propertyName.replaceAll("\\s", "");
         }
@@ -346,7 +346,7 @@ public class GrailsNameUtils {
         }
 
         if (name.endsWith(".groovy")) {
-            name = name.substring(0, name.length()-7);
+            name = name.substring(0, name.length() - 7);
         }
         return getNaturalName(name).replaceAll("\\s", "-").toLowerCase();
     }
@@ -411,13 +411,13 @@ public class GrailsNameUtils {
                 }
                 else if (w.length() > 1 && Character.isUpperCase(w.charAt(w.length() - 1))) {
                     w = "";
-                    words.add(++i,w);
+                    words.add(++i, w);
                 }
 
                 words.set(i, w + c);
             }
             else if (Character.isUpperCase(c)) {
-                if ((i == 0 && w.length() == 0) || (Character.isUpperCase(w.charAt(w.length() - 1)) && Character.isUpperCase(chars[j-1]))) {
+                if ((i == 0 && w.length() == 0) || (Character.isUpperCase(w.charAt(w.length() - 1)) && Character.isUpperCase(chars[j - 1]))) {
                     words.set(i, w + c);
                 }
                 else {
@@ -464,7 +464,6 @@ public class GrailsNameUtils {
         return getPropertyNameConvention(object, suffix);
     }
 
-
     /**
      * Test whether the give package name is a valid Java package
      *
@@ -472,15 +471,16 @@ public class GrailsNameUtils {
      * @return True if it is valid
      */
     public static boolean isValidJavaPackage(String packageName) {
-        if(isBlank(packageName)) return false;
+        if (isBlank(packageName)) return false;
         final String[] parts = packageName.split("\\.");
         for (String part : parts) {
-            if(!isValidJavaIdentifier(part)) {
+            if (!isValidJavaIdentifier(part)) {
                 return false;
             }
         }
         return true;
     }
+
     /**
      * Test whether the given name is a valid Java identifier
      *
@@ -488,21 +488,22 @@ public class GrailsNameUtils {
      * @return True if it is
      */
     public static boolean isValidJavaIdentifier(String name) {
-        if(isBlank(name)) return false;
+        if (isBlank(name)) return false;
 
         final char[] chars = name.toCharArray();
-        if(!Character.isJavaIdentifierStart(chars[0])) {
+        if (!Character.isJavaIdentifierStart(chars[0])) {
             return false;
         }
 
         for (char c : chars) {
-            if(!Character.isJavaIdentifierPart(c)) {
+            if (!Character.isJavaIdentifierPart(c)) {
                 return false;
             }
         }
 
         return true;
     }
+
     /**
      * Returns an appropriate property name for the given object. If the object is a collection will append List, Set, Collection or Map to the property name
      * @param object The object
@@ -510,7 +511,7 @@ public class GrailsNameUtils {
      * @return The property name convention
      */
     public static String getPropertyNameConvention(Object object, String suffix) {
-        if(object != null) {
+        if (object != null) {
             Class<?> type = object.getClass();
             if (type.isArray()) {
                 return getPropertyName(type.getComponentType()) + suffix + "Array";
@@ -523,17 +524,17 @@ public class GrailsNameUtils {
                 }
 
                 Object first = coll.iterator().next();
-                if(coll instanceof List) {
+                if (coll instanceof List) {
                     return getPropertyName(first.getClass()) + suffix + "List";
                 }
-                if(coll instanceof Set) {
+                if (coll instanceof Set) {
                     return getPropertyName(first.getClass()) + suffix + "Set";
                 }
                 return getPropertyName(first.getClass()) + suffix + "Collection";
             }
 
             if (object instanceof Map) {
-                Map map = (Map)object;
+                Map map = (Map) object;
 
                 if (map.isEmpty()) {
                     return "emptyMap";
@@ -620,12 +621,11 @@ public class GrailsNameUtils {
         if (Character.isUpperCase(suffix.charAt(0))) {
             return Character.toLowerCase(suffix.charAt(0)) + suffix.substring(1);
         }
-        if('_' == suffix.charAt(0)) {
+        if ('_' == suffix.charAt(0)) {
             return suffix;
         }
         return null;
     }
-
 
     /**
      * Returns true if the name of the method specified and the number of arguments make it a javabean property getter.
@@ -651,8 +651,8 @@ public class GrailsNameUtils {
      * @return true if it is a javabean property getter
      */
     public static boolean isGetter(String name, Class returnType, Class<?>[] args) {
-        if (name == null || name.length() == 0 || args == null)return false;
-        if (args.length != 0)return false;
+        if (name == null || name.length() == 0 || args == null) return false;
+        if (args.length != 0) return false;
 
         if (name.startsWith("get")) {
             name = name.substring(3);
@@ -706,9 +706,9 @@ public class GrailsNameUtils {
      * @return true if suffix indicates a property name
      */
     protected static boolean isPropertyMethodSuffix(String suffix) {
-        if(suffix.length() == 0) return false;
-        if(!Character.isJavaIdentifierStart(suffix.charAt(0))) return false;
-        if(suffix.length() == 1) return Character.isUpperCase(suffix.charAt(0));
+        if (suffix.length() == 0) return false;
+        if (!Character.isJavaIdentifierStart(suffix.charAt(0))) return false;
+        if (suffix.length() == 1) return Character.isUpperCase(suffix.charAt(0));
         return Character.isUpperCase(suffix.charAt(0)) || Character.isUpperCase(suffix.charAt(1));
     }
 

@@ -39,13 +39,13 @@ public class Near extends MethodExpression {
     public Criterion createCriterion() {
         MongoQuery.Near near = new MongoQuery.Near(propertyName, arguments[0]);
 
-        if(arguments.length > 1) {
+        if (arguments.length > 1) {
             Object o = arguments[1];
-            if(o instanceof Number) {
+            if (o instanceof Number) {
                 near.setMaxDistance(Distance.valueOf(((Number) o).doubleValue()));
             }
             else {
-                near.setMaxDistance((Distance)o);
+                near.setMaxDistance((Distance) o);
             }
         }
         return near;
@@ -53,15 +53,15 @@ public class Near extends MethodExpression {
 
     @Override
     public void setArguments(Object[] arguments) {
-        Assert.isTrue(arguments.length > 0 ,
+        Assert.isTrue(arguments.length > 0,
             "Missing required arguments to findBy*Near query");
 
         Object arg1 = arguments[0];
 
-        Assert.isTrue(((arg1 instanceof Point) || (arg1 instanceof Map) || (arg1 instanceof List)) ,
+        Assert.isTrue(((arg1 instanceof Point) || (arg1 instanceof Map) || (arg1 instanceof List)),
                 "Argument to findBy*Near should either be a Point, coordinate List or a Map");
 
-        if(arguments.length>1) {
+        if (arguments.length > 1) {
             Object arg2 = arguments[1];
             Assert.isTrue(((arg2 instanceof Number) || (arg2 instanceof Distance)),
                     "Second argument to findBy*Near should either the distance: either a number or an instanceof Distance");

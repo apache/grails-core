@@ -118,7 +118,7 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         String dsName = ConnectionSource.DEFAULT.equals(dataSourceName) ? "dataSource" : "dataSource_" + dataSourceName;
         Properties properties = getProperties();
 
-        if(applicationContext.containsBean(dsName)) {
+        if (applicationContext.containsBean(dsName)) {
             properties.put(Environment.DATASOURCE, applicationContext.getBean(dsName));
         }
         properties.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, currentSessionContext.getName());
@@ -239,7 +239,7 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         Object classLoaderObject = getProperties().get(AvailableSettings.CLASSLOADERS);
         ClassLoader appClassLoader;
 
-        if(classLoaderObject instanceof ClassLoader) {
+        if (classLoaderObject instanceof ClassLoader) {
             appClassLoader = (ClassLoader) classLoaderObject;
         }
         else {
@@ -257,26 +257,26 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         List<Class> annotatedClasses = new ArrayList<>();
         for (PersistentEntity persistentEntity : hibernateMappingContext.getPersistentEntities()) {
             Class javaClass = persistentEntity.getJavaClass();
-            if(javaClass.isAnnotationPresent(Entity.class)) {
+            if (javaClass.isAnnotationPresent(Entity.class)) {
                 annotatedClasses.add(javaClass);
             }
         }
 
-        if(!additionalClasses.isEmpty()) {
+        if (!additionalClasses.isEmpty()) {
             for (Class additionalClass : additionalClasses) {
-                if(GormEntity.class.isAssignableFrom(additionalClass)) {
+                if (GormEntity.class.isAssignableFrom(additionalClass)) {
                     hibernateMappingContext.addPersistentEntity(additionalClass);
                 }
             }
         }
 
-        addAnnotatedClasses( annotatedClasses.toArray(new Class[annotatedClasses.size()]));
+        addAnnotatedClasses(annotatedClasses.toArray(new Class[annotatedClasses.size()]));
 
         ClassLoaderService classLoaderService = new ClassLoaderServiceImpl(appClassLoader) {
             @Override
             public <S> Collection<S> loadJavaServices(Class<S> serviceContract) {
-                if(MetadataContributor.class.isAssignableFrom(serviceContract)) {
-                    if(metadataContributor != null) {
+                if (MetadataContributor.class.isAssignableFrom(serviceContract)) {
+                    if (metadataContributor != null) {
                         return (Collection<S>) Arrays.asList(domainBinder, metadataContributor);
                     }
                     else {
@@ -302,10 +302,12 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
 
         setSessionFactoryObserver(new SessionFactoryObserver() {
             private static final long serialVersionUID = 1;
+
             public void sessionFactoryCreated(SessionFactory factory) {}
+
             public void sessionFactoryClosed(SessionFactory factory) {
                 if (serviceRegistry != null) {
-                    ((ServiceRegistryImplementor)serviceRegistry).destroy();
+                    ((ServiceRegistryImplementor) serviceRegistry).destroy();
                 }
             }
         });
@@ -358,7 +360,6 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
     public ServiceRegistry getServiceRegistry() {
         return serviceRegistry;
     }
-
 
     @Override
     protected void reset() {

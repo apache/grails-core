@@ -203,7 +203,7 @@ public class MockApplicationContext extends GroovyObjectSupport implements WebAp
         Map<String, T> newMap = new HashMap<String, T>();
         for (int i = 0; i < beanNames.length; i++) {
             String beanName = beanNames[i];
-            newMap.put(beanName, (T)getBean(beanName));
+            newMap.put(beanName, (T) getBean(beanName));
         }
         return newMap;
     }
@@ -260,7 +260,6 @@ public class MockApplicationContext extends GroovyObjectSupport implements WebAp
         return beanNamesList.toArray(new String[beanNamesList.size()]);
     }
 
-
     public Object getBean(String name) throws BeansException {
         if (!beans.containsKey(name)) {
             throw new NoSuchBeanDefinitionException(name);
@@ -278,13 +277,13 @@ public class MockApplicationContext extends GroovyObjectSupport implements WebAp
             throw new NoSuchBeanDefinitionException(name);
         }
 
-        return (T)beans.get(name);
+        return (T) beans.get(name);
     }
 
     public <T> T getBean(Class<T> tClass) throws BeansException {
         final Map<String, T> map = getBeansOfType(tClass);
         if (map.isEmpty()) {
-            throw new NoSuchBeanDefinitionException(tClass, "No bean found for type: "  + tClass.getName());
+            throw new NoSuchBeanDefinitionException(tClass, "No bean found for type: " + tClass.getName());
         }
         return map.values().iterator().next();
     }
@@ -347,7 +346,7 @@ public class MockApplicationContext extends GroovyObjectSupport implements WebAp
     }
 
     public String getMessage(String code, Object[] args, String defaultMessage, Locale locale) {
-        MessageSource messageSource = (MessageSource)getBean("messageSource");
+        MessageSource messageSource = (MessageSource) getBean("messageSource");
         if (messageSource == null) {
             throw new BeanCreationException("No bean [messageSource] found in MockApplicationContext");
         }
@@ -355,7 +354,7 @@ public class MockApplicationContext extends GroovyObjectSupport implements WebAp
     }
 
     public String getMessage(String code, Object[] args, Locale locale) throws NoSuchMessageException {
-        MessageSource messageSource = (MessageSource)getBean("messageSource");
+        MessageSource messageSource = (MessageSource) getBean("messageSource");
         if (messageSource == null) {
             throw new BeanCreationException("No bean [messageSource] found in MockApplicationContext");
         }
@@ -363,7 +362,7 @@ public class MockApplicationContext extends GroovyObjectSupport implements WebAp
     }
 
     public String getMessage(MessageSourceResolvable resolvable, Locale locale) throws NoSuchMessageException {
-        MessageSource messageSource = (MessageSource)getBean("messageSource");
+        MessageSource messageSource = (MessageSource) getBean("messageSource");
         if (messageSource == null) {
             throw new BeanCreationException("No bean [messageSource] found in MockApplicationContext");
         }
@@ -411,6 +410,7 @@ public class MockApplicationContext extends GroovyObjectSupport implements WebAp
     public AutowireCapableBeanFactory getAutowireCapableBeanFactory() throws IllegalStateException {
         return new DefaultListableBeanFactory();
     }
+
     public ClassLoader getClassLoader() {
         return getClass().getClassLoader();
     }

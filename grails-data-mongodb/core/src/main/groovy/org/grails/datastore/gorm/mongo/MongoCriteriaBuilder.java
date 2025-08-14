@@ -205,6 +205,7 @@ public class MongoCriteriaBuilder extends CriteriaBuilder {
         addToCriteria(new MongoQuery.NearSphere(property, value, maxDistance));
         return this;
     }
+
     /**
      * Geospacial query for values within a given box. A box is defined as a multi-dimensional list in the form
      *
@@ -277,7 +278,7 @@ public class MongoCriteriaBuilder extends CriteriaBuilder {
     }
 
     public Criteria arguments(Map arguments) {
-        ((QueryArgumentsAware)this.query).setArguments(arguments);
+        ((QueryArgumentsAware) this.query).setArguments(arguments);
         return this;
     }
 }

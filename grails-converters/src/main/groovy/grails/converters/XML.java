@@ -123,7 +123,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
 
     public void render(Writer out) throws ConverterException {
         stream = new StreamingMarkupWriter(out, encoding);
-        writer = config.isPrettyPrint() ? new PrettyPrintXMLStreamWriter(stream): new XMLStreamWriter(stream);
+        writer = config.isPrettyPrint() ? new PrettyPrintXMLStreamWriter(stream) : new XMLStreamWriter(stream);
 
         try {
             isRendering = true;
@@ -169,7 +169,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
                 writer.characters(o.toString());
             }
             else if (o instanceof Class<?>) {
-                writer.characters(((Class<?>)o).getName());
+                writer.characters(((Class<?>) o).getName());
             }
             else if ((o.getClass().isPrimitive() && !o.getClass().equals(byte[].class)) ||
                     o instanceof Number || o instanceof Boolean) {

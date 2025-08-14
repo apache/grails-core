@@ -72,7 +72,6 @@ public class ConstrainedPropertyBuilder extends BuilderSupport {
     private boolean allowDynamic = false;
     private boolean defaultNullable = false;
 
-
     public ConstrainedPropertyBuilder(MappingContext mappingContext, ConstraintRegistry constraintRegistry, Class targetClass, Map<String, Object> defaultConstraints) {
         this.targetClass = targetClass;
         this.mappingContext = mappingContext;
@@ -139,15 +138,15 @@ public class ConstrainedPropertyBuilder extends BuilderSupport {
         // we do this so that missing property exception is throw if it doesn't exist
 
         try {
-            String property = (String)name;
+            String property = (String) name;
             DefaultConstrainedProperty cp;
             if (constrainedProperties.containsKey(property)) {
-                cp = (DefaultConstrainedProperty)constrainedProperties.get(property);
+                cp = (DefaultConstrainedProperty) constrainedProperties.get(property);
             }
             else {
                 Class<?> propertyType = determinePropertyType(property);
                 if (propertyType == null) {
-                    if(!allowDynamic) {
+                    if (!allowDynamic) {
                         throw new MissingMethodException(property, targetClass, new Object[]{attributes}, true);
                     }
                     // assume in dynamic use types are strings
@@ -196,8 +195,8 @@ public class ConstrainedPropertyBuilder extends BuilderSupport {
 
             return cp;
         }
-        catch(InvalidPropertyException ipe) {
-            throw new MissingMethodException((String)name,targetClass,new Object[]{ attributes});
+        catch (InvalidPropertyException ipe) {
+            throw new MissingMethodException((String) name, targetClass, new Object[]{ attributes});
         }
     }
 
@@ -207,13 +206,13 @@ public class ConstrainedPropertyBuilder extends BuilderSupport {
         if (IMPORT_FROM_CONSTRAINT.equals(name) && (value instanceof Class)) {
             return handleImportFrom(attributes, (Class) value);
         }
-        throw new MissingMethodException((String)name,targetClass,new Object[]{ attributes,value});
+        throw new MissingMethodException((String) name, targetClass, new Object[]{ attributes, value});
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private Object handleImportFrom(Map attributes, Class importFromClazz) {
 
-        Map importFromConstrainedProperties = new DefaultConstraintEvaluator(constraintRegistry,mappingContext, defaultConstraints )
+        Map importFromConstrainedProperties = new DefaultConstraintEvaluator(constraintRegistry, mappingContext, defaultConstraints)
                                                         .evaluate(importFromClazz, defaultNullable);
 
         List<MetaProperty> metaProperties = classPropertyFetcher.getMetaProperties();
@@ -223,7 +222,7 @@ public class ConstrainedPropertyBuilder extends BuilderSupport {
 
         List<String> resultingPropertyNames = new ArrayList<>();
         for (MetaProperty metaProperty : metaProperties) {
-            if(Modifier.isStatic(metaProperty.getModifiers())) {
+            if (Modifier.isStatic(metaProperty.getModifiers())) {
                 continue;
             }
             String propertyName = metaProperty.getName();
@@ -235,8 +234,8 @@ public class ConstrainedPropertyBuilder extends BuilderSupport {
                 resultingPropertyNames.add(propertyName);
             }
 
-            if (toBeExcludedPropertyNamesParam != null
-                    && isListOfRegexpsContainsString(toBeExcludedPropertyNamesParam, propertyName)) {
+            if (toBeExcludedPropertyNamesParam != null &&
+                    isListOfRegexpsContainsString(toBeExcludedPropertyNamesParam, propertyName)) {
                 resultingPropertyNames.remove(propertyName);
             }
         }
@@ -291,7 +290,7 @@ public class ConstrainedPropertyBuilder extends BuilderSupport {
 
     @Override
     protected Object createNode(Object name, Object value) {
-        return createNode(name,Collections.EMPTY_MAP,value);
+        return createNode(name, Collections.EMPTY_MAP, value);
     }
 
     public Map<String, ConstrainedProperty> getConstrainedProperties() {

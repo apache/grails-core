@@ -253,7 +253,7 @@ public interface JsonGenerator {
          *                  a parameter of the given type
          */
         public <T> Options addConverter(Class<T> type,
-                                        @ClosureParams(value=FromString.class, options={"T","T,String"})
+                                        @ClosureParams(value = FromString.class, options = {"T", "T,String"})
                                                 Closure<?> closure)
         {
             Converter converter = new DefaultJsonGenerator.ClosureConverter(type, closure);

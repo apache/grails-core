@@ -141,7 +141,7 @@ public class DatastoreTransactionManager extends AbstractPlatformTransactionMana
                 try {
                     if (session != null) {
                         Transaction transaction = session.getTransaction();
-                        if(transaction != null && transaction.isActive()) {
+                        if (transaction != null && transaction.isActive()) {
                             transaction.rollback();
                         }
                     }
@@ -163,9 +163,9 @@ public class DatastoreTransactionManager extends AbstractPlatformTransactionMana
         final SessionHolder sessionHolder = txObject.getSessionHolder();
         try {
             Transaction<?> transaction = txObject.getTransaction();
-            if(transaction != null && transaction.isActive() ) {
+            if (transaction != null && transaction.isActive()) {
                 Session session = sessionHolder.getSession();
-                if(!status.isReadOnly()) {
+                if (!status.isReadOnly()) {
                     if (session != null) {
                         if (status.isDebug()) {
                             logger.debug("Flushing Session prior to transaction commit [" + session + "]");
@@ -190,7 +190,7 @@ public class DatastoreTransactionManager extends AbstractPlatformTransactionMana
         final SessionHolder sessionHolder = txObject.getSessionHolder();
         try {
             Transaction<?> transaction = txObject.getTransaction();
-            if(transaction != null && transaction.isActive()) {
+            if (transaction != null && transaction.isActive()) {
                 if (status.isDebug()) {
                     logger.debug("Rolling back Datastore transaction on Session [" +
                             sessionHolder.getSession() + "]");

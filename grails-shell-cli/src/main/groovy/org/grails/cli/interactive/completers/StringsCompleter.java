@@ -56,7 +56,6 @@ public class StringsCompleter
         return strings;
     }
 
-
     public void setStrings(SortedSet<String> strings) {
         this.strings = strings;
     }

@@ -127,7 +127,7 @@ public class ManualEntityOrdering {
                                 if (left != null && right == null) return 1;
                                 if (left == null) return -1;
                                 if ((left instanceof Comparable) && (right instanceof Comparable)) {
-                                    return ((Comparable)left).compareTo(right);
+                                    return ((Comparable) left).compareTo(right);
                                 }
                             }
                         }

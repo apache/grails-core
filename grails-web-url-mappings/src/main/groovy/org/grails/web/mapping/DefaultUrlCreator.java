@@ -170,7 +170,7 @@ public class DefaultUrlCreator implements UrlCreator {
     @SuppressWarnings("unchecked")
     public String createRelativeURL(String controller, String action, String namespace, String pluginName, Map parameterValues, String encoding, String fragment) {
         final String url = createURLInternal(controller, action, parameterValues, false);
-        return  createUrlWithFragment(encoding, fragment, url);
+        return createUrlWithFragment(encoding, fragment, url);
     }
 
     public String createURL(String controller, String action, Map parameterValues, String encoding, String fragment) {
@@ -189,7 +189,7 @@ public class DefaultUrlCreator implements UrlCreator {
             }
             catch (UnsupportedEncodingException ex) {
                 throw new ControllerExecutionException("Error creating URL  [" + url +
-                     "], problem encoding URL fragment [" + fragment + "]: " + ex.getMessage(),ex);
+                     "], problem encoding URL fragment [" + fragment + "]: " + ex.getMessage(), ex);
             }
         }
 
@@ -233,7 +233,7 @@ public class DefaultUrlCreator implements UrlCreator {
                 for (int j = 0; j < array.length; j++) {
                     Object currentValue = array[j];
                     appendRequestParam(actualUriBuf, name, currentValue, encoding);
-                    if (j < (array.length-1)) {
+                    if (j < (array.length - 1)) {
                         actualUriBuf.append(ENTITY_AMPERSAND);
                     }
                 }

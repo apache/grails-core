@@ -107,7 +107,7 @@ public interface Session extends QueryCreator {
      */
     Transaction beginTransaction(TransactionDefinition definition);
 
-   /**
+    /**
      * Obtains the MappingContext instance
      *
      * @return The MappingContext
@@ -270,7 +270,7 @@ public interface Session extends QueryCreator {
      * @param keys The keys
      * @return A list of objects
      */
-    List retrieveAll(Class type, Serializable...keys);
+    List retrieveAll(Class type, Serializable... keys);
 
     /**
      * Creates a query instance for the give type
@@ -322,7 +322,6 @@ public interface Session extends QueryCreator {
      * @return The identifier or null if it cannot be established
      */
     Serializable getObjectIdentifier(Object instance);
-
 
     /**
      * Whether the session is synchronized with a transaction

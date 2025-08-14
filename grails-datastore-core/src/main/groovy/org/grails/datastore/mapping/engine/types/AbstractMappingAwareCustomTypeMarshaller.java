@@ -33,7 +33,7 @@ import org.grails.datastore.mapping.query.Query;
  * @since 1.0
  */
 @SuppressWarnings("rawtypes")
-public abstract class AbstractMappingAwareCustomTypeMarshaller<T, N, Q> implements CustomTypeMarshaller<T, N, Q>{
+public abstract class AbstractMappingAwareCustomTypeMarshaller<T, N, Q> implements CustomTypeMarshaller<T, N, Q> {
 
     private Class<T> targetType;
 
@@ -56,7 +56,7 @@ public abstract class AbstractMappingAwareCustomTypeMarshaller<T, N, Q> implemen
 
     public Object write(PersistentProperty property, T value, N nativeTarget) {
         String targetName = MappingUtils.getTargetKey(property);
-        return writeInternal(property, targetName,value,nativeTarget);
+        return writeInternal(property, targetName, value, nativeTarget);
     }
 
     protected abstract Object writeInternal(PersistentProperty property, String key, T value, N nativeTarget);

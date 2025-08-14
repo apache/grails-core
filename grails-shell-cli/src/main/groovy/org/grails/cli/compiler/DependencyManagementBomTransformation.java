@@ -132,8 +132,8 @@ public class DependencyManagementBomTransformation extends AnnotatedNodeASTTrans
         if (valueExpression instanceof ListExpression) {
             return getConstantExpressions((ListExpression) valueExpression);
         }
-        if (valueExpression instanceof ConstantExpression
-                && ((ConstantExpression) valueExpression).getValue() instanceof String) {
+        if (valueExpression instanceof ConstantExpression &&
+                ((ConstantExpression) valueExpression).getValue() instanceof String) {
             return Arrays.asList((ConstantExpression) valueExpression);
         }
         reportError("@DependencyManagementBom requires an inline constant that is a string or a string array",
@@ -144,8 +144,8 @@ public class DependencyManagementBomTransformation extends AnnotatedNodeASTTrans
     private List<ConstantExpression> getConstantExpressions(ListExpression valueExpression) {
         List<ConstantExpression> expressions = new ArrayList<>();
         for (Expression expression : valueExpression.getExpressions()) {
-            if (expression instanceof ConstantExpression
-                    && ((ConstantExpression) expression).getValue() instanceof String) {
+            if (expression instanceof ConstantExpression &&
+                    ((ConstantExpression) expression).getValue() instanceof String) {
                 expressions.add((ConstantExpression) expression);
             }
             else {

@@ -80,7 +80,6 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     public static final String ARGUMENT_LOCK = "lock";
     public static final Class<?>[] EMPTY_CLASS_ARRAY = {};
 
-
     private static HibernateProxyHandler proxyHandler = new HibernateProxyHandler();
 
     public static void populateArgumentsForCriteria(AbstractHibernateDatastore datastore, Class<?> targetClass, Criteria c, Map argMap, ConversionService conversionService) {
@@ -100,16 +99,16 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         Integer maxParam = null;
         Integer offsetParam = null;
         if (argMap.containsKey(ARGUMENT_MAX)) {
-            maxParam = conversionService.convert(argMap.get(ARGUMENT_MAX),Integer.class);
+            maxParam = conversionService.convert(argMap.get(ARGUMENT_MAX), Integer.class);
         }
         if (argMap.containsKey(ARGUMENT_OFFSET)) {
-            offsetParam = conversionService.convert(argMap.get(ARGUMENT_OFFSET),Integer.class);
+            offsetParam = conversionService.convert(argMap.get(ARGUMENT_OFFSET), Integer.class);
         }
         if (argMap.containsKey(ARGUMENT_FETCH_SIZE)) {
-            c.setFetchSize(conversionService.convert(argMap.get(ARGUMENT_FETCH_SIZE),Integer.class));
+            c.setFetchSize(conversionService.convert(argMap.get(ARGUMENT_FETCH_SIZE), Integer.class));
         }
         if (argMap.containsKey(ARGUMENT_TIMEOUT)) {
-            c.setTimeout(conversionService.convert(argMap.get(ARGUMENT_TIMEOUT),Integer.class));
+            c.setTimeout(conversionService.convert(argMap.get(ARGUMENT_TIMEOUT), Integer.class));
         }
         if (argMap.containsKey(ARGUMENT_FLUSH_MODE)) {
             c.setFlushMode(convertFlushMode(argMap.get(ARGUMENT_FLUSH_MODE)));
@@ -117,10 +116,10 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         if (argMap.containsKey(ARGUMENT_READ_ONLY)) {
             c.setReadOnly(ClassUtils.getBooleanFromMap(ARGUMENT_READ_ONLY, argMap));
         }
-        String orderParam = (String)argMap.get(ARGUMENT_ORDER);
+        String orderParam = (String) argMap.get(ARGUMENT_ORDER);
         Object fetchObj = argMap.get(ARGUMENT_FETCH);
         if (fetchObj instanceof Map) {
-            Map fetch = (Map)fetchObj;
+            Map fetch = (Map) fetchObj;
             for (Object o : fetch.keySet()) {
                 String associationName = (String) o;
                 c.setFetchMode(associationName, getFetchMode(fetch.get(associationName)));
@@ -209,7 +208,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             return null;
         }
         if (object instanceof FlushMode) {
-            return (FlushMode)object;
+            return (FlushMode) object;
         }
         return FlushMode.valueOf(String.valueOf(object));
     }
@@ -222,15 +221,15 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         if (firstDotPos == -1) {
             addOrder(c, sort, order, ignoreCase);
         } else { // nested property
-            String sortHead = sort.substring(0,firstDotPos);
-            String sortTail = sort.substring(firstDotPos+1);
+            String sortHead = sort.substring(0, firstDotPos);
+            String sortTail = sort.substring(firstDotPos + 1);
             PersistentProperty property = getGrailsDomainClassProperty(datastore, targetClass, sortHead);
             if (property instanceof Embedded) {
                 // embedded objects cannot reference entities (at time of writing), so no more recursion needed
                 addOrder(c, sort, order, ignoreCase);
-            } else if(property instanceof Association) {
+            } else if (property instanceof Association) {
                 Criteria subCriteria = c.createCriteria(sortHead);
-                Class<?> propertyTargetClass = ((Association)property).getAssociatedEntity().getJavaClass();
+                Class<?> propertyTargetClass = ((Association) property).getAssociatedEntity().getJavaClass();
                 GrailsHibernateUtil.cacheCriteriaByMapping(datastore, propertyTargetClass, subCriteria);
                 addOrderPossiblyNested(datastore, subCriteria, propertyTargetClass, sortTail, order, ignoreCase); // Recurse on nested sort
             }
@@ -254,9 +253,9 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * assuming targetClass corresponds to a GrailsDomainClass.
      */
     private static PersistentProperty getGrailsDomainClassProperty(AbstractHibernateDatastore datastore, Class<?> targetClass, String propertyName) {
-        PersistentEntity grailsClass = datastore != null ? datastore.getMappingContext().getPersistentEntity( targetClass.getName()) : null;
+        PersistentEntity grailsClass = datastore != null ? datastore.getMappingContext().getPersistentEntity(targetClass.getName()) : null;
         if (grailsClass == null) {
-            throw new IllegalArgumentException("Unexpected: class is not a domain class:"+targetClass.getName());
+            throw new IllegalArgumentException("Unexpected: class is not a domain class:" + targetClass.getName());
         }
         return grailsClass.getPropertyByName(propertyName);
     }
@@ -306,11 +305,11 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      */
     public static void setObjectToReadyOnly(Object target, SessionFactory sessionFactory) {
         Object resource = TransactionSynchronizationManager.getResource(sessionFactory);
-        if(resource != null) {
+        if (resource != null) {
             Session session = sessionFactory.getCurrentSession();
             if (canModifyReadWriteState(session, target)) {
                 if (target instanceof HibernateProxy) {
-                    target = ((HibernateProxy)target).getHibernateLazyInitializer().getImplementation();
+                    target = ((HibernateProxy) target).getHibernateLazyInitializer().getImplementation();
                 }
                 session.setReadOnly(target, true);
                 session.setHibernateFlushMode(FlushMode.MANUAL);
@@ -345,7 +344,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
 
         Object actualTarget = target;
         if (target instanceof HibernateProxy) {
-            actualTarget = ((HibernateProxy)target).getHibernateLazyInitializer().getImplementation();
+            actualTarget = ((HibernateProxy) target).getHibernateLazyInitializer().getImplementation();
         }
 
         session.setReadOnly(actualTarget, false);
@@ -359,7 +358,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      */
     public static void incrementVersion(Object target) {
         MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(target.getClass());
-        if (metaClass.hasProperty(target, GormProperties.VERSION)!=null) {
+        if (metaClass.hasProperty(target, GormProperties.VERSION) != null) {
             Object version = metaClass.getProperty(target, GormProperties.VERSION);
             if (version instanceof Long) {
                 Long newVersion = (Long) version + 1;
@@ -377,7 +376,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     @Deprecated
     public static void ensureCorrectGroovyMetaClass(Object target, Class<?> persistentClass) {
         if (target instanceof GroovyObject) {
-            GroovyObject go = ((GroovyObject)target);
+            GroovyObject go = ((GroovyObject) target);
             if (!go.getMetaClass().getTheClass().equals(persistentClass)) {
                 go.setMetaClass(GroovySystem.getMetaClassRegistry().getMetaClass(persistentClass));
             }
@@ -462,6 +461,4 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     public static String unqualify(final String qualifiedName) {
         return StringHelper.unqualify(qualifiedName);
     }
-
-
 }

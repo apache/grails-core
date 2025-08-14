@@ -78,8 +78,8 @@ public class BeanEntityAccess implements EntityAccess {
     @Override
     public void setProperty(String name, Object value) {
         Class type = getPropertyType(name);
-        if(value == null) {
-            if(!type.isPrimitive()) {
+        if (value == null) {
+            if (!type.isPrimitive()) {
                 beanWrapper.setPropertyValue(name, value);
             }
         }
@@ -96,7 +96,7 @@ public class BeanEntityAccess implements EntityAccess {
             return getProperty(idName);
         }
         PersistentProperty identity = persistentEntity.getIdentity();
-        if(identity != null) {
+        if (identity != null) {
             return getProperty(identity.getName());
         }
         return null;
@@ -118,7 +118,7 @@ public class BeanEntityAccess implements EntityAccess {
         final IdentityMapping identifier = cm.getIdentifier();
         if (identifier != null && identifier.getIdentifierName() != null) {
             String[] identifierName = identifier.getIdentifierName();
-            if(identifierName.length > 0) {
+            if (identifierName.length > 0) {
                 return identifierName[0];
             }
         }

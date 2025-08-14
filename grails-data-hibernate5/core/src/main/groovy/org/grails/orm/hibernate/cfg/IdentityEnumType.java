@@ -63,7 +63,7 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
     protected Class<? extends Enum<?>> enumClass;
     protected BidiEnumMap bidiMap;
     protected AbstractStandardBasicType<?> type;
-    protected  int[] sqlTypes;
+    protected int[] sqlTypes;
 
     public static BidiEnumMap getBidiEnumMap(Class<? extends Enum<?>> cls) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         BidiEnumMap m = ENUM_MAPPINGS.get(cls);
@@ -81,17 +81,16 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
         return m;
     }
 
-
     @SuppressWarnings("unchecked")
     public void setParameterValues(Properties properties) {
         try {
-            enumClass = (Class<? extends Enum<?>>)Thread.currentThread().getContextClassLoader().loadClass(
-                    (String)properties.get(PARAM_ENUM_CLASS));
+            enumClass = (Class<? extends Enum<?>>) Thread.currentThread().getContextClassLoader().loadClass(
+                    (String) properties.get(PARAM_ENUM_CLASS));
             if (LOG.isDebugEnabled()) {
                 LOG.debug(String.format("Building ID-mapping for Enum Class %s", enumClass.getName()));
             }
             bidiMap = getBidiEnumMap(enumClass);
-            type = (AbstractStandardBasicType<?>)typeConfiguration.getBasicTypeRegistry().getRegisteredType(bidiMap.keyType.getName());
+            type = (AbstractStandardBasicType<?>) typeConfiguration.getBasicTypeRegistry().getRegisteredType(bidiMap.keyType.getName());
             if (LOG.isDebugEnabled()) {
                 LOG.debug(String.format("Mapped Basic Type is %s", type));
             }

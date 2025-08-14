@@ -52,7 +52,7 @@ public class DefaultGrailsBootstrapClass extends AbstractGrailsClass implements 
     public Closure<?> getInitClosure() {
         Object obj = ClassPropertyFetcher.getInstancePropertyValue(instance, INIT_CLOSURE);
         if (obj instanceof Closure) {
-            return (Closure<?>)obj;
+            return (Closure<?>) obj;
         }
         return BLANK_CLOSURE;
     }
@@ -60,7 +60,7 @@ public class DefaultGrailsBootstrapClass extends AbstractGrailsClass implements 
     public Closure<?> getDestroyClosure() {
         Object obj = ClassPropertyFetcher.getInstancePropertyValue(instance, DESTROY_CLOSURE);
         if (obj instanceof Closure) {
-            return (Closure<?>)obj;
+            return (Closure<?>) obj;
         }
         return BLANK_CLOSURE;
     }

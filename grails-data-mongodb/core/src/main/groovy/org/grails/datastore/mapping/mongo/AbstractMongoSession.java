@@ -53,6 +53,7 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
     public AbstractMongoSession(MongoDatastore datastore, MappingContext mappingContext, ApplicationEventPublisher publisher) {
         this(datastore, mappingContext, publisher, false);
     }
+
     public AbstractMongoSession(MongoDatastore datastore, MappingContext mappingContext, ApplicationEventPublisher publisher, boolean stateless) {
         super(datastore, mappingContext, publisher, stateless);
         mongoDatastore = datastore;
@@ -90,7 +91,7 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
     public String getDatabase(PersistentEntity entity) {
 
         final String name = mongoDatabases.get(entity);
-        if(name != null) {
+        if (name != null) {
             return name;
         }
         return getDatastore().getDatabaseName(entity);
@@ -137,7 +138,7 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
     }
 
     public MongoClient getNativeInterface() {
-        return ((MongoDatastore)getDatastore()).getMongoClient();
+        return ((MongoDatastore) getDatastore()).getMongoClient();
     }
 
     public DocumentMappingContext getDocumentMappingContext() {
@@ -171,7 +172,7 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
      * @return The name of the previous database
      */
     public String useDatabase(PersistentEntity entity, String databaseName) {
-        if(databaseName == null) {
+        if (databaseName == null) {
             return mongoDatabases.put(entity, getDefaultDatabase());
         }
         else {
@@ -180,7 +181,7 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
     }
 
     public com.mongodb.client.MongoCollection<Document> getCollection(PersistentEntity entity) {
-        if(entity.isRoot()) {
+        if (entity.isRoot()) {
             final String database = getDatabase(entity);
             final String collectionName = getCollectionName(entity);
             return getNativeInterface()

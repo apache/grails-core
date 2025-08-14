@@ -72,7 +72,7 @@ public class UrlMappingsAutoConfiguration {
         if (cacheUrls == null) {
             cacheUrls = !Environment.isDevelopmentMode() && !Environment.getCurrent().isReloadEnabled();
         }
-        return cacheUrls? new CachingLinkGenerator(serverURL) : new DefaultLinkGenerator(serverURL);
+        return cacheUrls ? new CachingLinkGenerator(serverURL) : new DefaultLinkGenerator(serverURL);
     }
 
     @Bean

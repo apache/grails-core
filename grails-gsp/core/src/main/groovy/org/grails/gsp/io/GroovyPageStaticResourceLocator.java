@@ -46,7 +46,7 @@ public class GroovyPageStaticResourceLocator extends DefaultResourceLocator {
         if (resource == null || !resource.exists()) {
             AbstractTemplateVariableBinding binding = findBindingInOutputContext();
             if (binding instanceof GroovyPageBinding) {
-                GrailsPlugin pagePlugin = ((GroovyPageBinding)binding).getPagePlugin();
+                GrailsPlugin pagePlugin = ((GroovyPageBinding) binding).getPagePlugin();
                 if (pagePlugin != null && pluginManager != null) {
                     resource = findResourceForPlugin(pagePlugin, uri);
                 }

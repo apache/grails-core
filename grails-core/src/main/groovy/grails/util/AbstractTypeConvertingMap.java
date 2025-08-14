@@ -60,7 +60,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     }
 
     public boolean equals(Map that) {
-        return equals((Object)that);
+        return equals((Object) that);
     }
 
     @Override
@@ -77,7 +77,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
             return false;
         }
 
-        AbstractTypeConvertingMap thatMap = (AbstractTypeConvertingMap)that;
+        AbstractTypeConvertingMap thatMap = (AbstractTypeConvertingMap) that;
 
         if (wrappedMap == thatMap.wrappedMap) {
             return true;
@@ -122,7 +122,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     public Byte getByte(String name) {
         Object o = get(name);
         if (o instanceof Number) {
-            return ((Number)o).byteValue();
+            return ((Number) o).byteValue();
         }
 
         if (o != null) {
@@ -140,7 +140,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     public Byte getByte(String name, Integer defaultValue) {
         Byte value = getByte(name);
         if (value == null && defaultValue != null) {
-            value = (byte)defaultValue.intValue();
+            value = (byte) defaultValue.intValue();
         }
         return value;
     }
@@ -153,7 +153,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     public Character getChar(String name) {
         Object o = get(name);
         if (o instanceof Character) {
-            return (Character)o;
+            return (Character) o;
         }
 
         if (o != null) {
@@ -166,9 +166,9 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     }
 
     public Character getChar(String name, Integer defaultValue) {
-        Character value=getChar(name);
+        Character value = getChar(name);
         if (value == null && defaultValue != null) {
-            value = (char)defaultValue.intValue();
+            value = (char) defaultValue.intValue();
         }
         return value;
     }
@@ -181,7 +181,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     public Integer getInt(String name) {
         Object o = get(name);
         if (o instanceof Number) {
-            return ((Number)o).intValue();
+            return ((Number) o).intValue();
         }
 
         if (o != null) {
@@ -197,7 +197,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     }
 
     public Integer getInt(String name, Integer defaultValue) {
-        Integer value=getInt(name);
+        Integer value = getInt(name);
         if (value == null) {
             value = defaultValue;
         }
@@ -212,7 +212,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     public Long getLong(String name) {
         Object o = get(name);
         if (o instanceof Number) {
-            return ((Number)o).longValue();
+            return ((Number) o).longValue();
         }
 
         if (o != null) {
@@ -225,7 +225,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     }
 
     public Long getLong(String name, Long defaultValue) {
-        Long value=getLong(name);
+        Long value = getLong(name);
         if (value == null) {
             value = defaultValue;
         }
@@ -240,7 +240,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     public Short getShort(String name) {
         Object o = get(name);
         if (o instanceof Number) {
-            return ((Number)o).shortValue();
+            return ((Number) o).shortValue();
         }
 
         if (o != null) {
@@ -256,7 +256,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     }
 
     public Short getShort(String name, Integer defaultValue) {
-        Short value=getShort(name);
+        Short value = getShort(name);
         if (value == null && defaultValue != null) {
             value = defaultValue.shortValue();
         }
@@ -271,7 +271,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     public Double getDouble(String name) {
         Object o = get(name);
         if (o instanceof Number) {
-            return ((Number)o).doubleValue();
+            return ((Number) o).doubleValue();
         }
 
         if (o != null) {
@@ -287,7 +287,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     }
 
     public Double getDouble(String name, Double defaultValue) {
-        Double value=getDouble(name);
+        Double value = getDouble(name);
         if (value == null) {
             value = defaultValue;
         }
@@ -302,7 +302,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     public Float getFloat(String name) {
         Object o = get(name);
         if (o instanceof Number) {
-            return ((Number)o).floatValue();
+            return ((Number) o).floatValue();
         }
 
         if (o != null) {
@@ -318,7 +318,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     }
 
     public Float getFloat(String name, Float defaultValue) {
-        Float value=getFloat(name);
+        Float value = getFloat(name);
         if (value == null) {
             value = defaultValue;
         }
@@ -333,7 +333,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     public Boolean getBoolean(String name) {
         Object o = get(name);
         if (o instanceof Boolean) {
-            return (Boolean)o;
+            return (Boolean) o;
         }
 
         if (o != null) {
@@ -376,7 +376,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     public Date getDate(String name, String format) {
         Object value = get(name);
         if (value instanceof Date) {
-            return (Date)value;
+            return (Date) value;
         }
 
         if (value != null) {
@@ -423,7 +423,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
 
     private Date getDate(String name, Collection<String> formats) {
         for (String format : formats) {
-            Date date = getDate(name,format);
+            Date date = getDate(name, format);
             if (date != null) return date;
         }
         return null;
@@ -440,10 +440,10 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
             return Collections.emptyList();
         }
         if (paramValues.getClass().isArray()) {
-            return Arrays.asList((Object[])paramValues);
+            return Arrays.asList((Object[]) paramValues);
         }
         if (paramValues instanceof Collection) {
-            return new ArrayList((Collection)paramValues);
+            return new ArrayList((Collection) paramValues);
         }
         return Collections.singletonList(paramValues);
     }

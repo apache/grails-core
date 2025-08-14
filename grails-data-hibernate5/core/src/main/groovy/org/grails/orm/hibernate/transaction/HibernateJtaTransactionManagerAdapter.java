@@ -51,7 +51,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  */
 public class HibernateJtaTransactionManagerAdapter implements TransactionManager {
     PlatformTransactionManager springTransactionManager;
-    ThreadLocal<TransactionStatus> currentTransactionHolder= new ThreadLocal<>();
+    ThreadLocal<TransactionStatus> currentTransactionHolder = new ThreadLocal<>();
 
     public HibernateJtaTransactionManagerAdapter(PlatformTransactionManager springTransactionManager) {
         this.springTransactionManager = springTransactionManager;
@@ -59,7 +59,7 @@ public class HibernateJtaTransactionManagerAdapter implements TransactionManager
 
     @Override
     public void begin() {
-        TransactionDefinition definition=new DefaultTransactionDefinition(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        TransactionDefinition definition = new DefaultTransactionDefinition(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         currentTransactionHolder.set(springTransactionManager.getTransaction(definition));
     }
 
@@ -80,14 +80,14 @@ public class HibernateJtaTransactionManagerAdapter implements TransactionManager
     }
 
     protected TransactionStatus getAndRemoveStatus() {
-        TransactionStatus status=currentTransactionHolder.get();
+        TransactionStatus status = currentTransactionHolder.get();
         currentTransactionHolder.remove();
         return status;
     }
 
     @Override
     public int getStatus() {
-        TransactionStatus status=currentTransactionHolder.get();
+        TransactionStatus status = currentTransactionHolder.get();
         return convertToJtaStatus(status);
     }
 
@@ -112,7 +112,7 @@ public class HibernateJtaTransactionManagerAdapter implements TransactionManager
 
     @Override
     public void resume(Transaction tobj) throws IllegalStateException {
-        TransactionAdapter transaction = (TransactionAdapter)tobj;
+        TransactionAdapter transaction = (TransactionAdapter) tobj;
         // commit the PROPAGATION_NOT_SUPPORTED transaction returned in suspend
         springTransactionManager.commit(transaction.transactionStatus);
     }
@@ -185,9 +185,13 @@ public class HibernateJtaTransactionManagerAdapter implements TransactionManager
                 }
 
                 public void suspend() { }
+
                 public void resume() { }
+
                 public void flush() { }
+
                 public void beforeCommit(boolean readOnly) { }
+
                 public void afterCommit() { }
             });
         }
@@ -205,13 +209,13 @@ public class HibernateJtaTransactionManagerAdapter implements TransactionManager
 
         @Override
         public boolean equals(Object obj) {
-            if(obj == this) {
+            if (obj == this) {
                 return true;
             } else if (obj == null) {
                 return false;
             } else if (obj.getClass() == TransactionAdapter.class) {
-                TransactionAdapter other = (TransactionAdapter)obj;
-                if(other.transactionStatus == this.transactionStatus) {
+                TransactionAdapter other = (TransactionAdapter) obj;
+                if (other.transactionStatus == this.transactionStatus) {
                     return true;
                 } else if (other.transactionStatus != null) {
                     return other.transactionStatus.equals(this.transactionStatus);

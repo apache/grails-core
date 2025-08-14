@@ -62,7 +62,7 @@ public class GroovyPageView extends AbstractGrailsView {
     private static final Log LOG = LogFactory.getLog(GroovyPageView.class);
     protected GroovyPagesTemplateEngine templateEngine;
     private long createTimestamp = System.currentTimeMillis();
-    private static final long LASTMODIFIED_CHECK_INTERVAL =  Long.getLong("grails.gsp.reload.interval", 5000).longValue();
+    private static final long LASTMODIFIED_CHECK_INTERVAL = Long.getLong("grails.gsp.reload.interval", 5000).longValue();
     private ScriptSource scriptSource;
     protected GroovyPageTemplate template;
     public static final String EXCEPTION_MODEL_KEY = "exception";
@@ -76,7 +76,7 @@ public class GroovyPageView extends AbstractGrailsView {
         try {
             out = createResponseWriter(webRequest, response);
             final GroovyPageWritable writable = template.make(model);
-            writable.setShowSource( developmentMode  && request.getParameter("showSource") != null);
+            writable.setShowSource(developmentMode && request.getParameter("showSource") != null);
             writable.writeTo(out);
         }
         catch (Exception e) {
@@ -98,10 +98,10 @@ public class GroovyPageView extends AbstractGrailsView {
      * @param engine The GSP engine
      */
     protected void handleException(Exception exception,
-            GroovyPagesTemplateEngine engine)  {
+            GroovyPagesTemplateEngine engine) {
 
         GrailsUtil.deepSanitize(exception);
-        if(LOG.isDebugEnabled()) {
+        if (LOG.isDebugEnabled()) {
             LOG.debug("Error processing GroovyPageView: " + exception.getMessage(), exception);
         }
         if (exception instanceof GroovyPagesException) {
@@ -169,7 +169,7 @@ public class GroovyPageView extends AbstractGrailsView {
         super.afterPropertiesSet();
         try {
             initTemplate();
-        } catch(Exception e) {
+        } catch (Exception e) {
             handleException(e, templateEngine);
         }
     }

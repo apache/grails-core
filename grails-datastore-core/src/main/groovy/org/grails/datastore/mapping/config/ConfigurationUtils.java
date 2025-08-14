@@ -60,20 +60,20 @@ public class ConfigurationUtils {
     public static <T> Iterable<T> findServices(List servicesList, Class<T> serviceType) {
         List<T> services = new ArrayList<>();
 
-        if(servicesList != null) {
+        if (servicesList != null) {
             for (Object serviceObject : servicesList) {
-                if(serviceType.isInstance(serviceObject)) {
-                    services.add((T)serviceObject);
+                if (serviceType.isInstance(serviceObject)) {
+                    services.add((T) serviceObject);
                 }
                 else {
                     Class serviceTypeClass = null;
-                    if(serviceObject instanceof Class) {
+                    if (serviceObject instanceof Class) {
                         serviceTypeClass = (Class) serviceObject;
                     }
-                    else if(serviceObject instanceof CharSequence) {
-                        serviceTypeClass = ReflectionUtils.forName(serviceObject.toString(),ConfigurationUtils.class.getClassLoader());
+                    else if (serviceObject instanceof CharSequence) {
+                        serviceTypeClass = ReflectionUtils.forName(serviceObject.toString(), ConfigurationUtils.class.getClassLoader());
                     }
-                    if(serviceTypeClass != null && serviceType.isAssignableFrom(serviceTypeClass)) {
+                    if (serviceTypeClass != null && serviceType.isAssignableFrom(serviceTypeClass)) {
                         T serviceInstance = (T) ReflectionUtils.instantiate(serviceTypeClass);
                         services.add(serviceInstance);
                     }

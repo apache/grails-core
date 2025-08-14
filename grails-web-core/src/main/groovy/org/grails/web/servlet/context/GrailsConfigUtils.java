@@ -38,7 +38,6 @@ import org.grails.web.servlet.boostrap.BootstrapArtefactHandler;
  */
 public class GrailsConfigUtils {
 
-
     /**
      * Executes Grails bootstrap classes
      *
@@ -51,6 +50,7 @@ public class GrailsConfigUtils {
                                                ServletContext servletContext) {
         executeGrailsBootstraps(application, webContext, servletContext, null);
     }
+
     /**
      * Executes Grails bootstrap classes
      *
@@ -70,7 +70,7 @@ public class GrailsConfigUtils {
         PersistenceContextInterceptor interceptor = null;
         String[] beanNames = webContext.getBeanNamesForType(PersistenceContextInterceptor.class);
         if (beanNames.length > 0) {
-            interceptor = (PersistenceContextInterceptor)webContext.getBean(beanNames[0]);
+            interceptor = (PersistenceContextInterceptor) webContext.getBean(beanNames[0]);
         }
 
         if (interceptor != null) {
@@ -97,8 +97,6 @@ public class GrailsConfigUtils {
         }
     }
 
-
-
     public static void configureServletContextAttributes(ServletContext servletContext, GrailsApplication application, GrailsPluginManager pluginManager, WebApplicationContext webContext) {
         servletContext.setAttribute(ApplicationAttributes.PLUGIN_MANAGER, pluginManager);
         // use config file locations if available
@@ -108,8 +106,6 @@ public class GrailsConfigUtils {
         servletContext.setAttribute(ApplicationAttributes.APPLICATION_CONTEXT, webContext);
         servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, webContext);
     }
-
-
 
     /**
      * Checks if a Config parameter is true or a System property with the same name is true

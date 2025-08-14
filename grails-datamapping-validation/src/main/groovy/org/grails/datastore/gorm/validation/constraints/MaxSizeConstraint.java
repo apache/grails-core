@@ -40,7 +40,7 @@ public class MaxSizeConstraint extends AbstractConstraint {
 
     public MaxSizeConstraint(Class<?> constraintOwningClass, String constraintPropertyName, Object constraintParameter, MessageSource messageSource) {
         super(constraintOwningClass, constraintPropertyName, constraintParameter, messageSource);
-        this.maxSize = ((Number)this.constraintParameter).intValue() ;
+        this.maxSize = ((Number) this.constraintParameter).intValue();
     }
 
     /**
@@ -84,10 +84,10 @@ public class MaxSizeConstraint extends AbstractConstraint {
             length = Array.getLength(propertyValue);
         }
         else if (propertyValue instanceof Collection<?>) {
-            length = ((Collection<?>)propertyValue).size();
+            length = ((Collection<?>) propertyValue).size();
         }
         else { // String
-            length = ((String)propertyValue).length();
+            length = ((String) propertyValue).length();
         }
 
         if (length > maxSize) {

@@ -77,7 +77,6 @@ public class Restrictions {
         return new Query.In(property, subquery);
     }
 
-
     /**
      * Restricts the property to be in the list of given values
      * @param property The property

@@ -212,7 +212,7 @@ public class AntPathMatcher {
     }
 
     private String[] tokenize(String pattern) {
-        List<String> list = StringGroovyMethods.tokenize((CharSequence)pattern, (CharSequence)pathSeparator);
+        List<String> list = StringGroovyMethods.tokenize((CharSequence) pattern, (CharSequence) pathSeparator);
         return list.toArray(new String[list.size()]);
     }
 
@@ -353,7 +353,7 @@ public class AntPathMatcher {
     }
 
     private boolean hasText(String txt) {
-        return txt != null && txt.length()>0;
+        return txt != null && txt.length() > 0;
     }
 
     /**

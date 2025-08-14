@@ -39,10 +39,10 @@ public abstract class AbstractPersistenceEventListener implements PersistenceEve
      *     org.springframework.context.ApplicationEvent)
      */
     public final void onApplicationEvent(ApplicationEvent e) {
-        if(e instanceof AbstractPersistenceEvent) {
+        if (e instanceof AbstractPersistenceEvent) {
 
-            AbstractPersistenceEvent event = (AbstractPersistenceEvent)e;
-            if(!isValidSource(event)) {
+            AbstractPersistenceEvent event = (AbstractPersistenceEvent) e;
+            if (!isValidSource(event)) {
                 return;
             }
 

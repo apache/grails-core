@@ -65,8 +65,8 @@ public class GrailsWebUtil {
             return null;
         }
 
-        GrailsApplication grailsApplication = (GrailsApplication)servletContext.getAttribute(ApplicationAttributes.APPLICATION);
-        if(grailsApplication != null) {
+        GrailsApplication grailsApplication = (GrailsApplication) servletContext.getAttribute(ApplicationAttributes.APPLICATION);
+        if (grailsApplication != null) {
             return grailsApplication;
         }
 
@@ -88,7 +88,7 @@ public class GrailsWebUtil {
             return null;
         }
 
-        return ((GrailsWebRequest)requestAttributes).getAttributes().getGrailsApplication();
+        return ((GrailsWebRequest) requestAttributes).getAttributes().getGrailsApplication();
     }
 
     /**
@@ -108,7 +108,7 @@ public class GrailsWebUtil {
      */
     public static String getUriFromRequest(HttpServletRequest request) {
         Object includeUri = request.getAttribute("jakarta.servlet.include.request_uri");
-        return includeUri == null ? request.getRequestURI() : (String)includeUri;
+        return includeUri == null ? request.getRequestURI() : (String) includeUri;
     }
 
     /**
@@ -117,7 +117,7 @@ public class GrailsWebUtil {
      * @return The controller or null
      */
     public static GroovyObject getControllerFromRequest(HttpServletRequest request) {
-        return (GroovyObject)request.getAttribute(GrailsApplicationAttributes.CONTROLLER);
+        return (GroovyObject) request.getAttribute(GrailsApplicationAttributes.CONTROLLER);
     }
 
     public static String getContentType(String name, String encoding) {

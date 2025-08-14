@@ -102,8 +102,8 @@ public class GspAutoConfiguration {
     @Configuration
     @Import({TagLibraryLookupRegistrar.class, RemoveDefaultViewResolverRegistrar.class})
     protected static class GspTemplateEngineAutoConfiguration extends AbstractGspConfig {
-        private static final String LOCAL_DIRECTORY_TEMPLATE_ROOT="./src/main/resources/templates";
-        private static final String CLASSPATH_TEMPLATE_ROOT="classpath:/templates";
+        private static final String LOCAL_DIRECTORY_TEMPLATE_ROOT = "./src/main/resources/templates";
+        private static final String CLASSPATH_TEMPLATE_ROOT = "classpath:/templates";
 
         @Value("${spring.gsp.templateRoots:}")
         String[] templateRoots;
@@ -118,7 +118,7 @@ public class GspAutoConfiguration {
         String defaultLayoutName;
 
         @Bean
-        @ConditionalOnMissingBean(name="groovyPagesTemplateEngine")
+        @ConditionalOnMissingBean(name = "groovyPagesTemplateEngine")
         GroovyPagesTemplateEngine groovyPagesTemplateEngine(TagLibraryResolver tagLibraryResolver, TagLibraryLookup tagLibraryLookup, GroovyPagesTemplateRenderer groovyPagesTemplateRenderer) {
             GroovyPagesTemplateEngine templateEngine = new GroovyPagesTemplateEngine();
             templateEngine.setReloadEnabled(gspReloadingEnabled);
@@ -129,12 +129,12 @@ public class GspAutoConfiguration {
         }
 
         @Bean
-        @ConditionalOnMissingBean(name="groovyPageLocator")
+        @ConditionalOnMissingBean(name = "groovyPageLocator")
         GrailsConventionGroovyPageLocator groovyPageLocator() {
-            final List<String> templateRootsCleaned=resolveTemplateRoots();
+            final List<String> templateRootsCleaned = resolveTemplateRoots();
             CachingGrailsConventionGroovyPageLocator pageLocator = new CachingGrailsConventionGroovyPageLocator() {
                 protected List<String> resolveSearchPaths(String uri) {
-                    List<String> paths=new ArrayList<String>(templateRootsCleaned.size());
+                    List<String> paths = new ArrayList<String>(templateRootsCleaned.size());
                     for (String rootPath : templateRootsCleaned) {
                         paths.add(rootPath + cleanUri(uri));
                     }
@@ -165,7 +165,7 @@ public class GspAutoConfiguration {
                     rootPath = rootPath.trim();
                     // remove trailing slash since uri will always be prefixed with a slash
                     if (rootPath.endsWith("/")) {
-                        rootPath = rootPath.substring(0, rootPath.length()-1);
+                        rootPath = rootPath.substring(0, rootPath.length() - 1);
                     }
                     if (!StringUtils.isEmpty(rootPath)) {
                         rootPaths.add(rootPath);
@@ -245,7 +245,7 @@ public class GspAutoConfiguration {
 
     protected static class TagLibraryLookupRegistrar implements ImportBeanDefinitionRegistrar {
 
-        public static final Class<?>[] DEFAULT_TAGLIB_CLASSES=new Class<?>[] { SitemeshTagLib.class, RenderTagLib.class, RenderSitemeshTagLib.class };
+        public static final Class<?>[] DEFAULT_TAGLIB_CLASSES = new Class<?>[] { SitemeshTagLib.class, RenderTagLib.class, RenderSitemeshTagLib.class };
 
         @Override
         public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
@@ -332,7 +332,7 @@ public class GspAutoConfiguration {
         protected Properties createDefaultProperties() {
             Properties defaultProperties = new Properties();
             // scan for spring JSP taglib tld files by default, also scan for
-            defaultProperties.put("grails.gsp.tldScanPattern","classpath*:/META-INF/spring*.tld,classpath*:/META-INF/fmt.tld,classpath*:/META-INF/c.tld,classpath*:/META-INF/c-1_0-rt.tld");
+            defaultProperties.put("grails.gsp.tldScanPattern", "classpath*:/META-INF/spring*.tld,classpath*:/META-INF/fmt.tld,classpath*:/META-INF/c.tld,classpath*:/META-INF/c-1_0-rt.tld");
             return defaultProperties;
         }
     }

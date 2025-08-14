@@ -552,7 +552,7 @@ public class DefaultJsonGenerator implements JsonGenerator {
             if (!(o instanceof ClosureConverter)) {
                 return false;
             }
-            return this.type == ((ClosureConverter)o).type;
+            return this.type == ((ClosureConverter) o).type;
         }
 
         @Override

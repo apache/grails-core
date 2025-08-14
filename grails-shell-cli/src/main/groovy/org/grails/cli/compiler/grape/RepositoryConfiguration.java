@@ -95,8 +95,8 @@ public final class RepositoryConfiguration {
 
     @Override
     public String toString() {
-        return "RepositoryConfiguration [name=" + this.name + ", uri=" + this.uri + ", snapshotsEnabled="
-                + this.snapshotsEnabled + "]";
+        return "RepositoryConfiguration [name=" + this.name + ", uri=" + this.uri + ", snapshotsEnabled=" +
+                this.snapshotsEnabled + "]";
     }
 
 }

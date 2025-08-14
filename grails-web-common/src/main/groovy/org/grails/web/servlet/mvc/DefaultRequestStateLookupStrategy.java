@@ -105,7 +105,7 @@ public class DefaultRequestStateLookupStrategy implements GrailsRequestStateLook
                 }
                 if (grailsApplication != null) {
                     final String controllerName = getControllerNameInternal(req);
-                    return getActionName(grailsApplication,controllerName);
+                    return getActionName(grailsApplication, controllerName);
                 }
             }
         }
@@ -126,7 +126,7 @@ public class DefaultRequestStateLookupStrategy implements GrailsRequestStateLook
         if (controllerName != null) {
             if (grailsApplication == null) {
                 final GrailsWebRequest grailsWebRequest = getWebRequest();
-                if (grailsWebRequest!= null)
+                if (grailsWebRequest != null)
                     grailsApplication = grailsWebRequest.getAttributes().getGrailsApplication();
 
             }

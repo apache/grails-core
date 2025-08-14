@@ -40,7 +40,7 @@ public class EncodesToWriterAdapter implements EncodesToWriter {
 
     @Override
     public void encodeToWriter(CharSequence str, int off, int len, Writer writer, EncodingState encodingState) throws IOException {
-        if(shouldEncodeWith(encoder, encodingState)) {
+        if (shouldEncodeWith(encoder, encodingState)) {
             encoder.encodeToStream(encoder, str, off, len, new WriterEncodedAppender(writer), createNewEncodingState(encoder, encodingState));
         } else {
             CharSequences.writeCharSequence(writer, str, off, len);
@@ -49,7 +49,7 @@ public class EncodesToWriterAdapter implements EncodesToWriter {
 
     @Override
     public void encodeToWriter(char[] buf, int off, int len, Writer writer, EncodingState encodingState) throws IOException {
-        if(shouldEncodeWith(encoder, encodingState)) {
+        if (shouldEncodeWith(encoder, encodingState)) {
             encoder.encodeToStream(encoder, CharSequences.createCharSequence(buf, off, len), 0, len, new WriterEncodedAppender(writer), createNewEncodingState(encoder, encodingState));
         } else {
             writer.write(buf, off, len);
@@ -89,16 +89,16 @@ public class EncodesToWriterAdapter implements EncodesToWriter {
 
     public static EncodesToWriterAdapter createChainingEncodesToWriter(StreamingEncoder baseEncoder, List<StreamingEncoder> additionalEncoders, boolean applyAdditionalFirst) {
         boolean baseEncoderShouldBeApplied = ChainedEncoders.shouldApplyEncoder(baseEncoder);
-        List<StreamingEncoder> allEncoders=new ArrayList<StreamingEncoder>(additionalEncoders.size()+1);
-        if(!applyAdditionalFirst && baseEncoderShouldBeApplied) {
+        List<StreamingEncoder> allEncoders = new ArrayList<StreamingEncoder>(additionalEncoders.size() + 1);
+        if (!applyAdditionalFirst && baseEncoderShouldBeApplied) {
             allEncoders.add(baseEncoder);
         }
-        for(StreamingEncoder additional : additionalEncoders) {
-            if(ChainedEncoders.shouldApplyEncoder(additional)) {
+        for (StreamingEncoder additional : additionalEncoders) {
+            if (ChainedEncoders.shouldApplyEncoder(additional)) {
                 allEncoders.add(additional);
             }
         }
-        if(applyAdditionalFirst && baseEncoderShouldBeApplied) {
+        if (applyAdditionalFirst && baseEncoderShouldBeApplied) {
             allEncoders.add(baseEncoder);
         }
         return new EncodesToWriterAdapter(ChainedEncoder.createFor(allEncoders));

@@ -32,7 +32,7 @@ import org.grails.taglib.AbstractTemplateVariableBinding;
 import org.grails.taglib.TemplateVariableBinding;
 
 public class DefaultOutputContextLookup implements OutputContextLookup, EncodingStateRegistryLookup, Ordered {
-    private ThreadLocal<OutputContext> outputContextThreadLocal = new ThreadLocal<OutputContext>(){
+    private ThreadLocal<OutputContext> outputContextThreadLocal = new ThreadLocal<OutputContext>() {
         @Override
         protected OutputContext initialValue() {
             return new DefaultOutputContext();
@@ -41,7 +41,7 @@ public class DefaultOutputContextLookup implements OutputContextLookup, Encoding
 
     @Override
     public OutputContext lookupOutputContext() {
-        if(EncodingStateRegistryLookupHolder.getEncodingStateRegistryLookup()==null) {
+        if (EncodingStateRegistryLookupHolder.getEncodingStateRegistryLookup() == null) {
             // TODO: improve EncodingStateRegistry solution so that global state doesn't have to be used
             EncodingStateRegistryLookupHolder.setEncodingStateRegistryLookup(this);
         }

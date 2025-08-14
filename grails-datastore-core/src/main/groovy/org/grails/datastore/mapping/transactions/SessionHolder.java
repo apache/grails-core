@@ -51,7 +51,7 @@ public class SessionHolder extends ResourceHolderSupport {
 
     public Transaction<?> getTransaction() {
         final Session session = getSession();
-        if(session != null && session.hasTransaction()) {
+        if (session != null && session.hasTransaction()) {
             return session.getTransaction();
         }
         return null;

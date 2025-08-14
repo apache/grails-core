@@ -31,8 +31,8 @@ import org.springframework.core.io.Resource;
  * @author Graeme Rocher
  * @since 2.0
  */
-public class StaticResourceLocator implements ResourceLocator{
-    private Map<String,Resource> classToResourceMap = new HashMap<String,Resource>();
+public class StaticResourceLocator implements ResourceLocator {
+    private Map<String, Resource> classToResourceMap = new HashMap<String, Resource>();
 
     public void setSearchLocation(String searchLocation) {
         // do nothing

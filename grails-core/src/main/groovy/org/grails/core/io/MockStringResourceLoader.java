@@ -53,6 +53,7 @@ public class MockStringResourceLoader extends MockResourceLoader {
     public void registerMockResource(String location, Resource res) {
         mockResources.put(location, res);
     }
+
     /**
      * Registers a mock resource with the first argument as the location and the second as the contents
      * of the resource.

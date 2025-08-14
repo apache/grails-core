@@ -76,7 +76,7 @@ public class HibernateConnectionSourceFactory extends AbstractHibernateConnectio
     protected MetadataContributor metadataContributor;
     protected MessageSource messageSource = new StaticMessageSource();
 
-    public HibernateConnectionSourceFactory(Class...classes) {
+    public HibernateConnectionSourceFactory(Class... classes) {
         this.persistentClasses = classes;
     }
 
@@ -113,7 +113,7 @@ public class HibernateConnectionSourceFactory extends AbstractHibernateConnectio
     public HibernateMappingContextConfiguration buildConfiguration(String name, ConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource, HibernateConnectionSourceSettings settings) {
         boolean isDefault = ConnectionSource.DEFAULT.equals(name);
 
-        if(mappingContext == null) {
+        if (mappingContext == null) {
             mappingContext = new HibernateMappingContext(settings, applicationContext, persistentClasses);
         }
 
@@ -121,8 +121,8 @@ public class HibernateConnectionSourceFactory extends AbstractHibernateConnectio
         Class<? extends Configuration> configClass = hibernateSettings.getConfigClass();
 
         HibernateMappingContextConfiguration configuration;
-        if(configClass != null) {
-            if( !HibernateMappingContextConfiguration.class.isAssignableFrom(configClass) ) {
+        if (configClass != null) {
+            if (!HibernateMappingContextConfiguration.class.isAssignableFrom(configClass)) {
                 throw new ConfigurationException("The configClass setting must be a subclass for [HibernateMappingContextConfiguration]");
             }
             else {
@@ -133,13 +133,13 @@ public class HibernateConnectionSourceFactory extends AbstractHibernateConnectio
             configuration = new HibernateMappingContextConfiguration();
         }
 
-        if(JakartaValidatorRegistry.isAvailable() && messageSource != null) {
-            ValidatorRegistry registry = new JakartaValidatorRegistry(mappingContext,dataSourceConnectionSource.getSettings(), messageSource );
+        if (JakartaValidatorRegistry.isAvailable() && messageSource != null) {
+            ValidatorRegistry registry = new JakartaValidatorRegistry(mappingContext, dataSourceConnectionSource.getSettings(), messageSource);
             mappingContext.setValidatorRegistry(registry);
             configuration.getProperties().put("jakarta.persistence.validation.factory", registry);
         }
 
-        if(applicationContext != null && applicationContext.containsBean(dataSourceConnectionSource.getName())) {
+        if (applicationContext != null && applicationContext.containsBean(dataSourceConnectionSource.getName())) {
             configuration.setApplicationContext(this.applicationContext);
         }
         else {
@@ -238,7 +238,7 @@ public class HibernateConnectionSourceFactory extends AbstractHibernateConnectio
 
         AbstractClosureEventTriggeringInterceptor eventTriggeringInterceptor;
 
-        if(closureEventTriggeringInterceptorClass == null) {
+        if (closureEventTriggeringInterceptorClass == null) {
             eventTriggeringInterceptor = new ClosureEventTriggeringInterceptor();
         }
         else {
@@ -249,7 +249,7 @@ public class HibernateConnectionSourceFactory extends AbstractHibernateConnectio
 
         try {
             Class<? extends NamingStrategy> namingStrategy = hibernateSettings.getNaming_strategy();
-            if(namingStrategy != null) {
+            if (namingStrategy != null) {
                 GrailsDomainBinder.configureNamingStrategy(name, namingStrategy);
             }
         } catch (Throwable e) {
@@ -258,7 +258,7 @@ public class HibernateConnectionSourceFactory extends AbstractHibernateConnectio
 
         configuration.setEventListeners(hibernateSettings.toHibernateEventListeners(eventTriggeringInterceptor));
         HibernateEventListeners hibernateEventListeners = hibernateSettings.getHibernateEventListeners();
-        configuration.setHibernateEventListeners(this.hibernateEventListeners != null ? this.hibernateEventListeners  : hibernateEventListeners);
+        configuration.setHibernateEventListeners(this.hibernateEventListeners != null ? this.hibernateEventListeners : hibernateEventListeners);
         configuration.setHibernateMappingContext(mappingContext);
         configuration.setDataSourceName(name);
         configuration.setSessionFactoryBeanName(isDefault ? "sessionFactory" : "sessionFactory_" + name);
@@ -269,10 +269,10 @@ public class HibernateConnectionSourceFactory extends AbstractHibernateConnectio
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        if(applicationContext != null) {
+        if (applicationContext != null) {
             this.applicationContext = applicationContext;
             this.messageSource = applicationContext;
-            if (!GrailsVersion.isAtLeastMajorMinor(3,3)) {
+            if (!GrailsVersion.isAtLeastMajorMinor(3, 3)) {
                 SpringDataSourceConnectionSourceFactory springDataSourceConnectionSourceFactory = new SpringDataSourceConnectionSourceFactory();
                 springDataSourceConnectionSourceFactory.setApplicationContext(applicationContext);
                 this.dataSourceConnectionSourceFactory = springDataSourceConnectionSourceFactory;

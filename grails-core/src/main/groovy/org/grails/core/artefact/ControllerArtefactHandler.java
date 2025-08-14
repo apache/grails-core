@@ -45,6 +45,4 @@ public class ControllerArtefactHandler extends ArtefactHandlerAdapter {
     public String getPluginName() {
         return PLUGIN_NAME;
     }
-
-
 }

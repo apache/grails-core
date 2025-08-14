@@ -67,7 +67,6 @@ public class CreditCardConstraint extends AbstractConstraint {
         return constraintParameter;
     }
 
-
     public String getName() {
         return ConstrainedProperty.CREDIT_CARD_CONSTRAINT;
     }

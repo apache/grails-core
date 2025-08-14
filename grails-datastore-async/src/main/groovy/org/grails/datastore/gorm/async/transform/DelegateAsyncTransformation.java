@@ -85,7 +85,7 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
             Expression value = annotationNode.getMember("value");
             if (value instanceof ClassExpression) {
                 ClassNode targetApi = value.getType().getPlainNodeReference();
-                ClassNode classNode = (ClassNode)parent;
+                ClassNode classNode = (ClassNode) parent;
 
                 final String fieldName = '$' + Introspector.decapitalize(targetApi.getNameWithoutPackage());
                 FieldNode fieldNode = classNode.getField(fieldName);
@@ -97,8 +97,8 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
                 applyDelegateAsyncTransform(classNode, targetApi, fieldName);
             }
         }
-        else if(parent instanceof FieldNode) {
-            FieldNode fieldNode = (FieldNode)parent;
+        else if (parent instanceof FieldNode) {
+            FieldNode fieldNode = (FieldNode) parent;
             ClassNode targetApi = fieldNode.getType().getPlainNodeReference();
             ClassNode classNode = fieldNode.getOwner();
             applyDelegateAsyncTransform(classNode, targetApi, fieldNode.getName());
@@ -111,26 +111,25 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
 
         ClassNode promisesClass = ClassHelper.make(Promises.class).getPlainNodeReference();
         MethodNode createPromiseMethodTargetWithDecorators = promisesClass.getDeclaredMethod("createPromise", new Parameter[]{new Parameter(new ClassNode(Closure.class), "c"), new Parameter(new ClassNode(List.class), "c")});
-        Map<String,ClassNode> genericsSpec = createGenericsSpec(classNode);
-        for(MethodNode candidate : methods) {
+        Map<String, ClassNode> genericsSpec = createGenericsSpec(classNode);
+        for (MethodNode candidate : methods) {
             if (isCandidateMethod(candidate)) {
                 MethodNode existingMethod = classNode.getMethod(candidate.getName(), candidate.getParameters());
                 if (existingMethod == null) {
                     List<String> currentMethodGenPlaceholders = genericPlaceholderNames(candidate);
                     ClassNode promiseNode = ClassHelper.make(Promise.class).getPlainNodeReference();
                     ClassNode originalReturnType = correctToGenericsSpecRecurse(genericsSpec, candidate.getReturnType(), currentMethodGenPlaceholders);
-                    if(!originalReturnType.getNameWithoutPackage().equals(VOID)) {
+                    if (!originalReturnType.getNameWithoutPackage().equals(VOID)) {
                         ClassNode returnType = originalReturnType;
-                        if(ClassHelper.isPrimitiveType(originalReturnType.redirect())) {
+                        if (ClassHelper.isPrimitiveType(originalReturnType.redirect())) {
                             returnType = ClassHelper.getWrapper(originalReturnType.redirect());
                         }
-                        if(!OBJECT_CLASS_NODE.equals(returnType)) {
+                        if (!OBJECT_CLASS_NODE.equals(returnType)) {
                             promiseNode.setGenericsTypes(new GenericsType[]{new GenericsType(returnType)});
                         }
                     }
                     final BlockStatement methodBody = new BlockStatement();
                     final BlockStatement promiseBody = new BlockStatement();
-
 
                     final ClosureExpression closureExpression = new ClosureExpression(new Parameter[0], promiseBody);
                     VariableScope variableScope = new VariableScope();
@@ -145,8 +144,8 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
                     MethodCallExpression getDecoratorsMethodCall = new MethodCallExpression(new ClassExpression(delegateAsyncUtilsClassNode), "getPromiseDecorators", getPromiseDecoratorsArguments);
                     getDecoratorsMethodCall.setMethodTarget(getPromiseDecoratorsMethodNode);
 
-                    MethodCallExpression createPromiseWithDecorators = new MethodCallExpression(new ClassExpression(promisesClass), "createPromise",new ArgumentListExpression( closureExpression, getDecoratorsMethodCall));
-                    if(createPromiseMethodTargetWithDecorators != null) {
+                    MethodCallExpression createPromiseWithDecorators = new MethodCallExpression(new ClassExpression(promisesClass), "createPromise", new ArgumentListExpression(closureExpression, getDecoratorsMethodCall));
+                    if (createPromiseMethodTargetWithDecorators != null) {
                         createPromiseWithDecorators.setMethodTarget(createPromiseMethodTargetWithDecorators);
                     }
                     methodBody.addStatement(new ExpressionStatement(createPromiseWithDecorators));
@@ -154,7 +153,7 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
                     final ArgumentListExpression arguments = new ArgumentListExpression();
 
                     Parameter[] parameters = copyParameters(genericsSpec, StaticTypeCheckingSupport.parameterizeArguments(classNode, candidate), currentMethodGenPlaceholders);
-                    for(Parameter p : parameters) {
+                    for (Parameter p : parameters) {
                         p.setClosureSharedVariable(true);
                         variableScope.putReferencedLocalVariable(p);
                         VariableExpression ve = new VariableExpression(p);
@@ -163,13 +162,12 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
                     }
                     MethodCallExpression delegateMethodCall = new MethodCallExpression(new VariableExpression(fieldName), candidate.getName(), arguments);
                     promiseBody.addStatement(new ExpressionStatement(delegateMethodCall));
-                    MethodNode newMethodNode = new MethodNode(candidate.getName(), Modifier.PUBLIC,promiseNode, parameters,null, methodBody);
+                    MethodNode newMethodNode = new MethodNode(candidate.getName(), Modifier.PUBLIC, promiseNode, parameters, null, methodBody);
                     classNode.addMethod(newMethodNode);
                 }
             }
         }
     }
-
 
     private List<String> genericPlaceholderNames(MethodNode candidate) {
         GenericsType[] candidateGenericsTypes = candidate.getGenericsTypes();
@@ -187,14 +185,14 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
 
         ClassNode actualReceiver = receiver;
         List<GenericsType> redirectTypes = new ArrayList<GenericsType>();
-        if (actualReceiver.redirect().getGenericsTypes()!=null) {
-            Collections.addAll(redirectTypes,actualReceiver.redirect().getGenericsTypes());
+        if (actualReceiver.redirect().getGenericsTypes() != null) {
+            Collections.addAll(redirectTypes, actualReceiver.redirect().getGenericsTypes());
         }
         if (!redirectTypes.isEmpty()) {
             GenericsType[] redirectReceiverTypes = redirectTypes.toArray(new GenericsType[redirectTypes.size()]);
 
             GenericsType[] receiverParameterizedTypes = actualReceiver.getGenericsTypes();
-            if (receiverParameterizedTypes==null) {
+            if (receiverParameterizedTypes == null) {
                 receiverParameterizedTypes = redirectReceiverTypes;
             }
 
@@ -207,7 +205,6 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
 
         return copiedReturnType;
     }
-
 
     private static boolean isCandidateMethod(MethodNode declaredMethod) {
         ClassNode groovyMethods = GROOVY_OBJECT_CLASS_NODE;

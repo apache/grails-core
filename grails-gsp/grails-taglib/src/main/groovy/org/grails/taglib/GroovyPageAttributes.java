@@ -44,7 +44,7 @@ public class GroovyPageAttributes extends TypeConvertingMap implements Cloneable
 
     public GroovyPageAttributes(Map map, boolean gspTagSyntaxCall) {
         super(map);
-        this.gspTagSyntaxCall=gspTagSyntaxCall;
+        this.gspTagSyntaxCall = gspTagSyntaxCall;
     }
 
     public boolean isGspTagSyntaxCall() {
@@ -52,7 +52,7 @@ public class GroovyPageAttributes extends TypeConvertingMap implements Cloneable
     }
 
     public void setGspTagSyntaxCall(boolean gspTagSyntaxCall) {
-        this.gspTagSyntaxCall=gspTagSyntaxCall;
+        this.gspTagSyntaxCall = gspTagSyntaxCall;
     }
 
     @Override

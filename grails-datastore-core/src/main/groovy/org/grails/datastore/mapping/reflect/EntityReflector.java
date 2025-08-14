@@ -45,16 +45,19 @@ public interface EntityReflector {
      * @return Obtains the dirty checking state for the given entity
      */
     Map<String, Object> getDirtyCheckingState(Object entity);
+
     /**
      * @return The fast class
      * @deprecated Do not use
      */
     @Deprecated
     FastClass fastClass();
+
     /**
      * @return The identity type
      */
     Class identifierType();
+
     /**
      * @return The name of the identifier
      */
@@ -162,10 +165,12 @@ public interface EntityReflector {
          * @return The getter
          */
         Method setter();
+
         /**
          * @return The property type
          */
         Class propertyType();
+
         /**
          * Writes the property
          *

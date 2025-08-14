@@ -37,8 +37,8 @@ public class RabbitCompilerAutoConfiguration extends CompilerAutoConfiguration {
 
     @Override
     public boolean matches(ClassNode classNode) {
-        return AstUtils.hasAtLeastOneAnnotation(classNode, "EnableRabbit")
-                || AstUtils.hasAtLeastOneAnnotation(classNode, "EnableRabbitMessaging");
+        return AstUtils.hasAtLeastOneAnnotation(classNode, "EnableRabbit") ||
+                AstUtils.hasAtLeastOneAnnotation(classNode, "EnableRabbitMessaging");
     }
 
     @Override

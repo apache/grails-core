@@ -100,8 +100,6 @@ public class CorePluginFinder implements ParentApplicationContextAware {
         return resourceList.toArray(new Resource[resourceList.size()]);
     }
 
-
-
     @SuppressWarnings("rawtypes")
     private void loadCorePluginsFromResources(Resource[] resources) throws IOException {
 
@@ -118,7 +116,7 @@ public class CorePluginFinder implements ParentApplicationContextAware {
 
                     for (String pluginType : ph.pluginTypes) {
                         Class<?> pluginClass = attemptCorePluginClassLoad(pluginType);
-                        if(pluginClass != null) {
+                        if (pluginClass != null) {
                             addPlugin(pluginClass);
                             binaryDescriptors.put(pluginClass, new BinaryGrailsPluginDescriptor(resource, ph.pluginClasses));
                         }
@@ -137,7 +135,6 @@ public class CorePluginFinder implements ParentApplicationContextAware {
         }
     }
 
-
     private Class<?> attemptCorePluginClassLoad(String pluginClassName) {
         try {
             final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
@@ -151,7 +148,6 @@ public class CorePluginFinder implements ParentApplicationContextAware {
         }
         return null;
     }
-
 
     private void addPlugin(Class<?> plugin) {
         foundPluginClasses.add(plugin);
@@ -173,11 +169,11 @@ public class CorePluginFinder implements ParentApplicationContextAware {
 
         @Override
         public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
-            if(localName.equals("type")) {
+            if (localName.equals("type")) {
                 state = PluginParseState.TYPE;
                 buff = new StringBuilder();
             }
-            else if(localName.equals("resource")) {
+            else if (localName.equals("resource")) {
                 state = PluginParseState.RESOURCE;
                 buff = new StringBuilder();
             }

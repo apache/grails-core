@@ -161,7 +161,7 @@ public class GrailsUpdater {
         try {
             File downloadedJar = File.createTempFile(localJarFilename, jarFileExtension);
             String wrapperUrl = repo.getFileUrl(version, remoteJarFilename + jarFileExtension);
-            if(snapshotVersion != null) {
+            if (snapshotVersion != null) {
                 System.out.println("... Using Snapshot URL: " + wrapperUrl);
             }
 

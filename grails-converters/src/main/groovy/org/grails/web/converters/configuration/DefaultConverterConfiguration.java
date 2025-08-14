@@ -62,7 +62,7 @@ public class DefaultConverterConfiguration<C extends Converter> implements Conve
     }
 
     public Converter.CircularReferenceBehaviour getCircularReferenceBehaviour() {
-        return circularReferenceBehaviour != null ? circularReferenceBehaviour : (delegate != null ? delegate.getCircularReferenceBehaviour(): null);
+        return circularReferenceBehaviour != null ? circularReferenceBehaviour : (delegate != null ? delegate.getCircularReferenceBehaviour() : null);
     }
 
     public boolean isPrettyPrint() {

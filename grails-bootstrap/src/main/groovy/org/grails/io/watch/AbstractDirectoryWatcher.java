@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-
 /**
  * Backend for {@link DirectoryWatcher}
  * @author Craig Andrews
@@ -102,8 +101,8 @@ abstract class AbstractDirectoryWatcher implements Runnable {
         }
     }
 
-    protected boolean isValidDirectoryToMonitor(File file){
-        return file.isDirectory() && ! file.isHidden() && !file.getName().startsWith(".");
+    protected boolean isValidDirectoryToMonitor(File file) {
+        return file.isDirectory() && !file.isHidden() && !file.getName().startsWith(".");
     }
 
     protected boolean isValidFileToMonitor(File file, Collection<String> fileExtensions) {

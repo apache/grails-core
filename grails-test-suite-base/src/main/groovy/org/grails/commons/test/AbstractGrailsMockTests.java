@@ -65,8 +65,8 @@ public abstract class AbstractGrailsMockTests extends GroovyTestCase {
         ctx = new MockApplicationContext();
         ctx.registerMockBean(GrailsApplication.CLASS_LOADER_BEAN, gcl);
         onSetUp();
-        ga = new DefaultGrailsApplication(gcl.getLoadedClasses(),gcl);
-        if(ClassUtils.isPresent("Config", gcl)) {
+        ga = new DefaultGrailsApplication(gcl.getLoadedClasses(), gcl);
+        if (ClassUtils.isPresent("Config", gcl)) {
             ConfigObject config = new ConfigSlurper().parse(gcl.loadClass("Config"));
             ga.setConfig(new PropertySourcesConfig(config));
         }

@@ -73,24 +73,26 @@ class GroovyPageOptimizerVisitor extends CodeVisitorSupport {
         thisObjectVariable = new VariableExpression(THISOBJECT, targetGroovyPageNode);
 
         thisObjectDeclaration = new DeclarationExpression(
-                    thisObjectVariable
-                    ,Token.newSymbol(Types.EQUALS, 0, 0)
-                    ,thisObjectMethodCall);
+                thisObjectVariable,
+                Token.newSymbol(Types.EQUALS, 0, 0),
+                thisObjectMethodCall);
     }
 
-// TODO: Research why http://jira.grails.org/browse/GRAILS-8679 happens with this enabled. See ElvisAndClosureGroovyPageTests
-//    @Override
-//    public void visitClosureExpression(ClosureExpression expression) {
-//        innerClosures.push(expression);
-//        introduceThisObjectVariable(expression);
-//        super.visitClosureExpression(expression);
-//        innerClosures.pop();
-//    }
+    /*
+    TODO: Research why http://jira.grails.org/browse/GRAILS-8679 happens with this enabled. See ElvisAndClosureGroovyPageTests
+    @Override
+    public void visitClosureExpression(ClosureExpression expression) {
+        innerClosures.push(expression);
+        introduceThisObjectVariable(expression);
+        super.visitClosureExpression(expression);
+        innerClosures.pop();
+    }
+    */
 
     @SuppressWarnings("unused")
     private void introduceThisObjectVariable(ClosureExpression closureExpression) {
         if (closureExpression.getCode() instanceof BlockStatement) {
-            List<Statement> oldBlock = ((BlockStatement)closureExpression.getCode()).getStatements();
+            List<Statement> oldBlock = ((BlockStatement) closureExpression.getCode()).getStatements();
             BlockStatement newBlock = new BlockStatement();
 
             newBlock.addStatement(new ExpressionStatement(thisObjectDeclaration));
@@ -118,9 +120,9 @@ class GroovyPageOptimizerVisitor extends CodeVisitorSupport {
     }
 
     private boolean isCallFromOutOrCodecOut(MethodCallExpression expression) {
-        return (expression.getObjectExpression().getText().equals(OUT_RECEIVER)
-                || expression.getObjectExpression().getText().equals(EXPRESSIONOUT_RECEIVER))
-                && expression.getMethodAsString().equals(PRINT_METHOD);
+        return (expression.getObjectExpression().getText().equals(OUT_RECEIVER) ||
+                expression.getObjectExpression().getText().equals(EXPRESSIONOUT_RECEIVER)) &&
+                expression.getMethodAsString().equals(PRINT_METHOD);
     }
 
     @SuppressWarnings("unused")
@@ -152,7 +154,7 @@ class GroovyPageOptimizerVisitor extends CodeVisitorSupport {
     }
 
     private boolean isCallFromGroovyPageClass(MethodCallExpression expression) {
-        return expression.getObjectExpression().getText().equals(THIS_RECEIVER)
-                && !groovyPageClassNode.getMethods(expression.getMethodAsString()).isEmpty();
+        return expression.getObjectExpression().getText().equals(THIS_RECEIVER) &&
+                !groovyPageClassNode.getMethods(expression.getMethodAsString()).isEmpty();
     }
 }

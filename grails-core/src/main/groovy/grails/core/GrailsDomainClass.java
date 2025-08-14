@@ -44,6 +44,7 @@ public interface GrailsDomainClass extends GrailsClass {
      * @return Whether to autowire
      */
     boolean isAutowire();
+
     /**
      * @param domainClass
      * @return true if the specifying domain class is on the owning side of a relationship

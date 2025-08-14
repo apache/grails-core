@@ -51,11 +51,9 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
     private static final Logger LOG = LoggerFactory.getLogger(HibernatePersistenceContextInterceptor.class);
     private AbstractHibernateDatastore hibernateDatastore;
 
-
     private static ThreadLocal<Map<String, Boolean>> participate = ThreadLocal.withInitial(HashMap::new);
 
     private static ThreadLocal<Map<String, Integer>> nestingCount = ThreadLocal.withInitial(HashMap::new);
-
 
     private String dataSourceName;
 
@@ -86,7 +84,7 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
      */
     public void destroy() {
         DeferredBindingActions.clear();
-        if(!disconnected.isEmpty()) {
+        if (!disconnected.isEmpty()) {
             disconnected.pop();
         }
         if (getSessionFactory() == null || decNestingCount() > 0 || getParticipate()) {
@@ -121,24 +119,24 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
     public void reconnect() {
         if (getSessionFactory() == null) return;
         Session session = getSession();
-        if(!session.isConnected() && !disconnected.isEmpty()) {
+        if (!session.isConnected() && !disconnected.isEmpty()) {
             try {
                 Connection connection = disconnected.peekLast();
                 getSession().reconnect(connection);
             } catch (IllegalStateException e) {
                 // cannot reconnect on different exception. ignore
-                LOG.debug(e.getMessage(),e);
+                LOG.debug(e.getMessage(), e);
             }
         }
     }
 
     public void flush() {
         if (getSessionFactory() == null) return;
-        if(!getParticipate()) {
-            if(!transactionRequired) {
+        if (!getParticipate()) {
+            if (!transactionRequired) {
                 getSession().flush();
             }
-            else if(TransactionSynchronizationManager.isSynchronizationActive()) {
+            else if (TransactionSynchronizationManager.isSynchronizationActive()) {
                 getSession().flush();
             }
         }

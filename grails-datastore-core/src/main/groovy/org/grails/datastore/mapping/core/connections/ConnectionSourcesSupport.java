@@ -62,7 +62,7 @@ public class ConnectionSourcesSupport {
      */
     public static List<String> getConnectionSourceNames(PersistentEntity entity) {
         final Entity mappedForm = entity.getMapping().getMappedForm();
-        if(mappedForm != null)  {
+        if (mappedForm != null) {
             return mappedForm.getDatasources();
         }
         return DEFAULT_CONNECTION_SOURCE_NAMES;
@@ -77,8 +77,8 @@ public class ConnectionSourcesSupport {
      */
     public static boolean usesConnectionSource(PersistentEntity entity, String connectionSourceName) {
         Class[] interfaces = ClassUtils.getAllInterfacesForClass(entity.getJavaClass());
-        if(isMultiTenant(interfaces)) {
-            return !isMultiTenantExcludedDataSource( entity, connectionSourceName );
+        if (isMultiTenant(interfaces)) {
+            return !isMultiTenantExcludedDataSource(entity, connectionSourceName);
         }
         else {
             List<String> names = getConnectionSourceNames(entity);
@@ -90,7 +90,7 @@ public class ConnectionSourcesSupport {
     protected static boolean isMultiTenant(Class[] interfaces) {
         for (Class anInterface : interfaces) {
             String name = anInterface.getName();
-            if(name.startsWith("grails.gorm") && name.endsWith(".MultiTenant")) {
+            if (name.startsWith("grails.gorm") && name.endsWith(".MultiTenant")) {
                 return true;
             }
         }
@@ -108,7 +108,7 @@ public class ConnectionSourcesSupport {
     protected static boolean isMultiTenantExcludedDataSource(PersistentEntity entity, String connectionSourceName) {
         TenantDataSourceConfig tdsc = (TenantDataSourceConfig) entity.getJavaClass().getAnnotation(TenantDataSourceConfig.class);
         boolean result = false;
-        if ( null != tdsc ) {
+        if (null != tdsc) {
             final String[] dataSourcesToExclude = tdsc.dataSourcesToExclude();
             result = Arrays.asList(dataSourcesToExclude).contains(connectionSourceName);
         }

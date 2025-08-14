@@ -48,7 +48,6 @@ import org.grails.cli.compiler.dependencies.Dependency;
 import org.grails.cli.compiler.dependencies.DependencyManagement;
 import org.grails.cli.compiler.grape.DependencyResolutionContext;
 
-
 /**
  * A {@link CompilerAutoConfiguration} for Grails Micro Service applications
  *
@@ -72,15 +71,14 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
     @Override
     public boolean matches(ClassNode classNode) {
         boolean matches = AstUtils.hasAtLeastOneAnnotation(classNode, "grails.persistence.Entity", "grails.rest.Resource", "Resource", "grails.artefact.Artefact", "grails.web.Controller");
-        if(matches) lastMatch = classNode;
+        if (matches) lastMatch = classNode;
         return matches;
     }
-
 
     @Override
     public void applyDependencies(DependencyCustomizer dependencies) throws CompilationFailedException {
         addManagedDependencies(dependencies);
-        if(lastMatch != null) {
+        if (lastMatch != null) {
             lastMatch.addAnnotation(createGrabAnnotation("org.apache.grails", "grails-dependencies", Environment.class.getPackage().getImplementationVersion(), null, "pom", true));
             lastMatch.addAnnotation(createGrabAnnotation("org.apache.grails", "grails-web-boot", Environment.class.getPackage().getImplementationVersion(), null, null, true));
         }
@@ -99,7 +97,6 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
         return new GrailsDependencyVersions();
     }
 
-
     public static AnnotationNode createGrabAnnotation(String group, String module,
                                                 String version, String classifier, String type, boolean transitive) {
         AnnotationNode annotationNode = new AnnotationNode(new ClassNode(Grab.class));
@@ -117,7 +114,6 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
         return annotationNode;
     }
 
-
     @Override
     public void applyImports(ImportCustomizer imports) throws CompilationFailedException {
         imports.addStarImports(DEFAULT_IMPORTS);
@@ -131,7 +127,7 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
         ClassNode applicationClassNode = new ClassNode("Application", Modifier.PUBLIC, ClassHelper.make("grails.boot.config.GrailsAutoConfiguration"));
         AnnotationNode enableAutoAnnotation = new AnnotationNode(ENABLE_AUTO_CONFIGURATION_CLASS_NODE);
         try {
-            enableAutoAnnotation.addMember("exclude", new ClassExpression( ClassHelper.make("org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration")) );
+            enableAutoAnnotation.addMember("exclude", new ClassExpression(ClassHelper.make("org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration")));
         } catch (Throwable e) {
             // ignore
         }
@@ -163,11 +159,12 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
             }
         }
 
-//        @Override
-//        public Dependency find(String groupId, String artifactId) {
-//            return groupAndArtifactToDependency.get(groupId + ":" + artifactId);
-//        }
-
+        /*
+        @Override
+        public Dependency find(String groupId, String artifactId) {
+            return groupAndArtifactToDependency.get(groupId + ":" + artifactId);
+        }
+        */
 
         @Override
         public List<Dependency> getDependencies() {
@@ -182,16 +179,18 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
         @Override
         public Dependency find(String artifactId) {
             String groupAndArtifact = artifactToGroupAndArtifact.get(artifactId);
-            if (groupAndArtifact==null) {
+            if (groupAndArtifact == null) {
                 return null;
             }
             return groupAndArtifactToDependency.get(groupAndArtifact);
         }
 
-//        @Override
-//        public Iterator<Dependency> iterator() {
-//            return groupAndArtifactToDependency.values().iterator();
-//        }
+        /*
+        @Override
+        public Iterator<Dependency> iterator() {
+            return groupAndArtifactToDependency.values().iterator();
+        }
+        */
     }
 
 }

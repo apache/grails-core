@@ -163,7 +163,6 @@ public class GrailsConsole implements ConsoleLogger {
         }
     }
 
-
     protected GrailsConsole() throws IOException {
         cursorMove = 1;
 

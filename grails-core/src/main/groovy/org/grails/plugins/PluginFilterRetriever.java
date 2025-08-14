@@ -37,7 +37,6 @@ import grails.plugins.PluginFilter;
  */
 public class PluginFilterRetriever {
 
-
     @SuppressWarnings("rawtypes")
     public PluginFilter getPluginFilter(Config config) {
 
@@ -54,7 +53,7 @@ public class PluginFilterRetriever {
 
         if (includes != null) {
             if (includes instanceof Collection) {
-                pluginFilter = new IncludingPluginFilter(new HashSet((Collection)includes));
+                pluginFilter = new IncludingPluginFilter(new HashSet((Collection) includes));
             }
             else {
                 String[] includesArray = StringUtils.commaDelimitedListToStringArray(includes.toString());
@@ -63,7 +62,7 @@ public class PluginFilterRetriever {
         }
         else if (excludes != null) {
             if (excludes instanceof Collection) {
-                pluginFilter = new ExcludingPluginFilter(new HashSet((Collection)excludes));
+                pluginFilter = new ExcludingPluginFilter(new HashSet((Collection) excludes));
             }
             else {
                 String[] excludesArray = StringUtils.commaDelimitedListToStringArray(excludes.toString());

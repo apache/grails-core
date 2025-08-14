@@ -46,7 +46,7 @@ import org.grails.datastore.mapping.transactions.Transaction;
  * @since 1.0
  */
 @SuppressWarnings("rawtypes")
-public abstract class AbstractHibernateSession extends AbstractAttributeStoringSession implements QueryAliasAwareSession{
+public abstract class AbstractHibernateSession extends AbstractAttributeStoringSession implements QueryAliasAwareSession {
 
     protected AbstractHibernateDatastore datastore;
     protected boolean connected = true;
@@ -153,7 +153,7 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
     protected Collection getIterableAsCollection(Iterable objects) {
         Collection list;
         if (objects instanceof Collection) {
-            list = (Collection)objects;
+            list = (Collection) objects;
         }
         else {
             list = new ArrayList();
@@ -203,7 +203,6 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
     public void setSynchronizedWithTransaction(boolean synchronizedWithTransaction) {
         // no-op
     }
-
 
     public abstract FlushModeType getFlushMode();
 }

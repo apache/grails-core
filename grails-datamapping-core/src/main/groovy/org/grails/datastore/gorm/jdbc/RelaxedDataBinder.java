@@ -170,8 +170,7 @@ class RelaxedDataBinder extends DataBinder {
             String name = value.getName();
             for (String prefix : new RelaxedNames(stripLastDot(this.namePrefix))) {
                 for (String separator : new String[] { ".", "_" }) {
-                    String candidate = (StringUtils.hasLength(prefix) ? prefix + separator
-                            : prefix);
+                    String candidate = (StringUtils.hasLength(prefix) ? prefix + separator : prefix);
                     if (name.startsWith(candidate)) {
                         name = name.substring(candidate.length());
                         if (!(this.ignoreNestedProperties && name.contains("."))) {
@@ -233,8 +232,7 @@ class RelaxedDataBinder extends DataBinder {
         String name = path.prefix(index);
         TypeDescriptor descriptor = wrapper.getPropertyTypeDescriptor(name);
         if (descriptor == null || descriptor.isMap()) {
-            if (isMapValueStringType(descriptor)
-                    || isBlanked(wrapper, name, path.name(index))) {
+            if (isMapValueStringType(descriptor) || isBlanked(wrapper, name, path.name(index))) {
                 path.collapseKeys(index);
             }
             path.mapIndex(index);
@@ -276,8 +274,7 @@ class RelaxedDataBinder extends DataBinder {
 
     @SuppressWarnings("rawtypes")
     private boolean isBlanked(BeanWrapper wrapper, String propertyName, String key) {
-        Object value = (wrapper.isReadableProperty(propertyName)
-                ? wrapper.getPropertyValue(propertyName) : null);
+        Object value = (wrapper.isReadableProperty(propertyName) ? wrapper.getPropertyValue(propertyName) : null);
         if (value instanceof Map) {
             if (((Map) value).get(key) == BLANK) {
                 return true;
@@ -291,8 +288,8 @@ class RelaxedDataBinder extends DataBinder {
         String name = path.prefix(index);
         TypeDescriptor elementDescriptor = wrapper.getPropertyTypeDescriptor(name)
                 .getElementTypeDescriptor();
-        if (!elementDescriptor.isMap() && !elementDescriptor.isCollection()
-                && !elementDescriptor.getType().equals(Object.class)) {
+        if (!elementDescriptor.isMap() && !elementDescriptor.isCollection() &&
+                !elementDescriptor.getType().equals(Object.class)) {
             return;
         }
         Object extend = new LinkedHashMap<String, Object>();
@@ -312,15 +309,14 @@ class RelaxedDataBinder extends DataBinder {
         if (descriptor == null) {
             descriptor = TypeDescriptor.valueOf(Object.class);
         }
-        if (!descriptor.isMap() && !descriptor.isCollection()
-                && !descriptor.getType().equals(Object.class)) {
+        if (!descriptor.isMap() && !descriptor.isCollection() && !descriptor.getType().equals(Object.class)) {
             return;
         }
         String extensionName = path.prefix(index + 1);
         if (wrapper.isReadableProperty(extensionName)) {
             Object currentValue = wrapper.getPropertyValue(extensionName);
-            if ((descriptor.isCollection() && currentValue instanceof Collection)
-                    || (!descriptor.isCollection() && currentValue instanceof Map)) {
+            if ((descriptor.isCollection() && currentValue instanceof Collection) ||
+                    (!descriptor.isCollection() && currentValue instanceof Map)) {
                 return;
             }
         }

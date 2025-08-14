@@ -78,7 +78,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
             Assert.isInstanceOf(DefaultListableBeanFactory.class, beanFactory,
                     "ListableBeanFactory set must be a subclass of DefaultListableBeanFactory");
 
-            return new GrailsApplicationContext((DefaultListableBeanFactory) beanFactory,parentCtx);
+            return new GrailsApplicationContext((DefaultListableBeanFactory) beanFactory, parentCtx);
         }
 
         if (beanFactory != null) {
@@ -112,7 +112,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
         if (parentCtx.containsBean("classLoader")) {
             Object cl = parentCtx.getBean("classLoader");
             if (cl instanceof ClassLoader) {
-                setClassLoaderOnContext((ClassLoader)cl);
+                setClassLoaderOnContext((ClassLoader) cl);
             }
         }
     }
@@ -143,13 +143,13 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     }
 
     public BeanConfiguration addSingletonBean(String name, @SuppressWarnings("rawtypes") Class clazz) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name,clazz);
+        BeanConfiguration bc = new DefaultBeanConfiguration(name, clazz);
         registerBeanConfiguration(name, bc);
         return bc;
     }
 
     public BeanConfiguration addPrototypeBean(String name, @SuppressWarnings("rawtypes") Class clazz) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name,clazz,true);
+        BeanConfiguration bc = new DefaultBeanConfiguration(name, clazz, true);
         registerBeanConfiguration(name, bc);
         return bc;
     }
@@ -182,19 +182,19 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
 
     @SuppressWarnings("rawtypes")
     public BeanConfiguration addSingletonBean(String name, Class clazz, Collection args) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name,clazz,args);
+        BeanConfiguration bc = new DefaultBeanConfiguration(name, clazz, args);
         registerBeanConfiguration(name, bc);
         return bc;
     }
 
     public BeanConfiguration addPrototypeBean(String name) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name,true);
+        BeanConfiguration bc = new DefaultBeanConfiguration(name, true);
         registerBeanConfiguration(name, bc);
         return bc;
     }
 
     private void registerBeanConfiguration(String name, BeanConfiguration bc) {
-        beanConfigs.put(name,bc);
+        beanConfigs.put(name, bc);
         beanNames.add(name);
     }
 
@@ -204,7 +204,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     }
 
     public BeanConfiguration createPrototypeBean(String name) {
-        return new DefaultBeanConfiguration(name,true);
+        return new DefaultBeanConfiguration(name, true);
     }
 
     public BeanConfiguration createSingletonBean(String name) {
@@ -217,7 +217,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     }
 
     public void addBeanDefinition(String name, BeanDefinition bd) {
-        beanDefinitions.put(name,bd);
+        beanDefinitions.put(name, bd);
         beanConfigs.remove(name);
         beanNames.add(name);
     }
@@ -233,7 +233,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     public AbstractBeanDefinition createBeanDefinition(String name) {
         if (containsBean(name)) {
             if (beanDefinitions.containsKey(name)) {
-                return (AbstractBeanDefinition)beanDefinitions.get(name);
+                return (AbstractBeanDefinition) beanDefinitions.get(name);
             }
             if (beanConfigs.containsKey(name)) {
                 return beanConfigs.get(name).getBeanDefinition();

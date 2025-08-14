@@ -57,13 +57,12 @@ public class GroovyPageWritable implements Writable {
     private boolean showSource;
 
     private static final String GROOVY_SOURCE_CONTENT_TYPE = "text/plain";
+
     public GroovyPageWritable(GroovyPageMetaInfo metaInfo, OutputContextLookup outputContextLookup, boolean allowSettingContentType) {
         this.metaInfo = metaInfo;
         this.outputContextLookup = outputContextLookup;
         this.allowSettingContentType = allowSettingContentType;
     }
-
-
 
     /**
      * This sets any additional variables that need to be placed in the Binding of the GSP page.
@@ -105,7 +104,7 @@ public class GroovyPageWritable implements Writable {
         }
         else {
             // Set it to HTML by default
-            if (metaInfo.getCompilationException()!=null) {
+            if (metaInfo.getCompilationException() != null) {
                 throw metaInfo.getCompilationException();
             }
 
@@ -140,7 +139,7 @@ public class GroovyPageWritable implements Writable {
 
             GroovyPage page = null;
             try {
-                page = (GroovyPage)metaInfo.getPageClass().newInstance();
+                page = (GroovyPage) metaInfo.getPageClass().newInstance();
             } catch (Exception e) {
                 throw new GroovyPagesException("Problem instantiating page class", e);
             }
@@ -157,7 +156,7 @@ public class GroovyPageWritable implements Writable {
                 if (hasRequest) {
                     if (newParentCreated) {
                         outputContext.setBinding(null);
-                    } else  {
+                    } else {
                         outputContext.setBinding(parentBinding);
                     }
                 }
@@ -202,7 +201,7 @@ public class GroovyPageWritable implements Writable {
         // set plugin context path for top level rendering, this means actual view + layout
         // view is top level when parent is GroovyPageRequestBinding
         // pluginContextPath is also resetted when a plugin template is overrided by an application view
-        if (parent==null || (parent instanceof TemplateVariableBinding && ((TemplateVariableBinding)parent).isRoot()) || "".equals(metaInfo.getPluginPath())) {
+        if (parent == null || (parent instanceof TemplateVariableBinding && ((TemplateVariableBinding) parent).isRoot()) || "".equals(metaInfo.getPluginPath())) {
             binding.setPluginContextPath(metaInfo.getPluginPath());
         }
         binding.setPagePlugin(metaInfo.getPagePlugin());

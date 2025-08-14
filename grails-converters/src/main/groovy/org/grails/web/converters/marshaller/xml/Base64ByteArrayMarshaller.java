@@ -43,10 +43,10 @@ public class Base64ByteArrayMarshaller implements ObjectMarshaller<XML> {
 
         Writable w;
         if (object instanceof byte[]) {
-            w = EncodingGroovyMethods.encodeBase64((byte[])object);
+            w = EncodingGroovyMethods.encodeBase64((byte[]) object);
         }
         else {
-            w = EncodingGroovyMethods.encodeBase64((Byte[])object);
+            w = EncodingGroovyMethods.encodeBase64((Byte[]) object);
         }
 
         try {

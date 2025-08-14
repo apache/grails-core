@@ -55,7 +55,7 @@ public abstract class AbstractPersistenceEvent extends ApplicationEvent {
 
     protected AbstractPersistenceEvent(final Datastore source, final PersistentEntity entity,
             final EntityAccess entityAccess) {
-        this((Object)source, entity, entityAccess);
+        this((Object) source, entity, entityAccess);
     }
 
     protected AbstractPersistenceEvent(final Object source, final PersistentEntity entity,
@@ -63,7 +63,7 @@ public abstract class AbstractPersistenceEvent extends ApplicationEvent {
         super(source);
         this.entity = entity;
         this.entityAccess = entityAccess;
-        if(entityAccess != null) {
+        if (entityAccess != null) {
             this.entityObject = entityAccess.getEntity();
         }
         else {
@@ -80,7 +80,7 @@ public abstract class AbstractPersistenceEvent extends ApplicationEvent {
         MappingContext mappingContext = source.getMappingContext();
         entityObject = mappingContext.getProxyHandler().unwrap(entity);
         this.entity = mappingContext.getPersistentEntity(entityObject.getClass().getName());
-        if(this.entity != null) {
+        if (this.entity != null) {
             this.entityAccess = mappingContext.createEntityAccess(this.entity, entityObject);
         }
         else {

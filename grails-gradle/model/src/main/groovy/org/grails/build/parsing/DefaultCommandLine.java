@@ -156,7 +156,7 @@ public class DefaultCommandLine implements CommandLine {
         final Iterator<Map.Entry<String, Object>> i = undeclaredOptions.entrySet().iterator();
         while (i.hasNext()) {
             Map.Entry<String, Object> next = i.next();
-            if(!i.hasNext()) {
+            if (!i.hasNext()) {
                 return next;
             }
         }
@@ -180,9 +180,9 @@ public class DefaultCommandLine implements CommandLine {
         StringBuilder sb = new StringBuilder();
         String sep = "";
         List<String> args = new ArrayList<String>(remainingArgs);
-        if(includeOptions) {
+        if (includeOptions) {
             for (Map.Entry<String, Object> entry : undeclaredOptions.entrySet()) {
-                if (entry.getValue() instanceof Boolean && ((Boolean)entry.getValue())) {
+                if (entry.getValue() instanceof Boolean && ((Boolean) entry.getValue())) {
                     args.add('-' + entry.getKey());
                 }
                 else {

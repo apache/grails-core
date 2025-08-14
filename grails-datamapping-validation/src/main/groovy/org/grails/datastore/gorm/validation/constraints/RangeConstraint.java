@@ -32,7 +32,7 @@ import org.grails.datastore.mapping.reflect.ClassUtils;
  *
  * @author Graeme Rocher
  */
-@SuppressWarnings({"unchecked","rawtypes"})
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class RangeConstraint extends AbstractConstraint {
 
     private final Range range;
@@ -94,10 +94,10 @@ public class RangeConstraint extends AbstractConstraint {
             // Upgrade the numbers to Long, so all integer types can be compared.
             from = ((Number) from).longValue();
             to = ((Number) to).longValue();
-            if(propertyValue instanceof Number) {
+            if (propertyValue instanceof Number) {
                 propertyValue = ((Number) propertyValue).longValue();
             }
-            else if(propertyValue instanceof CharSequence) {
+            else if (propertyValue instanceof CharSequence) {
                 try {
                     propertyValue = Long.valueOf(propertyValue.toString());
                 } catch (NumberFormatException e) {
