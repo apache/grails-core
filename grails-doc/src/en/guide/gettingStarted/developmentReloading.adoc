@@ -44,3 +44,9 @@ Please see the JRebel documentation for more details: https://manuals.jrebel.com
 Hotswap Agent is an open-source tool that provides advanced hot swapping capabilities for Java applications. It allows developers to make changes to their code without restarting the application. Hotswap Agent supports a wide range of frameworks and libraries, including Spring Framework and Spring Boot.
 
 *Reloading Mechanism:* True hot swapping using DCEVM (Dynamic Code Evolution VM) to patch the JVM; reloads classes and resources, supporting structural changes.
+
+=== Running the Grails Application in Debug Mode
+
+Enables limited dynamic reloading via standard JVM hot swapping. This feature is built into the JVM and does not require additional configuration beyond starting the application with debugging enabled.  Supports automatic reloading of static content (such as CSS, JavaScript, or HTML templates) without restarting the application.  You can modify and reload Java code changes without a full restart, but this is limited to non-structural modifications.  Changes that affect class or method signatures (e.g., adding new methods, fields, or constructors; changing method parameters; or modifying class hierarchies) are not supported and will require a restart. This limitation stems from the JVM's hot swapping constraints.
+
+*Reloading Mechanism:* standard JVM hot swapping
