@@ -404,12 +404,11 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
 
         when:
-        def names = HibernateGormStaticApiEntity.executeQuery("select h.name from HibernateGormStaticApiEntity h where h.name like ?", ['test%'])
+        def entities = HibernateGormStaticApiEntity.executeQuery("from HibernateGormStaticApiEntity h where h.name like ?1", ['test%'])
 
         then:
-        names.size() == 2
-        names.contains('test1')
-        names.contains('test2')
+        entities.size() == 2
+        entities.collect{ it.name}.containsAll(['test1', 'test2'])
     }
 
     void "Test executeQuery with named params"() {
@@ -433,7 +432,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         new HibernateGormStaticApiEntity(name: "other").save(flush: true, failOnError: true)
 
         when:
-        def instances = HibernateGormStaticApiEntity.findAll("from HibernateGormStaticApiEntity where name = ?", ['test'])
+        def instances = HibernateGormStaticApiEntity.findAll("from HibernateGormStaticApiEntity where name = ?1", ['test'])
 
         then:
         instances.size() == 2

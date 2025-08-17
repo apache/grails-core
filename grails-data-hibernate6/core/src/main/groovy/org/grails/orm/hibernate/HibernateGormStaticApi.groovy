@@ -458,34 +458,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         }
     }
 
-    @Override
-    List<D> findAll(CharSequence query, Collection params, Map args) {
-        if(query instanceof GString) {
-            throw new GrailsQueryException("Unsafe query [$query]. GORM cannot automatically escape a GString value when combined with ordinal parameters, so this query is potentially vulnerable to HQL injection attacks. Please embed the parameters within the GString so they can be safely escaped.");
-        }
 
-        String queryString = query.toString()
-        queryString = normalizeMultiLineQueryString(queryString)
-
-        args = new HashMap(args)
-
-        def template = hibernateTemplate
-        return (List<D>) template.execute { Session session ->
-            Query q = (Query) session.createQuery(queryString)
-            template.applySettings(q)
-
-            params.eachWithIndex { val, int i ->
-                if (val instanceof CharSequence) {
-                    q.setParameter i, val.toString()
-                }
-                else {
-                    q.setParameter i, val
-                }
-            }
-            populateQueryArguments(q, args)
-            createHqlQuery(session, q).list()
-        }
-    }
 
     @Override
     D find(D exampleObject, Map args) {
@@ -542,30 +515,44 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         }
     }
 
-    @Override
-    List executeQuery(CharSequence query, Collection params, Map args) {
-        if(query instanceof GString) {
+
+
+    private List<D> numberedParameterQuery(CharSequence query, Map args, params) {
+        if (query instanceof GString) {
             throw new GrailsQueryException("Unsafe query [$query]. GORM cannot automatically escape a GString value when combined with ordinal parameters, so this query is potentially vulnerable to HQL injection attacks. Please embed the parameters within the GString so they can be safely escaped.");
         }
-
         def template = hibernateTemplate
+        def queryString = query.toString()
+        queryString = normalizeMultiLineQueryString(queryString)
         args = new HashMap(args)
 
         return (List<D>) template.execute { Session session ->
-            Query q = (Query) session.createQuery(query.toString(),persistentEntity.javaClass)
+
+
+            Query q = (Query) session.createQuery(queryString, persistentEntity.javaClass)
             template.applySettings(q)
 
             params.eachWithIndex { val, int i ->
+                var index = i + 1
                 if (val instanceof CharSequence) {
-                    q.setParameter i, val.toString()
-                }
-                else {
-                    q.setParameter i, val
+                    q.setParameter index, val.toString()
+                } else {
+                    q.setParameter index, val
                 }
             }
             populateQueryArguments(q, args)
             createHqlQuery(session, q).list()
         }
+    }
+
+    @Override
+    List executeQuery(CharSequence query, Collection params, Map args) {
+        numberedParameterQuery(query, args, params)
+    }
+
+    @Override
+    List<D> findAll(CharSequence query, Collection params, Map args) {
+        numberedParameterQuery(query, args, params)
     }
 
     @Override
