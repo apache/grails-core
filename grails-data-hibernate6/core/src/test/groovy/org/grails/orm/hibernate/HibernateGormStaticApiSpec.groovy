@@ -356,7 +356,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
 
         when:
-        def instance = HibernateGormStaticApiEntity.find("from HibernateGormStaticApiEntity where name = ?", ['test2'])
+        def instance = HibernateGormStaticApiEntity.find("from HibernateGormStaticApiEntity where name = ?1", ['test2'])
 
         then:
         instance.name == 'test2'

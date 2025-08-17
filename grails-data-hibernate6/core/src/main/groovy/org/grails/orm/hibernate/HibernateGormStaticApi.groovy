@@ -259,30 +259,8 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     D find(CharSequence query, Collection params, Map args) {
-        if(query instanceof GString) {
-            throw new GrailsQueryException("Unsafe query [$query]. GORM cannot automatically escape a GString value when combined with ordinal parameters, so this query is potentially vulnerable to HQL injection attacks. Please embed the parameters within the GString so they can be safely escaped.");
-        }
-
-        String queryString = query.toString()
-        queryString = normalizeMultiLineQueryString(queryString)
-
-        args = new HashMap(args)
-        def template = hibernateTemplate
-        return (D) template.execute { Session session ->
-            Query q = (Query) session.createQuery(queryString, persistentEntity.javaClass)
-            template.applySettings(q)
-
-            params.eachWithIndex { val, int i ->
-                if (val instanceof CharSequence) {
-                    q.setParameter i, val.toString()
-                }
-                else {
-                    q.setParameter i, val
-                }
-            }
-            populateQueryArguments(q, args)
-            createHqlQuery(session, q).singleResult()
-        }
+        def result = numberedParameterQuery(query, args, params)
+        result ? result.first() : null
     }
 
     @Override
@@ -355,7 +333,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                 sql = buildOrdinalParameterQueryFromGString((GString)sql, params)
             }
 
-            NativeQuery q = (NativeQuery)session.createNativeQuery(sql.toString())
+            NativeQuery q = (NativeQuery)session.createNativeQuery(sql.toString(),persistentEntity.javaClass)
 
             template.applySettings(q)
 
