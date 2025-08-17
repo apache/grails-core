@@ -19,7 +19,9 @@
 
 package org.grails.testing.spock
 
+import grails.testing.web.GrailsWebUnitTest
 import groovy.transform.CompileStatic
+import org.grails.testing.runtime.support.LazyTagLibraryLookup
 import org.grails.web.converters.configuration.ConvertersConfigurationHolder
 import org.spockframework.runtime.extension.IMethodInterceptor
 import org.spockframework.runtime.extension.IMethodInvocation
@@ -29,7 +31,24 @@ class WebCleanupSpecInterceptor implements IMethodInterceptor {
 
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {
-        ConvertersConfigurationHolder.clear()
-        invocation.proceed()
+        try {
+            invocation.proceed()
+        }
+        finally {
+            ConvertersConfigurationHolder.clear()
+
+            GrailsWebUnitTest test = (GrailsWebUnitTest) invocation.instance
+            if (test.purgeTagLibMetaClass) {
+                try {
+                    def lookup = test.grailsApplication.mainContext.getBean(LazyTagLibraryLookup)
+                    if (lookup) {
+                        lookup.cleanTagLibsMetaClass()
+                    }
+                }
+                catch (ignored) {
+                    // may not exist
+                }
+            }
+        }
     }
 }

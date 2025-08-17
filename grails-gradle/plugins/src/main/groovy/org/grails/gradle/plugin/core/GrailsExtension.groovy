@@ -56,14 +56,14 @@ class GrailsExtension {
     boolean exploded = true
 
     /**
-     * Whether to create a jar file to reference the classpath to prevent classpath too long issues in Windows
-     */
-    boolean pathingJar = false
-
-    /**
      * Whether java.time.* package should be a default import package
      */
     boolean importJavaTime = false
+
+    /**
+     * Whether the spring dependency management plugin should be applied by default
+     */
+    boolean springDependencyManagement = true
 
     /**
      * Configure the reloading agent

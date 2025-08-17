@@ -33,6 +33,7 @@ import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
+import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 
@@ -139,7 +140,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     @Override
     protected void applySpringBootPlugin(Project project) {
         super.applySpringBootPlugin(project)
-        project.tasks.withType(BootJar) { BootJar bootJar ->
+        project.tasks.withType(BootJar).configureEach { BootJar bootJar ->
             bootJar.enabled = false
         }
     }
@@ -164,6 +165,10 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         def copyAstClasses = project.tasks.register('copyAstClasses', Copy) {
             it.from sourceSets.ast.output
             it.into project.layout.buildDirectory.dir("classes/groovy/main")
+        }
+
+        project.tasks.named('findMainClass', FindMainClassTask).configure {
+            it.dependsOn(copyAstClasses)
         }
 
         def taskContainer = project.tasks

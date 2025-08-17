@@ -33,7 +33,7 @@ class ServerNameControllerSpec extends ContainerGebSpec {
 
     void 'should show the right server name when visiting /serverName'() {
         when: 'visiting the server name controller'
-        go '/serverName'
+        go('/serverName')
 
         then: 'the emitted hostname is correct'
         $('p').text() == 'Server name: testing.example.com'

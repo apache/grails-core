@@ -103,11 +103,11 @@ dependencies {
     testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 }
 
-// work around for issue #10118
-compileGroovy.doLast {
-    // unfortunate workaround, since the generated one overrides the one in src/main/resources
-    final String compileGroovyTargetDir = tasks.compileGroovy.destinationDirectory.getAsFile().getOrNull()?.path ?: 'build/classes/groovy/main'
-    project.delete(compileGroovyTargetDir + '/META-INF/grails.factories')
+// The `grails.factories` resources file will be "copied" into the generated one, so do not also copy the original to prevent a copy conflict (see issue #10118)
+sourceSets {
+    main {
+        resources.srcDirs = []
+    }
 }
 
 apply {

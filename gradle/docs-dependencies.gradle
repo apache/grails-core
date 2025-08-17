@@ -37,3 +37,50 @@ dependencies {
     add('documentation', 'org.apache.groovy:groovy-docgenerator')
     add('documentation', 'org.apache.groovy:groovy-templates')
 }
+
+String resolveProjectVersion(String artifact) {
+    String version = configurations.runtimeClasspath
+            .resolvedConfiguration
+            .resolvedArtifacts
+            .find {
+                it.moduleVersion.id.name == artifact
+            }?.moduleVersion?.id?.version
+    if (!version) {
+        return null
+    }
+}
+
+tasks.withType(Groovydoc).configureEach { Groovydoc gdoc ->
+    gdoc.exclude('META-INF/**', '*yml', '*properties', '*xml', '**/Application.groovy', '**/Bootstrap.groovy', '**/resources.groovy')
+    gdoc.groovyClasspath = configurations.documentation
+    gdoc.windowTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
+    gdoc.docTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
+    gdoc.access = GroovydocAccess.PROTECTED
+    gdoc.includeAuthor = false
+    gdoc.includeMainForScripts = false
+    gdoc.processScripts = false
+    gdoc.noTimestamp = true
+    gdoc.noVersionStamp = false
+
+    doFirst {
+        def gebVersion = resolveProjectVersion('geb-spock')
+        if(gebVersion) {
+            gdoc.link("https://www.gebish.org/manual/${gebVersion}/api/", 'geb.')
+        }
+
+        def testContainersVersion = resolveProjectVersion('testcontainers')
+        if(testContainersVersion) {
+            gdoc.link("https://javadoc.io/doc/org.testcontainers/testcontainers/${testContainersVersion}/", 'org.testcontainers.')
+        }
+
+        def springVersion = resolveProjectVersion('spring-core')
+        if(springVersion) {
+            gdoc.link("https://docs.spring.io/spring-framework/docs/${springVersion}/javadoc-api/", 'org.springframework.core.')
+        }
+
+        def springBootVersion = resolveProjectVersion('spring-boot')
+        if(springBootVersion) {
+            gdoc.link("https://docs.spring.io/spring-boot/docs/${springBootVersion}/api/", 'org.springframework.boot.')
+        }
+    }
+}

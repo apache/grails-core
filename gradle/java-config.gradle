@@ -38,18 +38,17 @@ tasks.withType(GroovyCompile).configureEach {
     groovyOptions.parameters = true
     options.encoding = 'UTF-8' // encoding needs to be the same since it's different across platforms
     options.fork = true
-    options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx1G']
+    options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G']
 }
 
 // Grails determines the grails version via the META-INF/MANIFEST.MF file
 // Note: we exclude attributes such as Built-By, Build-Jdk, Created-By to ensure the build is reproducible.
 tasks.withType(Jar).configureEach {
     manifest.attributes(
-            'Implementation-Title': 'Grails',
+            'Implementation-Title': 'Apache Grails',
             'Implementation-Version': grailsVersion,
-            'Implementation-Vendor': 'grails.org'
+            'Implementation-Vendor': 'grails.apache.org'
     )
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
 // Any jar, zip, or archive should be reproducible
@@ -57,7 +56,12 @@ tasks.withType(Jar).configureEach {
 tasks.withType(AbstractArchiveTask).configureEach {
     preserveFileTimestamps = false // to prevent timestamp mismatches
     reproducibleFileOrder = true // to keep the same ordering
-    dirMode = 0755 // To avoid platform specific defaults
-    fileMode = 0644 // to avoid platform specific defaults
+    // to avoid platform specific defaults, set the permissions consistently
+    filePermissions { permissions ->
+        permissions.unix(0644)
+    }
+    dirPermissions { permissions ->
+        permissions.unix(0755)
+    }
 }
 

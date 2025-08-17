@@ -22,6 +22,8 @@ import org.grails.web.databinding.bindingsource.HalJsonDataBindingSourceCreator
 
 import spock.lang.Specification
 
+import java.nio.charset.StandardCharsets
+
 class HalJsonDataBindingSourceCreatorSpec extends Specification {
 
     void 'Test JSON parsing'() {
@@ -36,8 +38,8 @@ class HalJsonDataBindingSourceCreatorSpec extends Specification {
     }
 }
 '''
-        def inputStream = new ByteArrayInputStream(json.getBytes("UTF-8"))
-        def bindingSource = new HalJsonDataBindingSourceCreator().createBindingSource(inputStream, "UTF-8")
+        def inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))
+        def bindingSource = new HalJsonDataBindingSourceCreator().createBindingSource(inputStream, StandardCharsets.UTF_8.name())
 
         when:
         def propertyNames = bindingSource.propertyNames

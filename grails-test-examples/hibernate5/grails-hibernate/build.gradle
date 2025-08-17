@@ -20,7 +20,7 @@
 plugins {
     id 'org.apache.grails.gradle.grails-web'
     id 'org.apache.grails.gradle.grails-gsp'
-    id 'com.bertramlabs.asset-pipeline'
+    id 'cloud.wondrify.asset-pipeline'
 }
 
 version = projectVersion
@@ -35,10 +35,17 @@ dependencies {
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-rest-transforms'
     implementation 'org.apache.grails:grails-gsp'
+    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
+        implementation 'org.apache.grails:grails-sitemesh3'
+    }
+    else {
+        implementation 'org.apache.grails:grails-layout'
+    }
 
-    implementation 'org.webjars.npm:jquery'
+    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
-    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
     runtimeOnly 'org.apache.grails:grails-databinding'
@@ -67,4 +74,5 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

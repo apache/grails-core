@@ -28,7 +28,7 @@ class BookControllerSpec extends GebSpec {
 
     void "Test list books"() {
         when:"The home page is visited"
-            go '/book/index'
+            go('/book/index')
 
         then:"The title is correct"
         	title == "Book List"

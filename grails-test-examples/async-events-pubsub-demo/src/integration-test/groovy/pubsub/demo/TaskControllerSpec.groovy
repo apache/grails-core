@@ -45,11 +45,6 @@ class TaskControllerSpec extends Specification {
         client = HttpClient.create("http://localhost:$serverPort".toURL())
     }
 
-    @PendingFeature(reason = '''
-        For some reason the response body is blank with bootTestRun.
-        However, when starting the application with bootRun,
-        the response body is as expected.
-    ''')
     @PendingFeatureIf({
         // thrown() does currently not work with Groovy 5
         GroovySystem.version.startsWith('5')

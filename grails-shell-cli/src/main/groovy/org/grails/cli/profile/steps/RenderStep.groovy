@@ -31,6 +31,8 @@ import org.grails.cli.profile.commands.templates.SimpleTemplate
 import org.grails.cli.profile.support.ArtefactVariableResolver
 import org.grails.io.support.Resource
 
+import java.nio.charset.StandardCharsets
+
 /**
  * A {@link org.grails.cli.profile.Step} that renders a template
  *
@@ -104,7 +106,7 @@ class RenderStep extends AbstractStep {
         if(!templateFile) {
             throw new IOException("cannot find template " + parameters.template)
         }
-        destination.setText(new SimpleTemplate(templateFile.inputStream.getText("UTF-8")).render(variables), "UTF-8")
+        destination.setText(new SimpleTemplate(templateFile.inputStream.getText(StandardCharsets.UTF_8.name())).render(variables), StandardCharsets.UTF_8.name())
         ClassNameCompleter.refreshAll()
     }
 

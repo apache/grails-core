@@ -1,0 +1,53 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+The best way to install Grails on Unix systems is with http://sdkman.io/[SDKMAN] which greatly simplifies installing
+and managing multiple Grails versions.
+
+Before updating make sure you have latest version of SDKMAN installed. If not, run
+
+[source,bash]
+----
+$ sdk update
+----
+
+In order to install Grails, run following command:
+
+[source,bash]
+----
+$ sdk install grails
+----
+
+You can also specify the version to the `sdk install` command.
+
+[source,bash,subs="attributes"]
+----
+$ sdk install grails {project-version}
+----
+
+You can find more information about SDKMAN usage on the http://sdkman.io/usage[SDKMAN Docs]
+
+You should now be able to run the Grails Forge CLI.
+
+[source,bash]
+----
+$ grails
+| Starting interactive mode...
+| Enter a command name to run. Use TAB for completion:
+grails>
+----

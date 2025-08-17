@@ -41,7 +41,7 @@ class WithTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest
         mockFormFieldsTemplateService.getWidgetPrefix() >> 'input-'
 		tagLib.formFieldsTemplateService = mockFormFieldsTemplateService
 
-        mockEmbeddedSitemeshLayout tagLib
+        mockEmbeddedGrailsLayout(tagLib)
     }
 
 	void 'bean attribute does not have to be specified if it is in scope from f:with'() {

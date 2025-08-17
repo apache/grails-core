@@ -24,6 +24,7 @@ import org.grails.web.util.GrailsApplicationAttributes;
 import groovy.lang.GroovyObject;
 import groovy.util.ConfigObject;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -46,7 +47,7 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
 @SuppressWarnings("rawtypes")
 public class GrailsWebUtil {
 
-    public static final String DEFAULT_ENCODING = "UTF-8";
+    public static final String DEFAULT_ENCODING = StandardCharsets.UTF_8.name();
     private static final String CHARSET_ATTRIBUTE = ";charset=";
     private static final Pattern CHARSET_IN_CONTENT_TYPE_REGEXP = Pattern.compile(";\\s*charset\\s*=", Pattern.CASE_INSENSITIVE);
 

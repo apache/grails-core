@@ -1,3 +1,0 @@
-<plugin name='services'>
-  <type>org.grails.plugins.services.ServicesGrailsPlugin</type>
-</plugin>

@@ -19,7 +19,8 @@
 
 package grails.doc.dropdown
 
-class SoftwareVersion implements Comparable<SoftwareVersion> {
+class SoftwareVersion implements Comparable<SoftwareVersion>, Serializable {
+    private static final long serialVersionUID = 1L;
 
     int major
     int minor
@@ -45,7 +46,11 @@ class SoftwareVersion implements Comparable<SoftwareVersion> {
                 softVersion.snapshot = new Snapshot(subparts[1..-1].join("-"))
                 return softVersion
             }
-            softVersion.patch = parts[2].toInteger()
+
+            // Filter out invalid patches (e.g. 1.0.RC4)
+            if (parts[2].isInteger()) {
+                softVersion.patch = parts[2].toInteger()
+            }
         }
         softVersion
     }

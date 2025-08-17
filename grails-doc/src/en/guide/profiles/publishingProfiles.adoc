@@ -18,14 +18,13 @@ under the License.
 ////
 
 
-==== Publishing Profiles to the Grails Central Repository
+==== Publishing Profiles
 
-
-Any profile created with the link:../ref/Command%20Line/create-profile.html[create-profile] command already comes configured with a `grails-profile-publish` plugin defined in `build.gradle`:
+To mark a profile project for publishing, you need to apply the `grails-profile-publish` plugin:
 
 [source,groovy]
 ----
-apply plugin: "org.grails.grails-profile-publish"
+apply plugin: "org.apache.grails.gradle.grails-publish-profile"
 ----
 
 To publish a profile using this plugin to the Grails central repository first upload the source to https://github.com[Github] (closed source profiles will not be accepted). Then register for an account on http://bintray.com[Bintray] and configure your keys as follows in the profile's `build.gradle` file:
@@ -33,49 +32,44 @@ To publish a profile using this plugin to the Grails central repository first up
 [source,groovy]
 ----
 grailsPublish {
-  user = 'YOUR USERNAME'
-  key = 'YOUR KEY'
-  githubSlug = 'your-repo/your-profile'
-  license = 'Apache-2.0'
-}
+        githubSlug = 'foo/bar'
+        license {
+            name = 'Apache-2.0'
+        }
+        title = 'My plugin title'
+        desc = 'My plugin description'
+        developers = [johndoe: 'John Doe']
+    }
 ----
 
 NOTE: The `githubSlug` argument should point to the path to your Github repository. For example if your repository is located at https://github.com/foo/bar then your `githubSlug` is `foo/bar`
 
-With this in place you can run `gradle publishProfile` to publish your profile:
+Environment variables control where the profile is published.  By default, this plugin will publish to the specified `MAVEN_PUBLISH` instance for snapshots, and `NEXUS_PUBLISH` for releases.  To change the snapshot publish behavior, set `snapshotRepoType` to `PublishType.NEXUS_PUBLISH`. To change the release publish behavior, set `releaseRepoType` to `PublishType.MAVEN_PUBLISH`.
 
-[source,bash]
-----
-$ gradle publishProfile
-----
+The credentials and connection url must be specified as a project property or an environment variable.
 
-The profile will be uploaded to Bintray. You can then go the https://github.com/grails-profiles[Grails profiles repository] and request to have your profile included by clicking "Include My Package" button on Bintray's interface (you must be logged in to see this).
+`MAVEN_PUBLISH` Environment Variables are:
 
+    MAVEN_PUBLISH_USERNAME
+    MAVEN_PUBLISH_PASSWORD
+    MAVEN_PUBLISH_URL
 
-==== Publishing Profiles to an Internal Repository
+`NEXUS_PUBLISH` Environment Variables are:
 
+    NEXUS_PUBLISH_USERNAME
+    NEXUS_PUBLISH_PASSWORD
+    NEXUS_PUBLISH_URL
+    NEXUS_PUBLISH_SNAPSHOT_URL
+    NEXUS_PUBLISH_STAGING_PROFILE_ID
 
-The aforementioned `grails-profile-publish` plugin configures https://docs.gradle.org/current/userguide/publishing_maven.html[Gradle's Maven Publish plugin]. In order to publish to an internal repository all you need to do is define the repository in `build.gradle`. For example:
+By default, the release or snapshot state is determined by the `project.version` or `projectVersion` gradle property.  To override this behavior, use the environment variable `GRAILS_PUBLISH_RELEASE` to decide if it's a release or snapshot.
 
-[source,groovy]
-----
-publishing {
-    repositories {
-        maven {
-            credentials {
-                username "foo"
-                password "bar"
-            }
-
-            url "http://foo.com/repo"
-        }
-    }
-}
-----
-
-Once configured you can publish your plugin with `gradle publish`:
+With these environment variables in place you can run `gradle publish` to publish your profile:
 
 [source,bash]
 ----
 $ gradle publish
 ----
+
+The profile will be uploaded to the specified location based on whether the version is a snapshot or release.
+

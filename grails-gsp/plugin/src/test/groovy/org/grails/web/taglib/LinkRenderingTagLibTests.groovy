@@ -317,7 +317,7 @@ class LinkRenderingTagLibTests extends Specification implements UrlMappingsUnitT
     }
 }
 
-@Artefact("UrlMappings")
+@Artefact('UrlMappings')
 class LinkRenderingTestUrlMappings {
     static mappings = {
         "/$controller/$action?/$id?"{

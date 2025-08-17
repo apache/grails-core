@@ -37,6 +37,7 @@ dependencies {
     testImplementation project(':grails-interceptors')
     testImplementation project(':grails-rest-transforms')
     testImplementation 'org.apache.groovy:groovy'
+    testImplementation 'com.fasterxml.jackson.core:jackson-databind'
     testImplementation project(':grails-testing-support-web'), {
         // This is a local project dependency
         exclude group: 'org.apache.grails', module: 'grails-testing-support-core'

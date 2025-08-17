@@ -21,6 +21,18 @@ Grails provides a set of useful CLI commands for various tasks, including the cr
 
 For instance, to create the foundation of an application, you typically need to generate a domain model using Grails Commands:
 
+The `create-app` and `create-domain-class` commands are supported in both the Grails Shell CLI and the Grails Forge CLI.
+
+
+Grails Forge CLI
+[source,console]
+----
+$ grails -t forge create-app myapp
+$ cd myapp
+$ grails -t forge create-domain-class book
+----
+
+Grails Shell CLI
 [source,console]
 ----
 $ grails create-app myapp

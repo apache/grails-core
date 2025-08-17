@@ -35,6 +35,8 @@ import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.SafeConstructor
 
+import java.nio.charset.StandardCharsets
+
 /**
  * Coordinated the DocEngine the produce documentation based on the gdoc format.
  *
@@ -366,7 +368,7 @@ class DocPublisher {
                 def textiles = f.listFiles().findAll { it.name.endsWith(ext)}.sort()
                 def usageFile = new File("${src}/ref/${section}${ext}")
                 if (usageFile.exists()) {
-                    def data = usageFile.getText("UTF-8")
+                    def data = usageFile.getText(StandardCharsets.UTF_8.name())
                     context.set(DocEngine.SOURCE_FILE, usageFile)
                     context.set(DocEngine.CONTEXT_PATH, pathToRoot)
                     context.set(DocEngine.API_CONTEXT_PATH, vars.resourcesPath)
@@ -379,7 +381,7 @@ class DocPublisher {
                 }
                 for (txt in textiles) {
                     def name = txt.name[0..-6]
-                    def data = txt.getText("UTF-8")
+                    def data = txt.getText(StandardCharsets.UTF_8.name())
                     context.set(DocEngine.SOURCE_FILE, txt.name)
                     context.set(DocEngine.CONTEXT_PATH, pathToRoot)
                     context.set(DocEngine.API_CONTEXT_PATH, vars.resourcesPath)
@@ -461,7 +463,7 @@ class DocPublisher {
         varsCopy.sectionToc = section.children
         varsCopy.sourcePath = section.file
         output.warn "Rendering document file $sourceFile.name"
-        varsCopy.content = engine.render(sourceFile.getText("UTF-8"), context)
+        varsCopy.content = engine.render(sourceFile.getText(StandardCharsets.UTF_8.name()), context)
 
         // First create the section content, which usually consists of a header
         // and the translated gdoc content.

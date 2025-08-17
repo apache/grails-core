@@ -15,7 +15,6 @@
  *  limitations under the License.
  */
 plugins {
-	id 'groovy'
 	id 'org.apache.grails.gradle.grails-profile'
 }
 
@@ -30,7 +29,7 @@ ext {
 }
 
 dependencies {
-	profileRuntimeOnly project(':grails-profiles-base')
+	profileRuntimeApi project(':grails-profiles-base')
 }
 
 TaskProvider<Copy> copyWrapper = tasks.register('copyGrailsWrapperScripts', Copy)
@@ -41,7 +40,7 @@ copyWrapper.configure { Copy copy ->
 	copy.into(project.layout.projectDirectory.dir('skeleton'))
 }
 
-tasks.named('sourcesProfileJar').configure {
+tasks.named('sourcesJar').configure {
 	it.dependsOn(copyWrapper)
 }
 

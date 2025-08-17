@@ -29,8 +29,14 @@ tasks.named('sourcesJar', Jar).configure { Jar jar ->
     SourceSetContainer sourceSets = project.extensions.getByType(JavaPluginExtension).sourceSets
     jar.reproducibleFileOrder = true
     jar.preserveFileTimestamps = false
-    jar.dirMode = 0755 // To avoid platform specific defaults
-    jar.fileMode = 0644 // to avoid platform specific defaults
+    // to avoid platform specific defaults, set the permissions consistently
+    jar.filePermissions { permissions ->
+        permissions.unix(0644)
+    }
+    jar.dirPermissions { permissions ->
+        permissions.unix(0755)
+    }
+
     jar.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
     // don't only include main, but any source set
@@ -53,11 +59,33 @@ tasks.withType(GroovyCompile).configureEach {
 // Note: we exclude attributes such as Built-By, Build-Jdk, Created-By to ensure the build is reproducible.
 tasks.withType(Jar).configureEach {
     manifest.attributes(
-            'Implementation-Title': 'Grails',
+            'Implementation-Title': 'Apache Grails',
             'Implementation-Version': projectVersion,
-            'Implementation-Vendor': 'grails.org'
+            'Implementation-Vendor': 'grails.apache.org'
     )
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+
+    if(it.archiveClassifier.getOrNull() != 'javadoc') {
+        from(rootProject.layout.projectDirectory.file('../DISCLAIMER')) {
+            into('META-INF')
+        }
+
+        def projectLicense = layout.projectDirectory.file('src/main/resources/META-INF/LICENSE')
+        if (!projectLicense.asFile.exists()) {
+            def basicLicense = rootProject.layout.projectDirectory.file('../licenses/LICENSE-Apache-2.0.txt')
+            from(basicLicense) {
+                into('META-INF')
+                rename { 'LICENSE' }
+            }
+        }
+
+        def projectNotice = layout.projectDirectory.file('src/main/resources/META-INF/NOTICE')
+        if (!projectNotice.asFile.exists()) {
+            def basicNotice = rootProject.layout.projectDirectory.file('../grails-core/src/main/resources/META-INF/NOTICE')
+            from(basicNotice) {
+                into('META-INF')
+            }
+        }
+    }
 }
 
 // Any jar, zip, or archive should be reproducible
@@ -65,6 +93,11 @@ tasks.withType(Jar).configureEach {
 tasks.withType(AbstractArchiveTask).configureEach {
     preserveFileTimestamps = false // to prevent timestamp mismatches
     reproducibleFileOrder = true // to keep the same ordering
-    dirMode = 0755 // To avoid platform specific defaults
-    fileMode = 0644 // to avoid platform specific defaults
+    // to avoid platform specific defaults, set the permissions consistently
+    filePermissions { permissions ->
+        permissions.unix(0644)
+    }
+    dirPermissions { permissions ->
+        permissions.unix(0755)
+    }
 }

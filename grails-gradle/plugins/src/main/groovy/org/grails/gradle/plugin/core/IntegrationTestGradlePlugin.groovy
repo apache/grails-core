@@ -32,6 +32,8 @@ import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.testing.Test
 import org.gradle.api.tasks.testing.TestReport
 import org.gradle.language.base.plugins.LifecycleBasePlugin
+import org.gradle.plugins.ide.idea.model.IdeaModel
+import org.gradle.plugins.ide.idea.model.IdeaModule
 import org.grails.gradle.plugin.util.SourceSets
 
 import static org.gradle.api.plugins.JavaPlugin.TEST_IMPLEMENTATION_CONFIGURATION_NAME
@@ -43,7 +45,6 @@ import static org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME
  * Gradle plugin for adding separate src/integration-test folder to hold integration tests
  *
  * Adds integrationTestImplementation and integrationTestRuntimeOnly configurations that extend from testCompileClasspath and testRuntimeClasspath
- *
  *
  */
 @CompileStatic
@@ -134,12 +135,11 @@ class IntegrationTestGradlePlugin implements Plugin<Project> {
     }
 
     @CompileDynamic
-    private integrateIdea(Project project, File[] acceptedSourceDirs) {
+    private void integrateIdea(Project project, File[] acceptedSourceDirs) {
         project.pluginManager.withPlugin('idea') { ->
-            project.idea {
-                module {
-                    testSourceDirs += acceptedSourceDirs
-                }
+            def ideaExtension = project.getExtensions().getByType(IdeaModel)
+            ideaExtension.module { IdeaModule it ->
+                it.testSources.from(acceptedSourceDirs)
             }
         }
     }

@@ -30,13 +30,13 @@ class ContextPathSpec extends ContainerGebSpec {
 
     void "test the context path defined in the environment overrides the standard one"() {
         when:
-        go '/myAppTest'
+        go('/myAppTest')
 
         then:
         title == "Welcome to Grails"
 
         when:
-        go '/myApp'
+        go('/myApp')
 
         then:
         title == "HTTP Status 404 – Not Found"

@@ -17,11 +17,12 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Since Grails 3.1 the http://gradle.org[Gradle Build System] is used for build related tasks such as compilation, runnings tests and producing binary distributions of your project. It is recommended to use Gradle 2.2 or above with Grails 3.1 (and higher).
+The http://gradle.org[Gradle Build System] is used for build related tasks such as compilation, running tests and producing binary distributions of your Grails project.
+It is recommended to use Gradle {GradleVersion} or above with Grails.
 
 The build is defined by the `build.gradle` file which specifies the version of your project, the dependencies of the project and the repositories where to find those dependencies (amongst other things).
 
-When you invoke the `grails` command the version of Gradle that ships with Grails 3.1 (currently 2.9) is invoked by the `grails` process via the http://www.gradle.org/docs/current/userguide/embedding.html[Gradle Tooling API]:
+When you invoke the `grails` command the version of Gradle that ships with Grails (currently {GradleVersion}) is invoked by the `grails` process via the http://www.gradle.org/docs/current/userguide/embedding.html[Gradle Tooling API]:
 
 [source,bash]
 ----

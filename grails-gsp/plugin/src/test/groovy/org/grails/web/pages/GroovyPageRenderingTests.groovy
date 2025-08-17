@@ -98,39 +98,6 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
         result == '<option value="MyClass1">content.item.name.MyClass1</option><option value="MyClass2">content.item.name.MyClass2</option>'
     }
 
-    def testMultilineAttributeGRAILS8253() {
-        when:
-        def template='''<html>
-<head>
-<title>Sample onclick issue page</title>
-</head>
-<body>
-<g:form name="testForm" controller="begin" action="create">
-<g:textField name="testField"/>
-<g:actionSubmit class="buttons" action="testAction" value="This
-is a test action description"
-onclick="if (testForm.testField.value=='') { alert('Please enter some text.'); return false; }"
-/>
-</g:form>
-</body>
-</html>'''
-        def result=applyTemplate(template, [:])
-
-        then:
-        result == '''<html>
-<head>
-<title>Sample onclick issue page</title>
-</head>
-<body>
-<form action="/begin/create" method="post" name="testForm" id="testForm" >
-<input type="text" name="testField" value="" id="testField" />
-<input type="submit" name="_action_testAction" value="This
-is a test action description" class="buttons" onclick="if (testForm.testField.value==&#39;&#39;) { alert(&#39;Please enter some text.&#39;); return false; }" />
-</form>
-</body>
-</html>'''
-    }
-
     def testNestedExpression() {
         when:
         def template='''<g:set var="a" value="hello"/><g:set var="b" value='${[test: "${a} ${a}"]}'/>${b.test}'''

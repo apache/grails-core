@@ -1,20 +1,18 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 package org.grails.cli.profile.repository
 
@@ -40,8 +38,8 @@ import org.grails.cli.profile.Profile
 @CompileStatic
 class MavenProfileRepository extends AbstractJarProfileRepository {
 
-    public static final GrailsRepositoryConfiguration DEFAULT_REPO = new GrailsRepositoryConfiguration("apacheRepository", new URI("https://repository.apache.org/content/groups/public"), true)
-    public static final GrailsRepositoryConfiguration MAVEN_CENTRAL = new GrailsRepositoryConfiguration("mavenCentral", new URI("https://repo1.maven.org/maven2"), false)
+    public static final GrailsRepositoryConfiguration GRAILS_REPO = new GrailsRepositoryConfiguration('grailsRepo', new URI('https://repo.grails.org/grails/restricted'), true)
+    public static final GrailsRepositoryConfiguration APACHE_REPO = new GrailsRepositoryConfiguration('apacheRepository', new URI('https://repository.apache.org/content/groups/public'), true)
 
     List<GrailsRepositoryConfiguration> repositoryConfigurations
     MavenResolverGrapeEngine grapeEngine
@@ -62,7 +60,8 @@ class MavenProfileRepository extends AbstractJarProfileRepository {
     MavenProfileRepository() {
         // Use apache repository with SNAPSHOTS when grailsVersion is not set or it ends in SNAPSHOT
         // otherwise use only mavenCentral
-        this((!Environment.grailsVersion || Environment.grailsVersion.endsWith("SNAPSHOT")) ? [DEFAULT_REPO] : [MAVEN_CENTRAL])
+        this((!Environment.grailsVersion || Environment.grailsVersion.endsWith("SNAPSHOT")) ? [APACHE_REPO, GRAILS_REPO] : [GRAILS_REPO])
+        // TODO: Remove GRAILS_REPO in snapshot section when Spring verison is released
     }
 
     @Override

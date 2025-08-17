@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+     Licensed to the Apache Software Foundation (ASF) under one
+     or more contributor license agreements.  See the NOTICE file
+     distributed with this work for additional information
+     regarding copyright ownership.  The ASF licenses this file
+     to you under the Apache License, Version 2.0 (the
+     "License"); you may not use this file except in compliance
+     with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing,
+     software distributed under the License is distributed on an
+     "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     KIND, either express or implied.  See the License for the
+     specific language governing permissions and limitations
+     under the License.
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.grails.forge.features</groupId>
+    <artifactId>grails-forge-features</artifactId>
+    <version>1</version>
+    <repositories>
+        <repository>
+            <id>central</id>
+            <url>https://repo.maven.apache.org/maven2</url>
+        </repository>
+    </repositories>
+    <dependencies>
+        <dependency>
+            <groupId>org.grails.plugins</groupId>
+            <artifactId>grails-web-console</artifactId>
+            <version>7.0.0-M2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.grails</groupId>
+            <artifactId>grails-quartz</artifactId>
+            <version>4.0.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <!-- Last released Feb 24, 2021 -->
+            <groupId>org.grails.plugins</groupId>
+            <artifactId>cache-ehcache</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+        <dependency>
+            <!-- Last released Oct 17, 2022 -->
+            <groupId>org.grails.plugins</groupId>
+            <artifactId>embedded-mongodb</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.asciidoctor.jvm.convert</groupId>
+            <artifactId>asciidoctor-gradle-jvm</artifactId>
+            <version>4.0.4</version>
+        </dependency>
+        <dependency>
+            <groupId>com.gradleup.shadow</groupId>
+            <artifactId>shadow-gradle-plugin</artifactId>
+            <version>8.3.6</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.erdi</groupId>
+            <artifactId>webdriver-binaries-gradle-plugin</artifactId>
+            <version>3.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.zeroturnaround</groupId>
+            <artifactId>gradle-jrebel-plugin</artifactId>
+            <version>1.2.1</version>
+        </dependency>
+        <dependency>
+            <!-- use version from https://github.com/apache/grails-core/blob/7.0.x/gradle.properties-->
+            <groupId>io.micronaut</groupId>
+            <artifactId>micronaut-http-client</artifactId>
+            <version>4.6.5</version>
+        </dependency>
+        <dependency>
+            <!-- use version from https://github.com/apache/grails-core/blob/7.0.x/gradle.properties-->
+            <groupId>io.micronaut.serde</groupId>
+            <artifactId>micronaut-serde-jackson</artifactId>
+            <version>2.11.0</version>
+        </dependency>
+    </dependencies>
+</project>

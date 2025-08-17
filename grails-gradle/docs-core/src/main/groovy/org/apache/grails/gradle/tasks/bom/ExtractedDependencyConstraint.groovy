@@ -55,7 +55,7 @@ class ExtractedDependencyConstraint extends CoordinateVersionHolder {
 
         Matcher matcher = property =~ dynamicPattern
         if(!matcher.find()) {
-            throw new IllegalStateException("Invalid Verison Property: ${property}")
+            throw new IllegalStateException("Invalid Version Property: ${property}")
         }
 
         matcher.group(1)

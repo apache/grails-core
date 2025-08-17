@@ -42,7 +42,7 @@ class ContainerFileDetectorSpockSpec extends ContainerGebSpec {
         ServiceRegistry.setInstance(ContainerFileDetector, null)
     }
 
-    @PendingFeature(reason = 'https://github.com/grails/geb/pull/146#issuecomment-2691433277')
+    @PendingFeature(reason = 'https://github.com/apache/grails-geb/pull/146#issuecomment-2691433277')
     void 'should fail to find file with fileDetector changed to UselessContainerFileDetector in setupSpec'() {
         given:
         def uploadPage = to UploadPage

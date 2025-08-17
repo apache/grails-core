@@ -42,6 +42,7 @@ ext {
 dependencies {
 
     implementation platform(project(':grails-bom'))
+    testFixturesImplementation platform(project(':grails-bom'))
 
     api project(':grails-data-mongodb-core'), {
         // api: needed as classes should also be available when compiling apps. eg. MongoEntity
@@ -131,4 +132,5 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/mongodb-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

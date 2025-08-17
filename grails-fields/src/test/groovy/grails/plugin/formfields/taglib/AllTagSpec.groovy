@@ -41,7 +41,7 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<
         mockFormFieldsTemplateService.findTemplate(_, 'wrapper', _, null) >> [path: '/_fields/default/wrapper']
         tagLib.formFieldsTemplateService = mockFormFieldsTemplateService
 
-        mockEmbeddedSitemeshLayout(tagLib)
+        mockEmbeddedGrailsLayout(tagLib)
     }
 
     void "all tag renders fields for all properties"() {

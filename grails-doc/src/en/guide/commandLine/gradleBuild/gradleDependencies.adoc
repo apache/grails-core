@@ -25,9 +25,9 @@ The default dependencies for the Grails Web application can be seen below:
 ----
 dependencies {
     profile "org.apache.grails.profiles:web"
-    developmentOnly "org.webjars.npm:bootstrap"
-    developmentOnly "org.webjars.npm:bootstrap-icons"
-    developmentOnly "org.webjars.npm:jquery"
+    testAndDevelopmentOnly "org.webjars.npm:bootstrap"
+    testAndDevelopmentOnly "org.webjars.npm:bootstrap-icons"
+    testAndDevelopmentOnly "org.webjars.npm:jquery"
     implementation platform("org.apache.grails:grails-bom:$grailsVersion")
     implementation "org.apache.grails:grails-core"
     implementation "org.apache.grails:grails-logging"
@@ -48,7 +48,7 @@ dependencies {
     implementation "org.springframework.boot:spring-boot-starter-tomcat"
     implementation "org.springframework.boot:spring-boot-starter-validation"
     console "org.apache.grails:grails-console"
-    runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails"
+    runtimeOnly "cloud.wondrify:asset-pipeline-grails"
     runtimeOnly "com.h2database:h2"
     runtimeOnly "com.zaxxer:HikariCP"
     runtimeOnly "org.fusesource.jansi:jansi"

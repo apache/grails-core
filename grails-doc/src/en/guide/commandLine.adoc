@@ -109,7 +109,7 @@ bootRun{
 ----
 
 
-=== non-interactive mode
+=== Non-interactive mode
 
 
 When you run a script manually and it prompts you for information, you can answer the questions and continue running the script. But when you run a script as part of an automated process, for example a continuous integration build server, there's no way to "answer" the questions. So you can pass the `\--non-interactive` switch to the script command to tell Grails to accept the default answer for any questions, for example whether to install a missing plugin.
@@ -222,7 +222,7 @@ Grails now utilizes the Gradle Build System for project management. The project'
 [source, groovy]
 ----
 plugins {
-    id 'org.grails.grails-web' version 'x.y.z' // Grails plugin
+    id 'org.apache.grails.gradle.grails-web' version 'x.y.z' // Grails plugin
 }
 
 repositories {
@@ -233,10 +233,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.grails:grails-core'
     // Add more dependencies as needed...
-}
-
-grails {
-    pathingJar = true
 }
 ----
 

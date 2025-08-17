@@ -64,11 +64,13 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
     public static final String DISPATCH_ACTION_PARAMETER = "_action_";
     public static final String SEND_ALLOW_HEADER_FOR_INVALID_HTTP_METHOD = "grails.http.invalid.method.allow.header";
     public static final String LAYOUT_ATTRIBUTE = "org.grails.layout.name";
+    public static final String NONE_LAYOUT = "_none_"; // legacy, sitemesh2 setting to not set a layout
     public static final String RENDERING_VIEW = "org.grails.rendering.view";
     public static final String GRAILS_DISPATCH_EXTENSION = ".dispatch";
     public static final String GRAILS_SERVLET_PATH = "/grails";
     public static final String EXCEPTION_ATTRIBUTE = "exception";
     public static final String ASYNC_REQUEST_URI_ATTRIBUTE = "jakarta.servlet.async.request_uri";
+    public static final String SITEMESH2_PAGE_ATTRIBUTE = "__sitemesh__page";
 
     public static final int SC_METHOD_NOT_ALLOWED = HttpServletResponse.SC_METHOD_NOT_ALLOWED;
 

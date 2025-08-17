@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: RAT Report
+name: "Licensing - RAT Report"
 on:
   push:
     branches:
@@ -26,6 +26,10 @@ on:
       - '[3-9]+.[3-9]+.x'
       - license-audit
   workflow_dispatch:
+# queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   rat-audit:
     runs-on: ubuntu-latest

@@ -20,11 +20,8 @@ under the License.
 Grails {version} ships with the following dependency upgrades:
 
 * Groovy {groovyVersion}
-* GORM {version}
 * Spring Framework {springVersion}
 * Spring Boot {springBootVersion}
 * Gradle {gradleVersion}
 * Spock {spockVersion}
-* Grails Testing Support {testingSupportVersion}
-* Grails Gradle Plugin {grailsGradlePluginVersion}
 

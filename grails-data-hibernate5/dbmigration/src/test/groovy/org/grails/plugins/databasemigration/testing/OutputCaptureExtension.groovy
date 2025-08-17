@@ -28,6 +28,8 @@ import org.spockframework.runtime.extension.IMethodInvocation
 import org.spockframework.runtime.model.FieldInfo
 import org.spockframework.runtime.model.SpecInfo
 
+import java.nio.charset.StandardCharsets
+
 class OutputCaptureExtension implements IAnnotationDrivenExtension<OutputCapture> {
 
     private final Map<FieldInfo, ByteArrayOutputStream> fieldBuffers = new HashMap<FieldInfo, ByteArrayOutputStream>(1);
@@ -83,7 +85,7 @@ class OutputCaptureExtension implements IAnnotationDrivenExtension<OutputCapture
 
             @Override
             String toString() {
-                return baos.toString("UTF-8")
+                return baos.toString(StandardCharsets.UTF_8)
             }
         }
     }

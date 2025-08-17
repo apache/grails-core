@@ -37,10 +37,12 @@ ext {
 
 dependencies {
     // TODO: Clarify and clean up dependencies
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-bom')) {
+        exclude group: 'org.liquibase', module: 'liquibase-core'
+    }
 
-    api("org.liquibase:liquibase-core:$liquibaseHibernate5Version")
-    api("org.liquibase.ext:liquibase-hibernate5:$liquibaseHibernate5Version") {
+    implementation("org.liquibase:liquibase-core:$liquibaseHibernate5Version")
+    implementation("org.liquibase.ext:liquibase-hibernate5:$liquibaseHibernate5Version") {
         exclude group: 'org.hibernate', module: 'hibernate-core'
         exclude group: 'org.hibernate', module: 'hibernate-entitymanager'
         exclude group: 'org.hibernate', module: 'hibernate-envers'
@@ -48,14 +50,13 @@ dependencies {
         exclude group: 'org.liquibase', module: 'liquibase-commercial'
     }
 
-    api(project(':grails-shell-cli')) {
+    implementation(project(':grails-shell-cli')) {
         exclude group: 'org.slf4j', module: 'slf4j-simple'
 
         // TODO: the shell cli is exporting groovy 3, while this project is expected to use groovy 4
         //       this plugin needs split into commands & the plugin itself so that different versions
         //       of groovy can be used
-        exclude group: 'org.codehaus.groovy', module: 'groovy'
-        exclude group: 'org.codehaus.groovy', module: 'groovy-bom'
+        exclude group: 'org.codehaus.groovy'
     }
 
     compileOnly 'org.springframework.boot:spring-boot-starter-logging'
@@ -71,6 +72,19 @@ dependencies {
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
     testImplementation 'com.h2database:h2'
+
+    constraints {
+        implementation("org.liquibase:liquibase-core") {
+            version {
+                strictly "$liquibaseHibernate5Version"
+            }
+        }
+        implementation("org.liquibase.ext:liquibase-hibernate5") {
+            version {
+                strictly "$liquibaseHibernate5Version"
+            }
+        }
+    }
 }
 
 tasks.named('jar', Jar) {
@@ -95,4 +109,5 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/hibernate5-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

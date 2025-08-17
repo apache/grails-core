@@ -155,14 +155,13 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
         return properties == null ? null : properties.orElse(null);
     }
 
-    private static Field getFieldFromHierarchy(PersistentEntity persistentEntity, String fieldName) {
-        Class<?> clazz = persistentEntity.getJavaClass();
+    private static Field getFieldFromHierarchy(Class<?> entity, String fieldName) {
+        Class<?> clazz = entity;
         while (clazz != null) {
             try {
                 return clazz.getDeclaredField(fieldName);
             } catch (NoSuchFieldException e) {
-                persistentEntity = persistentEntity.getParentEntity();
-                clazz = persistentEntity == null? null : persistentEntity.getJavaClass();
+                clazz = clazz.getSuperclass();
             }
         }
         return null;
@@ -179,7 +178,7 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
                     } else if (property.getName().equals(DATE_CREATED_PROPERTY)) {
                         storeTimestampAvailability(entitiesWithDateCreated, persistentEntity, property);
                     } else {
-                        Field field = getFieldFromHierarchy(persistentEntity, property.getName());
+                        Field field = getFieldFromHierarchy(persistentEntity.getJavaClass(), property.getName());
                         if (field != null && field.isAnnotationPresent(AutoTimestamp.class)) {
                             AutoTimestamp autoTimestamp = field.getAnnotation(AutoTimestamp.class);
                             if (autoTimestamp.value() == AutoTimestamp.EventType.UPDATED) {

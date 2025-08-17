@@ -1,3 +1,0 @@
-<plugin name='domainClass'>
-  <type>org.grails.plugins.domain.DomainClassGrailsPlugin</type>
-</plugin>

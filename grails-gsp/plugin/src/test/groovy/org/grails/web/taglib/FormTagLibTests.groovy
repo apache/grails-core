@@ -18,15 +18,16 @@
  */
 package org.grails.web.taglib
 
-import grails.core.GrailsUrlMappingsClass
+import grails.artefact.Artefact
 import grails.testing.web.taglib.TagLibUnitTest
 import grails.util.MockRequestDataValueProcessor
 import org.grails.buffer.FastStringWriter
-import org.grails.core.AbstractGrailsClass
 import org.grails.core.artefact.UrlMappingsArtefactHandler
+import org.grails.plugins.web.taglib.ApplicationTagLib
 import org.grails.plugins.web.taglib.FormTagLib
+import org.grails.plugins.web.taglib.UrlMappingTagLib
+import org.grails.web.mapping.UrlMappingsHolderFactoryBean
 import spock.lang.Issue
-import spock.lang.PendingFeatureIf
 import spock.lang.Rollup
 import spock.lang.Specification
 
@@ -41,33 +42,25 @@ import spock.lang.Specification
  * @author rvanderwerf
  */
 class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib> {
+    def setupSpec() {
+        // Test pollution causes these to be cached on the LazyTagLibraryLookup
+        [ApplicationTagLib, FormTagLib, UrlMappingTagLib].each {
+            GroovySystem.metaClassRegistry.removeMetaClass(it)
+        }
+    }
 
     def setup() {
         tagLib.requestDataValueProcessor = new MockRequestDataValueProcessor()
-    }
 
-    def setupSpec() {
-        def mappingsClosure = {
-            '/admin/books'(controller: 'books', namespace: 'admin')
-            '/books'(controller: 'books')
+        grailsApplication.addArtefact(UrlMappingsArtefactHandler.TYPE, FormTagLibUrlMappings)
+
+        defineBeans {
+            grailsUrlMappingsHolder(UrlMappingsHolderFactoryBean) {
+                delegate.grailsApplication = grailsApplication
+            }
         }
-        grailsApplication.addArtefact(UrlMappingsArtefactHandler.TYPE, new MockGrailsUrlMappingsClass(mappingsClosure))
     }
 
-    @PendingFeatureIf({
-        System.getenv().containsKey('CI')
-        /*
-        FOR SOME REASON FAILS (ONLY) IN CI WITH:
-        output == '<form action="/books" method="post" ><input type="hidden" name="requestDataValueProcessorHiddenName" value="hiddenValue" />\n</form>'
-        |      |
-        |      false
-        |      6 differences (95% similarity)
-        |      <form action="(------)" method="post" ><input type="hidden" name="requestDataValueProcessorHiddenName" value="hiddenValue" />\n</form>
-        |      <form action="(/books)" method="post" ><input type="hidden" name="requestDataValueProcessorHiddenName" value="hiddenValue" />\n</form>
-        <form action="" method="post" ><input type="hidden" name="requestDataValueProcessorHiddenName" value="hiddenValue" />
-        </form>
-        */
-    })
     def testFormNoNamespace() {
         expect:
         applyTemplate('<g:form controller="books"></g:form>') ==
@@ -291,27 +284,14 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
         ).toString() == '<form action="/con/action" method="post" id="formElementId" ><input type="hidden" name="requestDataValueProcessorHiddenName" value="hiddenValue" />\n</form>'
     }
 
-    @PendingFeatureIf({
-        System.getenv().containsKey('CI')
-        /*
-        FOR SOME REASON FAILS (ONLY) IN CI WITH:
-        tagLib.formActionSubmit([ controller: 'con', id: 'formElementId', value: 'Submit' ]).toString() == '<input type="submit" formaction="/con" value="Submit" id="formElementId" />'
-        |      |                                                                             |          |
-        |      <input type="submit" formaction="" value="Submit" id="formElementId" />       |          false
-        |                                                                                    |          4 differences (94% similarity)
-        |                                                                                    |          <input type="submit" formaction="(----)" value="Submit" id="formElementId" />
-        |                                                                                    |          <input type="submit" formaction="(/con)" value="Submit" id="formElementId" />
-        |                                                                                    <input type="submit" formaction="" value="Submit" id="formElementId" />
-        */
-    })
     def testFormActionSubmitWithController() {
         expect:
         tagLib.formActionSubmit([
-                controller: 'con',
+                controller: 'books',
                 id: 'formElementId',
                 value: 'Submit'
         ]).toString() ==
-                '<input type="submit" formaction="/con" value="Submit" id="formElementId" />'
+                '<input type="submit" formaction="/books" value="Submit" id="formElementId" />'
     }
 
     def testFormActionSubmitWithControllerAndAction() {
@@ -582,24 +562,12 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
     private void unRegisterRequestDataValueProcessor() {
         tagLib.requestDataValueProcessor = null
     }
+}
 
-    private static final class MockGrailsUrlMappingsClass extends AbstractGrailsClass implements GrailsUrlMappingsClass {
-
-        Closure mappingClosure
-
-        MockGrailsUrlMappingsClass(Closure mappingClosure) {
-            super(FormTagLibTests.class, 'UrlMappings')
-            this.mappingClosure = mappingClosure
-        }
-
-        @Override
-        Closure getMappingsClosure() {
-            return mappingClosure
-        }
-
-        @Override
-        List getExcludePatterns() {
-            return null
-        }
+@Artefact('UrlMappings')
+class FormTagLibUrlMappings {
+    static mappings = {
+        '/admin/books'(controller: 'books', namespace: 'admin')
+        '/books'(controller: 'books')
     }
 }

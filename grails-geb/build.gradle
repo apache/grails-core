@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 plugins {
     id 'java-library'
     id 'java-test-fixtures'
@@ -43,7 +42,6 @@ dependencies {
     // For most core projects, we don't apply the plugin and only add what we need so we need the platform
     // for consistency, add the platform here and later move away from the grails-plugin gradle plugin apply
     implementation platform(project(':grails-bom'))
-    testFixturesApi(platform(project(':grails-bom')))
     testFixturesImplementation platform(project(':grails-bom'))
 
     compileOnly project(':grails-core') // Provided, as this is a Grails plugin
@@ -70,4 +68,5 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

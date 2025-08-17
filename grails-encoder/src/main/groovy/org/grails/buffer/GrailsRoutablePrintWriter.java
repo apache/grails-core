@@ -29,8 +29,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.objenesis.ObjenesisStd;
 import org.springframework.objenesis.instantiator.ObjectInstantiator;
 
-// Moved from grails-gsp:
-// https://github.com/grails/grails-gsp/blob/v6.0.2/grails-web-sitemesh/src/main/groovy/org/grails/web/sitemesh/GrailsRoutablePrintWriter.java
 public class GrailsRoutablePrintWriter extends GrailsPrintWriterAdapter {
     private static final Logger LOG = LoggerFactory.getLogger(GrailsRoutablePrintWriter.class);
     private DestinationFactory factory;

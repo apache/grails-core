@@ -52,7 +52,7 @@ class TableSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<F
 
 	def setup() {
 		tagLib.formFieldsTemplateService = mockFormFieldsTemplateService
-		mockEmbeddedSitemeshLayout(tagLib)
+		mockEmbeddedGrailsLayout(tagLib)
 	}
 
     def cleanupSpec() {

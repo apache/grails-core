@@ -42,7 +42,6 @@ For Groovy configuration the following variables are available to the configurat
 
 *Variable*|*Description*
 userHome|Location of the home directory for the account that is running the Grails application.
-grailsHome|Location of the directory where you installed Grails. If the `GRAILS_HOME` environment variable is set, it is used.
 appName|The application name as it appears in build.gradle.
 appVersion|The application version as it appears in build.gradle.
 |===

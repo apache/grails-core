@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "Groovy Joint Validation Build"
+name: "CI - Groovy Joint Validation Build"
 on:
   push:
     branches:
@@ -22,10 +22,15 @@ on:
     branches:
       - '[4-9]+.[0-9]+.x'
   workflow_dispatch:
+# queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
   build_groovy:
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     runs-on: ubuntu-latest
     outputs:
       groovyVersion: ${{ steps.groovy-version.outputs.value }}
