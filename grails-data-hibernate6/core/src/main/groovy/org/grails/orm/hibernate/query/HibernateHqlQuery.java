@@ -1,11 +1,15 @@
 package org.grails.orm.hibernate.query;
 
+import jakarta.persistence.FlushModeType;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.event.PostQueryEvent;
 import org.grails.datastore.mapping.query.event.PreQueryEvent;
+import org.grails.orm.hibernate.HibernateDatastore;
+import org.grails.orm.hibernate.HibernateSession;
+import org.hibernate.SessionFactory;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
@@ -49,4 +53,22 @@ public class HibernateHqlQuery extends Query {
             return results;
         }
     }
+
+
+        public static HibernateHqlQuery createHqlQuery(org.hibernate.Session session
+                , org.hibernate.query.Query q
+                , HibernateDatastore dataStore
+                , SessionFactory sessionFactory
+                , PersistentEntity persistentEntity
+        ) {
+            var hibernateSession = new HibernateSession( dataStore, sessionFactory);
+            switch (session.getHibernateFlushMode()) {
+                case AUTO, ALWAYS:
+                    hibernateSession.setFlushMode(FlushModeType.AUTO);
+                    break;
+                default:
+                    hibernateSession.setFlushMode(FlushModeType.COMMIT);
+            }
+            return new HibernateHqlQuery(hibernateSession, persistentEntity, q);
+        }
 }

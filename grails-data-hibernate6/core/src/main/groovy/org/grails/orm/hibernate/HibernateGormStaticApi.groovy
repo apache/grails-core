@@ -253,7 +253,9 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             populateQueryArguments(q, queryNamedArgs)
             populateQueryArguments(q, args)
             populateQueryWithNamedArguments(q, queryNamedArgs)
-            createHqlQuery(session, q).singleResult()
+
+            def hqlQuery = HibernateHqlQuery.createHqlQuery(session, q, datastore as HibernateDatastore, sessionFactory, persistentEntity)
+            hqlQuery.singleResult()
         }
     }
 
@@ -283,7 +285,9 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             populateQueryArguments(q, args)
             populateQueryWithNamedArguments(q, params)
 
-            createHqlQuery(session, q).list()
+
+            def hibernateHqlQuery = HibernateHqlQuery.createHqlQuery(session, q, datastore as HibernateDatastore, sessionFactory, persistentEntity)
+            hibernateHqlQuery.list()
         }
     }
 
@@ -313,7 +317,9 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             q.addEntity(persistentClass)
             populateQueryArguments(q, args)
             q.setMaxResults(1)
-            def results = createHqlQuery(session, q).list()
+
+            def hibernateHqlQuery = HibernateHqlQuery.createHqlQuery(session,q, datastore as HibernateDatastore,sessionFactory,persistentEntity)
+            def results = hibernateHqlQuery.list()
             if(results.isEmpty()) {
                 return null
             }
@@ -348,7 +354,9 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             }
             q.addEntity(persistentClass)
             populateQueryArguments(q, args)
-            return createHqlQuery(session, q).list()
+
+            def hibernateHqlQuery = HibernateHqlQuery.createHqlQuery(session,q, datastore as HibernateDatastore,sessionFactory,persistentEntity)
+            return hibernateHqlQuery.list()
         }
     }
 
@@ -489,7 +497,9 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             populateQueryArguments(q, args)
             populateQueryWithNamedArguments(q, params)
 
-            createHqlQuery(session, q).list()
+
+            def hibernateHqlQuery = HibernateHqlQuery.createHqlQuery(session,q, datastore as HibernateDatastore,sessionFactory,persistentEntity)
+            hibernateHqlQuery.list()
         }
     }
 
@@ -519,7 +529,9 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                 }
             }
             populateQueryArguments(q, args)
-            createHqlQuery(session, q).list()
+
+            def hibernateHqlQuery = HibernateHqlQuery.createHqlQuery(session,q, datastore as HibernateDatastore,sessionFactory,persistentEntity)
+            hibernateHqlQuery.list()
         }
     }
 
@@ -914,8 +926,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             default:
                 hibernateSession.setFlushMode(FlushModeType.COMMIT)
         }
-        HibernateHqlQuery query = new HibernateHqlQuery(hibernateSession, persistentEntity, q)
-        return query
+        return HibernateHqlQuery.createHqlQuery(session,q, datastore as HibernateDatastore,sessionFactory,persistentEntity)
     }
 
 }
