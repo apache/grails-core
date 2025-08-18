@@ -199,16 +199,6 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
     }
 
     @Override
-    protected MethodNode weaveNewMethod(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, MethodNode methodNode, Map<String, ClassNode> genericsSpec) {
-        super.weaveNewMethod(sourceUnit, annotationNode, classNode, methodNode, genericsSpec)
-    }
-
-    @Override
-    protected void weaveClassNode(SourceUnit source, AnnotationNode annotationNode, ClassNode classNode) {
-        super.weaveClassNode(source, annotationNode, classNode)
-    }
-
-    @Override
     protected void enhanceClassNode(SourceUnit source, AnnotationNode annotationNode, ClassNode declaringClassNode) {
         weaveTransactionManagerAware(sourceUnit, annotationNode, declaringClassNode)
         super.enhanceClassNode(source, annotationNode, declaringClassNode)

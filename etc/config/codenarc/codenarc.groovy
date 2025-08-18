@@ -68,6 +68,7 @@ ruleset {
     UnnecessaryDotClass
     UnnecessaryGroovyImport
     UnnecessaryGString
+    UnnecessaryOverridingMethod
     UnnecessaryPublicModifier
     UnnecessarySemicolon
     UnusedImport

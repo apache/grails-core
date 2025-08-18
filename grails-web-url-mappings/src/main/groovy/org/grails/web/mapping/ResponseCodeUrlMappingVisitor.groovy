@@ -21,7 +21,6 @@ package org.grails.web.mapping
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.PropertyNode
 import org.codehaus.groovy.ast.expr.MethodCallExpression
-import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.control.SourceUnit
 
 class ResponseCodeUrlMappingVisitor extends ClassCodeVisitorSupport {
@@ -43,10 +42,6 @@ class ResponseCodeUrlMappingVisitor extends ClassCodeVisitorSupport {
             responseCodes << call.methodAsString
         }
         super.visitMethodCallExpression(call)
-    }
-
-    void visitExpressionStatement(ExpressionStatement statement) {
-        super.visitExpressionStatement(statement)
     }
 
     @Override

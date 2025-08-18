@@ -173,11 +173,6 @@ abstract class BuilderTypeCheckingExtension extends GroovyTypeCheckingExtensionS
         }
 
         @Override
-        void visitClosureExpression(final ClosureExpression expression) {
-            super.visitClosureExpression(expression)
-        }
-
-        @Override
         @CompileDynamic
         Expression transform(final Expression exp) {
             if (callsToBeReplaced.contains(exp)) {
