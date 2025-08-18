@@ -247,7 +247,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         def template = hibernateTemplate
         queryNamedArgs = new HashMap(queryNamedArgs)
         return (D) template.execute { Session session ->
-            def hqlQuery = HibernateHqlQuery.createHqlQuery(session, datastore as HibernateDatastore, sessionFactory, persistentEntity, queryString)
+            def hqlQuery = HibernateHqlQuery.createHqlQuery(session, datastore as HibernateDatastore, sessionFactory, persistentEntity, queryString, false)
             template.applySettings(hqlQuery.getQuery());
             hqlQuery.populateQuerySettings(queryNamedArgs)
             hqlQuery.populateQuerySettings(args)
@@ -275,7 +275,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
         def template = hibernateTemplate
         return (List<D>) template.execute { Session session ->
-            def hibernateHqlQuery = HibernateHqlQuery.createHqlQuery(session, datastore as HibernateDatastore, sessionFactory, persistentEntity,queryString)
+            def hibernateHqlQuery = HibernateHqlQuery.createHqlQuery(session, datastore as HibernateDatastore, sessionFactory, persistentEntity,queryString, false)
             template.applySettings(hibernateHqlQuery.getQuery())
             hibernateHqlQuery.populateQuerySettings(params)
             hibernateHqlQuery.populateQuerySettings(args)
@@ -293,25 +293,15 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             if(sql instanceof GString) {
                 sql = buildOrdinalParameterQueryFromGString((GString)sql, params)
             }
+            args = new HashMap(args)
 
-            NativeQuery q = (NativeQuery)session.createNativeQuery(sql.toString())
 
-            template.applySettings(q)
-
-            params.eachWithIndex { val, int i ->
-                i++
-                if (val instanceof CharSequence) {
-                    q.setParameter i, val.toString()
-                }
-                else {
-                    q.setParameter i, val
-                }
-            }
-            q.addEntity(persistentClass)
-            populateQueryArguments(q, args)
-            q.setMaxResults(1)
-
-            def results = createHqlQuery(session, q).list()
+            def hibernateHqlQuery = HibernateHqlQuery.createHqlQuery(session, datastore as HibernateDatastore, sessionFactory, persistentEntity, sql.toString(), true)
+            template.applySettings(hibernateHqlQuery.getQuery())
+            args.put(DynamicFinder.ARGUMENT_MAX, 1)
+            hibernateHqlQuery.populateQuerySettings(args)
+            hibernateHqlQuery.populateQueryWithIndexedArguments(params)
+            def results = hibernateHqlQuery.list()
             if(results.isEmpty()) {
                 return null
             }
@@ -325,29 +315,18 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     List<D> findAllWithSql(CharSequence sql, Map args = Collections.emptyMap()) {
         IHibernateTemplate template = hibernateTemplate
         return (List<D>) template.execute { Session session ->
-
             List params = []
             if(sql instanceof GString) {
                 sql = buildOrdinalParameterQueryFromGString((GString)sql, params)
             }
 
-            NativeQuery q = (NativeQuery)session.createNativeQuery(sql.toString(),persistentEntity.javaClass)
+            def hibernateHqlQuery =HibernateHqlQuery.createHqlQuery(session, datastore as HibernateDatastore, sessionFactory, persistentEntity, sql.toString(), true)
+            template.applySettings(hibernateHqlQuery.getQuery())
+            hibernateHqlQuery.populateQuerySettings(args)
+            hibernateHqlQuery.populateQueryWithIndexedArguments(params)
 
-            template.applySettings(q)
-
-            params.eachWithIndex { val, int i ->
-                i++
-                if (val instanceof CharSequence) {
-                    q.setParameter i, val.toString()
-                }
-                else {
-                    q.setParameter i, val
-                }
-            }
-            q.addEntity(persistentClass)
-            populateQueryArguments(q, args)
-
-            return createHqlQuery(session, q).list()
+            def list = hibernateHqlQuery.list()
+            return list
         }
     }
 
@@ -503,7 +482,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         args = new HashMap(args)
 
         return (List<D>) template.execute { Session session ->
-            def hqlQuery = HibernateHqlQuery.createHqlQuery(session, datastore as HibernateDatastore, sessionFactory, persistentEntity, queryString)
+            def hqlQuery = HibernateHqlQuery.createHqlQuery(session, datastore as HibernateDatastore, sessionFactory, persistentEntity, queryString, false)
             template.applySettings(hqlQuery.getQuery())
             hqlQuery.populateQuerySettings(args)
             hqlQuery.populateQueryWithIndexedArguments(params as List)
@@ -889,20 +868,6 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         datastore.applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hibernateQuery))
     }
 
-    protected HibernateHqlQuery createHqlQuery(Session session, Query q) {
-        HibernateSession hibernateSession = new HibernateSession((HibernateDatastore) datastore, sessionFactory)
-        FlushMode hibernateMode = session.getHibernateFlushMode()
-        switch (hibernateMode) {
-            case FlushMode.AUTO:
-                hibernateSession.setFlushMode(FlushModeType.AUTO)
-                break
-            case FlushMode.ALWAYS:
-                hibernateSession.setFlushMode(FlushModeType.AUTO)
-                break
-            default:
-                hibernateSession.setFlushMode(FlushModeType.COMMIT)
-        }
-        return new HibernateHqlQuery(hibernateSession, persistentEntity, q)
-    }
+
 
 }

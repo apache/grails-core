@@ -13,10 +13,8 @@ import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.exceptions.GrailsQueryException;
 import org.hibernate.FlushMode;
 import org.hibernate.SessionFactory;
-import org.hibernate.query.NativeQuery;
 import org.springframework.context.ApplicationEventPublisher;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -69,8 +67,10 @@ public class HibernateHqlQuery extends Query {
             , HibernateDatastore dataStore
             , SessionFactory sessionFactory
             , PersistentEntity persistentEntity
-            , String sqlString) {
-        var q =  session.createQuery(sqlString, persistentEntity.getJavaClass());
+            , String sqlString
+            , boolean isNative
+        ) {
+        var q = isNative ? session.createNativeQuery(sqlString, persistentEntity.getJavaClass()) : session.createQuery(sqlString, persistentEntity.getJavaClass());
         var hibernateSession = new HibernateSession( dataStore, sessionFactory);
         HibernateHqlQuery hibernateHqlQuery = new HibernateHqlQuery(hibernateSession, persistentEntity, q);
         hibernateHqlQuery.setFlushMode(session.getHibernateFlushMode());
