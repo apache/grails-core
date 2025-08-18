@@ -70,6 +70,7 @@ ruleset {
     UnnecessaryGString
     UnnecessaryOverridingMethod
     UnnecessaryPublicModifier
+    UnnecessarySafeNavigationOperator
     UnnecessarySemicolon
     UnusedImport
 }

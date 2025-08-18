@@ -30,7 +30,7 @@ class AllClassCompleter extends ClassNameCompleter {
 
     AllClassCompleter() {
         super(new File(BuildSettings.BASE_DIR, 'grails-app')
-                        ?.listFiles()
+                        .listFiles()
                         ?.findAll() { File f -> f.isDirectory() && !f.isHidden() && !f.name.startsWith('.') } as File[])
     }
 }
