@@ -40,9 +40,9 @@ class GrailsGebSettings {
 
     private static VncRecordingMode DEFAULT_RECORDING_MODE = VncRecordingMode.SKIP
     private static VncRecordingFormat DEFAULT_RECORDING_FORMAT = VncRecordingFormat.MP4
-    private static int DEFAULT_TIMEOUT_IMPLICITLY_WAIT = 0
-    private static int DEFAULT_TIMEOUT_PAGE_LOAD = 300
-    private static int DEFAULT_TIMEOUT_SCRIPT = 30
+    public static int DEFAULT_TIMEOUT_IMPLICITLY_WAIT = 0
+    public static int DEFAULT_TIMEOUT_PAGE_LOAD = 300
+    public static int DEFAULT_TIMEOUT_SCRIPT = 30
 
     String tracingEnabled
     String recordingDirectoryName
