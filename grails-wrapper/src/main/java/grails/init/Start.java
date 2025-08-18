@@ -26,6 +26,7 @@ import java.net.Authenticator;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
@@ -47,7 +48,7 @@ public class Start {
 
         try {
             GrailsVersion preferredGrailsVersion = getPreferredGrailsVersion();
-            List<GrailsReleaseType> allowedTypes = getAllowedReleaseTypes(preferredGrailsVersion);
+            LinkedHashSet<GrailsReleaseType> allowedTypes = getAllowedReleaseTypes(preferredGrailsVersion);
 
             GrailsUpdater updater = new GrailsUpdater(allowedTypes, preferredGrailsVersion);
             boolean forceUpdate = (args.length > 0 && args[0].trim().equals("update-wrapper"));
@@ -104,6 +105,18 @@ public class Start {
         String grailsVersion = properties.getProperty("grailsVersion");
         if(grailsVersion == null) {
             System.out.println("gradle.properties does not contain grailsVersion; downloading latest Grails Version");
+
+            String overrideGrailsVersion = System.getenv("PREFERRED_GRAILS_VERSION");
+            if (overrideGrailsVersion != null) {
+                try {
+                    return new GrailsVersion(overrideGrailsVersion);
+                } catch (Exception e) {
+                    System.out.println("An invalid Grails Version [" + overrideGrailsVersion + "] was specified in PREFERRED_GRAILS_VERSION");
+                    e.printStackTrace();
+                    System.exit(1);
+                }
+            }
+
             return null;
         }
 
@@ -119,7 +132,7 @@ public class Start {
         return null;
     }
 
-    private static List<GrailsReleaseType> getAllowedReleaseTypes(GrailsVersion preferredVersion) {
+    private static LinkedHashSet<GrailsReleaseType> getAllowedReleaseTypes(GrailsVersion preferredVersion) {
         String raw = System.getenv("GRAILS_WRAPPER_ALLOWED_TYPES");
         if (raw == null || raw.trim().isEmpty()) {
             if (preferredVersion != null) {
@@ -127,20 +140,25 @@ public class Start {
                 return preferredVersion.releaseType.upTo();
             } else {
                 String grailsVersion = Start.class.getPackage().getImplementationVersion();
-                GrailsVersion myVersion = new GrailsVersion(grailsVersion);
+                if (grailsVersion == null) {
+                    // the only time this version isn't defined is when it comes from a non-jar file, which should
+                    // only be in development
+                    return new LinkedHashSet<>(List.of(GrailsReleaseType.SNAPSHOT));
+                }
 
+                GrailsVersion myVersion = new GrailsVersion(grailsVersion);
                 if (myVersion.releaseType != GrailsReleaseType.RELEASE) {
-                    return Arrays.asList(GrailsReleaseType.values());
+                    return new LinkedHashSet<>(List.of(GrailsReleaseType.values()));
                 }
 
                 // Only consider releases unless this wrapper
-                return List.of(GrailsReleaseType.RELEASE);
+                return new LinkedHashSet<>(List.of(GrailsReleaseType.RELEASE));
             }
         }
 
-        return Arrays.stream(raw.split(","))
+        return new LinkedHashSet<>(Arrays.stream(raw.split(","))
                 .map(String::trim)
                 .map(GrailsReleaseType::valueOf)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 }

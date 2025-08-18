@@ -20,7 +20,7 @@
 version = '0.1'
 group = 'hyphenated'
 
-apply plugin: 'asset-pipeline'
+apply plugin: 'cloud.wondrify.asset-pipeline'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 
 // The grails-gsp Gradle plugin is not needed for running the functional tests.
@@ -31,16 +31,19 @@ apply plugin: 'org.apache.grails.gradle.grails-gsp'
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    implementation 'org.springframework.boot:spring-boot-starter-logging'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-autoconfigure'
-    implementation 'org.springframework.boot:spring-boot-starter-tomcat'
-    implementation 'org.apache.grails:grails-dependencies'
-    implementation 'org.apache.grails:grails-web-boot'
+    implementation 'org.apache.grails:grails-dependencies-starter-web'
+    implementation 'com.h2database:h2'
+    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
+        implementation 'org.apache.grails:grails-sitemesh3'
+    }
+    else {
+        implementation 'org.apache.grails:grails-layout'
+    }
 
     implementation 'org.apache.grails:grails-data-hibernate5'
 
-    implementation 'org.webjars.npm:jquery'
+    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly "org.hibernate:hibernate-ehcache:$hibernate5Version", {
         // exclude javax variant of hibernate-core
@@ -54,7 +57,7 @@ dependencies {
     runtimeOnly 'org.apache.grails:grails-scaffolding'
     runtimeOnly 'org.apache.grails:grails-fields'
 
-    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
 
     testImplementation 'org.apache.grails:grails-testing-support-web'
@@ -69,4 +72,5 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

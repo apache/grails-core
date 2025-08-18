@@ -1,0 +1,5 @@
+micronaut:
+  http:
+    services:
+      analytics:
+        url: 'http://localhost:8081'

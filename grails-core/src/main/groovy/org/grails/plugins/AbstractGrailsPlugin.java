@@ -177,10 +177,6 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
         return false;
     }
 
-    public boolean checkForChanges() {
-        return false;
-    }
-
 
     public String[] getDependencyNames() {
         return dependencyNames;

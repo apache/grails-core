@@ -25,10 +25,10 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 
 > And if you like the project, but just don't have time to contribute, that's fine. There are other easy ways to support the project and show your appreciation, which we would also be very happy about:
 > - Star the project
-> - Tweet about it
+> - Talk about it on Social Media
 > - Refer to this project in your project's readme
 > - Mention the project at local meetups and tell your friends/colleagues
-> - [Donate](https://opencollective.com/friends-of-grails) to the Friends of Grails initiative so others can work on the project.
+> - As an independent initiative, community members have set up an open collective for Apache Grails - https://opencollective.com/friends-of-grails. This initiative is designed to complement the Apache project and the many contributions we get from our great community and supporters.
 
 <!-- omit in toc -->
 ## Table of Contents
@@ -68,7 +68,8 @@ If you then still feel the need to ask a question and need clarification, we rec
 ## I Want to Contribute
 
 > ### Legal Notice <!-- omit in toc -->
-> When contributing to this project, you must agree that you have authored 100% of the content, that you have the necessary rights to the content and that the content you contribute may be provided under the project license.  All committers must sign the project's CLA.  More detailed requirements are available in the project's [CLA](https://cla-assistant.io/apache/grails-core).
+> When contributing to this project, you must agree that you have authored 100% of the content, that you have the
+> necessary rights to the content and that the content you contribute may be provided under the project license.
 
 ### Reporting Bugs
 
@@ -142,23 +143,44 @@ One of the benefits of [GitHub](http://github.com) is the way that you can easil
 If you're interested in contributing fixes and features to any part of grails, you will have to learn how to get hold of the project's source, build it and test it with your own applications. Before you start, make sure you have:
 
 * A git client
-* An Editor such as [IntelliJ](https://www.jetbrains.com/idea/).  
+* An Editor such as [IntelliJ](https://www.jetbrains.com/idea/)
+* A JDK (17 or higher)
+* A container runtime
 
-Once you have the pre-requisite packages installed, the next step is to download the Grails source code, which is hosted at [GitHub](http://github.com) in several repositories owned by the ["grails" GitHub user](http://github.com/grails). This is a simple case of cloning the repository you're interested in. For example, to get the core framework run:
+Once you have the pre-requisite packages installed, the next step is to download the Apache Grails source code, which is
+hosted at [GitHub](http://github.com/apache/grails-core). This is a simple case of cloning the repository you're
+interested in. For example, to get the core framework run:
 
     git clone http://github.com/apache/grails-core.git
 
-This will create a `grails-core` directory in your current working directory containing all the project source files. The next step is setting up the JDK to use.  Grails makes use of [SDKMAN!](https://sdkman.io/) for easy JDK setup.  Each Grails project should have a `.sdkmanrc` in it's root directory.  Change to the `grails-core` directory and install the preferred JDK by issuing the command:
+This will create a `grails-core` directory in your current working directory containing all the project source files.
+The next step is setting up the JDK to use. Grails makes use of [SDKMAN!](https://sdkman.io/) for easy JDK setup. Each
+Grails project should have a `.sdkmanrc` in it's root directory. Change to the `grails-core` directory and install the
+preferred JDK by issuing the command:
 
     sdk env .
 
+##### 3. Building the Code
+
+To build the code, without tests, simply run:
+
+    ./gradlew build -PskipTests
+
+If you encounter out of memory errors when trying to run the build, try adjusting Gradle build settings. For example:
+
+    export GRADLE_OPTS="-Xms2G -Xmx5G"
+
+Please note that a valid container runtime is required to run Grails Tests. The example above omits the tests so the
+build will pass.
+
 <!-- omit in toc -->
 #### Testing Your Change
-Grails has both local test coverage in the form of `unit` and `integration` tests.
 
-To run the full suite of tests in `grails-core` execute:
+Grails has test coverage in the form of `unit`, `integration`, and `functional` tests.
 
-    ./gradlew check
+To force a full run of the full suite of tests in `grails-core` execute:
+
+    ./gradlew build --rerun-tasks
 
 Check the test results & verify that the build completes successfully.
 
@@ -170,10 +192,13 @@ Sometimes it's useful to debug your local application to see what's going wrong.
 By default, Grails forks a JVM to run the application. The `-debug-jvm` argument causes the debugger to be associated with the forked JVM.  You can then attach your debugger as proceed as normal.
 
 ### Improving The Documentation
-There are many aspects to [Grail's documentation](https://grails.org/documentation.html): 
+
+There are many aspects to [Grail's documentation](https://docs.grails.org/)
 - [API](https://docs.grails.org/latest/api/) documentation in the code itself via javadoc & groovydoc.
-- [The Grails User Guide](https://docs.grails.org/6.2.1/guide/single.html) from the [grails-doc](https://github.com/apache/grails-doc) project.
-- Various how-to [Guides](https://guides.grails.org/index.html) from the [grails-guides](https://github.com/grails/grails-guides) project.
+- [The Grails User Guide](https://docs.grails.org/latest/guide/single.html) from the `grails-doc` project in this
+  repository.
+- Various how-to [Guides](https://guides.grails.org/index.html) from
+  the [grails-guides](https://github.com/grails-guides) Organization.
 
 <!-- omit in toc -->
 #### <u>Improving the User Guide</u>
@@ -183,12 +208,10 @@ This will link to the GitHub edit screen where you can make changes, preview the
 
 <!-- omit in toc -->
 #### <u>Building the Guide</u>
-If you want to make significant changes, such as changing the structure of the table of contents etc. then we recommend you build the user guide. To do that simply checkout the sources from GitHub:
 
-    $ git clone https://github.com/apache/grails-doc/
-    $ cd grails-doc
-
-The source files can be found in the `src/en/guide` directory. Whilst the Table of Contents (TOC) is defined in the `src/en/guide/toc.yml` file.
+If you want to make significant changes, such as changing the structure of the table of contents etc. then we recommend
+you build the user guide. The source files can be found in the `grails-doc/src/en/guide` directory. Whilst the Table of
+Contents (TOC) is defined in the `grails-doc/src/en/guide/toc.yml` file.
 
 Each YAML key points to a Asciidoc template. For example consider the following YAML:
 
@@ -198,27 +221,39 @@ Each YAML key points to a Asciidoc template. For example consider the following 
     title: What's new in Grails 3.2?
     ...
 
-The `introduction` key points to `src/en/guide/introduction.adoc`. The `title` key defines the title that is dislayed in the TOC. Because `whatsNew` key is nested underneath the `introduction` key it points to `src/en/guide/introduction/whatsNew.adoc`, which is nested in a directory called `introduction`.
+The `introduction` key points to `grails-doc/src/en/guide/introduction.adoc`. The `title` key defines the title that is
+dislayed in the TOC. Because `whatsNew` key is nested underneath the `introduction` key it points to
+`grails-doc/src/en/guide/introduction/whatsNew.adoc`, which is nested in a directory called `introduction`.
 
 Essentially, using the `toc.yml` file and the directory structure you can manipulate the structure of the user guide.
 
-To generate the documentation run the `publishGuide` task:
+To generate the documentation run the `publishGuide` in the `grails-doc` task:
 
-    ./gradlew publishGuide -x apiDocs
+    ./gradlew :grails-doc:publishGuide -x aggregateGroovydoc
 
-NOTE: In the above example we skip the `apiDocs` task to speed up building of the guide, otherwise all Groovydoc documentation will be built too!
+NOTE: In the above example we skip the `aggregateGroovydoc` task to speed up building of the guide, otherwise all
+Groovydoc documentation will be built too!
 
-Once the guide is built simply open the `build/docs/index.html` file in a browser to review your changes.
+Once the guide is built simply open the `grails-doc/build/original-guide/index.html` file in a browser to review your
+changes.
 
 ## Code Style
 
 Grails code style mostly mirrors the Spring Framework's [Style Guide](https://github.com/spring-projects/spring-framework/blob/main/CONTRIBUTING.md#source-code-style).  We are currently working on a more detailed proposal under ticket [#13754](https://github.com/apache/grails-core/issues/13754).
 
 ### Commit Messages
-Grails makes use of [Release Drafter](https://github.com/release-drafter/release-drafter) to draft its release notes so commit messages are important.  They should follow the project's rules.  While a change can be incrementally made under many commits, pull requests should be squashed into a single, meaningful commit message.
+
+Grails makes use of [Release Drafter](https://github.com/release-drafter/release-drafter) to draft its release notes so
+commit messages are important. They should follow the project's rules. While a change can be incrementally made under
+many commits, pull requests should be squashed into a single, meaningful commit message.
 
 ### Change Review Process
-The Grails project uses different review processes based on the change being made.  We use both a `Review then Commit` policy and a `Commit then Review` policy.  These policies only apply to what we consider `protected` branches - where a `protected` branch is a branch that will result in published code or tracks a Grails release version (i.e. 7.0.x is for the Grails 7 release).  Development will often occur in side branches without review and the review will be performed at the time of merging those changes into a `protected` branch.
+
+The Apache Grails project uses different review processes based on the change being made. We use both a
+`Review then Commit` policy and a `Commit then Review` policy. These policies only apply to what we consider `protected`
+branches - where a `protected` branch is a branch that will result in published code or tracks an Apache Grails release
+version (i.e. 7.0.x is for the Apache Grails 7 release). Development will often occur in side branches without review
+and the review will be performed at the time of merging those changes into a `protected` branch.
 
 Concerning when a review is required for a `protected` branch:
 * Build Related Changes - `Commit then Review`

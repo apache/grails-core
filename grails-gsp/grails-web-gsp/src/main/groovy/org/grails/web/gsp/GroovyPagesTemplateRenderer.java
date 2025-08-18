@@ -52,6 +52,7 @@ import org.springframework.util.ReflectionUtils;
 import java.io.IOException;
 import java.io.Writer;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -282,7 +283,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
                 }
                 FastStringWriter sw = new FastStringWriter();
                 ReflectionUtils.invokeMethod(generateViewMethod, scaffoldingTemplateGenerator, domainClass, scaffoldedtemplateName, sw);
-                t = groovyPagesTemplateEngine.createTemplate(new ByteArrayResource(sw.toString().getBytes("UTF-8"), uri), false);
+                t = groovyPagesTemplateEngine.createTemplate(new ByteArrayResource(sw.toString().getBytes(StandardCharsets.UTF_8), uri), false);
             }
         }
         return t;

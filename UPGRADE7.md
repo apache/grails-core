@@ -20,14 +20,14 @@ Experienced while upgrading modules for Grails 7
 
 - NOTE: Several items have been directly integrated into the upgrade guide. Please refer to it for the full list.
 - The amount of boilerplate required in gradle files has been reduced:  
-  - When `org.grails.grails-plugin` gradle plugin is applied, the bootJar task is disabled by default.  No more needing to explicitly set it to false!
+  - When applying the `org.apache.grails.gradle.grails-plugin`, previously `org.grails.grails-plugin`, gradle plugin, the bootJar task is disabled by default.  No more needing to explicitly set it to false!
   - We no longer have a `micronaut-bom` and a `spring-bom`.  We only have the `spring-bom` now, which allows `grails-bom` to inherit from it and be applied as part of the Spring Dependency Management plugin.  This means versions do not need included for any library in the bom.  Override bom versions via gradle properties.
   - The `grailsPublish` plugin returns and is no longer an internal only plugin.  It has been enhanced to work with some multi-project workflows.  Eliminate publishing boilerplate of the nexus-publish, maven-publish, & signing plugin by adopting it.
 - When migrating a new project to Grails 7, it's advised to generate a stock 7.0 app from [start.grails.org](https://start.grails.org) and compare the project with a grails app generated from the same grails version that your application uses.  This helps catch the dependency clean up that has occurred.  Including the additions of new dependencies.  Note: due to an issue with project resolution the `grails-bom` will need explicitly imported in buildSrc or any project that does not apply the grails gradle plugins (grails-plugin, grails-web, or grails-gsp).  By default, the grails gradle plugins (grails-plugin, grails-web, grails-gsp) will apply the bom automatically.
 - the gradle property `groovyVersion` is being replaced with the upstream spring property name `groovy.version`.  Please update your projects accordingly.
 - hibernate-ehcache
 
-    The `org.hibernate:hibernate-ehcache` library is no longer provided by the `org.grails.plugins:hibernate5` plugin. If
+    The `org.hibernate:hibernate-ehcache` library is no longer provided by the `org.apache.grails:grails-data-hibernate5`, previously `org.grails.plugins:hibernate5`,  plugin. If
     your application depends on `hibernate-ehcache`, you must now add it explicitly to your project dependencies.
     
     Since `hibernate-ehcache` brings in a conflicting `javax` version of `org.hibernate:hibernate-core`, it is
@@ -48,6 +48,5 @@ Experienced while upgrading modules for Grails 7
 
 ### Cool New Features
 - Hello Exterminator, Good by bugs! Lot's of things started working... and working well! For instance, use of controller namespaces now work seemlessly.
-- Massive decoupling of dependencies and cleanup between modules.  SiteMesh dependencies are no longer compiled into controllers fused between numerous modules. SiteMesh isn't even required to use Grails!
-- GSP can now be used OUTSIDE of Grails! see grails-boot
+- Massive decoupling of dependencies and cleanup between modules.
 - Works with Spring Security 6 out of the box. No plugin needed!

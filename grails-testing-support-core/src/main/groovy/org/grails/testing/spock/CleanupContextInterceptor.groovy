@@ -29,7 +29,11 @@ class CleanupContextInterceptor implements IMethodInterceptor {
 
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {
-        ((GrailsUnitTest)invocation.instance).cleanupGrailsApplication()
-        invocation.proceed()
+        try {
+            invocation.proceed()
+        }
+        finally {
+            ((GrailsUnitTest)invocation.instance).cleanupGrailsApplication()
+        }
     }
 }

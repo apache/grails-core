@@ -28,7 +28,7 @@ class LoadAfterSpec extends ContainerGebSpec {
 
     void "Test override one plugin view from another plugin"() {
         when:
-        go '/login/auth'
+        go('/login/auth')
 
         then:
         title == "My Plugin Login Auth"

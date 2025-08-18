@@ -33,8 +33,9 @@ runningAndDebuggingAnApplication: 2.8 Running and Debugging an Application
 testingAnApplication: 2.9 Testing an Application
 deployingAnApplication: 2.10 Deploying an Application
 supportedJakartaEEContainers: 2.11 Supported Jakarta EE Containers
-generatingAnApplication: 2.12 Generating an Application
-creatingArtefacts: 2.13 Creating Artefacts
+creatingArtefacts: 2.12 Creating Artefacts
+generatingAnApplication: 2.13 Generating an Application
+developmentReloading: 2.14 Development Reloading
 conf: 3. Configuration
 config: 3.1 Basic Configuration
 builtInOptions: 3.1.1 Built in options
@@ -142,7 +143,7 @@ linksAndResources: 7.2.2.4 Links and Resources
 formsAndFields: 7.2.2.5 Forms and Fields
 tagsAsMethodCalls: 7.2.2.6 Tags as Method Calls
 viewsAndTemplates: 7.2.3 Views and Templates
-layouts: 7.2.4 Layouts with Sitemesh
+layouts: 7.2.4 Layouts
 resources: 7.2.5 Static Resources
 includingResourcesUsingTheResourceTags: 7.2.5.1 Including resources using the resource tags
 otherResourceTags: 7.2.5.2 Other resource tags
@@ -152,7 +153,7 @@ optimizingYourResources: 7.2.5.5 Optimizing your resources
 debugging: 7.2.5.6 Debugging
 preventingProcessingOfResources: 7.2.5.7 Preventing processing of resources
 otherResourcesPlugins: 7.2.5.8 Other Resources-aware plugins
-sitemeshContentBlocks: 7.2.6 Sitemesh Content Blocks
+contentBlocks: 7.2.6 Content Blocks
 makingChangesToADeployedApplication: 7.2.7 Making Changes to a Deployed Application
 GSPDebugging: 7.2.8 GSP Debugging
 taglibs: 7.3 Tag Libraries

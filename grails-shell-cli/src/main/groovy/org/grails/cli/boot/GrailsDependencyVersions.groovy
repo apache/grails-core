@@ -72,9 +72,6 @@ class GrailsDependencyVersions implements DependencyManagement {
         if (!Environment.grailsVersion || Environment.grailsVersion.endsWith("SNAPSHOT")) {
             grape.addResolver([name:"apacheRepository", root:"https://repository.apache.org/content/groups/public"] as Map<String, Object>)
         }
-        else {
-            grape.addResolver([name:"mavenCentral", root:"https://repo1.maven.org/maven2"] as Map<String, Object>)
-        }
 
         grape.addResolver([name:"grailsCentral", root:"https://repo.grails.org/grails/restricted"] as Map<String, Object>)
 

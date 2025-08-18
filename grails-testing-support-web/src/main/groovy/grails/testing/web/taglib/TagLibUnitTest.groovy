@@ -29,6 +29,10 @@ trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnit
 
     private boolean hasBeenMocked = false
 
+    boolean getPurgeTagLibMetaClass() {
+        true
+    }
+
     /**
      * Renders a template for the given contents and model
      *

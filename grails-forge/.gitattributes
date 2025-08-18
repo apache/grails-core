@@ -1,0 +1,5 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Files that will always have CRLF line endings on checkout
+*.bat text eol=crlf

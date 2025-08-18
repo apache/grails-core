@@ -48,7 +48,7 @@ class CreatePluginCommand extends CreateAppCommand {
     String getName() { NAME }
 
     @Override
-    protected String getDefaultProfile() { "web-plugin" }
+    protected String getDefaultProfile() { "plugin" }
 
     protected boolean validateProfile(Profile profileInstance, String profileName, ExecutionContext executionContext) {
         def pluginProfile = profileInstance.extends.find() { Profile parent -> parent.name == 'plugin' }

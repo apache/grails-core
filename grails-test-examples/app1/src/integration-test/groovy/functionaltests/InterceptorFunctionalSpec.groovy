@@ -30,7 +30,7 @@ class InterceptorFunctionalSpec extends ContainerGebSpec {
     @Issue('apache/grails-core#9434')
     void "Test that an interceptor exception is handled correctly"() {
         when:
-        go '/errors/throwErrorInInterceptor'
+        go('/errors/throwErrorInInterceptor')
 
         then:
         $().text() == 'Message = Interceptor threw error'
@@ -39,7 +39,7 @@ class InterceptorFunctionalSpec extends ContainerGebSpec {
     @Issue('apache/grails-core#9183')
     void "Test that an after interceptor can render text and return false to disable view rendering"() {
         when:
-        go '/demo/show'
+        go('/demo/show')
 
         then:
         $().text() == 'the after interceptor rendered this'
@@ -47,7 +47,7 @@ class InterceptorFunctionalSpec extends ContainerGebSpec {
 
     void 'Test that after interceptor can render a model and view'() {
         when:
-        go '/demo/show?interceptorRendersView=true'
+        go('/demo/show?interceptorRendersView=true')
 
         then:
         $().text() == 'Name: JSB'
@@ -55,7 +55,7 @@ class InterceptorFunctionalSpec extends ContainerGebSpec {
 
     void 'Test that before interceptor can render a model and view'() {
         when:
-        go '/demo/another'
+        go('/demo/another')
 
         then:
         $().text() == 'Name: JSB'
@@ -63,7 +63,7 @@ class InterceptorFunctionalSpec extends ContainerGebSpec {
 
     void 'Test that after interceptor can render text'() {
         when:
-        go '/demo/show?interceptorRendersText=true'
+        go('/demo/show?interceptorRendersText=true')
 
         then:
         $().text() == 'text rendered by interceptor'
@@ -72,7 +72,7 @@ class InterceptorFunctionalSpec extends ContainerGebSpec {
     @Issue('apache/grails-core#9194')
     void 'Test that after interceptor can redirect'() {
         when:
-        go '/demo/show?interceptorRedirects=true'
+        go('/demo/show?interceptorRedirects=true')
 
         then:
         $().text() == 'Hi There! Special Action: redirect'
@@ -82,7 +82,7 @@ class InterceptorFunctionalSpec extends ContainerGebSpec {
     @Issue('apache/grails-core#9194')
     void 'Test that after interceptor can forward'() {
         when:
-        go '/demo/show?interceptorForwards=true'
+        go('/demo/show?interceptorForwards=true')
 
         then:
         $().text() == 'Hi There! Special Action: forward'
@@ -91,7 +91,7 @@ class InterceptorFunctionalSpec extends ContainerGebSpec {
     @Issue('apache/grails-core#9194')
     void 'Test that after interceptor can chain'() {
         when:
-        go '/demo/show?interceptorChains=true'
+        go('/demo/show?interceptorChains=true')
 
         then:
         $().text() == 'Hi There! Special Action: chain'

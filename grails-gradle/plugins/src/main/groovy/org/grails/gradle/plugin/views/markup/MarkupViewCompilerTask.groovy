@@ -50,9 +50,6 @@ class MarkupViewCompilerTask extends AbstractGroovyTemplateCompileTask {
 
     @Inject
     MarkupViewCompilerTask(ExecOperations execOperations, ObjectFactory objectFactory) {
-        super(execOperations, objectFactory)
-        fileExtension.convention('gml')
-        scriptBaseName.convention('grails.plugin.markup.view.MarkupViewTemplate')
-        compilerName.convention('grails.plugin.markup.view.MarkupViewCompiler')
+        super(execOperations, objectFactory, 'gml', 'grails.plugin.markup.view.MarkupViewTemplate', 'grails.plugin.markup.view.MarkupViewCompiler')
     }
 }

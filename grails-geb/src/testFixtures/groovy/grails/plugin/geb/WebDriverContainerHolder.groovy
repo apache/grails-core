@@ -109,10 +109,24 @@ class WebDriverContainerHolder {
                 grailsGebSettings.recordingDirectory,
                 grailsGebSettings.recordingFormat
         )
+
+        Map prefs = [
+                "credentials_enable_service"             : false,
+                "profile.password_manager_enabled"       : false,
+                "profile.password_manager_leak_detection": false
+        ]
+
+        ChromeOptions chromeOptions = new ChromeOptions()
+        // TODO: guest would be preferred, but this causes issues with downloads
+        // see https://issues.chromium.org/issues/42323769
+        // chromeOptions.addArguments("--guest")
+        chromeOptions.setExperimentalOption("prefs", prefs)
+
         currentContainer.tap {
             withEnv('SE_ENABLE_TRACING', grailsGebSettings.tracingEnabled)
             withAccessToHost(true)
             withImagePullPolicy(PullPolicy.ageBased(Duration.of(1, ChronoUnit.DAYS)))
+            withCapabilities(chromeOptions)
             start()
         }
         if (hostnameChanged) {
@@ -130,7 +144,7 @@ class WebDriverContainerHolder {
 
         currentBrowser = new Browser(new Configuration(configObject, new Properties(), null, null))
 
-        WebDriver driver = new RemoteWebDriver(currentContainer.seleniumAddress, new ChromeOptions())
+        WebDriver driver = new RemoteWebDriver(currentContainer.seleniumAddress, chromeOptions)
         ContainerFileDetector fileDetector = ServiceRegistry.getInstance(ContainerFileDetector, DefaultContainerFileDetector)
         ((RemoteWebDriver) driver).setFileDetector(fileDetector)
         driver.manage().timeouts().with {

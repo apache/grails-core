@@ -29,7 +29,7 @@ class InspectConfigControllerSpec extends ContainerGebSpec {
     @Issue('GRAILS-11951')
     void "test config properties from plugins"() {
         when:
-        go '/inspectConfig/showPropertyValues'
+        go('/inspectConfig/showPropertyValues')
 
         then:
         $('div', 0).text() == 'Prop One Defined By LoadFirst Plugin'

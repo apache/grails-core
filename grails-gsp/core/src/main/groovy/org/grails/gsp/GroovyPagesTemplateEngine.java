@@ -55,6 +55,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedAction;
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -399,7 +400,7 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
         Assert.hasLength(txt, "Argument [txt] cannot be null or blank");
         Assert.hasLength(pageName, "Argument [pageName] cannot be null or blank");
 
-        return createTemplate(new ByteArrayResource(txt.getBytes("UTF-8"), pageName), pageName, pageName != null);
+        return createTemplate(new ByteArrayResource(txt.getBytes(StandardCharsets.UTF_8), pageName), pageName, pageName != null);
     }
 
     /**

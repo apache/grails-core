@@ -431,7 +431,7 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
 
         defineBeans {
             grailsUrlMappingsHolder(UrlMappingsHolderFactoryBean) {
-                getDelegate().grailsApplication = grailsApplication
+                delegate.grailsApplication = grailsApplication
             }
         }
     }

@@ -17,6 +17,7 @@
 
 plugins {
     id 'java'
+    id 'groovy'
     id 'distribution'
 }
 
@@ -36,10 +37,21 @@ ext {
     startMainClass = 'grails.init.Start'
 }
 
-// Intentionally no dependencies to prevent bloat
+dependencies {
+    // Intentionally no implementation dependencies to prevent bloat
+
+    testImplementation platform(project(':grails-bom'))
+    testImplementation 'org.apache.groovy:groovy'
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.apache.groovy:groovy-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.platform:junit-platform-runner'
+}
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }
 
@@ -75,6 +87,9 @@ startScripts.configure { CreateStartScripts t ->
 }
 
 project.extensions.getByType(DistributionContainer).configureEach {
+    // WARNING: changing the distro name / classifier requires updating the task in grails-profiles-base to copy from the correct location
+    it.distributionBaseName = 'apache-grails-wrapper'
+    it.distributionClassifier = 'incubating-bin'
     it.contents {
         from(jarTask) {
             into ''
@@ -82,7 +97,13 @@ project.extensions.getByType(DistributionContainer).configureEach {
 
         from(startScripts) {
             into ''
-            fileMode = 0755
+            filePermissions { permissions ->
+                permissions.unix(0755)
+            }
+        }
+
+        from(layout.projectDirectory.dir('distribution-artifacts')) {
+            into ''
         }
     }
 }

@@ -18,7 +18,6 @@
  */
 package org.grails.orm.hibernate.support;
 
-
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
 import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher;
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
@@ -30,7 +29,6 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
-import org.grails.orm.hibernate.AbstractHibernateGormInstanceApi;
 import org.hibernate.Hibernate;
 import org.hibernate.HibernateException;
 import org.hibernate.event.spi.AbstractEvent;
@@ -63,57 +61,6 @@ public class ClosureEventTriggeringInterceptor extends AbstractClosureEventTrigg
 
     //    private final Logger log = LoggerFactory.getLogger(getClass());
     private static final long serialVersionUID = 1;
-
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#ONLOAD_EVENT} instead
-     */
-    @Deprecated
-    public static final String ONLOAD_EVENT = AbstractPersistenceEvent.ONLOAD_EVENT;
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#ONLOAD_SAVE} instead
-     */
-    @Deprecated
-    public static final String ONLOAD_SAVE = AbstractPersistenceEvent.ONLOAD_SAVE;
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#BEFORE_LOAD_EVENT} instead
-     */
-    @Deprecated
-    public static final String BEFORE_LOAD_EVENT = AbstractPersistenceEvent.BEFORE_LOAD_EVENT;
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#BEFORE_INSERT_EVENT} instead
-     */
-    @Deprecated
-    public static final String BEFORE_INSERT_EVENT = AbstractPersistenceEvent.BEFORE_INSERT_EVENT;
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#AFTER_INSERT_EVENT} instead
-     */
-    @Deprecated
-    public static final String AFTER_INSERT_EVENT = AbstractPersistenceEvent.AFTER_INSERT_EVENT;
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#BEFORE_UPDATE_EVENT} instead
-     */
-    @Deprecated
-    public static final String BEFORE_UPDATE_EVENT = AbstractPersistenceEvent.BEFORE_UPDATE_EVENT;
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#AFTER_UPDATE_EVENT} instead
-     */
-    @Deprecated
-    public static final String AFTER_UPDATE_EVENT = AbstractPersistenceEvent.AFTER_UPDATE_EVENT;
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#BEFORE_DELETE_EVENT} instead
-     */
-    @Deprecated
-    public static final String BEFORE_DELETE_EVENT = AbstractPersistenceEvent.BEFORE_DELETE_EVENT;
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#AFTER_DELETE_EVENT} instead
-     */
-    @Deprecated
-    public static final String AFTER_DELETE_EVENT = AbstractPersistenceEvent.AFTER_DELETE_EVENT;
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#AFTER_LOAD_EVENT} instead
-     */
-    @Deprecated
-    public static final String AFTER_LOAD_EVENT = AbstractPersistenceEvent.AFTER_LOAD_EVENT;
 
     protected AbstractHibernateDatastore datastore;
     protected ConfigurableApplicationEventPublisher eventPublisher;

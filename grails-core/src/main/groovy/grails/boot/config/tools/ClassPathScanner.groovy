@@ -22,11 +22,11 @@ import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import org.apache.grails.common.compiler.asm.AnnotationMetadataReader
 import org.springframework.core.io.DefaultResourceLoader
 import org.springframework.core.io.Resource
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 import org.springframework.core.io.support.ResourcePatternResolver
+import org.springframework.core.type.classreading.SimpleMetadataReaderFactory
 import org.springframework.util.ClassUtils
 
 import java.lang.annotation.Annotation
@@ -173,10 +173,12 @@ class ClassPathScanner {
 
     private void scanUsingPattern(ResourcePatternResolver resourcePatternResolver, String pattern, ClassLoader classLoader, Closure<Boolean> annotationFilter, Set<Class> classes) {
         def resources = resourcePatternResolver.getResources(pattern)
+
+        def factory = new SimpleMetadataReaderFactory(classLoader)
         for (Resource res in resources) {
             // ignore closures / inner classes
             if (!isExcluded(res)) {
-                def reader = new AnnotationMetadataReader(res, classLoader)
+                def reader = factory.getMetadataReader(res)
                 def metadata = reader.annotationMetadata
                 if (metadata.annotationTypes.any(annotationFilter)) {
                     classes << classLoader.loadClass(reader.classMetadata.className)

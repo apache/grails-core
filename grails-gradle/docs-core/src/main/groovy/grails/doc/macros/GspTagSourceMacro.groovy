@@ -23,6 +23,7 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Internal
 import org.radeox.api.engine.context.InitialRenderContext
 
+import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 import org.radeox.macro.BaseMacro
 import org.radeox.macro.CodeMacro
@@ -73,7 +74,7 @@ class GspTagSourceMacro extends BaseMacro implements Serializable {
                     return tagLibFile
                 }
 
-                def text = tagLibFile?.getText("UTF-8") ?: ""
+                def text = tagLibFile?.getText(StandardCharsets.UTF_8.name()) ?: ""
                 String closureSource = extractTagClosureSource(tagName, text)
                 if (closureSource) {
                     out << '<p><a href="#' + tagName +

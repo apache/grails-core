@@ -41,6 +41,10 @@ dependencies {
 
     api project(':grails-testing-support-core')
     api "org.javassist:javassist:${javassistVersion}"
+
+    implementation project(':grails-web-jsp'), {
+        // impl: TagLibraryResolverImpl
+    }
 }
 
 apply {

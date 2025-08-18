@@ -1,0 +1,9 @@
+# docker run -it --rm -p 5432:5432 -e POSTGRES_USER=dbuser -e POSTGRES_PASSWORD=theSecretPassword -e POSTGRES_DB=postgres postgres:15.3
+micronaut:
+  server:
+    port: 8081
+datasources:
+  default:
+    url: 'jdbc:postgresql://localhost/postgres'
+    username: 'dbuser'
+    password: 'theSecretPassword'

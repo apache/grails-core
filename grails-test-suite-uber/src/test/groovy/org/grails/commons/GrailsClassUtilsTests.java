@@ -44,82 +44,82 @@ public class GrailsClassUtilsTests {
 
     @Test
     public void testBooleanMatchesboolean() {
-        assertTrue(GrailsClassUtils.isMatchBetweenPrimativeAndWrapperTypes(Boolean.class, boolean.class));
+        assertTrue(GrailsClassUtils.isMatchBetweenPrimitiveAndWrapperTypes(Boolean.class, boolean.class));
     }
 
     @Test
     public void testbooleanMatchesBoolean() {
-        assertTrue(GrailsClassUtils.isMatchBetweenPrimativeAndWrapperTypes(boolean.class, Boolean.class));
+        assertTrue(GrailsClassUtils.isMatchBetweenPrimitiveAndWrapperTypes(boolean.class, Boolean.class));
     }
 
     @Test
     public void testIntegerMatchesint() {
-        assertTrue(GrailsClassUtils.isMatchBetweenPrimativeAndWrapperTypes(Integer.class, int.class));
+        assertTrue(GrailsClassUtils.isMatchBetweenPrimitiveAndWrapperTypes(Integer.class, int.class));
     }
 
     @Test
     public void testintMatchesInteger() {
-        assertTrue(GrailsClassUtils.isMatchBetweenPrimativeAndWrapperTypes(int.class, Integer.class));
+        assertTrue(GrailsClassUtils.isMatchBetweenPrimitiveAndWrapperTypes(int.class, Integer.class));
     }
 
     @Test
     public void testShortMatchesshort() {
-        assertTrue(GrailsClassUtils.isMatchBetweenPrimativeAndWrapperTypes(Short.class, short.class));
+        assertTrue(GrailsClassUtils.isMatchBetweenPrimitiveAndWrapperTypes(Short.class, short.class));
     }
 
     @Test
     public void testshortMatchesShort() {
-        assertTrue(GrailsClassUtils.isMatchBetweenPrimativeAndWrapperTypes(short.class, Short.class));
+        assertTrue(GrailsClassUtils.isMatchBetweenPrimitiveAndWrapperTypes(short.class, Short.class));
     }
 
     @Test
     public void testByteMatchesbyte() {
-        assertTrue(GrailsClassUtils.isMatchBetweenPrimativeAndWrapperTypes(Byte.class, byte.class));
+        assertTrue(GrailsClassUtils.isMatchBetweenPrimitiveAndWrapperTypes(Byte.class, byte.class));
     }
 
     @Test
     public void testbyteMatchesByte() {
-        assertTrue(GrailsClassUtils.isMatchBetweenPrimativeAndWrapperTypes(byte.class, Byte.class));
+        assertTrue(GrailsClassUtils.isMatchBetweenPrimitiveAndWrapperTypes(byte.class, Byte.class));
     }
 
     @Test
     public void testCharacterMatcheschar() {
-        assertTrue(GrailsClassUtils.isMatchBetweenPrimativeAndWrapperTypes(Character.class, char.class));
+        assertTrue(GrailsClassUtils.isMatchBetweenPrimitiveAndWrapperTypes(Character.class, char.class));
     }
 
     @Test
     public void testcharMatchesCharacter() {
-        assertTrue(GrailsClassUtils.isMatchBetweenPrimativeAndWrapperTypes(char.class, Character.class));
+        assertTrue(GrailsClassUtils.isMatchBetweenPrimitiveAndWrapperTypes(char.class, Character.class));
     }
 
     @Test
     public void testLongMatcheslong() {
-        assertTrue(GrailsClassUtils.isMatchBetweenPrimativeAndWrapperTypes(Long.class, long.class));
+        assertTrue(GrailsClassUtils.isMatchBetweenPrimitiveAndWrapperTypes(Long.class, long.class));
     }
 
     @Test
     public void testlongMatchesLong() {
-        assertTrue(GrailsClassUtils.isMatchBetweenPrimativeAndWrapperTypes(long.class, Long.class));
+        assertTrue(GrailsClassUtils.isMatchBetweenPrimitiveAndWrapperTypes(long.class, Long.class));
     }
 
     @Test
     public void testFloatMatchesfloat() {
-        assertTrue(GrailsClassUtils.isMatchBetweenPrimativeAndWrapperTypes(Float.class, float.class));
+        assertTrue(GrailsClassUtils.isMatchBetweenPrimitiveAndWrapperTypes(Float.class, float.class));
     }
 
     @Test
     public void testfloatMatchesFloat() {
-        assertTrue(GrailsClassUtils.isMatchBetweenPrimativeAndWrapperTypes(float.class, Float.class));
+        assertTrue(GrailsClassUtils.isMatchBetweenPrimitiveAndWrapperTypes(float.class, Float.class));
     }
 
     @Test
     public void testDoubleMatchesdouble() {
-        assertTrue(GrailsClassUtils.isMatchBetweenPrimativeAndWrapperTypes(Double.class, double.class));
+        assertTrue(GrailsClassUtils.isMatchBetweenPrimitiveAndWrapperTypes(Double.class, double.class));
     }
 
     @Test
     public void testdoubleMatchesDouble() {
-        assertTrue(GrailsClassUtils.isMatchBetweenPrimativeAndWrapperTypes(double.class, Double.class));
+        assertTrue(GrailsClassUtils.isMatchBetweenPrimitiveAndWrapperTypes(double.class, Double.class));
     }
 
     @Test

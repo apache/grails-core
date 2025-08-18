@@ -129,7 +129,7 @@ enum Environment {
     private static Boolean RELOADING_AGENT_ENABLED = null
     private static boolean initializingState = false
 
-    private static final String GRAILS_IMPLEMENTATION_TITLE = "Grails"
+    private static final String GRAILS_IMPLEMENTATION_TITLE = "Apache Grails"
     private static final String GRAILS_VERSION
     private static final boolean STANDALONE_DEPLOYED
     private static final boolean WAR_DEPLOYED

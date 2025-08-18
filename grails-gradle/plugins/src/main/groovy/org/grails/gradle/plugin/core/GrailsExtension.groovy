@@ -61,6 +61,11 @@ class GrailsExtension {
     boolean importJavaTime = false
 
     /**
+     * Whether the spring dependency management plugin should be applied by default
+     */
+    boolean springDependencyManagement = true
+
+    /**
      * Configure the reloading agent
      */
     Agent agent = new Agent()

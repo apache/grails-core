@@ -21,8 +21,8 @@ import java.nio.file.*
 import java.security.MessageDigest
 
 // ---------------------------------------------------------------------------
-String sha256(Path file) {
-    MessageDigest md = MessageDigest.getInstance('SHA-256')
+String sha512(Path file) {
+    MessageDigest md = MessageDigest.getInstance('SHA-512')
     file.withInputStream { is ->
         byte[] buf = new byte[8192]
         for (int r = is.read(buf); r > 0; r = is.read(buf))
@@ -39,7 +39,12 @@ Path scriptDir = Paths.get(getClass()
         .toAbsolutePath()
         .parent
 
+
 Path root = scriptDir.resolve('..').resolve('..').normalize()
+if(args && args.length > 0) {
+    System.out.println("Finding jars in: ${args[0]}" as String)
+    root = Paths.get(args[0]).toAbsolutePath().normalize()
+}
 
 // ---------------------------------------------------------------------------
 // Decide where to search: project root by default, or user-supplied path
@@ -62,16 +67,16 @@ Files.walk(scanRoot)
                         !it.toString().contains("buildSrc") &&
                         !it.toString().contains("etc") &&
                         it.toString().endsWith('.jar') &&
-                        it.toString().contains("${File.separator}build${File.separator}libs${File.separator}")
+                        it.toString().contains("${File.separator}build${File.separator}libs${File.separator}" as String)
             }
             .forEach { artifacts << it }
 
 artifacts.findAll {
-    !it.toString().contains("${File.separator}buildSrc${File.separator}") // build src jars aren't published
-    !it.toString().contains("${File.separator}grails-test-examples${File.separator}") // test examples aren't published
+    !it.toString().contains("${File.separator}buildSrc${File.separator}" as String) // build src jars aren't published
+    !it.toString().contains("${File.separator}grails-test-examples${File.separator}" as String) // test examples aren't published
 }.sort { a, b -> a.toString() <=> b.toString()
 }.collect { Path jar ->
-    String hash = sha256(jar)
+    String hash = sha512(jar)
     String relative = root.relativize(jar).toString()
     "${relative} ${hash}"
 }.sort().each {

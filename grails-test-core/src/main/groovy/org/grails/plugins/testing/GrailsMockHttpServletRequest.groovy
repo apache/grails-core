@@ -45,6 +45,8 @@ import org.springframework.util.MultiValueMap
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.multipart.MultipartHttpServletRequest
 
+import java.nio.charset.StandardCharsets
+
 /**
  * A custom mock HTTP servlet request that provides the extra properties
  * and methods normally injected by the "servlets" plugin.
@@ -109,13 +111,13 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
         setContentType('application/json; charset=UTF-8')
         setFormat('json')
         if (sourceJson instanceof String) {
-            setContent(sourceJson.getBytes("UTF-8"))
+            setContent(sourceJson.getBytes(StandardCharsets.UTF_8))
         }
         else if (sourceJson instanceof JSON) {
-            setContent(sourceJson.toString().getBytes("UTF-8"))
+            setContent(sourceJson.toString().getBytes(StandardCharsets.UTF_8))
         }
         else {
-            setContent(new JSON(sourceJson).toString().getBytes("UTF-8"))
+            setContent(new JSON(sourceJson).toString().getBytes(StandardCharsets.UTF_8))
         }
         getAttribute("org.codehaus.groovy.grails.WEB_REQUEST")?.informParameterCreationListeners()
     }
@@ -130,7 +132,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
         setFormat("xml")
 
         if (sourceXml instanceof String) {
-            setContent(sourceXml.getBytes("UTF-8"))
+            setContent(sourceXml.getBytes(StandardCharsets.UTF_8))
         }
         else {
             XML xml
@@ -139,7 +141,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
             } else {
                 xml = new XML(sourceXml)
             }
-            setContent(xml.toString().getBytes("UTF-8"))
+            setContent(xml.toString().getBytes(StandardCharsets.UTF_8))
         }
 
         getAttribute("org.codehaus.groovy.grails.WEB_REQUEST")?.informParameterCreationListeners()

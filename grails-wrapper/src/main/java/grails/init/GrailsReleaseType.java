@@ -17,7 +17,7 @@
 package grails.init;
 
 import java.util.Arrays;
-import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
 
 /**
@@ -39,9 +39,9 @@ public enum GrailsReleaseType {
     /**
      * @return this release type and all higher priority release types
      */
-    public List<GrailsReleaseType> upTo() {
-        return Arrays.stream(GrailsReleaseType.values())
+    public LinkedHashSet<GrailsReleaseType> upTo() {
+        return new LinkedHashSet<>(Arrays.stream(GrailsReleaseType.values())
                 .filter(e -> e.ordinal() <= this.ordinal())
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 }

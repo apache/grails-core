@@ -15,7 +15,7 @@
 description: Profile for plugins designed to work across all profiles
 build:
     plugins:
-        - org.grails.grails-plugin
+        - org.apache.grails.gradle.grails-plugin
     excludes:
         - org.apache.grails.gradle.grails-app
 dependencies:

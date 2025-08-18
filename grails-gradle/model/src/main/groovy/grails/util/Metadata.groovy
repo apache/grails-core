@@ -40,6 +40,7 @@ import java.lang.ref.SoftReference
  * @since 1.1
  */
 @CompileStatic
+// #12012 - Slf4j cannot be used on this class because this is used prior to the context being initialized
 class Metadata {
     private static final long serialVersionUID = -582452926111226898L
     public static final String FILE = "application.yml"
@@ -48,7 +49,6 @@ class Metadata {
     public static final String DEFAULT_APPLICATION_NAME = "grailsApplication"
     public static final String APPLICATION_GRAILS_VERSION = "info.app.grailsVersion"
     public static final String SERVLET_VERSION = "info.app.servletVersion"
-    public static final String WAR_DEPLOYED = "info.app.warDeployed"
     public static final String DEFAULT_SERVLET_VERSION = "6.0"
     public static final String BUILD_INFO_FILE = "META-INF/grails.build.info"
 
@@ -56,7 +56,6 @@ class Metadata {
     private final MutablePropertySources propertySources = new MutablePropertySources()
     private final ConfigurablePropertyResolver propertyResolver
     private Resource metadataFile
-    private boolean warDeployed
     private String servletVersion = DEFAULT_SERVLET_VERSION
     private Map<String, Object> props = null
 
@@ -91,6 +90,9 @@ class Metadata {
         return metadataFile
     }
 
+    /**
+     * Resets the current state of the Metadata so it is re-read.
+     */
     static void reset() {
         Metadata m = getFromMap()
         if (m != null) {
@@ -107,10 +109,11 @@ class Metadata {
             final Map<String, Object> m = [(APPLICATION_NAME): (Object) DEFAULT_APPLICATION_NAME]
             addPropertySource(new MapPropertySource("appName", m))
         }
-
-        warDeployed = getProperty(WAR_DEPLOYED, Boolean.class, false)
     }
 
+    /**
+     * @return the metadata for the current application
+     */
     static Metadata getCurrent() {
         Metadata m = getFromMap()
         if (m == null) {
@@ -136,12 +139,23 @@ class Metadata {
 
             url = classLoader.getResource(BUILD_INFO_FILE)
             if (url != null) {
-                if (IOUtils.isWithinBinary(url)) {
+                if (IOUtils.isWithinBinary(url) || !Environment.isDevelopmentEnvironmentAvailable()) {
                     url.withInputStream { input ->
                         addPropertySource(loadProperties(input, "build.info"))
                     }
                 }
+            } else {
+                // try WAR packaging resolve
+                url = classLoader.getResource("../../" + BUILD_INFO_FILE)
+                if (url != null) {
+                    if (IOUtils.isWithinBinary(url) || !Environment.isDevelopmentEnvironmentAvailable()) {
+                        url.withInputStream { input ->
+                            addPropertySource(loadProperties(input, "build.info"))
+                        }
+                    }
+                }
             }
+            afterLoading()
         }
         catch (Exception e) {
             throw new RuntimeException("Cannot load application metadata:" + e.getMessage(), e)
@@ -175,16 +189,31 @@ class Metadata {
         }
     }
 
+    /**
+     * Loads a Metadata instance from a Reader
+     * @param inputStream The InputStream
+     * @return a Metadata instance
+     */
     static Metadata getInstance(InputStream inputStream) {
         Metadata m = new Metadata(inputStream)
         holder.set(new FinalReference<Metadata>(m))
         return m
     }
 
+    /**
+     * Loads and returns a new Metadata object for the given File.
+     * @param file The File
+     * @return A Metadata object
+     */
     static Metadata getInstance(File file) {
         return getInstance(new FileSystemResource(file))
     }
 
+    /**
+     * Loads and returns a new Metadata object for the given File.
+     * @param file The File
+     * @return A Metadata object
+     */
     static Metadata getInstance(Resource file) {
         Reference<Metadata> ref = holder.get()
         if (ref != null) {
@@ -196,6 +225,10 @@ class Metadata {
         return new Metadata(file)
     }
 
+    /**
+     * Reloads the application metadata.
+     * @return The metadata object
+     */
     static Metadata reload() {
         Resource f = getCurrent().getMetadataFile()
         return (f != null && f.exists()) ? getInstance(f) : new Metadata()
@@ -235,18 +268,31 @@ class Metadata {
         return getProperty(APPLICATION_VERSION, String.class, null)
     }
 
+    /**
+     * @return The Grails version used to build the application
+     */
     String getGrailsVersion() {
         return getProperty(APPLICATION_GRAILS_VERSION, String.class, null)
     }
 
+    /**
+     * @return The environment the application expects to run in
+     */
     String getEnvironment() {
         return getProperty("grails.env", String.class, null)
     }
 
+    /**
+     * @return The application name
+     */
     String getApplicationName() {
         return getProperty(APPLICATION_NAME, String.class, DEFAULT_APPLICATION_NAME)
     }
 
+
+    /**
+     * @return The version of the servlet spec the application was created for
+     */
     String getServletVersion() {
         return getProperty(SERVLET_VERSION, String.class, DEFAULT_SERVLET_VERSION)
     }
@@ -255,10 +301,16 @@ class Metadata {
         this.servletVersion = servletVersion
     }
 
+    /**
+     * @return true if this application is deployed as a WAR
+     */
     boolean isWarDeployed() {
-        return warDeployed
+        Environment.isWarDeployed()
     }
 
+    /**
+     * @return True if the development sources are present
+     */
     boolean isDevelopmentEnvironmentAvailable() {
         return Environment.isDevelopmentEnvironmentAvailable()
     }

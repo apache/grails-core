@@ -1,0 +1,56 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+}
+
+version = projectVersion
+group = 'org.apache.grails.gradle'
+
+ext {
+    pomTitle = 'Grails Gradle Common'
+    pomDescription = 'Various common utilities that are shared between Grails Gradle code and the Grails Framework'
+    pomDevelopers = ['jdaugherty': 'James Daugherty']
+}
+
+dependencies {
+    compileOnly platform(project(':grails-gradle-bom'))
+
+    // compile with the Groovy version provided by Gradle
+    // to ensure build compatibility with Gradle, currently Groovy 3.0.x
+    // see: https://docs.gradle.org/current/userguide/compatibility.html#groovy
+    compileOnly 'org.codehaus.groovy:groovy'
+
+    testImplementation platform(project(':grails-gradle-bom'))
+    testImplementation 'org.slf4j:slf4j-simple'
+    testImplementation('org.spockframework:spock-core') { transitive = false }
+    testImplementation 'org.codehaus.groovy:groovy-test-junit5'
+    // for easier setting of environment variables in tests
+    testImplementation 'uk.org.webcompere:system-stubs-core:2.1.8'
+
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+}
+
+apply {
+    // java-configuration must be applied first since tasks are now lazy registered
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

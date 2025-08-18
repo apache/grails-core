@@ -27,6 +27,8 @@ group = 'org.apache.grails.common'
 dependencies {
     implementation platform(project(':grails-bom'))
 
+    api 'org.apache.grails.gradle:grails-gradle-common'
+
     // WARNING: this file is not to depend on grails-core; it is meant to be a shared library that can be used
     // independently of Grails.  Mainly to share data between Grails & GORM
 

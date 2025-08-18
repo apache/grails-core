@@ -20,6 +20,8 @@ package org.grails.plugins.testing
 
 import spock.lang.Specification
 
+import java.nio.charset.StandardCharsets
+
 /**
  * Test case for {@link org.grails.plugins.testing.GrailsMockHttpServletRequest}.
  */
@@ -72,7 +74,7 @@ class GrailsMockHttpServletRequestTests extends Specification {
         when:
         request.method = 'POST'
         request.contentType = "application/xml; charset=UTF-8"
-        request.content = TEST_XML_CONTENT.getBytes("UTF-8")
+        request.content = TEST_XML_CONTENT.getBytes(StandardCharsets.UTF_8)
 
         then:
         verifyXmlResult request.XML

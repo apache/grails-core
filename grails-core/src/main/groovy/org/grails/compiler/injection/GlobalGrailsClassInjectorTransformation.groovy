@@ -28,12 +28,13 @@ import grails.util.GrailsNameUtils
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import org.springframework.core.CollectionFactory
 import groovy.xml.MarkupBuilder
 import groovy.xml.StreamingMarkupBuilder
 import groovy.xml.XmlSlurper
 import groovy.xml.slurpersupport.GPathResult
 import org.apache.grails.common.compiler.GroovyTransformOrder
-import org.apache.grails.common.properties.PropertyFileUtils
+import org.apache.grails.gradle.common.PropertyFileUtils
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
@@ -53,6 +54,7 @@ import org.grails.io.support.GrailsResourceUtils
 import org.grails.io.support.UrlResource
 
 import java.lang.reflect.Modifier
+import java.nio.charset.StandardCharsets
 
 /**
  * A global transformation that applies Grails' transformations to classes within a Grails project
@@ -190,7 +192,8 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             if (Modifier.isAbstract(classNode.getModifiers())) return false
 
             def classNodeName = classNode.name
-            def props = new Properties()
+            // Use SortedProperties to ensure a consistent order of entries for reproducible builds
+            def props = CollectionFactory.createSortedProperties(false)
             def superTypeName = superType.getName()
 
             // generate META-INF/grails.factories
@@ -282,7 +285,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             PluginAstReader pluginAstReader = new PluginAstReader()
             def info = pluginAstReader.readPluginInfo(pluginClassNode)
 
-            pluginXml.withWriter("UTF-8") { Writer writer ->
+            pluginXml.withWriter(StandardCharsets.UTF_8.name()) { Writer writer ->
                 def mkp = new MarkupBuilder(writer)
                 def pluginName = GrailsNameUtils.getLogicalPropertyName(pluginClassNode.name, "GrailsPlugin")
 
@@ -366,7 +369,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
                 mkp.yield pluginXml
             }
 
-            pluginXmlFile.withWriter("UTF-8") { Writer writer ->
+            pluginXmlFile.withWriter(StandardCharsets.UTF_8.name()) { Writer writer ->
                 writable.writeTo(writer)
             }
 

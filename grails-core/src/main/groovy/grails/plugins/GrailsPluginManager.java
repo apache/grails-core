@@ -166,12 +166,6 @@ public interface GrailsPluginManager extends ApplicationContextAware {
     void doRuntimeConfiguration(String pluginName, RuntimeSpringConfiguration springConfig);
 
     /**
-     * Checks all the plugins to see whether they have any changes
-     */
-    @Deprecated
-    void checkForChanges();
-
-    /**
      * Sets the GrailsApplication used be this plugin manager
      * @param application The GrailsApplication instance
      */

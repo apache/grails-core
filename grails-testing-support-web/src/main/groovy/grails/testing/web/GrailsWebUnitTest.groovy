@@ -53,6 +53,13 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
     static Map<String, String> groovyPages = [:]
     GrailsWebRequest webRequest
 
+    /**
+     * When mocking tag libs, the LazyTagLibraryLookup will not be cleared by default. True forces it to be cleared.
+     */
+    boolean getPurgeTagLibMetaClass() {
+        false
+    }
+
     GrailsMockHttpServletRequest getRequest() {
         return (GrailsMockHttpServletRequest) getWebRequest().getCurrentRequest()
     }

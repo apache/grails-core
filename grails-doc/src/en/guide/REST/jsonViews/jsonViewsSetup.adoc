@@ -45,7 +45,7 @@ Then apply the `org.apache.grails.views-json` Gradle plugin after any Grails cor
 [source,groovy]
 ----
 ...
-apply plugin: "org.grails.grails-web"
+apply plugin: "org.apache.grails.gradle.grails-web"
 apply plugin: "org.apache.grails.views-json"
 ----
 

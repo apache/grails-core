@@ -33,7 +33,7 @@ dependencies {
     api project(':grails-web-core')
     api project(':grails-encoder')
     api 'org.apache.groovy:groovy'
-    runtimeOnly project(':grails-codecs')
+    runtimeOnly project(':grails-codecs-core')
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.springframework:spring-test', {

@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Since version 3, Grails integrates with the https://github.com/bertramdev/asset-pipeline[Asset Pipeline plugin] to provide sophisticated static asset management. This plugin is installed by default in new Grails applications.
+Since version 3, Grails integrates with the https://github.com/wondrify/asset-pipeline[Asset Pipeline plugin] to provide sophisticated static asset management. This plugin is installed by default in new Grails applications.
 
 The basic way to include a link to a static asset in your application is to use the xref:../../../ref/Tags%20-%20GSP/resource.adoc[resource] tag. This simple approach creates a URI pointing to the file.
 

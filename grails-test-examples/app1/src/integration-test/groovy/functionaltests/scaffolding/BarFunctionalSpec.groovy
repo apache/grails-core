@@ -30,7 +30,7 @@ class BarFunctionalSpec extends ContainerGebSpec {
 
     void "Test that a scaffolded view is resolved correctly"() {
         when:
-        go '/bar/index'
+        go('/bar/index')
 
         then:
         title == "Bar List"

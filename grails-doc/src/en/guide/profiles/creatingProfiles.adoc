@@ -60,7 +60,7 @@ features:
         - asset-pipeline
 build:
     plugins:
-        - org.grails.grails-web
+        - org.apache.grails.gradle.grails-web
     excludes:
         - org.grails.grails-core
 dependencies:

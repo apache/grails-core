@@ -54,6 +54,7 @@ class ProfileRepoConfig {
         // If the repo url from the wrapper is set, then the wrapper has been configured for a local install, so honor it as a valid source
         String repoUrl = System.getProperty('grails.repo.url') ?: System.getenv('GRAILS_REPO_URL')
         if (repoUrl) {
+            System.out.println("Grails repo url override detected, including repo: ${repoUrl}")
             repos << new ProfileRepoConfig(name: 'grails-override-repo', url: fixRepoUrl(repoUrl), snapshots: Environment.grailsVersion.endsWith('SNAPSHOT'))
         }
 

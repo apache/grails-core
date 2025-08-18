@@ -34,6 +34,8 @@ import org.grails.io.support.DefaultResourceLoader
 import org.grails.io.support.Resource
 import org.grails.io.support.ResourceLoader
 
+import java.nio.charset.StandardCharsets
+
 /**
  * Interface for classes that can render templates
  *
@@ -268,7 +270,7 @@ class TemplateRendererImpl implements TemplateRenderer, ProfileRepositoryAware {
 
     private static void writeTemplateToDestination(Template template, Map model, File destination) {
         destination.parentFile.mkdirs()
-        destination.withWriter("UTF-8") { Writer w ->
+        destination.withWriter(StandardCharsets.UTF_8.name()) { Writer w ->
             template.make(model).writeTo(w)
             w.flush()
         }
