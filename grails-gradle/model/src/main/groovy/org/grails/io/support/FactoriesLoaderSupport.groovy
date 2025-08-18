@@ -46,7 +46,7 @@ class FactoriesLoaderSupport {
      *
      * @return An array of classes that implement the factory class
      */
-    static String[] loadFactoryNames(Class<?> factoryClass, ClassLoader classLoader = FactoriesLoaderSupport.class.classLoader) {
+    static String[] loadFactoryNames(Class<?> factoryClass, ClassLoader classLoader = FactoriesLoaderSupport.classLoader) {
         String factoryClassName = factoryClass.getName()
         return loadFactoryNames(factoryClassName, classLoader)
     }
@@ -59,7 +59,7 @@ class FactoriesLoaderSupport {
      *
      * @return An array of classes that implement the factory class
      */
-    static String[] loadFactoryNames(String factoryClassName, ClassLoader classLoader = FactoriesLoaderSupport.class.classLoader) {
+    static String[] loadFactoryNames(String factoryClassName, ClassLoader classLoader = FactoriesLoaderSupport.classLoader) {
         try {
             Map<String, String[]> loadedProperties = loadedPropertiesForClassLoader.get(System.identityHashCode(classLoader))
             if (loadedProperties == null) {

@@ -56,7 +56,7 @@ class DynamicElementReader extends GroovyObjectSupport {
     private String rootNamespace
     ErrorHandler errorHandler = new SimpleSaxErrorHandler(LOG)
     int validationMode = XmlValidationModeDetector.VALIDATION_NONE
-    EntityResolver entityResolver = new DelegatingEntityResolver(DynamicElementReader.class.getClassLoader())
+    EntityResolver entityResolver = new DelegatingEntityResolver(DynamicElementReader.getClassLoader())
     ParserContext parserContext
     NamespaceHandler namespaceHandler
     BeanConfiguration beanConfiguration

@@ -63,7 +63,7 @@ class DefaultServiceRegistry implements ServiceRegistry, Initializable {
                 if (theClass.simpleName.startsWith('$')) {
                     // handle automatically implemented abstract service implementations
                     Class superClass = theClass.getSuperclass()
-                    if (superClass != null && superClass != Object.class && Modifier.isAbstract(superClass.modifiers)) {
+                    if (superClass != null && superClass != Object && Modifier.isAbstract(superClass.modifiers)) {
                         serviceMap.put(superClass.name, service)
                     }
 

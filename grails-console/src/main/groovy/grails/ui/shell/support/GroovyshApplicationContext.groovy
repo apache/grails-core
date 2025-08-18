@@ -40,7 +40,7 @@ class GroovyshApplicationContext extends GenericApplicationContext {
     protected void startConsole() {
         Binding binding = new Binding()
         binding.setVariable('ctx', this)
-        binding.setVariable(GrailsApplication.APPLICATION_ID, getBean(GrailsApplication.class))
+        binding.setVariable(GrailsApplication.APPLICATION_ID, getBean(GrailsApplication))
 
         final GroovyshWebApplicationContext self = this
 

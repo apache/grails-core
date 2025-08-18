@@ -391,7 +391,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     }
 
     private boolean isNotValidStringType() {
-        return !CharSequence.class.isAssignableFrom(propertyType)
+        return !CharSequence.isAssignableFrom(propertyType)
     }
 
     /**

@@ -313,7 +313,7 @@ class GroovyChange extends AbstractChange {
      * @return Whether the database executor is instance of LoggingExecutor
      */
     protected boolean shouldRun() {
-        !(Scope.getCurrentScope().getSingleton(ExecutorService.class).getExecutor('jdbc', database) instanceof LoggingExecutor)
+        !(Scope.getCurrentScope().getSingleton(ExecutorService).getExecutor('jdbc', database) instanceof LoggingExecutor)
     }
 
     /**

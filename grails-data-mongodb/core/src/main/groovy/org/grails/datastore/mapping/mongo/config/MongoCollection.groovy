@@ -159,22 +159,22 @@ class MongoCollection extends Collection {
     }
 
     @Override
-    Entity property(String name, @DelegatesTo(MongoAttribute.class) Closure propertyConfig) {
+    Entity property(String name, @DelegatesTo(MongoAttribute) Closure propertyConfig) {
         return super.property(name, propertyConfig)
     }
 
     @Override
-    Entity<Attribute> id(@DelegatesTo(MongoAttribute.class) Closure identityConfig) {
+    Entity<Attribute> id(@DelegatesTo(MongoAttribute) Closure identityConfig) {
         return super.id(identityConfig)
     }
 
     @Override
-    Entity version(@DelegatesTo(MongoAttribute.class) Closure versionConfig) {
+    Entity version(@DelegatesTo(MongoAttribute) Closure versionConfig) {
         return super.version(versionConfig)
     }
 
     @Override
-    MongoAttribute property(@DelegatesTo(MongoAttribute.class) Closure propertyConfig) {
+    MongoAttribute property(@DelegatesTo(MongoAttribute) Closure propertyConfig) {
         return (MongoAttribute)super.property(propertyConfig)
     }
 

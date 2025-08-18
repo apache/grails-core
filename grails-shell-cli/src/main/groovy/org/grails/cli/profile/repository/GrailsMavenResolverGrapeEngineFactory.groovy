@@ -56,13 +56,13 @@ class GrailsMavenResolverGrapeEngineFactory {
                                            DependencyResolutionContext dependencyResolutionContext) {
 
         RepositorySystem repositorySystem = createServiceLocator()
-                .getService(RepositorySystem.class)
+                .getService(RepositorySystem)
 
         DefaultRepositorySystemSession repositorySystemSession = MavenRepositorySystemUtils
                 .newSession()
 
         ServiceLoader<RepositorySystemSessionAutoConfiguration> autoConfigurations = ServiceLoader
-                .load(RepositorySystemSessionAutoConfiguration.class)
+                .load(RepositorySystemSessionAutoConfiguration)
 
         for (RepositorySystemSessionAutoConfiguration autoConfiguration : autoConfigurations) {
             autoConfiguration.apply(repositorySystemSession, repositorySystem)
@@ -78,11 +78,11 @@ class GrailsMavenResolverGrapeEngineFactory {
 
     private static ServiceLocator createServiceLocator() {
         DefaultServiceLocator locator = MavenRepositorySystemUtils.newServiceLocator()
-        locator.addService(RepositorySystem.class, DefaultRepositorySystem.class)
-        locator.addService(RepositoryConnectorFactory.class,
-                BasicRepositoryConnectorFactory.class)
-        locator.addService(TransporterFactory.class, HttpTransporterFactory.class)
-        locator.addService(TransporterFactory.class, FileTransporterFactory.class)
+        locator.addService(RepositorySystem, DefaultRepositorySystem)
+        locator.addService(RepositoryConnectorFactory,
+                BasicRepositoryConnectorFactory)
+        locator.addService(TransporterFactory, HttpTransporterFactory)
+        locator.addService(TransporterFactory, FileTransporterFactory)
         return locator
     }
 

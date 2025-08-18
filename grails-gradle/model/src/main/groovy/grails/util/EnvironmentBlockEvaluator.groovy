@@ -78,6 +78,6 @@ class EnvironmentBlockEvaluator extends GroovyObjectSupport {
             }
             return null
         }
-        throw new MissingMethodException(name, Environment.class, argsArray)
+        throw new MissingMethodException(name, Environment, argsArray)
     }
 }

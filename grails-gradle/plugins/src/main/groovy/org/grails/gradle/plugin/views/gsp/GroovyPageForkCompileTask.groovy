@@ -96,7 +96,7 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
         this.execOperations = execOperations
         packageName = objectFactory.property(String).convention(project.name ?: project.projectDir.canonicalFile.name)
         srcDir = objectFactory.directoryProperty()
-        compileOptions = objectFactory.newInstance(ViewCompileOptions.class)
+        compileOptions = objectFactory.newInstance(ViewCompileOptions)
         serverpath = objectFactory.property(String)
         grailsConfigurationPaths = objectFactory.fileCollection()
         grailsConfigurationPaths.from(

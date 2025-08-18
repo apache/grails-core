@@ -52,13 +52,13 @@ class GrailsAutoConfiguration implements GrailsApplicationClass, ApplicationCont
     static {
         try {
             // patch AopConfigUtils if possible
-            Field field = AopConfigUtils.class.getDeclaredField(APC_PRIORITY_LIST_FIELD)
+            Field field = AopConfigUtils.getDeclaredField(APC_PRIORITY_LIST_FIELD)
             if (field != null) {
                 field.setAccessible(true)
                 Object obj = field.get(null)
                 List<Class<?>> list = (List<Class<?>>) obj
-                list.add(GroovyAwareInfrastructureAdvisorAutoProxyCreator.class)
-                list.add(GroovyAwareAspectJAwareAdvisorAutoProxyCreator.class)
+                list.add(GroovyAwareInfrastructureAdvisorAutoProxyCreator)
+                list.add(GroovyAwareAspectJAwareAdvisorAutoProxyCreator)
             }
         } catch (Throwable e) {
             // ignore

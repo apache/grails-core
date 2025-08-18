@@ -35,7 +35,7 @@ class ProfileRepoConfig {
         List<ProfileRepoConfig> repos = []
 
         // If there is manual configuration, honor it
-        Map profileRepos = GrailsCli.getSetting(BuildSettings.PROFILE_REPOSITORIES, Map.class, Collections.emptyMap())
+        Map profileRepos = GrailsCli.getSetting(BuildSettings.PROFILE_REPOSITORIES, Map, Collections.emptyMap())
         if (profileRepos) {
             for (repoName in profileRepos.keySet()) {
                 def data = profileRepos.get(repoName)

@@ -125,7 +125,7 @@ class BeanPropertyAccessorFactory implements GrailsApplicationAware {
 
     private Constrained resolveConstraints(BeanWrapper beanWrapper, String propertyName) {
         Class<?> type = beanWrapper.wrappedClass
-        boolean defaultNullable = Validateable.class.isAssignableFrom(type) ? type.metaClass.invokeStaticMethod(type, 'defaultNullable') : false
+        boolean defaultNullable = Validateable.isAssignableFrom(type) ? type.metaClass.invokeStaticMethod(type, 'defaultNullable') : false
         ConstrainedProperty constraint = constraintsEvaluator.evaluate(type, defaultNullable)[propertyName]
 
         new Constrained(constraint ?: createDefaultConstraint(beanWrapper, propertyName))

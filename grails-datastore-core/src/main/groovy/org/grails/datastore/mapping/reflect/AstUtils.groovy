@@ -74,7 +74,7 @@ class AstUtils {
 
     private static final String SPEC_CLASS = 'spock.lang.Specification'
     private static final Class<?>[] EMPTY_JAVA_CLASS_ARRAY = []
-    private static final Class<?>[] OBJECT_CLASS_ARG = [Object.class]
+    private static final Class<?>[] OBJECT_CLASS_ARG = [Object]
 
     public static final ClassNode COMPILE_STATIC_TYPE = ClassHelper.make(CompileStatic)
     public static final ClassNode TYPE_CHECKED_TYPE = ClassHelper.make(TypeChecked)
@@ -84,10 +84,10 @@ class AstUtils {
     public static final ClassNode[] EMPTY_CLASS_ARRAY = new ClassNode[0]
     public static final Token ASSIGNMENT_OPERATOR = Token.newSymbol(Types.ASSIGNMENT_OPERATOR, 0, 0)
     public static final ArgumentListExpression ZERO_ARGUMENTS = new ArgumentListExpression()
-    public static final ClassNode OBJECT_CLASS_NODE = new ClassNode(Object.class).getPlainNodeReference()
+    public static final ClassNode OBJECT_CLASS_NODE = new ClassNode(Object).getPlainNodeReference()
 
     private static final Set<String> TRANSFORMED_CLASSES = new LinkedHashSet<String>()
-    private static final Set<String> ENTITY_ANNOTATIONS = ['grails.persistence.Entity', 'grails.gorm.annotation.Entity', Entity.class.getName()] as Set<String>
+    private static final Set<String> ENTITY_ANNOTATIONS = ['grails.persistence.Entity', 'grails.gorm.annotation.Entity', Entity.getName()] as Set<String>
 
     /**
      * @return The names of the transformed entities for this context
@@ -478,7 +478,7 @@ class AstUtils {
             if (placeHolderType != null) {
                 return placeHolderType.getPlainNodeReference()
             } else {
-                return ClassHelper.make(Object.class).getPlainNodeReference()
+                return ClassHelper.make(Object).getPlainNodeReference()
             }
         }
 
@@ -501,7 +501,7 @@ class AstUtils {
                             if (placeHolderType != null) {
                                 copiedGenericsType = new GenericsType(placeHolderType.getPlainNodeReference())
                             } else {
-                                copiedGenericsType = new GenericsType(ClassHelper.make(Object.class).getPlainNodeReference())
+                                copiedGenericsType = new GenericsType(ClassHelper.make(Object).getPlainNodeReference())
                             }
                         } else {
                             copiedGenericsType = new GenericsType(replaceGenericsPlaceholders(parameterizedType.getType(), genericsPlaceholders))

@@ -268,35 +268,35 @@ class Metadata {
     }
 
     String getApplicationVersion() {
-        return getProperty(APPLICATION_VERSION, String.class, null)
+        return getProperty(APPLICATION_VERSION, String, null)
     }
 
     /**
      * @return The Grails version used to build the application
      */
     String getGrailsVersion() {
-        return getProperty(APPLICATION_GRAILS_VERSION, String.class, null)
+        return getProperty(APPLICATION_GRAILS_VERSION, String, null)
     }
 
     /**
      * @return The environment the application expects to run in
      */
     String getEnvironment() {
-        return getProperty('grails.env', String.class, null)
+        return getProperty('grails.env', String, null)
     }
 
     /**
      * @return The application name
      */
     String getApplicationName() {
-        return getProperty(APPLICATION_NAME, String.class, DEFAULT_APPLICATION_NAME)
+        return getProperty(APPLICATION_NAME, String, DEFAULT_APPLICATION_NAME)
     }
 
     /**
      * @return The version of the servlet spec the application was created for
      */
     String getServletVersion() {
-        return getProperty(SERVLET_VERSION, String.class, DEFAULT_SERVLET_VERSION)
+        return getProperty(SERVLET_VERSION, String, DEFAULT_SERVLET_VERSION)
     }
 
     void setServletVersion(String servletVersion) {

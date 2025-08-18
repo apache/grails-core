@@ -41,7 +41,7 @@ import org.apache.grails.common.compiler.GroovyTransformOrder
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 class JpaGormEntityTransformation extends GormEntityTransformation {
 
-    private static final ClassNode MY_TYPE = new ClassNode(JpaEntity.class)
+    private static final ClassNode MY_TYPE = new ClassNode(JpaEntity)
 
     @Override
     void visit(ASTNode[] astNodes, SourceUnit sourceUnit) {

@@ -86,7 +86,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
 
     private static final String VOID = 'void'
     private static final Class<?>[] EMPTY_JAVA_CLASS_ARRAY = []
-    private static final Class<?>[] OBJECT_CLASS_ARG = [Object.class]
+    private static final Class<?>[] OBJECT_CLASS_ARG = [Object]
 
     private static final ClassNode VALIDATION_CONSTRAINT_NODE
     public static final String METHOD_NAME_MARK_DIRTY = 'markDirty'

@@ -183,7 +183,7 @@ trait ResponseRenderer extends WebAttributes {
         setLayout(webRequest.currentRequest, false, layoutArg)
     }
 
-    private void renderJsonInternal(HttpServletResponse response, @DelegatesTo(value = StreamingJsonBuilder.StreamingJsonDelegate.class, strategy = Closure.DELEGATE_FIRST) Closure callable) {
+    private void renderJsonInternal(HttpServletResponse response, @DelegatesTo(value = StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         response.setContentType(GrailsWebUtil.getContentType(MimeType.JSON.getName(), response.getCharacterEncoding() ?: 'UTF-8'))
         def jsonBuilder = new StreamingJsonBuilder(response.writer)
         jsonBuilder.call callable

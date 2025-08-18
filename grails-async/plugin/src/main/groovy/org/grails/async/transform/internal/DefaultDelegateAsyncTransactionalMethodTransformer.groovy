@@ -62,7 +62,7 @@ class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyn
     private static final Parameter[] SET_TRANSACTION_MANAGER_METHOD_PARAMETERS = [new Parameter(INTERFACE_TRANSACTION_MANAGER, 'transactionManager')] as Parameter[]
     private static final String FIELD_NAME_TRANSACTION_MANAGER = '$transactionManager'
     private static final String FIELD_NAME_PROMISE_DECORATORS = '$promiseDecorators'
-    private static final ClassNode CLASS_NODE_MAP = new ClassNode(Map.class).getPlainNodeReference()
+    private static final ClassNode CLASS_NODE_MAP = new ClassNode(Map).getPlainNodeReference()
     private static final String METHOD_NAME_SET_TRANSACTION_MANAGER = 'setTransactionManager'
     private static final VariableExpression EXPRESSION_THIS = new VariableExpression('this')
     private static final Token OPERATOR_ASSIGNMENT = new Token(Types.EQUAL, '=', -1, -1)

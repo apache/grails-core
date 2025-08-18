@@ -101,7 +101,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 class GormEntityTransformation extends AbstractASTTransformation implements CompilationUnitAware, ASTTransformation, TransformWithPriority {
 
-    private static final ClassNode MY_TYPE = new ClassNode(Entity.class)
+    private static final ClassNode MY_TYPE = new ClassNode(Entity)
     protected static final ClassNode JPA_ENTITY_CLASS_NODE = ClassHelper.make(jakarta.persistence.Entity)
     public static final AnnotationNode JPA_ENTITY_ANNOTATION_NODE = new AnnotationNode(JPA_ENTITY_CLASS_NODE)
     public static final AnnotationNode JPA_VERSION_ANNOTATION_NODE = new AnnotationNode(ClassHelper.make(Version))
@@ -177,7 +177,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         classNode.setUsingGenerics(true)
 
         if (!isJpaEntity) {
-            AstUtils.addAnnotationIfNecessary(classNode, Entity.class)
+            AstUtils.addAnnotationIfNecessary(classNode, Entity)
             try {
                 AstUtils.addAnnotationIfNecessary(classNode, (Class<? extends Annotation>) getClass().classLoader.loadClass('grails.persistence.Entity'))
             } catch (Throwable e) {
@@ -450,7 +450,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
 
         if (!hasVersion) {
             ClassNode parent = AstUtils.getFurthestUnresolvedParent(classNode)
-            parent.addProperty(GormProperties.VERSION, Modifier.PUBLIC, new ClassNode(Long.class), null, null, null)
+            parent.addProperty(GormProperties.VERSION, Modifier.PUBLIC, new ClassNode(Long), null, null, null)
         }
     }
 
@@ -461,7 +461,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
             // inject into furthest relative
             ClassNode parent = AstUtils.getFurthestUnresolvedParent(classNode)
 
-            parent.addProperty(GormProperties.IDENTITY, Modifier.PUBLIC, new ClassNode(Long.class), null, null, null)
+            parent.addProperty(GormProperties.IDENTITY, Modifier.PUBLIC, new ClassNode(Long), null, null, null)
         }
     }
 
@@ -658,7 +658,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
      * @return A {@link ClassNode} of type {@link Set} that is possibly parameterized by the expression that is passed in.
      */
     private ClassNode findPropertyType(Expression expression) {
-        ClassNode setNode = ClassHelper.make(Set.class).getPlainNodeReference()
+        ClassNode setNode = ClassHelper.make(Set).getPlainNodeReference()
         if (expression instanceof ClassExpression) {
             setNode.setGenericsTypes([new GenericsType(AstUtils.nonGeneric(expression.type))] as GenericsType[])
         }
@@ -671,7 +671,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
 
     private void injectToStringMethod(ClassNode classNode) {
         final boolean hasToString = AstUtils.implementsOrInheritsZeroArgMethod(classNode, 'toString')
-        final boolean hasToStringAnnotation = AstUtils.findAnnotation(classNode, ToString.class) != null
+        final boolean hasToStringAnnotation = AstUtils.findAnnotation(classNode, ToString) != null
         final boolean isEnum = AstUtils.isEnum(classNode)
 
         if (!hasToString && !hasToStringAnnotation && !isEnum) {
@@ -680,7 +680,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
             VariableExpression idVariable = new VariableExpression('id')
             ge.addValue(new TernaryExpression(new BooleanExpression(idVariable), idVariable, new ConstantExpression('(unsaved)')))
             Statement s = new ReturnStatement(ge)
-            MethodNode mn = new MethodNode('toString', Modifier.PUBLIC, new ClassNode(String.class), new Parameter[0], new ClassNode[0], s)
+            MethodNode mn = new MethodNode('toString', Modifier.PUBLIC, new ClassNode(String), new Parameter[0], new ClassNode[0], s)
             classNode.addMethod(mn)
         }
     }

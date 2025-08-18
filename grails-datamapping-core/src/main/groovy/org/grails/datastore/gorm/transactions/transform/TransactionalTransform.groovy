@@ -138,7 +138,7 @@ import static org.grails.datastore.mapping.reflect.AstUtils.varThis
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransformation {
 
-    private static final Set<String> ANNOTATION_NAME_EXCLUDES = new HashSet<String>([Transactional.class.getName(), 'grails.transaction.Rollback', Rollback.class.getName(), NotTransactional.class.getName(), 'grails.transaction.NotTransactional', 'grails.gorm.transactions.ReadOnly'])
+    private static final Set<String> ANNOTATION_NAME_EXCLUDES = new HashSet<String>([Transactional.getName(), 'grails.transaction.Rollback', Rollback.getName(), NotTransactional.getName(), 'grails.transaction.NotTransactional', 'grails.gorm.transactions.ReadOnly'])
     public static final ClassNode MY_TYPE = new ClassNode(Transactional)
     public static final ClassNode READ_ONLY_TYPE = new ClassNode(ReadOnly)
     private static final String PROPERTY_TRANSACTION_MANAGER = 'transactionManager'

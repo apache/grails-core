@@ -46,7 +46,7 @@ class ServicesGrailsPlugin extends Plugin  {
     Closure doWithSpring() {
         { ->
             GrailsApplication application = grailsApplication
-            final boolean springTransactionManagement = config.getProperty(Settings.SPRING_TRANSACTION_MANAGEMENT, Boolean.class, false)
+            final boolean springTransactionManagement = config.getProperty(Settings.SPRING_TRANSACTION_MANAGEMENT, Boolean, false)
             if (springTransactionManagement) {
                 throw new GrailsConfigurationException('Spring proxy-based transaction management no longer supported. Yes the @grails.gorm.transactions.Transactional annotation instead')
             }

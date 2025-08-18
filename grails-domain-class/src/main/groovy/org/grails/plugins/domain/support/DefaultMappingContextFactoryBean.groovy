@@ -70,7 +70,7 @@ class DefaultMappingContextFactoryBean implements FactoryBean<MappingContext>, I
 
     @Override
     Class<?> getObjectType() {
-        return MappingContext.class
+        return MappingContext
     }
 
     @Override

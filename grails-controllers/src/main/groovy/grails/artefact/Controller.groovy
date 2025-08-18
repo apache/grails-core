@@ -486,7 +486,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
     @Generated
     @SuppressWarnings('unchecked')
     Method getExceptionHandlerMethodFor(final Class<? extends Exception> exceptionType) throws Exception {
-        if (!Exception.class.isAssignableFrom(exceptionType)) {
+        if (!Exception.isAssignableFrom(exceptionType)) {
             throw new IllegalArgumentException("exceptionType [${exceptionType.getName()}] argument must be Exception or a subclass of Exception")
         }
 

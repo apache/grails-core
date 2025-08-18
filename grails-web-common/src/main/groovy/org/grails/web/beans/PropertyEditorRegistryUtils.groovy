@@ -63,18 +63,18 @@ class PropertyEditorRegistryUtils {
         def dateFormat = new SimpleDateFormat(DataBinder.DEFAULT_DATE_FORMAT, locale)
 
         registry.registerCustomEditor(Date, new CustomDateEditor(dateFormat, true))
-        registry.registerCustomEditor(BigDecimal, new CustomNumberEditor(BigDecimal.class, floatFormat, true))
-        registry.registerCustomEditor(BigInteger, new CustomNumberEditor(BigInteger.class, floatFormat, true))
-        registry.registerCustomEditor(Double, new CustomNumberEditor(Double.class, floatFormat, true))
-        registry.registerCustomEditor(double.class, new CustomNumberEditor(Double.class, floatFormat, true))
-        registry.registerCustomEditor(Float, new CustomNumberEditor(Float.class, floatFormat, true))
-        registry.registerCustomEditor(float.class, new CustomNumberEditor(Float.class, floatFormat, true))
-        registry.registerCustomEditor(Long, new CustomNumberEditor(Long.class, integerFormat, true))
-        registry.registerCustomEditor(long.class, new CustomNumberEditor(Long.class, integerFormat, true))
-        registry.registerCustomEditor(Integer, new CustomNumberEditor(Integer.class, integerFormat, true))
-        registry.registerCustomEditor(int.class, new CustomNumberEditor(Integer.class, integerFormat, true))
-        registry.registerCustomEditor(Short, new CustomNumberEditor(Short.class, integerFormat, true))
-        registry.registerCustomEditor(short.class, new CustomNumberEditor(Short.class, integerFormat, true))
+        registry.registerCustomEditor(BigDecimal, new CustomNumberEditor(BigDecimal, floatFormat, true))
+        registry.registerCustomEditor(BigInteger, new CustomNumberEditor(BigInteger, floatFormat, true))
+        registry.registerCustomEditor(Double, new CustomNumberEditor(Double, floatFormat, true))
+        registry.registerCustomEditor(double, new CustomNumberEditor(Double, floatFormat, true))
+        registry.registerCustomEditor(Float, new CustomNumberEditor(Float, floatFormat, true))
+        registry.registerCustomEditor(float, new CustomNumberEditor(Float, floatFormat, true))
+        registry.registerCustomEditor(Long, new CustomNumberEditor(Long, integerFormat, true))
+        registry.registerCustomEditor(long, new CustomNumberEditor(Long, integerFormat, true))
+        registry.registerCustomEditor(Integer, new CustomNumberEditor(Integer, integerFormat, true))
+        registry.registerCustomEditor(int, new CustomNumberEditor(Integer, integerFormat, true))
+        registry.registerCustomEditor(Short, new CustomNumberEditor(Short, integerFormat, true))
+        registry.registerCustomEditor(short, new CustomNumberEditor(Short, integerFormat, true))
         registry.registerCustomEditor(Date, new CompositeEditor(new StructuredDateEditor(dateFormat, true), new CustomDateEditor(new SimpleDateFormat(JSON_DATE_FORMAT), true)))
         registry.registerCustomEditor(Calendar, new StructuredDateEditor(dateFormat, true))
 
@@ -101,7 +101,7 @@ class PropertyEditorRegistryUtils {
 
         Map<String, PropertyEditorRegistrar> editors = (Map<String, PropertyEditorRegistrar>)servletContext.getAttribute(PROPERTY_EDITOR_REGISTRARS)
         if (editors == null) {
-            editors = context.getBeansOfType(PropertyEditorRegistrar.class)
+            editors = context.getBeansOfType(PropertyEditorRegistrar)
             if (!Environment.isDevelopmentMode()) {
                 servletContext.setAttribute(PROPERTY_EDITOR_REGISTRARS, editors)
             }

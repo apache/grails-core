@@ -138,7 +138,7 @@ class GrailsCli {
      * @param targetType the expected type of the property value
      * @param defaultValue The default value
      */
-    static <T> T getSetting(String key, Class<T> targetType = Object.class, T defaultValue = null) {
+    static <T> T getSetting(String key, Class<T> targetType = Object, T defaultValue = null) {
         def value = SETTINGS_MAP.get(key, defaultValue)
         if (value == null) {
             return null

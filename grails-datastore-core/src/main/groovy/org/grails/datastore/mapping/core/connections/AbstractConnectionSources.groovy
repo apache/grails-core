@@ -70,7 +70,7 @@ abstract class AbstractConnectionSources <T, S extends ConnectionSourceSettings>
      * @return An iterable of connection source names. Should never return null.
      */
     protected Iterable<String> getConnectionSourceNames(ConnectionSourceFactory<T, S> connectionSourceFactory, PropertyResolver configuration) {
-        Map<String, Object> allConnectionSources = configuration.getProperty(connectionSourceFactory.getConnectionSourcesConfigurationKey().toString(), Map.class, Collections.emptyMap())
+        Map<String, Object> allConnectionSources = configuration.getProperty(connectionSourceFactory.getConnectionSourcesConfigurationKey().toString(), Map, Collections.emptyMap())
         return toValidConnectionSourceNames(allConnectionSources)
     }
 

@@ -58,7 +58,7 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
     protected ResponseRedirector redirector
 
     void setApplicationContext(ApplicationContext applicationContext) {
-        this.actionResultTransformers = applicationContext.getBeansOfType(ActionResultTransformer.class).values()
+        this.actionResultTransformers = applicationContext.getBeansOfType(ActionResultTransformer).values()
         this.applicationContext = applicationContext
         this.redirector = new ResponseRedirector(applicationContext.getBean(LinkGenerator))
     }

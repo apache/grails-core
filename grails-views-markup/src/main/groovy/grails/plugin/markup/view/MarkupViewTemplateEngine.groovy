@@ -139,7 +139,7 @@ class MarkupViewTemplateEngine extends ResolvableGroovyTemplateEngine {
 
             if (compileStatic) {
                 newConfig.addCompilationCustomizers(
-                        new ASTTransformationCustomizer(Collections.singletonMap('extensions', 'groovy.text.markup.MarkupTemplateTypeCheckingExtension'), CompileStatic.class))
+                        new ASTTransformationCustomizer(Collections.singletonMap('extensions', 'groovy.text.markup.MarkupTemplateTypeCheckingExtension'), CompileStatic))
             }
 
             innerEngine.compilerConfiguration.addCompilationCustomizers(newConfig.compilationCustomizers as CompilationCustomizer[])

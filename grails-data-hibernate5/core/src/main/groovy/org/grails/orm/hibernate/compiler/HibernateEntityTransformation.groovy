@@ -86,7 +86,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 class HibernateEntityTransformation implements ASTTransformation, CompilationUnitAware, TransformWithPriority {
 
-    private static final ClassNode MY_TYPE = new ClassNode(grails.gorm.hibernate.annotation.ManagedEntity.class)
+    private static final ClassNode MY_TYPE = new ClassNode(grails.gorm.hibernate.annotation.ManagedEntity)
     private static final Object APPLIED_MARKER = new Object()
 
 //    final boolean available = ClassUtils.isPresent("org.hibernate.SessionFactory") && Boolean.valueOf(System.getProperty("hibernate.enhance", "true"))
@@ -143,7 +143,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
 
         def staticCompilationVisitor = new StaticCompilationVisitor(sourceUnit, classNode)
 
-        AnnotationNode transientAnnotationNode = new AnnotationNode(ClassHelper.make(Transient.class))
+        AnnotationNode transientAnnotationNode = new AnnotationNode(ClassHelper.make(Transient))
         FieldNode entityEntryHolderField = classNode.addField(entryHolderFieldName, Modifier.PRIVATE | Modifier.TRANSIENT, entityEntryClassNode, null)
         entityEntryHolderField
                  .addAnnotation(transientAnnotationNode)

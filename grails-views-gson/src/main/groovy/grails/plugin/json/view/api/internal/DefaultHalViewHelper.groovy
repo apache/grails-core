@@ -638,7 +638,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
 
         @Override
         void call(String name, Object value,
-                  @DelegatesTo(StreamingJsonDelegate.class) Closure callable) throws IOException {
+                  @DelegatesTo(StreamingJsonDelegate) Closure callable) throws IOException {
             writeName(name)
             verifyValue()
             writeObject(value, callable)
@@ -659,7 +659,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
         }
 
         @Override
-        void call(String name, @DelegatesTo(value = StreamingJsonDelegate.class, strategy = Closure.DELEGATE_FIRST) Closure value) throws IOException {
+        void call(String name, @DelegatesTo(value = StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure value) throws IOException {
             first = false
             delegate.call(name, value)
         }

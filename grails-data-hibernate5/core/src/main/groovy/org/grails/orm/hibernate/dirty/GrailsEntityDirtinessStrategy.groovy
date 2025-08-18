@@ -49,7 +49,7 @@ import org.grails.datastore.mapping.model.types.Embedded
 @CompileStatic
 class GrailsEntityDirtinessStrategy implements CustomEntityDirtinessStrategy {
 
-    protected static final Logger LOG = LoggerFactory.getLogger(GrailsEntityDirtinessStrategy.class)
+    protected static final Logger LOG = LoggerFactory.getLogger(GrailsEntityDirtinessStrategy)
 
     @Override
     boolean canDirtyCheck(Object entity, EntityPersister persister, Session session) {
@@ -152,6 +152,6 @@ class GrailsEntityDirtinessStrategy implements CustomEntityDirtinessStrategy {
     }
 
     private DirtyCheckable cast(Object entity) {
-        return DirtyCheckable.class.cast(entity)
+        return DirtyCheckable.cast(entity)
     }
 }

@@ -72,11 +72,11 @@ class JsonViewResolver extends SmartViewResolver {
             def errorsRenderer = new ErrorsJsonViewRenderer((Class)Errors)
             errorsRenderer.setJsonViewResolver(this)
             rendererRegistry.addRenderer(errorsRenderer)
-            def defaultJsonRenderer = rendererRegistry.findRenderer(MimeType.JSON, Object.class)
+            def defaultJsonRenderer = rendererRegistry.findRenderer(MimeType.JSON, Object)
             viewConfiguration.mimeTypes.each { String mimeTypeString ->
                 MimeType mimeType = new MimeType(mimeTypeString, 'json')
                 rendererRegistry.addDefaultRenderer(
-                    new JsonViewJsonRenderer<Object>(Object.class, mimeType, this , proxyHandler, rendererRegistry, defaultJsonRenderer)
+                    new JsonViewJsonRenderer<Object>(Object, mimeType, this , proxyHandler, rendererRegistry, defaultJsonRenderer)
                 )
             }
 

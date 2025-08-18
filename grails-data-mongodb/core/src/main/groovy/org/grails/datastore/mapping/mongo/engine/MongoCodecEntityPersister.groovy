@@ -98,8 +98,8 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
         this.fastClassData = FieldEntityAccess.getOrIntializeReflector(entity)
         PersistentProperty identity = entity.identity
         if (identity != null) {
-            hasNumericalIdentifier = Long.class.isAssignableFrom(identity.type)
-            hasStringIdentifier = String.class.isAssignableFrom(identity.type)
+            hasNumericalIdentifier = Long.isAssignableFrom(identity.type)
+            hasStringIdentifier = String.isAssignableFrom(identity.type)
         }
     }
 
@@ -416,7 +416,7 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
 
         ObjectId objectId = ObjectId.get()
         def identityType = persistentEntity.identity.type
-        if (ObjectId.class.isAssignableFrom(identityType)) {
+        if (ObjectId.isAssignableFrom(identityType)) {
             return objectId
         }
 

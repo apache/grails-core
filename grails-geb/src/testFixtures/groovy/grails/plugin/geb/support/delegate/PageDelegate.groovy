@@ -411,7 +411,7 @@ trait PageDelegate implements Navigable, AlertAndConfirmSupport, WaitingSupport,
     }
 
     @Override
-    void interact(@DelegatesTo(strategy = 1, value = InteractDelegate.class) Closure interactionClosure) {
+    void interact(@DelegatesTo(strategy = 1, value = InteractDelegate) Closure interactionClosure) {
         page.interact(interactionClosure)
     }
 }

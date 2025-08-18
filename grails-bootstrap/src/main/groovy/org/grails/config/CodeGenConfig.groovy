@@ -140,7 +140,7 @@ class CodeGenConfig implements Cloneable, ConfigMap {
         }
 
         def envName = Environment.current.name
-        def environmentSpecific = getProperty("environments.${envName}", Map.class)
+        def environmentSpecific = getProperty("environments.${envName}", Map)
         if (environmentSpecific != null) {
             if (!environmentSpecific.isEmpty()) {
                 mergeMap(environmentSpecific, false)
@@ -187,33 +187,33 @@ class CodeGenConfig implements Cloneable, ConfigMap {
         else if (requiredType.isInstance(value)) {
             return (T)value
         }
-        if (requiredType == String.class) {
+        if (requiredType == String) {
             return String.valueOf(value)
-        } else if (requiredType == Boolean.class) {
+        } else if (requiredType == Boolean) {
             Boolean booleanObject = toBooleanObject(String.valueOf(value))
             return booleanObject != null ? booleanObject : Boolean.FALSE
         } else if (requiredType == boolean) {
             Boolean booleanObject = toBooleanObject(String.valueOf(value))
             return booleanObject != null ? booleanObject.booleanValue() : Boolean.FALSE.booleanValue()
-        } else if (requiredType == Integer.class) {
+        } else if (requiredType == Integer) {
             if (value instanceof Number) {
                 return Integer.valueOf(((Number)value).intValue())
             } else {
                 return Integer.valueOf(String.valueOf(value))
             }
-        } else if (requiredType == Long.class) {
+        } else if (requiredType == Long) {
             if (value instanceof Number) {
                 return Long.valueOf(((Number)value).longValue())
             } else {
                 return Long.valueOf(String.valueOf(value))
             }
-        } else if (requiredType == Double.class) {
+        } else if (requiredType == Double) {
             if (value instanceof Number) {
                 return Double.valueOf(((Number)value).doubleValue())
             } else {
                 return Double.valueOf(String.valueOf(value))
             }
-        } else if (requiredType == BigDecimal.class) {
+        } else if (requiredType == BigDecimal) {
             return new BigDecimal(String.valueOf(value))
         } else {
             return convertToOtherTypes(value, requiredType)

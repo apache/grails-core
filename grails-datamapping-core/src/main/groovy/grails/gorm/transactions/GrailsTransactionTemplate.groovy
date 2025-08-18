@@ -64,7 +64,7 @@ class GrailsTransactionTemplate {
         this.transactionTemplate = new org.springframework.transaction.support.TransactionTemplate(transactionManager, this.transactionAttribute)
     }
 
-    <T> T executeAndRollback(@ClosureParams(value = SimpleType.class, options = 'org.springframework.transaction.TransactionStatus') Closure<T> action) throws TransactionException {
+    <T> T executeAndRollback(@ClosureParams(value = SimpleType, options = 'org.springframework.transaction.TransactionStatus') Closure<T> action) throws TransactionException {
         try {
             Object result = transactionTemplate.execute(new TransactionCallback() {
                 Object doInTransaction(TransactionStatus status) {
@@ -90,7 +90,7 @@ class GrailsTransactionTemplate {
         }
     }
 
-    <T> T execute(@ClosureParams(value = SimpleType.class, options = 'org.springframework.transaction.TransactionStatus') Closure<T> action) throws TransactionException {
+    <T> T execute(@ClosureParams(value = SimpleType, options = 'org.springframework.transaction.TransactionStatus') Closure<T> action) throws TransactionException {
         try {
             Object result = transactionTemplate.execute(new TransactionCallback() {
                 Object doInTransaction(TransactionStatus status) {

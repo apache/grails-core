@@ -78,7 +78,7 @@ class WebSetupSpecInterceptor implements IMethodInterceptor {
         def config = grailsApplication.config
         test.defineBeans {
 
-            final classLoader = ControllerUnitTest.class.getClassLoader()
+            final classLoader = ControllerUnitTest.getClassLoader()
 
             boolean registerConstraintEvaluator
             if (ClassUtils.isPresent('grails.testing.gorm.DataTest', classLoader)) {

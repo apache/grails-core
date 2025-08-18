@@ -177,7 +177,7 @@ trait RestResponder {
                     if (proxyHandler != null && target != null) {
                         target = proxyHandler.unwrapIfProxy(target)
                     }
-                    Renderer<Errors> errorsRenderer = registry.findContainerRenderer(mimeType, Errors.class, target)
+                    Renderer<Errors> errorsRenderer = registry.findContainerRenderer(mimeType, Errors, target)
                     if (errorsRenderer) {
                         final context = new ServletRenderContext(webRequest, [model: args.model])
                         if (args.view) {

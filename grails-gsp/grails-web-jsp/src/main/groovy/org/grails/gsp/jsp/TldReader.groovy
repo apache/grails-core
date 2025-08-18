@@ -33,7 +33,7 @@ import org.grails.io.support.SpringIOUtils
 @CompileStatic
 class TldReader {
 
-    private static final Log log = LogFactory.getLog(TldReader.class)
+    private static final Log log = LogFactory.getLog(TldReader)
     final Map<String,String> tags = [:]
     final List<String> listeners = []
     String uri

@@ -337,7 +337,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
                 if (secondaryDatastore) {
                     serviceName = secondaryDatastore + NameUtils.capitalize(serviceName)
                 }
-                if (serviceClass != null && serviceClass != Object.class) {
+                if (serviceClass != null && serviceClass != Object) {
                     services.put(serviceName, serviceClass)
                 }
             }

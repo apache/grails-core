@@ -229,7 +229,7 @@ class GormEnhancer implements Closeable {
                 if (namedQueries == null) {
 
                     ClassPropertyFetcher cpf = ClassPropertyFetcher.forClass(entity)
-                    Closure closure = cpf.getStaticPropertyValue(GormProperties.NAMED_QUERIES, Closure.class)
+                    Closure closure = cpf.getStaticPropertyValue(GormProperties.NAMED_QUERIES, Closure)
                     if (closure != null) {
                         closure = (Closure)closure.clone()
                         def evaluator = new NamedQueriesBuilder()

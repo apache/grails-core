@@ -303,7 +303,7 @@ trait DatabaseMigrationCommand {
         LabelExpression labelExpression = liquibase.changeLogParameters.labels
         liquibase.changeLogParameters.setContexts(contexts)
 
-        final ExecutorService executorService = Scope.getCurrentScope().getSingleton(ExecutorService.class)
+        final ExecutorService executorService = Scope.getCurrentScope().getSingleton(ExecutorService)
         final Executor oldTemplate = executorService.getExecutor('jdbc', database)
         final LoggingExecutor outputTemplate = new LoggingExecutor(oldTemplate, output, database)
         executorService.setExecutor('jdbc', database, outputTemplate)
@@ -356,7 +356,7 @@ trait DatabaseMigrationCommand {
             executor.execute(new RawSqlStatement('SET DEFINE OFF;'))
         }
         if (database instanceof MSSQLDatabase && database.getDefaultCatalogName() != null) {
-            executor.execute(new RawSqlStatement('USE ' + database.escapeObjectName(database.getDefaultCatalogName(), Catalog.class) + ';'))
+            executor.execute(new RawSqlStatement('USE ' + database.escapeObjectName(database.getDefaultCatalogName(), Catalog) + ';'))
         }
     }
 

@@ -56,7 +56,7 @@ class MimeTypesConfiguration {
     @Bean('mimeTypesHolder')
     @Primary
     MimeTypesHolder mimeTypesHolder() {
-        final MimeType[] mimeTypes = grailsApplication.mainContext.getBean('mimeTypes', MimeType[].class)
+        final MimeType[] mimeTypes = grailsApplication.mainContext.getBean('mimeTypes', MimeType[])
         return new MimeTypesHolder(mimeTypes)
     }
 
@@ -87,7 +87,7 @@ class MimeTypesConfiguration {
 
             final List<MimeTypeProvider> mimeTypeProviders = this.mimeTypeProviders
             processProviders(mimes, mimeTypeProviders)
-            final Map<String, MimeTypeProvider> childTypes = grailsApplication.mainContext.getBeansOfType(MimeTypeProvider.class)
+            final Map<String, MimeTypeProvider> childTypes = grailsApplication.mainContext.getBeansOfType(MimeTypeProvider)
             processProviders(mimes, childTypes.values())
             mimeTypes = mimes.toArray(new MimeType[0])
         }
@@ -108,7 +108,7 @@ class MimeTypesConfiguration {
 
     @CompileStatic(TypeCheckingMode.SKIP)
     protected Map<CharSequence, Object> getMimeConfig(Config config) {
-        return config.getProperty(Settings.MIME_TYPES, Map.class)
+        return config.getProperty(Settings.MIME_TYPES, Map)
     }
 
     private void processProviders(List<MimeType> mimes, Iterable<MimeTypeProvider> mimeTypeProviders) {

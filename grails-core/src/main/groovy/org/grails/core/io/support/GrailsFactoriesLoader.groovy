@@ -47,7 +47,7 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
      * @param factoryClass the interface or abstract class representing the factory
      */
     static <T> List<T> loadFactories(Class<T> factoryClass) {
-        (List<T>)loadFactoriesWithArguments(factoryClass, GrailsFactoriesLoader.class.classLoader)
+        (List<T>)loadFactoriesWithArguments(factoryClass, GrailsFactoriesLoader.classLoader)
     }
 
     /**
@@ -77,7 +77,7 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
         results
     }
 
-    static <T> List<Class<T>> loadFactoryClasses(Class<T> factoryClass, ClassLoader classLoader = GrailsFactoriesLoader.class.classLoader) {
+    static <T> List<Class<T>> loadFactoryClasses(Class<T> factoryClass, ClassLoader classLoader = GrailsFactoriesLoader.classLoader) {
         Assert.notNull factoryClass, "'factoryClass' must not be null"
 
         def factoryNames = loadFactoryNames(factoryClass, classLoader)
@@ -107,7 +107,7 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
         }
     }
 
-    static <T> T loadFactory(Class<T> factoryClass, ClassLoader classLoader = GrailsFactoriesLoader.class.classLoader) {
+    static <T> T loadFactory(Class<T> factoryClass, ClassLoader classLoader = GrailsFactoriesLoader.classLoader) {
         def all = loadFactories(factoryClass, classLoader)
         if (all) {
             return all.get(0)
@@ -115,7 +115,7 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
     }
 
     static <T> T loadFactory(Class<T> factoryClass, Object... arguments) {
-        loadFactory(factoryClass, GrailsFactoriesLoader.class.classLoader, arguments)
+        loadFactory(factoryClass, GrailsFactoriesLoader.classLoader, arguments)
     }
 
     static <T> T loadFactory(Class<T> factoryClass, ClassLoader classLoader, Object... arguments) {

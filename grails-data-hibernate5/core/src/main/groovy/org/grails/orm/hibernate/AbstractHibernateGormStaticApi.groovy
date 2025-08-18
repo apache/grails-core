@@ -838,9 +838,9 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
                     q.setParameter stringKey, null
                 } else if (value instanceof CharSequence) {
                     q.setParameter stringKey, value.toString()
-                } else if (List.class.isAssignableFrom(value.getClass())) {
+                } else if (List.isAssignableFrom(value.getClass())) {
                     q.setParameterList stringKey, (List) value
-                } else if (Set.class.isAssignableFrom(value.getClass())) {
+                } else if (Set.isAssignableFrom(value.getClass())) {
                     q.setParameterList stringKey, (Set) value
                 } else if (value.getClass().isArray()) {
                     q.setParameterList stringKey, (Object[]) value
@@ -854,7 +854,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
     protected Integer intValue(Map args, String key) {
         def value = args.get(key)
         if (value) {
-            return conversionService.convert(value, Integer.class)
+            return conversionService.convert(value, Integer)
         }
         return null
     }
@@ -877,11 +877,11 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             q.cacheable = ClassUtils.getBooleanFromMap(DynamicFinder.ARGUMENT_CACHE, args)
         }
         if (args.containsKey(DynamicFinder.ARGUMENT_FETCH_SIZE)) {
-            Integer fetchSizeParam = conversionService.convert(args.remove(DynamicFinder.ARGUMENT_FETCH_SIZE), Integer.class)
+            Integer fetchSizeParam = conversionService.convert(args.remove(DynamicFinder.ARGUMENT_FETCH_SIZE), Integer)
             q.setFetchSize(fetchSizeParam.intValue())
         }
         if (args.containsKey(DynamicFinder.ARGUMENT_TIMEOUT)) {
-            Integer timeoutParam = conversionService.convert(args.remove(DynamicFinder.ARGUMENT_TIMEOUT), Integer.class)
+            Integer timeoutParam = conversionService.convert(args.remove(DynamicFinder.ARGUMENT_TIMEOUT), Integer)
             q.setTimeout(timeoutParam.intValue())
         }
         if (args.containsKey(DynamicFinder.ARGUMENT_READ_ONLY)) {

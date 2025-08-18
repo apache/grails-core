@@ -732,7 +732,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 it.dependsOn(findMainClassTask)
                 it.configuredMainClassName.convention(GrailsGradlePlugin.getMainClassProvider(project))
             }
-        } else if (!FindMainClassTask.class.isAssignableFrom(existingTask.class)) {
+        } else if (!FindMainClassTask.isAssignableFrom(existingTask.class)) {
             project.logger.warn('Grails Projects typically register a findMainClass task to force the MainClass resolution for Spring Boot. This task already exists so this will not occur.')
         }
     }

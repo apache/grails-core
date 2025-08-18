@@ -59,7 +59,7 @@ abstract class HibernateSpec extends Specification {
 
     void setupSpec() {
 
-        List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader.class, getClass().getClassLoader())
+        List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader, getClass().getClassLoader())
         ResourceLoader resourceLoader = new DefaultResourceLoader()
         MutablePropertySources propertySources = new MutablePropertySources()
         PropertySourceLoader ymlLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains('yml') }

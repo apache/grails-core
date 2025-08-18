@@ -82,7 +82,7 @@ import static org.grails.datastore.mapping.reflect.AstUtils.processVariableScope
 abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTransformation {
 
     private static final Set<String> METHOD_NAME_EXCLUDES = new HashSet<String>(Arrays.asList('afterPropertiesSet', 'destroy'))
-    private static final Set<String> ANNOTATION_NAME_EXCLUDES = new HashSet<String>(Arrays.asList(PostConstruct.class.getName(), PreDestroy.class.getName(), 'grails.web.controllers.ControllerMethod'))
+    private static final Set<String> ANNOTATION_NAME_EXCLUDES = new HashSet<String>(Arrays.asList(PostConstruct.getName(), PreDestroy.getName(), 'grails.web.controllers.ControllerMethod'))
     /**
      * Key used to store within the original method node metadata, all previous decorated methods
      */
@@ -145,7 +145,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
                 }
 
                 // don't apply to methods added by traits
-                if (hasAnnotation(md, Traits.TraitBridge.class)) continue
+                if (hasAnnotation(md, Traits.TraitBridge)) continue
                 // ignore methods that delegate to each other
                 if (hasAnnotation(md, 'grails.compiler.DelegatingMethod')) continue
 

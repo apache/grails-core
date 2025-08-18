@@ -48,7 +48,7 @@ class DomainModelServiceImpl implements DomainModelService {
 
     static {
         try {
-            derivedMethod = Property.class.getMethod('isDerived', (Class<?>[]) null)
+            derivedMethod = Property.getMethod('isDerived', (Class<?>[]) null)
         } catch (NoSuchMethodException | SecurityException e) {
             // no-op
         }

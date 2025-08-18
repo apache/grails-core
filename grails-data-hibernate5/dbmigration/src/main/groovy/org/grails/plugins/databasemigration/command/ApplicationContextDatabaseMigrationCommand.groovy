@@ -87,7 +87,7 @@ trait ApplicationContextDatabaseMigrationCommand implements DatabaseMigrationCom
 
         def serviceRegistry = applicationContext.getBean(sessionFactoryName, SessionFactoryImplementor).serviceRegistry.parentServiceRegistry
 
-        Dialect dialect = serviceRegistry.getService(JdbcServices.class).dialect
+        Dialect dialect = serviceRegistry.getService(JdbcServices).dialect
 
         HibernateDatastore hibernateDatastore = applicationContext.getBean('hibernateDatastore', HibernateDatastore)
         hibernateDatastore = hibernateDatastore.getDatastoreForConnection(dataSource)
