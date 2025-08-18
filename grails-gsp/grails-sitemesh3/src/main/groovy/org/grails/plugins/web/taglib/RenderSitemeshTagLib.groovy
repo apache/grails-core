@@ -33,6 +33,10 @@ import grails.gsp.TagLib
 
 import java.nio.CharBuffer
 
+/**
+ * The tags in this library are rendered by sitemesh itself instead of the grails tags so they should always be written
+ * as a 'sitemesh' namespace.
+ */
 @TagLib
 class RenderSitemeshTagLib implements TagLibrary {
 

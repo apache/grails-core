@@ -28,10 +28,10 @@ import grails.gsp.TagLib
 
 @TagLib
 class SitemeshTagLib implements TagLibrary {
-    static String namespace = 'sitemesh'
+    static String namespace = 'grailsLayout'
     CodecLookup codecLookup
-    // from org.grails.gsp.compiler.SitemeshPreprocessor
-    public static final String XML_CLOSING_FOR_EMPTY_TAG_ATTRIBUTE_NAME = "gsp_sm_xmlClosingForEmptyTag";
+    // from org.grails.gsp.compiler.GrailsLayoutPreprocessor
+    public static final String XML_CLOSING_FOR_EMPTY_TAG_ATTRIBUTE_NAME = "gsp_sm_xmlClosingForEmptyTag"
 
     SitemeshTagLib(CodecLookup codecLookup) {
         this.codecLookup = codecLookup
@@ -97,9 +97,9 @@ class SitemeshTagLib implements TagLibrary {
         content
     }
 
-    // Grails org.grails.gsp.compiler.SitemeshPreprocessor replaces
-    // <content /> tags with <sitemesh:captureContent /> tags. This just changes them back.
-    // Alternatively, a 'sitemesh:captureContent' ContentBlockExtractingRule can be used.
+    // Grails org.grails.gsp.compiler.GrailsLayoutPreprocessor replaces
+    // <content /> tags with <grailsLayout:captureContent /> tags. This just changes them back.
+    // Alternatively, a 'grailsLayout:captureContent' ContentBlockExtractingRule can be used.
     // See: GrailsTagRuleBundle
     Closure captureContent = { attrs, body ->
         StringBuilder tag = new StringBuilder('<content ')
@@ -119,7 +119,7 @@ class SitemeshTagLib implements TagLibrary {
     /**
      * Allows passing of parameters to Sitemesh layout.<br/>
      *
-     * &lt;sitemesh:parameter name="foo" value="bar" /&gt;
+     * &lt;grailsLayout:parameter name="foo" value="bar" /&gt;
      */
     Closure parameter = { Map attrs, body ->
         captureTagContent(out, 'parameter', attrs, body)
