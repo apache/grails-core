@@ -67,8 +67,6 @@ class DefaultRendererRegistry extends ClassAndMimeTypeRegistry<Renderer, Rendere
 
     String modelSuffix = ''
 
-    DefaultRendererRegistry() { }
-
     @PostConstruct
     void initialize() {
         addDefaultRenderer(new DefaultXmlRenderer<Object>(Object, groovyPageLocator, this))

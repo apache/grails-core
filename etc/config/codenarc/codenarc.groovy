@@ -64,6 +64,7 @@ ruleset {
     }
     SpaceBeforeOpeningBrace
     SpaceInsideParentheses
+    UnnecessaryConstructor
     UnnecessaryGroovyImport
     UnnecessaryGString
     UnnecessaryPublicModifier
