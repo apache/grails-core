@@ -40,7 +40,7 @@ The `create-restapi` command accepts the following options:
 
 - `NAME`: The desired name for the REST API application.
 
-- `-f, --features=FEATURE[,FEATURE...]`: Specifies the features to include. Available options include h2, scaffolding, gorm-hibernate5, spring-boot-starter-jetty, springloaded, spring-boot-starter-tomcat, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, spring-boot-starter-undertow, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, asset-pipeline-grails, views-json, gorm-neo4j, asciidoctor, embedded-mongodb, grails-web-console, logbackGroovy, mongo-sync, shade, geb, properties.
+- `-f, --features=FEATURE[,FEATURE...]`: Specifies the features to include. Available options include h2, scaffolding, gorm-hibernate5, spring-boot-starter-jetty, spring-boot-starter-tomcat, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, spring-boot-starter-undertow, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, asset-pipeline-grails, views-json, gorm-neo4j, asciidoctor, embedded-mongodb, grails-web-console, logbackGroovy, mongo-sync, shade, geb, properties.
 
 - `-g, --gorm=GORM Implementation`: Specifies the GORM Implementation to configure, with options like hibernate, mongodb, neo4j.
 

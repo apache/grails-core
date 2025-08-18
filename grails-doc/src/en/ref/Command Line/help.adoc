@@ -140,7 +140,7 @@ Creates an application
       [NAME]            The name of the application to create.
   -f, --features=FEATURE[,FEATURE...]
                         The features to use. Possible values: h2, scaffolding, gorm-hibernate5,
-                          spring-boot-starter-jetty, springloaded, spring-boot-starter-tomcat,
+                          spring-boot-starter-jetty, spring-boot-starter-tomcat,
                           micronaut-http-client, cache-ehcache, hibernate-validator, postgres,
                           mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb,
                           assertj, mockito, spring-boot-starter-undertow,
