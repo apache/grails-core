@@ -416,3 +416,9 @@ The `servletContext` is no longer included by default in the generated `Bootstra
 ```console
 ServletContext servletContext
 ```
+
+===== 12.17 Development Reloading
+
+For Grails 7, as was the case with Grails 4 and 5 and shell-generated applications in 6, Spring Boot Developer Tools is used by default for development reloading within generated applications.
+
+To learn more about development reloading options, please see the xref:../guide/gettingStarted#developmentReloading[Development Reloading] section of this guide.

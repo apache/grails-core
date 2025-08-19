@@ -80,7 +80,6 @@ Available Features
   assertj                             AssertJ fluent assertions framework
   hamcrest                            Hamcrest matchers for JUnit
   jrebel                              Adds support for class reloading with JRebel (requires separate JRebel installation)
-  springloaded                        Adds support for class reloading with Spring Loaded
 
   Documentation
   asciidoctor                         Adds support for creating Asciidoctor documentation

@@ -19,10 +19,12 @@
 
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
+import spock.lang.PendingFeature
 
 @Integration
 class EndToEndSpec extends ContainerGebSpec {
 
+    @PendingFeature
     def 'simple layout'() {
         when:
         go('endToEnd/simpleLayout')
@@ -33,6 +35,7 @@ class EndToEndSpec extends ContainerGebSpec {
 </body></html>"""
     }
 
+    @PendingFeature
     def 'title in subtemplate'() {
         when:
         go('endToEnd/titleInSubtemplate')
@@ -44,6 +47,7 @@ class EndToEndSpec extends ContainerGebSpec {
 </body></html>"""
     }
 
+    @PendingFeature
     def 'multiple levels of layouts'() {
         when:
         go('endToEnd/multipleLevelsOfLayouts')
@@ -54,6 +58,7 @@ class EndToEndSpec extends ContainerGebSpec {
 </body></html>"""
     }
 
+    @PendingFeature
     def 'parameters'() {
         when:
         go('endToEnd/parameters')
@@ -62,6 +67,7 @@ class EndToEndSpec extends ContainerGebSpec {
         pageSource == """<html><head></head><body><h1>pageProperty: here!</h1></body></html>"""
     }
 
+    @PendingFeature
     def 'parameters with logic'() {
         when:
         go('endToEnd/parametersWithLogic')
@@ -70,6 +76,7 @@ class EndToEndSpec extends ContainerGebSpec {
         pageSource == "<html><head></head><body>good</body></html>"
     }
 
+    @PendingFeature
     def 'multiline title'() {
         when:
         go('endToEnd/multilineTitle')

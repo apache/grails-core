@@ -70,7 +70,7 @@ Options include specifying features, configuring the GORM implementation, select
 
 Here are the available options for the create-plugin command:
 
-- -f, --features=FEATURE[,FEATURE...]: Specifies the features to include in the plugin. Available options include h2, gorm-hibernate5, spring-boot-starter-jetty, springloaded, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, spring-boot-starter-undertow,  github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, views-json, gorm-neo4j, asciidoctor, embedded-mongodb, grails-web-console, logbackGroovy, mongo-sync, shade, properties.
+- -f, --features=FEATURE[,FEATURE...]: Specifies the features to include in the plugin. Available options include h2, gorm-hibernate5, spring-boot-starter-jetty, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, spring-boot-starter-undertow,  github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, views-json, gorm-neo4j, asciidoctor, embedded-mongodb, grails-web-console, logbackGroovy, mongo-sync, shade, properties.
 - -g, --gorm=GORM Implementation: Specifies the GORM Implementation to configure for the plugin. Possible values are hibernate, mongodb, neo4j.
 - -h, --help: Displays the help message and exits.
 - -i, --inplace: Creates a service within the current directory.

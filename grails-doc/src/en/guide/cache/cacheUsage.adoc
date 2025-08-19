@@ -47,4 +47,4 @@ cache manager are backed by a thread-safe `java.util.concurrent.ConcurrentMap`.
 This is fine for testing and possibly for low-traffic sites, but you should
 consider using one of the extension plugins if you need clustering, disk
 storage, persistence between restarts, and more configurability of features like
-time-to-live, maximum cache size, etc. Currently the only extension plugin available for Grails 3 is https://plugins.grails.org/plugin/grails/cache-ehcache[cache-ehcache].
+time-to-live, maximum cache size, etc. Currently, the only extension plugin available for Grails 3 is https://github.com/grails-plugins/grails-cache-ehcache[cache-ehcache].
