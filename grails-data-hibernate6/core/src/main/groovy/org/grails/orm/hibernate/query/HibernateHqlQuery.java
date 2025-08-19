@@ -70,9 +70,9 @@ public class HibernateHqlQuery extends Query {
             , String sqlString
             , boolean isNative
         ) {
-        var q = isNative ? session.createNativeQuery(sqlString, persistentEntity.getJavaClass()) : session.createQuery(sqlString, persistentEntity.getJavaClass());
+        var q = isNative ? session.createNativeQuery(sqlString, Object.class) : session.createQuery(sqlString, Object.class);
         var hibernateSession = new HibernateSession( dataStore, sessionFactory);
-        HibernateHqlQuery hibernateHqlQuery = new HibernateHqlQuery(hibernateSession, persistentEntity, q);
+        HibernateHqlQuery hibernateHqlQuery = new HibernateHqlQuery(hibernateSession, null, q);
         hibernateHqlQuery.setFlushMode(session.getHibernateFlushMode());
         return hibernateHqlQuery;
     }

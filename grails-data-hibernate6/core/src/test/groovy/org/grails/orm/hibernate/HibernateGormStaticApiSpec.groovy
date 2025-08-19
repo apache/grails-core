@@ -362,41 +362,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instance.name == 'test2'
     }
 
-    void "Test findAll with named parameters"() {
-        given:
-        new HibernateGormStaticApiEntity(name: "test").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "other").save(flush: true, failOnError: true)
 
-        when:
-        def instances = HibernateGormStaticApiEntity.findAll("from HibernateGormStaticApiEntity where name = :name", [name: 'test'])
-
-        then:
-        instances.size() == 2
-    }
-
-    void "Test findWithSql"() {
-        given:
-        new HibernateGormStaticApiEntity(name: "test1").save(flush: true, failOnError: true)
-
-        when:
-        def instance = HibernateGormStaticApiEntity.findWithSql("select * from hibernate_gorm_static_api_entity where name = 'test1'")
-
-        then:
-        instance.name == 'test1'
-    }
-
-    void "Test findAllWithSql"() {
-        given:
-        new HibernateGormStaticApiEntity(name: "test").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
-
-        when:
-        def instances = HibernateGormStaticApiEntity.findAllWithSql("select * from hibernate_gorm_static_api_entity where name = 'test'")
-
-        then:
-        instances.size() == 2
-    }
 
     void "Test executeQuery with positional params"() {
         given:

@@ -264,6 +264,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     List<D> findAll(CharSequence query, Map params, Map args) {
+
         params = new LinkedHashMap(params)
         args = new LinkedHashMap(args)
         if(query instanceof GString) {
@@ -460,8 +461,8 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         }
 
         return (List<D>) template.execute { Session session ->
-            Query q = (Query) session.createQuery(query.toString(),Object.class)
-            def hibernateHqlQuery = HibernateHqlQuery.createHqlQuery(session,q, datastore as HibernateDatastore,sessionFactory,persistentEntity)
+//            Query q = (Query) session.createQuery(query.toString(),Object.class)
+            def hibernateHqlQuery = HibernateHqlQuery.createHqlQuery(session, datastore as HibernateDatastore, sessionFactory, persistentEntity, query.toString(), false)
             template.applySettings(hibernateHqlQuery.getQuery())
             hibernateHqlQuery.populateQuerySettings(params)
             hibernateHqlQuery.populateQuerySettings(args)
