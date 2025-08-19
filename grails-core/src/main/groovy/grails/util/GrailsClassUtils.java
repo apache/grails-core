@@ -67,7 +67,7 @@ import grails.artefact.Enhanced;
 public class GrailsClassUtils {
 
     private static final Log LOG = LogFactory.getLog(GrailsClassUtils.class);
-    public static final Map<Class<?>, Class<?>> PRIMITIVE_TYPE_COMPATIBLE_CLASSES = new HashMap<Class<?>, Class<?>>();
+    public static final Map<Class<?>, Class<?>> PRIMITIVE_TYPE_COMPATIBLE_CLASSES = new HashMap<>();
 
     /**
      * Just add two entries to the class compatibility map
@@ -159,7 +159,7 @@ public class GrailsClassUtils {
      */
     public static Set<Class> getAllInterfacesForClassAsSet(Class clazz, ClassLoader classLoader) {
         Assert.notNull(clazz, "Class must not be null");
-        Set<Class> interfaces = new LinkedHashSet<Class>();
+        Set<Class> interfaces = new LinkedHashSet<>();
         while (clazz != null) {
             Class<?>[] ifcs = clazz.getInterfaces();
             for (Class<?> ifc : ifcs) {
@@ -327,7 +327,7 @@ public class GrailsClassUtils {
             return new PropertyDescriptor[0];
         }
 
-        Set<PropertyDescriptor> properties = new HashSet<PropertyDescriptor>();
+        Set<PropertyDescriptor> properties = new HashSet<>();
         PropertyDescriptor descriptor = null;
         try {
             PropertyDescriptor[] descriptors = BeanUtils.getPropertyDescriptors(clazz);
@@ -365,7 +365,7 @@ public class GrailsClassUtils {
     public static PropertyDescriptor[] getPropertiesAssignableToType(Class<?> clazz, Class<?> propertySuperType) {
         if (clazz == null || propertySuperType == null) return new PropertyDescriptor[0];
 
-        Set<PropertyDescriptor> properties = new HashSet<PropertyDescriptor>();
+        Set<PropertyDescriptor> properties = new HashSet<>();
         PropertyDescriptor descriptor = null;
         try {
             PropertyDescriptor[] descriptors = BeanUtils.getPropertyDescriptors(clazz);

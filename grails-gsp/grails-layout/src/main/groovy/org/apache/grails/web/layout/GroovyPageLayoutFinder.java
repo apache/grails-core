@@ -66,8 +66,8 @@ public class GroovyPageLayoutFinder implements ApplicationListener<ContextRefres
 
     private static final int ORDER = Ordered.LOWEST_PRECEDENCE - 1;
 
-    private Map<String, DecoratorCacheValue> decoratorCache = new ConcurrentHashMap<String, DecoratorCacheValue>();
-    private Map<LayoutCacheKey, DecoratorCacheValue> layoutDecoratorCache = new ConcurrentHashMap<LayoutCacheKey, DecoratorCacheValue>();
+    private Map<String, DecoratorCacheValue> decoratorCache = new ConcurrentHashMap<>();
+    private Map<LayoutCacheKey, DecoratorCacheValue> layoutDecoratorCache = new ConcurrentHashMap<>();
 
     private String defaultDecoratorName;
     private boolean gspReloadEnabled;

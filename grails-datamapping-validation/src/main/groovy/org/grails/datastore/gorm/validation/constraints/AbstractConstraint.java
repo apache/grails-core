@@ -132,7 +132,7 @@ public abstract class AbstractConstraint implements Constraint {
 
     public void rejectValueWithDefaultMessage(Object target, Errors errors, String defaultMessage, String[] codes, Object[] args) {
         BindingResult result = (BindingResult) errors;
-        Set<String> newCodes = new LinkedHashSet<String>();
+        Set<String> newCodes = new LinkedHashSet<>();
 
         if (args.length > 1 && messageSource != null) {
             if ((args[0] instanceof String) && (args[1] instanceof Class<?>)) {

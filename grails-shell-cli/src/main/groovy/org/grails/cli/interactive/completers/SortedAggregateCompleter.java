@@ -39,7 +39,7 @@ import static jline.internal.Preconditions.checkNotNull;
 public class SortedAggregateCompleter
     implements Completer
 {
-    private final List<Completer> completers = new ArrayList<Completer>();
+    private final List<Completer> completers = new ArrayList<>();
 
     public SortedAggregateCompleter() {
         // empty
@@ -85,7 +85,7 @@ public class SortedAggregateCompleter
         // buffer could be null
         checkNotNull(candidates);
 
-        List<Completion> completions = new ArrayList<Completion>(completers.size());
+        List<Completion> completions = new ArrayList<>(completers.size());
 
         // Run each completer, saving its completion results
         int max = -1;
@@ -131,7 +131,7 @@ public class SortedAggregateCompleter
 
         public Completion(final List<CharSequence> candidates) {
             checkNotNull(candidates);
-            this.candidates = new LinkedList<CharSequence>(candidates);
+            this.candidates = new LinkedList<>(candidates);
         }
 
         public void complete(final Completer completer, final String buffer, final int cursor) {

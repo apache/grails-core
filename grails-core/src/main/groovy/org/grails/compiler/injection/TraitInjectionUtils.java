@@ -69,7 +69,7 @@ public class TraitInjectionUtils {
         }
         if (!implementsTrait && !traitNotLoaded) {
             final GenericsType[] genericsTypes = traitClassNode.getGenericsTypes();
-            final Map<String, ClassNode> parameterNameToParameterValue = new LinkedHashMap<String, ClassNode>();
+            final Map<String, ClassNode> parameterNameToParameterValue = new LinkedHashMap<>();
             if (genericsTypes != null) {
                 for (GenericsType gt : genericsTypes) {
                     parameterNameToParameterValue.put(gt.getName(), classNode);
@@ -122,7 +122,7 @@ public class TraitInjectionUtils {
                                             final String artefactType,
                                             final CompilationUnit compilationUnit) {
         final List<TraitInjector> traitInjectors = getTraitInjectors();
-        final List<TraitInjector> injectorsToUse = new ArrayList<TraitInjector>();
+        final List<TraitInjector> injectorsToUse = new ArrayList<>();
         for (final TraitInjector injector : traitInjectors) {
             final List<String> artefactTypes = Arrays.asList(injector.getArtefactTypes());
 

@@ -67,12 +67,12 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     protected Query query;
     protected boolean uniqueResult = false;
     protected boolean paginationEnabledList;
-    protected List<Query.Order> orderEntries = new ArrayList<Query.Order>();
+    protected List<Query.Order> orderEntries = new ArrayList<>();
     protected MetaObjectProtocol queryMetaClass;
     protected Query.ProjectionList projectionList;
     protected PersistentEntity persistentEntity;
     protected boolean readOnly;
-    private List<Query.Junction> logicalExpressionStack = new ArrayList<Query.Junction>();
+    private List<Query.Junction> logicalExpressionStack = new ArrayList<>();
 
     public AbstractCriteriaBuilder(final Class targetClass, QueryCreator queryCreator, final MappingContext mappingContext) {
         Assert.notNull(targetClass, "Argument [targetClass] cannot be null");
@@ -312,7 +312,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
                     }
                     query = associationQuery;
                     persistentEntity = association.getAssociatedEntity();
-                    logicalExpressionStack = new ArrayList<Query.Junction>();
+                    logicalExpressionStack = new ArrayList<>();
                     invokeClosureNode(args[0]);
                     return query;
                 }

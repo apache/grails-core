@@ -52,7 +52,7 @@ public class ChainedConverterConfiguration<C extends Converter> implements Conve
     private final boolean cacheObjectMarshallerByClass;
     private Map<Integer, ObjectMarshaller<C>> objectMarshallerForClassCache;
     private final boolean developmentMode = Environment.isDevelopmentMode();
-    private final ObjectMarshaller<C> NULL_HOLDER = new ObjectMarshaller<C>() {
+    private final ObjectMarshaller<C> NULL_HOLDER = new ObjectMarshaller<>() {
         public boolean supports(Object object) {
             return false;
         }
@@ -73,15 +73,15 @@ public class ChainedConverterConfiguration<C extends Converter> implements Conve
         prettyPrint = cfg.isPrettyPrint();
         cacheObjectMarshallerByClass = cfg.isCacheObjectMarshallerByClass();
         if (cacheObjectMarshallerByClass) {
-            objectMarshallerForClassCache = new ConcurrentHashMap<Integer, ObjectMarshaller<C>>();
+            objectMarshallerForClassCache = new ConcurrentHashMap<>();
         }
         circularReferenceBehaviour = cfg.getCircularReferenceBehaviour();
 
-        List<ObjectMarshaller<C>> oms = new ArrayList<ObjectMarshaller<C>>(marshallerList);
+        List<ObjectMarshaller<C>> oms = new ArrayList<>(marshallerList);
         Collections.reverse(oms);
         ChainedObjectMarshaller<C> prev = null;
         for (ObjectMarshaller<C> om : oms) {
-            prev = new ChainedObjectMarshaller<C>(om, prev);
+            prev = new ChainedObjectMarshaller<>(om, prev);
         }
         root = prev;
     }

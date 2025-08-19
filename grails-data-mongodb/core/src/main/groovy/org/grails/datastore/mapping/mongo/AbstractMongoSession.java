@@ -41,14 +41,14 @@ import org.grails.datastore.mapping.mongo.config.MongoMappingContext;
 public abstract class AbstractMongoSession extends AbstractSession<MongoClient> {
     public static final String MONGO_SET_OPERATOR = "$set";
     public static final String MONGO_UNSET_OPERATOR = "$unset";
-    protected static final Map<PersistentEntity, WriteConcern> declaredWriteConcerns = new ConcurrentHashMap<PersistentEntity, WriteConcern>();
+    protected static final Map<PersistentEntity, WriteConcern> declaredWriteConcerns = new ConcurrentHashMap<>();
 
     protected final String defaultDatabase;
     protected MongoDatastore mongoDatastore;
     protected WriteConcern writeConcern = null;
     protected boolean errorOccured = false;
-    protected Map<PersistentEntity, String> mongoCollections = new ConcurrentHashMap<PersistentEntity, String>();
-    protected Map<PersistentEntity, String> mongoDatabases = new ConcurrentHashMap<PersistentEntity, String>();
+    protected Map<PersistentEntity, String> mongoCollections = new ConcurrentHashMap<>();
+    protected Map<PersistentEntity, String> mongoDatabases = new ConcurrentHashMap<>();
 
     public AbstractMongoSession(MongoDatastore datastore, MappingContext mappingContext, ApplicationEventPublisher publisher) {
         this(datastore, mappingContext, publisher, false);

@@ -68,7 +68,7 @@ public class DataBindingUtils {
 
     public static final String DATA_BINDER_BEAN_NAME = "grailsWebDataBinder";
     private static final String BLANK = "";
-    private static final Map<Class, List> CLASS_TO_BINDING_INCLUDE_LIST = new ConcurrentHashMap<Class, List>();
+    private static final Map<Class, List> CLASS_TO_BINDING_INCLUDE_LIST = new ConcurrentHashMap<>();
 
     /**
      * Associations both sides of any bidirectional relationships found in the object and source map to bind

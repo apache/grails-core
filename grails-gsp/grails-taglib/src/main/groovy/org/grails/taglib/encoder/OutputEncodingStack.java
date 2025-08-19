@@ -124,7 +124,7 @@ public final class OutputEncodingStack {
         return null;
     }
 
-    private Stack<StackEntry> stack = new Stack<StackEntry>();
+    private Stack<StackEntry> stack = new Stack<>();
     private OutputProxyWriter taglibWriter;
     private OutputProxyWriter outWriter;
     private OutputProxyWriter staticWriter;

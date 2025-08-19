@@ -77,7 +77,7 @@ import org.grails.web.util.GrailsApplicationAttributes;
 public class GroovyPagesTemplateRenderer implements InitializingBean {
     private GrailsConventionGroovyPageLocator groovyPageLocator;
     private GroovyPagesTemplateEngine groovyPagesTemplateEngine;
-    private ConcurrentMap<String, CacheEntry<Template>> templateCache = new ConcurrentHashMap<String, CacheEntry<Template>>();
+    private ConcurrentMap<String, CacheEntry<Template>> templateCache = new ConcurrentHashMap<>();
     private Object scaffoldingTemplateGenerator;
     private Map<String, Collection<String>> scaffoldedActionMap;
     private Map<String, GrailsDomainClass> controllerToScaffoldedDomainClassMap;
@@ -161,7 +161,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         return CacheEntry.getValue(templateCache, cacheKey, reloadEnabled ? GroovyPageMetaInfo.LASTMODIFIED_CHECK_INTERVAL : -1, null,
                 new Callable<CacheEntry<Template>>() {
                     public CacheEntry<Template> call() {
-                        return new CacheEntry<Template>() {
+                        return new CacheEntry<>() {
                             boolean allowCaching = cacheEnabled;
                             boolean neverExpire = false;
 

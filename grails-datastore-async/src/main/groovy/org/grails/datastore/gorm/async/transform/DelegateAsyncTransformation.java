@@ -171,7 +171,7 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
 
     private List<String> genericPlaceholderNames(MethodNode candidate) {
         GenericsType[] candidateGenericsTypes = candidate.getGenericsTypes();
-        List<String> names = new ArrayList<String>();
+        List<String> names = new ArrayList<>();
         if (candidateGenericsTypes != null) {
             for (GenericsType gt : candidateGenericsTypes) {
                 names.add(gt.getName());
@@ -184,7 +184,7 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
         ClassNode copiedReturnType = originalReturnType.getPlainNodeReference();
 
         ClassNode actualReceiver = receiver;
-        List<GenericsType> redirectTypes = new ArrayList<GenericsType>();
+        List<GenericsType> redirectTypes = new ArrayList<>();
         if (actualReceiver.redirect().getGenericsTypes() != null) {
             Collections.addAll(redirectTypes, actualReceiver.redirect().getGenericsTypes());
         }

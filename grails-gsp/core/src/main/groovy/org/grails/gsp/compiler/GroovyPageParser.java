@@ -119,14 +119,14 @@ public class GroovyPageParser implements Tokens {
     private boolean finalPass = false;
     private int tagIndex;
     private Map<Object, Object> tagContext;
-    private Stack<TagMeta> tagMetaStack = new Stack<TagMeta>();
+    private Stack<TagMeta> tagMetaStack = new Stack<>();
     private GrailsTagRegistry tagRegistry = GrailsTagRegistry.getInstance();
     private Environment environment;
-    private List<String> htmlParts = new ArrayList<String>();
+    private List<String> htmlParts = new ArrayList<>();
     private static GrailsLayoutPreprocessor grailsLayoutPreprocessor = new GrailsLayoutPreprocessor();
 
-    Set<Integer> bodyVarsDefined = new HashSet<Integer>();
-    Map<Integer, String> attrsVarsMapDefinition = new HashMap<Integer, String>();
+    Set<Integer> bodyVarsDefined = new HashSet<>();
+    Map<Integer, String> attrsVarsMapDefinition = new HashMap<>();
 
     int closureLevel = 0;
 
@@ -149,7 +149,7 @@ public class GroovyPageParser implements Tokens {
     private int state;
     private static final String DEFAULT_CONTENT_TYPE = "text/html;charset=UTF-8";
     private int constantCount = 0;
-    private Map<String, Integer> constantsToNumbers = new HashMap<String, Integer>();
+    private Map<String, Integer> constantsToNumbers = new HashMap<>();
 
     private final String pageName;
     public static final String[] DEFAULT_IMPORTS = {
@@ -181,7 +181,7 @@ public class GroovyPageParser implements Tokens {
 
     private String pluginAnnotation;
     public static final String GROOVY_SOURCE_CHAR_ENCODING = "UTF-8";
-    private Map<String, String> jspTags = new HashMap<String, String>();
+    private Map<String, String> jspTags = new HashMap<>();
     private long lastModified;
     private boolean precompileMode;
     private Boolean compileStaticMode;
@@ -318,7 +318,7 @@ public class GroovyPageParser implements Tokens {
     }
 
     private Map<String, String> parseDirectives(String gspSource) {
-        Map<String, String> result = new HashMap<String, String>();
+        Map<String, String> result = new HashMap<>();
         // strip gsp comments
         String input = PRESCAN_COMMENT_PATTERN.matcher(gspSource).replaceAll("");
         // find page directives
@@ -537,7 +537,7 @@ public class GroovyPageParser implements Tokens {
     private void directJspTagLib(String text) {
 
         text = text.substring(TAGLIB_DIRECTIVE.length() + 1, text.length());
-        Map<String, String> attrs = new LinkedHashMap<String, String>();
+        Map<String, String> attrs = new LinkedHashMap<>();
         populateMapWithAttributes(attrs, text);
 
         String prefix = attrs.get("\"prefix\"");
@@ -1151,7 +1151,7 @@ public class GroovyPageParser implements Tokens {
 
         if (GroovyPage.DEFAULT_NAMESPACE.equals(ns) && tagRegistry.isSyntaxTag(tagName)) {
             if (tagContext == null) {
-                tagContext = new HashMap<Object, Object>();
+                tagContext = new HashMap<>();
                 tagContext.put(GroovyPage.OUT, out);
                 tagContext.put(GroovyPageParser.class, this);
             }

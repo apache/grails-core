@@ -38,7 +38,7 @@ public class NameUtils {
     public static final String DOLLAR_SEPARATOR = "$";
 
     static {
-        Set<String> configurational = new HashSet<String>(Arrays.asList(
+        Set<String> configurational = new HashSet<>(Arrays.asList(
                 GormProperties.META_CLASS,
                 GormProperties.CLASS,
                 GormProperties.TRANSIENT,

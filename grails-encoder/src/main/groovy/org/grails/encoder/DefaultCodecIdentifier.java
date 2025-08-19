@@ -38,7 +38,7 @@ public class DefaultCodecIdentifier implements CodecIdentifier {
     }
 
     public DefaultCodecIdentifier(String codecName, String... codecAliases) {
-        this(codecName, codecAliases != null ? new HashSet<String>(Arrays.asList(codecAliases)) : null);
+        this(codecName, codecAliases != null ? new HashSet<>(Arrays.asList(codecAliases)) : null);
     }
 
     public DefaultCodecIdentifier(String codecName, Set<String> codecAliases) {

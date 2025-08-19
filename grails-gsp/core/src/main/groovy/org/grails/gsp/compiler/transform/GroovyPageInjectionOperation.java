@@ -56,7 +56,7 @@ public class GroovyPageInjectionOperation extends GrailsAwareInjectionOperation 
 
     private GroovyPageInjector[] getGroovyPageInjectors() {
         if (groovyPageInjectors == null) {
-            List<GroovyPageInjector> injectors = new ArrayList<GroovyPageInjector>();
+            List<GroovyPageInjector> injectors = new ArrayList<>();
             for (ClassInjector ci : getClassInjectors()) {
                 if (ci instanceof GroovyPageInjector) {
                     injectors.add((GroovyPageInjector) ci);

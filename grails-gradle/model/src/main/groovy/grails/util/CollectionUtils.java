@@ -48,7 +48,7 @@ public class CollectionUtils {
             throw new IllegalArgumentException("Must have an even number of keys and values");
         }
 
-        Map<K, V> map = new HashMap<K, V>();
+        Map<K, V> map = new HashMap<>();
         for (int i = 0; i < keysAndValues.length; i += 2) {
             map.put((K) keysAndValues[i], (V) keysAndValues[i + 1]);
         }
@@ -60,7 +60,7 @@ public class CollectionUtils {
             return Collections.emptySet();
         }
 
-        return new HashSet<T>(Arrays.asList(values));
+        return new HashSet<>(Arrays.asList(values));
     }
 
     public static <T> List<T> newList(T... values) {
@@ -68,7 +68,7 @@ public class CollectionUtils {
             return Collections.emptyList();
         }
 
-        return new ArrayList<T>(Arrays.asList(values));
+        return new ArrayList<>(Arrays.asList(values));
     }
 
     /**

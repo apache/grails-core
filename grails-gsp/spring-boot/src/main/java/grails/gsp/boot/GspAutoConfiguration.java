@@ -134,7 +134,7 @@ public class GspAutoConfiguration {
             final List<String> templateRootsCleaned = resolveTemplateRoots();
             CachingGrailsConventionGroovyPageLocator pageLocator = new CachingGrailsConventionGroovyPageLocator() {
                 protected List<String> resolveSearchPaths(String uri) {
-                    List<String> paths = new ArrayList<String>(templateRootsCleaned.size());
+                    List<String> paths = new ArrayList<>(templateRootsCleaned.size());
                     for (String rootPath : templateRootsCleaned) {
                         paths.add(rootPath + cleanUri(uri));
                     }
@@ -160,7 +160,7 @@ public class GspAutoConfiguration {
 
         protected List<String> resolveTemplateRoots() {
             if (templateRoots.length > 0) {
-                List<String> rootPaths = new ArrayList<String>(templateRoots.length);
+                List<String> rootPaths = new ArrayList<>(templateRoots.length);
                 for (String rootPath : templateRoots) {
                     rootPath = rootPath.trim();
                     // remove trailing slash since uri will always be prefixed with a slash
@@ -252,7 +252,7 @@ public class GspAutoConfiguration {
             if (!registry.containsBeanDefinition("gspTagLibraryLookup")) {
                 GenericBeanDefinition beanDefinition = createBeanDefinition(StandaloneTagLibraryLookup.class);
 
-                ManagedList<BeanDefinition> list = new ManagedList<BeanDefinition>();
+                ManagedList<BeanDefinition> list = new ManagedList<>();
                 registerTagLibs(list);
 
                 beanDefinition.getPropertyValues().addPropertyValue("tagLibInstances", list);

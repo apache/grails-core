@@ -113,7 +113,7 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
 
     @Override
     public Map<String, ConstrainedProperty> evaluate(Class<?> theClass, boolean defaultNullable, boolean useOnlyAdHocConstraints, Closure... adHocConstraintsClosures) {
-        List<Closure> constraints = useOnlyAdHocConstraints ? new ArrayList<Closure>() : ClassPropertyFetcher.getStaticPropertyValuesFromInheritanceHierarchy(theClass, PROPERTY_NAME, Closure.class);
+        List<Closure> constraints = useOnlyAdHocConstraints ? new ArrayList<>() : ClassPropertyFetcher.getStaticPropertyValuesFromInheritanceHierarchy(theClass, PROPERTY_NAME, Closure.class);
         if (adHocConstraintsClosures != null) {
             constraints.addAll(Arrays.asList(adHocConstraintsClosures));
         }

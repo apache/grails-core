@@ -249,7 +249,7 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
             return false;
         }
 
-        return doWithManualSession(event, new Closure<Boolean>(this) {
+        return doWithManualSession(event, new Closure<>(this) {
             @Override
             public Boolean call() {
                 return preDeleteEventListener.call(event.getEntity());
@@ -258,7 +258,7 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
     }
 
     public boolean onPreUpdate(final PreUpdateEvent event) {
-        return doWithManualSession(event, new Closure<Boolean>(this) {
+        return doWithManualSession(event, new Closure<>(this) {
             @Override
             public Boolean call() {
                 Object entity = event.getEntity();
@@ -275,7 +275,7 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
     }
 
     public boolean onPreInsert(final PreInsertEvent event) {
-        return doWithManualSession(event, new Closure<Boolean>(this) {
+        return doWithManualSession(event, new Closure<>(this) {
             @Override
             public Boolean call() {
                 Object entity = event.getEntity();

@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class Holder<T> {
 
-    private Map<Integer, T> instances = new ConcurrentHashMap<Integer, T>();
+    private Map<Integer, T> instances = new ConcurrentHashMap<>();
     // TODO remove mappedOnly and singleton
     private T singleton;
     private String name;

@@ -37,7 +37,7 @@ import static jline.internal.Preconditions.checkNotNull;
 public class StringsCompleter
     implements Completer
 {
-    private SortedSet<String> strings = new TreeSet<String>();
+    private SortedSet<String> strings = new TreeSet<>();
 
     public StringsCompleter() {
         // empty

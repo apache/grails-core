@@ -106,7 +106,7 @@ public interface UrlMapping extends Comparable, UrlCreator {
 
     String EXCEPTION = "exception";
 
-    Set<String> KEYWORDS = new HashSet<String>() {
+    Set<String> KEYWORDS = new HashSet<>() {
         {
             add(CONTROLLER);
             add(ACTION);

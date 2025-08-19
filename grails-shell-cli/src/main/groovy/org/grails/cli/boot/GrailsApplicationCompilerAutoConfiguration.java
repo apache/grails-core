@@ -140,10 +140,10 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
 
     class GrailsDependencies implements DependencyManagement {
 
-        private Map<String, Dependency> groupAndArtifactToDependency = new HashMap<String, Dependency>();
+        private Map<String, Dependency> groupAndArtifactToDependency = new HashMap<>();
 
-        private Map<String, String> artifactToGroupAndArtifact = new HashMap<String, String>();
-        private List<Dependency> dependencies = new ArrayList<Dependency>();
+        private Map<String, String> artifactToGroupAndArtifact = new HashMap<>();
+        private List<Dependency> dependencies = new ArrayList<>();
 
         public GrailsDependencies(List<org.eclipse.aether.graph.Dependency> dependencies) {
             for (org.eclipse.aether.graph.Dependency dependency : dependencies) {
@@ -151,7 +151,7 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
                 String artifactId = dependency.getArtifact().getArtifactId();
                 String version = dependency.getArtifact().getVersion();
 
-                List<Dependency.Exclusion> exclusions = new ArrayList<Dependency.Exclusion>();
+                List<Dependency.Exclusion> exclusions = new ArrayList<>();
                 Dependency value = new Dependency(groupId, artifactId, version, exclusions);
                 this.dependencies.add(value);
                 groupAndArtifactToDependency.put(groupId + ":" + artifactId, value);

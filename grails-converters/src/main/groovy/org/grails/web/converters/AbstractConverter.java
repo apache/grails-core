@@ -41,8 +41,8 @@ public abstract class AbstractConverter<W> implements ConfigurableConverter<W>, 
 
     protected String contentType;
     protected String encoding = "UTF-8";
-    protected Map<Class, List<String>> includes = new LinkedHashMap<Class, List<String>>();
-    protected Map<Class, List<String>> excludes = new LinkedHashMap<Class, List<String>>();
+    protected Map<Class, List<String>> includes = new LinkedHashMap<>();
+    protected Map<Class, List<String>> excludes = new LinkedHashMap<>();
 
     public abstract void setTarget(Object target);
 

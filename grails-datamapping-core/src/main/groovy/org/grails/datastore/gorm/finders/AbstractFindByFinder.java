@@ -42,7 +42,7 @@ public abstract class AbstractFindByFinder extends DynamicFinder {
 
     @Override
     protected Object doInvokeInternal(final DynamicFinderInvocation invocation) {
-        return execute(new SessionCallback<Object>() {
+        return execute(new SessionCallback<>() {
             public Object doInSession(final Session session) {
                 return invokeQuery(buildQuery(invocation, session));
             }

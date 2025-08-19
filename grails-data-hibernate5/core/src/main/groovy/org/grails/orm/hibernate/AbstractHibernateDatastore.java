@@ -424,7 +424,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
         final boolean isMultiTenant = getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR;
         Closure<T> multiTenantCallable;
         if (isMultiTenant) {
-            multiTenantCallable = new Closure<T>(this) {
+            multiTenantCallable = new Closure<>(this) {
                 @Override
                 public T call(Object... args) {
                     enableMultiTenancyFilter();

@@ -153,7 +153,7 @@ public class TagBodyClosure extends Closure {
      */
     @SuppressWarnings("unchecked")
     private Map<String, Object> addAndSaveVariables(Binding binding, Map args) {
-        Map<String, Object> savedVariablesMap = new LinkedHashMap<String, Object>();
+        Map<String, Object> savedVariablesMap = new LinkedHashMap<>();
         for (Iterator<Object> i = args.keySet().iterator(); i.hasNext(); ) {
             String varname = String.valueOf(i.next());
             savedVariablesMap.put(varname, binding.getVariable(varname));

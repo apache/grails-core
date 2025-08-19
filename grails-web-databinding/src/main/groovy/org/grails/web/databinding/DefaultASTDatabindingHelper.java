@@ -52,10 +52,10 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
     public static final String DEFAULT_DATABINDING_WHITELIST = "$defaultDatabindingWhiteList";
     public static final String NO_BINDABLE_PROPERTIES = "$_NO_BINDABLE_PROPERTIES_$";
 
-    private static Map<ClassNode, Set<String>> CLASS_NODE_TO_WHITE_LIST_PROPERTY_NAMES = new HashMap<ClassNode, Set<String>>();
+    private static Map<ClassNode, Set<String>> CLASS_NODE_TO_WHITE_LIST_PROPERTY_NAMES = new HashMap<>();
 
     @SuppressWarnings("serial")
-    private static final List<ClassNode> SIMPLE_TYPES = new ArrayList<ClassNode>() {
+    private static final List<ClassNode> SIMPLE_TYPES = new ArrayList<>() {
         {
             add(new ClassNode(Boolean.class));
             add(new ClassNode(Boolean.TYPE));
@@ -142,9 +142,9 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
     }
 
     private Set<String> getPropertyNamesToIncludeInWhiteList(final SourceUnit sourceUnit, final ClassNode classNode) {
-        final Set<String> propertyNamesToIncludeInWhiteList = new HashSet<String>();
-        final Set<String> unbindablePropertyNames = new HashSet<String>();
-        final Set<String> bindablePropertyNames = new HashSet<String>();
+        final Set<String> propertyNamesToIncludeInWhiteList = new HashSet<>();
+        final Set<String> unbindablePropertyNames = new HashSet<>();
+        final Set<String> bindablePropertyNames = new HashSet<>();
         if (!classNode.getSuperClass().equals(new ClassNode(Object.class))) {
             final Set<String> parentClassPropertyNames = getPropertyNamesToIncludeInWhiteListForParentClass(sourceUnit, classNode.getSuperClass());
             bindablePropertyNames.addAll(parentClassPropertyNames);
@@ -253,7 +253,7 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
     }
 
     private Set<String> getPropertyNamesExpressedInTransientsList(final ClassNode classNode) {
-        final Set<String> transientFields = new HashSet<String>();
+        final Set<String> transientFields = new HashSet<>();
         final FieldNode transientsField = classNode.getField("transients");
         if (transientsField != null && transientsField.isStatic()) {
             final Expression initialValueExpression = transientsField.getInitialValueExpression();

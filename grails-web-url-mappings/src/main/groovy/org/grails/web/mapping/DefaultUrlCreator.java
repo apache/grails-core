@@ -126,7 +126,7 @@ public class DefaultUrlCreator implements UrlCreator {
     private String createURLInternal(String controller, String action, Map<String, String> parameterValues, boolean includeContextPath) {
         GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.getRequestAttributes();
 
-        if (parameterValues == null) parameterValues = new HashMap<String, String>();
+        if (parameterValues == null) parameterValues = new HashMap<>();
         boolean blankController = GrailsStringUtils.isBlank(controller);
         boolean blankAction = GrailsStringUtils.isBlank(action);
 

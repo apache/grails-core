@@ -48,7 +48,7 @@ import org.grails.datastore.mapping.query.Query;
 public class ManualEntityOrdering {
 
     PersistentEntity entity;
-    private static Map<String, Method> cachedReadMethods = new ConcurrentHashMap<String, Method>();
+    private static Map<String, Method> cachedReadMethods = new ConcurrentHashMap<>();
 
     public ManualEntityOrdering(PersistentEntity entity) {
         this.entity = entity;

@@ -46,7 +46,7 @@ public class StreamByteBuffer {
 
     private static final int DEFAULT_CHUNK_SIZE = 8192;
 
-    private LinkedList<StreamByteBufferChunk> chunks = new LinkedList<StreamByteBufferChunk>();
+    private LinkedList<StreamByteBufferChunk> chunks = new LinkedList<>();
     private StreamByteBufferChunk currentWriteChunk;
     private StreamByteBufferChunk currentReadChunk = null;
     private int chunkSize;

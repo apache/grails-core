@@ -40,7 +40,7 @@ public class XMLStreamWriter {
 
     protected Mode mode = INIT;
 
-    protected Stack<String> tagStack = new Stack<String>();
+    protected Stack<String> tagStack = new Stack<>();
 
     private char quoteChar = '"';
 

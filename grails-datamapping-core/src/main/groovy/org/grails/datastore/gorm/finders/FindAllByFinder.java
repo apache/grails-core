@@ -46,7 +46,7 @@ public class FindAllByFinder extends DynamicFinder {
 
     @Override
     protected Object doInvokeInternal(final DynamicFinderInvocation invocation) {
-        return execute(new SessionCallback<Object>() {
+        return execute(new SessionCallback<>() {
             public Object doInSession(final Session session) {
                 Query q = buildQuery(invocation, session);
                 return invokeQuery(q);

@@ -194,7 +194,7 @@ public class HibernateEventListener extends AbstractHibernateEventListener {
         if (entity == null) return null;
         Class<?> clazz = Hibernate.getClass(entity);
 
-        SoftKey<Class<?>> key = new SoftKey<Class<?>>(clazz);
+        SoftKey<Class<?>> key = new SoftKey<>(clazz);
         ClosureEventListener eventListener = eventListeners.get(key);
         if (eventListener != null) {
             return eventListener;

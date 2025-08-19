@@ -262,7 +262,7 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
     private void processMethods(ClassNode classNode, SourceUnit source,
             GeneratorContext context) {
 
-        List<MethodNode> deferredNewMethods = new ArrayList<MethodNode>();
+        List<MethodNode> deferredNewMethods = new ArrayList<>();
         for (MethodNode method : classNode.getMethods()) {
             if (methodShouldBeConfiguredAsControllerAction(method)) {
                 final List<MethodNode> declaredMethodsWithThisName = classNode.getDeclaredMethods(method.getName());
@@ -337,7 +337,7 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
     }
 
     protected Collection<MethodNode> getExceptionHandlerMethods(final ClassNode classNode, SourceUnit sourceUnit) {
-        final Map<ClassNode, MethodNode> exceptionTypeToHandlerMethodMap = new HashMap<ClassNode, MethodNode>();
+        final Map<ClassNode, MethodNode> exceptionTypeToHandlerMethodMap = new HashMap<>();
         final List<MethodNode> methods = classNode.getMethods();
         for (MethodNode methodNode : methods) {
             if (isExceptionHandlingMethod(methodNode)) {
@@ -458,7 +458,7 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
 
     private void processClosures(ClassNode classNode, SourceUnit source, GeneratorContext context) {
 
-        List<PropertyNode> propertyNodes = new ArrayList<PropertyNode>(classNode.getProperties());
+        List<PropertyNode> propertyNodes = new ArrayList<>(classNode.getProperties());
 
         Expression initialExpression;
         ClosureExpression closureAction;

@@ -244,7 +244,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
     @Override
     protected final void deleteEntities(PersistentEntity persistentEntity, Iterable objects) {
         if (objects != null) {
-            final Set<K> keys = new LinkedHashSet<K>();
+            final Set<K> keys = new LinkedHashSet<>();
             final List deleteList = new ArrayList();
             for (Object object : objects) {
                 K key = readIdentifierFromObject(object);
@@ -260,7 +260,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
             }
 
             if (!keys.isEmpty()) {
-                deleteEntries(getEntityFamily(), new ArrayList<K>(keys));
+                deleteEntries(getEntityFamily(), new ArrayList<>(keys));
                 for (Object object : deleteList) {
                     firePostDeleteEvent(persistentEntity, createEntityAccess(persistentEntity, object));
                 }
@@ -843,7 +843,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
 
             cacheNativeEntry(persistentEntity, (Serializable) k, tmp);
 
-            pendingOperation = new PendingInsertAdapter<T, K>(persistentEntity, k, tmp, entityAccess) {
+            pendingOperation = new PendingInsertAdapter<>(persistentEntity, k, tmp, entityAccess) {
                 public void run() {
                     K insertResult = executeInsert(persistentEntity, entityAccess, getNativeKey(), getNativeEntry());
                     if (insertResult == null) {
@@ -868,7 +868,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
 
             final T finalTmp = tmp;
             final K finalK = k;
-            pendingOperation = new PendingUpdateAdapter<T, K>(persistentEntity, finalK, finalTmp, entityAccess) {
+            pendingOperation = new PendingUpdateAdapter<>(persistentEntity, finalK, finalTmp, entityAccess) {
                 public void run() {
                     if (cancelUpdate(persistentEntity, entityAccess)) {
                         setVetoed(true);
@@ -885,10 +885,10 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
         entityAccess.setNativeEntry(e);
 
         final List<PersistentProperty> props = persistentEntity.getPersistentProperties();
-        final Map<Association, List<Serializable>> toManyKeys = new HashMap<Association, List<Serializable>>();
-        final Map<OneToMany, Serializable> inverseCollectionUpdates = new HashMap<OneToMany, Serializable>();
-        final Map<PersistentProperty, Object> toIndex = new HashMap<PersistentProperty, Object>();
-        final Map<PersistentProperty, Object> toUnindex = new HashMap<PersistentProperty, Object>();
+        final Map<Association, List<Serializable>> toManyKeys = new HashMap<>();
+        final Map<OneToMany, Serializable> inverseCollectionUpdates = new HashMap<>();
+        final Map<PersistentProperty, Object> toIndex = new HashMap<>();
+        final Map<PersistentProperty, Object> toUnindex = new HashMap<>();
         entityAccess.setToIndex(toIndex);
         for (PersistentProperty prop : props) {
             PropertyMapping<Property> pm = prop.getMapping();
@@ -1099,7 +1099,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
             // and the identifer is generated only upon insert of the entity
 
             final K updateId = k;
-            PendingOperation postOperation = new PendingOperationAdapter<T, K>(persistentEntity, k, e) {
+            PendingOperation postOperation = new PendingOperationAdapter<>(persistentEntity, k, e) {
                 public void run() {
                     updateToManyIndices(e, updateId, toManyKeys, false);
 
@@ -1128,7 +1128,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
         else {
             final K updateId = k;
 
-            PendingOperation postOperation = new PendingOperationAdapter<T, K>(persistentEntity, k, e) {
+            PendingOperation postOperation = new PendingOperationAdapter<>(persistentEntity, k, e) {
                 public void run() {
                     updateToManyIndices(e, updateId, toManyKeys, false);
                     if (doesRequirePropertyIndexing()) {
@@ -1180,7 +1180,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
         Object embeddedInstances = entityAccess.getProperty(prop.getName());
         if (embeddedInstances instanceof Map) {
             Map instances = (Map) embeddedInstances;
-            Map<Object, T> embeddedEntries = new HashMap<Object, T>();
+            Map<Object, T> embeddedEntries = new HashMap<>();
             for (Object k : instances.keySet()) {
                 embeddedEntries.put(k, handleEmbeddedInstance((Association) prop, instances.get(k)));
             }
@@ -1191,12 +1191,12 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
             if (embeddedInstances == null)
                 setEmbeddedCollection(e, key, null, null);
             else {
-                setEmbeddedCollection(e, key, MappingUtils.createConcreteCollection(prop.getType()), new ArrayList<T>());
+                setEmbeddedCollection(e, key, MappingUtils.createConcreteCollection(prop.getType()), new ArrayList<>());
             }
         }
         else {
             Collection instances = (Collection) embeddedInstances;
-            List<T> embeddedEntries = new ArrayList<T>();
+            List<T> embeddedEntries = new ArrayList<>();
             for (Object instance : instances) {
                 T entry = handleEmbeddedInstance((Association) prop, instance);
                 embeddedEntries.add(entry);
@@ -1481,7 +1481,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
      */
     @Override
     protected List<Serializable> persistEntities(PersistentEntity persistentEntity, Iterable objs) {
-        List<Serializable> keys = new ArrayList<Serializable>();
+        List<Serializable> keys = new ArrayList<>();
         Iterable newIter = objs;
         if (objs instanceof Collection) {
             newIter = new ArrayList((Collection) objs);
@@ -1511,7 +1511,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
      */
     @Override
     protected List<Object> retrieveAllEntities(PersistentEntity persistentEntity, Iterable<Serializable> keys) {
-        List<Object> results = new ArrayList<Object>();
+        List<Object> results = new ArrayList<>();
         for (Serializable key : keys) {
             results.add(retrieveEntity(persistentEntity, key));
         }
@@ -1528,7 +1528,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
      */
     @Override
     protected List<Object> retrieveAllEntities(PersistentEntity persistentEntity, Serializable[] keys) {
-        List<Object> results = new ArrayList<Object>();
+        List<Object> results = new ArrayList<>();
         for (Serializable key : keys) {
             results.add(retrieveEntity(persistentEntity, key));
         }

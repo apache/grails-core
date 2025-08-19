@@ -58,7 +58,7 @@ class GroovyPageOptimizerVisitor extends CodeVisitorSupport {
     private static final String PRINT_METHOD = "print";
     private static final String EXPRESSIONOUT_RECEIVER = "expressionOut";
 
-    private Stack<ClosureExpression> innerClosures = new Stack<ClosureExpression>();
+    private Stack<ClosureExpression> innerClosures = new Stack<>();
     private ClassNode targetGroovyPageNode;
 
     private DeclarationExpression thisObjectDeclaration;

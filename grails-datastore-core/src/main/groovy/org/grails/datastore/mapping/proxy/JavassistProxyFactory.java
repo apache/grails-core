@@ -45,8 +45,8 @@ import org.grails.datastore.mapping.reflect.ReflectionUtils;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class JavassistProxyFactory implements org.grails.datastore.mapping.proxy.ProxyFactory {
 
-    private static final Map<Class, Class> PROXY_FACTORIES = new ConcurrentHashMap<Class, Class>();
-    private static final Map<Class, Class> ID_TYPES = new ConcurrentHashMap<Class, Class>();
+    private static final Map<Class, Class> PROXY_FACTORIES = new ConcurrentHashMap<>();
+    private static final Map<Class, Class> ID_TYPES = new ConcurrentHashMap<>();
     private static final Class[] EMPTY_CLASS_ARRAY = {};
 
     private static final Set<String> EXCLUDES = new HashSet(Arrays.asList("$getStaticMetaClass"));

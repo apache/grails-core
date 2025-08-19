@@ -117,7 +117,7 @@ public class ClosureClassIgnoringComponentScanBeanDefinitionParser extends Compo
             else {
                 if (rootLoader != null) {
                     // search all parents up to rootLoader
-                    Collection<URL> urls = new LinkedHashSet<URL>();
+                    Collection<URL> urls = new LinkedHashSet<>();
                     findResourcesRecursive(getParent(), name, urls);
                     return Collections.enumeration(urls);
                 }
@@ -204,7 +204,7 @@ public class ClosureClassIgnoringComponentScanBeanDefinitionParser extends Compo
         final PathMatchingResourcePatternResolver resourceResolver = new PathMatchingResourcePatternResolver(parentOnlyResourceLoader) {
             @Override
             protected Resource[] findAllClassPathResources(String location) throws IOException {
-                Set<Resource> result = new LinkedHashSet<Resource>(16);
+                Set<Resource> result = new LinkedHashSet<>(16);
 
                 if (BuildSettings.CLASSES_DIR != null) {
                     @SuppressWarnings("unused")

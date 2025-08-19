@@ -50,7 +50,7 @@ public abstract class AbstractPersistenceEvent extends ApplicationEvent {
     private final Object entityObject;
     private final EntityAccess entityAccess;
     private boolean cancelled;
-    private List<String> excludedListenerNames = new ArrayList<String>();
+    private List<String> excludedListenerNames = new ArrayList<>();
     private Serializable nativeEvent;
 
     protected AbstractPersistenceEvent(final Datastore source, final PersistentEntity entity,

@@ -191,7 +191,7 @@ public class GrailsResourceUtils {
         GRAILS_RESOURCE_PATTERN_ELEVENTH_MATCH
     };
 
-    private static Map<String, Boolean> KNOWN_PATHS = new LinkedHashMap<String, Boolean>() {
+    private static Map<String, Boolean> KNOWN_PATHS = new LinkedHashMap<>() {
         @Override
         protected boolean removeEldestEntry(Map.Entry eldest) {
             return this.size() > 100;
@@ -468,7 +468,7 @@ public class GrailsResourceUtils {
         }
 
         String[] pathArray = delimitedListToStringArray(pathToUse, FOLDER_SEPARATOR);
-        List<String> pathElements = new LinkedList<String>();
+        List<String> pathElements = new LinkedList<>();
         int tops = 0;
 
         for (int i = pathArray.length - 1; i >= 0; i--) {
@@ -552,7 +552,7 @@ public class GrailsResourceUtils {
         if (delimiter == null) {
             return new String[] {str};
         }
-        List<String> result = new ArrayList<String>();
+        List<String> result = new ArrayList<>();
         if ("".equals(delimiter)) {
             for (int i = 0; i < str.length(); i++) {
                 result.add(deleteAny(str.substring(i, i + 1), charsToDelete));

@@ -71,10 +71,10 @@ public class JspInvokeGrailsTagLibTag extends BodyTagSupport implements DynamicA
 
     private String tagName;
     private int invocationCount;
-    private List<Object> invocationArgs = new ArrayList<Object>();
-    private List<String> invocationBodyContent = new ArrayList<String>();
+    private List<Object> invocationArgs = new ArrayList<>();
+    private List<String> invocationBodyContent = new ArrayList<>();
     private BeanWrapper bean;
-    protected Map<String, Object> attributes = new HashMap<String, Object>();
+    protected Map<String, Object> attributes = new HashMap<>();
     private FastStringPrintWriter sw;
     private PrintWriter out;
     private JspWriter jspWriter;
@@ -104,7 +104,7 @@ public class JspInvokeGrailsTagLibTag extends BodyTagSupport implements DynamicA
                     if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
                         trimmed = trimmed.substring(1, trimmed.length() - 1);
                         Matcher m = ATTRIBUTE_MAP.matcher(trimmed);
-                        Map<String, Object> attributeMap = new HashMap<String, Object>();
+                        Map<String, Object> attributeMap = new HashMap<>();
                         while (m.find()) {
                             String attributeName = m.group(1);
                             String attributeValue = m.group(2);
@@ -322,7 +322,7 @@ public class JspInvokeGrailsTagLibTag extends BodyTagSupport implements DynamicA
             if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
                 trimmed = trimmed.substring(1, trimmed.length() - 1);
                 Matcher m = ATTRIBUTE_MAP.matcher(trimmed);
-                Map<String, Object> attributeMap = new HashMap<String, Object>();
+                Map<String, Object> attributeMap = new HashMap<>();
                 while (m.find()) {
                     String attributeName = m.group(1);
                     String attributeValue = m.group(2);

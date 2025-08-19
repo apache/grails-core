@@ -33,7 +33,7 @@ public class AnnotationDomainClassArtefactHandler extends DomainClassArtefactHan
 
     private static final String JPA_MAPPING_STRATEGY = "JPA";
 
-    private Set<String> jpaClassNames = new HashSet<String>();
+    private Set<String> jpaClassNames = new HashSet<>();
 
     public Set<String> getJpaClassNames() {
         return jpaClassNames;

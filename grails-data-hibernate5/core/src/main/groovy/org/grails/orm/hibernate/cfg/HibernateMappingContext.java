@@ -206,8 +206,9 @@ public class HibernateMappingContext extends AbstractMappingContext {
 
         public HibernateEmbeddedPersistentEntity(Class type, MappingContext ctx) {
             super(type, ctx);
-            this.classMapping = new ClassMapping<Mapping>() {
+            this.classMapping = new ClassMapping<>() {
                 Mapping mappedForm = (Mapping) context.getMappingFactory().createMappedForm(HibernateEmbeddedPersistentEntity.this);
+
                 @Override
                 public PersistentEntity getEntity() {
                     return HibernateEmbeddedPersistentEntity.this;

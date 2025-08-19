@@ -83,7 +83,7 @@ public class GrailsWebRequest extends DispatcherServletWebRequest {
     private boolean skipFilteringCodec = false;
     private Encoder filteringEncoder;
     public static final String ID_PARAMETER = "id";
-    private final List<ParameterCreationListener> parameterCreationListeners = new ArrayList<ParameterCreationListener>();
+    private final List<ParameterCreationListener> parameterCreationListeners = new ArrayList<>();
     private final UrlPathHelper urlHelper = new UrlPathHelper();
     private ApplicationContext applicationContext;
     private String baseUrl;

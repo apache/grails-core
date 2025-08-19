@@ -39,7 +39,7 @@ public class WatchPatternParser {
     public static final String WILD_CARD = "*";
 
     public List<WatchPattern> getWatchPatterns(List<String> patterns) {
-        List<WatchPattern> watchPatterns = new ArrayList<WatchPattern>();
+        List<WatchPattern> watchPatterns = new ArrayList<>();
 
         for (String pattern : patterns) {
             WatchPattern watchPattern = new WatchPattern();

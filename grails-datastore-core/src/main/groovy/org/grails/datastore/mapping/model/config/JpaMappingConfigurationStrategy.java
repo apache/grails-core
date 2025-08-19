@@ -74,7 +74,7 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
             return super.getPersistentProperties(entity, context, classMapping, includeIdentifiers);
         }
 
-        final List<PersistentProperty> persistentProperties = new ArrayList<PersistentProperty>();
+        final List<PersistentProperty> persistentProperties = new ArrayList<>();
         ClassPropertyFetcher cpf = ClassPropertyFetcher.forClass(entityClass);
 
         for (MetaProperty metaProperty : cpf.getMetaProperties()) {

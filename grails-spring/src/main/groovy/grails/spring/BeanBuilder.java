@@ -117,14 +117,14 @@ public class BeanBuilder extends GroovyObjectSupport {
     private static final String REF = "ref";
     private RuntimeSpringConfiguration springConfig;
     private BeanConfiguration currentBeanConfig;
-    private Map<String, DeferredProperty> deferredProperties = new HashMap<String, DeferredProperty>();
+    private Map<String, DeferredProperty> deferredProperties = new HashMap<>();
     private ApplicationContext parentCtx;
     private Map<String, Object> binding = Collections.emptyMap();
     private ClassLoader classLoader = null;
     private NamespaceHandlerResolver namespaceHandlerResolver;
-    private Map<String, NamespaceHandler> namespaceHandlers = new HashMap<String, NamespaceHandler>();
+    private Map<String, NamespaceHandler> namespaceHandlers = new HashMap<>();
     private XmlBeanDefinitionReader xmlBeanDefinitionReader;
-    private Map<String, String> namespaces = new HashMap<String, String>();
+    private Map<String, String> namespaces = new HashMap<>();
     private Resource beanBuildResource = new ByteArrayResource(new byte[0]);
     private XmlReaderContext readerContext;
     private ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
@@ -279,7 +279,7 @@ public class BeanBuilder extends GroovyObjectSupport {
      * @return A map of BeanDefinition instances with the bean id as the key
      */
     public Map<String, BeanDefinition> getBeanDefinitions() {
-        Map<String, BeanDefinition> beanDefinitions = new HashMap<String, BeanDefinition>();
+        Map<String, BeanDefinition> beanDefinitions = new HashMap<>();
         for (String beanName : getSpringConfig().getBeanNames()) {
             beanDefinitions.put(beanName, getSpringConfig().getBeanConfig(beanName).getBeanDefinition());
         }

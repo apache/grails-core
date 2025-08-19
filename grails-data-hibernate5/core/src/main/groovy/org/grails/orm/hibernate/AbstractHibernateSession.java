@@ -125,7 +125,7 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
     }
 
     public List<Serializable> persist(Iterable objects) {
-        List<Serializable> identifiers = new ArrayList<Serializable>();
+        List<Serializable> identifiers = new ArrayList<>();
         for (Object object : objects) {
             identifiers.add(hibernateTemplate.save(object));
         }

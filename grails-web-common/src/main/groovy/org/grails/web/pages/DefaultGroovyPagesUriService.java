@@ -34,10 +34,10 @@ import org.springframework.util.Assert;
  */
 public class DefaultGroovyPagesUriService extends GroovyPagesUriSupport {
 
-    ConcurrentMap<TupleStringKey, String> templateURICache = new ConcurrentHashMap<TupleStringKey, String>();
-    ConcurrentMap<TupleStringKey, String> deployedViewURICache = new ConcurrentHashMap<TupleStringKey, String>();
-    ConcurrentMap<ControllerObjectKey, String> controllerNameCache = new ConcurrentHashMap<ControllerObjectKey, String>();
-    ConcurrentMap<TupleStringKey, String> noSuffixViewURICache = new ConcurrentHashMap<TupleStringKey, String>();
+    ConcurrentMap<TupleStringKey, String> templateURICache = new ConcurrentHashMap<>();
+    ConcurrentMap<TupleStringKey, String> deployedViewURICache = new ConcurrentHashMap<>();
+    ConcurrentMap<ControllerObjectKey, String> controllerNameCache = new ConcurrentHashMap<>();
+    ConcurrentMap<TupleStringKey, String> noSuffixViewURICache = new ConcurrentHashMap<>();
 
     private static class TupleStringKey {
         String keyPart1;

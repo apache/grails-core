@@ -67,7 +67,7 @@ public class PagedResultList extends grails.gorm.PagedResultList {
     @Override
     public int getTotalCount() {
         if (totalCount == Integer.MIN_VALUE) {
-            totalCount = hibernateTemplate.execute(new GrailsHibernateTemplate.HibernateCallback<Integer>() {
+            totalCount = hibernateTemplate.execute(new GrailsHibernateTemplate.HibernateCallback<>() {
                 public Integer doInHibernate(Session session) throws HibernateException, SQLException {
                     CriteriaImpl impl = (CriteriaImpl) criteria;
                     Criteria totalCriteria = session.createCriteria(impl.getEntityOrClassName());

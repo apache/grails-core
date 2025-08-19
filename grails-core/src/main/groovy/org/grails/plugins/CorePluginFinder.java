@@ -58,11 +58,11 @@ public class CorePluginFinder implements ParentApplicationContextAware {
     private static final Logger LOG = LoggerFactory.getLogger(CorePluginFinder.class);
     public static final String CORE_PLUGIN_PATTERN = "META-INF/grails-plugin.xml";
 
-    private final Set<Class<?>> foundPluginClasses = new HashSet<Class<?>>();
+    private final Set<Class<?>> foundPluginClasses = new HashSet<>();
     @SuppressWarnings("unused")
     private final GrailsApplication application;
     @SuppressWarnings("rawtypes")
-    private final Map<Class, BinaryGrailsPluginDescriptor> binaryDescriptors = new HashMap<Class, BinaryGrailsPluginDescriptor>();
+    private final Map<Class, BinaryGrailsPluginDescriptor> binaryDescriptors = new HashMap<>();
 
     public CorePluginFinder(GrailsApplication application) {
         this.application = application;

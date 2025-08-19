@@ -43,8 +43,8 @@ import org.codehaus.groovy.runtime.metaclass.MetaClassRegistryImpl;
 @SuppressWarnings("rawtypes")
 public class MetaClassRegistryCleaner implements MetaClassRegistryChangeEventListener {
 
-    private Map<Class, Object> alteredClasses = new ConcurrentHashMap<Class, Object>();
-    private Map<IdentityWeakReference, Object> alteredInstances = new ConcurrentHashMap<IdentityWeakReference, Object>();
+    private Map<Class, Object> alteredClasses = new ConcurrentHashMap<>();
+    private Map<IdentityWeakReference, Object> alteredInstances = new ConcurrentHashMap<>();
     private static final Object NO_CUSTOM_METACLASS = new Object();
     private static boolean cleaning;
     private static final MetaClassRegistryCleaner INSTANCE = new MetaClassRegistryCleaner();
@@ -126,7 +126,7 @@ public class MetaClassRegistryCleaner implements MetaClassRegistryChangeEventLis
     }
 
     private void cleanMetaClassOfInstance(MetaClassRegistryImpl registry) {
-        List<IdentityWeakReference> keys = new ArrayList<IdentityWeakReference>(alteredInstances.keySet());
+        List<IdentityWeakReference> keys = new ArrayList<>(alteredInstances.keySet());
         for (IdentityWeakReference key : keys) {
             Object instance = key.get();
             if (instance != null) {
@@ -141,7 +141,7 @@ public class MetaClassRegistryCleaner implements MetaClassRegistryChangeEventLis
     }
 
     private void cleanMetaClassOfClass(MetaClassRegistryImpl registry) {
-        Set<Class> classes = new HashSet<Class>(alteredClasses.keySet());
+        Set<Class> classes = new HashSet<>(alteredClasses.keySet());
         for (Class aClass : classes) {
             Object alteredMetaClass = alteredClasses.get(aClass);
             if (alteredMetaClass == NO_CUSTOM_METACLASS) {

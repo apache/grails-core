@@ -90,55 +90,55 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
     public static final Set<String> SIMPLE_TYPES;
 
     static {
-        SIMPLE_TYPES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            boolean.class.getName(),
-            long.class.getName(),
-            short.class.getName(),
-            int.class.getName(),
-            byte.class.getName(),
-            float.class.getName(),
-            double.class.getName(),
-            char.class.getName(),
-            Boolean.class.getName(),
-            Long.class.getName(),
-            Short.class.getName(),
-            Integer.class.getName(),
-            Byte.class.getName(),
-            Float.class.getName(),
-            Double.class.getName(),
-            Character.class.getName(),
-            String.class.getName(),
-            java.util.Date.class.getName(),
-            Time.class.getName(),
-            Timestamp.class.getName(),
-            java.sql.Date.class.getName(),
-            BigDecimal.class.getName(),
-            BigInteger.class.getName(),
-            Locale.class.getName(),
-            Calendar.class.getName(),
-            GregorianCalendar.class.getName(),
-            java.util.Currency.class.getName(),
-            TimeZone.class.getName(),
-            Object.class.getName(),
-            Class.class.getName(),
-            byte[].class.getName(),
-            Byte[].class.getName(),
-            char[].class.getName(),
-            Character[].class.getName(),
-            Blob.class.getName(),
-            Clob.class.getName(),
-            Serializable.class.getName(),
-            URI.class.getName(),
-            URL.class.getName(),
-            UUID.class.getName(),
-            "org.bson.types.ObjectId",
-            "java.time.Instant",
-            "java.time.LocalDateTime",
-            "java.time.LocalDate",
-            "java.time.LocalTime",
-            "java.time.OffsetDateTime",
-            "java.time.OffsetTime",
-            "java.time.ZonedDateTime")));
+        SIMPLE_TYPES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+                boolean.class.getName(),
+                long.class.getName(),
+                short.class.getName(),
+                int.class.getName(),
+                byte.class.getName(),
+                float.class.getName(),
+                double.class.getName(),
+                char.class.getName(),
+                Boolean.class.getName(),
+                Long.class.getName(),
+                Short.class.getName(),
+                Integer.class.getName(),
+                Byte.class.getName(),
+                Float.class.getName(),
+                Double.class.getName(),
+                Character.class.getName(),
+                String.class.getName(),
+                java.util.Date.class.getName(),
+                Time.class.getName(),
+                Timestamp.class.getName(),
+                java.sql.Date.class.getName(),
+                BigDecimal.class.getName(),
+                BigInteger.class.getName(),
+                Locale.class.getName(),
+                Calendar.class.getName(),
+                GregorianCalendar.class.getName(),
+                java.util.Currency.class.getName(),
+                TimeZone.class.getName(),
+                Object.class.getName(),
+                Class.class.getName(),
+                byte[].class.getName(),
+                Byte[].class.getName(),
+                char[].class.getName(),
+                Character[].class.getName(),
+                Blob.class.getName(),
+                Clob.class.getName(),
+                Serializable.class.getName(),
+                URI.class.getName(),
+                URL.class.getName(),
+                UUID.class.getName(),
+                "org.bson.types.ObjectId",
+                "java.time.Instant",
+                "java.time.LocalDateTime",
+                "java.time.LocalDate",
+                "java.time.LocalTime",
+                "java.time.OffsetDateTime",
+                "java.time.OffsetTime",
+                "java.time.ZonedDateTime")));
     }
 
     private Map<Class, Collection<CustomTypeMarshaller>> typeConverterMap = new ConcurrentHashMap<>();
@@ -196,8 +196,9 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
      * @return An Identity instance
      */
     public Identity<T> createIdentity(PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
-        return new Identity<T>(owner, context, pd) {
+        return new Identity<>(owner, context, pd) {
             PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
+
             public PropertyMapping<T> getMapping() {
                 return propertyMapping;
             }
@@ -213,8 +214,9 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
      * @return An Identity instance
      */
     public TenantId<T> createTenantId(PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
-        return new TenantId<T>(owner, context, pd) {
+        return new TenantId<>(owner, context, pd) {
             PropertyMapping<T> propertyMapping = createDerivedPropertyMapping(this, owner);
+
             public PropertyMapping<T> getMapping() {
                 return propertyMapping;
             }
@@ -249,8 +251,9 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
         if (customTypeMarshaller == null && !allowArbitraryCustomTypes()) {
             throw new IllegalStateException("Cannot create a custom type without a type converter for type " + propertyType);
         }
-        return new Custom<T>(owner, context, pd, customTypeMarshaller) {
+        return new Custom<>(owner, context, pd, customTypeMarshaller) {
             PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
+
             public PropertyMapping<T> getMapping() {
                 return propertyMapping;
             }
@@ -292,8 +295,9 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
      * @return A Simple property type
      */
     public Simple<T> createSimple(PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
-        return new Simple<T>(owner, context, pd) {
+        return new Simple<>(owner, context, pd) {
             PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
+
             public PropertyMapping<T> getMapping() {
                 return propertyMapping;
             }
@@ -301,7 +305,7 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
     }
 
     protected PropertyMapping<T> createPropertyMapping(final PersistentProperty<T> property, final PersistentEntity owner) {
-        return new PropertyMapping<T>() {
+        return new PropertyMapping<>() {
             private T mappedForm = createMappedForm(property);
 
             public ClassMapping getClassMapping() {
@@ -317,7 +321,7 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
     private PropertyMapping<T> createDerivedPropertyMapping(final PersistentProperty<T> property, final PersistentEntity owner) {
         final T mappedFormObject = createMappedForm(property);
         mappedFormObject.setDerived(true);
-        return new PropertyMapping<T>() {
+        return new PropertyMapping<>() {
             private T mappedForm = mappedFormObject;
 
             public ClassMapping getClassMapping() {

@@ -73,7 +73,7 @@ public interface Converter<W> {
         PATH;
 
         public static List<String> allowedValues() {
-            List<String> v = new ArrayList<String>();
+            List<String> v = new ArrayList<>();
             for (CircularReferenceBehaviour crb : values()) {
                 v.add(crb.name());
             }

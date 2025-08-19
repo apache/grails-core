@@ -73,7 +73,7 @@ public class PrefixedConfig implements Config {
     @Deprecated
     public Map<String, Object> flatten() {
         Map<String, Object> flattened = delegate.flatten();
-        Map<String, Object> map = new LinkedHashMap<String, Object>(flattened.size());
+        Map<String, Object> map = new LinkedHashMap<>(flattened.size());
         for (String key : flattened.keySet()) {
             map.put(formulateKey(key), flattened.get(key));
         }
@@ -95,7 +95,7 @@ public class PrefixedConfig implements Config {
 
     @Override
     public Object navigate(String... path) {
-        List<String> tokens = new ArrayList<String>();
+        List<String> tokens = new ArrayList<>();
         tokens.addAll(Arrays.asList(prefixTokens));
         tokens.addAll(Arrays.asList(path));
         return delegate.navigate(tokens.toArray(new String[tokens.size()]));
@@ -134,7 +134,7 @@ public class PrefixedConfig implements Config {
     @Override
     public Set<String> keySet() {
         Set<String> keys = delegate.keySet();
-        Set<String> newKeys = new HashSet<String>();
+        Set<String> newKeys = new HashSet<>();
         for (String key : keys) {
             newKeys.add(formulateKey(key));
         }
@@ -149,9 +149,9 @@ public class PrefixedConfig implements Config {
     @Override
     public Set<Entry<String, Object>> entrySet() {
         final Set<Entry<String, Object>> entries = delegate.entrySet();
-        Set<Entry<String, Object>> newEntries = new HashSet<Entry<String, Object>>();
+        Set<Entry<String, Object>> newEntries = new HashSet<>();
         for (final Entry<String, Object> entry : entries) {
-            newEntries.add(new Entry<String, Object>() {
+            newEntries.add(new Entry<>() {
                 @Override
                 public String getKey() {
                     return formulateKey(entry.getKey());

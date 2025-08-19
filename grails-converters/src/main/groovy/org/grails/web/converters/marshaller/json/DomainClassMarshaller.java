@@ -95,10 +95,10 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON
     }
 
     private void initializeDomainClassFetchers() {
-        this.domainClassFetchers = new ArrayList<DomainClassFetcher>() {{
-                add(new ByGrailsApplicationDomainClassFetcher(application));
-                add(new ByDatasourceDomainClassFetcher());
-            }};
+        this.domainClassFetchers = new ArrayList<>() {{
+            add(new ByGrailsApplicationDomainClassFetcher(application));
+            add(new ByDatasourceDomainClassFetcher());
+        }};
     }
 
     public boolean isIncludeVersion() {
@@ -130,7 +130,7 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON
 
         List<String> excludes = json.getExcludes(clazz);
         List<String> includes = json.getIncludes(clazz);
-        IncludeExcludeSupport<String> includeExcludeSupport = new IncludeExcludeSupport<String>();
+        IncludeExcludeSupport<String> includeExcludeSupport = new IncludeExcludeSupport<>();
 
         BeanWrapper beanWrapper = new BeanWrapperImpl(value);
 

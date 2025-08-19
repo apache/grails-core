@@ -87,7 +87,7 @@ public abstract class AbstractHibernateQuery extends Query {
     protected static final String ALIAS = "_alias";
     protected static ConversionService conversionService = new DefaultConversionService();
     protected static Field opField = ReflectionUtils.findField(SimpleExpression.class, "op");
-    private static final Map<String, Boolean> JOIN_STATUS_CACHE = new ConcurrentHashMap<String, Boolean>();
+    private static final Map<String, Boolean> JOIN_STATUS_CACHE = new ConcurrentHashMap<>();
 
     static {
         ReflectionUtils.makeAccessible(opField);
@@ -98,10 +98,10 @@ public abstract class AbstractHibernateQuery extends Query {
     protected AbstractHibernateQuery.HibernateProjectionList hibernateProjectionList;
     protected String alias;
     protected int aliasCount;
-    protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<String, CriteriaAndAlias>();
-    protected LinkedList<String> aliasStack = new LinkedList<String>();
-    protected LinkedList<PersistentEntity> entityStack = new LinkedList<PersistentEntity>();
-    protected LinkedList<Association> associationStack = new LinkedList<Association>();
+    protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
+    protected LinkedList<String> aliasStack = new LinkedList<>();
+    protected LinkedList<PersistentEntity> entityStack = new LinkedList<>();
+    protected LinkedList<Association> associationStack = new LinkedList<>();
     protected LinkedList aliasInstanceStack = new LinkedList();
     private boolean hasJoins = false;
     protected ProxyHandler proxyHandler = new HibernateProxyHandler();

@@ -89,7 +89,7 @@ public class DefaultASTValidateableHelper implements ASTValidateableHelper {
         final Expression nullOutConstrainedPropertiesExpression = new BinaryExpression(
                 new VariableExpression(CONSTRAINED_PROPERTIES_PROPERTY_NAME),
                 Token.newSymbol(Types.EQUALS, 0, 0), new ConstantExpression(null));
-        List<Statement> statements = new ArrayList<Statement>();
+        List<Statement> statements = new ArrayList<>();
         statements.add(new ExpressionStatement(nullOutConstrainedPropertiesExpression));
         classNode.addStaticInitializerStatements(statements, true);
     }
@@ -181,7 +181,7 @@ public class DefaultASTValidateableHelper implements ASTValidateableHelper {
      * @return a Map describing all of the properties which need to be constrained
      */
     protected Map<String, ClassNode> getPropertiesToEnsureConstraintsFor(final ClassNode classNode) {
-        final Map<String, ClassNode> fieldsToConstrain = new HashMap<String, ClassNode>();
+        final Map<String, ClassNode> fieldsToConstrain = new HashMap<>();
         final List<FieldNode> allFields = classNode.getFields();
         for (final FieldNode field : allFields) {
             if (!field.isStatic()) {

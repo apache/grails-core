@@ -352,7 +352,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                 final boolean isCollection = Collection.class.isAssignableFrom(o.getClass());
                 final boolean isMap = Map.class.isAssignableFrom(o.getClass());
                 if (!(isMap || isCollection)) {
-                    Map<String, Object> props = new HashMap<String, Object>();
+                    Map<String, Object> props = new HashMap<>();
                     props.put("class", o.getClass());
                     StringBuilder ref = new StringBuilder();
                     int idx = referenceStack.indexOf(o);
@@ -377,7 +377,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                 value(null);
                 break;
             case PATH:
-                Map<String, Object> props = new HashMap<String, Object>();
+                Map<String, Object> props = new HashMap<>();
                 props.put("class", o.getClass());
                 int idx = referenceStack.indexOf(o);
                 PathCapturingJSONWriterWrapper pcWriter = (PathCapturingJSONWriterWrapper) writer;
@@ -419,11 +419,11 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
     }
 
     public static void registerObjectMarshaller(Class<?> clazz, Closure<?> callable) throws ConverterException {
-        registerObjectMarshaller(new ClosureObjectMarshaller<JSON>(clazz, callable));
+        registerObjectMarshaller(new ClosureObjectMarshaller<>(clazz, callable));
     }
 
     public static void registerObjectMarshaller(Class<?> clazz, int priority, Closure<?> callable) throws ConverterException {
-        registerObjectMarshaller(new ClosureObjectMarshaller<JSON>(clazz, callable), priority);
+        registerObjectMarshaller(new ClosureObjectMarshaller<>(clazz, callable), priority);
     }
 
     public static void registerObjectMarshaller(ObjectMarshaller<JSON> om) throws ConverterException {
@@ -432,7 +432,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
             throw new ConverterException("Default Configuration not found for class " + JSON.class.getName());
         }
         if (!(cfg instanceof DefaultConverterConfiguration<?>)) {
-            cfg = new DefaultConverterConfiguration<JSON>(cfg);
+            cfg = new DefaultConverterConfiguration<>(cfg);
             ConvertersConfigurationHolder.setDefaultConfiguration(JSON.class, cfg);
         }
         ((DefaultConverterConfiguration<JSON>) cfg).registerObjectMarshaller(om);
@@ -444,14 +444,14 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
             throw new ConverterException("Default Configuration not found for class " + JSON.class.getName());
         }
         if (!(cfg instanceof DefaultConverterConfiguration<?>)) {
-            cfg = new DefaultConverterConfiguration<JSON>(cfg);
+            cfg = new DefaultConverterConfiguration<>(cfg);
             ConvertersConfigurationHolder.setDefaultConfiguration(JSON.class, cfg);
         }
         ((DefaultConverterConfiguration<JSON>) cfg).registerObjectMarshaller(om, priority);
     }
 
     public static void createNamedConfig(String name, Closure<?> callable) throws ConverterException {
-        DefaultConverterConfiguration<JSON> cfg = new DefaultConverterConfiguration<JSON>(ConvertersConfigurationHolder.getConverterConfiguration(JSON.class));
+        DefaultConverterConfiguration<JSON> cfg = new DefaultConverterConfiguration<>(ConvertersConfigurationHolder.getConverterConfiguration(JSON.class));
         try {
             callable.call(cfg);
             ConvertersConfigurationHolder.setNamedConverterConfiguration(JSON.class, name, cfg);
@@ -464,7 +464,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
     public static void withDefaultConfiguration(Closure<?> callable) throws ConverterException {
         ConverterConfiguration<JSON> cfg = ConvertersConfigurationHolder.getConverterConfiguration(JSON.class);
         if (!(cfg instanceof DefaultConverterConfiguration<?>)) {
-            cfg = new DefaultConverterConfiguration<JSON>(cfg);
+            cfg = new DefaultConverterConfiguration<>(cfg);
         }
         try {
             callable.call(cfg);
@@ -501,7 +501,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
             invokeMethod("json", new Object[] { callable });
         }
 
-        private Stack<BuilderMode> stack = new Stack<BuilderMode>();
+        private Stack<BuilderMode> stack = new Stack<>();
         private boolean start = true;
         private JSONWriter writer;
 

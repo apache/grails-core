@@ -37,7 +37,7 @@ import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
  */
 public abstract class AbstractMultipleDataSourceAggregatePersistenceContextInterceptor implements PersistenceContextInterceptor {
 
-    protected final List<PersistenceContextInterceptor> interceptors = new ArrayList<PersistenceContextInterceptor>();
+    protected final List<PersistenceContextInterceptor> interceptors = new ArrayList<>();
     protected final AbstractHibernateDatastore hibernateDatastore;
 
     public AbstractMultipleDataSourceAggregatePersistenceContextInterceptor(AbstractHibernateDatastore hibernateDatastore) {

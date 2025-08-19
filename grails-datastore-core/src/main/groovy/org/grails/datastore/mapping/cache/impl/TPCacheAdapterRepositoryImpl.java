@@ -51,5 +51,5 @@ public class TPCacheAdapterRepositoryImpl<T> implements TPCacheAdapterRepository
         adapters.put(entityJavaClassFQN, cacheAdapter);
     }
 
-    private ConcurrentHashMap<String, TPCacheAdapter<T>> adapters = new ConcurrentHashMap<String, TPCacheAdapter<T>>();
+    private ConcurrentHashMap<String, TPCacheAdapter<T>> adapters = new ConcurrentHashMap<>();
 }

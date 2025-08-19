@@ -41,7 +41,7 @@ import org.grails.orm.hibernate.support.SoftKey;
 public abstract class AbstractHibernateEventListener extends AbstractPersistenceEventListener {
 
     protected final transient ConcurrentMap<SoftKey<Class<?>>, Boolean> cachedShouldTrigger =
-            new ConcurrentHashMap<SoftKey<Class<?>>, Boolean>();
+            new ConcurrentHashMap<>();
     protected final boolean failOnError;
     protected final List<?> failOnErrorPackages;
 

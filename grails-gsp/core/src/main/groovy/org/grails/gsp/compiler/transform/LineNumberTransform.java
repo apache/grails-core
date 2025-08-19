@@ -138,7 +138,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
     int[] extractLineNumberArray(AnnotationNode node) {
         ListExpression lineNumberArray = (ListExpression) node.getMember("lines");
         // make assumption that this is a simple array of constants
-        List<Integer> numbers = new ArrayList<Integer>();
+        List<Integer> numbers = new ArrayList<>();
         for (Expression e : lineNumberArray.getExpressions()) {
             if (e instanceof ConstantExpression) {
                 numbers.add((Integer) ((ConstantExpression) e).getValue());

@@ -57,10 +57,10 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
     public static final String SCOPE = "scope";
     public static final String SCOPE_SINGLETON = "singleton";
     private String scope;
-    private Map<String, ActionInvoker> actions = new HashMap<String, ActionInvoker>();
+    private Map<String, ActionInvoker> actions = new HashMap<>();
     private String defaultActionName;
     private String namespace;
-    protected Map<String, String> actionUriToViewName = new HashMap<String, String>();
+    protected Map<String, String> actionUriToViewName = new HashMap<>();
 
     public DefaultGrailsControllerClass(Class<?> clazz) {
         super(clazz, CONTROLLER);
@@ -169,7 +169,7 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
      */
     @Override
     public void registerUrlConverter(UrlConverter urlConverter) {
-        for (String actionName : new ArrayList<String>(actions.keySet())) {
+        for (String actionName : new ArrayList<>(actions.keySet())) {
             actionUriToViewName.put(urlConverter.toUrlElement(actionName), actionName);
             actions.put(urlConverter.toUrlElement(actionName), actions.remove(actionName));
         }

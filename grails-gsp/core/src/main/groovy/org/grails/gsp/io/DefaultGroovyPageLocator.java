@@ -67,12 +67,12 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
     private static final String SLASHED_VIEWS_DIR_PATH = "/" + GrailsResourceUtils.VIEWS_DIR_PATH;
     private static final String PLUGINS_PATH = "/plugins/";
     private static final String BLANK = "";
-    protected Collection<ResourceLoader> resourceLoaders = new ConcurrentLinkedQueue<ResourceLoader>();
+    protected Collection<ResourceLoader> resourceLoaders = new ConcurrentLinkedQueue<>();
     protected GrailsPluginManager pluginManager;
     private ConcurrentMap<String, String> precompiledGspMap;
     protected boolean warDeployed = Environment.isWarDeployed();
     protected boolean reloadEnabled = !warDeployed;
-    private Set<String> reloadedPrecompiledGspClassNames = new CopyOnWriteArraySet<String>();
+    private Set<String> reloadedPrecompiledGspClassNames = new CopyOnWriteArraySet<>();
 
     public void setResourceLoader(ResourceLoader resourceLoader) {
         addResourceLoader(resourceLoader);
@@ -88,7 +88,7 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
         if (precompiledGspMap == null) {
             this.precompiledGspMap = null;
         } else {
-            this.precompiledGspMap = new ConcurrentHashMap<String, String>(precompiledGspMap);
+            this.precompiledGspMap = new ConcurrentHashMap<>(precompiledGspMap);
         }
     }
 
@@ -215,7 +215,7 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
     protected GroovyPageCompiledScriptSource createGroovyPageCompiledScriptSource(final String uri, String fullPath, Class<?> viewClass) {
         GroovyPageCompiledScriptSource scriptSource = new GroovyPageCompiledScriptSource(uri, fullPath, viewClass);
         if (reloadEnabled) {
-            scriptSource.setResourceCallable(new PrivilegedAction<Resource>() {
+            scriptSource.setResourceCallable(new PrivilegedAction<>() {
                 public Resource run() {
                     return findReloadablePage(uri);
                 }

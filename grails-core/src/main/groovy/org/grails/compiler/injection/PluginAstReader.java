@@ -78,14 +78,14 @@ class PluginAstReader {
                 if (expr != null) {
                     Object value = null;
                     if (expr instanceof ListExpression) {
-                        final List<String> list = new ArrayList<String>();
+                        final List<String> list = new ArrayList<>();
                         for (Expression i : ((ListExpression) expr).getExpressions()) {
                             list.add(i.getText());
                         }
                         value = list;
                     }
                     else if (expr instanceof MapExpression) {
-                        final Map<String, String> map = new LinkedHashMap<String, String>();
+                        final Map<String, String> map = new LinkedHashMap<>();
                         value = map;
                         for (MapEntryExpression mee : ((MapExpression) expr).getMapEntryExpressions()) {
                             map.put(mee.getKeyExpression().getText(), mee.getValueExpression().getText());
@@ -125,7 +125,7 @@ class PluginAstReader {
 
         private String name;
         private String version;
-        private Map<String, Object> attributes = new ConcurrentHashMap<String, Object>();
+        private Map<String, Object> attributes = new ConcurrentHashMap<>();
 
         public BasicGrailsPluginInfo() {
         }

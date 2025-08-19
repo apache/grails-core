@@ -67,7 +67,7 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
     protected GrailsApplication grailsApplication;
     protected boolean isBase = false;
     protected String version = "1.0";
-    protected Map<String, Object> dependencies = new HashMap<String, Object>();
+    protected Map<String, Object> dependencies = new HashMap<>();
     protected String[] dependencyNames = {};
     protected Class<?> pluginClass;
     protected ApplicationContext applicationContext;

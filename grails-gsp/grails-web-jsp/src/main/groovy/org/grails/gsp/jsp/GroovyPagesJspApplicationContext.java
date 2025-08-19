@@ -54,7 +54,7 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
 
     private static final ExpressionFactory expressionFactoryImpl = findExpressionFactoryImplementation();
 
-    private final LinkedList<ELContextListener> listeners = new LinkedList<ELContextListener>();
+    private final LinkedList<ELContextListener> listeners = new LinkedList<>();
     private final CompositeELResolver elResolver = new CompositeELResolver();
     private final CompositeELResolver additionalResolvers = new CompositeELResolver();
 

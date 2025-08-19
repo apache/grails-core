@@ -272,7 +272,7 @@ public class AntPathMatcher {
     }
 
     public Map<String, String> extractUriTemplateVariables(String pattern, String path) {
-        Map<String, String> variables = new LinkedHashMap<String, String>();
+        Map<String, String> variables = new LinkedHashMap<>();
         /*boolean result =*/ doMatch(pattern, path, true, variables);
         return variables;
     }
@@ -475,7 +475,7 @@ public class AntPathMatcher {
 
         private String str;
 
-        private final List<String> variableNames = new LinkedList<String>();
+        private final List<String> variableNames = new LinkedList<>();
 
         private final Map<String, String> uriTemplateVariables;
 

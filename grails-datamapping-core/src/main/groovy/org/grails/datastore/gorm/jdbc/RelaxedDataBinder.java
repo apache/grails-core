@@ -389,7 +389,7 @@ class RelaxedDataBinder extends DataBinder {
             return Collections.singleton(name);
         }
         List<String> nameAndAliases;
-        nameAndAliases = new ArrayList<String>(aliases.size() + 1);
+        nameAndAliases = new ArrayList<>(aliases.size() + 1);
         nameAndAliases.add(name);
         nameAndAliases.addAll(aliases);
         return nameAndAliases;
@@ -437,7 +437,7 @@ class RelaxedDataBinder extends DataBinder {
         }
 
         List<String> prefixes() {
-            List<String> prefixes = new ArrayList<String>();
+            List<String> prefixes = new ArrayList<>();
             for (int index = 1; index < this.nodes.size(); index++) {
                 prefixes.add(prefix(index));
             }

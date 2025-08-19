@@ -39,5 +39,5 @@ public class HashMapTPCacheAdapter<T> implements TPCacheAdapter<T> {
         return cache.get(key);
     }
 
-    private ConcurrentHashMap<Object, T> cache = new ConcurrentHashMap<Object, T>();
+    private ConcurrentHashMap<Object, T> cache = new ConcurrentHashMap<>();
 }

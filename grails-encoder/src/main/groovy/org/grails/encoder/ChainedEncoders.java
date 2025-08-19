@@ -34,7 +34,7 @@ public class ChainedEncoders {
         if (encoders == null || encoders.isEmpty()) {
             return null;
         }
-        List<StreamingEncoder> streamingEncoders = new ArrayList<StreamingEncoder>();
+        List<StreamingEncoder> streamingEncoders = new ArrayList<>();
         for (Encoder encoder : encoders) {
             if (!(encoder instanceof StreamingEncoder)) {
                 return null;
@@ -114,7 +114,7 @@ public class ChainedEncoders {
         List<Encoder> nextEncoders;
         if (encodeToEncoder != null) {
             if (encoders != null) {
-                List<Encoder> joined = new ArrayList<Encoder>(encoders.size() + 1);
+                List<Encoder> joined = new ArrayList<>(encoders.size() + 1);
                 joined.addAll(encoders);
                 joined.add(encodeToEncoder);
                 nextEncoders = Collections.unmodifiableList(joined);

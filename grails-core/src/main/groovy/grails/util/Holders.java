@@ -47,10 +47,10 @@ import org.grails.core.support.GrailsApplicationDiscoveryStrategy;
 public class Holders {
 
     private static final Log LOG = LogFactory.getLog(Holders.class);
-    private static Holder<GrailsPluginManager> pluginManagers = new Holder<GrailsPluginManager>("PluginManager");
-    private static Holder<Boolean> pluginManagersInCreation = new Holder<Boolean>("PluginManagers in creation");
-    private static Holder<Config> configs = new Holder<Config>("config");
-    private static Holder<Map<?, ?>> flatConfigs = new Holder<Map<?, ?>>("flat config");
+    private static Holder<GrailsPluginManager> pluginManagers = new Holder<>("PluginManager");
+    private static Holder<Boolean> pluginManagersInCreation = new Holder<>("PluginManagers in creation");
+    private static Holder<Config> configs = new Holder<>("config");
+    private static Holder<Map<?, ?>> flatConfigs = new Holder<>("flat config");
 
     private static List<GrailsApplicationDiscoveryStrategy> applicationDiscoveryStrategies = GrailsFactoriesLoader.loadFactories(GrailsApplicationDiscoveryStrategy.class, Holders.class.getClassLoader());
     private static Holder servletContexts;

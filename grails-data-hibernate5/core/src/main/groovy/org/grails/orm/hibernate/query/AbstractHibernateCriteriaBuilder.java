@@ -126,15 +126,15 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     protected Criteria criteria;
     protected MetaClass criteriaMetaClass;
     protected boolean uniqueResult = false;
-    protected List<LogicalExpression> logicalExpressionStack = new ArrayList<LogicalExpression>();
-    protected List<String> associationStack = new ArrayList<String>();
+    protected List<LogicalExpression> logicalExpressionStack = new ArrayList<>();
+    protected List<String> associationStack = new ArrayList<>();
     protected boolean participate;
     protected boolean scroll;
     protected boolean count;
     protected ProjectionList projectionList = Projections.projectionList();
-    protected List<String> aliasStack = new ArrayList<String>();
-    protected List<Criteria> aliasInstanceStack = new ArrayList<Criteria>();
-    protected Map<String, String> aliasMap = new HashMap<String, String>();
+    protected List<String> aliasStack = new ArrayList<>();
+    protected List<Criteria> aliasInstanceStack = new ArrayList<>();
+    protected Map<String, String> aliasMap = new HashMap<>();
     protected static final String ALIAS = "_alias";
     protected ResultTransformer resultTransformer;
     protected int aliasCount;
@@ -2023,7 +2023,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      */
     protected class LogicalExpression {
         public final Object name;
-        public final List<Criterion> args = new ArrayList<Criterion>();
+        public final List<Criterion> args = new ArrayList<>();
 
         public LogicalExpression(Object name) {
             this.name = name;

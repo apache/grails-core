@@ -197,7 +197,7 @@ public class GSPGrailsLayoutPage extends AbstractHTMLPage implements Content {
     public void setContentBuffer(String tagName, StreamCharBuffer buffer) {
         used = true;
         if (contentBuffers == null) {
-            contentBuffers = new HashMap<String, StreamCharBuffer>();
+            contentBuffers = new HashMap<>();
         }
         String propertyName = "page." + tagName;
         contentBuffers.put(propertyName, buffer);

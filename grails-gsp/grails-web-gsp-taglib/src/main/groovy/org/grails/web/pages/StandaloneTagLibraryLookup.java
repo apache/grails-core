@@ -70,7 +70,7 @@ public class StandaloneTagLibraryLookup extends TagLibraryLookup implements Appl
     }
 
     public void setTagLibInstances(List<Object> tagLibInstances) {
-        this.tagLibInstancesSet = new LinkedHashSet<Object>();
+        this.tagLibInstancesSet = new LinkedHashSet<>();
         tagLibInstancesSet.addAll(tagLibInstances);
     }
 
@@ -81,7 +81,7 @@ public class StandaloneTagLibraryLookup extends TagLibraryLookup implements Appl
 
     public void detectAndRegisterTabLibBeans() {
         if (tagLibInstancesSet == null) {
-            tagLibInstancesSet = new LinkedHashSet<Object>();
+            tagLibInstancesSet = new LinkedHashSet<>();
         }
         Collection<Object> detectedInstances = applicationContext.getBeansWithAnnotation(TagLib.class).values();
         for (Object instance : detectedInstances) {

@@ -195,7 +195,7 @@ public class ArtefactTypeAstTransformation extends AbstractArtefactTypeAstTransf
     }
 
     public static List<ClassInjector> findInjectors(String artefactType, ClassInjector[] classInjectors) {
-        List<ClassInjector> injectors = new ArrayList<ClassInjector>();
+        List<ClassInjector> injectors = new ArrayList<>();
         for (ClassInjector classInjector : classInjectors) {
             if (classInjector instanceof AllArtefactClassInjector) {
                 injectors.add(classInjector);

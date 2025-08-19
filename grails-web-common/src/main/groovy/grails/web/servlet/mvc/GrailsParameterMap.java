@@ -66,7 +66,7 @@ import org.grails.web.util.WebUtils;
 public class GrailsParameterMap extends TypeConvertingMap implements Cloneable {
 
     private static final Logger LOG = LoggerFactory.getLogger(GrailsParameterMap.class);
-    private static final Map<String, String> CACHED_DATE_FORMATS = new ConcurrentHashMap<String, String>();
+    private static final Map<String, String> CACHED_DATE_FORMATS = new ConcurrentHashMap<>();
 
     private final Map nestedDateMap = new LinkedHashMap();
     private final HttpServletRequest request;

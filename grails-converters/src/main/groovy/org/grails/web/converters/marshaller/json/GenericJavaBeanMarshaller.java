@@ -50,7 +50,7 @@ public class GenericJavaBeanMarshaller extends IncludeExcludePropertyMarshaller<
         Class<? extends Object> clazz = o.getClass();
         List<String> excludes = json.getExcludes(clazz);
         List<String> includes = json.getIncludes(clazz);
-        IncludeExcludeSupport<String> includeExcludeSupport = new IncludeExcludeSupport<String>();
+        IncludeExcludeSupport<String> includeExcludeSupport = new IncludeExcludeSupport<>();
 
         try {
             writer.object();

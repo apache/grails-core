@@ -159,7 +159,7 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
             String namespace = mapping.getNamespace() instanceof String ? mapping.getNamespace().toString() : null;
 
             Constrained[] params = mapping.getConstraints();
-            Set<String> requiredParams = new HashSet<String>();
+            Set<String> requiredParams = new HashSet<>();
             int optionalIndex = -1;
             for (int j = 0; j < params.length; j++) {
                 Constrained param = params[j];
@@ -182,7 +182,7 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Reverse mapping: " + key + " -> " + mapping);
             }
-            Set<String> requiredParamsAndOptionals = new HashSet<String>(requiredParams);
+            Set<String> requiredParamsAndOptionals = new HashSet<>(requiredParams);
             if (optionalIndex > -1) {
                 for (int j = optionalIndex; j < params.length; j++) {
                     Constrained constrained = params[j];
@@ -207,7 +207,7 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
 
     @SuppressWarnings("unchecked")
     private void sortMappings() {
-        List<ResponseCodeUrlMapping> responseCodeUrlMappings = new ArrayList<ResponseCodeUrlMapping>();
+        List<ResponseCodeUrlMapping> responseCodeUrlMappings = new ArrayList<>();
         Iterator<UrlMapping> iter = urlMappings.iterator();
         while (iter.hasNext()) {
             UrlMapping mapping = iter.next();
@@ -333,7 +333,7 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
             }
         }
         if (mapping == null || (mapping instanceof ResponseCodeUrlMapping)) {
-            Set<String> lookupParams = new HashSet<String>(DEFAULT_ACTION_PARAMS);
+            Set<String> lookupParams = new HashSet<>(DEFAULT_ACTION_PARAMS);
             Set<String> paramKeys = new HashSet<String>(params.keySet());
             paramKeys.removeAll(lookupParams);
             lookupParams.addAll(paramKeys);
@@ -356,7 +356,7 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
         }
 
         if (mapping == null || (mapping instanceof ResponseCodeUrlMapping)) {
-            Set<String> lookupParams = new HashSet<String>(DEFAULT_CONTROLLER_ONLY_PARAMS);
+            Set<String> lookupParams = new HashSet<>(DEFAULT_CONTROLLER_ONLY_PARAMS);
             Set<String> paramKeys = new HashSet<String>(params.keySet());
             paramKeys.removeAll(lookupParams);
             lookupParams.addAll(paramKeys);
@@ -379,7 +379,7 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
         }
 
         if (mapping == null || (mapping instanceof ResponseCodeUrlMapping)) {
-            Set<String> lookupParams = new HashSet<String>(DEFAULT_CONTROLLER_PARAMS);
+            Set<String> lookupParams = new HashSet<>(DEFAULT_CONTROLLER_PARAMS);
             Set<String> paramKeys = new HashSet<String>(params.keySet());
             paramKeys.removeAll(lookupParams);
             lookupParams.addAll(paramKeys);
@@ -424,7 +424,7 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
         }
 
         if (mapping == null || (mapping instanceof ResponseCodeUrlMapping)) {
-            Set<String> lookupParams = new HashSet<String>();
+            Set<String> lookupParams = new HashSet<>();
             UrlMappingKey lookupKey = new UrlMappingKey(controller, null, namespace, pluginName, httpMethod, version, lookupParams);
             mapping = mappingsLookup.get(lookupKey);
             if (mapping == null) {
@@ -888,12 +888,12 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
     class UrlMappingsList {
         // A map from a UrlMappingsListKey to a list of UrlMappingKeys
         private Map<UrlMappingsListKey, List<UrlMappingKey>> lookup =
-                new HashMap<UrlMappingsListKey, List<UrlMappingKey>>();
+                new HashMap<>();
 
         public void put(UrlMappingsListKey key, UrlMappingKey mapping) {
             List<UrlMappingKey> mappingsList = lookup.get(key);
             if (null == mappingsList) {
-                mappingsList = new ArrayList<UrlMappingKey>();
+                mappingsList = new ArrayList<>();
                 lookup.put(key, mappingsList);
             }
             if (!mappingsList.contains(mapping)) {

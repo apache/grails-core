@@ -56,8 +56,8 @@ import org.slf4j.LoggerFactory;
 class MacOsWatchServiceDirectoryWatcher extends AbstractDirectoryWatcher {
 
     private static final Logger LOG = LoggerFactory.getLogger(MacOsWatchServiceDirectoryWatcher.class);
-    private Map<WatchKey, List<String>> watchKeyToExtensionsMap = new ConcurrentHashMap<WatchKey, List<String>>();
-    private Set<Path> individualWatchedFiles = new HashSet<Path>();
+    private Map<WatchKey, List<String>> watchKeyToExtensionsMap = new ConcurrentHashMap<>();
+    private Set<Path> individualWatchedFiles = new HashSet<>();
 
     private final WatchService watchService;
 
@@ -182,22 +182,21 @@ class MacOsWatchServiceDirectoryWatcher extends AbstractDirectoryWatcher {
         }
         try {
             //add the subdirectories too
-            Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+            Files.walkFileTree(dir, new SimpleFileVisitor<>() {
                 @Override
                 public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
-                    throws IOException
-                {
+                        throws IOException {
                     if (!isValidDirectoryToMonitor(dir.toFile())) {
                         return FileVisitResult.SKIP_SUBTREE;
                     }
                     WatchablePath watchPath = new WatchablePath(dir);
-                    Kind[] events = new Kind[] { StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY };
+                    Kind[] events = new Kind[]{StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY};
                     WatchKey watchKey = watchPath.register(watchService, events);
                     final List<String> originalFileExtensions = watchKeyToExtensionsMap.get(watchKey);
                     if (originalFileExtensions == null) {
                         watchKeyToExtensionsMap.put(watchKey, fileExtensions);
                     } else {
-                        final HashSet<String> newFileExtensions = new HashSet<String>(originalFileExtensions);
+                        final HashSet<String> newFileExtensions = new HashSet<>(originalFileExtensions);
                         newFileExtensions.addAll(fileExtensions);
                         watchKeyToExtensionsMap.put(watchKey, Collections.unmodifiableList(new ArrayList(newFileExtensions)));
                     }

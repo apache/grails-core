@@ -764,7 +764,7 @@ public abstract class BsonQuery extends Query {
      * @return The list of native values suitable for passing to Mongo.
      */
     protected static List<Object> getInListQueryValues(PersistentEntity entity, In in) {
-        List<Object> values = new ArrayList<Object>(in.getValues().size());
+        List<Object> values = new ArrayList<>(in.getValues().size());
         final MappingContext mappingContext = entity.getMappingContext();
         for (Object value : in.getValues()) {
             if (mappingContext.isPersistentEntity(value)) {

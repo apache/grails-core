@@ -42,14 +42,14 @@ import org.grails.taglib.TemplateVariableBinding;
 public class CachingGrailsConventionGroovyPageLocator extends GrailsConventionGroovyPageLocator {
 
     private static final GroovyPageResourceScriptSource NULL_SCRIPT = new GroovyPageResourceScriptSource("/null", new ByteArrayResource("".getBytes()));
-    private ConcurrentMap<GroovyPageLocatorCacheKey, CacheEntry<GroovyPageScriptSource>> uriResolveCache = new ConcurrentHashMap<GroovyPageLocatorCacheKey, CacheEntry<GroovyPageScriptSource>>();
+    private ConcurrentMap<GroovyPageLocatorCacheKey, CacheEntry<GroovyPageScriptSource>> uriResolveCache = new ConcurrentHashMap<>();
     private long cacheTimeout = -1;
 
     @Override
     public GroovyPageScriptSource findPageInBinding(final String uri, final TemplateVariableBinding binding) {
         if (uri == null) return null;
 
-        Callable<GroovyPageScriptSource> updater = new Callable<GroovyPageScriptSource>() {
+        Callable<GroovyPageScriptSource> updater = new Callable<>() {
             public GroovyPageScriptSource call() {
                 GroovyPageScriptSource scriptSource = CachingGrailsConventionGroovyPageLocator.super.findPageInBinding(uri, binding);
                 if (scriptSource == null) {
@@ -66,7 +66,7 @@ public class CachingGrailsConventionGroovyPageLocator extends GrailsConventionGr
     public GroovyPageScriptSource findPageInBinding(final String pluginName, final String uri, final TemplateVariableBinding binding) {
         if (uri == null || pluginName == null) return null;
 
-        Callable<GroovyPageScriptSource> updater = new Callable<GroovyPageScriptSource>() {
+        Callable<GroovyPageScriptSource> updater = new Callable<>() {
             public GroovyPageScriptSource call() {
                 GroovyPageScriptSource scriptSource = CachingGrailsConventionGroovyPageLocator.super.findPageInBinding(pluginName, uri, binding);
                 if (scriptSource == null) {
@@ -83,7 +83,7 @@ public class CachingGrailsConventionGroovyPageLocator extends GrailsConventionGr
     public GroovyPageScriptSource findPage(final String uri) {
         if (uri == null) return null;
 
-        Callable<GroovyPageScriptSource> updater = new Callable<GroovyPageScriptSource>() {
+        Callable<GroovyPageScriptSource> updater = new Callable<>() {
             public GroovyPageScriptSource call() {
                 GroovyPageScriptSource scriptSource = CachingGrailsConventionGroovyPageLocator.super.findPage(uri);
                 if (scriptSource == null) {
@@ -107,7 +107,7 @@ public class CachingGrailsConventionGroovyPageLocator extends GrailsConventionGr
                 throw new CacheEntry.UpdateException(e);
             }
         } else {
-            scriptSource = CacheEntry.getValue(uriResolveCache, cacheKey, cacheTimeout, updater, new Callable<CacheEntry>() {
+            scriptSource = CacheEntry.getValue(uriResolveCache, cacheKey, cacheTimeout, updater, new Callable<>() {
                 @Override
                 public CacheEntry call() throws Exception {
                     return new CustomCacheEntry();
@@ -178,7 +178,7 @@ public class CachingGrailsConventionGroovyPageLocator extends GrailsConventionGr
     public void removePrecompiledPage(GroovyPageCompiledScriptSource scriptSource) {
         super.removePrecompiledPage(scriptSource);
         // remove the entry from uriResolveCache
-        for (Map.Entry<GroovyPageLocatorCacheKey, CacheEntry<GroovyPageScriptSource>> entry : new HashSet<Map.Entry<GroovyPageLocatorCacheKey, CacheEntry<GroovyPageScriptSource>>>(uriResolveCache.entrySet())) {
+        for (Map.Entry<GroovyPageLocatorCacheKey, CacheEntry<GroovyPageScriptSource>> entry : new HashSet<>(uriResolveCache.entrySet())) {
             GroovyPageScriptSource ss = entry.getValue().getValue();
             if (ss == scriptSource || (ss instanceof GroovyPageCompiledScriptSource && scriptSource.getURI().equals(((GroovyPageCompiledScriptSource) ss).getURI()))) {
                 uriResolveCache.remove(entry.getKey());

@@ -33,7 +33,7 @@ import org.grails.datastore.mapping.core.Session;
  */
 public class SessionHolder extends ResourceHolderSupport {
 
-    private Deque<Session> sessions = new LinkedBlockingDeque<Session>();
+    private Deque<Session> sessions = new LinkedBlockingDeque<>();
     private Object creator = null;
 
     public SessionHolder(Session session) {

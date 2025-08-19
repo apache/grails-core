@@ -32,7 +32,7 @@ public class GrailsTagRegistry {
 
     private static GrailsTagRegistry instance = new GrailsTagRegistry();
 
-    private static Map<String, Class<?>> tagRegistry = new ConcurrentHashMap<String, Class<?>>();
+    private static Map<String, Class<?>> tagRegistry = new ConcurrentHashMap<>();
 
     static {
         instance.registerTag(GroovyEachTag.TAG_NAME, GroovyEachTag.class);

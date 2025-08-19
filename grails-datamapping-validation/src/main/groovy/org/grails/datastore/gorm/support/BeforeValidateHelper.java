@@ -29,7 +29,7 @@ import groovy.lang.MetaClass;
 
 public class BeforeValidateHelper implements Serializable {
     public static final String BEFORE_VALIDATE = "beforeValidate";
-    private transient Map<Class<?>, BeforeValidateEventTriggerCaller> eventTriggerCallerCache = new ConcurrentHashMap<Class<?>, BeforeValidateEventTriggerCaller>();
+    private transient Map<Class<?>, BeforeValidateEventTriggerCaller> eventTriggerCallerCache = new ConcurrentHashMap<>();
 
     public static final class BeforeValidateEventTriggerCaller {
         EventTriggerCaller eventTriggerCaller;
@@ -66,6 +66,6 @@ public class BeforeValidateHelper implements Serializable {
     // Ensure that the cache is re-initalized empty when deserialized
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject();
-        eventTriggerCallerCache = new ConcurrentHashMap<Class<?>, BeforeValidateEventTriggerCaller>();
+        eventTriggerCallerCache = new ConcurrentHashMap<>();
     }
 }

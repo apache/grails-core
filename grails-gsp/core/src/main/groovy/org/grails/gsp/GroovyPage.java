@@ -108,7 +108,7 @@ public abstract class GroovyPage extends Script {
     private String pluginContextPath;
     private Encoder rawEncoder;
 
-    private final List<Closure<?>> bodyClosures = new ArrayList<Closure<?>>(15);
+    private final List<Closure<?>> bodyClosures = new ArrayList<>(15);
 
     public GroovyPage() {
         init();
@@ -527,7 +527,7 @@ public abstract class GroovyPage extends Script {
 
     public void setHtmlParts(String[] htmlParts) {
         this.htmlParts = htmlParts;
-        this.htmlPartsSet = new HashSet<Integer>();
+        this.htmlPartsSet = new HashSet<>();
         if (htmlParts != null) {
             for (String htmlPart : htmlParts) {
                 if (htmlPart != null) {

@@ -45,7 +45,7 @@ import org.grails.core.exceptions.GrailsConfigurationException;
 @CompileStatic
 public class CompositeConfig implements Config {
 
-    protected Deque<Config> configs = new ArrayDeque<Config>();
+    protected Deque<Config> configs = new ArrayDeque<>();
 
     /**
      * Adds a config at the highest level of precedence
@@ -68,7 +68,7 @@ public class CompositeConfig implements Config {
     @Override
     @Deprecated
     public Map<String, Object> flatten() {
-        Map<String, Object> flattened = new LinkedHashMap<String, Object>();
+        Map<String, Object> flattened = new LinkedHashMap<>();
         for (Config c : configs) {
             flattened.putAll(c.flatten());
         }
@@ -192,7 +192,7 @@ public class CompositeConfig implements Config {
 
     @Override
     public Set<String> keySet() {
-        Set<String> entries = new HashSet<String>();
+        Set<String> entries = new HashSet<>();
         for (Config config : configs) {
             entries.addAll(config.keySet());
         }
@@ -201,7 +201,7 @@ public class CompositeConfig implements Config {
 
     @Override
     public Collection<Object> values() {
-        Collection<Object> values = new ArrayList<Object>();
+        Collection<Object> values = new ArrayList<>();
         for (Config config : configs) {
             values.addAll(config.values());
         }
@@ -210,7 +210,7 @@ public class CompositeConfig implements Config {
 
     @Override
     public Set<Map.Entry<String, Object>> entrySet() {
-        Set<Map.Entry<String, Object>> entries = new HashSet<Map.Entry<String, Object>>();
+        Set<Map.Entry<String, Object>> entries = new HashSet<>();
         for (Config config : configs) {
             entries.addAll(config.entrySet());
         }

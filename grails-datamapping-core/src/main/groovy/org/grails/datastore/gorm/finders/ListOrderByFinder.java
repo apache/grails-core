@@ -66,7 +66,7 @@ public class ListOrderByFinder extends AbstractFinder {
         String nameInSignature = match.group(2);
         final String propertyName = NameUtils.decapitalizeFirstChar(nameInSignature);
 
-        return execute(new SessionCallback<Object>() {
+        return execute(new SessionCallback<>() {
             public Object doInSession(final Session session) {
                 Query q = session.createQuery(clazz);
                 applyAdditionalCriteria(q, additionalCriteria);

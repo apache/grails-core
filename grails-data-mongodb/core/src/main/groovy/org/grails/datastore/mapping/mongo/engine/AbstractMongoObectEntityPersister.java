@@ -261,16 +261,16 @@ public abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEn
             query.in(identity.getName(), actualKeys);
         }
         else {
-            List<Serializable> keyList = new ArrayList<Serializable>();
+            List<Serializable> keyList = new ArrayList<>();
             for (Serializable key : keys) {
                 keyList.add(key);
             }
             query.in(identity.getName(), keyList);
         }
 
-        List<Object> entityResults = new ArrayList<Object>();
+        List<Object> entityResults = new ArrayList<>();
         Iterator<Serializable> keyIterator = keys.iterator();
-        Map<Serializable, Object> resultMap = new HashMap<Serializable, Object>();
+        Map<Serializable, Object> resultMap = new HashMap<>();
         for (Object o : query.list()) {
             if (isEmbeddedEntry(o)) {
                 final ValueRetrievalStrategy<T> valueRetrievalStrategy = getValueRetrievalStrategy();

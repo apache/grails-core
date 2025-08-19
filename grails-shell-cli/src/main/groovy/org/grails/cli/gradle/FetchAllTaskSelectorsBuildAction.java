@@ -52,21 +52,21 @@ public class FetchAllTaskSelectorsBuildAction implements BuildAction<AllTasksMod
 
     public AllTasksModel execute(BuildController controller) {
         AllTasksModel model = new AllTasksModel();
-        Map<String, Set<String>> allTaskSelectors = new LinkedHashMap<String, Set<String>>();
+        Map<String, Set<String>> allTaskSelectors = new LinkedHashMap<>();
         model.allTaskSelectors = allTaskSelectors;
-        Map<String, Set<String>> allTasks = new LinkedHashMap<String, Set<String>>();
+        Map<String, Set<String>> allTasks = new LinkedHashMap<>();
         model.allTasks = allTasks;
-        Map<String, String> projectPaths = new HashMap<String, String>();
+        Map<String, String> projectPaths = new HashMap<>();
         model.projectPaths = projectPaths;
         for (BasicGradleProject project: controller.getBuildModel().getProjects()) {
             BuildInvocations entryPointsForProject = controller.getModel(project, BuildInvocations.class);
-            Set<String> selectorNames = new LinkedHashSet<String>();
+            Set<String> selectorNames = new LinkedHashSet<>();
             for (TaskSelector selector : entryPointsForProject.getTaskSelectors()) {
                 selectorNames.add(selector.getName());
             }
             allTaskSelectors.put(project.getName(), selectorNames);
 
-            Set<String> taskNames = new LinkedHashSet<String>();
+            Set<String> taskNames = new LinkedHashSet<>();
             for (Task task : entryPointsForProject.getTasks()) {
                 taskNames.add(task.getName());
             }

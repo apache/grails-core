@@ -128,15 +128,15 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
 
     /** Cache to hold filename lists per Locale */
     private final ConcurrentMap<Pair<String, Locale>, CacheEntry<List<Pair<String, Resource>>>> cachedFilenames =
-            new ConcurrentHashMap<Pair<String, Locale>, CacheEntry<List<Pair<String, Resource>>>>();
+            new ConcurrentHashMap<>();
 
     /** Cache to hold already loaded properties per filename */
-    private final ConcurrentMap<String, CacheEntry<PropertiesHolder>> cachedProperties = new ConcurrentHashMap<String, CacheEntry<PropertiesHolder>>();
+    private final ConcurrentMap<String, CacheEntry<PropertiesHolder>> cachedProperties = new ConcurrentHashMap<>();
 
     /** Cache to hold merged loaded properties per locale */
-    private final ConcurrentMap<Locale, CacheEntry<PropertiesHolder>> cachedMergedProperties = new ConcurrentHashMap<Locale, CacheEntry<PropertiesHolder>>();
+    private final ConcurrentMap<Locale, CacheEntry<PropertiesHolder>> cachedMergedProperties = new ConcurrentHashMap<>();
 
-    private final ConcurrentMap<String, CacheEntry<Resource>> cachedResources = new ConcurrentHashMap<String, CacheEntry<Resource>>();
+    private final ConcurrentMap<String, CacheEntry<Resource>> cachedResources = new ConcurrentHashMap<>();
 
     /**
      * Set a single basename, following the basic ResourceBundle convention of
@@ -388,7 +388,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
      * cached forever.
      */
     protected PropertiesHolder getMergedProperties(final Locale locale) {
-        return CacheEntry.getValue(cachedMergedProperties, locale, cacheMillis, new Callable<PropertiesHolder>() {
+        return CacheEntry.getValue(cachedMergedProperties, locale, cacheMillis, new Callable<>() {
             @Override
             public PropertiesHolder call() throws Exception {
                 Properties mergedProps = new Properties();
@@ -419,11 +419,11 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
      * @see #calculateFilenamesForLocale
      */
     protected List<Pair<String, Resource>> calculateAllFilenames(final String basename, final Locale locale) {
-        Pair<String, Locale> cacheKey = new Pair<String, Locale>(basename, locale);
-        return CacheEntry.getValue(cachedFilenames, cacheKey, cacheMillis, new Callable<List<Pair<String, Resource>>>() {
+        Pair<String, Locale> cacheKey = new Pair<>(basename, locale);
+        return CacheEntry.getValue(cachedFilenames, cacheKey, cacheMillis, new Callable<>() {
             @Override
             public List<Pair<String, Resource>> call() throws Exception {
-                List<String> filenames = new ArrayList<String>(7);
+                List<String> filenames = new ArrayList<>(7);
                 filenames.addAll(calculateFilenamesForLocale(basename, locale));
                 if (fallbackToSystemLocale && !locale.equals(Locale.getDefault())) {
                     List<String> fallbackFilenames = calculateFilenamesForLocale(basename, Locale.getDefault());
@@ -435,9 +435,9 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
                     }
                 }
                 filenames.add(basename);
-                List<Pair<String, Resource>> filenamesAndResources = new ArrayList<Pair<String, Resource>>(filenames.size());
+                List<Pair<String, Resource>> filenamesAndResources = new ArrayList<>(filenames.size());
                 for (String filename : filenames) {
-                    filenamesAndResources.add(new Pair<String, Resource>(filename, locateResource(filename)));
+                    filenamesAndResources.add(new Pair<>(filename, locateResource(filename)));
                 }
                 return filenamesAndResources;
             }
@@ -455,7 +455,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
      * @return the List of filenames to check
      */
     protected List<String> calculateFilenamesForLocale(String basename, Locale locale) {
-        List<String> result = new ArrayList<String>(3);
+        List<String> result = new ArrayList<>(3);
         String language = locale.getLanguage();
         String country = locale.getCountry();
         String variant = locale.getVariant();
@@ -489,12 +489,12 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
      */
     @SuppressWarnings("rawtypes")
     protected PropertiesHolder getProperties(final String filename, final Resource resource) {
-        return CacheEntry.getValue(cachedProperties, filename, fileCacheMillis, new Callable<PropertiesHolder>() {
+        return CacheEntry.getValue(cachedProperties, filename, fileCacheMillis, new Callable<>() {
             @Override
             public PropertiesHolder call() throws Exception {
                 return new PropertiesHolder(filename, resource);
             }
-        }, new Callable<CacheEntry>() {
+        }, new Callable<>() {
             @Override
             public CacheEntry call() throws Exception {
                 return new PropertiesHolderCacheEntry();
@@ -594,7 +594,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
     }
 
     protected Resource locateResource(final String filename) {
-        return CacheEntry.getValue(cachedResources, filename, cacheMillis, new Callable<Resource>() {
+        return CacheEntry.getValue(cachedResources, filename, cacheMillis, new Callable<>() {
             @Override
             public Resource call() throws Exception {
                 return locateResourceWithoutCache(filename);
@@ -633,7 +633,7 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
 
         /** Cache to hold already generated MessageFormats per message code */
         private final ConcurrentMap<Pair<String, Locale>, CacheEntry<MessageFormat>> cachedMessageFormats =
-                new ConcurrentHashMap<Pair<String, Locale>, CacheEntry<MessageFormat>>();
+                new ConcurrentHashMap<>();
 
         public PropertiesHolder(String filename, Resource resource) {
             this.filename = filename;
@@ -717,8 +717,8 @@ public class ReloadableResourceBundleMessageSource extends AbstractMessageSource
             if (this.properties == null) {
                 return null;
             }
-            Pair<String, Locale> cacheKey = new Pair<String, Locale>(code, locale);
-            return CacheEntry.getValue(cachedMessageFormats, cacheKey, -1, new Callable<MessageFormat>() {
+            Pair<String, Locale> cacheKey = new Pair<>(code, locale);
+            return CacheEntry.getValue(cachedMessageFormats, cacheKey, -1, new Callable<>() {
                 @Override
                 public MessageFormat call() throws Exception {
                     String msg = properties.getProperty(code);

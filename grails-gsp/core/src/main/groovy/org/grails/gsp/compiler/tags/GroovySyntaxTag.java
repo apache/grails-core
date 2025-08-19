@@ -50,7 +50,7 @@ public abstract class GroovySyntaxTag implements GrailsTag {
     @SuppressWarnings("rawtypes")
     protected Map tagContext;
     protected PrintWriter out;
-    protected Map<String, String> attributes = new HashMap<String, String>();
+    protected Map<String, String> attributes = new HashMap<>();
     protected GroovyPageParser parser;
 
     protected String foreachRenamedIt;

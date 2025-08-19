@@ -58,12 +58,12 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
 
     private static final Log LOG = LogFactory.getLog(DefaultRuntimeSpringConfiguration.class);
     protected GenericApplicationContext context;
-    private Map<String, BeanConfiguration> beanConfigs = new HashMap<String, BeanConfiguration>();
-    private Map<String, BeanDefinition> beanDefinitions = new HashMap<String, BeanDefinition>();
-    private Set<String> beanNames = new LinkedHashSet<String>();
+    private Map<String, BeanConfiguration> beanConfigs = new HashMap<>();
+    private Map<String, BeanDefinition> beanDefinitions = new HashMap<>();
+    private Set<String> beanNames = new LinkedHashSet<>();
     protected ApplicationContext parent;
     protected ClassLoader classLoader;
-    protected Map<String, List<String>> aliases = new HashMap<String, List<String>>();
+    protected Map<String, List<String>> aliases = new HashMap<>();
     protected ListableBeanFactory beanFactory;
 
     /**
@@ -248,7 +248,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     }
 
     public List<String> getBeanNames() {
-        return Collections.unmodifiableList(new ArrayList<String>(beanNames));
+        return Collections.unmodifiableList(new ArrayList<>(beanNames));
     }
 
     public void registerBeansWithContext(GenericApplicationContext applicationContext) {
@@ -351,7 +351,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     public void addAlias(String alias, String beanName) {
         List<String> beanAliases = aliases.get(beanName);
         if (beanAliases == null) {
-            beanAliases = new ArrayList<String>();
+            beanAliases = new ArrayList<>();
             aliases.put(beanName, beanAliases);
         }
         beanAliases.add(alias);

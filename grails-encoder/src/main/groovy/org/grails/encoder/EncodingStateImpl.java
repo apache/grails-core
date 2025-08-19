@@ -99,7 +99,7 @@ public class EncodingStateImpl implements EncodingState {
         } else if (encoders.size() == 1 && encoders.contains(encoder)) {
             return this;
         } else {
-            newEncoders = new LinkedHashSet<Encoder>();
+            newEncoders = new LinkedHashSet<>();
             newEncoders.addAll(encoders);
             newEncoders.add(encoder);
         }

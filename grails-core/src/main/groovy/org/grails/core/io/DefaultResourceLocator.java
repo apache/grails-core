@@ -57,10 +57,10 @@ public class DefaultResourceLocator implements ResourceLocator, ResourceLoaderAw
     protected static final Resource NULL_RESOURCE = new ByteArrayResource("null".getBytes());
 
     protected PathMatchingResourcePatternResolver patchMatchingResolver;
-    protected List<String> classSearchDirectories = new ArrayList<String>();
-    protected List<String> resourceSearchDirectories = new ArrayList<String>();
-    protected Map<String, Resource> classNameToResourceCache = new ConcurrentHashMap<String, Resource>();
-    protected Map<String, Resource> uriToResourceCache = new ConcurrentHashMap<String, Resource>();
+    protected List<String> classSearchDirectories = new ArrayList<>();
+    protected List<String> resourceSearchDirectories = new ArrayList<>();
+    protected Map<String, Resource> classNameToResourceCache = new ConcurrentHashMap<>();
+    protected Map<String, Resource> uriToResourceCache = new ConcurrentHashMap<>();
     protected ResourceLoader defaultResourceLoader = new FileSystemResourceLoader();
     protected GrailsPluginManager pluginManager;
     protected boolean warDeployed = Environment.isWarDeployed();
@@ -210,7 +210,7 @@ public class DefaultResourceLocator implements ResourceLocator, ResourceLoaderAw
 
     private List<String> getSearchPatternForExtension(String classNameWithPathSeparator, String... extensions) {
 
-        List<String> searchPatterns = new ArrayList<String>();
+        List<String> searchPatterns = new ArrayList<>();
         for (String extension : extensions) {
             String filename = classNameWithPathSeparator + extension;
             for (String classSearchDirectory : classSearchDirectories) {

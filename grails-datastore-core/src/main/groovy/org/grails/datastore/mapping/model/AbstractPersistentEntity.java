@@ -60,8 +60,8 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
     protected List<PersistentProperty> persistentProperties;
     protected List<Association> associations;
     protected List<Embedded> embedded;
-    protected Map<String, PersistentProperty> propertiesByName = new HashMap<String, PersistentProperty>();
-    protected Map<String, PersistentProperty> mappedPropertiesByName = new HashMap<String, PersistentProperty>();
+    protected Map<String, PersistentProperty> propertiesByName = new HashMap<>();
+    protected Map<String, PersistentProperty> mappedPropertiesByName = new HashMap<>();
     protected PersistentProperty identity;
     protected PersistentProperty version;
     protected List<String> persistentPropertyNames;

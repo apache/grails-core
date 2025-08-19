@@ -391,7 +391,7 @@ public class GrailsNameUtils {
      */
     public static String getNaturalName(String name) {
         name = getShortName(name);
-        List<String> words = new ArrayList<String>();
+        List<String> words = new ArrayList<>();
         int i = 0;
         char[] chars = name.toCharArray();
         for (int j = 0; j < chars.length; j++) {

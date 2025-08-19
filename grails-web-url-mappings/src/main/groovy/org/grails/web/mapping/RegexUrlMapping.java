@@ -77,7 +77,7 @@ public class RegexUrlMapping extends AbstractUrlMapping {
 
     public static final String FORMAT_PARAMETER = "format";
     private Pattern[] patterns;
-    private Map<Integer, List<Pattern>> patternByTokenCount = new HashMap<Integer, List<Pattern>>();
+    private Map<Integer, List<Pattern>> patternByTokenCount = new HashMap<>();
     private UrlMappingData urlData;
     private static final String DEFAULT_ENCODING = "UTF-8";
     private static final Logger LOG = LoggerFactory.getLogger(RegexUrlMapping.class);

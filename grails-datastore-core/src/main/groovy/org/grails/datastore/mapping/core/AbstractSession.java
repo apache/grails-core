@@ -510,7 +510,7 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
             p = createPersister(cls, getMappingContext());
             if (p != null) {
                 if (!isStateless(((EntityPersister) p).getPersistentEntity())) {
-                    firstLevelCache.put(cls, new ConcurrentHashMap<Serializable, Object>());
+                    firstLevelCache.put(cls, new ConcurrentHashMap<>());
                 }
                 persisters.put(cls, p);
             }
@@ -769,7 +769,7 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
         }
 
         // sort the objects into sets by Persister, in case the objects are of different types.
-        Map<Persister, List> toDelete = new HashMap<Persister, List>();
+        Map<Persister, List> toDelete = new HashMap<>();
         for (Object object : objects) {
             if (object == null) {
                 continue;
@@ -820,7 +820,7 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
         }
 
         List list = new ArrayList();
-        List<Serializable> toRetrieve = new ArrayList<Serializable>();
+        List<Serializable> toRetrieve = new ArrayList<>();
         final Map<Serializable, Object> cache = getInstanceCache(type);
         for (Object key : keys) {
             Serializable serializable = (Serializable) key;
@@ -832,7 +832,7 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
         }
         List<Object> retrieved = p.retrieveAll(toRetrieve);
         Iterator<Serializable> keyIterator = toRetrieve.iterator();
-        Map<Serializable, Object> retrievedMap = new HashMap<Serializable, Object>();
+        Map<Serializable, Object> retrievedMap = new HashMap<>();
         for (Object o : retrieved) {
             final Serializable identifier = p.getObjectIdentifier(o);
             if (identifier != null) {

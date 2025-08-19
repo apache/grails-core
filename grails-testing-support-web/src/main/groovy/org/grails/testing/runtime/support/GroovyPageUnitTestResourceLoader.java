@@ -49,7 +49,7 @@ import org.grails.io.support.GrailsResourceUtils;
 public class GroovyPageUnitTestResourceLoader extends DefaultResourceLoader implements GrailsApplicationAware, InitializingBean {
 
     public static final String WEB_INF_PREFIX = "/WEB-INF/grails-app/views";
-    private Map<String, String> groovyPages = new ConcurrentHashMap<String, String>();
+    private Map<String, String> groovyPages = new ConcurrentHashMap<>();
     private String basePath;
     private GrailsApplication grailsApplication;
 

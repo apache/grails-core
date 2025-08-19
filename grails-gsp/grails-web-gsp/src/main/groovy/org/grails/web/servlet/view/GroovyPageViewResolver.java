@@ -62,7 +62,7 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
     protected GroovyPagesTemplateEngine templateEngine;
     protected GrailsConventionGroovyPageLocator groovyPageLocator;
 
-    private ConcurrentMap<String, CacheEntry<View>> viewCache = new ConcurrentHashMap<String, CacheEntry<View>>();
+    private ConcurrentMap<String, CacheEntry<View>> viewCache = new ConcurrentHashMap<>();
     private boolean allowGrailsViewCaching = !GrailsUtil.isDevelopmentEnv();
     private long cacheTimeout = -1;
     private boolean resolveJspView = false;
@@ -107,12 +107,11 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
         CacheEntry<View> entry = viewCache.get(viewCacheKey);
 
         final String lookupViewName = viewName;
-        Callable<View> updater = new Callable<View>() {
+        Callable<View> updater = new Callable<>() {
             public View call() throws Exception {
                 try {
                     return createGrailsView(lookupViewName);
-                }
-                catch (Exception e) {
+                } catch (Exception e) {
                     throw new WrappedInitializationException(e);
                 }
             }

@@ -795,7 +795,7 @@ public class JpaQueryBuilder {
         queryString.append(SPACE).append("SET");
 
         // keys need to be sorted before query is built
-        Set<String> keys = new TreeSet<String>(propertiesToUpdate.keySet());
+        Set<String> keys = new TreeSet<>(propertiesToUpdate.keySet());
 
         Iterator<String> iterator = keys.iterator();
         while (iterator.hasNext()) {

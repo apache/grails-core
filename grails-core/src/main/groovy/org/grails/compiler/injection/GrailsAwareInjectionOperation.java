@@ -115,9 +115,9 @@ public class GrailsAwareInjectionOperation extends CompilationUnit.PrimaryClassN
                 resolver = new PathMatchingResourcePatternResolver(classLoader);
                 resources = scanForPatterns(resolver, pattern2, pattern);
             }
-            final List<ClassInjector> injectors = new ArrayList<ClassInjector>();
-            final List<ClassInjector> globalInjectors = new ArrayList<ClassInjector>();
-            final Set<Class> injectorClasses = new LinkedHashSet<Class>();
+            final List<ClassInjector> injectors = new ArrayList<>();
+            final List<ClassInjector> globalInjectors = new ArrayList<>();
+            final Set<Class> injectorClasses = new LinkedHashSet<>();
             for (Resource resource : resources) {
                 // ignore not readable classes and closures
                 if (!resource.isReadable() || resource.getFilename().contains("$_")) continue;
@@ -171,7 +171,7 @@ public class GrailsAwareInjectionOperation extends CompilationUnit.PrimaryClassN
     }
 
     private static Resource[] scanForPatterns(PathMatchingResourcePatternResolver resolver, String... patterns) throws IOException {
-        List<Resource> results = new ArrayList<Resource>();
+        List<Resource> results = new ArrayList<>();
         for (String pattern : patterns) {
             results.addAll(Arrays.asList(resolver.getResources(pattern)));
         }

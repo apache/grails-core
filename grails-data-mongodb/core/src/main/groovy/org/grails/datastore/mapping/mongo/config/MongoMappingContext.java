@@ -346,8 +346,9 @@ public class MongoMappingContext extends DocumentMappingContext {
         public Custom<MongoAttribute> createCustom(PersistentEntity owner, MappingContext context, final PropertyDescriptor pd) {
             if (hasCodecForType(pd.getPropertyType())) {
                 CodecCustomTypeMarshaller customTypeMarshaller = new CodecCustomTypeMarshaller(codecRegistry.get(pd.getPropertyType()), MongoMappingContext.this);
-                return new Custom<MongoAttribute>(owner, context, pd, customTypeMarshaller) {
+                return new Custom<>(owner, context, pd, customTypeMarshaller) {
                     PropertyMapping<MongoAttribute> propertyMapping = createPropertyMapping(this, owner);
+
                     public PropertyMapping<MongoAttribute> getMapping() {
                         return propertyMapping;
                     }

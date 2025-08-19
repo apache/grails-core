@@ -52,7 +52,7 @@ public class GroovyBeanMarshaller extends IncludeExcludePropertyMarshaller<XML> 
             Class<? extends Object> clazz = o.getClass();
             List<String> excludes = xml.getExcludes(clazz);
             List<String> includes = xml.getIncludes(clazz);
-            IncludeExcludeSupport<String> includeExcludeSupport = new IncludeExcludeSupport<String>();
+            IncludeExcludeSupport<String> includeExcludeSupport = new IncludeExcludeSupport<>();
 
             boolean isEntity = o.getClass().getAnnotation(Entity.class) != null;
             for (PropertyDescriptor property : BeanUtils.getPropertyDescriptors(o.getClass())) {

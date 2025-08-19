@@ -101,7 +101,7 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
     private GrailsPlugin pagePlugin;
     private boolean initialized = false;
 
-    private CacheEntry<Resource> shouldReloadCacheEntry = new CacheEntry<Resource>();
+    private CacheEntry<Resource> shouldReloadCacheEntry = new CacheEntry<>();
     public static String DEFAULT_PLUGIN_PATH = "";
 
     volatile boolean metaClassShouldBeRemoved = false;
@@ -435,7 +435,7 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
     }
 
     public Resource checkIfReloadableResourceHasChanged(final PrivilegedAction<Resource> resourceCallable) {
-        Callable<Resource> checkerCallable = new Callable<Resource>() {
+        Callable<Resource> checkerCallable = new Callable<>() {
             public Resource call() {
                 Resource resource = resourceCallable.run();
                 if (resource != null && resource.exists()) {

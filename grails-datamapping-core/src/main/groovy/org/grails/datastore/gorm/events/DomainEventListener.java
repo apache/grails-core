@@ -58,7 +58,7 @@ import org.grails.datastore.mapping.model.config.GormProperties;
 public class DomainEventListener extends AbstractPersistenceEventListener
        implements MappingContext.Listener {
 
-    private Map<PersistentEntity, Map<String, Method>> entityEvents = new ConcurrentHashMap<PersistentEntity, Map<String, Method>>();
+    private Map<PersistentEntity, Map<String, Method>> entityEvents = new ConcurrentHashMap<>();
 
     @SuppressWarnings("rawtypes")
     public static final Class[] ZERO_PARAMS = {};
@@ -309,7 +309,7 @@ public class DomainEventListener extends AbstractPersistenceEventListener
 
     private void createEventCaches(PersistentEntity entity) {
         Class<?> javaClass = entity.getJavaClass();
-        final ConcurrentHashMap<String, Method> events = new ConcurrentHashMap<String, Method>();
+        final ConcurrentHashMap<String, Method> events = new ConcurrentHashMap<>();
         entityEvents.put(entity, events);
 
         findAndCacheEvent(EVENT_BEFORE_INSERT, javaClass, events);

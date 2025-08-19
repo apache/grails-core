@@ -28,8 +28,8 @@ import org.grails.datastore.mapping.transactions.SessionHolder;
 
 public abstract class AbstractAttributeStoringSession implements Session {
 
-    protected Map<Integer, Map<String, Object>> attributes = new ConcurrentHashMap<Integer, Map<String, Object>>();
-    protected Map<String, Object> sessionPropertyMap = new ConcurrentHashMap<String, Object>();
+    protected Map<Integer, Map<String, Object>> attributes = new ConcurrentHashMap<>();
+    protected Map<String, Object> sessionPropertyMap = new ConcurrentHashMap<>();
     private boolean connected = true;
 
     public void setAttribute(Object entity, String attributeName, Object value) {
@@ -40,7 +40,7 @@ public abstract class AbstractAttributeStoringSession implements Session {
         int id = System.identityHashCode(entity);
         Map<String, Object> attrs = attributes.get(id);
         if (attrs == null) {
-            attrs = new ConcurrentHashMap<String, Object>();
+            attrs = new ConcurrentHashMap<>();
             attributes.put(id, attrs);
         }
 

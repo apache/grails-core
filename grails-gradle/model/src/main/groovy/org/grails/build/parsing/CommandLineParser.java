@@ -37,8 +37,8 @@ import grails.util.Environment;
  */
 public class CommandLineParser {
 
-    static Map<String, String> ENV_ARGS = new HashMap<String, String>();
-    static Map<String, String> DEFAULT_ENVS = new HashMap<String, String>();
+    static Map<String, String> ENV_ARGS = new HashMap<>();
+    static Map<String, String> DEFAULT_ENVS = new HashMap<>();
     private static CommandLine CURRENT = null;
     private static final String DEFAULT_PADDING = "        ";
 
@@ -50,7 +50,7 @@ public class CommandLineParser {
         DEFAULT_ENVS.put("test-app", Environment.TEST.getName());
     }
 
-    private Map<String, Option> declaredOptions = new HashMap<String, Option>();
+    private Map<String, Option> declaredOptions = new HashMap<>();
     private int longestOptionNameLength = 0;
     private String usageMessage;
 
@@ -102,7 +102,7 @@ public class CommandLineParser {
         final int inDoubleQuote = 2;
         int state = normal;
         final StringTokenizer tok = new StringTokenizer(toProcess, "\"\' ", true);
-        final ArrayList<String> result = new ArrayList<String>();
+        final ArrayList<String> result = new ArrayList<>();
         final StringBuilder current = new StringBuilder();
         boolean lastTokenHasBeenQuoted = false;
 

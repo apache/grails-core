@@ -66,7 +66,7 @@ public abstract class DatastoreUtils {
     private static final Logger logger = LoggerFactory.getLogger(DatastoreUtils.class);
     private static final String DATASTORE_CONFIG_FLAT = "datastoreConfigFlat";
     private static final ThreadLocal<Map<Datastore, Set<Session>>> deferredCloseHolder =
-            new NamedThreadLocal<Map<Datastore, Set<Session>>>(
+            new NamedThreadLocal<>(
                     "Datastore Sessions registered for deferred close");
     private static final String DATASTORE_CONFIG = "datastoreConfig";
 
@@ -276,10 +276,10 @@ public abstract class DatastoreUtils {
         logger.debug("Initializing deferred close of Datastore Sessions");
         Map<Datastore, Set<Session>> holderMap = deferredCloseHolder.get();
         if (holderMap == null) {
-            holderMap = new HashMap<Datastore, Set<Session>>();
+            holderMap = new HashMap<>();
             deferredCloseHolder.set(holderMap);
         }
-        holderMap.put(datastore, new LinkedHashSet<Session>(4));
+        holderMap.put(datastore, new LinkedHashSet<>(4));
     }
 
     /**

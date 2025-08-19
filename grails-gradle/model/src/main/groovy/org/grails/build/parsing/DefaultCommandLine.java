@@ -37,8 +37,8 @@ public class DefaultCommandLine implements CommandLine {
 
     Properties systemProperties = new Properties();
     LinkedHashMap<String, Object> undeclaredOptions = new LinkedHashMap<>();
-    LinkedHashMap<String, SpecifiedOption> declaredOptions = new LinkedHashMap<String, SpecifiedOption>();
-    List<String> remainingArgs = new ArrayList<String>();
+    LinkedHashMap<String, SpecifiedOption> declaredOptions = new LinkedHashMap<>();
+    List<String> remainingArgs = new ArrayList<>();
     private String environment;
     private String commandName;
     private String[] rawArguments;
@@ -179,7 +179,7 @@ public class DefaultCommandLine implements CommandLine {
     private String remainingArgsToString(String separator, boolean includeOptions) {
         StringBuilder sb = new StringBuilder();
         String sep = "";
-        List<String> args = new ArrayList<String>(remainingArgs);
+        List<String> args = new ArrayList<>(remainingArgs);
         if (includeOptions) {
             for (Map.Entry<String, Object> entry : undeclaredOptions.entrySet()) {
                 if (entry.getValue() instanceof Boolean && ((Boolean) entry.getValue())) {

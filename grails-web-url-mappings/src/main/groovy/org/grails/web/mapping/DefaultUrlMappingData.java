@@ -44,7 +44,7 @@ public class DefaultUrlMappingData implements UrlMappingData {
     private final String[] logicalUrls;
     private final String[] tokens;
 
-    private List<Boolean> optionalTokens = new ArrayList<Boolean>();
+    private List<Boolean> optionalTokens = new ArrayList<>();
     private boolean hasOptionalExtension;
 
     public DefaultUrlMappingData(String urlPattern) {
@@ -54,7 +54,7 @@ public class DefaultUrlMappingData implements UrlMappingData {
         String configuredPattern = configureUrlPattern(urlPattern);
         this.urlPattern = configuredPattern;
         tokens = tokenizeUrlPattern(configuredPattern);
-        List<String> urls = new ArrayList<String>();
+        List<String> urls = new ArrayList<>();
         parseUrls(urls, tokens, optionalTokens);
 
         logicalUrls = urls.toArray(new String[urls.size()]);
@@ -162,8 +162,8 @@ public class DefaultUrlMappingData implements UrlMappingData {
         String newPattern = this.urlPattern + configureUrlPattern(path);
 
         String[] tokens = tokenizeUrlPattern(newPattern);
-        List<String> urls = new ArrayList<String>();
-        List<Boolean> optionalTokens = new ArrayList<Boolean>();
+        List<String> urls = new ArrayList<>();
+        List<Boolean> optionalTokens = new ArrayList<>();
         parseUrls(urls, tokens, optionalTokens);
         String[] logicalUrls = urls.toArray(new String[urls.size()]);
 

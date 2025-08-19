@@ -86,7 +86,7 @@ public class UrlCreatorCache {
 
     private class CachingUrlCreator implements UrlCreator {
         private UrlCreator delegate;
-        private ConcurrentHashMap<UrlCreatorKey, String> cache = new ConcurrentHashMap<UrlCreatorKey, String>();
+        private ConcurrentHashMap<UrlCreatorKey, String> cache = new ConcurrentHashMap<>();
         private final int weight;
 
         public CachingUrlCreator(UrlCreator delegate, int weight) {

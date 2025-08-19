@@ -42,8 +42,8 @@ public class StopWatch {
      */
     private final String id;
 
-    private final Deque<TaskInfo> runningTasks = new LinkedList<TaskInfo>();
-    private final Deque<TaskInfo> taskList = new LinkedList<TaskInfo>();
+    private final Deque<TaskInfo> runningTasks = new LinkedList<>();
+    private final Deque<TaskInfo> taskList = new LinkedList<>();
 
     /** Is the stop watch currently running? */
     private boolean running;
@@ -213,7 +213,7 @@ public class StopWatch {
         pf.setMinimumIntegerDigits(3);
         pf.setGroupingUsed(false);
         final TaskInfo[] taskInfos = getTaskInfo();
-        Arrays.sort(taskInfos, new Comparator<TaskInfo>() {
+        Arrays.sort(taskInfos, new Comparator<>() {
             @Override
             public int compare(TaskInfo o1, TaskInfo o2) {
                 return Long.compare(o1.getTimeMillis(), o2.getTimeMillis());

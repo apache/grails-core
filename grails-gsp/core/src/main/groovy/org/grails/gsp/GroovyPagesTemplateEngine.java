@@ -104,7 +104,7 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
     private static final Log LOG = LogFactory.getLog(GroovyPagesTemplateEngine.class);
     private static File dumpLineNumbersTo;
 
-    private ConcurrentMap<String, CacheEntry<GroovyPageMetaInfo>> pageCache = new ConcurrentHashMap<String, CacheEntry<GroovyPageMetaInfo>>();
+    private ConcurrentMap<String, CacheEntry<GroovyPageMetaInfo>> pageCache = new ConcurrentHashMap<>();
     private ClassLoader classLoader;
     private AtomicInteger scriptNameCount = new AtomicInteger(0);
 
@@ -484,7 +484,7 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
      * @return true if it is reloadable
      */
     private boolean isGroovyPageReloadable(final Resource resource, GroovyPageMetaInfo meta) {
-        return isReloadEnabled() && meta.shouldReload(new PrivilegedAction<Resource>() {
+        return isReloadEnabled() && meta.shouldReload(new PrivilegedAction<>() {
             public Resource run() {
                 return resource;
             }
@@ -802,7 +802,7 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
      * to prevent using the static cache that was used previously.
      */
     private Map<String, Class<?>> createDomainClassMap() {
-        Map<String, Class<?>> domainsWithoutPackage = new HashMap<String, Class<?>>();
+        Map<String, Class<?>> domainsWithoutPackage = new HashMap<>();
         if (grailsApplication != null) {
             GrailsClass[] domainClasses = grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE);
             for (GrailsClass domainClass : domainClasses) {

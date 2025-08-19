@@ -244,7 +244,7 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
 
     @Override
     public <T> T withSession(final Closure<T> callable) {
-        return DatastoreUtils.execute(this, new SessionCallback<T>() {
+        return DatastoreUtils.execute(this, new SessionCallback<>() {
             @Override
             public T doInSession(Session session) {
                 return callable.call(session);

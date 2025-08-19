@@ -32,7 +32,7 @@ import org.springframework.core.io.Resource;
  */
 public class MockStringResourceLoader extends MockResourceLoader {
 
-    private Map<String, Resource> mockResources = new HashMap<String, Resource>();
+    private Map<String, Resource> mockResources = new HashMap<>();
 
     @Override
     public Resource getResource(String location) {

@@ -61,11 +61,11 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
     private static final String GRAILS_APP_I18N_PATH_COMPONENT = "/grails-app/i18n/";
     protected GrailsApplication application;
     protected GrailsPluginManager pluginManager;
-    protected List<String> pluginBaseNames = new ArrayList<String>();
+    protected List<String> pluginBaseNames = new ArrayList<>();
     private ResourceLoader localResourceLoader;
     private PathMatchingResourcePatternResolver resourceResolver;
-    private ConcurrentMap<Locale, CacheEntry<PropertiesHolder>> cachedMergedPluginProperties = new ConcurrentHashMap<Locale, CacheEntry<PropertiesHolder>>();
-    private ConcurrentMap<Locale, CacheEntry<PropertiesHolder>> cachedMergedBinaryPluginProperties = new ConcurrentHashMap<Locale, CacheEntry<PropertiesHolder>>();
+    private ConcurrentMap<Locale, CacheEntry<PropertiesHolder>> cachedMergedPluginProperties = new ConcurrentHashMap<>();
+    private ConcurrentMap<Locale, CacheEntry<PropertiesHolder>> cachedMergedBinaryPluginProperties = new ConcurrentHashMap<>();
     private long pluginCacheMillis = Long.MIN_VALUE;
     private boolean searchClasspath = false;
     private String messageBundleLocationPattern = "classpath*:*.properties";
@@ -108,7 +108,7 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
                 }
             });
             if (propertiesFiles != null && propertiesFiles.length > 0) {
-                List<Resource> resourceList = new ArrayList<Resource>(propertiesFiles.length);
+                List<Resource> resourceList = new ArrayList<>(propertiesFiles.length);
                 for (File propertiesFile : propertiesFiles) {
                     resourceList.add(new FileSystemResource(propertiesFile));
                 }
@@ -140,7 +140,7 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
             }
         }
 
-        List<String> basenames = new ArrayList<String>();
+        List<String> basenames = new ArrayList<>();
         for (Resource resource : resources) {
             String filename = resource.getFilename();
             String baseName = GrailsStringUtils.getFileBasename(filename);
@@ -177,7 +177,7 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
      * cached forever.
      */
     protected PropertiesHolder getMergedPluginProperties(final Locale locale) {
-        return CacheEntry.getValue(cachedMergedPluginProperties, locale, cacheMillis, new Callable<PropertiesHolder>() {
+        return CacheEntry.getValue(cachedMergedPluginProperties, locale, cacheMillis, new Callable<>() {
             @Override
             public PropertiesHolder call() throws Exception {
                 Properties mergedProps = new Properties();
@@ -212,7 +212,7 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
     }
 
     protected PropertiesHolder getMergedBinaryPluginProperties(final Locale locale) {
-        return CacheEntry.getValue(cachedMergedBinaryPluginProperties, locale, cacheMillis, new Callable<PropertiesHolder>() {
+        return CacheEntry.getValue(cachedMergedBinaryPluginProperties, locale, cacheMillis, new Callable<>() {
             @Override
             public PropertiesHolder call() throws Exception {
                 Properties mergedProps = new Properties();

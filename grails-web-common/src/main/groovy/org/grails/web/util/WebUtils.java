@@ -110,7 +110,7 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
     public static HandlerInterceptor[] lookupHandlerInterceptors(ServletContext servletContext) {
         WebApplicationContext wac = WebApplicationContextUtils.getRequiredWebApplicationContext(servletContext);
 
-        final Collection<HandlerInterceptor> allHandlerInterceptors = new ArrayList<HandlerInterceptor>();
+        final Collection<HandlerInterceptor> allHandlerInterceptors = new ArrayList<>();
 
         WebRequestInterceptor[] webRequestInterceptors = lookupWebRequestInterceptors(servletContext);
         for (WebRequestInterceptor webRequestInterceptor : webRequestInterceptors) {
@@ -231,7 +231,7 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
     public static Map<String, Object> exposeRequestAttributesAndReturnOldValues(HttpServletRequest request, Map<String, ?> attributes) {
         Assert.notNull(request, "Request must not be null");
         Assert.notNull(attributes, "Attributes Map must not be null");
-        Map<String, Object> originalValues = new HashMap<String, Object>();
+        Map<String, Object> originalValues = new HashMap<>();
         for (Map.Entry<String, ?> entry : attributes.entrySet()) {
             String name = entry.getKey();
             Object current = request.getAttribute(name);
@@ -298,7 +298,7 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public static Map<String, Object> fromQueryString(String queryString) {
-        Map<String, Object> result = new LinkedHashMap<String, Object>();
+        Map<String, Object> result = new LinkedHashMap<>();
         if (queryString.startsWith("?")) queryString = queryString.substring(1);
 
         String[] pairs = queryString.split("&");

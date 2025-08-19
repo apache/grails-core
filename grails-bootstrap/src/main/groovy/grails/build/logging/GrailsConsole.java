@@ -127,7 +127,7 @@ public class GrailsConsole implements ConsoleLogger {
      * The category of the current output
      */
     @SuppressWarnings("serial")
-    Stack<String> category = new Stack<String>() {
+    Stack<String> category = new Stack<>() {
         @Override
         public String toString() {
             if (size() == 1) return peek() + CATEGORY_SEPARATOR;

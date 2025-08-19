@@ -215,7 +215,7 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
 
     protected static InMemoryConnectionSources<Map<String, Map>, ConnectionSourceSettings> createMultipleDataSources(final Iterable<String> dataSourceNames, PropertyResolver propertyResolver) {
         SimpleMapConnectionSourceFactory simpleMapConnectionSourceFactory = new SimpleMapConnectionSourceFactory();
-        return new InMemoryConnectionSources<Map<String, Map>, ConnectionSourceSettings>(
+        return new InMemoryConnectionSources<>(
                 simpleMapConnectionSourceFactory.create(ConnectionSource.DEFAULT, propertyResolver),
                 simpleMapConnectionSourceFactory,
                 propertyResolver

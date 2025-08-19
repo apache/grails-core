@@ -62,7 +62,7 @@ public class JSONWriter {
     /**
      * The Mode stack.
      */
-    private Stack<Mode> stack = new Stack<Mode>();
+    private Stack<Mode> stack = new Stack<>();
 
     /**
      * The writer that will receive the output.

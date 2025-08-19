@@ -48,8 +48,8 @@ import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class AbstractGormMappingFactory<R extends Entity, T extends Property> extends MappingFactory<R, T> {
 
-    protected Map<PersistentEntity, Map<String, T>> entityToPropertyMap = new HashMap<PersistentEntity, Map<String, T>>();
-    protected Map<PersistentEntity, R> entityToMapping = new HashMap<PersistentEntity, R>();
+    protected Map<PersistentEntity, Map<String, T>> entityToPropertyMap = new HashMap<>();
+    protected Map<PersistentEntity, R> entityToMapping = new HashMap<>();
     private Closure defaultMapping;
     private Object contextObject;
     protected Closure defaultConstraints;

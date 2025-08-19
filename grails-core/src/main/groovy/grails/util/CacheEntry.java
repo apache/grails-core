@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
  */
 public class CacheEntry<V> {
     private static final Logger LOG = LoggerFactory.getLogger(CacheEntry.class);
-    private final AtomicReference<V> valueRef = new AtomicReference<V>(null);
+    private final AtomicReference<V> valueRef = new AtomicReference<>(null);
     private long createdMillis;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final Lock readLock = lock.readLock();
@@ -102,7 +102,7 @@ public class CacheEntry<V> {
     }
 
     @SuppressWarnings("rawtypes")
-    private static final Callable<CacheEntry> DEFAULT_CACHE_ENTRY_FACTORY = new Callable<CacheEntry>() {
+    private static final Callable<CacheEntry> DEFAULT_CACHE_ENTRY_FACTORY = new Callable<>() {
         @Override
         public CacheEntry call() throws Exception {
             return new CacheEntry();

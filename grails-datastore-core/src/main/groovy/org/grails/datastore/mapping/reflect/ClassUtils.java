@@ -29,7 +29,7 @@ import java.util.Map;
  * @since 5.0
  */
 public class ClassUtils {
-    public static final Map<Class<?>, Class<?>> PRIMITIVE_TYPE_COMPATIBLE_CLASSES = new HashMap<Class<?>, Class<?>>();
+    public static final Map<Class<?>, Class<?>> PRIMITIVE_TYPE_COMPATIBLE_CLASSES = new HashMap<>();
 
     /**
      * Just add two entries to the class compatibility map

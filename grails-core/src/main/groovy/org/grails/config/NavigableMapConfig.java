@@ -421,7 +421,7 @@ public abstract class NavigableMapConfig implements Config {
     }
 
     private List<String> convertTokensIntoArrayList(StringTokenizer st) {
-        List<String> elements = new ArrayList<String>();
+        List<String> elements = new ArrayList<>();
         while (st.hasMoreTokens()) {
             elements.add(st.nextToken());
         }

@@ -87,7 +87,7 @@ public class ChainedTransactionManager implements PlatformTransactionManager {
         Assert.isTrue(transactionManagers.length > 0, "At least one PlatformTransactionManager must be given!");
 
         this.synchronizationManager = synchronizationManager;
-        this.transactionManagers = new ArrayList<PlatformTransactionManager>();
+        this.transactionManagers = new ArrayList<>();
         this.transactionManagers.addAll(Arrays.asList(transactionManagers));
     }
 
@@ -224,7 +224,7 @@ public class ChainedTransactionManager implements PlatformTransactionManager {
 
     private <T> Iterable<T> reverse(Collection<T> collection) {
 
-        List<T> list = new ArrayList<T>(collection);
+        List<T> list = new ArrayList<>(collection);
         Collections.reverse(list);
         return list;
     }

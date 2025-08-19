@@ -46,12 +46,12 @@ public abstract class BasePluginFilter implements PluginFilter {
     /**
      * Plugins corresponding with the supplied names.
      */
-    private final List<GrailsPlugin> explicitlyNamedPlugins = new ArrayList<GrailsPlugin>();
+    private final List<GrailsPlugin> explicitlyNamedPlugins = new ArrayList<>();
 
     /**
      * Plugins derivied through a dependency relationship.
      */
-    private final List<GrailsPlugin> derivedPlugins = new ArrayList<GrailsPlugin>();
+    private final List<GrailsPlugin> derivedPlugins = new ArrayList<>();
 
     /**
      * Holds a name to GrailsPlugin map (String, Plugin).
@@ -71,7 +71,7 @@ public abstract class BasePluginFilter implements PluginFilter {
     }
 
     public BasePluginFilter(String[] included) {
-        suppliedNames = new HashSet<String>();
+        suppliedNames = new HashSet<>();
         for (int i = 0; i < included.length; i++) {
             suppliedNames.add(included[i].trim());
         }
@@ -96,13 +96,13 @@ public abstract class BasePluginFilter implements PluginFilter {
     public List<GrailsPlugin> filterPluginList(List<GrailsPlugin> original) {
 
         originalPlugins = Collections.unmodifiableList(original);
-        addedNames = new HashSet<String>();
+        addedNames = new HashSet<>();
 
         buildNameMap();
         buildExplicitlyNamedList();
         buildDerivedPluginList();
 
-        List<GrailsPlugin> pluginList = new ArrayList<GrailsPlugin>();
+        List<GrailsPlugin> pluginList = new ArrayList<>();
         pluginList.addAll(explicitlyNamedPlugins);
         pluginList.addAll(derivedPlugins);
 
@@ -180,7 +180,7 @@ public abstract class BasePluginFilter implements PluginFilter {
      *
      */
     private void buildNameMap() {
-        nameMap = new HashMap<String, GrailsPlugin>();
+        nameMap = new HashMap<>();
         for (GrailsPlugin plugin : originalPlugins) {
             nameMap.put(plugin.getName(), plugin);
         }

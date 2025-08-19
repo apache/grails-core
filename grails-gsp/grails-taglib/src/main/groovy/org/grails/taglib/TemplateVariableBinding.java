@@ -37,7 +37,7 @@ public class TemplateVariableBinding extends AbstractTemplateVariableBinding {
 
     private Binding parent;
     private Object owner;
-    private Set<String> cachedParentVariableNames = new HashSet<String>();
+    private Set<String> cachedParentVariableNames = new HashSet<>();
     private boolean root;
 
     public TemplateVariableBinding() {
@@ -188,7 +188,7 @@ public class TemplateVariableBinding extends AbstractTemplateVariableBinding {
     @SuppressWarnings("unchecked")
     @Override
     public Set<String> getVariableNames() {
-        Set<String> variableNames = new HashSet<String>();
+        Set<String> variableNames = new HashSet<>();
         if (parent != null) {
             if (parent instanceof AbstractTemplateVariableBinding) {
                 variableNames.addAll(((AbstractTemplateVariableBinding) parent).getVariableNames());

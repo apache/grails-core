@@ -199,7 +199,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
             }
         });
 
-        QueryHandler<Near> nearHandler = new QueryHandler<Near>() {
+        QueryHandler<Near> nearHandler = new QueryHandler<>() {
             public void handle(EmbeddedQueryEncoder queryEncoder, Near near, Document query, PersistentEntity entity) {
                 Document nearQuery = new Document();
                 Object value = near.getValue();
@@ -1142,7 +1142,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                 if (projectedProperties.size() == 1) {
                     ProjectedProperty projectedProperty = projectedProperties.get(0);
                     PersistentProperty property = projectedProperty.property;
-                    List<Serializable> identifiers = new ArrayList<Serializable>();
+                    List<Serializable> identifiers = new ArrayList<>();
                     boolean hasResults = false;
                     while (cursor.hasNext()) {
                         hasResults = true;
@@ -1182,7 +1182,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                     while (cursor.hasNext()) {
                         hasResults = true;
                         Document dbo = (Document) cursor.next();
-                        List<Object> projectedResult = new ArrayList<Object>();
+                        List<Object> projectedResult = new ArrayList<>();
                         int index = 0;
                         for (ProjectedProperty projectedProperty : projectedProperties) {
                             PersistentProperty property = projectedProperty.property;
@@ -1206,7 +1206,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                         return;
                     }
 
-                    Map<Integer, List> finalResults = new HashMap<Integer, List>();
+                    Map<Integer, List> finalResults = new HashMap<>();
                     for (Integer index : associationMap.keySet()) {
                         Map<Class, List<Serializable>> associatedEntityIdentifiers = associationMap.get(index);
                         for (Class associationClass : associatedEntityIdentifiers.keySet()) {
@@ -1250,10 +1250,10 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
         }
 
         private Map<Integer, Map<Class, List<Serializable>>> createAssociationMap() {
-            Map<Integer, Map<Class, List<Serializable>>> associationMap = new HashMap<Integer, Map<Class, List<Serializable>>>();
+            Map<Integer, Map<Class, List<Serializable>>> associationMap = new HashMap<>();
             associationMap = DefaultGroovyMethods.withDefault(associationMap, new Closure(this) {
                 public Object doCall(Object o) {
-                    Map<Class, List<Serializable>> subMap = new HashMap<Class, List<Serializable>>();
+                    Map<Class, List<Serializable>> subMap = new HashMap<>();
                     subMap = DefaultGroovyMethods.withDefault(subMap, new Closure(this) {
                         public Object doCall(Object o) {
                             return new ArrayList<Serializable>();
@@ -1301,7 +1301,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
         private Object addInitializedObject(Document dbo) {
             if (projectedProperties.size() > 1) {
 
-                List<Object> projected = new ArrayList<Object>();
+                List<Object> projected = new ArrayList<>();
                 for (ProjectedProperty projectedProperty : projectedProperties) {
                     Object value;
                     value = getProjectedValue(dbo, projectedProperty.projectionKey);
@@ -1456,7 +1456,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
         }
 
         public AggregatePipeline build() {
-            aggregationPipeline = new ArrayList<Document>();
+            aggregationPipeline = new ArrayList<>();
 
             if (!query.keySet().isEmpty()) {
                 aggregationPipeline.add(new Document(MATCH_OPERATOR, query));
@@ -1482,7 +1482,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                 aggregationPipeline.add(new Document("$skip", offset));
             }
 
-            projectedKeys = new ArrayList<ProjectedProperty>();
+            projectedKeys = new ArrayList<>();
             singleResult = true;
 
             Document projectObject = new Document();

@@ -1338,7 +1338,7 @@ public abstract class Query implements Cloneable {
     }
 
     public static abstract class Junction implements Criterion {
-        private List<Criterion> criteria = new ArrayList<Criterion>();
+        private List<Criterion> criteria = new ArrayList<>();
 
         protected Junction() {
         }

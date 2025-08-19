@@ -65,7 +65,7 @@ import org.grails.io.support.GrailsResourceUtils;
 @AstTransformer
 public class DefaultGrailsDomainClassInjector implements GrailsDomainClassInjector, GrailsArtefactClassInjector {
 
-    private List<ClassNode> classesWithInjectedToString = new ArrayList<ClassNode>();
+    private List<ClassNode> classesWithInjectedToString = new ArrayList<>();
 
     public void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode) {
         if (GrailsASTUtils.isDomainClass(classNode, source) && shouldInjectClass(classNode)) {
@@ -108,7 +108,7 @@ public class DefaultGrailsDomainClassInjector implements GrailsDomainClassInject
 
     private void injectAssociations(ClassNode classNode) {
 
-        List<PropertyNode> propertiesToAdd = new ArrayList<PropertyNode>();
+        List<PropertyNode> propertiesToAdd = new ArrayList<>();
         for (PropertyNode propertyNode : classNode.getProperties()) {
             final String name = propertyNode.getName();
             final boolean isHasManyProperty = name.equals(GormProperties.HAS_MANY);

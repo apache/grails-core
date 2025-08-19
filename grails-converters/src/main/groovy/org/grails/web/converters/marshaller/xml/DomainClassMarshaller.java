@@ -106,7 +106,7 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<XML>
 
         List<String> excludes = xml.getExcludes(clazz);
         List<String> includes = xml.getIncludes(clazz);
-        IncludeExcludeSupport<String> includeExcludeSupport = new IncludeExcludeSupport<String>();
+        IncludeExcludeSupport<String> includeExcludeSupport = new IncludeExcludeSupport<>();
 
         PersistentEntity domainClass = findDomainClass(value);
 

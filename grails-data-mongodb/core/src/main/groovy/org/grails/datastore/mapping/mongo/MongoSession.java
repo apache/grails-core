@@ -103,10 +103,10 @@ public class MongoSession extends AbstractMongoSession {
                 return;
             }
 
-            Map<String, Integer> numberOfOptimisticUpdates = new LinkedHashMap<String, Integer>();
-            Map<String, Integer> numberOfPessimisticUpdates = new LinkedHashMap<String, Integer>();
+            Map<String, Integer> numberOfOptimisticUpdates = new LinkedHashMap<>();
+            Map<String, Integer> numberOfPessimisticUpdates = new LinkedHashMap<>();
 
-            Map<PersistentEntity, List<WriteModel<Document>>> writeModels = new LinkedHashMap<PersistentEntity, List<WriteModel<Document>>>();
+            Map<PersistentEntity, List<WriteModel<Document>>> writeModels = new LinkedHashMap<>();
             for (PersistentEntity persistentEntity : pendingInserts.keySet()) {
                 final Collection<PendingInsert> inserts = pendingInserts.get(persistentEntity);
                 if (inserts != null && !inserts.isEmpty()) {
@@ -116,7 +116,7 @@ public class MongoSession extends AbstractMongoSession {
 
                         if (insert.isVetoed()) continue;
 
-                        entityWrites.add(new InsertOneModel<Document>((Document) insert.getNativeEntry()));
+                        entityWrites.add(new InsertOneModel<>((Document) insert.getNativeEntry()));
 
                         final List<PendingOperation> cascadeOperations = insert.getCascadeOperations();
                         addPostFlushOperations(cascadeOperations);
@@ -160,7 +160,7 @@ public class MongoSession extends AbstractMongoSession {
                         }
                         final UpdateOptions options = new UpdateOptions();
 
-                        entityWrites.add(new UpdateOneModel<Document>(id, updateDoc, options.upsert(false)));
+                        entityWrites.add(new UpdateOneModel<>(id, updateDoc, options.upsert(false)));
 
                         final List cascadeOperations = update.getCascadeOperations();
                         addPostFlushOperations(cascadeOperations);
@@ -175,7 +175,7 @@ public class MongoSession extends AbstractMongoSession {
                 final Collection<PendingDelete> deletes = pendingDeletes.get(persistentEntity);
                 if (deletes != null && !deletes.isEmpty()) {
                     List<WriteModel<Document>> entityWrites = getWriteModelsForEntity(persistentEntity, writeModels);
-                    List<Object> nativeKeys = new ArrayList<Object>();
+                    List<Object> nativeKeys = new ArrayList<>();
                     for (PendingDelete delete : deletes) {
                         delete.run();
 
@@ -184,7 +184,7 @@ public class MongoSession extends AbstractMongoSession {
                         final Object k = delete.getNativeKey();
                         if (k != null) {
                             if (k instanceof Document) {
-                                entityWrites.add(new DeleteManyModel<Document>((Document) k));
+                                entityWrites.add(new DeleteManyModel<>((Document) k));
                             }
                             else {
                                 nativeKeys.add(k);
@@ -194,7 +194,7 @@ public class MongoSession extends AbstractMongoSession {
                         final List cascadeOperations = delete.getCascadeOperations();
                         addPostFlushOperations(cascadeOperations);
                     }
-                    entityWrites.add(new DeleteManyModel<Document>(new Document(MongoConstants.MONGO_ID_FIELD, new Document(BsonQuery.IN_OPERATOR, nativeKeys))));
+                    entityWrites.add(new DeleteManyModel<>(new Document(MongoConstants.MONGO_ID_FIELD, new Document(BsonQuery.IN_OPERATOR, nativeKeys))));
                 }
             }
 
@@ -264,7 +264,7 @@ public class MongoSession extends AbstractMongoSession {
         PersistentEntity key = persistentEntity.isRoot() ? persistentEntity : persistentEntity.getRootEntity();
         List<WriteModel<Document>> entityWrites = writeModels.get(key);
         if (entityWrites == null) {
-            entityWrites = new ArrayList<WriteModel<Document>>();
+            entityWrites = new ArrayList<>();
             writeModels.put(key, entityWrites);
         }
         return entityWrites;
@@ -288,7 +288,7 @@ public class MongoSession extends AbstractMongoSession {
 
     @Override
     protected Transaction<MongoClient> beginTransactionInternal() {
-        return new SessionOnlyTransaction<MongoClient>(getNativeInterface(), this);
+        return new SessionOnlyTransaction<>(getNativeInterface(), this);
     }
 
     @Override
@@ -316,7 +316,7 @@ public class MongoSession extends AbstractMongoSession {
 
     protected Map<PersistentEntity, List> getDeleteMap(Iterable objects) {
         // sort the objects into sets by Persister, in case the objects are of different types.
-        Map<PersistentEntity, List> toDelete = new HashMap<PersistentEntity, List>();
+        Map<PersistentEntity, List> toDelete = new HashMap<>();
         for (Object object : objects) {
             if (object == null) {
                 continue;

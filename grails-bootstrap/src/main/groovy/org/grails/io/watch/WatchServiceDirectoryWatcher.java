@@ -55,8 +55,8 @@ import org.slf4j.LoggerFactory;
 class WatchServiceDirectoryWatcher extends AbstractDirectoryWatcher {
 
     private static final Logger LOG = LoggerFactory.getLogger(WatchServiceDirectoryWatcher.class);
-    private Map<WatchKey, List<String>> watchKeyToExtensionsMap = new ConcurrentHashMap<WatchKey, List<String>>();
-    private Set<Path> individualWatchedFiles = new HashSet<Path>();
+    private Map<WatchKey, List<String>> watchKeyToExtensionsMap = new ConcurrentHashMap<>();
+    private Set<Path> individualWatchedFiles = new HashSet<>();
 
     private final WatchService watchService;
 
@@ -178,11 +178,10 @@ class WatchServiceDirectoryWatcher extends AbstractDirectoryWatcher {
         }
         try {
             //add the subdirectories too
-            Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+            Files.walkFileTree(dir, new SimpleFileVisitor<>() {
                 @Override
                 public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
-                    throws IOException
-                {
+                        throws IOException {
                     if (!isValidDirectoryToMonitor(dir.toFile())) {
                         return FileVisitResult.SKIP_SUBTREE;
                     }
@@ -191,7 +190,7 @@ class WatchServiceDirectoryWatcher extends AbstractDirectoryWatcher {
                     if (originalFileExtensions == null) {
                         watchKeyToExtensionsMap.put(watchKey, fileExtensions);
                     } else {
-                        final HashSet<String> newFileExtensions = new HashSet<String>(originalFileExtensions);
+                        final HashSet<String> newFileExtensions = new HashSet<>(originalFileExtensions);
                         newFileExtensions.addAll(fileExtensions);
                         watchKeyToExtensionsMap.put(watchKey, Collections.unmodifiableList(new ArrayList(newFileExtensions)));
                     }

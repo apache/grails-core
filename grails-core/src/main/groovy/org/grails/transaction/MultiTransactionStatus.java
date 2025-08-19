@@ -40,7 +40,7 @@ class MultiTransactionStatus implements TransactionStatus {
 
     private final PlatformTransactionManager mainTransactionManager;
     private final Map<PlatformTransactionManager, TransactionStatus> transactionStatuses = Collections
-            .synchronizedMap(new HashMap<PlatformTransactionManager, TransactionStatus>());
+            .synchronizedMap(new HashMap<>());
 
     private boolean newSynchronization;
 
@@ -178,7 +178,7 @@ class MultiTransactionStatus implements TransactionStatus {
 
     private static class SavePoints {
 
-        private final Map<TransactionStatus, Object> savepoints = new HashMap<TransactionStatus, Object>();
+        private final Map<TransactionStatus, Object> savepoints = new HashMap<>();
 
         private void addSavePoint(TransactionStatus status, Object savepoint) {
 

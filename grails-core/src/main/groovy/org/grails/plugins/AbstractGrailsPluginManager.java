@@ -75,16 +75,16 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
     private static final Log LOG = LogFactory.getLog(AbstractGrailsPluginManager.class);
     private static final String BLANK = "";
     public static final String CONFIG_FILE = "application.groovy";
-    protected List<GrailsPlugin> pluginList = new ArrayList<GrailsPlugin>();
+    protected List<GrailsPlugin> pluginList = new ArrayList<>();
     protected GrailsApplication application;
     protected Resource[] pluginResources = new Resource[0];
-    protected Map<String, GrailsPlugin> plugins = new HashMap<String, GrailsPlugin>();
-    protected Map<String, GrailsPlugin> classNameToPluginMap = new HashMap<String, GrailsPlugin>();
+    protected Map<String, GrailsPlugin> plugins = new HashMap<>();
+    protected Map<String, GrailsPlugin> classNameToPluginMap = new HashMap<>();
     protected Class<?>[] pluginClasses = new Class[0];
     protected boolean initialised = false;
     protected boolean shutdown = false;
     protected ApplicationContext applicationContext;
-    protected Map<String, GrailsPlugin> failedPlugins = new HashMap<String, GrailsPlugin>();
+    protected Map<String, GrailsPlugin> failedPlugins = new HashMap<>();
     protected boolean loadCorePlugins = true;
 
     private static final String CONFIG_BINDING_USER_HOME = "userHome";
@@ -97,7 +97,7 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
     }
 
     public List<TypeFilter> getTypeFilters() {
-        List<TypeFilter> list = new ArrayList<TypeFilter>();
+        List<TypeFilter> list = new ArrayList<>();
         for (GrailsPlugin grailsPlugin : pluginList) {
             list.addAll(grailsPlugin.getTypeFilters());
         }
@@ -295,7 +295,7 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
         // since plugin classes are added as overridable artefacts, which are added as the first
         // item in the list of artefacts, we have to iterate in reverse order to ensure plugin
         // load sequence is maintained
-        ArrayList<GrailsPlugin> plugins = new ArrayList<GrailsPlugin>(pluginList);
+        ArrayList<GrailsPlugin> plugins = new ArrayList<>(pluginList);
         Collections.reverse(plugins);
         for (GrailsPlugin plugin : plugins) {
             if (plugin.supportsCurrentScopeAndEnvironment()) {

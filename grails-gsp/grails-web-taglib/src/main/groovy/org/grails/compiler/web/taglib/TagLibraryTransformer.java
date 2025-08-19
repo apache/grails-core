@@ -209,9 +209,9 @@ public class TagLibraryTransformer implements GrailsArtefactClassInjector, Annot
     }
 
     private List<PropertyNode> findTags(ClassNode classNode) {
-        List<PropertyNode> tags = new ArrayList<PropertyNode>();
+        List<PropertyNode> tags = new ArrayList<>();
         List<PropertyNode> properties = classNode.getProperties();
-        List<PropertyNode> potentialAliases = new ArrayList<PropertyNode>();
+        List<PropertyNode> potentialAliases = new ArrayList<>();
         for (PropertyNode property : properties) {
             if (property.isPublic()) {
                 Expression initialExpression = property.getInitialExpression();

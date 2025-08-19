@@ -32,7 +32,7 @@ import org.springframework.core.io.ResourceLoader;
  */
 public class SimpleMapResourceLoader implements ResourceLoader {
 
-    private Map<String, Resource> resources = new ConcurrentHashMap<String, Resource>();
+    private Map<String, Resource> resources = new ConcurrentHashMap<>();
 
     public Map<String, Resource> getResources() {
         return resources;

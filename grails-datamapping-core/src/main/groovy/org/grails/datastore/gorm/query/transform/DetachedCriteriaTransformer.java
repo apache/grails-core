@@ -159,10 +159,10 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
             "property", "property",
             "count", "countDistinct");
 
-    protected Map<String, ClassNode> detachedCriteriaVariables = new HashMap<String, ClassNode>();
-    protected Map<String, Object> aliases = new HashMap<String, Object>();
-    protected Map<String, ClassNode> staticDetachedCriteriaVariables = new HashMap<String, ClassNode>();
-    protected Set<Expression> aliasExpressions = new HashSet<Expression>();
+    protected Map<String, ClassNode> detachedCriteriaVariables = new HashMap<>();
+    protected Map<String, Object> aliases = new HashMap<>();
+    protected Map<String, ClassNode> staticDetachedCriteriaVariables = new HashMap<>();
+    protected Set<Expression> aliasExpressions = new HashSet<>();
     protected ClassNode currentClassNode;
 
     public DetachedCriteriaTransformer(SourceUnit sourceUnit) {
@@ -942,7 +942,7 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         Expression objectExpression = pe.getObjectExpression();
         if (objectExpression instanceof PropertyExpression) {
             // nested property expression, we have to find the root variable expression and walk backwards through all the properties involved
-            List<String> associationMethodCalls = new ArrayList<String>();
+            List<String> associationMethodCalls = new ArrayList<>();
 
             while (objectExpression instanceof PropertyExpression) {
                 PropertyExpression currentPe = (PropertyExpression) objectExpression;
@@ -1345,7 +1345,7 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
             throw new IllegalArgumentException("Must have an even number of keys and values");
         }
 
-        Map<K, V> map = new HashMap<K, V>();
+        Map<K, V> map = new HashMap<>();
         for (int i = 0; i < keysAndValues.length; i += 2) {
             map.put((K) keysAndValues[i], (V) keysAndValues[i + 1]);
         }
@@ -1357,6 +1357,6 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
             return Collections.emptySet();
         }
 
-        return new HashSet<T>(Arrays.asList(values));
+        return new HashSet<>(Arrays.asList(values));
     }
 }

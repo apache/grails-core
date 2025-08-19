@@ -199,7 +199,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                 datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
             }
 
-            connectionSources.addListener(new ConnectionSourcesListener<MongoClient, MongoConnectionSourceSettings>() {
+            connectionSources.addListener(new ConnectionSourcesListener<>() {
                 public void newConnectionSource(final ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource) {
                     final SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings> singletonConnectionSources = new SingletonConnectionSources<>(connectionSource, connectionSources.getBaseConfiguration());
                     MongoDatastore childDatastore = createChildDatastore(mappingContext, eventPublisher, parent, singletonConnectionSources);
@@ -1057,7 +1057,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
 
     class PersistentEntityCodeRegistry implements CodecProvider {
 
-        Map<String, PersistentEntityCodec> codecs = new HashMap<String, PersistentEntityCodec>();
+        Map<String, PersistentEntityCodec> codecs = new HashMap<>();
 
         @Override
         public <T> Codec<T> get(Class<T> clazz, CodecRegistry registry) {

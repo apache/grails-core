@@ -66,8 +66,9 @@ class ClassRelativeClassLoader extends URLClassLoader {
         if ("".equals(name)) {
             final URL[] urls = getURLs();
             final int l = urls.length;
-            return new Enumeration<URL>() {
+            return new Enumeration<>() {
                 int i = 0;
+
                 @Override
                 public boolean hasMoreElements() {
                     return i < l;

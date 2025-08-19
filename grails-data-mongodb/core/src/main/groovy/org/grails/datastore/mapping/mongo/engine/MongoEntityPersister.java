@@ -61,7 +61,7 @@ import org.grails.datastore.mapping.query.Query;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Document> {
 
-    public static final ValueRetrievalStrategy<Document> VALUE_RETRIEVAL_STRATEGY = new ValueRetrievalStrategy<Document>() {
+    public static final ValueRetrievalStrategy<Document> VALUE_RETRIEVAL_STRATEGY = new ValueRetrievalStrategy<>() {
         @Override
         public Object getValue(Document document, String name) {
             return document.get(name);
@@ -245,21 +245,21 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
             nativeValue = value;
         } else if (value.getClass().isArray()) {
             Object[] array = (Object[]) value;
-            List<Object> nativeColl = new ArrayList<Object>(array.length);
+            List<Object> nativeColl = new ArrayList<>(array.length);
             for (Object item : array) {
                 nativeColl.add(getSimpleNativePropertyValue(item, mappingContext));
             }
             nativeValue = nativeColl;
         } else if (value instanceof Collection) {
             Collection existingColl = (Collection) value;
-            List<Object> nativeColl = new ArrayList<Object>(existingColl.size());
+            List<Object> nativeColl = new ArrayList<>(existingColl.size());
             for (Object item : existingColl) {
                 nativeColl.add(getSimpleNativePropertyValue(item, mappingContext));
             }
             nativeValue = nativeColl;
         } else if (value instanceof Map) {
             Map<String, Object> existingMap = (Map) value;
-            Map<String, Object> newMap = new LinkedHashMap<String, Object>();
+            Map<String, Object> newMap = new LinkedHashMap<>();
             for (Map.Entry<String, Object> entry :existingMap.entrySet()) {
                 newMap.put(entry.getKey(), getSimpleNativePropertyValue(entry.getValue(), mappingContext));
             }
@@ -304,7 +304,7 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
     }
 
     private Document removeNullEntries(Document nativeEntry) {
-        for (String key : new HashSet<String>(nativeEntry.keySet())) {
+        for (String key : new HashSet<>(nativeEntry.keySet())) {
             Object o = nativeEntry.get(key);
             if (o == null) {
                 nativeEntry.remove(key);

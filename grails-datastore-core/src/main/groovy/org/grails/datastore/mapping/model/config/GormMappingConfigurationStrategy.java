@@ -153,7 +153,7 @@ public class GormMappingConfigurationStrategy implements MappingConfigurationStr
 
     @Override
     public List<PersistentProperty> getPersistentProperties(PersistentEntity entity, MappingContext context, ClassMapping classMapping, boolean includeIdentifiers) {
-        final List<PersistentProperty> persistentProperties = new ArrayList<PersistentProperty>();
+        final List<PersistentProperty> persistentProperties = new ArrayList<>();
         ClassPropertyFetcher cpf = ClassPropertyFetcher.forClass(entity.getJavaClass());
 
         // owners are the classes that own this class
@@ -516,7 +516,7 @@ public class GormMappingConfigurationStrategy implements MappingConfigurationStr
     private List<PropertyDescriptor> getPropertiesAssignableFromType(Class type, ClassPropertyFetcher propertyFetcher) {
         List<PropertyDescriptor> props = propertyFetcher.getPropertiesAssignableFromType(type);
         // exclude properties of type object!
-        List<PropertyDescriptor> valid = new ArrayList<PropertyDescriptor>(props.size());
+        List<PropertyDescriptor> valid = new ArrayList<>(props.size());
         for (PropertyDescriptor prop : props) {
             if (prop.getPropertyType() != null && !prop.getPropertyType().equals(Object.class)) {
                 valid.add(prop);
