@@ -826,6 +826,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
         return (Integer) template.execute { Session session ->
             Query q = (Query) session.createQuery(query.toString())
+            q.setHibernateFlushMode(FlushMode.COMMIT)
             template.applySettings(q)
             def sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource( sessionFactory )
             if (sessionHolder && sessionHolder.hasTimeout()) {
@@ -842,7 +843,8 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             }
             populateQueryArguments(q, args)
             return withQueryEvents(q) {
-                q.executeUpdate()
+
+                def update = q.executeUpdate()
             }
         }
     }

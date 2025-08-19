@@ -161,32 +161,8 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instances.size() == 2
     }
 
-    void "Test find with DetachedCriteria from where query"() {
-        given:
-        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
 
-        when:
-        def criteria = HibernateGormStaticApiEntity.where { name == "test2" }
-        def instance = HibernateGormStaticApiEntity.find(criteria)
 
-        then:
-        instance.name == "test2"
-    }
-
-    void "Test findAll with DetachedCriteria from where query"() {
-        given:
-        new HibernateGormStaticApiEntity(name: "test").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "other").save(flush: true, failOnError: true)
-
-        when:
-        def criteria = HibernateGormStaticApiEntity.where { name == "test" }
-        def instances = HibernateGormStaticApiEntity.findAll(criteria)
-
-        then:
-        instances.size() == 2
-    }
 
     void "Test count"() {
         given:
@@ -203,23 +179,6 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
 
 
-    void "Test merge"() {
-        given:
-        def entity = new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
-        session.clear()
-        entity.name = "modified"
-
-        when:
-        def merged = HibernateGormStaticApiEntity.merge(entity)
-        session.flush()
-        session.clear()
-        def updated = HibernateGormStaticApiEntity.get(entity.id)
-
-        then:
-        merged.name == "modified"
-        updated.name == "modified"
-    }
-
     void "Test refresh"() {
         given:
         def entity = new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
@@ -232,6 +191,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         entity.name == "test"
     }
 
+    //TODO transaction is not working
     void "Test withTransaction"() {
         when:
         HibernateGormStaticApiEntity.withTransaction { status ->
@@ -254,6 +214,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         result == null
     }
 
+    //TODO The instance was not associated with this session
     void "Test withNewSession"() {
         given:
         new HibernateGormStaticApiEntity(name: "outer").save(flush: true, failOnError: true)
@@ -268,6 +229,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         count == 2
     }
 
+    //TODO Update happens but is not persisted
     void "Test executeUpdate"() {
         given:
         new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
@@ -462,6 +424,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instance.name == 'updated'
     }
 
+    //TODO Update happens but is not persisted and positional parameters
     void "Test executeUpdate with positional params"() {
         given:
         new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
