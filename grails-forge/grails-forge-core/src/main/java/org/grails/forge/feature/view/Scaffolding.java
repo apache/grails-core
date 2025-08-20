@@ -56,8 +56,8 @@ public class Scaffolding implements DefaultFeature {
 
     @Override
     public String getDescription() {
-        return "The Scaffolding plugin simplifies generating CRUD interfaces for domain classes. " +
-               "It is useful for rapid prototyping and creating basic data management user interfaces " +
+        return "The Scaffolding Plugin simplifies generating CRUD interfaces for domain classes. " +
+               "It is useful for rapid prototyping and creates basic data management user interfaces " +
                 "with minimal manual code.";
     }
 

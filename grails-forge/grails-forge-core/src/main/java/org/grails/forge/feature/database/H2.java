@@ -46,7 +46,7 @@ public class H2 extends DatabaseDriverFeature implements DefaultFeature {
     @Override
     public String getDescription() {
         return "Add the H2 database with default configuration. " +
-                "H2 is a lightweight in-memory database for development and testing.";
+                "H2 is a lightweight in-memory database, perfect for development and testing.";
     }
 
     @Override

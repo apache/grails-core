@@ -43,7 +43,7 @@ public class GrailsCache implements Feature {
 
     @Override
     public String getDescription() {
-        return "The Cache Plugin provides a powerful and easy to add caching functionality to Grails applications and plugins.";
+        return "The Cache Plugin provides powerful and easy-to-use caching functionality for Grails applications and plugins.";
     }
 
     @Override

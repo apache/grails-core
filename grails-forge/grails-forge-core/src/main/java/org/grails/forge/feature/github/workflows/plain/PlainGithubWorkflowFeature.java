@@ -36,7 +36,7 @@ public class PlainGithubWorkflowFeature extends GitHubWorkflowFeature {
 
     @Override
     public String getTitle() {
-        return "Github Actions CI Workflow";
+        return "GitHub Actions CI Workflow";
     }
 
     @Override
