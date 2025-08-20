@@ -121,9 +121,6 @@ public class AssetPipeline implements DefaultFeature {
     @Override
     public String getDocumentation() {
         return "https://github.com/wondrify/asset-pipeline#readme";
-
-        // The site is currently broken (2025-08-20), replace the above when working again
-        // return "http://www.asset-pipeline.com/manual/";
     }
 
     @Override

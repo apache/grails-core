@@ -34,8 +34,8 @@ class EHCacheSpec extends ApplicationContextSpec implements CommandOutputFixture
 
         then:
         readme
-        readme.contains("[https://www.ehcache.org/](https://www.ehcache.org/)")
-        readme.contains("[Grails EHCache Plugin documentation](https://grails-plugins.github.io/grails-cache-ehcache/latest/)")
+        readme.contains("[https://www.ehcache.org](https://www.ehcache.org)")
+        readme.contains("[Grails Ehcache Plugin documentation](https://grails-plugins.github.io/grails-cache-ehcache/latest)")
     }
 
     @Unroll

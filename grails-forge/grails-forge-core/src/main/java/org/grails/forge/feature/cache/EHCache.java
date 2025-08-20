@@ -34,7 +34,7 @@ public class EHCache implements CacheFeature {
 
     @Override
     public String getTitle() {
-        return "Ehcache";
+        return "Ehcache Plugin";
     }
 
     @Override
