@@ -60,7 +60,6 @@ public class LazyTagLibraryLookup extends TagLibraryLookup {
         }
         if (ClassUtils.isPresent("org.grails.plugins.sitemesh3.Sitemesh3GrailsPlugin", classLoader)) {
             try {
-                mockedClasses.add(Class.forName("org.grails.plugins.web.taglib.SitemeshTagLib"));
                 mockedClasses.add(Class.forName("org.grails.plugins.web.taglib.RenderSitemeshTagLib"));
             }
             catch (Exception ignored) {

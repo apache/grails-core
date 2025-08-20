@@ -69,7 +69,6 @@ import org.grails.plugins.sitemesh3.GrailsLayoutHandlerMapping;
 import org.grails.plugins.sitemesh3.Sitemesh3GrailsPlugin;
 import org.grails.plugins.web.taglib.RenderSitemeshTagLib;
 import org.grails.plugins.web.taglib.RenderTagLib;
-import org.grails.plugins.web.taglib.SitemeshTagLib;
 import org.grails.taglib.TagLibraryLookup;
 import org.grails.web.gsp.GroovyPagesTemplateRenderer;
 import org.grails.web.gsp.io.CachingGrailsConventionGroovyPageLocator;
@@ -245,7 +244,7 @@ public class GspAutoConfiguration {
 
     protected static class TagLibraryLookupRegistrar implements ImportBeanDefinitionRegistrar {
 
-        public static final Class<?>[] DEFAULT_TAGLIB_CLASSES = new Class<?>[] { SitemeshTagLib.class, RenderTagLib.class, RenderSitemeshTagLib.class };
+        public static final Class<?>[] DEFAULT_TAGLIB_CLASSES = new Class<?>[] { RenderTagLib.class, RenderSitemeshTagLib.class };
 
         @Override
         public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
