@@ -138,6 +138,6 @@ public class TestContainers implements Feature {
     @Nullable
     @Override
     public String getThirdPartyDocumentation() {
-        return "https://www.testcontainers.org";
+        return "https://java.testcontainers.org";
     }
 }
