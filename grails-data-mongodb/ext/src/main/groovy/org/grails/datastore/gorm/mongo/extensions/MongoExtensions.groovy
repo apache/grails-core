@@ -390,11 +390,11 @@ class MongoExtensions {
     }
 
     static DeleteResult remove(final MongoCollection<Document> collection, final Map<String,Object> query) {
-        deleteMany collection, query
+        deleteMany(collection, query)
     }
 
     static MongoCollection<Document> rightShift(final MongoCollection<Document> collection, final Map<String, Object> query) {
-        deleteMany collection, query
+        deleteMany(collection, query)
         return collection
     }
 
@@ -539,7 +539,7 @@ class MongoExtensions {
     }
 
     static void insert(final MongoCollection<Document> collection, final Map<String, Object>... documents) {
-        collection.insertMany documents.collect() { Map m -> new Document(m) } as List<Document>
+        collection.insertMany(documents.collect() { Map m -> new Document(m) } as List<Document>)
     }
 
     static MongoCollection<Document> leftShift(final MongoCollection<Document> collection, final Map<String, Object>... documents) {
@@ -556,7 +556,7 @@ class MongoExtensions {
     }
 
     static MongoCollection<Document> insert(final MongoCollection<Document> collection, final List<? extends Map<String, Object>> documents) {
-        collection.insertMany documents.collect() { Map m -> new Document(m) } as List<Document>
+        collection.insertMany(documents.collect() { Map m -> new Document(m) } as List<Document>)
         return collection
     }
 
@@ -567,21 +567,21 @@ class MongoExtensions {
     static MongoCollection<Document> insert(final MongoCollection<Document> collection, final List<? extends Map<String, Object>> documents, final WriteConcern writeConcern, final InsertManyOptions insertOptions) {
         collection
                 .withWriteConcern(writeConcern)
-                .insertMany documents.collect() { Map m -> new Document(m) } as List<Document>, insertOptions
+                .insertMany(documents.collect() { Map m -> new Document(m) } as List<Document>, insertOptions)
         return collection
     }
 
     static MongoCollection<Document> insert(final MongoCollection<Document> collection, final List<? extends Map> documents, final InsertManyOptions insertOptions) {
-        collection.insertMany documents.collect() { Map m -> new Document(m) } as List<Document>, insertOptions
+        collection.insertMany(documents.collect() { Map m -> new Document(m) } as List<Document>, insertOptions)
         return collection
     }
 
     static  MongoCollection save(final MongoCollection<Document> collection, final Map<String, Object> document) {
-        insert collection, document
+        insert(collection, document)
     }
 
     static  MongoCollection save(final MongoCollection<Document> collection, final Map<String, Object> document, final WriteConcern writeConcern) {
-        insert collection, document, writeConcern
+        insert(collection, document, writeConcern)
     }
 
     static UpdateResult replaceOne(MongoCollection<Document> collection, Map<String, Object> filter, Document replacement) {

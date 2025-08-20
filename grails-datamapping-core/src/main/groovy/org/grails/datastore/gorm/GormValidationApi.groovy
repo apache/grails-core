@@ -104,7 +104,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
             currentSession.setFlushMode(FlushModeType.COMMIT)
         }
         try {
-            beforeValidateHelper.invokeBeforeValidate instance, fields
+            beforeValidateHelper.invokeBeforeValidate(instance, fields)
             fireEvent(instance, fields)
 
             Validator validator = getValidator()
@@ -119,19 +119,19 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
             for (error in errors.allErrors) {
                 if (error instanceof FieldError) {
                     if (((FieldError)error).bindingFailure) {
-                        localErrors.addError error
+                        localErrors.addError(error)
                     }
                 } else {
-                    localErrors.addError error
+                    localErrors.addError(error)
                 }
             }
 
             if (validator instanceof CascadingValidator) {
-                ((CascadingValidator)validator).validate instance, localErrors, deepValidate
+                ((CascadingValidator)validator).validate(instance, localErrors, deepValidate)
             } else if (validator instanceof org.grails.datastore.gorm.validation.CascadingValidator) {
-                ((org.grails.datastore.gorm.validation.CascadingValidator) validator).validate instance, localErrors, deepValidate
+                ((org.grails.datastore.gorm.validation.CascadingValidator) validator).validate(instance, localErrors, deepValidate)
             } else {
-                validator.validate instance, localErrors
+                validator.validate(instance, localErrors)
             }
 
             if (fields) {
@@ -156,7 +156,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * @return True if the instance is valid
      */
     boolean validate(D instance, Map arguments) {
-        doValidate instance, arguments, (List)null
+        doValidate(instance, arguments, (List)null)
     }
 
     /**
@@ -167,7 +167,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * @return True if the instance is valid
      */
     boolean validate(D instance, List fields) {
-        doValidate instance, (Map)null, fields
+        doValidate(instance, (Map)null, fields)
     }
 
     private ValidationErrors filterErrors(ValidationErrors errors, Set validatedFields, Object target) {
@@ -210,7 +210,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * @return True if the instance is valid
      */
     boolean validate(D instance) {
-        doValidate instance, (Map)null, (List)null
+        doValidate(instance, (Map)null, (List)null)
     }
 
     /**

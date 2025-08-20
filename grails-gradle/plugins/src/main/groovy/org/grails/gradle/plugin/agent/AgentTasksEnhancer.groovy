@@ -58,10 +58,10 @@ class AgentTasksEnhancer implements Action<Project> {
 
         GrailsExtension.Agent agentConfig = project.extensions.findByType(GrailsExtension)?.agent ?: new GrailsExtension.Agent()
         if (agentConfig.enabled) {
-            exec.jvmArgs "-javaagent:${agentConfig.path?.absolutePath ?: agent.absolutePath}"
+            exec.jvmArgs("-javaagent:${agentConfig.path?.absolutePath ?: agent.absolutePath}")
 
             for (String arg in agentConfig.jvmArgs) {
-                exec.jvmArgs arg
+                exec.jvmArgs(arg)
             }
             for (Map.Entry<String, String> entry in agentConfig.systemProperties) {
                 exec.systemProperty(entry.key, entry.value)

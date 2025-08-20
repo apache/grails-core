@@ -323,7 +323,7 @@ class SimpleDecoder implements PropertyDecoder<Simple> {
 
         if (type.isArray()) {
             if (!decoder.is(DEFAULT_DECODER)) {
-                decoder.decode reader, property, entityAccess
+                decoder.decode(reader, property, entityAccess)
             }
             else {
                 def arrayDecoder = codecRegistry.get(List)
@@ -337,7 +337,7 @@ class SimpleDecoder implements PropertyDecoder<Simple> {
                 DEFAULT_DECODERS.get(bsonType).decode(reader, property, entityAccess)
             }
             else {
-                decoder.decode reader, property, entityAccess
+                decoder.decode(reader, property, entityAccess)
             }
         }
     }

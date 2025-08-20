@@ -30,7 +30,7 @@ class Plant implements Serializable {
     String name
 
     static mapping = {
-        name index: true
-        goesInPatch index: true
+        name(index: true)
+        goesInPatch(index: true)
     }
 }

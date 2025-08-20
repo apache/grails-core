@@ -729,7 +729,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
         }
         finally {
             def lastJunction = junctions.remove(junctions.size() - 1)
-            add lastJunction
+            add(lastJunction)
         }
     }
 
@@ -780,7 +780,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
 
         def criteria = lazyQuery
         lazyQuery = null
-        this.with criteria
+        this.with(criteria)
     }
 
 }

@@ -30,7 +30,7 @@ class ModifyPerson implements Serializable {
     String name
 
     static mapping = {
-        name index: true
+        name(index: true)
     }
 
     def beforeInsert() {

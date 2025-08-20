@@ -46,12 +46,12 @@ class CreateScaffoldControllerCommand implements GrailsApplicationCommand, Comma
     boolean handle() {
         final String domainClassName = args[0]
         if (!domainClassName) {
-            error 'No domain-class specified'
+            error('No domain-class specified')
             return FAILURE
         }
         final Resource sourceClass = source(domainClassName)
         if (!sourceClass) {
-            error "No domain-class found for name: ${domainClassName}"
+            error("No domain-class found for name: ${domainClassName}")
             return FAILURE
         }
         boolean overwrite = isFlagPresent('force')

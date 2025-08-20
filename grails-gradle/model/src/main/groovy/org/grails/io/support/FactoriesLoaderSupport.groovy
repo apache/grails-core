@@ -71,7 +71,7 @@ class FactoriesLoaderSupport {
                     url.withInputStream { InputStream input ->
                         properties.load(input)
                     }
-                    allProperties.add properties
+                    allProperties.add(properties)
                     allKeys.addAll((Set<String>) properties.keySet())
                 }
                 Map<String, String[]> mergedFactoryNames = [:]
@@ -80,10 +80,10 @@ class FactoriesLoaderSupport {
                     for (Properties props : allProperties) {
                         String factoryClassNames = props.getProperty(propertyName)
                         if (factoryClassNames) {
-                            result.addAll factoryClassNames.split(',').toList()
+                            result.addAll(factoryClassNames.split(',').toList())
                         }
                     }
-                    mergedFactoryNames.put propertyName, result as String[]
+                    mergedFactoryNames.put(propertyName, result as String[])
                 }
                 loadedProperties = loadedPropertiesForClassLoader.putIfAbsent(System.identityHashCode(classLoader), mergedFactoryNames)
                 if (loadedProperties == null) {

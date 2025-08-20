@@ -90,14 +90,14 @@ class GroovyPagePlugin implements Plugin<Project> {
         }
 
         tasks.withType(War).configureEach { War war ->
-            war.dependsOn compileGroovyPages
+            war.dependsOn(compileGroovyPages)
             war.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             if (war.name == 'bootWar') {
                 war.from(destDir) { CopySpec it ->
                     it.into('WEB-INF/classes')
                 }
             } else if (war.name == 'war') {
-                war.from destDir
+                war.from(destDir)
             }
 
             if (war.classpath) {
@@ -108,7 +108,7 @@ class GroovyPagePlugin implements Plugin<Project> {
         }
 
         tasks.withType(Jar).configureEach { Jar jar ->
-            jar.dependsOn compileGroovyPages
+            jar.dependsOn(compileGroovyPages)
             jar.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             if (!(jar instanceof War)) {
                 if (jar.name == 'bootJar') {
@@ -116,7 +116,7 @@ class GroovyPagePlugin implements Plugin<Project> {
                         it.into('BOOT-INF/classes')
                     }
                 } else if (jar.name == 'jar') {
-                    jar.from destDir
+                    jar.from(destDir)
                 }
             }
         }

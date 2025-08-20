@@ -30,6 +30,6 @@ class OptLockNotVersioned implements Serializable {
     String name
 
     static mapping = {
-        version false
+        version(false)
     }
 }

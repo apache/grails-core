@@ -82,23 +82,23 @@ class GrailsWebDataBinder extends SimpleDataBinder {
     GrailsWebDataBinder(GrailsApplication grailsApplication) {
         this.grailsApplication = grailsApplication
         this.conversionService = new SpringConversionServiceAdapter()
-        registerConverter new ByteArrayMultipartFileValueConverter()
+        registerConverter(new ByteArrayMultipartFileValueConverter())
     }
 
     @Override
     void bind(obj, DataBindingSource source) {
-        bind obj, source, null, getBindingIncludeList(obj), null, null
+        bind(obj, source, null, getBindingIncludeList(obj), null, null)
     }
 
     @Override
     void bind(obj, DataBindingSource source, DataBindingListener listener) {
-        bind obj, source, null, getBindingIncludeList(obj), null, listener
+        bind(obj, source, null, getBindingIncludeList(obj), null, listener)
     }
 
     @Override
     void bind(object, DataBindingSource source, String filter, List whiteList, List blackList, DataBindingListener listener) {
         def bindingResult = new BeanPropertyBindingResult(object, object.getClass().name)
-        doBind object, source, filter, whiteList, blackList, listener, bindingResult
+        doBind(object, source, filter, whiteList, blackList, listener, bindingResult)
     }
 
     @Override
@@ -111,24 +111,24 @@ class GrailsWebDataBinder extends SimpleDataBinder {
         if (listener != null && !(listener instanceof DataBindingEventMulticastListener)) {
             allListeners << listener
         }
-        allListeners.addAll listeners.findAll { DataBindingListener l -> l.supports(object.getClass()) }
+        allListeners.addAll(listeners.findAll { DataBindingListener l -> l.supports(object.getClass()) })
 
         def listenerWrapper = new DataBindingEventMulticastListener(allListeners)
 
         boolean bind = listenerWrapper.beforeBinding(object, bindingResult)
 
         if (bind) {
-            super.doBind object, source, filter, whiteList, blackList, listenerWrapper, bindingResult
+            super.doBind(object, source, filter, whiteList, blackList, listenerWrapper, bindingResult)
         }
 
-        listenerWrapper.afterBinding object, bindingResult
+        listenerWrapper.afterBinding(object, bindingResult)
 
         populateErrors(object, bindingResult)
     }
 
     @Override
     void bind(obj, GPathResult gpath) {
-        bind obj, new SimpleMapDataBindingSource(new GPathResultMap(gpath)), getBindingIncludeList(obj)
+        bind(obj, new SimpleMapDataBindingSource(new GPathResultMap(gpath)), getBindingIncludeList(obj))
     }
 
     protected populateErrors(obj, BindingResult bindingResult) {
@@ -200,9 +200,9 @@ class GrailsWebDataBinder extends SimpleDataBinder {
     protected initializeProperty(obj, String propName, Class propertyType, DataBindingSource source) {
         def isInitialized = false
         if (source.dataSourceAware) {
-            def isDomainClass = isDomainClass propertyType
+            def isDomainClass = isDomainClass(propertyType)
             if (isDomainClass && source.containsProperty(propName)) {
-                def val = source.getPropertyValue propName
+                def val = source.getPropertyValue(propName)
                 def idValue = getIdentifierValueFrom(val)
                 if (idValue != null) {
                     def persistentInstance = getPersistentInstance(propertyType, idValue)
@@ -214,13 +214,13 @@ class GrailsWebDataBinder extends SimpleDataBinder {
             }
         }
         if (!isInitialized) {
-            super.initializeProperty obj, propName,  propertyType, source
+            super.initializeProperty(obj, propName,  propertyType, source)
         }
     }
 
     protected getPersistentInstance(Class<?> type, id) {
         try {
-            InvokerHelper.invokeStaticMethod type, 'get', id
+            InvokerHelper.invokeStaticMethod(type, 'get', id)
         } catch (Exception exc) {}
     }
 
@@ -273,12 +273,12 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                     def persistedInstance = getPersistentInstance(propertyType, idValue)
                     if (persistedInstance != null) {
                         needsBinding = false
-                        bindProperty obj, source, metaProperty, persistedInstance, listener, errors
+                        bindProperty(obj, source, metaProperty, persistedInstance, listener, errors)
                         if (persistedInstance != null) {
                             if (val instanceof Map) {
-                                bind persistedInstance, new SimpleMapDataBindingSource(val), listener
+                                bind(persistedInstance, new SimpleMapDataBindingSource(val), listener)
                             } else if (val instanceof DataBindingSource) {
-                                bind persistedInstance, val, listener
+                                bind(persistedInstance, val, listener)
                             }
                         }
                     }
@@ -297,7 +297,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                     }
                     if (shouldBindNull) {
                         needsBinding = false
-                        bindProperty obj, source, metaProperty, null, listener, errors
+                        bindProperty(obj, source, metaProperty, null, listener, errors)
                     }
                 }
             } else if (Collection.isAssignableFrom(metaProperty.type)) {
@@ -317,7 +317,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                     }
                     if (listValue != null) {
                         needsBinding = false
-                        def coll = initializeCollection obj, metaProperty.name, metaProperty.type
+                        def coll = initializeCollection(obj, metaProperty.name, metaProperty.type)
                         if (coll instanceof Collection) {
                             coll.clear()
                         }
@@ -336,7 +336,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                                             } else {
                                                 newBindingSource = new SimpleMapDataBindingSource((Map)item)
                                             }
-                                            bind persistentInstance, newBindingSource, listener
+                                            bind(persistentInstance, newBindingSource, listener)
                                             itemsWhichNeedBinding << persistentInstance
                                         }
                                     }
@@ -348,7 +348,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                         }
                         if (itemsWhichNeedBinding) {
                             for (item in itemsWhichNeedBinding) {
-                                addElementToCollection obj, metaProperty.name, metaProperty.type, item, false
+                                addElementToCollection(obj, metaProperty.name, metaProperty.type, item, false)
                             }
                         }
                     }
@@ -371,7 +371,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
             }
         }
         if (needsBinding) {
-            super.processProperty obj, metaProperty, val, source, listener, errors
+            super.processProperty(obj, metaProperty, val, source, listener, errors)
         }
     }
 
@@ -386,11 +386,11 @@ class GrailsWebDataBinder extends SimpleDataBinder {
             def idValue = getIdentifierValueFrom(val)
             if (idValue != null && idValue != '') {
                 def propertyType = getDomainClassType(obj, propName)
-                def referencedType = getReferencedTypeForCollection propName, obj
+                def referencedType = getReferencedTypeForCollection(propName, obj)
                 if (referencedType != null && isDomainClass(referencedType)) {
                     needsBinding = false
                     if (Set.isAssignableFrom(metaProperty.type)) {
-                        def collection = initializeCollection obj, propName, metaProperty.type
+                        def collection = initializeCollection(obj, propName, metaProperty.type)
                         def instance
                         if (collection != null) {
                             instance = findAlementWithId((Set)collection, idValue)
@@ -404,34 +404,34 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                                 Exception e = new IllegalArgumentException(message)
                                 addBindingError(obj, propName, idValue, e, listener, errors)
                             } else {
-                                addElementToCollectionAt obj, propName, collection, Integer.parseInt(indexedPropertyReferenceDescriptor.index), instance
+                                addElementToCollectionAt(obj, propName, collection, Integer.parseInt(indexedPropertyReferenceDescriptor.index), instance)
                             }
                         }
                         if (instance != null) {
                             if (val instanceof Map) {
-                                bind instance, new SimpleMapDataBindingSource(val), listener
+                                bind(instance, new SimpleMapDataBindingSource(val), listener)
                             } else if (val instanceof DataBindingSource) {
-                                bind instance, val, listener
+                                bind(instance, val, listener)
                             }
                         }
                     } else if (Collection.isAssignableFrom(metaProperty.type)) {
-                        def collection = initializeCollection obj, propName, metaProperty.type
+                        def collection = initializeCollection(obj, propName, metaProperty.type)
                         def idx = Integer.parseInt(indexedPropertyReferenceDescriptor.index)
                         if ('null' == idValue) {
                             if (idx < collection.size()) {
                                 def element = collection[idx]
                                 if (element != null) {
-                                    collection.remove element
+                                    collection.remove(element)
                                 }
                             }
                         } else {
                             def instance = getPersistentInstance(referencedType, idValue)
-                            addElementToCollectionAt obj, propName, collection, idx, instance
+                            addElementToCollectionAt(obj, propName, collection, idx, instance)
                             if (instance != null) {
                                 if (val instanceof Map) {
-                                    bind instance, new SimpleMapDataBindingSource(val), listener
+                                    bind(instance, new SimpleMapDataBindingSource(val), listener)
                                 } else if (val instanceof DataBindingSource) {
-                                    bind instance, val, listener
+                                    bind(instance, val, listener)
                                 }
                             }
                         }
@@ -439,22 +439,22 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                         Map map = (Map)obj[propName]
                         if (idValue == 'null' || idValue == null || idValue == '') {
                             if (map != null) {
-                                map.remove indexedPropertyReferenceDescriptor.index
+                                map.remove(indexedPropertyReferenceDescriptor.index)
                             }
                         } else {
-                            map = initializeMap obj, propName
-                            def persistedInstance = getPersistentInstance referencedType, idValue
+                            map = initializeMap(obj, propName)
+                            def persistedInstance = getPersistentInstance(referencedType, idValue)
                             if (persistedInstance != null) {
                                 if (map.size() < autoGrowCollectionLimit || map.containsKey(indexedPropertyReferenceDescriptor.index)) {
                                     map[indexedPropertyReferenceDescriptor.index] = persistedInstance
                                     if (val instanceof Map) {
-                                        bind persistedInstance, new SimpleMapDataBindingSource(val), listener
+                                        bind(persistedInstance, new SimpleMapDataBindingSource(val), listener)
                                     } else if (val instanceof DataBindingSource) {
-                                        bind persistedInstance, val, listener
+                                        bind(persistedInstance, val, listener)
                                     }
                                 }
                             } else {
-                                map.remove indexedPropertyReferenceDescriptor.index
+                                map.remove(indexedPropertyReferenceDescriptor.index)
                             }
                         }
                     }
@@ -462,7 +462,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
             }
         }
         if (needsBinding) {
-            super.processIndexedProperty obj, metaProperty, indexedPropertyReferenceDescriptor, val, source, listener, errors
+            super.processIndexedProperty(obj, metaProperty, indexedPropertyReferenceDescriptor, val, source, listener, errors)
         }
     }
 
@@ -475,7 +475,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
 
     @Override
     protected addElementToCollectionAt(obj, String propertyName, Collection collection, index, val) {
-        super.addElementToCollectionAt obj, propertyName, collection, index, val
+        super.addElementToCollectionAt(obj, propertyName, collection, index, val)
 
         def domainClass = getPersistentEntity(obj.getClass())
         if (domainClass != null) {
@@ -522,7 +522,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
             if (property != null) {
                 if (Collection.isAssignableFrom(property.type)) {
                     if (propertyValue instanceof String) {
-                        isSet = addElementToCollection obj, propName, property, propertyValue, true
+                        isSet = addElementToCollection(obj, propName, property, propertyValue, true)
                     } else if (propertyValue instanceof String[]) {
                         if (property instanceof Association) {
                             Association association = (Association)property
@@ -559,7 +559,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
         }
 
         if (!isSet) {
-            super.setPropertyValue obj, source, metaProperty, propertyValue, listener
+            super.setPropertyValue(obj, source, metaProperty, propertyValue, listener)
         }
     }
 
@@ -597,46 +597,46 @@ class GrailsWebDataBinder extends SimpleDataBinder {
         }
 
         def elementToAdd = propertyValue
-        def referencedType = getReferencedTypeForCollection propName, obj
+        def referencedType = getReferencedTypeForCollection(propName, obj)
         if (referencedType != null) {
             if (isDomainClass(referencedType)) {
-                def persistentInstance = getPersistentInstance referencedType, propertyValue
+                def persistentInstance = getPersistentInstance(referencedType, propertyValue)
                 if (persistentInstance != null) {
                     elementToAdd = persistentInstance
                 }
             }
         }
-        super.addElementToCollection obj, propName, propertyType, elementToAdd, clearCollection
+        super.addElementToCollection(obj, propName, propertyType, elementToAdd, clearCollection)
     }
 
     protected addElementToCollection(obj, String propName, PersistentProperty property, propertyValue, boolean clearCollection) {
-        addElementToCollection obj, propName, property.type, propertyValue, clearCollection
+        addElementToCollection(obj, propName, property.type, propertyValue, clearCollection)
     }
 
     @Autowired(required=false)
     void setStructuredBindingEditors(TypedStructuredBindingEditor[] editors) {
         editors.each { TypedStructuredBindingEditor editor ->
-            registerStructuredEditor editor.targetType, editor
+            registerStructuredEditor(editor.targetType, editor)
         }
     }
 
     @Autowired(required=false)
     void setValueConverters(ValueConverter[] converters) {
         converters.each { ValueConverter converter ->
-            registerConverter converter
+            registerConverter(converter)
         }
     }
 
     @Autowired(required=false)
     void setFormattedValueConverters(FormattedValueConverter[] converters) {
         converters.each { FormattedValueConverter converter ->
-            registerFormattedValueConverter converter
+            registerFormattedValueConverter(converter)
         }
     }
 
     @Autowired(required=false)
     void setDataBindingListeners(DataBindingListener[] listeners) {
-        this.listeners.addAll Arrays.asList(listeners)
+        this.listeners.addAll(Arrays.asList(listeners))
     }
 
     @Override

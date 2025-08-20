@@ -36,7 +36,7 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
         def o = new OptLockVersioned(name: 'locked')
 
         when:
-        o.save flush: true
+        o.save(flush: true)
 
         then:
         o.version == 0
@@ -45,7 +45,7 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
         manager.session.clear()
         o = OptLockVersioned.get(o.id)
         o.name = 'Fred'
-        o.save flush: true
+        o.save(flush: true)
 
         then:
         o.version == 1
@@ -78,7 +78,7 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
                 reloaded.save(flush: true)
             }
         }.join()
-        sleep 2000 // heisenbug
+        sleep(2000) // heisenbug
 
         o.name += ' in main session'
         def ex
@@ -115,7 +115,7 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
                 reloaded.save(flush: true)
             }
         }.join()
-        sleep 2000 // heisenbug
+        sleep(2000) // heisenbug
 
         o.name += ' in main session'
         def ex

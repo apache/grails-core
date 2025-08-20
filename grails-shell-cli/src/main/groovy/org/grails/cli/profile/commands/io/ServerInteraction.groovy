@@ -37,7 +37,7 @@ trait ServerInteraction {
      */
     void waitForStartup(String host = 'localhost', int port = 8080) {
         while (!isServerAvailable(host, port)) {
-            sleep 100
+            sleep(100)
         }
         try {
             new URL("http://${host ?: 'localhost'}:${port ?: 8080}/is-tomcat-running").text

@@ -86,7 +86,7 @@ class GenerateControllerCommand implements GrailsApplicationCommand, CommandLine
 
                 addStatus("Scaffolding complete for ${projectPath(sourceClass)}")
             } else {
-                error "Domain class not found for name: $domainClassName"
+                error("Domain class not found for name: $domainClassName")
                 failureCount++
             }
         }

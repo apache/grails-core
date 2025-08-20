@@ -323,10 +323,10 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
 
             params.eachWithIndex { val, int i ->
                 if (val instanceof CharSequence) {
-                    q.setParameter i, val.toString()
+                    q.setParameter(i, val.toString())
                 }
                 else {
-                    q.setParameter i, val
+                    q.setParameter(i, val)
                 }
             }
             populateQueryArguments(q, args)
@@ -375,10 +375,10 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             params.eachWithIndex { val, int i ->
                 i++
                 if (val instanceof CharSequence) {
-                    q.setParameter i, val.toString()
+                    q.setParameter(i, val.toString())
                 }
                 else {
-                    q.setParameter i, val
+                    q.setParameter(i, val)
                 }
             }
             q.addEntity(persistentClass)
@@ -418,10 +418,10 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             params.eachWithIndex { val, int i ->
                 i++
                 if (val instanceof CharSequence) {
-                    q.setParameter i, val.toString()
+                    q.setParameter(i, val.toString())
                 }
                 else {
-                    q.setParameter i, val
+                    q.setParameter(i, val)
                 }
             }
             q.addEntity(persistentClass)
@@ -544,10 +544,10 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
 
             params.eachWithIndex { val, int i ->
                 if (val instanceof CharSequence) {
-                    q.setParameter i, val.toString()
+                    q.setParameter(i, val.toString())
                 }
                 else {
-                    q.setParameter i, val
+                    q.setParameter(i, val)
                 }
             }
             populateQueryArguments(q, args)
@@ -563,7 +563,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
 
             Criteria crit = session.createCriteria(persistentEntity.javaClass)
             hibernateTemplate.applySettings(crit)
-            crit.add example
+            crit.add(example)
             GrailsHibernateQueryUtils.populateArgumentsForCriteria(persistentEntity, crit, args, datastore.mappingContext.conversionService, true)
             crit.maxResults = 1
             firePreQueryEvent(session, crit)
@@ -583,7 +583,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
 
             Criteria crit = session.createCriteria(persistentEntity.javaClass)
             hibernateTemplate.applySettings(crit)
-            crit.add example
+            crit.add(example)
             GrailsHibernateQueryUtils.populateArgumentsForCriteria(persistentEntity, crit, args, datastore.mappingContext.conversionService, true)
             firePreQueryEvent(session, crit)
             List results = crit.list()
@@ -604,7 +604,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             hibernateTemplate.applySettings(criteria)
             criteria.add(Restrictions.allEq(queryArgs))
             for (name in nullNames) {
-                criteria.add Restrictions.isNull(name)
+                criteria.add(Restrictions.isNull(name))
             }
             criteria.setResultTransformer(DistinctRootEntityResultTransformer.INSTANCE)
 
@@ -653,10 +653,10 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
 
             params.eachWithIndex { val, int i ->
                 if (val instanceof CharSequence) {
-                    q.setParameter i, val.toString()
+                    q.setParameter(i, val.toString())
                 }
                 else {
-                    q.setParameter i, val
+                    q.setParameter(i, val)
                 }
             }
             populateQueryArguments(q, args)
@@ -676,7 +676,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             hibernateTemplate.applySettings(criteria)
             criteria.add(Restrictions.allEq(queryArgs))
             for (name in nullNames) {
-                criteria.add Restrictions.isNull(name)
+                criteria.add(Restrictions.isNull(name))
             }
             criteria.setMaxResults(1)
             GrailsHibernateQueryUtils.populateArgumentsForCriteria(persistentEntity, criteria, args, datastore.mappingContext.conversionService, true)
@@ -789,7 +789,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
         Set<String> allNames = new HashSet<>(query.keySet() as Set<String>)
         for (String name in allNames) {
             if (query[name] == null) {
-                query.remove name
+                query.remove(name)
                 nullNames << name
             }
         }
@@ -835,17 +835,17 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
                 def value = entry.value
 
                 if (value == null) {
-                    q.setParameter stringKey, null
+                    q.setParameter(stringKey, null)
                 } else if (value instanceof CharSequence) {
-                    q.setParameter stringKey, value.toString()
+                    q.setParameter(stringKey, value.toString())
                 } else if (List.isAssignableFrom(value.getClass())) {
-                    q.setParameterList stringKey, (List) value
+                    q.setParameterList(stringKey, (List) value)
                 } else if (Set.isAssignableFrom(value.getClass())) {
-                    q.setParameterList stringKey, (Set) value
+                    q.setParameterList(stringKey, (Set) value)
                 } else if (value.getClass().isArray()) {
-                    q.setParameterList stringKey, (Object[]) value
+                    q.setParameterList(stringKey, (Object[]) value)
                 } else {
-                    q.setParameter stringKey, value
+                    q.setParameter(stringKey, value)
                 }
             }
         }

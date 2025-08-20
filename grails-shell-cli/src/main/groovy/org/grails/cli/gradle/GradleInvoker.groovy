@@ -56,7 +56,7 @@ class GradleInvoker {
                 arguments << '-Dgrails.full.stacktrace=true'
             }
 
-            arguments.addAll argArray.collect() { it.toString() }
+            arguments.addAll(argArray.collect() { it.toString() })
             buildLauncher.withArguments(arguments as String[])
         }
     }

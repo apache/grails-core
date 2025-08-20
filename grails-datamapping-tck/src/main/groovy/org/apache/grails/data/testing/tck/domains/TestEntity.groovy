@@ -35,14 +35,14 @@ class TestEntity implements Serializable {
     ChildEntity child
 
     static mapping = {
-        name index: true
-        age index: true
-        child index: true
+        name(index: true)
+        age(index: true)
+        child(index: true)
     }
 
     static constraints = {
-        name blank: false
-        child nullable: true
-        age nullable: true
+        name(blank: false)
+        child(nullable: true)
+        age(nullable: true)
     }
 }

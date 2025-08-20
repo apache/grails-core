@@ -202,7 +202,7 @@ class FormFieldsTemplateService {
         }
 
         candidatePaths.findResult { String path ->
-            log.debug "looking for template with path $path"
+            log.debug("looking for template with path $path")
             def source = groovyPageLocator.findTemplateByPath(path)
             if (source) {
                 Map template = [path: path]
@@ -210,7 +210,7 @@ class FormFieldsTemplateService {
                     source.URI.startsWith(it.pluginPath)
                 }
                 template.plugin = plugin?.name
-                log.debug "found template $template.path ${plugin ? "in $template.plugin plugin" : ''}"
+                log.debug("found template $template.path ${plugin ? "in $template.plugin plugin" : ''}")
                 return template
             }
             return null

@@ -59,7 +59,7 @@ trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnit
      * @return The tag library instance
      */
     void mockArtefact(Class<?> tagLibClass) {
-        mockTagLib tagLibClass
+        mockTagLib(tagLibClass)
     }
 
     String getBeanName(Class<?> tagLibClass) {
@@ -82,7 +82,7 @@ trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnit
 
     private void ensureTaglibHasBeenMocked() {
         if (!hasBeenMocked) {
-            mockTagLib getTagLibTypeUnderTest()
+            mockTagLib(getTagLibTypeUnderTest())
             hasBeenMocked = true
         }
     }

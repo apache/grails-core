@@ -48,7 +48,7 @@ abstract class AbstractStructuredBindingEditor<T> implements TypedStructuredBind
     @Override
     T getPropertyValue(Object obj, String propertyName, DataBindingSource bindingSource) {
         def propertyMap = getPropertyValuesMap(propertyName, bindingSource)
-        getPropertyValue propertyMap
+        getPropertyValue(propertyMap)
     }
 
     abstract T getPropertyValue(Map values)

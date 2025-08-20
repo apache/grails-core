@@ -37,7 +37,7 @@ class OrderBySpec extends GrailsDataTckSpec {
 
         when:
         def results = TestEntity.createCriteria().list {
-            order 'age'
+            order('age')
         }
         then:
         40 == results[0].age
@@ -46,7 +46,7 @@ class OrderBySpec extends GrailsDataTckSpec {
 
         when:
         results = TestEntity.createCriteria().list {
-            order 'age', 'desc'
+            order('age', 'desc')
         }
 
         then:

@@ -49,8 +49,8 @@ abstract class GlobalClassInjectorAdapter implements GlobalClassInjector {
     void performInjectionOnAnnotatedClass(SourceUnit source, ClassNode classNode) {
         def className = classNode.name
         if (!processesClassNames.contains(className)) {
-            performInjectionInternal source, classNode
-            processesClassNames.add className
+            performInjectionInternal(source, classNode)
+            processesClassNames.add(className)
         }
     }
 

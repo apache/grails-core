@@ -211,7 +211,7 @@ class GenericGroovyTemplateView extends AbstractUrlBasedView {
         @Override
         void headers(Map<String, String> namesAndValues) {
             for (entry in namesAndValues.entrySet()) {
-                header entry.key, entry.value
+                header(entry.key, entry.value)
             }
         }
 

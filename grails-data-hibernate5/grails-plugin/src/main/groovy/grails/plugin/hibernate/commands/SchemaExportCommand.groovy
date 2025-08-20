@@ -80,7 +80,7 @@ class SchemaExportCommand implements ApplicationCommand {
 
         String action = export ? 'Exporting' : "Generating script to ${file.path}"
         String ds = argsMap.datasource ? "for DataSource '$argsMap.datasource'" : 'for the default DataSource'
-        println "$action in environment '${Environment.current.name}' $ds"
+        println("$action in environment '${Environment.current.name}' $ds")
 
         EnumSet<TargetType> targetTypes
         if (stdout) {

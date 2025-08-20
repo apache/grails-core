@@ -137,7 +137,7 @@ trait ResponseRenderer extends WebAttributes {
         applyContentType(response, null, object)
 
         try {
-            response.writer.write object.inspect()
+            response.writer.write(object.inspect())
         }
         catch (IOException e) {
             throw new ControllerExecutionException('I/O error obtaining response writer: ' + e.getMessage(), e)
@@ -156,7 +156,7 @@ trait ResponseRenderer extends WebAttributes {
 
         setContentType(response, TEXT_HTML, DEFAULT_ENCODING, true)
 
-        renderMarkupInternal webRequest, closure, response
+        renderMarkupInternal(webRequest, closure, response)
     }
 
     /**
@@ -171,8 +171,8 @@ trait ResponseRenderer extends WebAttributes {
         HttpServletResponse response = webRequest.currentResponse
         String layoutArg = argMap[ARGUMENT_LAYOUT]?.toString() ?: null
 
-        applyContentType response, argMap, closure
-        handleStatusArgument argMap, webRequest, response
+        applyContentType(response, argMap, closure)
+        handleStatusArgument(argMap, webRequest, response)
 
         if (BUILDER_TYPE_JSON.equals(argMap.get(ARGUMENT_BUILDER)) || isJSONResponse(response)) {
             renderJsonInternal(response, closure)
@@ -186,7 +186,7 @@ trait ResponseRenderer extends WebAttributes {
     private void renderJsonInternal(HttpServletResponse response, @DelegatesTo(value = StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         response.setContentType(GrailsWebUtil.getContentType(MimeType.JSON.getName(), response.getCharacterEncoding() ?: 'UTF-8'))
         def jsonBuilder = new StreamingJsonBuilder(response.writer)
-        jsonBuilder.call callable
+        jsonBuilder.call(callable)
     }
 
     /**
@@ -201,9 +201,9 @@ trait ResponseRenderer extends WebAttributes {
         HttpServletResponse response = webRequest.currentResponse
         String layoutArg = argMap[ARGUMENT_LAYOUT]?.toString() ?: null
 
-        applyContentType response, argMap, body
-        handleStatusArgument argMap, webRequest, response
-        render body
+        applyContentType(response, argMap, body)
+        handleStatusArgument(argMap, webRequest, response)
+        render(body)
         setLayout(webRequest.currentRequest, false, layoutArg)
     }
 
@@ -266,13 +266,13 @@ trait ResponseRenderer extends WebAttributes {
         def applicationAttributes = webRequest.attributes
         if (argMap.containsKey(ARGUMENT_TEXT)) {
             def textArg = argMap[ARGUMENT_TEXT]
-            applyContentType response, argMap, textArg
+            applyContentType(response, argMap, textArg)
             if (textArg instanceof Writable) {
                 renderWritable((Writable) textArg, response)
                 webRequest.renderView = false
             } else {
                 CharSequence text = (textArg instanceof CharSequence) ? ((CharSequence) textArg) : textArg.toString()
-                render text
+                render(text)
             }
             setLayout(webRequest.currentRequest, false, layoutArg)
         } else if (argMap.containsKey(ARGUMENT_VIEW)) {
@@ -286,11 +286,11 @@ trait ResponseRenderer extends WebAttributes {
             if (modelObject) {
                 Collection<ActionResultTransformer> resultTransformers = actionResultTransformers
                 for (ActionResultTransformer resultTransformer : resultTransformers) {
-                    modelObject = resultTransformer.transformActionResult webRequest, viewUri, modelObject
+                    modelObject = resultTransformer.transformActionResult(webRequest, viewUri, modelObject)
                 }
             }
 
-            applyContentType webRequest.currentResponse, argMap, null, false
+            applyContentType(webRequest.currentResponse, argMap, null, false)
 
             Map model
             if (modelObject instanceof Map) {
@@ -299,10 +299,10 @@ trait ResponseRenderer extends WebAttributes {
                 model = [:]
             }
 
-            ((GroovyObject) this).setProperty 'modelAndView', new ModelAndView(viewUri, model)
+            ((GroovyObject) this).setProperty('modelAndView', new ModelAndView(viewUri, model))
             setLayout(webRequest.currentRequest, true, layoutArg)
         } else if (argMap.containsKey(ARGUMENT_TEMPLATE)) {
-            applyContentType response, argMap, null, false
+            applyContentType(response, argMap, null, false)
             webRequest.renderView = false
             boolean hasModel = argMap.containsKey(ARGUMENT_MODEL)
             def modelObject
@@ -366,7 +366,7 @@ trait ResponseRenderer extends WebAttributes {
                     renderTemplateForCollection(webRequest, view, binding, colObject, var)
                 } else if (hasModel) {
                     if (modelObject instanceof Map) {
-                        setTemplateModel webRequest, binding, (Map) modelObject
+                        setTemplateModel(webRequest, binding, (Map) modelObject)
                     }
                     renderViewForTemplate(webRequest, view, binding)
                 } else {
@@ -411,7 +411,7 @@ trait ResponseRenderer extends WebAttributes {
                     } else {
                         input = IOUtils.openStream(new File(o.toString()))
                     }
-                    SpringIOUtils.copy input, response.getOutputStream()
+                    SpringIOUtils.copy(input, response.getOutputStream())
                 } catch (IOException e) {
                     throw new ControllerExecutionException(
                             "I/O error copying file to response: ${e.message}", e)
@@ -493,7 +493,7 @@ trait ResponseRenderer extends WebAttributes {
         b.encoding = response.characterEncoding
 
         Writable markup = (Writable) b.bind(closure)
-        renderWritable markup, response
+        renderWritable(markup, response)
 
         webRequest.setRenderView(false)
     }
@@ -507,7 +507,7 @@ trait ResponseRenderer extends WebAttributes {
     private void renderWritable(Writable writable, HttpServletResponse response) {
         try {
             PrintWriter writer = response.getWriter()
-            writable.writeTo writer
+            writable.writeTo(writer)
             writer.flush()
         }
         catch (IOException e) {
@@ -516,7 +516,7 @@ trait ResponseRenderer extends WebAttributes {
     }
 
     private boolean applyContentType(HttpServletResponse response, Map argMap, Object renderArgument) {
-        applyContentType response, argMap, renderArgument, true
+        applyContentType(response, argMap, renderArgument, true)
     }
 
     private boolean applyContentType(HttpServletResponse response, Map argMap, Object renderArgument, boolean useDefault) {
@@ -605,9 +605,9 @@ trait ResponseRenderer extends WebAttributes {
             }
         } else {
             if (GrailsStringUtils.isBlank(var)) {
-                binding.put DEFAULT_ARGUMENT, colObject
+                binding.put(DEFAULT_ARGUMENT, colObject)
             } else {
-                binding.put var, colObject
+                binding.put(var, colObject)
             }
 
             renderViewForTemplate(webRequest, view, binding)

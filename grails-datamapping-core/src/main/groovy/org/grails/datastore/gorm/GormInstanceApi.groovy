@@ -109,7 +109,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
      */
     D refresh(D instance) {
         execute({ Session session ->
-            session.refresh instance
+            session.refresh(instance)
             return instance
         } as SessionCallback)
     }
@@ -139,7 +139,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
      */
     D insert(D instance, Map params) {
         execute({ Session session ->
-            doSave instance, params, session, true
+            doSave(instance, params, session, true)
         } as SessionCallback)
     }
 
@@ -181,7 +181,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
      */
     D save(D instance, Map params) {
         execute({ Session session ->
-            doSave instance, params, session
+            doSave(instance, params, session)
         } as SessionCallback)
     }
 

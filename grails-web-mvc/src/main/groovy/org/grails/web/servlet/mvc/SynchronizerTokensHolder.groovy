@@ -40,7 +40,7 @@ class SynchronizerTokensHolder implements Serializable {
 
     boolean isValid(String url, String token) {
         try {
-            getTokens(url).contains UUID.fromString(token)
+            getTokens(url).contains(UUID.fromString(token))
         }
         catch (IllegalArgumentException e) {
             false
@@ -61,7 +61,7 @@ class SynchronizerTokensHolder implements Serializable {
         if (url && token) {
             final Set set = getTokens(url)
             try {
-                set.remove UUID.fromString(token)
+                set.remove(UUID.fromString(token))
             }
             catch (IllegalArgumentException ignored) {}
             if (set.isEmpty()) {

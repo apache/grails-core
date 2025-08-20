@@ -258,7 +258,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      */
     List<Serializable> saveAll(Object... objectsToSave) {
         (List<Serializable>)execute({ Session session ->
-            session.persist Arrays.asList(objectsToSave)
+            session.persist(Arrays.asList(objectsToSave))
         } as SessionCallback)
     }
 
@@ -269,7 +269,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      */
     List<Serializable> saveAll(Iterable<?> objectsToSave) {
         (List<Serializable>)execute({ Session session ->
-            session.persist objectsToSave
+            session.persist(objectsToSave)
         } as SessionCallback)
     }
 
@@ -279,7 +279,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      */
     void deleteAll(Object... objectsToDelete) {
         execute({ Session session ->
-            session.delete Arrays.asList(objectsToDelete)
+            session.delete(Arrays.asList(objectsToDelete))
         } as SessionCallback)
     }
 
@@ -289,7 +289,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      */
     void deleteAll(Map params, Object... objectsToDelete) {
         execute({ Session session ->
-            session.delete Arrays.asList(objectsToDelete)
+            session.delete(Arrays.asList(objectsToDelete))
             if (params?.flush) {
                 session.flush()
             }
@@ -302,7 +302,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      */
     void deleteAll(Iterable objectToDelete) {
         execute({ Session session ->
-            session.delete objectToDelete
+            session.delete(objectToDelete)
         } as SessionCallback)
     }
 
@@ -312,7 +312,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      */
     void deleteAll(Map params, Iterable objectToDelete) {
         execute({ Session session ->
-            session.delete objectToDelete
+            session.delete(objectToDelete)
             if (params?.flush) {
                 session.flush()
             }
@@ -761,7 +761,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
             queryMap.each { key, value -> processedQueryMap[key.toString()] = value }
             q.allEq(processedQueryMap)
 
-            DynamicFinder.populateArgumentsForCriteria persistentClass, q, args
+            DynamicFinder.populateArgumentsForCriteria(persistentClass, q, args)
             q.list()
         } as SessionCallback<List>)
     }
@@ -818,7 +818,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
                 queryMap.each { key, value -> processedQueryMap[key.toString()] = value }
                 q.allEq(processedQueryMap)
             }
-            DynamicFinder.populateArgumentsForCriteria persistentClass, q, args
+            DynamicFinder.populateArgumentsForCriteria(persistentClass, q, args)
             q.singleResult()
         } as SessionCallback)
     }
@@ -853,7 +853,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      */
     <T> T  withSession(Closure<T> callable) {
         execute({ Session session ->
-            callable.call session
+            callable.call(session)
         } as SessionCallback)
     }
 
@@ -865,7 +865,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      */
     <T> T  withDatastoreSession(Closure<T> callable) {
         execute({ Session session ->
-            callable.call session
+            callable.call(session)
         } as SessionCallback)
     }
 
@@ -899,7 +899,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     GormAllOperations<D> eachTenant(Closure callable) {
         if (multiTenancyMode != MultiTenancyMode.NONE) {
-            Tenants.eachTenant callable
+            Tenants.eachTenant(callable)
             return this
         }
         else {
@@ -999,7 +999,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      */
     <T> T withNewTransaction(Map transactionProperties, Closure<T> callable) {
         def props = new HashMap(transactionProperties)
-        props.remove 'propagationName'
+        props.remove('propagationName')
         props.propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
         withTransaction(props, callable)
     }
@@ -1011,7 +1011,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * @return The result of the closure execution
      */
     <T> T withTransaction(TransactionDefinition definition, Closure<T> callable) {
-        Assert.notNull transactionManager, 'No transactionManager bean configured'
+        Assert.notNull(transactionManager, 'No transactionManager bean configured')
 
         if (!callable) {
             return
@@ -1026,11 +1026,11 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     <T> T withNewSession(Closure<T> callable) {
         def session = datastore.connect()
         try {
-            DatastoreUtils.bindNewSession session
+            DatastoreUtils.bindNewSession(session)
             return callable?.call(session)
         }
         finally {
-            DatastoreUtils.unbindSession session
+            DatastoreUtils.unbindSession(session)
         }
     }
 
@@ -1041,11 +1041,11 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         if (datastore instanceof StatelessDatastore) {
             def session = datastore.connectStateless()
             try {
-                DatastoreUtils.bindNewSession session
+                DatastoreUtils.bindNewSession(session)
                 return callable?.call(session)
             }
             finally {
-                DatastoreUtils.unbindSession session
+                DatastoreUtils.unbindSession(session)
             }
         }
         else {

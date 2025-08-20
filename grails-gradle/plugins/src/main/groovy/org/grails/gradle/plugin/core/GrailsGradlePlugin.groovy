@@ -281,7 +281,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
         String slf4jPreventExclusion = project.properties['slf4jPreventExclusion']
         if (!slf4jPreventExclusion || slf4jPreventExclusion != 'true') {
             project.configurations.configureEach { Configuration configuration ->
-                configuration.exclude group: 'org.slf4j', module: 'slf4j-simple'
+                configuration.exclude(group: 'org.slf4j', module: 'slf4j-simple')
             }
         }
     }
@@ -373,7 +373,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 ant.mkdir(dir: buildInfoFile.parentFile)
                 ant.propertyfile(file: buildInfoFile) {
                     for (me in buildPropertiesTask.inputs.properties) {
-                        entry key: me.key, value: me.value
+                        entry(key: me.key, value: me.value)
                     }
                 }
                 PropertyFileUtils.makePropertiesFileReproducible(buildInfoFile)
@@ -556,18 +556,18 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 }
             }
 
-            task.systemProperty Metadata.APPLICATION_NAME, project.name
-            task.systemProperty Metadata.APPLICATION_VERSION, (project.version instanceof Serializable ? project.version : project.version.toString())
-            task.systemProperty Metadata.APPLICATION_GRAILS_VERSION, grailsVersion
-            task.systemProperty Environment.KEY, defaultGrailsEnv
-            task.systemProperty Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: ''
+            task.systemProperty(Metadata.APPLICATION_NAME, project.name)
+            task.systemProperty(Metadata.APPLICATION_VERSION, (project.version instanceof Serializable ? project.version : project.version.toString()))
+            task.systemProperty(Metadata.APPLICATION_GRAILS_VERSION, grailsVersion)
+            task.systemProperty(Environment.KEY, defaultGrailsEnv)
+            task.systemProperty(Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: '')
             if (task.minHeapSize == null) {
                 task.minHeapSize = '768m'
             }
             if (task.maxHeapSize == null) {
                 task.maxHeapSize = '768m'
             }
-            task.jvmArgs '-XX:+TieredCompilation', '-XX:TieredStopAtLevel=1', '-XX:CICompilerCount=3'
+            task.jvmArgs('-XX:+TieredCompilation', '-XX:TieredStopAtLevel=1', '-XX:CICompilerCount=3')
 
             // Copy GRAILS_FORK_OPTS into the fork. Or use GRAILS_OPTS if no fork options provided
             // This allows run-app etc. to run using appropriate settings and allows users to provided
@@ -575,15 +575,15 @@ class GrailsGradlePlugin extends GroovyPlugin {
             def envMap = System.getenv()
             String opts = envMap.GRAILS_FORK_OPTS ?: envMap.GRAILS_OPTS
             if (opts) {
-                task.jvmArgs opts.split(' ')
+                task.jvmArgs(opts.split(' '))
             }
         }
 
         TaskContainer tasks = project.tasks
 
         String grailsEnvSystemProperty = System.getProperty(Environment.KEY)
-        tasks.withType(Test).each systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.TEST.getName())
-        tasks.withType(JavaExec).each systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.DEVELOPMENT.getName())
+        tasks.withType(Test).each(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.TEST.getName()))
+        tasks.withType(JavaExec).each(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.DEVELOPMENT.getName()))
     }
 
     protected void configureConsoleTask(Project project) {
@@ -769,12 +769,12 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
             if (!native2ascii) {
                 task.from(sourceSet.resources) { spec ->
-                    spec.include '**/*.properties'
+                    spec.include('**/*.properties')
                     spec.filter(ReplaceTokens, tokens: replaceTokens)
                 }
             } else if (!grailsExt.native2asciiAnt) {
                 task.from(sourceSet.resources) { spec ->
-                    spec.include '**/*.properties'
+                    spec.include('**/*.properties')
                     spec.filter(ReplaceTokens, tokens: replaceTokens)
                     spec.filter(EscapeUnicode)
                 }
@@ -782,16 +782,16 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
             task.from(sourceSet.resources) { spec ->
                 spec.filter(ReplaceTokens, tokens: replaceTokens)
-                spec.include '**/*.groovy'
-                spec.include '**/*.yml'
-                spec.include '**/*.xml'
+                spec.include('**/*.groovy')
+                spec.include('**/*.yml')
+                spec.include('**/*.xml')
             }
 
             task.from(sourceSet.resources) { spec ->
-                spec.exclude '**/*.properties'
-                spec.exclude '**/*.groovy'
-                spec.exclude '**/*.yml'
-                spec.exclude '**/*.xml'
+                spec.exclude('**/*.properties')
+                spec.exclude('**/*.groovy')
+                spec.exclude('**/*.yml')
+                spec.exclude('**/*.xml')
             }
         }
     }
@@ -822,7 +822,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
                     // devtools' automatic restart mechanism uses a specialized classloader setup, which can interfere
                     // with Grails' plugin management and bean wiring when running CLI scripts via Gradle
-                    it.systemProperty 'spring.devtools.restart.enabled', 'false'
+                    it.systemProperty('spring.devtools.restart.enabled', 'false')
 
                     List<Object> args = []
                     def otherArgs = project.findProperty('args')
@@ -853,7 +853,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
                     // devtools' automatic restart mechanism uses a specialized classloader setup, which can interfere
                     // with Grails' plugin management and bean wiring when running CLI commands via Gradle
-                    it.systemProperty 'spring.devtools.restart.enabled', 'false'
+                    it.systemProperty('spring.devtools.restart.enabled', 'false')
 
                     List<Object> args = []
                     def otherArgs = project.findProperty('args')

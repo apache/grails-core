@@ -118,7 +118,7 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
 
     @Override
     protected List<Object> retrieveAllEntities(PersistentEntity pe, Serializable[] keys) {
-        retrieveAllEntities pe, Arrays.asList(keys)
+        retrieveAllEntities(pe, Arrays.asList(keys))
     }
 
     @Override
@@ -446,7 +446,7 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
                         addCascadeOperation(new PendingOperationAdapter(pe, id, obj) {
                             @Override
                             void run() {
-                                self.firePostDeleteEvent pe, entityAccess
+                                self.firePostDeleteEvent(pe, entityAccess)
                             }
                         })
                     } else {

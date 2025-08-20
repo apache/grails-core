@@ -114,7 +114,7 @@ abstract class AbstractDataBindingGrailsPlugin extends Plugin {
             halXmlDataBindingSourceCreator(HalXmlDataBindingSourceCreator)
             jsonApiDataBindingSourceCreator(JsonApiDataBindingSourceCreator)
 
-            defaultCurrencyConverter CurrencyValueConverter
+            defaultCurrencyConverter(CurrencyValueConverter)
         }
     }
 

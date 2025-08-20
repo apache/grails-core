@@ -96,7 +96,7 @@ class DefaultErrorsPrinter extends DefaultStackTracePrinter implements CodeSnipp
                     if (lineNumbersShown[res.filename].contains(lineNumber)) continue // don't repeat the same lines twice
 
                     lineNumbersShown[res.filename] << lineNumber
-                    pw.print formatCodeSnippetStart(res, lineNumber, attrs)
+                    pw.print(formatCodeSnippetStart(res, lineNumber, attrs))
                     def input = null
                     try {
                         input = res.inputStream
@@ -111,10 +111,10 @@ class DefaultErrorsPrinter extends DefaultStackTracePrinter implements CodeSnipp
                                 if (currentLineNumber in range) {
                                     boolean isErrorLine = currentLineNumber == lineNumber
                                     if (isErrorLine) {
-                                        pw.print formatCodeSnippetErrorLine(currentLineNumber, currentLine, attrs)
+                                        pw.print(formatCodeSnippetErrorLine(currentLineNumber, currentLine, attrs))
                                     }
                                     else {
-                                        pw.print formatCodeSnippetLine(currentLineNumber, currentLine, attrs)
+                                        pw.print(formatCodeSnippetLine(currentLineNumber, currentLine, attrs))
                                     }
                                 }
                                 else if (currentLineNumber > last) {
@@ -134,7 +134,7 @@ class DefaultErrorsPrinter extends DefaultStackTracePrinter implements CodeSnipp
                         } catch (e) {
                             // ignore
                         }
-                        pw.print formatCodeSnippetEnd(res, lineNumber)
+                        pw.print(formatCodeSnippetEnd(res, lineNumber))
                     }
                 }
                 else {

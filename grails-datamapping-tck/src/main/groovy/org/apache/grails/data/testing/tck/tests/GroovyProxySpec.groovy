@@ -53,7 +53,7 @@ class GroovyProxySpec extends GrailsDataTckSpec {
         location.code
 
         then: 'An exception is thrown'
-        thrown DataIntegrityViolationException
+        thrown(DataIntegrityViolationException)
 
         where:
         useGroovyProxyFactory << [true, false]

@@ -115,17 +115,17 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
             if (!isUriAbsolute(uri)) {
                 final base = handleAbsolute(attrs)
                 if (base != null) {
-                    writer.append base
+                    writer.append(base)
                 }
                 else if (includeContext) {
 
                     def cp = attrs.get(ATTRIBUTE_CONTEXT_PATH)
                     if (cp == null) cp = getContextPath()
                     if (cp != null)
-                        writer.append cp
+                        writer.append(cp)
                 }
             }
-            writer.append uri
+            writer.append(uri)
 
             def params = attrs.get(ATTRIBUTE_PARAMS)
 
@@ -137,7 +137,7 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
                     "$encodedKey=$encodedValue"
                 }.join('&')
                 writer.append(uri.indexOf('?') >= 0 ? '&' : '?')
-                      .append paramString
+                      .append(paramString)
             }
         }
         else if (attrs.get(ATTRIBUTE_RELATIVE_URI) != null) {
@@ -145,9 +145,9 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
             String forwardUri = WebUtils.getForwardURI(requestStateLookupStrategy.webRequest.request)
             int index = forwardUri.lastIndexOf('/')
             if (index != -1) {
-                writer.append forwardUri.substring(0, index + 1)
+                writer.append(forwardUri.substring(0, index + 1))
             }
-            writer.append relativeUri
+            writer.append(relativeUri)
         }
         else {
             // prefer a URL attribute
@@ -269,20 +269,20 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
                     final cp = contextPathAttribute == null ? getContextPath() : contextPathAttribute
                     if (attrs.get(ATTRIBUTE_BASE) || cp == null) {
                         attrs.put(ATTRIBUTE_ABSOLUTE, true)
-                        writer.append handleAbsolute(attrs)
+                        writer.append(handleAbsolute(attrs))
                     }
                     else if (includeContext) {
-                        writer.append cp
+                        writer.append(cp)
                     }
-                    writer.append url
+                    writer.append(url)
                 }
                 else {
                     url = mapping.createRelativeURL(convertedControllerName, convertedActionName, namespace, pluginName, params, encoding, frag)
-                    writer.append handleAbsolute(attrs)
-                    writer.append url
+                    writer.append(handleAbsolute(attrs))
+                    writer.append(url)
                 }
             } else {
-                writer.append urlAttribute
+                writer.append(urlAttribute)
             }
         }
         return writer.toString()
@@ -349,7 +349,7 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
         StringBuilder url = new StringBuilder(absolutePath?.toString() ?: '')
         def dir = attrs.dir?.toString()
         if (attrs.plugin) {
-            url.append pluginManager?.getPluginPath(attrs.plugin?.toString()) ?: ''
+            url.append(pluginManager?.getPluginPath(attrs.plugin?.toString()) ?: '')
         }
         else {
             if (contextPathAttribute == null) {
@@ -366,17 +366,17 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
         }
         if (dir) {
             if (!dir.startsWith(slash)) {
-                url.append slash
+                url.append(slash)
             }
-            url.append dir
+            url.append(dir)
         }
 
         def file = attrs.file?.toString()
         if (file) {
             if (!(file.startsWith(slash) || (dir != null && dir.endsWith(slash)))) {
-                url.append slash
+                url.append(slash)
             }
-            url.append file
+            url.append(file)
         }
 
         return url.toString()

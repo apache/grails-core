@@ -53,10 +53,10 @@ class ConstrainedEntity implements Serializable {
     static constraints = {
 
         num(maxSize: ConstrainedEntity.MAX_VALUE)
-        str validator: { val, obj ->
+        str(validator: { val, obj ->
             if (val != null && !ConstrainedEntity.ALLOWABLE_VALUES.contains(val)) {
                 return ['not.valid']
             }
-        }
+        })
     }
 }

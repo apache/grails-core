@@ -239,7 +239,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         def publications = Publication.recentPublications {
-            eq 'title', 'Some Book'
+            eq('title', 'Some Book')
         }
 
         then:
@@ -247,7 +247,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         publications = Publication.recentPublications {
-            like 'title', 'Some%'
+            like('title', 'Some%')
         }
 
         then:
@@ -255,7 +255,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         def cnt = Publication.recentPublications.count {
-            eq 'title', 'Some Book'
+            eq('title', 'Some Book')
         }
 
         then:
@@ -263,7 +263,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         publications = Publication.recentPublications(max: 3) {
-            like 'title', 'Some%'
+            like('title', 'Some%')
         }
 
         then:
@@ -285,7 +285,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         def results = Publication.publishedAfter(now - 5) {
-            eq 'paperback', true
+            eq('paperback', true)
         }
 
         then:
@@ -293,7 +293,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedAfter(now - 5, [max: 2, offset: 1]) {
-            eq 'paperback', true
+            eq('paperback', true)
         }
 
         then:
@@ -301,7 +301,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedBetween(now - 5, now + 1) {
-            eq 'paperback', true
+            eq('paperback', true)
         }
 
         then:
@@ -309,7 +309,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedBetween(now - 5, now + 1, [max: 2, offset: 1]) {
-            eq 'paperback', true
+            eq('paperback', true)
         }
 
         then:
@@ -317,7 +317,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedAfter(now - 1005) {
-            eq 'paperback', true
+            eq('paperback', true)
         }
 
         then:
@@ -325,7 +325,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedAfter(now - 5) {
-            eq 'paperback', false
+            eq('paperback', false)
         }
 
         then:
@@ -333,7 +333,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedAfter(now - 5, [max: 2, offset: 1]) {
-            eq 'paperback', false
+            eq('paperback', false)
         }
 
         then:
@@ -341,7 +341,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedBetween(now - 5, now + 1) {
-            eq 'paperback', false
+            eq('paperback', false)
         }
 
         then:
@@ -349,7 +349,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedBetween(now - 5, now + 1, [max: 2, offset: 1]) {
-            eq 'paperback', false
+            eq('paperback', false)
         }
 
         then:
@@ -357,7 +357,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedAfter(now - 1005) {
-            eq 'paperback', false
+            eq('paperback', false)
         }
 
         then:
@@ -629,16 +629,16 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         manager.session.clear()
 
         def results = Publication.recentPublicationsByTitle('Some Book').publishedAfter(now - 2).list()
-        assertEquals 'wrong number of books were returned from chained queries', 2, results?.size()
+        assertEquals('wrong number of books were returned from chained queries', 2, results?.size())
 
         results = Publication.recentPublicationsByTitle('Some Book').publishedAfter(now - 2).count()
-        assertEquals 2, results
+        assertEquals(2, results)
 
         results = Publication.recentPublicationsByTitle('Some Book').publishedAfter(lastWeek - 2).list()
-        assertEquals 'wrong number of books were returned from chained queries', 5, results?.size()
+        assertEquals('wrong number of books were returned from chained queries', 5, results?.size())
 
         results = Publication.recentPublicationsByTitle('Some Book').publishedAfter(lastWeek - 2).count()
-        assertEquals 5, results
+        assertEquals(5, results)
     }
 
     void 'Test referencing named query before any dynamic methods'() {

@@ -40,7 +40,7 @@ class GeoIntersects extends MethodExpression {
 
     @Override
     void setArguments(Object[] arguments) {
-        Assert.isTrue arguments.length == 1, 'Exactly 1 argument required to GeoWithin query'
+        Assert.isTrue(arguments.length == 1, 'Exactly 1 argument required to GeoWithin query')
 
         def value = arguments[0]
 

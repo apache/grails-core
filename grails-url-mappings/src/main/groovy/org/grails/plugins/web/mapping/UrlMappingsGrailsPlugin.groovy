@@ -102,7 +102,7 @@ class UrlMappingsGrailsPlugin extends Plugin {
         UrlMappingsHolder urlMappingsHolder = createUrlMappingsHolder(applicationContext)
 
         HotSwappableTargetSource ts = ctx.getBean('urlMappingsTargetSource', HotSwappableTargetSource)
-        ts.swap urlMappingsHolder
+        ts.swap(urlMappingsHolder)
 
         LinkGenerator linkGenerator = ctx.getBean('grailsLinkGenerator', LinkGenerator)
         if (linkGenerator instanceof CachingLinkGenerator) {

@@ -264,14 +264,14 @@ class PageRenderer implements ApplicationContextAware, ServletContextAware {
                         String name = args[0]
                         Object o = args[1]
                         if (o == null) {
-                            attributes.remove name
+                            attributes.remove(name)
                         } else {
                             attributes[name] = o
                         }
                         return null
                     }
                     if (methodName == 'removeAttribute') {
-                        attributes.remove args[0]
+                        attributes.remove(args[0])
                         return null
                     }
 

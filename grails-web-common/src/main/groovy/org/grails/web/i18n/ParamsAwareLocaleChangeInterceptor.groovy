@@ -52,7 +52,7 @@ class ParamsAwareLocaleChangeInterceptor extends LocaleChangeInterceptor {
 
     void setParamName(String name) {
         paramName = name
-        super.setParamName name
+        super.setParamName(name)
     }
 
     @Autowired(required = false)
@@ -83,8 +83,8 @@ class ParamsAwareLocaleChangeInterceptor extends LocaleChangeInterceptor {
                 request.setAttribute(DispatcherServlet.LOCALE_RESOLVER_ATTRIBUTE, localeResolver)
             }
             def localeEditor = new LocaleEditor()
-            localeEditor.setAsText localeParam?.toString()
-            localeResolver?.setLocale request, response, (Locale)localeEditor.value
+            localeEditor.setAsText(localeParam?.toString())
+            localeResolver?.setLocale(request, response, (Locale)localeEditor.value)
             return true
         }
         catch (Exception e) {

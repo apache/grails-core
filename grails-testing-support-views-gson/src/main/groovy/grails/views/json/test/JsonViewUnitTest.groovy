@@ -113,7 +113,7 @@ trait JsonViewUnitTest extends GrailsUnitTest {
      * @return The render result
      */
     JsonRenderResult render(Map arguments) {
-        render arguments, null
+        render(arguments, null)
     }
 
     /**

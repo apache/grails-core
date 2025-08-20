@@ -98,7 +98,7 @@ class EnhancesTraitTransformation extends AbstractArtefactTypeAstTransformation 
             def ast = source.AST
             transformerNode.module = ast
 
-            ast.classes.add transformerNode
+            ast.classes.add(transformerNode)
 
             def compilationTargetDirectory = GlobalGrailsClassInjectorTransformation.resolveCompilationTargetDirectory(source)
             GlobalGrailsClassInjectorTransformation.updateGrailsFactoriesWithType(transformerNode, GlobalGrailsClassInjectorTransformation.TRAIT_INJECTOR_CLASS, compilationTargetDirectory)

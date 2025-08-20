@@ -49,8 +49,8 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for countries with 1 resident'
         def results = Country.withCriteria {
-            sizeLe 'residents', 3
-            order 'name'
+            sizeLe('residents', 3)
+            order('name')
         }
 
         then: 'We get the correct result back'
@@ -62,8 +62,8 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for countries with 2 resident'
         results = Country.withCriteria {
-            sizeLe 'residents', 2
-            order 'name'
+            sizeLe('residents', 2)
+            order('name')
         }
 
         then: 'We get the correct result back'
@@ -74,7 +74,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for countries with 2 residents'
         results = Country.withCriteria {
-            sizeLe 'residents', 1
+            sizeLe('residents', 1)
         }
 
         then: 'we get 1 result back'
@@ -103,8 +103,8 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for countries with 1 resident'
         def results = Country.withCriteria {
-            sizeLt 'residents', 3
-            order 'name'
+            sizeLt('residents', 3)
+            order('name')
         }
 
         then: 'We get the correct result back'
@@ -115,7 +115,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for countries with 2 resident'
         results = Country.withCriteria {
-            sizeLt 'residents', 2
+            sizeLt('residents', 2)
         }
 
         then: 'We get the correct result back'
@@ -125,7 +125,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for countries with 2 residents'
         results = Country.withCriteria {
-            sizeLt 'residents', 1
+            sizeLt('residents', 1)
         }
 
         then: 'we get no results back'
@@ -154,8 +154,8 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for countries with 1 resident'
         def results = Country.withCriteria {
-            sizeGt 'residents', 1
-            order 'name'
+            sizeGt('residents', 1)
+            order('name')
         }
 
         then: 'We get the correct result back'
@@ -166,7 +166,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for countries with 2 resident'
         results = Country.withCriteria {
-            sizeGt 'residents', 2
+            sizeGt('residents', 2)
         }
 
         then: 'We get the correct result back'
@@ -176,7 +176,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for countries with 2 residents'
         results = Country.withCriteria {
-            sizeGt 'residents', 5
+            sizeGt('residents', 5)
         }
 
         then: 'we get no results back'
@@ -205,8 +205,8 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for countries with 1 resident'
         def results = Country.withCriteria {
-            sizeGe 'residents', 1
-            order 'name'
+            sizeGe('residents', 1)
+            order('name')
         }
 
         then: 'We get the correct result back'
@@ -218,8 +218,8 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for countries with 2 resident'
         results = Country.withCriteria {
-            sizeGe 'residents', 2
-            order 'name'
+            sizeGe('residents', 2)
+            order('name')
         }
 
         then: 'We get the correct result back'
@@ -230,7 +230,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for countries with 2 residents'
         results = Country.withCriteria {
-            sizeGe 'residents', 5
+            sizeGe('residents', 5)
         }
 
         then: 'we get no results back'
@@ -254,7 +254,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for countries with 1 resident'
         def results = Country.withCriteria {
-            sizeEq 'residents', 1
+            sizeEq('residents', 1)
         }
 
         then: 'We get the correct result back'
@@ -264,7 +264,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for countries with 3 resident'
         results = Country.withCriteria {
-            sizeEq 'residents', 3
+            sizeEq('residents', 3)
         }
 
         then: 'We get the correct result back'
@@ -274,7 +274,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for countries with 2 residents'
         results = Country.withCriteria {
-            sizeEq 'residents', 2
+            sizeEq('residents', 2)
         }
 
         then: 'we get no results back'
@@ -298,7 +298,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for countries that don\'t have 1 resident'
         def results = Country.withCriteria {
-            sizeNe 'residents', 1
+            sizeNe('residents', 1)
         }
 
         then: 'We get the correct result back'
@@ -308,7 +308,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for countries who don\'t have 3 resident'
         results = Country.withCriteria {
-            sizeNe 'residents', 3
+            sizeNe('residents', 3)
         }
 
         then: 'We get the correct result back'
@@ -319,8 +319,8 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         when: 'We query for countries with 2 residents'
         results = Country.withCriteria {
             and {
-                sizeNe 'residents', 1
-                sizeNe 'residents', 3
+                sizeNe('residents', 1)
+                sizeNe('residents', 3)
             }
         }
 

@@ -54,7 +54,7 @@ class ValidateableTypeCheckingExtension extends TypeCheckingDSL {
                 def constraintsProperty = classNode.getField('constraints')
                 constraintsProperty.initialExpression.code = currentScope.constraintsClosureCode
                 currentScope.checkingConstraintsClosure = true
-                withTypeChecker { visitClosureExpression constraintsProperty.initialExpression }
+                withTypeChecker { visitClosureExpression(constraintsProperty.initialExpression) }
             }
             scopeExit()
         }

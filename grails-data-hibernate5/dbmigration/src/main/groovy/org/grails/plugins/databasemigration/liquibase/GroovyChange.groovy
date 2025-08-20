@@ -190,7 +190,7 @@ class GroovyChange extends AbstractChange {
 
     @Override
     CheckSum generateCheckSum() {
-        CheckSum.compute checksumString ?: 'Grails Change'
+        CheckSum.compute(checksumString ?: 'Grails Change')
     }
 
     @Override
@@ -205,7 +205,7 @@ class GroovyChange extends AbstractChange {
      * @param message the error message
      */
     void error(String message) {
-        validationErrors.addError message
+        validationErrors.addError(message)
     }
 
     /**
@@ -214,7 +214,7 @@ class GroovyChange extends AbstractChange {
      * @param warning the warning message
      */
     void warn(String warning) {
-        warnings.addWarning warning
+        warnings.addWarning(warning)
     }
 
     /**
@@ -324,6 +324,6 @@ class GroovyChange extends AbstractChange {
      */
     protected void withNewTransaction(Closure callable) {
         new DatabaseMigrationTransactionManager(ctx, dataSourceName)
-                .withNewTransaction callable
+                .withNewTransaction(callable)
     }
 }

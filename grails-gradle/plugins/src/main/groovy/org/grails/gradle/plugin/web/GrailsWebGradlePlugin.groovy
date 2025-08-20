@@ -56,7 +56,7 @@ class GrailsWebGradlePlugin extends GrailsGradlePlugin {
             FileCollection fileCollection = buildClasspath(project, project.configurations.runtimeClasspath, project.configurations.console)
             taskContainer.create('urlMappingsReport', ApplicationContextCommandTask) {
                 classpath = fileCollection
-                systemProperty Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName())
+                systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
                 command = 'url-mappings-report'
             }
         }

@@ -72,7 +72,7 @@ class ResourceUtils extends GrailsResourceUtils {
                             boolean hasGroovySources = dirFiles?.find() { File f -> f.name.endsWith('.groovy') }
                             if (hasGroovySources) {
                                 // if there are Groovy sources stop here, no need to add child packages
-                                packageNames.add "${prefix}${dirName}".toString()
+                                packageNames.add("${prefix}${dirName}".toString())
                             }
                             else {
                                 // otherwise recurse into a child package

@@ -306,7 +306,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                                     rs.getExpression(),
                                     readObjectCall
                             )
-                            staticCompilationVisitor.visitTernaryExpression ternaryExpr
+                            staticCompilationVisitor.visitTernaryExpression(ternaryExpr)
                             rs.setExpression(ternaryExpr)
 
                         }

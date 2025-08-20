@@ -81,7 +81,7 @@ class ControllersGrailsPlugin extends Plugin {
             annotationHandlerAdapter(RequestMappingHandlerAdapter)
 
             for (controller in application.getArtefacts(ControllerArtefactHandler.TYPE)) {
-                log.debug "Configuring controller $controller.fullName"
+                log.debug("Configuring controller $controller.fullName")
                 if (controller.available) {
                     def lazyInit = controller.hasProperty('lazyInit') ? controller.getPropertyValue('lazyInit') : true
                     "${controller.fullName}"(controller.clazz) { bean ->

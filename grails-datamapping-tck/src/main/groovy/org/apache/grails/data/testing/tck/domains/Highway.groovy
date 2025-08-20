@@ -30,7 +30,7 @@ class Highway implements Serializable {
     String name
 
     static mapping = {
-        bypassed index: true
-        name index: true
+        bypassed(index: true)
+        name(index: true)
     }
 }

@@ -73,7 +73,7 @@ class CoreGrailsPlugin extends Plugin {
             def config = application.config
 
             // enable post-processing of @Configuration beans defined by plugins
-            grailsConfigurationClassPostProcessor ConfigurationClassPostProcessor
+            grailsConfigurationClassPostProcessor(ConfigurationClassPostProcessor)
             grailsBeanOverrideConfigurer(MapBasedSmartPropertyOverrideConfigurer) {
                 delegate.grailsApplication = application
             }
@@ -101,7 +101,7 @@ class CoreGrailsPlugin extends Plugin {
             }
 
             if (packagesToScan) {
-                xmlns grailsContext: 'http://grails.org/schema/context'
+                xmlns(grailsContext: 'http://grails.org/schema/context')
                 grailsContext.'component-scan'('base-package': packagesToScan.join(','))
             }
 

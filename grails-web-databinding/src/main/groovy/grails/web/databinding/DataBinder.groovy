@@ -40,39 +40,39 @@ trait DataBinder {
 
     @Generated
     BindingResult bindData(target, bindingSource, Map includeExclude) {
-        bindData target, bindingSource, includeExclude, null
+        bindData(target, bindingSource, includeExclude, null)
     }
 
     @Generated
     BindingResult bindData(target, bindingSource) {
-        bindData target, bindingSource, Collections.EMPTY_MAP, null
+        bindData(target, bindingSource, Collections.EMPTY_MAP, null)
     }
 
     @Generated
     BindingResult bindData(target, bindingSource, String filter) {
-        bindData target, bindingSource, Collections.EMPTY_MAP, filter
+        bindData(target, bindingSource, Collections.EMPTY_MAP, filter)
     }
 
     @Generated
     BindingResult bindData(target, bindingSource, List excludes) {
-        bindData target, bindingSource, [exclude: excludes], null
+        bindData(target, bindingSource, [exclude: excludes], null)
     }
 
     @Generated
     BindingResult bindData(target, bindingSource, List excludes, String filter) {
-        bindData target, bindingSource, [exclude: excludes], filter
+        bindData(target, bindingSource, [exclude: excludes], filter)
     }
 
     @Generated
     BindingResult bindData(target, bindingSource, Map includeExclude, String filter) {
         List includeList = convertToListIfCharSequence(includeExclude?.include)
         List excludeList = convertToListIfCharSequence(includeExclude?.exclude)
-        DataBindingUtils.bindObjectToInstance target, bindingSource, includeList, excludeList, filter
+        DataBindingUtils.bindObjectToInstance(target, bindingSource, includeList, excludeList, filter)
     }
 
     @Generated
     void bindData(Class targetType, Collection collectionToPopulate, CollectionDataBindingSource collectionBindingSource) {
-        DataBindingUtils.bindToCollection targetType, collectionToPopulate, collectionBindingSource
+        DataBindingUtils.bindToCollection(targetType, collectionToPopulate, collectionBindingSource)
     }
 
     private List convertToListIfCharSequence(value) {

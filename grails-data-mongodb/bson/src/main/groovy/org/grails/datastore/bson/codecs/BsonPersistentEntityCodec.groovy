@@ -210,7 +210,7 @@ class BsonPersistentEntityCodec implements Codec {
         if (includeIdentifier) {
             def id = access.getIdentifier()
             if (id != null) {
-                getPropertyEncoder(Identity).encode writer, (Identity)entity.identity, id, access, encoderContext, codecRegistry
+                getPropertyEncoder(Identity).encode(writer, (Identity)entity.identity, id, access, encoderContext, codecRegistry)
             }
         }
 
@@ -339,7 +339,7 @@ class BsonPersistentEntityCodec implements Codec {
      */
     protected void writeAttributes(Map<String, Object> attributes, BsonWriter writer, EncoderContext encoderContext) {
         for (name in attributes.keySet()) {
-            writer.writeName name
+            writer.writeName(name)
             Object v = attributes.get(name)
             Codec<Object> codec = (Codec<Object>)codecRegistry.get(v.getClass())
             codec.encode(writer, v, encoderContext)

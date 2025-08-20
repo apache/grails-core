@@ -74,8 +74,8 @@ class NegationSpec extends GrailsDataTckSpec {
         when:
         def results = Book.withCriteria {
             not {
-                eq 'title', 'The Stand'
-                eq 'author', 'James Patterson'
+                eq('title', 'The Stand')
+                eq('author', 'James Patterson')
             }
         }
 

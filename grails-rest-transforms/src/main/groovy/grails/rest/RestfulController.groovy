@@ -68,7 +68,7 @@ class RestfulController<T> {
     def index(Integer max) {
         if (max < 0) { max = null }
         params.max = Math.min(max ?: 10, 100)
-        respond listAllResources(params), model: [("${resourceName}Count".toString()): countResources()]
+        respond(listAllResources(params), model: [("${resourceName}Count".toString()): countResources()])
     }
 
     /**
@@ -77,7 +77,7 @@ class RestfulController<T> {
      * @return The rendered resource or a 404 if it doesn't exist
      */
     def show() {
-        respond queryForResource(params.id)
+        respond(queryForResource(params.id))
     }
 
     /**
@@ -87,7 +87,7 @@ class RestfulController<T> {
         if (handleReadOnly()) {
             return
         }
-        respond createResource()
+        respond(createResource())
     }
 
     /**
@@ -103,22 +103,22 @@ class RestfulController<T> {
         instance.validate()
         if (instance.hasErrors()) {
             transactionStatus.setRollbackOnly()
-            respond instance.errors, view: 'create' // STATUS CODE 422
+            respond(instance.errors, view: 'create') // STATUS CODE 422
             return
         }
 
-        saveResource instance
+        saveResource(instance)
 
         request.withFormat {
-            form multipartForm {
+            form(multipartForm {
                 flash.message = message(code: 'default.created.message', args: [classMessageArg, instance.id])
                 redirect instance
-            }
+            })
             '*' {
                 response.addHeader(HttpHeaders.LOCATION,
                         grailsLinkGenerator.link(resource: this.controllerName, action: 'show', id: instance.id, absolute: true,
                                             namespace: hasProperty('namespace') ? this.namespace : null))
-                respond instance, [status: CREATED, view: 'show']
+                respond(instance, [status: CREATED, view: 'show'])
             }
         }
     }
@@ -127,7 +127,7 @@ class RestfulController<T> {
         if (handleReadOnly()) {
             return
         }
-        respond queryForResource(params.id)
+        respond(queryForResource(params.id))
     }
 
     /**
@@ -161,21 +161,21 @@ class RestfulController<T> {
         instance.validate()
         if (instance.hasErrors()) {
             transactionStatus.setRollbackOnly()
-            respond instance.errors, view: 'edit' // STATUS CODE 422
+            respond(instance.errors, view: 'edit') // STATUS CODE 422
             return
         }
 
-        updateResource instance
+        updateResource(instance)
         request.withFormat {
-            form multipartForm {
+            form(multipartForm {
                 flash.message = message(code: 'default.updated.message', args: [classMessageArg, instance.id])
                 redirect instance
-            }
+            })
             '*' {
                 response.addHeader(HttpHeaders.LOCATION,
                         grailsLinkGenerator.link(resource: this.controllerName, action: 'show', id: instance.id, absolute: true,
                                             namespace: hasProperty('namespace') ? this.namespace : null))
-                respond instance, [status: OK]
+                respond(instance, [status: OK])
             }
         }
     }
@@ -197,14 +197,14 @@ class RestfulController<T> {
             return
         }
 
-        deleteResource instance
+        deleteResource(instance)
 
         request.withFormat {
-            form multipartForm {
+            form(multipartForm {
                 flash.message = message(code: 'default.deleted.message', args: [classMessageArg, instance.id])
                 redirect action: 'index', method: 'GET'
-            }
-            '*' { render status: NO_CONTENT } // NO CONTENT STATUS CODE
+            })
+            '*' { render(status: NO_CONTENT) } // NO CONTENT STATUS CODE
         }
     }
 
@@ -215,7 +215,7 @@ class RestfulController<T> {
      */
     protected boolean handleReadOnly() {
         if (readOnly) {
-            render status: HttpStatus.METHOD_NOT_ALLOWED.value()
+            render(status: HttpStatus.METHOD_NOT_ALLOWED.value())
             return true
         } else {
             return false
@@ -263,7 +263,7 @@ class RestfulController<T> {
      */
     protected T createResource() {
         T instance = resource.getDeclaredConstructor().newInstance()
-        bindData instance, getObjectToBind()
+        bindData(instance, getObjectToBind())
         instance
     }
 
@@ -287,11 +287,11 @@ class RestfulController<T> {
 
     protected void notFound() {
         request.withFormat {
-            form multipartForm {
+            form(multipartForm {
                 flash.message = message(code: 'default.not.found.message', args: [classMessageArg, params.id])
                 redirect action: 'index', method: 'GET'
-            }
-            '*' { render status: NOT_FOUND }
+            })
+            '*' { render(status: NOT_FOUND) }
         }
     }
 
@@ -302,7 +302,7 @@ class RestfulController<T> {
      * @return The saved resource or null if can't save it
      */
     protected T saveResource(T resource) {
-        resource.save flush: true
+        resource.save(flush: true)
     }
 
     /**
@@ -312,7 +312,7 @@ class RestfulController<T> {
      * @return The updated resource or null if can't save it
      */
     protected T updateResource(T resource) {
-        saveResource resource
+        saveResource(resource)
     }
 
     /**
@@ -321,7 +321,7 @@ class RestfulController<T> {
      * @param resource The resource to be deleted
      */
     protected void deleteResource(T resource) {
-        resource.delete flush: true
+        resource.delete(flush: true)
     }
 
     protected String getClassMessageArg() {

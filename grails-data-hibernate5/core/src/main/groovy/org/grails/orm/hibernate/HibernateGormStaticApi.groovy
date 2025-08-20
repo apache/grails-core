@@ -198,10 +198,10 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
 
             params.eachWithIndex { val, int i ->
                 if (val instanceof CharSequence) {
-                    q.setParameter i, val.toString()
+                    q.setParameter(i, val.toString())
                 }
                 else {
-                    q.setParameter i, val
+                    q.setParameter(i, val)
                 }
             }
             populateQueryArguments(q, args)

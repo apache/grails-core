@@ -89,7 +89,7 @@ class CrudOperationsSpec extends GrailsDataTckSpec {
         t.save(failOnError: true)
 
         then:
-        thrown ValidationException
+        thrown(ValidationException)
         t.id == null
     }
 }

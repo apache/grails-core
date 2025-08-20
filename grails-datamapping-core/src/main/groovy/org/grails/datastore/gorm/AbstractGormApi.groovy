@@ -82,10 +82,10 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
                 !m.isSynthetic() && !Modifier.isStatic(mods) && Modifier.isPublic(mods) &&
                         !AbstractGormApi.EXCLUDES.contains(m.name)
             }
-            methods.addAll methodsToAdd
+            methods.addAll(methodsToAdd)
             if (clazz != GormStaticApi && clazz != GormInstanceApi && clazz != GormValidationApi && clazz != AbstractGormApi) {
                 def extendedMethodsToAdd = methodsToAdd.findAll { Method m -> !ReflectionUtils.isMethodOverriddenFromParent(m) }
-                extendedMethods.addAll extendedMethodsToAdd
+                extendedMethods.addAll(extendedMethodsToAdd)
             }
             clazz = clazz.getSuperclass()
         }

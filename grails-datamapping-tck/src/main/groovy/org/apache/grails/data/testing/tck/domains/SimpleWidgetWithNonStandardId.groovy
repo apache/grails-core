@@ -28,6 +28,6 @@ class SimpleWidgetWithNonStandardId implements Serializable {
     Long version
     String name
     static mapping = {
-        id name: 'myIdentifier'
+        id(name: 'myIdentifier')
     }
 }

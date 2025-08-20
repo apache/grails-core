@@ -138,7 +138,7 @@ abstract class AbstractProfile implements Profile {
                     GroovyScriptCommand cmd = (GroovyScriptCommand)classLoader.loadClass(clsName.toString()).newInstance()
                     cmd.profile = this
                     cmd.profileRepository = profileRepository
-                    internalCommands.add cmd
+                    internalCommands.add(cmd)
                 }
                 else if (fileName.endsWith('.yml')) {
                     def yamlCommand = profileDir.createRelative("commands/$fileName")
@@ -147,7 +147,7 @@ abstract class AbstractProfile implements Profile {
                         Command cmd = new DefaultMultiStepCommand(clsName.toString(), this, data)
                         Object minArguments = data?.minArguments
                         cmd.minArguments = minArguments instanceof Integer ? (Integer)minArguments : 1
-                        internalCommands.add cmd
+                        internalCommands.add(cmd)
                     }
 
                 }
@@ -164,7 +164,7 @@ abstract class AbstractProfile implements Profile {
                 def featureData = profileDir.createRelative("features/${fn}/feature.yml")
                 if (featureData.exists()) {
                     def f = new DefaultFeature(this, fn.toString(), profileDir.createRelative("features/$fn/"))
-                    features.add f
+                    features.add(f)
                 }
             }
 
@@ -182,7 +182,7 @@ abstract class AbstractProfile implements Profile {
                     String coords = (String) entry.coords
                     if (scope == 'excludes') {
                         def artifact = new DefaultArtifact(coords)
-                        exclusions.add new Exclusion(artifact.groupId ?: null, artifact.artifactId ?: null, artifact.classifier ?: null, artifact.extension ?: null)
+                        exclusions.add(new Exclusion(artifact.groupId ?: null, artifact.artifactId ?: null, artifact.classifier ?: null, artifact.extension ?: null))
                     } else {
                         Dependency dependency = createDependency(coords, scope, entry)
                         dependencies.add(dependency)
@@ -252,7 +252,7 @@ abstract class AbstractProfile implements Profile {
         calculatedFeatures.addAll(features)
         def parents = getExtends()
         for (profile in parents) {
-            calculatedFeatures.addAll profile.features
+            calculatedFeatures.addAll(profile.features)
         }
         return calculatedFeatures
     }
@@ -442,11 +442,11 @@ abstract class AbstractProfile implements Profile {
 
     protected void registerParentCommands(ProjectContext context, Iterable<Profile> parents, Closure registerCommand) {
         for (parent in parents) {
-            parent.getCommands(context).each registerCommand
+            parent.getCommands(context).each(registerCommand)
 
             def extended = parent.extends
             if (extended) {
-                registerParentCommands context, extended, registerCommand
+                registerParentCommands(context, extended, registerCommand)
             }
         }
     }
@@ -468,7 +468,7 @@ abstract class AbstractProfile implements Profile {
             def requiredArguments = cmd?.description?.arguments
             int requiredArgumentCount = requiredArguments?.findAll() { CommandArgument ca -> ca.required }?.size() ?: 0
             if (commandLine.remainingArgs.size() < requiredArgumentCount) {
-                context.console.error "Command [$commandName] missing required arguments: ${requiredArguments*.name}. Type 'grails help $commandName' for more info."
+                context.console.error("Command [$commandName] missing required arguments: ${requiredArguments*.name}. Type 'grails help $commandName' for more info.")
                 return false
             }
             else {

@@ -47,7 +47,7 @@ class TenantIdDecoder implements PropertyDecoder<TenantId> {
             SimpleDecoder.DEFAULT_DECODERS.get(bsonType).decode(reader, property, entityAccess)
         }
         else {
-            decoder.decode reader, property, entityAccess
+            decoder.decode(reader, property, entityAccess)
         }
     }
 }

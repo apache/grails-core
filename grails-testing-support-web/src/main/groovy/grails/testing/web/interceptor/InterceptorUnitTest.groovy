@@ -151,7 +151,7 @@ trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
 
     private void ensureInterceptorHasBeenMocked() {
         if (!hasBeenMocked) {
-            mockInterceptor getInterceptorTypeUnderTest()
+            mockInterceptor(getInterceptorTypeUnderTest())
             hasBeenMocked = true
         }
     }

@@ -330,7 +330,7 @@ class CountryTagLib implements TagLibrary {
      */
     Closure country = { attrs ->
         if (!attrs.code) {
-            throwTagError '[country] requires [code] attribute to specify the country code'
+            throwTagError('[country] requires [code] attribute to specify the country code')
         }
         out << ISO3166_3[attrs.code]
     }

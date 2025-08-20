@@ -290,7 +290,7 @@ class DomainEventsSpec extends GrailsDataTckSpec {
     void 'Test bean autowiring'() {
         given:
         def personService = new Object()
-        manager.session.datastore.applicationContext.beanFactory.registerSingleton 'personService', personService
+        manager.session.datastore.applicationContext.beanFactory.registerSingleton('personService', personService)
 
         def p = new PersonEvent()
         def saved = p
@@ -303,14 +303,14 @@ class DomainEventsSpec extends GrailsDataTckSpec {
 
         then:
         'Fred' == p.name
-        personService.is saved.personService // test Groovy constructor
+        personService.is(saved.personService) // test Groovy constructor
         if (!manager.session.datastore.getClass().name.contains('Hibernate')) {
             // autowiring is added to the real constructor by an AST, so can't test this for Hibernate
-            personService.is p.personService // test constructor called by the datastore
+            personService.is(p.personService) // test constructor called by the datastore
         }
     }
 
     def cleanup() {
-        manager.session.datastore.applicationContext?.beanFactory?.destroySingleton 'personService'
+        manager.session.datastore.applicationContext?.beanFactory?.destroySingleton('personService')
     }
 }

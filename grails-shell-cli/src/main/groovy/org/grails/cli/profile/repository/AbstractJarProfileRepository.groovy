@@ -103,7 +103,7 @@ abstract class AbstractJarProfileRepository implements ProfileRepository {
             registeredUrls.add(url)
             def profile = new JarProfile(this, new ClassPathResource('META-INF/grails-profile/', classLoader), classLoader)
             profile.profileRepository = this
-            allProfiles.add profile
+            allProfiles.add(profile)
             profilesByName[profile.name] = profile
         }
     }

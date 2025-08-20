@@ -60,7 +60,7 @@ abstract class ResourceResolvingCommandFactory<T> implements CommandFactory {
     protected Collection<Resource> findCommandResources(Profile profile, boolean inherited) {
         Collection<Resource> allResources = []
         for (CommandResourceResolver resolver in getCommandResolvers(inherited)) {
-            allResources.addAll resolver.findCommandResources(profile)
+            allResources.addAll(resolver.findCommandResources(profile))
         }
         return allResources
     }

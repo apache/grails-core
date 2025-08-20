@@ -96,12 +96,12 @@ class NavigableMap implements Map<String, Object>, Cloneable {
 
     @Override
     boolean containsKey(Object key) {
-        delegateMap.containsKey key
+        delegateMap.containsKey(key)
     }
 
     @Override
     boolean containsValue(Object value) {
-        delegateMap.containsValue value
+        delegateMap.containsValue(value)
     }
 
     @CompileDynamic
@@ -121,12 +121,12 @@ class NavigableMap implements Map<String, Object>, Cloneable {
 
     @Override
     Object remove(Object key) {
-        delegateMap.remove key
+        delegateMap.remove(key)
     }
 
     @Override
     void putAll(Map<? extends String, ? extends Object> m) {
-        delegateMap.putAll m
+        delegateMap.putAll(m)
     }
 
     @Override

@@ -57,7 +57,7 @@ class ResponseRedirector {
     boolean useJessionId = false
 
     ResponseRedirector(LinkGenerator linkGenerator) {
-        Assert.notNull linkGenerator, 'Argument [linkGenerator] cannot be null'
+        Assert.notNull(linkGenerator, 'Argument [linkGenerator] cannot be null')
         this.linkGenerator = linkGenerator
     }
 
@@ -97,7 +97,7 @@ class ResponseRedirector {
         final Map namedParameters = new LinkedHashMap<>(arguments)
         // we generate a relative link with no context path so that the absolute can be calculated by combining the serverBaseURL
         // which includes the contextPath
-        namedParameters.put LinkGenerator.ATTRIBUTE_CONTEXT_PATH, BLANK
+        namedParameters.put(LinkGenerator.ATTRIBUTE_CONTEXT_PATH, BLANK)
 
         boolean absolute = getBooleanArgument(ARGUMENT_ABSOLUTE, arguments, true)
 
@@ -121,8 +121,8 @@ class ResponseRedirector {
      */
     private void redirectResponse(String serverBaseURL, String actualUri, HttpServletRequest request, HttpServletResponse response, boolean permanent, boolean moved, boolean absolute) {
         if (log.isDebugEnabled()) {
-            log.debug "Method [redirect] forwarding request to [$actualUri]"
-            log.debug "Executing redirect with response [$response]"
+            log.debug("Method [redirect] forwarding request to [$actualUri]")
+            log.debug("Executing redirect with response [$response]")
         }
 
         String processedActualUri = processedUrl(actualUri, request)
@@ -145,15 +145,15 @@ class ResponseRedirector {
         }
 
         response.status = status
-        response.setHeader HttpHeaders.LOCATION, redirectUrl
+        response.setHeader(HttpHeaders.LOCATION, redirectUrl)
 
         if (redirectListeners) {
             for (redirectEventListener in redirectListeners) {
-                redirectEventListener.responseRedirected redirectUrl
+                redirectEventListener.responseRedirected(redirectUrl)
             }
         }
 
-        request.setAttribute GRAILS_REDIRECT_ISSUED, processedActualUri
+        request.setAttribute(GRAILS_REDIRECT_ISSUED, processedActualUri)
     }
 
     private String processedUrl(String link, HttpServletRequest request) {

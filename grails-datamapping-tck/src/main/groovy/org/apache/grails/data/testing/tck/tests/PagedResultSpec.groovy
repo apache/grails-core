@@ -68,7 +68,7 @@ class PagedResultSpec extends GrailsDataTckSpec {
 
         when: 'A query is executed that returns no results'
         def results = Person.createCriteria().list(max: 1) {
-            eq 'lastName', 'NotFound'
+            eq('lastName', 'NotFound')
         }
 
         then:
@@ -82,7 +82,7 @@ class PagedResultSpec extends GrailsDataTckSpec {
 
         when: 'The list method is used with pagination params'
         def results = Person.createCriteria().list(offset: 1, max: 2) {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
 
         then: 'You get a paged result list back'
@@ -99,7 +99,7 @@ class PagedResultSpec extends GrailsDataTckSpec {
 
         when: 'The list method is used with pagination params'
         def results = Person.createCriteria().list(offset: 1, max: 2, sort: 'firstName', order: 'DESC') {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
 
         then: 'You get a paged result list back'

@@ -78,7 +78,7 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
     }
 
     static <T> List<Class<T>> loadFactoryClasses(Class<T> factoryClass, ClassLoader classLoader = GrailsFactoriesLoader.classLoader) {
-        Assert.notNull factoryClass, "'factoryClass' must not be null"
+        Assert.notNull(factoryClass, "'factoryClass' must not be null")
 
         def factoryNames = loadFactoryNames(factoryClass, classLoader)
 
@@ -86,7 +86,7 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
         for (String factoryName in factoryNames) {
             def clazz = loadFactoryClass(factoryName, factoryClass, classLoader)
             if (clazz) {
-                result.add clazz
+                result.add(clazz)
             }
         }
         return result

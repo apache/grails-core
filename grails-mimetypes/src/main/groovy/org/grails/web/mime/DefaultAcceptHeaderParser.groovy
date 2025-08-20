@@ -52,7 +52,7 @@ class DefaultAcceptHeaderParser implements AcceptHeaderParser {
         MimeType[] mimeConfig = configuredMimeTypes
         if (!mimeConfig) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug "No mime types configured, defaulting to 'text/html'"
+                LOG.debug("No mime types configured, defaulting to 'text/html'")
             }
             mimeConfig = MimeType.createDefaults()
         }
@@ -87,7 +87,7 @@ class DefaultAcceptHeaderParser implements AcceptHeaderParser {
         }
 
         if (!mimes) {
-            LOG.debug "No configured mime types found for Accept header: $header"
+            LOG.debug("No configured mime types found for Accept header: $header")
             return fallbackMimeType ? [fallbackMimeType] as MimeType[] : MimeType.createDefaults()
         }
 

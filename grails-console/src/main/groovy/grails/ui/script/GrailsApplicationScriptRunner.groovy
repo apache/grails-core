@@ -64,7 +64,7 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
         CompilerConfiguration configuration = CompilerConfiguration.DEFAULT
         if (config.containsProperty(defaultPackageKey)) {
             ImportCustomizer importCustomizer = new ImportCustomizer()
-            importCustomizer.addStarImports config.getProperty(defaultPackageKey, String)
+            importCustomizer.addStarImports(config.getProperty(defaultPackageKey, String))
             configuration.addCompilationCustomizers(importCustomizer)
         }
         sh = new GroovyShell(binding, configuration)

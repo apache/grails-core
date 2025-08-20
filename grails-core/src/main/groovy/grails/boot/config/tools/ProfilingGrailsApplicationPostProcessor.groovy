@@ -51,7 +51,7 @@ class ProfilingGrailsApplicationPostProcessor extends GrailsApplicationPostProce
     Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         def totalTime = System.currentTimeMillis() - startTime
         if (totalTime > 10) {
-            println "Creating bean $beanName of type ${bean.getClass()} took ${totalTime}ms"
+            println("Creating bean $beanName of type ${bean.getClass()} took ${totalTime}ms")
         }
         return bean
     }

@@ -179,7 +179,7 @@ class GormEnhancer implements Closeable {
      */
     List<String> allQualifiers(Datastore datastore, PersistentEntity entity) {
         List<String> qualifiers = new ArrayList<>()
-        qualifiers.addAll ConnectionSourcesSupport.getConnectionSourceNames(entity)
+        qualifiers.addAll(ConnectionSourcesSupport.getConnectionSourceNames(entity))
         if ((MultiTenant.isAssignableFrom(entity.javaClass) || qualifiers.contains(ConnectionSource.ALL)) && (datastore instanceof ConnectionSourcesProvider)) {
             qualifiers.clear()
             qualifiers.add(ConnectionSource.DEFAULT)
@@ -187,7 +187,7 @@ class GormEnhancer implements Closeable {
             Iterable<ConnectionSource> allConnectionSources = ((ConnectionSourcesProvider) datastore).getConnectionSources().allConnectionSources
             Collection<String> allConnectionSourceNames = allConnectionSources.findAll() { ConnectionSource connectionSource -> connectionSource.name != ConnectionSource.DEFAULT }
                                                                               .collect() { ((ConnectionSource)it).name }
-            qualifiers.addAll allConnectionSourceNames
+            qualifiers.addAll(allConnectionSourceNames)
         }
         return qualifiers
     }
@@ -284,7 +284,7 @@ class GormEnhancer implements Closeable {
             }
         }
         else {
-            log.debug "Returning default tenant id for non-multitenant class [$entity]"
+            log.debug("Returning default tenant id for non-multitenant class [$entity]")
             return ConnectionSource.DEFAULT
         }
     }
@@ -517,7 +517,7 @@ class GormEnhancer implements Closeable {
         if (dynamicEnhance) {
             for (PersistentEntity e in datastore.mappingContext.persistentEntities) {
                 if (e.external && !includeExternal) continue
-                enhance e, onlyExtendedMethods
+                enhance(e, onlyExtendedMethods)
             }
         }
     }

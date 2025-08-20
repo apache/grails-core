@@ -67,7 +67,7 @@ class GormService<T extends GormEntity<T>> {
         if (readOnly) {
             return
         }
-        ((GormEntityApi) queryForResource(id)).delete flush: true
+        ((GormEntityApi) queryForResource(id)).delete(flush: true)
     }
 
     @Transactional

@@ -86,7 +86,7 @@ class ClasspathEntityScanner {
             else {
                 for (BeanDefinition candidate in componentProvider.findCandidateComponents(packageName)) {
                     Class persistentEntity = Class.forName(candidate.beanClassName, false, classLoader)
-                    classes.add persistentEntity
+                    classes.add(persistentEntity)
                 }
             }
         }

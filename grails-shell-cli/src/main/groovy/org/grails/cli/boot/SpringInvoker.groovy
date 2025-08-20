@@ -44,7 +44,7 @@ class SpringInvoker {
         ServiceLoader<CommandFactory> factories = ServiceLoader.load(
                 CommandFactory, Thread.currentThread().contextClassLoader)
         factories.each { CommandFactory factory ->
-            runner.addCommands factory.getCommands()
+            runner.addCommands(factory.getCommands())
         }
     }
 

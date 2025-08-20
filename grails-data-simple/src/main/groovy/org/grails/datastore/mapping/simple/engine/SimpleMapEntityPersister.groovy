@@ -326,7 +326,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
 
         if (isVersioned(entityAccess)) {
             if (existing == null) {
-                setVersion entityAccess
+                setVersion(entityAccess)
             }
             else {
                 def oldVersion = existing.version

@@ -97,7 +97,7 @@ class GrailsCli {
     static {
         if (BuildSettings.SHARED_SETTINGS_FILE.exists()) {
             try {
-                SETTINGS_MAP.merge new ConfigSlurper().parse(BuildSettings.SHARED_SETTINGS_FILE.toURI().toURL())
+                SETTINGS_MAP.merge(new ConfigSlurper().parse(BuildSettings.SHARED_SETTINGS_FILE.toURI().toURL()))
             } catch (Throwable e) {
                 e.printStackTrace()
                 System.err.println("ERROR: Problem loading $BuildSettings.SHARED_SETTINGS_FILE: ${e.message}")
@@ -192,9 +192,9 @@ class GrailsCli {
     }
 
     private int getBaseUsage() {
-        System.out.println "Usage: \n\t $USAGE_MESSAGE \n\t $PLUGIN_USAGE_MESSAGE \n\n"
-        this.execute 'list-profiles'
-        System.out.println "\nType 'grails help' or 'grails -h' for more information."
+        System.out.println("Usage: \n\t $USAGE_MESSAGE \n\t $PLUGIN_USAGE_MESSAGE \n\n")
+        this.execute('list-profiles')
+        System.out.println("\nType 'grails help' or 'grails -h' for more information.")
 
         return 1
     }
@@ -286,7 +286,7 @@ class GrailsCli {
         def arguments = cmd.description.arguments
         def requiredArgs = arguments.count { CommandArgument arg -> arg.required }
         if (mainCommandLine.remainingArgs.size() < requiredArgs) {
-            outputMissingArgumentsMessage cmd
+            outputMissingArgumentsMessage(cmd)
             return false
         } else {
             return cmd.handle(createExecutionContext(mainCommandLine))
@@ -445,7 +445,7 @@ class GrailsCli {
             } catch (UserInterruptException e) {
                 exitInteractiveMode()
             } catch (Throwable e) {
-                console.error "Caught exception ${e.message}", e
+                console.error("Caught exception ${e.message}", e)
             }
         }
     }
@@ -538,7 +538,7 @@ class GrailsCli {
                         def grailsClasspath = buildActionExecuter.run()
                         if (grailsClasspath.error) {
                             GrailsConsole.instance.error("${grailsClasspath.error} Type 'gradle dependencies' for more information")
-                            exit 1
+                            exit(1)
                         }
                         return [
                                 dependencies: grailsClasspath.dependencies,
@@ -608,10 +608,10 @@ class GrailsCli {
         try {
             args[0] = args[0].substring(1)
             def process = new ProcessBuilder(args).redirectErrorStream(true).start()
-            console.log process.inputStream.getText('UTF-8')
+            console.log(process.inputStream.getText('UTF-8'))
             return true
         } catch (e) {
-            console.error "Error occurred executing process: $e.message"
+            console.error("Error occurred executing process: $e.message")
             return false
         }
     }
@@ -631,13 +631,13 @@ class GrailsCli {
         history.previous()
 
         if (!history.previous()) {
-            console.error '! not valid. Can not repeat without history'
+            console.error('! not valid. Can not repeat without history')
         }
 
         //another step to previous command
         String historicalCommand = history.current()
         if (historicalCommand.startsWith('!')) {
-            console.error "Can not repeat command: $historicalCommand"
+            console.error("Can not repeat command: $historicalCommand")
         } else {
             return handleCommand(cliParser.parseString(historicalCommand))
         }

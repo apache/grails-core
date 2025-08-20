@@ -33,7 +33,7 @@ class ClosureValueConverter implements ValueConverter {
     Class targetType
 
     Object convert(value) {
-        converterClosure value
+        converterClosure(value)
     }
 
     Class<?> getTargetType() {

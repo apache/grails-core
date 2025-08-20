@@ -129,7 +129,7 @@ class WritableScriptTemplate implements Template {
 
     @Override
     Writable make() {
-        make Collections.emptyMap()
+        make(Collections.emptyMap())
     }
 
     @Override

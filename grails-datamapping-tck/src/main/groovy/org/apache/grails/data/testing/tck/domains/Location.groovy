@@ -34,7 +34,7 @@ class Location implements Serializable {
     }
 
     static mapping = {
-        name index: true
-        code index: true
+        name(index: true)
+        code(index: true)
     }
 }

@@ -320,7 +320,7 @@ class PropertyConfig extends Property {
         }
         else {
             cc = new ColumnConfig()
-            property.columns.add cc
+            property.columns.add(cc)
         }
         if (config.column) {
             config.name = config.column

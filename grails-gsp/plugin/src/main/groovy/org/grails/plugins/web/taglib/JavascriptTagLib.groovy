@@ -78,10 +78,10 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
             if (hasResourceProcessor) {
                 out << r.script(Collections.EMPTY_MAP, body)
             } else {
-                out.println '<script type="text/javascript">'
+                out.println('<script type="text/javascript">')
                 out << body()
                 out.println()
-                out.println '</script>'
+                out.println('</script>')
             }
         }
     }

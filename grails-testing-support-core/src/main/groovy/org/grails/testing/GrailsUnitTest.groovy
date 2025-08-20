@@ -100,8 +100,8 @@ trait GrailsUnitTest {
     void defineBeans(Closure closure) {
         def binding = new Binding()
         def bb = new BeanBuilder(null, null, grailsApplication.getClassLoader())
-        binding.setVariable 'application', grailsApplication
-        bb.setBinding binding
+        binding.setVariable('application', grailsApplication)
+        bb.setBinding(binding)
         bb.beans(closure)
         bb.registerBeans((BeanDefinitionRegistry)applicationContext)
         applicationContext.beanFactory.preInstantiateSingletons()

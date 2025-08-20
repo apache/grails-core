@@ -87,12 +87,12 @@ class Tenants {
     static Serializable currentId(MultiTenantCapableDatastore multiTenantCapableDatastore) {
         def tenantId = CurrentTenant.get()
         if (tenantId != null) {
-            log.debug "Found tenant id [$tenantId] bound to thread local"
+            log.debug("Found tenant id [$tenantId] bound to thread local")
             return tenantId
         } else {
             TenantResolver tenantResolver = multiTenantCapableDatastore.getTenantResolver()
             Serializable tenantIdentifier = tenantResolver.resolveTenantIdentifier()
-            log.debug "Resolved tenant id [$tenantIdentifier] from resolver [${tenantResolver.getClass().simpleName}]"
+            log.debug("Resolved tenant id [$tenantIdentifier] from resolver [${tenantResolver.getClass().simpleName}]")
             return tenantIdentifier
         }
     }
@@ -108,13 +108,13 @@ class Tenants {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)datastore
             def tenantId = CurrentTenant.get()
             if (tenantId != null) {
-                log.debug "Found tenant id [$tenantId] bound to thread local"
+                log.debug("Found tenant id [$tenantId] bound to thread local")
                 return tenantId
             }
             else {
                 TenantResolver tenantResolver = multiTenantCapableDatastore.getTenantResolver()
                 def tenantIdentifier = tenantResolver.resolveTenantIdentifier()
-                log.debug "Resolved tenant id [$tenantIdentifier] from resolver [${tenantResolver.getClass().simpleName}]"
+                log.debug("Resolved tenant id [$tenantIdentifier] from resolver [${tenantResolver.getClass().simpleName}]")
                 return tenantIdentifier
             }
         }

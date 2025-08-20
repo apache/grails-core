@@ -135,7 +135,7 @@ class DocEngine extends BaseRenderEngine implements WikiRenderEngine {
     }
 
     private void emitWarning(String name, String ref, String type) {
-        println "WARNING: ${initialContext.get(SOURCE_FILE)}: Link '$name' refers to non-existent $type $ref!"
+        println("WARNING: ${initialContext.get(SOURCE_FILE)}: Link '$name' refers to non-existent $type $ref!")
     }
 
     boolean showCreate() { false }

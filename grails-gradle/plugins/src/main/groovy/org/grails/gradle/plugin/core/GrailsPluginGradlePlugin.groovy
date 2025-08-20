@@ -139,7 +139,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         if (!project.tasks.names.contains('sourcesJar')) {
             project.tasks.register('sourcesJar', Jar).configure { Jar jarTask ->
                 jarTask.archiveClassifier.set('sources')
-                jarTask.from SourceSets.findMainSourceSet(project).allSource
+                jarTask.from(SourceSets.findMainSourceSet(project).allSource)
             }
         }
     }
@@ -170,8 +170,8 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         }
 
         def copyAstClasses = project.tasks.register('copyAstClasses', Copy) {
-            it.from sourceSets.ast.output
-            it.into project.layout.buildDirectory.dir('classes/groovy/main')
+            it.from(sourceSets.ast.output)
+            it.into(project.layout.buildDirectory.dir('classes/groovy/main'))
         }
 
         project.tasks.named('findMainClass', FindMainClassTask).configure {
@@ -199,7 +199,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                 project.rootProject.logger.info('Found sources jar task')
                 sourcesJarTask.configure {
                     project.rootProject.logger.info('Including ast in sources jar')
-                    from sourceSets.ast.allSource
+                    from(sourceSets.ast.allSource)
                 }
             } else {
                 project.rootProject.logger.info('No sources jar task found')
@@ -219,7 +219,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                 if (taskContainer.findByName('javadocJar') == null) {
                     taskContainer.create('javadocJar', Jar) {
                         archiveClassifier.set('javadoc')
-                        from groovydocTask.outputs
+                        from(groovydocTask.outputs)
                         outputs.cacheIf { true }
                     }.dependsOn(javadocTask)
                 }
@@ -278,19 +278,19 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
             def processResourcesDependencies = []
 
             processResourcesDependencies << project.task(type: Copy, 'copyCommands') {
-                from "${project.projectDir}/src/main/scripts"
-                into "${processResources.destinationDir}/META-INF/commands"
+                from("${project.projectDir}/src/main/scripts")
+                into("${processResources.destinationDir}/META-INF/commands")
             }
 
             processResourcesDependencies << project.task(type: Copy, 'copyTemplates') {
-                from "${project.projectDir}/src/main/templates"
-                into "${processResources.destinationDir}/META-INF/templates"
+                from("${project.projectDir}/src/main/templates")
+                into("${processResources.destinationDir}/META-INF/templates")
             }
             processResources.setDuplicatesStrategy(DuplicatesStrategy.INCLUDE)
             processResources.dependsOn(*processResourcesDependencies)
             project.processResources {
-                exclude 'spring/resources.groovy'
-                exclude '**/*.gsp'
+                exclude('spring/resources.groovy')
+                exclude('**/*.gsp')
             }
         }
     }

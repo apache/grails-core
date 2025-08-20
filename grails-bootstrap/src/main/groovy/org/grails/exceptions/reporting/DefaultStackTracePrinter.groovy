@@ -135,23 +135,23 @@ class DefaultStackTracePrinter implements StackTracePrinter {
 
     protected void printCausedByMessage(PrintWriter sb, Throwable e) {
         sb.println()
-        sb.println "Caused by ${e.class.simpleName}: ${e.message}"
+        sb.println("Caused by ${e.class.simpleName}: ${e.message}")
     }
 
     protected void printHeader(PrintWriter sb, String header) {
-        sb.println header
+        sb.println(header)
     }
 
     protected void printLastEntry(PrintWriter sb, String lineNumber, String methodName, String fileName) {
-        sb.println "^   $lineNumber | $methodName in $fileName"
+        sb.println("^   $lineNumber | $methodName in $fileName")
     }
 
     protected void printStackLine(PrintWriter sb, String lineNumber, String methodName, String fileName) {
-        sb.println "|   $lineNumber | $methodName in $fileName"
+        sb.println("|   $lineNumber | $methodName in $fileName")
     }
 
     protected void printFailureLocation(PrintWriter sb, String lineNumber, String methodName, String fileName) {
-        sb.println "->> $lineNumber | $methodName in $fileName"
+        sb.println("->> $lineNumber | $methodName in $fileName")
         sb << '- ' * 36
         sb.println()
     }

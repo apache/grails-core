@@ -143,7 +143,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @emptyTag
      */
     Closure createLinkTo = { attrs ->
-        GrailsUtil.deprecated 'Tag [createLinkTo] is deprecated please use [resource] instead'
+        GrailsUtil.deprecated('Tag [createLinkTo] is deprecated please use [resource] instead')
         return resource(attrs)
     }
 
@@ -329,7 +329,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
 
         def typeInfo = SUPPORTED_TYPES[type]?.clone()
         if (!typeInfo) {
-            throwTagError "I can't work out the type of ${uri} with type [${type}]. Please check the URL, resource definition or specify [type] attribute"
+            throwTagError("I can't work out the type of ${uri} with type [${type}]. Please check the URL, resource definition or specify [type] attribute")
         }
 
         def writerName = typeInfo.remove('writer')

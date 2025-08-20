@@ -132,7 +132,7 @@ class MongoCodecSession extends AbstractMongoSession {
                         entityWrites << new InsertOneModel<?>(object)
 
                         final List<PendingOperation> cascadeOperations = insert.cascadeOperations
-                        addPostFlushOperations cascadeOperations
+                        addPostFlushOperations(cascadeOperations)
                     }
                 }
             }
@@ -183,7 +183,7 @@ class MongoCodecSession extends AbstractMongoSession {
                             entityWrites << new UpdateOneModel<Document>(id, updateDoc, options.upsert(false))
 
                             final List cascadeOperations = update.cascadeOperations
-                            addPostFlushOperations cascadeOperations
+                            addPostFlushOperations(cascadeOperations)
                         }
 
                     }
@@ -204,7 +204,7 @@ class MongoCodecSession extends AbstractMongoSession {
                         if (k) {
                             nativeKeys << k
                             final List cascadeOperations = delete.cascadeOperations
-                            addPostFlushOperations cascadeOperations
+                            addPostFlushOperations(cascadeOperations)
                         }
 
                     }

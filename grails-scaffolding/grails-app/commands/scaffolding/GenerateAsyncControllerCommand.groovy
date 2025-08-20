@@ -76,7 +76,7 @@ class GenerateAsyncControllerCommand implements GrailsApplicationCommand, Comman
 
                 addStatus("Scaffolding complete for ${projectPath(sourceClass)}")
             } else {
-                error "No domain-class not found for name: $domainClassName"
+                error("No domain-class not found for name: $domainClassName")
                 failureCount++
             }
         }

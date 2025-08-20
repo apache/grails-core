@@ -68,7 +68,7 @@ trait GormValidateable {
      * @return True if the instance is valid
      */
     boolean validate(Map arguments) {
-        currentGormValidationApi().validate this, arguments
+        currentGormValidationApi().validate(this, arguments)
     }
 
     /**
@@ -78,7 +78,7 @@ trait GormValidateable {
      * @return True if the instance is valid
      */
     boolean validate(List fields) {
-        currentGormValidationApi().validate this, fields
+        currentGormValidationApi().validate(this, fields)
     }
 
     /**
@@ -87,7 +87,7 @@ trait GormValidateable {
      * @return True if the instance is valid
      */
     boolean validate() {
-        currentGormValidationApi().validate this
+        currentGormValidationApi().validate(this)
     }
 
     /**

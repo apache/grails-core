@@ -299,7 +299,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         boolean escapeHtml = true
         if (attrs.containsKey('escapeHtml')) {
             escapeHtml = attrs.boolean('escapeHtml')
-            attrs.remove 'escapeHtml'
+            attrs.remove('escapeHtml')
         }
 
         // Add textarea field to requestDataValueProcessor
@@ -494,7 +494,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
 
         //Write RequestDataValueProcessor hidden fields if necessary
         if (requestDataValueProcessor != null) {
-            writeHiddenFields requestDataValueProcessor.getExtraHiddenFields(request)
+            writeHiddenFields(requestDataValueProcessor.getExtraHiddenFields(request))
         }
         // close tag
         writer << '</form>'
@@ -535,7 +535,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
 
         // Strip out any 'name' attribute, since this tag overrides it.
         if (attrs.name) {
-            log.warn "[actionSubmit] 'name' attribute will be ignored"
+            log.warn("[actionSubmit] 'name' attribute will be ignored")
             attrs.remove('name')
         }
 
@@ -704,14 +704,14 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         def years = attrs.years
         def relativeYears = attrs.relativeYears
         if (years != null && relativeYears != null) {
-            throwTagError 'Tag [datePicker] does not allow both the years and relativeYears attributes to be used together.'
+            throwTagError('Tag [datePicker] does not allow both the years and relativeYears attributes to be used together.')
         }
 
         if (relativeYears != null) {
             if (!(relativeYears instanceof IntRange)) {
                 // allow for a syntax like relativeYears="[-2..5]".  The value there is a List containing an IntRage.
                 if ((!(relativeYears instanceof List)) || (relativeYears.size() != 1) || (!(relativeYears[0] instanceof IntRange))) {
-                    throwTagError 'The [datePicker] relativeYears attribute must be a range of int.'
+                    throwTagError('The [datePicker] relativeYears attribute must be a range of int.')
                 }
                 relativeYears = relativeYears[0]
             }
@@ -791,11 +791,11 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         out.println("<label style=\"display:none;\" for=\"${name}_minute\" id=\"label_${name}_minute\">Minute</label>")
         // Change this hidden to use requestDataValueProcessor
         def dateStructValue = processFormFieldValueIfNecessary("${name}", 'date.struct', 'hidden')
-        out.println "<input type=\"hidden\" name=\"${name}\" value=\"${dateStructValue}\" />"
+        out.println("<input type=\"hidden\" name=\"${name}\" value=\"${dateStructValue}\" />")
 
         // create day select
         if (precision >= PRECISION_RANKINGS['day']) {
-            out.println "<select name=\"${name}_day\" id=\"${id}_day\" aria-labelledby=\"${name} ${name}_day\""
+            out.println("<select name=\"${name}_day\" id=\"${id}_day\" aria-labelledby=\"${name} ${name}_day\"")
             if (attrs.disabled) {
                 out << ' disabled="disabled"'
             }
@@ -815,14 +815,14 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
             for (i in 1..31) {
                 // Change this option to use requestDataValueProcessor
                 def dayIndex = processFormFieldValueIfNecessary("${name}_day", "${i}", 'option')
-                out.println "<option value=\"${dayIndex}\"${i == day ? ' selected="selected"' : ''}>${i}</option>"
+                out.println("<option value=\"${dayIndex}\"${i == day ? ' selected="selected"' : ''}>${i}</option>")
             }
-            out.println '</select>'
+            out.println('</select>')
         }
 
         // create month select
         if (precision >= PRECISION_RANKINGS['month']) {
-            out.println "<select name=\"${name}_month\" id=\"${id}_month\" aria-labelledby=\"${name} ${name}_month\""
+            out.println("<select name=\"${name}_month\" id=\"${id}_month\" aria-labelledby=\"${name} ${name}_month\"")
             if (attrs.disabled) {
                 out << ' disabled="disabled"'
             }
@@ -843,15 +843,15 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 if (m) {
                     def monthIndex = i + 1
                     monthIndex = processFormFieldValueIfNecessary("${name}_month", "${monthIndex}", 'option')
-                    out.println "<option value=\"${monthIndex}\"${i == month ? ' selected="selected"' : ''}>$m</option>"
+                    out.println("<option value=\"${monthIndex}\"${i == month ? ' selected="selected"' : ''}>$m</option>")
                 }
             }
-            out.println '</select>'
+            out.println('</select>')
         }
 
         // create year select
         if (precision >= PRECISION_RANKINGS['year']) {
-            out.println "<select name=\"${name}_year\" id=\"${id}_year\" aria-labelledby=\"${name} ${name}_year\""
+            out.println("<select name=\"${name}_year\" id=\"${id}_year\" aria-labelledby=\"${name} ${name}_year\"")
             if (attrs.disabled) {
                 out << ' disabled="disabled"'
             }
@@ -871,14 +871,14 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
             for (i in years) {
                 // Change this year option to use requestDataValueProcessor
                 def yearIndex  = processFormFieldValueIfNecessary("${name}_year", "${i}", 'option')
-                out.println "<option value=\"${yearIndex}\"${i == year ? ' selected="selected"' : ''}>${i}</option>"
+                out.println("<option value=\"${yearIndex}\"${i == year ? ' selected="selected"' : ''}>${i}</option>")
             }
-            out.println '</select>'
+            out.println('</select>')
         }
 
         // do hour select
         if (precision >= PRECISION_RANKINGS['hour']) {
-            out.println "<select name=\"${name}_hour\" id=\"${id}_hour\" aria-labelledby=\"${name} ${name}_hour\""
+            out.println("<select name=\"${name}_hour\" id=\"${id}_hour\" aria-labelledby=\"${name} ${name}_hour\"")
             if (attrs.disabled) {
                 out << ' disabled="disabled"'
             }
@@ -900,19 +900,19 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 if (i < 10) h = '0' + h
                 // This option add hour to requestDataValueProcessor
                 h  = processFormFieldValueIfNecessary("${name}_hour", "${h}", 'option')
-                out.println "<option value=\"${h}\"${i == hour ? ' selected="selected"' : ''}>$h</option>"
+                out.println("<option value=\"${h}\"${i == hour ? ' selected="selected"' : ''}>$h</option>")
             }
-            out.println '</select> :'
+            out.println('</select> :')
 
             // If we're rendering the hour, but not the minutes, then display the minutes as 00 in read-only format
             if (precision < PRECISION_RANKINGS['minute']) {
-                out.println '00'
+                out.println('00')
             }
         }
 
         // do minute select
         if (precision >= PRECISION_RANKINGS['minute']) {
-            out.println "<select name=\"${name}_minute\" id=\"${id}_minute\" aria-labelledby=\"${name} ${name}_minute\""
+            out.println("<select name=\"${name}_minute\" id=\"${id}_minute\" aria-labelledby=\"${name} ${name}_minute\"")
             if (attrs.disabled) {
                 out << 'disabled="disabled"'
             }
@@ -933,9 +933,9 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 def m = '' + i
                 if (i < 10) m = '0' + m
                 m  = processFormFieldValueIfNecessary("${name}_minute", "${m}", 'option')
-                out.println "<option value=\"${m}\"${i == minute ? ' selected="selected"' : ''}>$m</option>"
+                out.println("<option value=\"${m}\"${i == minute ? ' selected="selected"' : ''}>$m</option>")
             }
-            out.println '</select>'
+            out.println('</select>')
         }
     }
 

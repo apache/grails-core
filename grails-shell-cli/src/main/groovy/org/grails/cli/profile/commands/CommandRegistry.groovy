@@ -92,7 +92,7 @@ class CommandRegistry {
                 ec.handle(new GrailsCli.ExecutionContextImpl(new CodeGenConfig(profile.configuration)))
             }
             factoryCommands.removeAll(condition)
-            commands.addAll factoryCommands
+            commands.addAll(factoryCommands)
         }
 
         commands.addAll(registeredCommands.values()

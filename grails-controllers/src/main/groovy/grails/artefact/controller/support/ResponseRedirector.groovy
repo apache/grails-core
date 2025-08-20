@@ -99,8 +99,8 @@ trait ResponseRedirector implements WebAttributes {
                 def id = ((GroovyObject)object).getProperty(GormProperties.IDENTITY)
                 if (id != null) {
                     def args = [:]
-                    args.put LinkGenerator.ATTRIBUTE_RESOURCE, object
-                    args.put LinkGenerator.ATTRIBUTE_METHOD, HttpMethod.GET.toString()
+                    args.put(LinkGenerator.ATTRIBUTE_RESOURCE, object)
+                    args.put(LinkGenerator.ATTRIBUTE_METHOD, HttpMethod.GET.toString())
                     redirect(args)
                     return
                 }
@@ -123,12 +123,12 @@ trait ResponseRedirector implements WebAttributes {
         }
 
         grails.web.mapping.ResponseRedirector redirector = new grails.web.mapping.ResponseRedirector(grailsLinkGenerator)
-        redirector.setRedirectListeners redirectListeners
-        redirector.setRequestDataValueProcessor requestDataValueProcessor
-        redirector.setUseJessionId useJsessionId
+        redirector.setRedirectListeners(redirectListeners)
+        redirector.setRequestDataValueProcessor(requestDataValueProcessor)
+        redirector.setUseJessionId(useJsessionId)
 
         def webRequest = webRequest
-        redirector.redirect webRequest.getRequest(), webRequest.getResponse(), argMap
+        redirector.redirect(webRequest.getRequest(), webRequest.getResponse(), argMap)
     }
 
     /**
@@ -188,7 +188,7 @@ trait ResponseRedirector implements WebAttributes {
         } else {
             url = response.encodeRedirectURL(url)
         }
-        response.sendRedirect url
+        response.sendRedirect(url)
     }
 
     @Generated

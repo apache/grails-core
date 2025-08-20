@@ -41,14 +41,14 @@ abstract class AbstractDatastoreApi {
         if (datastore == null) {
             throw new IllegalStateException('Cannot execute session callback with null datastore')
         }
-        DatastoreUtils.execute datastore, callback
+        DatastoreUtils.execute(datastore, callback)
     }
 
     protected void execute(VoidSessionCallback callback) {
         if (datastore == null) {
             throw new IllegalStateException('Cannot execute session callback with null datastore')
         }
-        DatastoreUtils.execute datastore, callback
+        DatastoreUtils.execute(datastore, callback)
     }
 
     Datastore getDatastore() {

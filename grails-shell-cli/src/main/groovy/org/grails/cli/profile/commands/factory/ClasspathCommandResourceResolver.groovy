@@ -51,7 +51,7 @@ class ClasspathCommandResourceResolver implements CommandResourceResolver {
         try {
             resources = []
             for (String ext in matchingFileExtensions) {
-                resources.addAll resourcePatternResolver.getResources("classpath*:META-INF/commands/*.$ext").toList()
+                resources.addAll(resourcePatternResolver.getResources("classpath*:META-INF/commands/*.$ext").toList())
             }
             return resources
         } catch (Throwable e) {

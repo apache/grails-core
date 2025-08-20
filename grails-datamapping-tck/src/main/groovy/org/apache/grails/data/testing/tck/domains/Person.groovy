@@ -68,13 +68,13 @@ class Person implements Serializable, Comparable<Person>, AsyncEntity<Person> {
     }
 
     static mapping = {
-        firstName index: true
-        lastName index: true
-        age index: true
+        firstName(index: true)
+        lastName(index: true)
+        age(index: true)
     }
 
     static constraints = {
-        face nullable: true
+        face(nullable: true)
     }
 
     @Override

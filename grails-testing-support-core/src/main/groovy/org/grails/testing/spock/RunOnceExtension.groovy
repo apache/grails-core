@@ -31,6 +31,6 @@ class RunOnceExtension extends AbstractAnnotationDrivenExtension<RunOnce> {
 
     @Override
     void visitFixtureAnnotation(RunOnce annotation, MethodInfo fixtureMethod) {
-        fixtureMethod.addInterceptor new RunOnceInterceptor()
+        fixtureMethod.addInterceptor(new RunOnceInterceptor())
     }
 }

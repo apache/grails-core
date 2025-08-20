@@ -44,7 +44,7 @@ import static java.util.Collections.EMPTY_LIST
 class PropertyPathAccessor implements BeanPropertyAccessor {
 
     final String pathFromRoot
-    final String propertyName = stripIndex pathFromRoot.contains('.') ? substringAfterLast(pathFromRoot, '.') : pathFromRoot
+    final String propertyName = stripIndex(pathFromRoot.contains('.') ? substringAfterLast(pathFromRoot, '.') : pathFromRoot)
     final Class beanType = null
     final Class propertyType = Object
 

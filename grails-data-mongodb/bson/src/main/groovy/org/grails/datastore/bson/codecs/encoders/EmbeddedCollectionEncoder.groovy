@@ -46,7 +46,7 @@ class EmbeddedCollectionEncoder implements PropertyEncoder<EmbeddedCollection> {
     @Override
     void encode(BsonWriter writer, EmbeddedCollection property, Object value, EntityAccess parentAccess, EncoderContext encoderContext, CodecRegistry codecRegistry) {
 
-        writer.writeName MappingUtils.getTargetKey(property)
+        writer.writeName(MappingUtils.getTargetKey(property))
 
         def associatedEntity = property.associatedEntity
         BsonPersistentEntityCodec associatedCodec = createEmbeddedEntityCodec(codecRegistry, associatedEntity)
@@ -97,7 +97,7 @@ class EmbeddedCollectionEncoder implements PropertyEncoder<EmbeddedCollection> {
             for (e in value) {
                 Map.Entry<String, Object> entry = (Map.Entry<String, Object>)e
 
-                writer.writeName entry.key
+                writer.writeName(entry.key)
 
                 def v = entry.value
                 def ea = mappingContext.getEntityReflector(associatedEntity)

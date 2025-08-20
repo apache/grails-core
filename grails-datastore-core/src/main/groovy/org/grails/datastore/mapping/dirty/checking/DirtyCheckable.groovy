@@ -109,7 +109,7 @@ trait DirtyCheckable {
             if (DirtyCheckingSupport.DIRTY_CLASS_MARKER.is($changedProperties)) {
                 trackChanges()
             }
-            $changedProperties.put propertyName, ((GroovyObject)this).getProperty(propertyName)
+            $changedProperties.put(propertyName, ((GroovyObject)this).getProperty(propertyName))
         }
     }
 
@@ -139,7 +139,7 @@ trait DirtyCheckable {
                 if (DirtyCheckingSupport.DIRTY_CLASS_MARKER.is($changedProperties)) {
                     trackChanges()
                 }
-                $changedProperties.put propertyName, oldValue
+                $changedProperties.put(propertyName, oldValue)
             }
         }
     }

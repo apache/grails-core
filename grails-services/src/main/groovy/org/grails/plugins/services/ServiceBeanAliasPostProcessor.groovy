@@ -86,7 +86,7 @@ class ServiceBeanAliasPostProcessor implements BeanFactoryPostProcessor {
                 // only register the alias if their is only
                 // one candidate target bean for the alias
                 if (listOfBeanNames.size() == 1) {
-                    beanFactory.registerAlias listOfBeanNames[0], aliasName
+                    beanFactory.registerAlias(listOfBeanNames[0], aliasName)
                 }
             }
         }

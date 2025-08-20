@@ -231,7 +231,7 @@ class ProfileCompilerTask extends AbstractCompile {
                 }
                 List featureNames = []
                 for (f in featureDirs) {
-                    featureNames.add f.name
+                    featureNames.add(f.name)
                 }
                 if (featureNames) {
                     map.put('provided', featureNames.sort())
@@ -244,7 +244,7 @@ class ProfileCompilerTask extends AbstractCompile {
             List<String> templates = []
             templatesDirectory.get().asFileTree.visit { FileVisitDetails f ->
                 if (!f.isDirectory() && !f.name.startsWith('.')) {
-                    templates.add f.relativePath.pathString
+                    templates.add(f.relativePath.pathString)
                 }
             }
             profileData.put('templates', templates.sort())

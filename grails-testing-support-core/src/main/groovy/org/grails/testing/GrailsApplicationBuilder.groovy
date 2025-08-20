@@ -181,7 +181,7 @@ class GrailsApplicationBuilder {
 
             conversionService(ConversionServiceFactoryBean)
 
-            xmlns context: 'http://www.springframework.org/schema/context'
+            xmlns(context: 'http://www.springframework.org/schema/context')
             // adds AutowiredAnnotationBeanPostProcessor, CommonAnnotationBeanPostProcessor and others
             // see org.springframework.context.annotation.AnnotationConfigUtils.registerAnnotationConfigProcessors method
             context.'annotation-config'()

@@ -27,6 +27,6 @@ class ContactDetails implements Serializable {
     String phoneNumber
 
     static constraints = {
-        phoneNumber nullable: false, unique: true
+        phoneNumber(nullable: false, unique: true)
     }
 }

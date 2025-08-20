@@ -166,7 +166,7 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
      */
     void beans(Closure beanDefinitions) {
         def bb = new BeanBuilder(null, grailsApplication.classLoader)
-        bb.beans beanDefinitions
+        bb.beans(beanDefinitions)
         bb.registerBeans((BeanDefinitionRegistry)applicationContext)
         new MapBasedSmartPropertyOverrideConfigurer(grailsApplication: grailsApplication).postProcessBeanFactory(((ConfigurableApplicationContext)applicationContext).beanFactory)
     }

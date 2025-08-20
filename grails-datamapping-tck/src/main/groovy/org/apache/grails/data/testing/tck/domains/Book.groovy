@@ -31,8 +31,8 @@ class Book implements Serializable {
     Boolean published = false
 
     static mapping = {
-        published index: true
-        title index: true
-        author index: true
+        published(index: true)
+        title(index: true)
+        author(index: true)
     }
 }

@@ -247,7 +247,7 @@ class HalJsonRenderer<T> extends AbstractLinkingRenderer<T> {
         }
         //Push the current object to referenceStack for  handling circular references. Once all its fields are handled,
         //the object is removed from the stack.
-        referenceStack.push object
+        referenceStack.push(object)
         Map<Association, Object> associationMap = writeLinks(context, metaClazz, object, entity, locale, contentType, writer, true)
 
         writeDomain(context, metaClazz, entity, object, writer)

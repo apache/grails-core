@@ -51,7 +51,7 @@ class QueryEventsSpec extends GrailsDataTckSpec {
 
     void "pre-events are fired before queries are run"() {
         when:
-        TestEntity.findByName 'bob'
+        TestEntity.findByName('bob')
         then:
         listener.events.size() >= 1
         listener.events[0] instanceof PreQueryEvent
@@ -75,7 +75,7 @@ class QueryEventsSpec extends GrailsDataTckSpec {
         new TestEntity(name: 'mark').save(flush: true)
 
         when:
-        TestEntity.findByName 'bob'
+        TestEntity.findByName('bob')
         then:
         listener.events.size() >= 1
         listener.events[1] instanceof PostQueryEvent

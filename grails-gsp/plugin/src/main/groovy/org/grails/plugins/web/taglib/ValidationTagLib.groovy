@@ -207,7 +207,7 @@ class ValidationTagLib implements TagLibrary {
 
     def eachErrorInternal(attrs, body, boolean outputResult = false) {
         def errorsList = extractErrors(attrs)
-        eachErrorInternalForList attrs, errorsList, body, outputResult
+        eachErrorInternalForList(attrs, errorsList, body, outputResult)
     }
 
     def eachErrorInternalForList(attrs, errorsList, body, boolean outputResult = false) {

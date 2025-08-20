@@ -401,7 +401,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
         static void registerBeans(BeanDefinitionRegistry registry, Closure beanDefinitions) {
             def classLoader = Thread.currentThread().contextClassLoader
             def beanReader = classLoader.loadClass('org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader').newInstance(registry)
-            beanReader.beans beanDefinitions
+            beanReader.beans(beanDefinitions)
         }
     }
 
@@ -419,8 +419,8 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
         static void registerBeans(BeanDefinitionRegistry registry, Closure beanDefinitions) {
             def classLoader = Thread.currentThread().contextClassLoader
             def beanBuilder = classLoader.loadClass('grails.spring.BeanBuilder').newInstance()
-            beanBuilder.beans beanDefinitions
-            beanBuilder.registerBeans registry
+            beanBuilder.beans(beanDefinitions)
+            beanBuilder.registerBeans(registry)
         }
     }
 }

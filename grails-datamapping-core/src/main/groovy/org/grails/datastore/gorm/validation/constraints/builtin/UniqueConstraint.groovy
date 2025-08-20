@@ -156,7 +156,7 @@ class UniqueConstraint extends AbstractConstraint {
                                     continue
                                 }
                             }
-                            eq propName, value
+                            eq(propName, value)
                         }
                     }
                 }

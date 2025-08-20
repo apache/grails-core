@@ -347,8 +347,8 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
                 String qualified = !isEmpty ? "_${qualifierQueue.join('_')}" : ''
                 String qualifiedLanguageSpecificPath = "${originalPath}_${language}${qualified}${extensionSuffix}"
                 String qualifiedPath = "${originalPath}${qualified}${extensionSuffix}"
-                qualifiedPaths.add qualifiedPath
-                qualifiedPaths.add qualifiedLanguageSpecificPath
+                qualifiedPaths.add(qualifiedPath)
+                qualifiedPaths.add(qualifiedLanguageSpecificPath)
 
                 template = getCachedTemplatesWithDefault(qualifiedLanguageSpecificPath)
                 if (template.is(NULL_ENTRY)) {
@@ -372,8 +372,8 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
                     String qualified = !isEmpty ? "_${qualifierQueue.join('_')}" : ''
                     String qualifiedLanguageSpecificPath = "${originalPath}_${language}${qualified}${extensionSuffix}"
                     String qualifiedPath = "${originalPath}${qualified}${extensionSuffix}"
-                    qualifiedPaths.add qualifiedPath
-                    qualifiedPaths.add qualifiedLanguageSpecificPath
+                    qualifiedPaths.add(qualifiedPath)
+                    qualifiedPaths.add(qualifiedLanguageSpecificPath)
 
                     template = getCachedTemplatesWithDefault(qualifiedLanguageSpecificPath)
                     if (template.is(NULL_ENTRY)) {

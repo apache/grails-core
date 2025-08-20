@@ -109,7 +109,7 @@ class DataSourceGrailsPlugin extends Plugin {
                 DataSourceUtils.clearJdbcDriverRegistrations()
             }
             catch (e) {
-                log.debug "Error deregistering JDBC drivers: $e.message", e
+                log.debug("Error deregistering JDBC drivers: $e.message", e)
             }
         }
     }

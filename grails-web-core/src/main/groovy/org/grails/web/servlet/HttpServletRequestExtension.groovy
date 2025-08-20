@@ -37,7 +37,7 @@ import org.grails.web.util.WebUtils
 class HttpServletRequestExtension {
 
     static String getForwardURI(HttpServletRequest request) {
-        WebUtils.getForwardURI request
+        WebUtils.getForwardURI(request)
     }
 
     static getProperty(HttpServletRequest request, String name) {
@@ -56,25 +56,25 @@ class HttpServletRequestExtension {
     }
 
     static propertyMissing(HttpServletRequest request, String name) {
-        getProperty request, name
+        getProperty(request, name)
     }
 
     static propertyMissing(HttpServletRequest request, String name, value) {
         def mp = request.getClass().metaClass.getMetaProperty(name)
         if (mp) {
-            mp.setProperty request, value
+            mp.setProperty(request, value)
         }
         else {
-            request.setAttribute name, value
+            request.setAttribute(name, value)
         }
     }
 
     static getAt(HttpServletRequest request, String name) {
-        getProperty request, name
+        getProperty(request, name)
     }
 
     static putAt(HttpServletRequest request, String name, val) {
-        setProperty request, name, val
+        setProperty(request, name, val)
     }
 
     static each(HttpServletRequest request, Closure c) {

@@ -35,10 +35,10 @@ class SpringConversionServiceAdapter implements ConversionService {
     private SpringConversionService springConversionService = new DefaultConversionService()
 
     boolean canConvert(Class<?> source, Class<?> target) {
-        springConversionService.canConvert source, target
+        springConversionService.canConvert(source, target)
     }
 
     def convert(Object object, Class<?> targetType) {
-        springConversionService.convert object, targetType
+        springConversionService.convert(object, targetType)
     }
 }

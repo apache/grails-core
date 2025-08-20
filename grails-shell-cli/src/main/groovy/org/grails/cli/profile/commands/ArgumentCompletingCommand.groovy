@@ -56,10 +56,10 @@ abstract class ArgumentCompletingCommand implements Command, Completer {
                     if (arg.name.startsWith(lastArg)) {
                         candidates.add("${argName.substring(lastArg.length())} ".toString())
                     } else if (!invalidOptions) {
-                        candidates.add "$flag ".toString()
+                        candidates.add("$flag ".toString())
                     }
                 } else {
-                    candidates.add "$flag ".toString()
+                    candidates.add("$flag ".toString())
                 }
             }
         }

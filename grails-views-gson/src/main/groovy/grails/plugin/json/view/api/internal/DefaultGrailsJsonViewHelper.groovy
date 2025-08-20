@@ -75,7 +75,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
 
     @Override
     JsonOutput.JsonWritable render(Object object, @DelegatesTo(StreamingJsonDelegate) Closure customizer) {
-        render object, Collections.emptyMap(), customizer
+        render(object, Collections.emptyMap(), customizer)
     }
 
     void inline(Object object, Map arguments = Collections.emptyMap(), @DelegatesTo(StreamingJsonDelegate) Closure customizer = null, StreamingJsonDelegate jsonDelegate) {
@@ -287,15 +287,15 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
             Writer writeTo(Writer out) throws IOException {
                 Iterable iterable = (Iterable)object
                 boolean first = true
-                out.append JsonOutput.OPEN_BRACKET
+                out.append(JsonOutput.OPEN_BRACKET)
                 for (o in iterable) {
                     if (!first) {
-                        out.append JsonOutput.COMMA
+                        out.append(JsonOutput.COMMA)
                     }
                     forEach.call(o, out)
                     first = false
                 }
-                out.append JsonOutput.CLOSE_BRACKET
+                out.append(JsonOutput.CLOSE_BRACKET)
             }
         }
     }
@@ -310,14 +310,14 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
                 Map map = (Map)object
                 boolean entryRendered = false
 
-                out.append JsonOutput.OPEN_BRACE
+                out.append(JsonOutput.OPEN_BRACE)
                 for (entry in map.entrySet()) {
                     if (!simpleIncludeExcludeSupport.shouldInclude(incs, excs, entry.key.toString())) {
                         continue
                     }
 
                     if (entryRendered) {
-                        out.append JsonOutput.COMMA
+                        out.append(JsonOutput.COMMA)
                     }
                     out.append(JsonOutput.toJson(entry.key.toString()))
                     out.append(JsonOutput.COLON)
@@ -329,7 +329,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
                     }
                     entryRendered = true
                 }
-                out.append JsonOutput.CLOSE_BRACE
+                out.append(JsonOutput.CLOSE_BRACE)
                 return out
             }
         }
@@ -409,10 +409,10 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
                             def propertyType = desc.propertyType
                             boolean isArray = propertyType.isArray()
                             if (isStringType(propertyType)) {
-                                jsonDelegate.call propertyName, value.toString()
+                                jsonDelegate.call(propertyName, value.toString())
                             }
                             else if (isSimpleType(propertyType, value)) {
-                                jsonDelegate.call propertyName, value
+                                jsonDelegate.call(propertyName, value)
                             }
                             else if (isArray || Iterable.isAssignableFrom(propertyType)) {
                                 Class componentType
@@ -437,9 +437,9 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
                                             out.append(JsonOutput.toJson((Object)o))
                                         }
                                         else {
-                                            out.append JsonOutput.OPEN_BRACE
+                                            out.append(JsonOutput.OPEN_BRACE)
                                             processSimple(new StreamingJsonDelegate(out, true), o, processedObjects, incs, excs, "${path}${propertyName}.", renderNulls)
-                                            out.append JsonOutput.CLOSE_BRACE
+                                            out.append(JsonOutput.CLOSE_BRACE)
                                         }
                                     })
                                 }
@@ -694,11 +694,11 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
         }
 
         if (isStringType(prop.type)) {
-            jsonDelegate.call propertyName, value.toString()
+            jsonDelegate.call(propertyName, value.toString())
         } else if (prop.type.isEnum()) {
-            jsonDelegate.call propertyName, ((Enum) value).name()
+            jsonDelegate.call(propertyName, ((Enum) value).name())
         } else if (value instanceof TimeZone) {
-            jsonDelegate.call propertyName, value.getID()
+            jsonDelegate.call(propertyName, value.getID())
         } else {
             jsonDelegate.call(propertyName, value)
         }
@@ -830,17 +830,17 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
                             Iterable iterable = (Iterable)collection
                             int size = iterable.size()
                             int i = 0
-                            out.append JsonOutput.OPEN_BRACKET
+                            out.append(JsonOutput.OPEN_BRACKET)
                             for (o in collection) {
                                 model.put(var, o)
                                 model.put(GrailsNameUtils.getPropertyName(o.class), o)
                                 def writable = prepareWritable(childTemplate, model)
                                 writable.writeTo(out)
                                 if (++i != size) {
-                                    out.append JsonOutput.COMMA
+                                    out.append(JsonOutput.COMMA)
                                 }
                             }
-                            out.append JsonOutput.CLOSE_BRACKET
+                            out.append(JsonOutput.CLOSE_BRACKET)
                         }
                         else {
                             GrailsView writable = prepareWritable(childTemplate, model)

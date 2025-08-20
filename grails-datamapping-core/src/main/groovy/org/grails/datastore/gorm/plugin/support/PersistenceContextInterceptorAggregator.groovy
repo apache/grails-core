@@ -72,7 +72,7 @@ class PersistenceContextInterceptorAggregator implements BeanDefinitionRegistryP
     protected ManagedList moveInterceptorBeansToManagedList(BeanDefinitionRegistry registry, Collection<String> persistenceInterceptorBeanNames) {
         ManagedList list = new ManagedList()
         persistenceInterceptorBeanNames.each { String beanName ->
-            list.add registry.getBeanDefinition(beanName)
+            list.add(registry.getBeanDefinition(beanName))
             registry.removeBeanDefinition(beanName)
         }
         return list

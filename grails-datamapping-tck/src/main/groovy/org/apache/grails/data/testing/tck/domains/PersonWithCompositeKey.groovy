@@ -29,6 +29,6 @@ class PersonWithCompositeKey implements Serializable {
     String lastName
     Integer age
     static mapping = {
-        id composite: ['lastName', 'firstName']
+        id(composite: ['lastName', 'firstName'])
     }
 }

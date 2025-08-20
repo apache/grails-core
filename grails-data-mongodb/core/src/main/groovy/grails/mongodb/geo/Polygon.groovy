@@ -47,8 +47,8 @@ class Polygon extends Shape implements GeoJSON {
         Assert.notNull(others, 'Point others is required')
 
         List<Point> list = []
-        list.addAll Arrays.asList(x, y, z)
-        list.addAll others
+        list.addAll(Arrays.asList(x, y, z))
+        list.addAll(others)
         this.points = [list]
     }
 

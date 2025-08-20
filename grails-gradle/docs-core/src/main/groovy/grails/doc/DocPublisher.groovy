@@ -374,7 +374,7 @@ class DocPublisher {
                     context.set(DocEngine.SOURCE_FILE, usageFile)
                     context.set(DocEngine.CONTEXT_PATH, pathToRoot)
                     context.set(DocEngine.API_CONTEXT_PATH, vars.resourcesPath)
-                    output.warn "Rendering document file $usageFile.name"
+                    output.warn("Rendering document file $usageFile.name")
                     vars.content = engine.render(data, context)
                     vars.sourcePath = "ref/$usageFile.name"
                     new File("${refDocsDir}/ref/${section}/Usage.html").withWriter(encoding) { out ->
@@ -387,7 +387,7 @@ class DocPublisher {
                     context.set(DocEngine.SOURCE_FILE, txt.name)
                     context.set(DocEngine.CONTEXT_PATH, pathToRoot)
                     context.set(DocEngine.API_CONTEXT_PATH, vars.resourcesPath)
-                    output.warn "Rendering document file $txt.name"
+                    output.warn("Rendering document file $txt.name")
                     vars.content = engine.render(data, context)
                     vars.sourcePath = "ref/${section}/$txt.name"
                     new File("${refDocsDir}/ref/${section}/${name}.html").withWriter(encoding) { out ->
@@ -428,7 +428,7 @@ class DocPublisher {
             template.make(vars).writeTo(out)
         }
 
-        ant.echo "Built user manual at ${refDocsDir}/index.html"
+        ant.echo("Built user manual at ${refDocsDir}/index.html")
     }
 
     void writeChapter(
@@ -464,7 +464,7 @@ class DocPublisher {
         varsCopy.level = level
         varsCopy.sectionToc = section.children
         varsCopy.sourcePath = section.file
-        output.warn "Rendering document file $sourceFile.name"
+        output.warn("Rendering document file $sourceFile.name")
         varsCopy.content = engine.render(sourceFile.getText(StandardCharsets.UTF_8.name()), context)
 
         // First create the section content, which usually consists of a header
@@ -647,7 +647,7 @@ class DocPublisher {
 
         if (gdocsNotInToc) {
             for (gdoc in gdocsNotInToc) {
-                output.warn "No TOC entry found for '${gdoc}'"
+                output.warn("No TOC entry found for '${gdoc}'")
             }
         }
 
@@ -662,18 +662,18 @@ class DocPublisher {
         if (section.name in existing) {
             def duplicateError = "Duplicate section name: ${fullName}" as String
             errors << duplicateError
-            output.error duplicateError
+            output.error(duplicateError)
         }
 
         // Does the file path for the gdoc exist?
         if (!section.file || !new File(baseDir, section.file).exists()) {
             def noFileError = "No file found for '${fullName}'" as String
             errors << noFileError
-            output.error noFileError
+            output.error(noFileError)
         }
         else {
             // Found this gdoc file in the TOC.
-            gdocFiles.remove section.file
+            gdocFiles.remove(section.file)
         }
 
         existing << section.name
@@ -751,7 +751,7 @@ class DocPublisher {
     }
 
     private overrideAliasesFromToc(node) {
-        engine.engineProperties.setProperty "alias.${node.name}", node.file - '.gdoc'
+        engine.engineProperties.setProperty("alias.${node.name}", node.file - '.gdoc')
 
         for (section in node.children) {
             overrideAliasesFromToc(section)

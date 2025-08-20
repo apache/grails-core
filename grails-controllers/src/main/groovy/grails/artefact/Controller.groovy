@@ -109,7 +109,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
     void header(String headerName, headerValue) {
         if (headerValue != null) {
             final HttpServletResponse response = getResponse()
-            response?.setHeader headerName, headerValue.toString()
+            response?.setHeader(headerName, headerValue.toString())
         }
     }
 
@@ -122,7 +122,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
      */
     @Generated
     void bindData(Class targetType, Collection collectionToPopulate, ServletRequest request) {
-        DataBindingUtils.bindToCollection targetType, collectionToPopulate, request
+        DataBindingUtils.bindToCollection(targetType, collectionToPopulate, request)
     }
 
     /**
@@ -239,10 +239,10 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
             Errors controllerErrors = getErrorsInternal(webRequest)
             Errors errors = (Errors)argMap.get(GormProperties.ERRORS)
             if (controllerErrors != null && errors != null) {
-                controllerErrors.addAllErrors errors
+                controllerErrors.addAllErrors(errors)
             }
             else {
-                setErrorsInternal webRequest, errors
+                setErrorsInternal(webRequest, errors)
             }
             def action = argMap.get(GrailsControllerClass.ACTION)
             if (action != null) {
@@ -251,7 +251,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
             if (!argMap.containsKey(GrailsControllerClass.NAMESPACE_PROPERTY)) {
                 // this could be made more efficient if we had a reference to the GrailsControllerClass object, which
                 // has the namespace property accessible without needing reflection
-                argMap.put GrailsControllerClass.NAMESPACE_PROPERTY, GrailsClassUtils.getStaticFieldValue(controller.getClass(), GrailsControllerClass.NAMESPACE_PROPERTY)
+                argMap.put(GrailsControllerClass.NAMESPACE_PROPERTY, GrailsClassUtils.getStaticFieldValue(controller.getClass(), GrailsControllerClass.NAMESPACE_PROPERTY))
             }
         }
 
@@ -265,7 +265,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
      */
     @Generated
     TokenResponseHandler withForm(Closure callable) {
-        withForm getWebRequest(), callable
+        withForm(getWebRequest(), callable)
     }
 
     /**

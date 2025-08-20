@@ -32,7 +32,7 @@ class ChildEntity implements Serializable {
     String name
 
     static mapping = {
-        name index: true
+        name(index: true)
     }
 
     static belongsTo = [TestEntity]

@@ -29,6 +29,6 @@ trait AutowiredTest extends GrailsUnitTest {
 
     void autowire() {
         AutowireCapableBeanFactory beanFactory = applicationContext.autowireCapableBeanFactory
-        beanFactory.autowireBeanProperties this, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME, false
+        beanFactory.autowireBeanProperties(this, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME, false)
     }
 }

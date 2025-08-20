@@ -157,7 +157,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
 
     void mockTagLibs(Class<?>... tagLibClasses) {
         for (Class c : tagLibClasses) {
-            mockTagLib c
+            mockTagLib(c)
         }
     }
 
@@ -216,7 +216,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
      */
     String applyTemplate(String contents, Map model = [:]) {
         def sw = new StringWriter()
-        applyTemplate sw, contents, model
+        applyTemplate(sw, contents, model)
         return sw.toString()
     }
 

@@ -281,7 +281,7 @@ class SimpleMapQuery extends Query {
         },
         (Query.In): { allEntities, Association association, Query.In inList, Closure function = {it} ->
             queryAssociation(allEntities, association) {
-                inList.values?.contains function(resolveIfEmbedded(inList.property, it))
+                inList.values?.contains(function(resolveIfEmbedded(inList.property, it)))
             }
         }
     ]

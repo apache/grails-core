@@ -86,7 +86,7 @@ class NamedCriteriaProxy<D> implements GormQueryOperations<D> {
         def getClosure = {
             queryBuilder = delegate
             invokeCriteriaClosure()
-            eq 'id', id
+            eq('id', id)
             uniqueResult = true
         }
         return  entity.javaClass.createCriteria().get(getClosure)
@@ -110,7 +110,7 @@ class NamedCriteriaProxy<D> implements GormQueryOperations<D> {
         def conversionService = entity.mappingContext.conversionService
         return (D) entity.javaClass.createCriteria().get({
             queryBuilder = delegate
-            maxResults 1
+            maxResults(1)
             uniqueResult = true
             invokeCriteriaClosure(additionalCriteria)
             if (paramsMap && queryBuilder instanceof CriteriaBuilder) {
@@ -151,10 +151,10 @@ class NamedCriteriaProxy<D> implements GormQueryOperations<D> {
             }
             invokeCriteriaClosure(additionalCriteria)
             if (paramsMap?.max) {
-                maxResults conversionService.convert(paramsMap.max, Integer)
+                maxResults(conversionService.convert(paramsMap.max, Integer))
             }
             if (paramsMap?.offset) {
-                firstResult conversionService.convert(paramsMap.offset, Integer)
+                firstResult(conversionService.convert(paramsMap.offset, Integer))
             }
             if (paramsMap && queryBuilder instanceof CriteriaBuilder) {
                 DynamicFinder.populateArgumentsForCriteria(entity.javaClass, queryBuilder.query, paramsMap)
@@ -180,9 +180,9 @@ class NamedCriteriaProxy<D> implements GormQueryOperations<D> {
             queryBuilder = delegate
             invokeCriteriaClosure()
             params.each { key, val ->
-                eq key, val
+                eq(key, val)
             }
-            maxResults 1
+            maxResults(1)
             uniqueResult = true
         }
         entity.javaClass.withCriteria(queryClosure)
@@ -193,7 +193,7 @@ class NamedCriteriaProxy<D> implements GormQueryOperations<D> {
             queryBuilder = delegate
             invokeCriteriaClosure()
             params.each { key, val ->
-                eq key, val
+                eq(key, val)
             }
         }
         entity.javaClass.withCriteria(queryClosure)

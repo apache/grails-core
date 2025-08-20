@@ -83,7 +83,7 @@ class IOUtils extends SpringIOUtils {
      */
     static String toString(InputStream stream, String encoding = null) {
         def writer = new StringWriter()
-        copy stream, writer, encoding
+        copy(stream, writer, encoding)
         writer.toString()
     }
 

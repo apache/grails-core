@@ -254,7 +254,7 @@ trait Interceptor implements ResponseRenderer, ResponseRedirector, RequestForwar
     void header(String headerName, headerValue) {
         if (headerValue != null) {
             final HttpServletResponse response = getResponse()
-            response?.setHeader headerName, headerValue.toString()
+            response?.setHeader(headerName, headerValue.toString())
         }
     }
 

@@ -76,7 +76,7 @@ class IntegrationTestGradlePlugin implements Plugin<Project> {
 
         for (File srcDir in sourceDirs) {
             registerSourceDir(integrationTest, srcDir)
-            acceptedSourceDirs.add srcDir
+            acceptedSourceDirs.add(srcDir)
         }
 
         final File resources = new File(project.projectDir, 'grails-app/conf')
@@ -105,9 +105,9 @@ class IntegrationTestGradlePlugin implements Plugin<Project> {
             it.reports.html.required.set(false)
             it.maxParallelForks = 1
             it.testLogging {
-                events 'passed'
+                events('passed')
             }
-            it.systemProperty GRAILS_INTEGRATION_TEST_INDICATOR, true
+            it.systemProperty(GRAILS_INTEGRATION_TEST_INDICATOR, true)
         }
         tasks.named('check').configure {
             it.dependsOn(integrationTestTask)
@@ -133,7 +133,7 @@ class IntegrationTestGradlePlugin implements Plugin<Project> {
 
     @CompileDynamic
     private void registerSourceDir(SourceSet integrationTest, File srcDir) {
-        integrationTest."${srcDir.name}".srcDir srcDir
+        integrationTest."${srcDir.name}".srcDir(srcDir)
     }
 
     @CompileDynamic

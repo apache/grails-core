@@ -42,6 +42,6 @@ trait RenderConverterTrait {
         GrailsWebRequest webRequest = (GrailsWebRequest)RequestContextHolder.currentRequestAttributes()
         HttpServletResponse response = webRequest.currentResponse
         webRequest.renderView = false
-        converter.render response
+        converter.render(response)
     }
 }

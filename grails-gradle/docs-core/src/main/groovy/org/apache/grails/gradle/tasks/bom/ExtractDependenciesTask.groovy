@@ -115,13 +115,13 @@ abstract class ExtractDependenciesTask extends DefaultTask {
 
         List<String> lines = generateAsciiDoc(constraints)
         destination.get().asFile.withWriter { writer ->
-            writer.writeLine '[cols="1,1,1,1,1,1", options="header"]'
-            writer.writeLine '|==='
-            writer.writeLine '| Index | Group | Artifact | Version | Property Name | Source'
+            writer.writeLine('[cols="1,1,1,1,1,1", options="header"]')
+            writer.writeLine('|===')
+            writer.writeLine('| Index | Group | Artifact | Version | Property Name | Source')
             lines.each { line ->
                 writer.writeLine(line)
             }
-            writer.writeLine '|==='
+            writer.writeLine('|===')
         }
     }
 

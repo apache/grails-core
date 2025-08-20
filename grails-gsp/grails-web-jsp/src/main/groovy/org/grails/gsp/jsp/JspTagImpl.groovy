@@ -68,7 +68,7 @@ class JspTagImpl implements JspTag {
     }
 
     void doTag(Writer targetWriter, Map<String,Object> attributes) {
-        doTag targetWriter, attributes, null
+        doTag(targetWriter, attributes, null)
     }
 
     protected void checkInitialized() {
@@ -107,7 +107,7 @@ class JspTagImpl implements JspTag {
         }
         else if (tag instanceof Tag) {
             Tag theTag = (Tag)tag
-            withJspWriterDelegate pageContext, targetWriter, {
+            withJspWriterDelegate(pageContext, targetWriter, {
 
                 try {
                     pageContext.pushTopTag theTag
@@ -154,7 +154,7 @@ class JspTagImpl implements JspTag {
                     pageContext.popTopTag()
                     theTag?.release()
                 }
-            }
+            })
         }
                 }
 
@@ -172,7 +172,7 @@ class JspTagImpl implements JspTag {
 
         attributes?.each { String key, Object value ->
             if (key && tagBean.isWritableProperty(key)) {
-                tagBean.setPropertyValue key, value
+                tagBean.setPropertyValue(key, value)
             }
             else if (key && tag instanceof DynamicAttributes) {
                 ((DynamicAttributes)tag).setDynamicAttribute(null, key, value)
@@ -196,7 +196,7 @@ class JspTagImpl implements JspTag {
     }
 
     void withJspWriterDelegate(GroovyPagesPageContext pageContext, Writer delegate, Closure callable) {
-        pageContext.pushWriter new JspWriterDelegate(delegate)
+        pageContext.pushWriter(new JspWriterDelegate(delegate))
         try {
             callable()
         }
@@ -208,7 +208,7 @@ class JspTagImpl implements JspTag {
     protected handleSimpleTag(SimpleTag tag, Map attributes, GroovyPagesPageContext pageContext,
             Writer targetWriter, Closure body) {
 
-        withJspWriterDelegate pageContext, targetWriter, {
+        withJspWriterDelegate(pageContext, targetWriter, {
             if (body) {
                 pageContext.pushTopTag tag
                 try {
@@ -226,7 +226,7 @@ class JspTagImpl implements JspTag {
                 }
             }
             tag.doTag()
-        }
+        })
     }
 
 //----------------------------------------------------------------------------

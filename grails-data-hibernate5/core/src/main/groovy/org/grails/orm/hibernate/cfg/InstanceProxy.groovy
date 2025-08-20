@@ -37,12 +37,12 @@ class InstanceProxy {
         this.instanceApi = instanceApi
         this.validateApi = validateApi
         validateMethods = validateApi.methods*.name as Set<String>
-        validateMethods.remove 'getValidator'
-        validateMethods.remove 'setValidator'
-        validateMethods.remove 'getBeforeValidateHelper'
-        validateMethods.remove 'setBeforeValidateHelper'
-        validateMethods.remove 'getValidateMethod'
-        validateMethods.remove 'setValidateMethod'
+        validateMethods.remove('getValidator')
+        validateMethods.remove('setValidator')
+        validateMethods.remove('getBeforeValidateHelper')
+        validateMethods.remove('setBeforeValidateHelper')
+        validateMethods.remove('getValidateMethod')
+        validateMethods.remove('setValidateMethod')
     }
 
     def invokeMethod(String name, args) {
@@ -56,8 +56,8 @@ class InstanceProxy {
 
     private final static Object[] prependToArray(Object item, Object[] array) {
         def list = new ArrayList(array.length + 1)
-        list.add item
-        list.addAll array
+        list.add(item)
+        list.addAll(array)
         list as Object[]
     }
 

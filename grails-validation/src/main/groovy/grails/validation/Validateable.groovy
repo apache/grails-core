@@ -110,7 +110,7 @@ trait Validateable {
      */
     @Generated
     boolean validate() {
-        validate null, null, null
+        validate(null, null, null)
     }
 
     /**
@@ -130,7 +130,7 @@ trait Validateable {
      */
     @Generated
     boolean validate(Map<String, Object> params) {
-        validate params, null
+        validate(params, null)
     }
 
     /**
@@ -150,7 +150,7 @@ trait Validateable {
      */
     @Generated
     boolean validate(List fieldsToValidate) {
-        validate fieldsToValidate, null, null
+        validate(fieldsToValidate, null, null)
     }
 
     /**
@@ -170,7 +170,7 @@ trait Validateable {
      */
     @Generated
     boolean validate(List fieldsToValidate, Map<String, Object> params) {
-        validate fieldsToValidate, params, null
+        validate(fieldsToValidate, params, null)
     }
 
     /**
@@ -206,10 +206,10 @@ trait Validateable {
             for (originalError in originalErrors.allErrors) {
                 if (originalError instanceof FieldError) {
                     if (originalErrors.getFieldError(((FieldError)originalError).field)?.bindingFailure) {
-                        localErrors.addError originalError
+                        localErrors.addError(originalError)
                     }
                 } else {
-                    localErrors.addError originalError
+                    localErrors.addError(originalError)
                 }
             }
             for (prop in constraints.values()) {

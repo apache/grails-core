@@ -31,6 +31,6 @@ class Nose implements Serializable {
     static belongsTo = [face: Face]
 
     static mapping = {
-        face index: true
+        face(index: true)
     }
 }

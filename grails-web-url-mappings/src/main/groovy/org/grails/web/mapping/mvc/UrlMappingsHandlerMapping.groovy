@@ -97,7 +97,7 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
 
         // WebRequestInterceptor need to come first, as these include things like Hibernate OSIV
         if (webRequestHandlerInterceptors) {
-            chain.addInterceptors webRequestHandlerInterceptors
+            chain.addInterceptors(webRequestHandlerInterceptors)
         }
 
         String lookupPath = this.urlPathHelper.getLookupPathForRequest(request)

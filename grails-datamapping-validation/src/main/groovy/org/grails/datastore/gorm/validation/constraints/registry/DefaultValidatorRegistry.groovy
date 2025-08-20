@@ -67,7 +67,7 @@ class DefaultValidatorRegistry implements ValidatorRegistry, ConstraintRegistry,
         if (defaultConstraints != null) {
             defaultConstraintsMap = [:]
             try {
-                new ClosureToMapPopulator(defaultConstraintsMap).populate defaultConstraints
+                new ClosureToMapPopulator(defaultConstraintsMap).populate(defaultConstraints)
             } catch (Throwable e) {
                 throw new ValidationConfigurationException("Error populating default constraints from configuration: ${e.message}", e)
             }

@@ -97,7 +97,7 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
                 callable.call()
             }
             else {
-                json.call callable
+                json.call(callable)
             }
         }
         return json
@@ -105,13 +105,13 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
 
     StreamingJsonBuilder json(Iterable iterable) {
         this.root = iterable
-        json.call iterable.asList()
+        json.call(iterable.asList())
         return json
     }
 
     StreamingJsonBuilder json(Map map) {
         this.root = map
-        json.call map
+        json.call(map)
         return json
     }
 
@@ -184,11 +184,11 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
                 this.json((JsonOutput.JsonWritable)val)
             }
             else {
-                json.call val
+                json.call(val)
             }
         }
         else {
-            json.call args
+            json.call(args)
         }
         return json
     }

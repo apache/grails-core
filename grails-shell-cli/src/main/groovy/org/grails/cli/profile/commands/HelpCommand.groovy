@@ -64,46 +64,46 @@ class HelpCommand implements ProfileCommand, Completer, ProjectContextAware, Pro
                 if (desc.name == helpCommandName) {
                     console.addStatus("Command: $desc.name")
                     console.addStatus('Description:')
-                    console.println "${desc.description ?: ''}"
+                    console.println("${desc.description ?: ''}")
                     if (desc.usage) {
                         console.println()
                         console.addStatus('Usage:')
-                        console.println "${desc.usage}"
+                        console.println("${desc.usage}")
                     }
                     if (desc.arguments) {
                         console.println()
                         console.addStatus('Arguments:')
                         for (arg in desc.arguments) {
-                            console.println "* ${arg.name} - ${arg.description ?: ''} (${arg.required ? 'REQUIRED' : 'OPTIONAL'})"
+                            console.println("* ${arg.name} - ${arg.description ?: ''} (${arg.required ? 'REQUIRED' : 'OPTIONAL'})")
                         }
                     }
                     if (desc.flags) {
                         console.println()
                         console.addStatus('Flags:')
                         for (arg in desc.flags) {
-                            console.println "* ${arg.name} - ${arg.description ?: ''}"
+                            console.println("* ${arg.name} - ${arg.description ?: ''}")
                         }
                     }
                     return true
                 }
             }
-            console.error "Help for command $helpCommandName not found"
+            console.error("Help for command $helpCommandName not found")
             return false
         } else {
-            console.log '''
+            console.log('''
 Usage (optionals marked with *):'
 grails [environment]* [target] [arguments]*'
 
-'''
+''')
             console.addStatus('Examples:')
             console.log('$ grails dev run-app')
             console.log('$ grails create-app books')
-            console.log ''
+            console.log('')
             console.addStatus('Available Commands (type grails help \'command-name\' for more info):')
             console.addStatus("${'Command Name'.padRight(37)} Command Description")
             console.println('-' * 100)
             for (CommandDescription desc : allCommands) {
-                console.println "${desc.name.padRight(40)}${desc.description}"
+                console.println("${desc.name.padRight(40)}${desc.description}")
             }
             console.println()
             console.addStatus('Detailed usage with help [command]')

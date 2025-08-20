@@ -46,7 +46,7 @@ trait Events {
      */
     def <E extends Event<?>> Registration<Object, Consumer<E>> on(Class key, Closure consumer) {
         LoggerFactory.getLogger(getClass()).warn("The class [${getClass()}] used the legacy Reactor 2 event bus and needs to be re-compiled")
-        on key.name, consumer
+        on(key.name, consumer)
     }
 
     /**
@@ -116,7 +116,7 @@ trait Events {
             }
         }
         else {
-            eventBus.notify key, ev
+            eventBus.notify(key, ev)
         }
         return eventBus
     }
@@ -126,7 +126,7 @@ trait Events {
      */
     Bus notify(Object key, data) {
         LoggerFactory.getLogger(getClass()).warn("The class [${getClass()}] used the legacy Reactor 2 event bus and needs to be re-compiled")
-        eventBus.notify Event.from(key.toString(), data)
+        eventBus.notify(Event.from(key.toString(), data))
         return eventBus
     }
 
@@ -145,7 +145,7 @@ trait Events {
 
     def <E extends Event<?>>    Bus sendAndReceive(Object key, Closure reply) {
         LoggerFactory.getLogger(getClass()).warn("The class [${getClass()}] used the legacy Reactor 2 event bus and needs to be re-compiled")
-        eventBus.sendAndReceive key.toString(), new grails.events.Event(key.toString(), new Object[0]), reply
+        eventBus.sendAndReceive(key.toString(), new grails.events.Event(key.toString(), new Object[0]), reply)
         return eventBus
     }
 

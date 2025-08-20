@@ -111,7 +111,7 @@ class AsyncGrailsWebRequest extends GrailsWebRequest implements AsyncWebRequest,
 
     @Override
     void dispatch() {
-        Assert.notNull this.asyncContext, 'Cannot dispatch without an AsyncContext'
+        Assert.notNull(this.asyncContext, 'Cannot dispatch without an AsyncContext')
         asyncContext.dispatch()
     }
 
@@ -126,7 +126,7 @@ class AsyncGrailsWebRequest extends GrailsWebRequest implements AsyncWebRequest,
             handler.run()
         }
         asyncContext = null
-        asyncCompleted.set true
+        asyncCompleted.set(true)
     }
 
     @Override

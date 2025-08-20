@@ -49,7 +49,7 @@ class CacheGrailsPlugin extends Plugin {
     Closure doWithSpring() {
         { ->
             if (!cachingEnabled) {
-                log.warn 'Cache plugin is disabled'
+                log.warn('Cache plugin is disabled')
                 return
             }
 
@@ -77,7 +77,7 @@ class CacheGrailsPlugin extends Plugin {
 
             if (pluginConfiguration.clearAtStartup) {
                 for (String cacheName in grailsCacheManager.cacheNames) {
-                    log.info "Clearing cache $cacheName"
+                    log.info("Clearing cache $cacheName")
                     Cache cache = grailsCacheManager.getCache(cacheName)
                     cache.clear()
                 }

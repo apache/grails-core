@@ -30,7 +30,7 @@ class EnumThing {
     TestEnum en
 
     static mapping = {
-        name index: true
-        en index: true
+        name(index: true)
+        en(index: true)
     }
 }

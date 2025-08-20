@@ -51,7 +51,7 @@ class DataBindingEventMulticastListener implements DataBindingListener {
                     bind = false
                 }
             } catch (Exception e) {
-                log.error "An error occurred invoking beforeBinding on the ${listener.getClass().getName()} listener.", e
+                log.error("An error occurred invoking beforeBinding on the ${listener.getClass().getName()} listener.", e)
             }
         }
         bind
@@ -66,7 +66,7 @@ class DataBindingEventMulticastListener implements DataBindingListener {
                     bind = false
                 }
             } catch (Exception e) {
-                log.error "An error occurred invoking beforeBinding on the ${listener.getClass().getName()} listener.", e
+                log.error("An error occurred invoking beforeBinding on the ${listener.getClass().getName()} listener.", e)
             }
         }
         bind
@@ -77,9 +77,9 @@ class DataBindingEventMulticastListener implements DataBindingListener {
         if (listeners) {
             for (DataBindingListener listener : listeners) {
                 try {
-                    listener.afterBinding obj, propertyName, errors
+                    listener.afterBinding(obj, propertyName, errors)
                 } catch (Exception e) {
-                    log.error "An error occurred invoking afterBinding on the ${listener.getClass().getName()} listener.", e
+                    log.error("An error occurred invoking afterBinding on the ${listener.getClass().getName()} listener.", e)
                 }
             }
         }
@@ -90,9 +90,9 @@ class DataBindingEventMulticastListener implements DataBindingListener {
         if (listeners) {
             for (DataBindingListener listener : listeners) {
                 try {
-                    listener.afterBinding target, errors
+                    listener.afterBinding(target, errors)
                 } catch (Exception e) {
-                    log.error "An error occurred invoking afterBinding on the ${listener.getClass().getName()} listener.", e
+                    log.error("An error occurred invoking afterBinding on the ${listener.getClass().getName()} listener.", e)
                 }
             }
         }
@@ -103,9 +103,9 @@ class DataBindingEventMulticastListener implements DataBindingListener {
         if (listeners) {
             for (DataBindingListener listener : listeners) {
                 try {
-                    listener.bindingError error, errors
+                    listener.bindingError(error, errors)
                 } catch (Exception e) {
-                    log.error "An error occurred invoking bindingError on the ${listener.getClass().getName()} listener.", e
+                    log.error("An error occurred invoking bindingError on the ${listener.getClass().getName()} listener.", e)
                 }
             }
         }

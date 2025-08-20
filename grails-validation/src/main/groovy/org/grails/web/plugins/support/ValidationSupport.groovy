@@ -50,10 +50,10 @@ class ValidationSupport {
             for (originalError in originalErrors.allErrors) {
                 if (originalError instanceof FieldError) {
                     if (originalErrors.getFieldError(originalError.field)?.bindingFailure) {
-                        localErrors.addError originalError
+                        localErrors.addError(originalError)
                     }
                 } else {
-                    localErrors.addError originalError
+                    localErrors.addError(originalError)
                 }
             }
             for (prop in constraints.values()) {

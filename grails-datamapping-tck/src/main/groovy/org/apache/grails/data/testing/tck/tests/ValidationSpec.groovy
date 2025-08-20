@@ -51,7 +51,7 @@ class ValidationSpec extends GrailsDataTckSpec {
         def t = new TestEntity(name: 'someName')
 
         when:
-        t.errors.reject 'foo'
+        t.errors.reject('foo')
         boolean isValid = t.validate()
         int errorCount = t.errors.errorCount
 

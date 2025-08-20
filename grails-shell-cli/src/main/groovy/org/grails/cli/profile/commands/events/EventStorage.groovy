@@ -42,7 +42,7 @@ class EventStorage {
         def listeners = eventListeners[eventName]
         for (listener in listeners) {
             listener.delegate = caller
-            listener.call args
+            listener.call(args)
         }
     }
 }

@@ -168,7 +168,7 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
                         if (pluginPropertySource instanceof EnumerablePropertySource) {
                             propertySources.addLast(new PrefixedMapPropertySource("grails.plugins.$plugin.name", (EnumerablePropertySource)pluginPropertySource))
                         }
-                        propertySources.addLast pluginPropertySource
+                        propertySources.addLast(pluginPropertySource)
                     }
                 }
             }
@@ -220,7 +220,7 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
             def withSpring = lifeCycle.doWithSpring()
             if (withSpring) {
                 def bb = new BeanBuilder(null, springConfig, application.classLoader)
-                bb.beans withSpring
+                bb.beans(withSpring)
             }
         }
 

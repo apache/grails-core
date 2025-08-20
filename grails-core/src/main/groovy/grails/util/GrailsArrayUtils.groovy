@@ -68,7 +68,7 @@ abstract class GrailsArrayUtils {
      * @return A new array with the given object added to the end
      */
     static Object addToEnd(Object array, Object newObject) {
-        add array, Array.getLength(array), newObject
+        add(array, Array.getLength(array), newObject)
     }
 
     /**
@@ -78,7 +78,7 @@ abstract class GrailsArrayUtils {
      * @return A new array with the given object added to the start
      */
     static Object addToStart(Object array, Object newObject) {
-        add array, 0, newObject
+        add(array, 0, newObject)
     }
     /**
      * Adds the given object to the given array at the given position
@@ -99,10 +99,10 @@ abstract class GrailsArrayUtils {
             def type = array.getClass().componentType
             int len = Array.getLength(array)
             def newArray = Array.newInstance(type, len + 1)
-            System.arraycopy array, 0, newArray, 0, pos
-            Array.set newArray, pos, newObject
+            System.arraycopy(array, 0, newArray, 0, pos)
+            Array.set(newArray, pos, newObject)
             if (pos < len) {
-                System.arraycopy array, pos, newArray, pos + 1, len - pos
+                System.arraycopy(array, pos, newArray, pos + 1, len - pos)
             }
             return newArray
         }
@@ -128,7 +128,7 @@ abstract class GrailsArrayUtils {
             def newArray = Array.newInstance(type, len + len2)
             System.arraycopy(array, 0, newArray, 0, len)
             try {
-                System.arraycopy otherArray, 0, newArray, len, len2
+                System.arraycopy(otherArray, 0, newArray, len, len2)
             } catch (ArrayStoreException ase) {
                 throw new IllegalArgumentException("Component types of passed arrays do not match [${array.getClass().componentType}] and [${otherArray.getClass().componentType}]", ase)
             }
@@ -158,7 +158,7 @@ abstract class GrailsArrayUtils {
         }
         else {
             def newArray = Array.newInstance(type, newLen)
-            System.arraycopy args, start, newArray, 0, newLen
+            System.arraycopy(args, start, newArray, 0, newLen)
             return newArray
         }
     }

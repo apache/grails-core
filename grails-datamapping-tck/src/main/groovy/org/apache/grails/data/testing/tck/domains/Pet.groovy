@@ -34,12 +34,12 @@ class Pet implements Serializable {
     Face face
 
     static mapping = {
-        name index: true
+        name(index: true)
     }
 
     static constraints = {
-        owner nullable: true
-        age nullable: true
-        face nullable: true
+        owner(nullable: true)
+        age(nullable: true)
+        face(nullable: true)
     }
 }

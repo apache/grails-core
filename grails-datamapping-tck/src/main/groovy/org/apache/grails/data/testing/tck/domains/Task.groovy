@@ -31,7 +31,7 @@ class Task implements Serializable {
     String name
 
     static mapping = {
-        name index: true
+        name(index: true)
     }
 
     static hasMany = [tasks: Task]

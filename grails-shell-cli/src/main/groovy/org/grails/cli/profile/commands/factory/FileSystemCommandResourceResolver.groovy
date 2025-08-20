@@ -48,7 +48,7 @@ class FileSystemCommandResourceResolver implements CommandResourceResolver {
         if (commandsDir.exists()) {
             Collection<Resource> commandFiles = []
             for (ext in matchingFileExtensions) {
-                commandFiles.addAll resolver.getResources("*.$ext")
+                commandFiles.addAll(resolver.getResources("*.$ext"))
             }
             commandFiles = commandFiles.sort(false) { Resource file -> file.filename }
             return commandFiles

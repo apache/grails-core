@@ -61,7 +61,7 @@ class DomainMappingTypeCheckingExtension extends TypeCheckingDSL {
                 def mappingProperty = classNode.getField('mapping')
                 mappingProperty.initialExpression.code = currentScope.mappingClosureCode
                 currentScope.checkingMappingClosure = true
-                withTypeChecker { visitClosureExpression mappingProperty.initialExpression }
+                withTypeChecker { visitClosureExpression(mappingProperty.initialExpression) }
             }
             scopeExit()
         }

@@ -314,14 +314,14 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D> {
     @Override
     def <T> T withCriteria(@DelegatesTo(Criteria) Closure<T> callable) {
         Tenants.withId((Class<Datastore>)datastore.getClass(), tenantId) {
-            allOperations.withCriteria callable
+            allOperations.withCriteria(callable)
         }
     }
 
     @Override
     def <T> T withCriteria(Map builderArgs, @DelegatesTo(Criteria) Closure callable) {
         Tenants.withId((Class<Datastore>)datastore.getClass(), tenantId) {
-            allOperations.withCriteria builderArgs, callable
+            allOperations.withCriteria(builderArgs, callable)
         }
     }
 
@@ -524,63 +524,63 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D> {
     @Override
     def <T> T withSession(Closure<T> callable) {
         Tenants.withId((Class<Datastore>)datastore.getClass(), tenantId) {
-            allOperations.withSession callable
+            allOperations.withSession(callable)
         }
     }
 
     @Override
     def <T> T withDatastoreSession(Closure<T> callable) {
         Tenants.withId((Class<Datastore>)datastore.getClass(), tenantId) {
-            allOperations.withDatastoreSession callable
+            allOperations.withDatastoreSession(callable)
         }
     }
 
     @Override
     def <T> T withTransaction(Closure<T> callable) {
         Tenants.withId((Class<Datastore>)datastore.getClass(), tenantId) {
-            allOperations.withTransaction callable
+            allOperations.withTransaction(callable)
         }
     }
 
     @Override
     def <T> T withNewTransaction(Closure<T> callable) {
         Tenants.withId((Class<Datastore>)datastore.getClass(), tenantId) {
-            allOperations.withNewTransaction callable
+            allOperations.withNewTransaction(callable)
         }
     }
 
     @Override
     def <T> T withTransaction(Map transactionProperties, Closure<T> callable) {
         Tenants.withId((Class<Datastore>)datastore.getClass(), tenantId) {
-            allOperations.withTransaction transactionProperties, callable
+            allOperations.withTransaction(transactionProperties, callable)
         }
     }
 
     @Override
     def <T> T withNewTransaction(Map transactionProperties, Closure<T> callable) {
         Tenants.withId((Class<Datastore>)datastore.getClass(), tenantId) {
-            allOperations.withNewTransaction transactionProperties, callable
+            allOperations.withNewTransaction(transactionProperties, callable)
         }
     }
 
     @Override
     def <T> T withTransaction(TransactionDefinition definition, Closure<T> callable) {
         Tenants.withId((Class<Datastore>)datastore.getClass(), tenantId) {
-            allOperations.withTransaction definition, callable
+            allOperations.withTransaction(definition, callable)
         }
     }
 
     @Override
     def <T> T withNewSession(Closure<T> callable) {
         Tenants.withId((Class<Datastore>)datastore.getClass(), tenantId) {
-            allOperations.withNewSession callable
+            allOperations.withNewSession(callable)
         }
     }
 
     @Override
     def <T> T withStatelessSession(Closure<T> callable) {
         Tenants.withId((Class<Datastore>)datastore.getClass(), tenantId) {
-            allOperations.withStatelessSession callable
+            allOperations.withStatelessSession(callable)
         }
     }
 

@@ -120,7 +120,7 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
                     }.collect() { String pn ->
                         "${pn.substring(valStr.size())} ".toString()
                     }
-                    candidates.addAll candidateProfiles
+                    candidates.addAll(candidateProfiles)
                     return cursor
                 }
             }
@@ -147,7 +147,7 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
                     }.collect() { String pn ->
                         "${pn.substring(valStr.size())} ".toString()
                     }
-                    candidates.addAll candidatesFeatures
+                    candidates.addAll(candidatesFeatures)
                     return cursor
                 }
             }
@@ -339,7 +339,7 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
             return true
         }
         else {
-            System.err.println "Cannot find profile $profileName"
+            System.err.println("Cannot find profile $profileName")
             return false
         }
     }
@@ -436,8 +436,8 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
         }
 
         for (Feature f in features) {
-            dependencies.addAll f.dependencies.findAll() { Dependency dep -> dep.scope != 'build' }
-            buildDependencies.addAll f.dependencies.findAll() { Dependency dep -> dep.scope == 'build' }
+            dependencies.addAll(f.dependencies.findAll() { Dependency dep -> dep.scope != 'build' })
+            buildDependencies.addAll(f.dependencies.findAll() { Dependency dep -> dep.scope == 'build' })
         }
 
         dependencies.add(new Dependency(profileRepository.getProfileArtifact(profileCoords), 'profile'))
@@ -468,9 +468,9 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
         }
 
         for (Feature f in features) {
-            buildPlugins.addAll f.buildPlugins.collect() { String name ->
+            buildPlugins.addAll(f.buildPlugins.collect() { String name ->
                 "apply plugin:\"$name\""
-            }
+            })
         }
 
         buildPlugins = buildPlugins.unique().join(ln)
@@ -661,14 +661,14 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
             ant.copy(file: "${srcDir}/.gitignore", todir: destDir, failonerror: false)
 
             if (!destFile.exists()) {
-                ant.copy file: srcFile, tofile: destFile
+                ant.copy(file: srcFile, tofile: destFile)
             } else if (buildMergeProfileNames.contains(participatingProfile.name)) {
                 def concatFile = "${destDir}/concat-build.gradle"
                 ant.move(file: destFile, tofile: concatFile)
                 ant.concat([destfile: destFile, fixlastline: true], {
                     path {
-                        pathelement location: concatFile
-                        pathelement location: srcFile
+                        pathelement(location: concatFile)
+                        pathelement(location: srcFile)
                     }
                 })
                 ant.delete(file: concatFile, failonerror: false)
@@ -682,14 +682,14 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
             File destFile = new File(destDir, GRADLE_PROPERTIES)
 
             if (!destFile.exists()) {
-                ant.copy file: srcFile, tofile: destFile
+                ant.copy(file: srcFile, tofile: destFile)
             } else {
                 def concatGradlePropertiesFile = "${destDir}/concat-gradle.properties"
                 ant.move(file: destFile, tofile: concatGradlePropertiesFile)
                 ant.concat([destfile: destFile, fixlastline: true], {
                     path {
-                        pathelement location: concatGradlePropertiesFile
-                        pathelement location: srcFile
+                        pathelement(location: concatGradlePropertiesFile)
+                        pathelement(location: srcFile)
                     }
                 })
                 ant.delete(file: concatGradlePropertiesFile, failonerror: false)
@@ -709,10 +709,10 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
             fileSet(dir: srcDir, casesensitive: false) {
                 exclude(name: '**/.gitkeep')
                 for (exc in excludes) {
-                    exclude name: exc
+                    exclude(name: exc)
                 }
-                exclude name: '**/' + BUILD_GRADLE
-                exclude name: '**/' + GRADLE_PROPERTIES
+                exclude(name: '**/' + BUILD_GRADLE)
+                exclude(name: '**/' + GRADLE_PROPERTIES)
                 binaryFileExtensions.each { ext ->
                     exclude(name: "**/*.${ext}")
                 }
@@ -736,9 +736,9 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
                     include(name: "**/*.${ext}")
                 }
                 for (exc in excludes) {
-                    exclude name: exc
+                    exclude(name: exc)
                 }
-                exclude name: '**/' + BUILD_GRADLE
+                exclude(name: '**/' + BUILD_GRADLE)
             }
             mapper {
                 filtermapper {

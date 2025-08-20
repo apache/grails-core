@@ -248,7 +248,7 @@ class GrailsApp extends SpringApplication {
                                     newFiles.remove(f)
                                 }
                                 pluginManager.informOfFileChange(f)
-                                sleep 1000
+                                sleep(1000)
                             }
                         } else if (i == 1) {
                             changedFiles.clear()
@@ -305,7 +305,7 @@ class GrailsApp extends SpringApplication {
         }
         def baseFileLocation = appDir?.absolutePath ?: location
         compilerConfig.setTargetDirectory(new File(baseFileLocation, BuildSettings.BUILD_CLASSES_PATH))
-        println "File $changedFile changed, recompiling..."
+        println("File $changedFile changed, recompiling...")
         if (changedFile.name.endsWith('.java')) {
             if (JavaCompiler.isAvailable()) {
                 JavaCompiler.recompile(compilerConfig, changedFile)

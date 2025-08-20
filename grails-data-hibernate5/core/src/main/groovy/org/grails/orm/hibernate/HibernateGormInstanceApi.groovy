@@ -119,7 +119,7 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
         List<String> names = []
         def entityProperties = persister.getEntityMetamodel().getProperties()
         for (index in dirtyPropertyIndexes) {
-            names.add entityProperties[index].name
+            names.add(entityProperties[index].name)
         }
         return names
     }

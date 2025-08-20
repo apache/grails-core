@@ -30,7 +30,7 @@ class UniqueGroup implements Serializable, DirtyCheckable {
     String name
     String desc
     static constraints = {
-        name unique: true, index: true
-        desc nullable: true
+        name(unique: true, index: true)
+        desc(nullable: true)
     }
 }

@@ -58,7 +58,7 @@ class GPathResultMap implements Map {
             uniqueChildNames << getPropertyNameForNode(childNode)
         }
         uniqueChildNames.each { name ->
-            def value = get name
+            def value = get(name)
             entries << new AbstractMap.SimpleImmutableEntry(name, value)
         }
         if (this.@id != null) {
@@ -105,7 +105,7 @@ class GPathResultMap implements Map {
 
     Set keySet() {
         def keys = gpath.children().collect {
-            getPropertyNameForNodeChild it
+            getPropertyNameForNodeChild(it)
         } as Set
         if (this.@id != null) {
             keys << 'id'

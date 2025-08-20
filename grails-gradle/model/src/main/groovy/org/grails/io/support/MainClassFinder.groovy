@@ -149,7 +149,7 @@ class MainClassFinder {
             }
         }
         ArrayDeque<File> stack = new ArrayDeque<>()
-        stack.push rootFolder
+        stack.push(rootFolder)
 
         while (!stack.empty) {
             final File file = stack.pop()

@@ -142,7 +142,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             for (ArtefactHandler handler in artefactHandlers) {
                 if (handler.isArtefact(classNode)) {
                     if (!classNode.getAnnotations(ARTEFACT_CLASS_NODE)) {
-                        transformedClasses.add classNodeName
+                        transformedClasses.add(classNodeName)
                         def annotationNode = new AnnotationNode(new ClassNode(Artefact))
                         annotationNode.addMember('value', new ConstantExpression(handler.getType()))
                         classNode.addAnnotation(annotationNode)
@@ -311,7 +311,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
                         resources {
                             for (String cn in artefactClasses) {
                                 if (!pluginExcludes.any() { String exc -> antPathMatcher.match(exc, cn.replace('.', '/')) }) {
-                                    resource cn
+                                    resource(cn)
                                 }
                             }
                         }
@@ -367,7 +367,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             handleExcludes(pluginXml)
 
             Writable writable = new StreamingMarkupBuilder().bind {
-                mkp.yield pluginXml
+                mkp.yield(pluginXml)
             }
 
             pluginXmlFile.withWriter(StandardCharsets.UTF_8.name()) { Writer writer ->

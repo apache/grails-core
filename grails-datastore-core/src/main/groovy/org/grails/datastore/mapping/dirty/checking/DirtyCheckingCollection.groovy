@@ -68,7 +68,7 @@ class DirtyCheckingCollection implements Collection, DirtyCheckableCollection {
     @Override
     boolean add(Object o) {
         parent.markDirty(property)
-        target.add o
+        target.add(o)
     }
 
     @Override

@@ -88,7 +88,7 @@ class TestLinkGenerator implements LinkGenerator {
             }
         }
         if (params.params instanceof Map) {
-            url.append WebUtils.toQueryString((Map)params.params, encoding)
+            url.append(WebUtils.toQueryString((Map)params.params, encoding))
         }
         return url.toString()
     }

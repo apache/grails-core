@@ -124,14 +124,14 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             Errors errors = HibernateRuntimeUtils.setupErrorsProperty(target)
 
             if (validator) {
-                datastore.applicationEventPublisher?.publishEvent new ValidationEvent(datastore, target)
+                datastore.applicationEventPublisher?.publishEvent(new ValidationEvent(datastore, target))
 
                 if (validator instanceof CascadingValidator) {
-                    ((CascadingValidator)validator).validate target, errors, deepValidate
+                    ((CascadingValidator)validator).validate(target, errors, deepValidate)
                 } else if (validator instanceof org.grails.datastore.gorm.validation.CascadingValidator) {
-                    ((org.grails.datastore.gorm.validation.CascadingValidator) validator).validate target, errors, deepValidate
+                    ((org.grails.datastore.gorm.validation.CascadingValidator) validator).validate(target, errors, deepValidate)
                 } else {
-                    validator.validate target, errors
+                    validator.validate(target, errors)
                 }
 
                 if (errors.hasErrors()) {
@@ -149,7 +149,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         // this piece of code will retrieve a persistent instant
         // of a domain class property is only the id is set thus
         // relieving this burden off the developer
-        autoRetrieveAssociations datastore, domainClass, target
+        autoRetrieveAssociations(datastore, domainClass, target)
 
         // Once we get here we've either validated this object or skipped validation, either way
         // we don't need to validate again for the rest of this save.
@@ -198,7 +198,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @Override
     void discard(D instance) {
-        hibernateTemplate.evict instance
+        hibernateTemplate.evict(instance)
     }
 
     @Override
@@ -206,7 +206,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         boolean flush = shouldFlush(params)
         try {
             hibernateTemplate.execute { Session session ->
-                session.delete instance
+                session.delete(instance)
                 if (flush) {
                     session.flush()
                 }
@@ -226,7 +226,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @Override
     boolean isAttached(D instance) {
-        hibernateTemplate.contains instance
+        hibernateTemplate.contains(instance)
     }
 
     @Override
@@ -254,9 +254,9 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     protected D performSave(final D target, final boolean flush) {
         hibernateTemplate.execute { Session session ->
-            session.saveOrUpdate target
+            session.saveOrUpdate(target)
             if (flush) {
-                flushSession session
+                flushSession(session)
             }
             return target
         }
@@ -267,7 +267,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             Object merged = session.merge(target)
             session.lock(merged, LockMode.NONE)
             if (flush) {
-                flushSession session
+                flushSession(session)
             }
             return (D)merged
         }
@@ -277,9 +277,9 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         hibernateTemplate.execute { Session session ->
             try {
                 markInsertActive()
-                session.save target
+                session.save(target)
                 if (shouldFlush) {
-                    flushSession session
+                    flushSession(session)
                 }
                 return target
             } finally {
@@ -294,7 +294,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             session.flush()
         } catch (HibernateException e) {
             // session should not be flushed again after a data access exception!
-            session.setFlushMode FlushMode.MANUAL
+            session.setFlushMode(FlushMode.MANUAL)
             throw e
         }
     }
@@ -395,7 +395,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
      */
     protected Object handleValidationError(PersistentEntity entity, final Object target, Errors errors) {
         // if a validation error occurs set the object to read-only to prevent a flush
-        setObjectToReadOnly target
+        setObjectToReadOnly(target)
         if (entity) {
             for (Association association in entity.associations) {
                 if (association instanceof ToOne && !association instanceof Embedded) {
@@ -403,13 +403,13 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                         def bean = new BeanWrapperImpl(target)
                         def propertyValue = bean.getPropertyValue(association.name)
                         if (propertyValue != null) {
-                            setObjectToReadOnly propertyValue
+                            setObjectToReadOnly(propertyValue)
                         }
                     }
                 }
             }
         }
-        setErrorsOnInstance target, errors
+        setErrorsOnInstance(target, errors)
         return null
     }
 
@@ -425,7 +425,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         hibernateTemplate.execute { Session session ->
             if (session.contains(target) && proxyHandler.isInitialized(target)) {
                 target = proxyHandler.unwrap(target)
-                session.setReadOnly target, true
+                session.setReadOnly(target, true)
                 session.flushMode = FlushMode.MANUAL
             }
         }

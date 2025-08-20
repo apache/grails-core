@@ -76,7 +76,7 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
 
         evict = ClassUtils.getBooleanFromMap(ARGUMENT_EVICT, arguments)
 
-        fireEvent instance, validatedFieldsList
+        fireEvent(instance, validatedFieldsList)
 
         hibernateTemplate.execute { Session session ->
 
@@ -84,11 +84,11 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
             applyManualFlush(session)
             try {
                 if (validator instanceof CascadingValidator) {
-                    ((CascadingValidator)validator).validate instance, errors, deepValidate
+                    ((CascadingValidator)validator).validate(instance, errors, deepValidate)
                 } else if (validator instanceof grails.gorm.validation.CascadingValidator) {
-                    ((grails.gorm.validation.CascadingValidator) validator).validate instance, errors, deepValidate
+                    ((grails.gorm.validation.CascadingValidator) validator).validate(instance, errors, deepValidate)
                 } else {
-                    validator.validate instance, errors
+                    validator.validate(instance, errors)
                 }
             } finally {
                 if (!errors.hasErrors()) {
@@ -164,6 +164,6 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
      * @return the new Errors object
      */
     protected Errors setupErrorsProperty(Object target) {
-        HibernateRuntimeUtils.setupErrorsProperty target
+        HibernateRuntimeUtils.setupErrorsProperty(target)
     }
 }

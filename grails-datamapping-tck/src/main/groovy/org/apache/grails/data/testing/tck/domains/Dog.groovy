@@ -30,7 +30,7 @@ class Dog implements Serializable {
     String name
 
     static mapping = {
-        age index: true
-        name index: true
+        age(index: true)
+        name(index: true)
     }
 }

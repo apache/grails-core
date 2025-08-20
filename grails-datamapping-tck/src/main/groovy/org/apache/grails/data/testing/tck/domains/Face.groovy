@@ -33,6 +33,6 @@ class Face implements Serializable {
     static belongsTo = [person: Person]
 
     static constraints = {
-        person nullable: true
+        person(nullable: true)
     }
 }

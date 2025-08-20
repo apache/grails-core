@@ -48,7 +48,7 @@ class PageContextFactory {
         def gspServlet = servletContext.getAttribute(GroovyPagesServlet.SERVLET_INSTANCE)
         if (!gspServlet) {
             gspServlet = new GroovyPagesServlet()
-            servletContext.setAttribute GroovyPagesServlet.SERVLET_INSTANCE, gspServlet
+            servletContext.setAttribute(GroovyPagesServlet.SERVLET_INSTANCE, gspServlet)
         }
         def pageScope = request.getAttribute(GAA.PAGE_SCOPE)
         if (!pageScope) {

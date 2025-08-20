@@ -39,8 +39,8 @@ class PropertyComparisonQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for dogs that are alive'
         def results = Dog.withCriteria {
-            geProperty 'age', 'deathAge'
-            order 'name'
+            geProperty('age', 'deathAge')
+            order('name')
         }
 
         then: '3 dogs are found'
@@ -59,8 +59,8 @@ class PropertyComparisonQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for dogs that are alive'
         def results = Dog.withCriteria {
-            leProperty 'age', 'deathAge'
-            order 'name'
+            leProperty('age', 'deathAge')
+            order('name')
         }
 
         then: '3 dogs are found'
@@ -79,8 +79,8 @@ class PropertyComparisonQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for dogs that are alive'
         def results = Dog.withCriteria {
-            ltProperty 'age', 'deathAge'
-            order 'name'
+            ltProperty('age', 'deathAge')
+            order('name')
         }
 
         then: '2 dogs are found'
@@ -98,8 +98,8 @@ class PropertyComparisonQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for dogs that are alive'
         def results = Dog.withCriteria {
-            gtProperty 'deathAge', 'age'
-            order 'name'
+            gtProperty('deathAge', 'age')
+            order('name')
         }
 
         then: '2 dogs are found'
@@ -117,8 +117,8 @@ class PropertyComparisonQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for dogs that are alive'
         def results = Dog.withCriteria {
-            neProperty 'age', 'deathAge'
-            order 'name'
+            neProperty('age', 'deathAge')
+            order('name')
         }
 
         then: '2 dogs are found'
@@ -136,7 +136,7 @@ class PropertyComparisonQuerySpec extends GrailsDataTckSpec {
 
         when: 'We query for dogs that died'
         def results = Dog.withCriteria {
-            eqProperty 'age', 'deathAge'
+            eqProperty('age', 'deathAge')
         }
 
         then: '1 dog is found'

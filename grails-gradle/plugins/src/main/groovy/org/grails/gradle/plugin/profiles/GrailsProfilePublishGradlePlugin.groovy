@@ -78,6 +78,6 @@ class GrailsProfilePublishGradlePlugin extends GrailsPublishGradlePlugin {
 
     @Override
     protected void doAddArtefact(Project project, MavenPublication publication) {
-        publication.from project.components.named('java').get()
+        publication.from(project.components.named('java').get())
     }
 }

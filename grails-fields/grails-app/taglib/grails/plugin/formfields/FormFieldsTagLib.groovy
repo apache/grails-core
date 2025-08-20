@@ -528,9 +528,9 @@ class FormFieldsTagLib {
         String widgetTemplateName = formFieldsTemplateService.getTemplateFor('widget')
         Map template = formFieldsTemplateService.findTemplate(propertyAccessor, widgetTemplateName, widgetFolder, theme)
         if (template) {
-            render template: template.path, plugin: template.plugin, model: model + [attrs: attrs] + attrs
+            render(template: template.path, plugin: template.plugin, model: model + [attrs: attrs] + attrs)
         } else {
-            renderDefaultInput propertyAccessor, model, attrs
+            renderDefaultInput(propertyAccessor, model, attrs)
         }
     }
 
@@ -547,7 +547,7 @@ class FormFieldsTagLib {
         }
 
         if (template) {
-            render template: template.path, plugin: template.plugin, model: model + [attrs: attrs] + attrs
+            render(template: template.path, plugin: template.plugin, model: model + [attrs: attrs] + attrs)
         } else if (!(model.value instanceof CharSequence)) {
             renderDefaultDisplay(model, attrs, widgetFolder, theme)
         } else {
@@ -691,7 +691,7 @@ class FormFieldsTagLib {
         // TODO: encoding information of widget gets lost - don't use MarkupBuilder
         def widget = model.widget
         if (widget != null) {
-            mkp.yieldUnescaped widget
+            mkp.yieldUnescaped(widget)
         }
     }
 
@@ -953,7 +953,7 @@ class FormFieldsTagLib {
                 g.formatDate(date: model.value)
                 break
             default:
-                g.fieldValue bean: model.bean, field: model.property
+                g.fieldValue(bean: model.bean, field: model.property)
         }
     }
 

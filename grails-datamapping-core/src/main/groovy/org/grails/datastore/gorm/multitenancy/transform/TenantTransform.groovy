@@ -126,13 +126,13 @@ class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
                 // $tenantResolver.setDelegate(this)
                 // Serializable $tenantId = (Serializable)$tenantResolver.call()
                 // if($tenantId == null) throw new TenantNotFoundException(..)
-                newMethodBody.addStatement declS(closureVar, annValue)
-                newMethodBody.addStatement assignS(closureVar, callD(closureVar, 'clone'))
-                newMethodBody.addStatement stmt(callD(closureVar, 'setDelegate', varThis()))
-                newMethodBody.addStatement declS(tenantIdVar, castX(serializableClassNode, callD(closureVar, 'call')))
-                newMethodBody.addStatement ifS(equalsNullX(tenantIdVar),
+                newMethodBody.addStatement(declS(closureVar, annValue))
+                newMethodBody.addStatement(assignS(closureVar, callD(closureVar, 'clone')))
+                newMethodBody.addStatement(stmt(callD(closureVar, 'setDelegate', varThis())))
+                newMethodBody.addStatement(declS(tenantIdVar, castX(serializableClassNode, callD(closureVar, 'call'))))
+                newMethodBody.addStatement(ifS(equalsNullX(tenantIdVar),
                     throwS(ctorX(make(TenantNotFoundException), constX('Tenant id resolved from @Tenant is null')))
-                )
+                ))
                 return makeDelegatingClosureCall(tenantServiceVar, 'withId', args(tenantIdVar), params(param(serializableClassNode, VAR_TENANT_ID)), originalMethodCallExpr, variableScope)
             }
             else {

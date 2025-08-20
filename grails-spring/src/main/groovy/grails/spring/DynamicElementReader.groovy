@@ -126,7 +126,7 @@ class DynamicElementReader extends GroovyObjectSupport {
         InputSource is = new InputSource(new StringReader(sw.toString()))
         Element element = documentLoader.loadDocument(is, entityResolver, errorHandler, validationMode, true).getDocumentElement()
 
-        parserContext?.delegate?.initDefaults element
+        parserContext?.delegate?.initDefaults(element)
         if (namespaceHandler && parserContext) {
             if (beanDecorator && beanConfiguration) {
                 BeanDefinitionHolder holder = new BeanDefinitionHolder(beanConfiguration.getBeanDefinition(), beanConfiguration.getName())

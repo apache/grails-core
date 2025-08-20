@@ -106,7 +106,7 @@ class DatabaseMigrationTransactionManager {
      */
     void withNewTransaction(Map transactionProperties, Closure callable) {
         def props = new HashMap(transactionProperties)
-        props.remove 'propagationName'
+        props.remove('propagationName')
         props.propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
         withTransaction(props, callable)
     }
@@ -133,7 +133,7 @@ class DatabaseMigrationTransactionManager {
      * @return The result of the closure execution
      */
     void withTransaction(TransactionDefinition definition, Closure callable) {
-        Assert.notNull transactionManager, 'No transactionManager bean configured'
+        Assert.notNull(transactionManager, 'No transactionManager bean configured')
 
         if (!callable) {
             return

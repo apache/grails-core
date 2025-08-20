@@ -83,7 +83,7 @@ trait RestResponder {
      */
     @Generated
     def respond(Map args, value) {
-        internalRespond value, args
+        internalRespond(value, args)
     }
 
     /**
@@ -98,7 +98,7 @@ trait RestResponder {
      */
     @Generated
     def respond(Map value) {
-        internalRespond value
+        internalRespond(value)
     }
 
     /**
@@ -106,7 +106,7 @@ trait RestResponder {
      */
     @Generated
     def respond(Map namedArgs, Map value) {
-        internalRespond value, namedArgs
+        internalRespond(value, namedArgs)
     }
 
     /**
@@ -122,7 +122,7 @@ trait RestResponder {
      */
     @Generated
     def respond(value, Map args = [:]) {
-        internalRespond value, args
+        internalRespond(value, args)
     }
 
     private internalRespond(value, Map args = [:]) {
@@ -225,7 +225,7 @@ trait RestResponder {
     }
 
     private callRender(Map args) {
-        ((ResponseRenderer)this).render args
+        ((ResponseRenderer)this).render(args)
     }
 
     private List<String> calculateFormats(String actionName, value, Map args) {

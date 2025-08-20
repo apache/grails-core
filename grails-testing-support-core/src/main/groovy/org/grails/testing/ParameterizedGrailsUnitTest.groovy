@@ -52,7 +52,7 @@ trait ParameterizedGrailsUnitTest<T> extends GrailsUnitTest {
                     _artefactInstance = applicationContext.getBean(beanName, T)
                 } else {
                     _artefactInstance = cutType.newInstance()
-                    applicationContext.autowireCapableBeanFactory.autowireBeanProperties _artefactInstance, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME, false
+                    applicationContext.autowireCapableBeanFactory.autowireBeanProperties(_artefactInstance, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME, false)
                 }
             }
         }

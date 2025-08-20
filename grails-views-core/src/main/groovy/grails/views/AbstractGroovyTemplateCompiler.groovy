@@ -140,7 +140,7 @@ abstract class AbstractGroovyTemplateCompiler {
     }
 
     void compile(File...sources) {
-        compile Arrays.asList(sources)
+        compile(Arrays.asList(sources))
     }
 
     static void run(String[] args, Class<? extends GenericViewConfiguration> configurationClass, Class<? extends AbstractGroovyTemplateCompiler> compilerClass) {

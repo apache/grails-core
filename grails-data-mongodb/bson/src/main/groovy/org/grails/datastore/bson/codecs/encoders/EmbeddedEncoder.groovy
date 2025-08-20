@@ -48,7 +48,7 @@ class EmbeddedEncoder implements PropertyEncoder<Embedded> {
                 associatedEntity = property.associatedEntity
             }
 
-            writer.writeName MappingUtils.getTargetKey(property)
+            writer.writeName(MappingUtils.getTargetKey(property))
 
             def reflector = mappingContext.getEntityReflector(associatedEntity)
             BsonPersistentEntityCodec codec = createEmbeddedEntityCodec(codecRegistry, associatedEntity)

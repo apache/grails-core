@@ -67,7 +67,7 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
 
     @Override
     protected void doBegin(Object transaction, TransactionDefinition definition) {
-        super.doBegin transaction, definition
+        super.doBegin(transaction, definition)
 
         if (definition.isReadOnly()) {
             // transaction is HibernateTransactionManager.HibernateTransactionObject private class instance
