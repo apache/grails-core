@@ -132,4 +132,4 @@ In the event that you need to debug external configuration, you can enable loggi
 
 === Further Configuration Customization
 
-As Grails is a SpringBoot configuration options are available as well, for documentation please consult: {springBootReference}/html/features.html#features.external-config.files
+As Grails is a SpringBoot configuration options are available as well, for documentation please consult: {springBootReference}features/external-config.html

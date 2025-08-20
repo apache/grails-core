@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-When you use the `create-*` and `generate-*` commands, Grails automatically generates `unit` or `integration` tests. For example, running the link:../ref/Command%20Line/create-controller.html[create-controller] command as follows:
+When you use the `create-*` and `generate-*` commands, Grails automatically generates `unit` or `integration` tests. For example, running the link:{commandLineRef}create-controller.html[create-controller] command as follows:
 
 [source,groovy]
 ----

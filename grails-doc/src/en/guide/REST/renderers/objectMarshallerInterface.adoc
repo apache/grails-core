@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-For more complex marshallers it is recommended you implement the {apiDocs}org/grails/web/converters/marshaller/ObjectMarshaller.html[ObjectMarshaller] interface. For example given a domain class:
+For more complex marshallers it is recommended you implement the link:{api}org/grails/web/converters/marshaller/ObjectMarshaller.html[ObjectMarshaller] interface. For example given a domain class:
 
 [source,groovy]
 ----
@@ -77,7 +77,7 @@ With the custom `ObjectMarshaller` in place, the output is now:
 ==== Customizing the Name of the Root Element
 
 
-If you wish the customize the name of the surrounding element, you can implement {apiDocs}org/grails/web/converters/marshaller/NameAwareMarshaller.html[NameAwareMarshaller]:
+If you wish the customize the name of the surrounding element, you can implement link:{api}org/grails/web/converters/marshaller/NameAwareMarshaller.html[NameAwareMarshaller]:
 
 [source,groovy]
 ----

@@ -93,4 +93,4 @@ class Author {
 }
 ----
 
-For more information see the section on  link:{hibernate5Guide}/manual/index.html#caching[Caching] in the user guide.
+For more information see the section on  link:{hibernate5GuideFromRef}index.html#caching[Caching] in the user guide.

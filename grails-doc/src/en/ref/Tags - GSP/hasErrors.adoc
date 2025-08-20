@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-Checks whether a bean, request scope, or model reference has any errors and if so invokes the body of the tag. Typically used in conjunction with either xref:eachError.adoc[eachError] or xref:renderErrors.adoc[renderErrors]
+Checks whether a bean, request scope, or model reference has any errors and if so invokes the body of the tag. Typically used in conjunction with either xref:eachError.html[eachError] or xref:renderErrors.html[renderErrors]
 
 
 === Examples

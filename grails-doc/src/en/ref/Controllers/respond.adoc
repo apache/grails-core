@@ -39,7 +39,7 @@ respond Book.get(1), formats: ['xml', 'json']
 === Description
 
 
-The respond method uses link:{guidePath}/theWebLayer.html#contentNegotiation[Content Negotiation] to respond with the most appropriate content type. See the documentation on  link:{guidePath}/webServices.html#REST[REST support] for more information.
+The respond method uses link:{guidePath}theWebLayer.html#contentNegotiation[Content Negotiation] to respond with the most appropriate content type. See the documentation on  link:{guidePath}REST.html[REST support] for more information.
 
 If a view is picked for rendering then a model will automatically be calculated to pass to the view.
 

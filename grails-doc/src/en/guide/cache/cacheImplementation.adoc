@@ -22,9 +22,9 @@ All of the plugin's classes are designed for extensibility; the classes are all 
 == Cache manager
 
 
-The core cache plugin registers a `grailsCacheManager` Spring bean, and the extension plugins replace this bean with one that creates and manages caches for that implementation. The default implementation is an instance of link:{api}/grails/plugin/cache/GrailsConcurrentMapCacheManager.html[GrailsConcurrentMapCacheManager] which uses link:{api}/grails/plugin/cache/GrailsConcurrentMapCache.html[GrailsConcurrentMapCache] as its cache implementation. It uses a `java.util.concurrent.ConcurrentHashMap` to store cached values.
+The core cache plugin registers a `grailsCacheManager` Spring bean, and the extension plugins replace this bean with one that creates and manages caches for that implementation. The default implementation is an instance of link:{api}grails/plugin/cache/GrailsConcurrentMapCacheManager.html[GrailsConcurrentMapCacheManager] which uses link:{api}grails/plugin/cache/GrailsConcurrentMapCache.html[GrailsConcurrentMapCache] as its cache implementation. It uses a `java.util.concurrent.ConcurrentHashMap` to store cached values.
 
-You can customize the cache manager by replacing the `grailsCacheManager` Spring bean in `resources.groovy` with your own; either subclass link:{api}/grails/plugin/cache/GrailsConcurrentMapCacheManager.html[GrailsConcurrentMapCacheManager] (e.g. to override the `createConcurrentMapCache()` method) or by implementing the link:{api}/org/grails/plugin/cache/GrailsCacheManager.html[GrailsCacheManager] interface.
+You can customize the cache manager by replacing the `grailsCacheManager` Spring bean in `resources.groovy` with your own; either subclass link:{api}grails/plugin/cache/GrailsConcurrentMapCacheManager.html[GrailsConcurrentMapCacheManager] (e.g. to override the `createConcurrentMapCache()` method) or by implementing the link:{api}org/grails/plugin/cache/GrailsCacheManager.html[GrailsCacheManager] interface.
 
 === Fragment caching
 
@@ -47,11 +47,11 @@ You can cache the content of templates with the `<cache:render>` tag. You can sp
 
 === Service caching
 
-You can cache the return value of a service method by annotating it with link:{api}/grails/plugin/cache/Cacheable.html[Cacheable].
+You can cache the return value of a service method by annotating it with link:{api}grails/plugin/cache/Cacheable.html[Cacheable].
 
 ==== Key generation
 
-The default key generated implements the link:{api}/grails/plugin/cache/GrailsCacheKeyGenerator.html[GrailsCacheKeyGenerator] which provides method for generating keys taking into account:
+The default key generated implements the link:{api}grails/plugin/cache/GrailsCacheKeyGenerator.html[GrailsCacheKeyGenerator] which provides method for generating keys taking into account:
 
 * The class name
 * The method name

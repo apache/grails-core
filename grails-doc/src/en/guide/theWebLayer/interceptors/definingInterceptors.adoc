@@ -19,7 +19,7 @@ under the License.
 
 By default interceptors will match the controllers with the same name. For example if you have an interceptor called `BookInterceptor` then all requests to the actions of the `BookController` will trigger the interceptor.
 
-An `Interceptor` implements the {apiDocs}grails/artefact/Interceptor.html[Interceptor] trait and provides 3 methods that can be used to intercept requests:
+An `Interceptor` implements the link:{api}grails/artefact/Interceptor.html[Interceptor] trait and provides 3 methods that can be used to intercept requests:
 
 [source,groovy]
 ----
@@ -58,4 +58,4 @@ boolean after() {
 }
 ----
 
-The `afterView` method is executed after view rendering completes. If an exception occurs, the exception is available using the `throwable` property of the {apiDocs}grails/artefact/Interceptor.html[Interceptor] trait.
+The `afterView` method is executed after view rendering completes. If an exception occurs, the exception is available using the `throwable` property of the link:{api}grails/artefact/Interceptor.html[Interceptor] trait.

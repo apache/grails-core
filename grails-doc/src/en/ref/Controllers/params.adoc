@@ -26,7 +26,7 @@ under the License.
 
 
 A mutable multi-dimensional map (hash) of request (CGI) parameters. 
-See link:https://docs.grails.org/latest/api/grails/web/servlet/mvc/GrailsParameterMap.html[api documentation] for details.
+See link:{apiFromRef}grails/web/servlet/mvc/GrailsParameterMap.html[api documentation] for details.
 
 
 === Examples
@@ -42,7 +42,7 @@ class BookController {
 }
 ----
 
-To perform data binding (see link:{guidePath}/theWebLayer.html#dataBinding[data binding] in the user guide):
+To perform data binding (see link:{guidePath}theWebLayer.html#dataBinding[data binding] in the user guide):
 
 [source,groovy]
 ----
@@ -63,7 +63,7 @@ The `params` object can be indexed into using the array index operator or de-ref
 println params.foo
 ----
 
-The params object can also be used to bind request parameters onto the properties of a domain class using either the constructor or the link:../Domain%20Classes/properties.html[properties] property:
+The params object can also be used to bind request parameters onto the properties of a domain class using either the constructor or the link:{domainClassesRefFromRef}properties.html[properties] property:
 
 [source,groovy]
 ----
@@ -72,4 +72,4 @@ book = Book.get(1)
 book.properties = params
 ----
 
-For further reading see link:{guidePath}/theWebLayer.html#dataBinding[data binding] in the user guide.
+For further reading see link:{guidePath}theWebLayer.html#dataBinding[data binding] in the user guide.

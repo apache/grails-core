@@ -19,7 +19,7 @@ under the License.
 
 Grails provides the following GORM configuration options:
 
-* `grails.gorm.failOnError`  - If set to `true`, causes the `save()` method on domain classes to throw a `grails.validation.ValidationException` if link:validation.html[validation] fails during a save.  This option may also be assigned a list of Strings representing package names.  If the value is a list of Strings then the failOnError behavior will only be applied to domain classes in those packages (including sub-packages).  See the link:../ref/Domain%20Classes/save.html[save] method docs for more information.
+* `grails.gorm.failOnError`  - If set to `true`, causes the `save()` method on domain classes to throw a `grails.validation.ValidationException` if link:validation.html[validation] fails during a save.  This option may also be assigned a list of Strings representing package names.  If the value is a list of Strings then the failOnError behavior will only be applied to domain classes in those packages (including sub-packages).  See the link:{domainClassesRef}save.html[save] method docs for more information.
 
 For example, to enable failOnError for all domain classes:
 

@@ -21,7 +21,7 @@ under the License.
 ==== Creating a controller
 
 
-Controllers can be created with the link:../ref/Command%20Line/create-controller.html[create-controller] or link:../ref/Command%20Line/generate-controller.html[generate-controller] command. For example try running the following command from the root of a Grails project:
+Controllers can be created with the link:{commandLineRef}create-controller.html[create-controller] or link:{commandLineRef}generate-controller.html[generate-controller] command. For example try running the following command from the root of a Grails project:
 
 [source,bash]
 ----

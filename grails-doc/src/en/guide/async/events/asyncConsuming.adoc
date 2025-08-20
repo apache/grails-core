@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-There are several ways to consume an event. The recommended way is to use the link:{asyncApi}/grails/events/annotation/Subscriber.html[Subscriber] annotation. Note that the class using this annotation needs to be a Spring bean.
+There are several ways to consume an event. The recommended way is to use the link:{api}grails/events/annotation/Subscriber.html[Subscriber] annotation. Note that the class using this annotation needs to be a Spring bean.
 
 For example:
 

@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-Renders its body conditionally, based on an expression and/or current environment. The tag renders its body unless all the specified conditions (test and/or environment) are `true`. Does the opposite of what the xref:if.adoc[if] tag does.
+Renders its body conditionally, based on an expression and/or current environment. The tag renders its body unless all the specified conditions (test and/or environment) are `true`. Does the opposite of what the xref:if.html[if] tag does.
 
 
 === Examples

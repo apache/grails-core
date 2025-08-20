@@ -78,7 +78,7 @@ public class GebWithWebDriverBinaries implements Feature {
 
     @Override
     public String getThirdPartyDocumentation() {
-        return "https://www.gebish.org/manual/current/";
+        return "https://groovy.apache.org/geb/manual/current/";
     }
 
     @Override

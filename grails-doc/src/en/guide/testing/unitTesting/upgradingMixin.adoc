@@ -21,7 +21,7 @@ In prior Grails versions mixins were used to implement unit tests.  The new unit
 
 === FreshRuntime Removed
 
-The `@FreshRuntime` annotation was removed due to the design of the new framework. The annotation allowed any metaclass changes to be sandboxed either at the method or class level. Spock provides a similar annotation to do the same thing, link:http://spockframework.org/spock/docs/1.1/all_in_one.html#_confinemetaclasschanges[@ConfineMetaClassChanges].
+The `@FreshRuntime` annotation was removed due to the design of the new framework. The annotation allowed any metaclass changes to be sandboxed either at the method or class level. Spock provides a similar annotation to do the same thing, link:{spockDocs}all_in_one.html#_confinemetaclasschanges[@ConfineMetaClassChanges].
 
 In addition, the annotation caused the application context to be refreshed. Because the application context is refreshed between test classes automatically, the annotation is no longer necessary.
 

@@ -104,7 +104,7 @@ You can also specify a version
 [source,console,subs=attributes+]
 $ sdk install grails {version}
 
-You can find more information about SDKMAN usage on the https://sdkman.io/usage[SDKMAN Docs].
+You can find more information about SDKMAN usage on the https://sdkman.io/usage/[SDKMAN Docs].
 After installing, all three CLI commands: `grails`, `grails-shell-cli`, and `grails-forge-cli` will be available.
 
 === Manual installation

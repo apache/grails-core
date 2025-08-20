@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-When you create a Grails application with the link:../ref/Command%20Line/create-app.html[create-app] command by default the "web" profile is used:
+When you create a Grails application with the link:{commandLineRef}create-app.html[create-app] command by default the "web" profile is used:
 
 [source,console]
 ----
@@ -33,14 +33,14 @@ $ grails create-app myapp --profile=rest-api
 
 Profiles encapsulate the project commands, templates, and plugins that are designed to work for a given profile. The source for the profiles can be found https://github.com/grails-profiles[on GitHub], and the profiles themselves are published as JAR files to the Grails central repository.
 
-To find out what profiles are available, use the link:../ref/Command%20Line/list-profiles.html[list-profiles] command:
+To find out what profiles are available, use the link:{commandLineRef}list-profiles.html[list-profiles] command:
 
 [source,console]
 ----
 $ grails list-profiles
 ----
 
-For more information on a particular profile, use the link:../ref/Command%20Line/profile-info.html[profile-info] command:
+For more information on a particular profile, use the link:{commandLineRef}profile-info.html[profile-info] command:
 
 [source,console]
 ----
@@ -62,7 +62,7 @@ grails {
   profiles {
     repositories {
       myRepo {
-        url = "http://foo.com/repo"
+        url = "https://foo.com/repo"
         snapshotsEnabled = true
       }
       mavenCentral()
@@ -81,7 +81,7 @@ grails {
   profiles {
     repositories {
       myRepo {
-        url = "http://foo.com/repo"
+        url = "https://foo.com/repo"
         snapshotsEnabled = true
         username = "user"
         password = "pass"

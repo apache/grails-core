@@ -56,7 +56,7 @@ grails> create-controller greeting
 
 This command will generate a new controller named "GreetingController.groovy" within the grails-app/controllers/myapp directory. You might wonder why there is an additional "myapp" directory. This structure aligns with conventions commonly used in Java development, where classes are organized into packages. Grails automatically includes the application name as part of the package structure. If you do not specify a package, Grails defaults to using the application name.
 
-For more detailed information on creating controllers, you can refer to the documentation on the link:../ref/Command%20Line/create-controller.html[create-controller] page.
+For more detailed information on creating controllers, you can refer to the documentation on the link:{commandLineRef}create-controller.html[create-controller] page.
 
 === Step 5: Edit the Controller
 
@@ -76,7 +76,7 @@ class GreetingController {
 }
 ----
 
-The action is simply a method. In this particular case, it calls a special method provided by Grails to link:../ref/Controllers/render.html[render] the page.
+The action is simply a method. In this particular case, it calls a special method provided by Grails to link:{controllersRef}render.html[render] the page.
 
 === Step 6: Run the Application
 

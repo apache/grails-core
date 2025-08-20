@@ -49,4 +49,4 @@ Person bart = query.find()
 
 The `where` method defaults to a conjunction (logical AND) for the created query. The `whereAny` compliments the `where` method by allowing the creation of `DetachedCriteria` using a disjunction (logical OR).
 
-The `where` method is a powerful new type-safe querying option introduced in Grails 2.0. For more information on using the `where` method see the dedicated section on  link:{hibernate5Guide}/manual/index.html#whereQueries[Where Queries] and  link:{hibernate5Guide}/manual/index.html#detachedCriteria[Detached Criteria] in the user guide.
+The `where` method is a powerful new type-safe querying option introduced in Grails 2.0. For more information on using the `where` method see the dedicated section on  link:{hibernate5GuideFromRef}index.html#whereQueries[Where Queries] and  link:{hibernate5GuideFromRef}index.html#detachedCriteria[Detached Criteria] in the user guide.

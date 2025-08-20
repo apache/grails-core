@@ -53,12 +53,6 @@ API documentation for the snapshot /development instance can be found at:
 * [Swagger / OpenAPI Doc](https://grailsforge-snapshot-cjmq3uyfcq-uc.a.run.app/swagger-ui/index.html)
 * [RAPI Doc](https://grailsforge-snapshot-cjmq3uyfcq-uc.a.run.app/rapidoc/index.html)
 
-## Documentation
-
-<!-- See the [Documentation](https://grails.github.io/grails-forge/6.0.x/guide/) for more information. -->
-
-See the [Snapshot Documentation](https://grails.github.io/grails-forge/snapshot/guide/) for the current development docs.
-
 ## Snapshots and Releases
 
 Releases are published to SDKMan via the Release action on [Github Actions](https://github.com/apache/grails-core/actions).
@@ -237,8 +231,8 @@ Create two databases `grailsforge-production` and `grailsforge-snapshot`
 | `MICRONAUT_HTTP_SERVICES_ANALYTICS_URL`          | URL of cloud run `grailsforge-analytics-snapshot`                                                                                                      |
 | `GITHUB_OAUTH_APP_CLIENT_ID`                     | The Client ID shared after creating GitHub OAuth App                                                                                                   |
 | `GITHUB_OAUTH_APP_CLIENT_SECRET`                 | The Client secret shared after creating the GitHub OAuth app                                                                                           |
-| `GITHUB_USER_AGENT`                              | URL of the grails-forge-ui static website. For example, `https://start.grails.org/`. The default value is `https://grails.github.io/grails-forge-ui/`. |
-| `GITHUB_REDIRECT_URL`                            | URL of the grails-forge-ui static website. For example, `https://start.grails.org/`. The default value is `https://grails.github.io/grails-forge-ui/`. |
+| `GITHUB_USER_AGENT`                              | URL of the grails-forge-ui static website. The default value is `https://start.grails.org/`. |
+| `GITHUB_REDIRECT_URL`                            | URL of the grails-forge-ui static website. The default value is `https://start.grails.org/`. |
 
 
 ### Cloud Run grailsforge-analytics-latest

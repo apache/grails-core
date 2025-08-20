@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Grails link:scaffolding.html[scaffolding] templates for controllers and views are fully i18n-aware. The GSPs use the link:{gspdocs}/ref/Tags/message.html[message] tag for labels, buttons etc. and controller `flash` messages use i18n to resolve locale-specific messages.
+Grails link:scaffolding.html[scaffolding] templates for controllers and views are fully i18n-aware. The GSPs use the link:{gspTagsRef}message.html[message] tag for labels, buttons etc. and controller `flash` messages use i18n to resolve locale-specific messages.
 
 The scaffolding includes locale specific labels for domain classes and domain fields. For example, if you have a `Book` domain class with a `title` field:
 

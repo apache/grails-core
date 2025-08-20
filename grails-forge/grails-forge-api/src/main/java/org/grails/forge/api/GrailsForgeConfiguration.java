@@ -103,7 +103,7 @@ public class GrailsForgeConfiguration {
     @ConfigurationProperties(GitHubConfiguration.PREFIX)
     public static class GitHubConfiguration {
         public static final String PREFIX = "github";
-        public static final String DEFAULT_USER_AGENT = "https://grails.github.io/grails-forge-ui/";
+        public static final String DEFAULT_USER_AGENT = "https://start.grails.org/";
 
         private String clientId;
         private String clientSecret;

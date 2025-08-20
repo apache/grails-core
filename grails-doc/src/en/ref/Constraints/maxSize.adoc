@@ -42,6 +42,6 @@ children maxSize: 25
 
 Sets the maximum size of a collection or number property.
 
-This constraint influences  link:{hibernate5Guide}/manual/index.html#constraints[schema generation].
+This constraint influences  link:{hibernate5GuideFromRef}index.html#constraints[schema generation].
 
 Error Code: `className.propertyName.maxSize.exceeded`

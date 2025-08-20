@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-To map a domain class with annotations, create a new class in `src/main/groovy/` and use the annotations defined as part of the EJB 3.0 spec (for more info on this see the http://annotations.hibernate.org/[Hibernate Annotations Docs]):
+To map a domain class with annotations, create a new class in `src/main/groovy/` and use the annotations defined as part of the EJB 3.0 spec (for more info on this see the https://annotations.hibernate.org/[Hibernate Annotations Docs]):
 
 [source,groovy]
 ----
@@ -67,7 +67,7 @@ Then register the class with the Hibernate `sessionFactory` by adding relevant e
 [source,xml]
 ----
 <!DOCTYPE hibernate-configuration SYSTEM
-  "http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd">
+  "https://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd">
 <hibernate-configuration>
     <session-factory>
         <mapping package="com.books" />

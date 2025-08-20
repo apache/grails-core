@@ -34,7 +34,7 @@ grails create-plugin simple
 
 Creates a Grails plugin project. A Grails plugin project is just like an application project except it contains a plugin descriptor and can be packaged as a plugin and installed into other applications.
 
-Plugins are not just useful for plugin developers, but also as a way to modularize large Grails applications. Refer to the section on link:{guidePath}/plugins.html[Plugin Development] in the user guide for more information on developing plugins for Grails.
+Plugins are not just useful for plugin developers, but also as a way to modularize large Grails applications. Refer to the section on link:{guidePath}plugins.html[Plugin Development] in the user guide for more information on developing plugins for Grails.
 
 Usage:
 
@@ -51,7 +51,7 @@ grails create-plugin <<name>>
 
 The `create-plugin` command is used to create a Grails plugin project. A Grails plugin project is similar to an application project but includes a plugin descriptor and can be packaged as a plugin to be installed into other Grails applications.
 
-Plugins are not only valuable for plugin developers but also serve as a means to modularize large Grails applications. They allow you to encapsulate functionality and easily reuse it across different projects. To learn more about developing plugins for Grails, refer to the section on link:{guidePath}/plugins.html[Plugin Development] in the Grails user guide.
+Plugins are not only valuable for plugin developers but also serve as a means to modularize large Grails applications. They allow you to encapsulate functionality and easily reuse it across different projects. To learn more about developing plugins for Grails, refer to the section on link:{guidePath}plugins.html[Plugin Development] in the Grails user guide.
 
 === Usage
 

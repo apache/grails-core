@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-Supports embedding domain components into domain classes - otherwise known as  link:{hibernate5Guide}/manual/index.html#gormComposition[composition].
+Supports embedding domain components into domain classes - otherwise known as  link:{hibernate5GuideFromRef}index.html#gormComposition[composition].
 
 
 === Examples

@@ -42,7 +42,7 @@ Creates a form that can submit multi-part data for file uploads.
 === Description
 
 
-Identical to the standard xref:form.adoc[form] tag except that it sets the `enctype` attribute to `"multipart/form-data"` automatically.
+Identical to the standard xref:form.html[form] tag except that it sets the `enctype` attribute to `"multipart/form-data"` automatically.
 
 Attributes
 

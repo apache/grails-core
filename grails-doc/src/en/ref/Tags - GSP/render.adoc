@@ -113,6 +113,6 @@ Attributes
 * `var` (optional) - The variable name of the bean to be referenced in the template
 * `plugin` (optional) - The plugin to look for the template in
 
-See xref:../ref/Controllers/render.adoc[render] in the Grails user guide for more information.
+See link:{controllersRefFromRef}render.html[render] in the Grails user guide for more information.
 
 
