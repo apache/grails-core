@@ -297,7 +297,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
                 mapping.cache.usage = args.usage
             }
             else {
-                LOG.warn("ORM Mapping Invalid: Specified [usage] with value [$args.usage] of [cache] in class [$className] is not valid")
+                LOG.warn('ORM Mapping Invalid: Specified [usage] with value [{}] of [cache] in class [{}] is not valid', args.usage, className)
             }
         }
         if (args.include) {
@@ -305,7 +305,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
                 mapping.cache.include = args.include
             }
             else {
-                LOG.warn("ORM Mapping Invalid: Specified [include] with value [$args.include] of [cache] in class [$className] is not valid")
+                LOG.warn('ORM Mapping Invalid: Specified [include] with value [{}] of [cache] in class [{}] is not valid', args.include, className)
             }
         }
     }
@@ -536,7 +536,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
                     cc.usage = namedArgs.cache
                 }
                 else {
-                    LOG.warn("ORM Mapping Invalid: Specified [usage] of [cache] with value [$args.usage] for association [$name] in class [$className] is not valid")
+                    LOG.warn('ORM Mapping Invalid: Specified [usage] of [cache] with value [{}] for association [{}] in class [{}] is not valid', args.usage, name, className)
                 }
                 property.cache = cc
             }
@@ -550,13 +550,13 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
                     cc.usage = cacheArgs.usage
                 }
                 else {
-                    LOG.warn("ORM Mapping Invalid: Specified [usage] of [cache] with value [$args.usage] for association [$name] in class [$className] is not valid")
+                    LOG.warn('ORM Mapping Invalid: Specified [usage] of [cache] with value [{}] for association [{}] in class [{}] is not valid', args.usage, name, className)
                 }
                 if (CacheConfig.INCLUDE_OPTIONS.contains(cacheArgs.include)) {
                     cc.include = cacheArgs.include
                 }
                 else {
-                    LOG.warn("ORM Mapping Invalid: Specified [include] of [cache] with value [$args.include] for association [$name] in class [$className] is not valid")
+                    LOG.warn('ORM Mapping Invalid: Specified [include] of [cache] with value [{}] for association [{}] in class [{}] is not valid', args.include, name, className)
                 }
                 property.cache = cc
             }
@@ -613,7 +613,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
                     cc."$k" = v
                 }
                 catch (Exception e) {
-                    LOG.warn("Parameter [$k] cannot be used with [joinTable] argument")
+                    LOG.warn('Parameter [{}] cannot be used with [joinTable] argument', k.toString())
                 }
             }
         }

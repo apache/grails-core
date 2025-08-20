@@ -19,7 +19,7 @@
 package org.grails.plugins.web.servlet.context
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Commons
+import groovy.util.logging.Slf4j
 
 import jakarta.servlet.ServletContext
 
@@ -45,7 +45,7 @@ import org.grails.web.servlet.context.GrailsConfigUtils
  * @since 3.0
  */
 @CompileStatic
-@Commons
+@Slf4j
 class BootStrapClassRunner extends GrailsApplicationLifeCycleAdapter implements GrailsApplicationAware, ServletContextAware, ApplicationContextAware, PluginManagerAware {
 
     GrailsApplication grailsApplication

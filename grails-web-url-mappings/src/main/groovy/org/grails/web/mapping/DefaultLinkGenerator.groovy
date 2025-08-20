@@ -427,7 +427,7 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
                 u = "http://localhost:${System.getProperty('server.port') ?: '8080'}${contextPath ?: '' }"
             }
         }
-        log.trace("Resolved base server URL: $u")
+        log.trace('Resolved base server URL: {}', u)
         return u
     }
 

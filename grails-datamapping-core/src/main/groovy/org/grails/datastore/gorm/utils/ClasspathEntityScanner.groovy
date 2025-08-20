@@ -81,7 +81,7 @@ class ClasspathEntityScanner {
         for (Package p in packages) {
             def packageName = p.name
             if (ignoredPackages.contains(packageName)) {
-                log.error("Package [$packageName] will not be scanned as it is too generic and will slow down startup time. Use a more specific package")
+                log.error('Package [{}] will not be scanned as it is too generic and will slow down startup time. Use a more specific package', packageName)
             }
             else {
                 for (BeanDefinition candidate in componentProvider.findCandidateComponents(packageName)) {

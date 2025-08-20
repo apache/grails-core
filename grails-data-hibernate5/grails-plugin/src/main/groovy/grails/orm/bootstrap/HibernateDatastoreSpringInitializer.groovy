@@ -17,7 +17,6 @@ package grails.orm.bootstrap
 import javax.sql.DataSource
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ApplicationContext
@@ -46,7 +45,6 @@ import org.grails.orm.hibernate.support.HibernateDatastoreConnectionSourcesRegis
  * @author Graeme Rocher
  * @since 3.0
  */
-@Slf4j
 class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
 
     public static final String SESSION_FACTORY_BEAN_NAME = 'sessionFactory'

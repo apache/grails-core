@@ -284,7 +284,7 @@ class GormEnhancer implements Closeable {
             }
         }
         else {
-            log.debug("Returning default tenant id for non-multitenant class [$entity]")
+            log.debug('Returning default tenant id for non-multitenant class [{}]', entity)
             return ConnectionSource.DEFAULT
         }
     }

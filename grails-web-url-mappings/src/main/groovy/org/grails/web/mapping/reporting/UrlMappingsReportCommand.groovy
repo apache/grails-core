@@ -20,7 +20,7 @@ package org.grails.web.mapping.reporting
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
-import groovy.util.logging.Commons
+import groovy.util.logging.Slf4j
 
 import grails.dev.commands.ApplicationCommand
 import grails.dev.commands.ExecutionContext
@@ -35,7 +35,7 @@ import grails.web.mapping.reporting.UrlMappingsRenderer
  */
 @CompileStatic
 @EqualsAndHashCode
-@Commons
+@Slf4j
 class UrlMappingsReportCommand implements ApplicationCommand {
 
     final String description = /Prints out a report of the project's URL mappings/

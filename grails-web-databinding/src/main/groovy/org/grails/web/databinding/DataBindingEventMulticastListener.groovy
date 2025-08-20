@@ -19,7 +19,7 @@
 package org.grails.web.databinding
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Commons
+import groovy.util.logging.Slf4j
 
 import grails.databinding.errors.BindingError
 import grails.databinding.events.DataBindingListener
@@ -30,7 +30,7 @@ import grails.databinding.events.DataBindingListener
  * @since 2.3
  */
 @CompileStatic
-@Commons
+@Slf4j
 class DataBindingEventMulticastListener implements DataBindingListener {
 
     protected final List<DataBindingListener> listeners

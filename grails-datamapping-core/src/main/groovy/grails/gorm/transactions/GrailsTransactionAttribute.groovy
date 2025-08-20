@@ -76,9 +76,7 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
 
     @Override
     boolean rollbackOn(Throwable ex) {
-        if (log.isTraceEnabled()) {
-            log.trace("Applying rules to determine whether transaction should rollback on $ex")
-        }
+        log.trace('Applying rules to determine whether transaction should rollback on {}', ex.toString())
 
         RollbackRuleAttribute winner = null
         int deepest = Integer.MAX_VALUE
@@ -94,9 +92,7 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
             }
         }
 
-        if (log.isTraceEnabled()) {
-            log.trace("Winning rollback rule is: $winner")
-        }
+        log.trace('Winning rollback rule is: {}', winner)
 
         // User superclass behavior (rollback on unchecked) if no rule matches.
         if (winner == null) {

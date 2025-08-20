@@ -25,7 +25,6 @@ import java.util.function.Supplier
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
-import groovy.util.logging.Slf4j
 
 import com.github.dockerjava.api.model.ContainerNetwork
 import geb.Browser
@@ -52,7 +51,6 @@ import grails.plugin.geb.serviceloader.ServiceRegistry
  * @author James Daugherty
  * @since 4.1
  */
-@Slf4j
 @CompileStatic
 class WebDriverContainerHolder {
 

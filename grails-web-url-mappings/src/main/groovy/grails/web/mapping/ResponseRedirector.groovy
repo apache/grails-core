@@ -19,8 +19,7 @@
 package grails.web.mapping
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Commons
-
+import groovy.util.logging.Slf4j
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
@@ -41,7 +40,7 @@ import org.grails.web.util.GrailsApplicationAttributes
  * @author Graeme Rocher
  */
 @CompileStatic
-@Commons
+@Slf4j
 class ResponseRedirector {
 
     public static final String ARGUMENT_PERMANENT = 'permanent'
@@ -120,10 +119,8 @@ class ResponseRedirector {
      * Redirects the response the the given URI
      */
     private void redirectResponse(String serverBaseURL, String actualUri, HttpServletRequest request, HttpServletResponse response, boolean permanent, boolean moved, boolean absolute) {
-        if (log.isDebugEnabled()) {
-            log.debug("Method [redirect] forwarding request to [$actualUri]")
-            log.debug("Executing redirect with response [$response]")
-        }
+        log.debug('Method [redirect] forwarding request to [{}]', actualUri)
+        log.debug('Executing redirect with response [{}]', response)
 
         String processedActualUri = processedUrl(actualUri, request)
 

@@ -657,7 +657,7 @@ class FormFieldsTagLib {
             message(code: key, default: null) ?: null
         }
         if (log.traceEnabled && !message) {
-            log.trace("i18n missing translation for one of ${keysInPreferenceOrder}")
+            log.trace('i18n missing translation for one of {}', keysInPreferenceOrder)
         }
         message ?: defaultMessage
     }

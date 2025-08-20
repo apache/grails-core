@@ -77,7 +77,7 @@ class CacheGrailsPlugin extends Plugin {
 
             if (pluginConfiguration.clearAtStartup) {
                 for (String cacheName in grailsCacheManager.cacheNames) {
-                    log.info("Clearing cache $cacheName")
+                    log.info('Clearing cache {}', cacheName)
                     Cache cache = grailsCacheManager.getCache(cacheName)
                     cache.clear()
                 }

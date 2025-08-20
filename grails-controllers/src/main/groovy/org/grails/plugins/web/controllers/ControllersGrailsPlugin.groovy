@@ -81,7 +81,7 @@ class ControllersGrailsPlugin extends Plugin {
             annotationHandlerAdapter(RequestMappingHandlerAdapter)
 
             for (controller in application.getArtefacts(ControllerArtefactHandler.TYPE)) {
-                log.debug("Configuring controller $controller.fullName")
+                log.debug('Configuring controller {}', controller.fullName)
                 if (controller.available) {
                     def lazyInit = controller.hasProperty('lazyInit') ? controller.getPropertyValue('lazyInit') : true
                     "${controller.fullName}"(controller.clazz) { bean ->
@@ -114,9 +114,7 @@ class ControllersGrailsPlugin extends Plugin {
         if (application.isArtefactOfType(ControllerArtefactHandler.TYPE, (Class) event.source)) {
             ApplicationContext context = applicationContext
             if (!context) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Application context not found. Can't reload")
-                }
+                log.debug("Application context not found. Can't reload")
                 return
             }
 

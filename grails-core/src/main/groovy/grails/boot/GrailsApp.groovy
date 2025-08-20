@@ -310,7 +310,7 @@ class GrailsApp extends SpringApplication {
             if (JavaCompiler.isAvailable()) {
                 JavaCompiler.recompile(compilerConfig, changedFile)
             } else {
-                log.error("Cannot recompile [$changedFile.name], the current JVM is not a JDK (recompilation will not work on a JRE missing the compiler APIs).")
+                log.error('Cannot recompile [{}], the current JVM is not a JDK (recompilation will not work on a JRE missing the compiler APIs).', changedFile.name)
             }
         } else {
             compileGroovyFile(compilerConfig, changedFile)

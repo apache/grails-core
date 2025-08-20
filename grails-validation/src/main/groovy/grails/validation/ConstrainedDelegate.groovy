@@ -20,7 +20,6 @@
 package grails.validation
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 
 import org.springframework.validation.Errors
 
@@ -35,7 +34,6 @@ import grails.gorm.validation.Constraint
  *
  */
 @CompileStatic
-@Slf4j
 class ConstrainedDelegate implements Constrained, ConstrainedProperty {
 
     final ConstrainedProperty property

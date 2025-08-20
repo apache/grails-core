@@ -22,7 +22,6 @@ import java.time.LocalDateTime
 
 import groovy.transform.CompileStatic
 import groovy.transform.TailRecursive
-import groovy.util.logging.Slf4j
 
 import org.spockframework.runtime.extension.IGlobalExtension
 import org.spockframework.runtime.model.MethodInfo
@@ -43,7 +42,6 @@ import grails.testing.mixin.integration.Integration
  * @author James Daugherty
  * @since 4.1
  */
-@Slf4j
 @CompileStatic
 class GrailsContainerGebExtension implements IGlobalExtension {
 

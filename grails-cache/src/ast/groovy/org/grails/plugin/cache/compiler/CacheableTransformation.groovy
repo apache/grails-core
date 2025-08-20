@@ -72,7 +72,7 @@ class CacheableTransformation extends AbstractCacheTransformation {
     protected Expression buildDelegatingMethodCall(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, MethodNode methodNode, MethodCallExpression originalMethodCallExpr, BlockStatement newMethodBody) {
         boolean isControllerClass = classNode.name.endsWith(ControllerArtefactHandler.TYPE)
         if (isControllerClass) {
-            log.warn("@Cacheable is not supported on controller methods. Ignoring method: ${methodNode.name}")
+            log.warn('@Cacheable is not supported on controller methods. Ignoring method: {}', methodNode.name)
             return originalMethodCallExpr
         }
 

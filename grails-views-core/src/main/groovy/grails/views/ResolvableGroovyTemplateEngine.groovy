@@ -213,7 +213,7 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
             url = templateResolver.resolveTemplate("${path}.${extension}")
         }
         if (url != null) {
-            log.debug("Found template URL [${url}] for path [$path]")
+            log.debug('Found template URL [{}] for path [{}]', url, path)
             WritableScriptTemplate template = createTemplate(path, url)
             template.templatePath = path
             return template
@@ -224,7 +224,7 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
     private WritableScriptTemplate attemptResolveClass(String path) {
         Class cls = templateResolver.resolveTemplateClass(path)
         if (cls != null) {
-            log.debug("Found template class [${cls.name}] for path [$path]")
+            log.debug('Found template class [{}] for path [{}]', cls.name, path)
             WritableScriptTemplate template = createTemplate((Class<? extends Template>) cls)
             template.templatePath = path
             return template
@@ -315,15 +315,15 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
             template = resolveCache.getIfPresent(cacheKey)
             if (template != null) {
                 if (template.is(NULL_ENTRY)) {
-                    log.debug("No template found for path [$path] and locale [$locale]")
+                    log.debug('No template found for path [{}] and locale [{}]', path, locale)
                     return null
                 }
                 else if (!enableReloading || !((WritableScriptTemplate) template).wasModified()) {
-                    log.debug("Found cached template for path [$path] and locale [$locale]")
+                    log.debug('Found cached template for path [{}] and locale [{}]', path, locale)
                     return template
                 }
                 else {
-                    log.debug("Reloading template modified for path [$path] and locale [$locale]. ")
+                    log.debug('Reloading template modified for path [{}] and locale [{}]. ', path, locale)
                     cachedTemplates.invalidate(path)
                     resolveCache.invalidate(cacheKey)
                     template = null

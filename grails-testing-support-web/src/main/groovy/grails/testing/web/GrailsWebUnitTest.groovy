@@ -21,7 +21,6 @@ package grails.testing.web
 import groovy.text.Template
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 
 import org.springframework.mock.web.MockHttpSession
 import org.springframework.mock.web.MockServletContext
@@ -48,7 +47,6 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
 
 @CompileStatic
-@Slf4j
 trait GrailsWebUnitTest implements GrailsUnitTest {
 
     private Set<Class> loadedCodecs = new HashSet<Class>()

@@ -22,7 +22,7 @@ import java.text.DateFormat
 import java.text.DateFormatSymbols
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Commons
+import groovy.util.logging.Slf4j
 
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.InitializingBean
@@ -53,7 +53,7 @@ import org.grails.web.servlet.mvc.SynchronizerTokensHolder
  * @author Graeme Rocher
  */
 @TagLib
-@Commons
+@Slf4j
 class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrary, GrailsConfigurationAware {
 
     private static final List<String> DEFAULT_CURRENCY_CODES = ['EUR', 'XCD', 'USD', 'XOF', 'NOK', 'AUD',
