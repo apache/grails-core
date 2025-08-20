@@ -38,6 +38,11 @@ public class GrailsConsole implements DefaultFeature {
 
     @Override
     public String getName() {
+        return "grails-console";
+    }
+
+    @Override
+    public String getTitle() {
         return "Console";
     }
 
