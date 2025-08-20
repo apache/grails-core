@@ -293,7 +293,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
 
                         @Override
                         void visitReturnStatement(ReturnStatement statement) {
-                            ReturnStatement rs = (ReturnStatement)statement
+                            ReturnStatement rs = (ReturnStatement) statement
                             def i = varX(interceptorField)
                             def propertyName = NameUtils.getPropertyNameForGetterOrSetter(methodNode.getName())
 
@@ -316,7 +316,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 else {
                     Statement code = methodNode.code
                     if (code instanceof BlockStatement) {
-                        BlockStatement bs = (BlockStatement)code
+                        BlockStatement bs = (BlockStatement) code
                         Parameter parameter = methodNode.getParameters()[0]
                         ClassNode parameterType = parameter.type
                         final boolean isPrimitive = ClassHelper.isPrimitiveType(parameterType)
@@ -329,7 +329,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                                 callX(interceptorFieldExpr, writeMethodName, args(varX('this'), constX(propertyName), propX(varX('this'), propertyName), varX(parameter)))
                             )
                         )
-                        staticCompilationVisitor.visitIfElse((IfStatement)ifStatement)
+                        staticCompilationVisitor.visitIfElse((IfStatement) ifStatement)
                         bs.getStatements().add(0, ifStatement)
                     }
                 }

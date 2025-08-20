@@ -99,7 +99,7 @@ class MongoCodecSession extends AbstractMongoSession {
 
     @Override
     MongoDatastore getDatastore() {
-        return (MongoDatastore)super.getDatastore()
+        return (MongoDatastore) super.getDatastore()
     }
 
     @Override
@@ -150,7 +150,7 @@ class MongoCodecSession extends AbstractMongoSession {
                         if (update.vetoed) continue
 
                         DirtyCheckable changedObject = (DirtyCheckable) update.getNativeEntry()
-                        PersistentEntityCodec codec = (PersistentEntityCodec)datastore.codecRegistry.get(changedObject.getClass())
+                        PersistentEntityCodec codec = (PersistentEntityCodec) datastore.codecRegistry.get(changedObject.getClass())
 
                         final Object nativeKey = update.nativeKey
                         final Document id = new Document(MongoEntityPersister.MONGO_ID_FIELD, nativeKey)
@@ -223,7 +223,7 @@ class MongoCodecSession extends AbstractMongoSession {
 
                 WriteConcern wc = writeConcern
                 if (wc == null) {
-                    org.grails.datastore.mapping.mongo.config.MongoCollection mapping = (org.grails.datastore.mapping.mongo.config.MongoCollection)persistentEntity.mapping.mappedForm
+                    org.grails.datastore.mapping.mongo.config.MongoCollection mapping = (org.grails.datastore.mapping.mongo.config.MongoCollection) persistentEntity.mapping.mappedForm
                     wc = mapping.writeConcern
                 }
                 if (wc != null) {
@@ -302,7 +302,7 @@ class MongoCodecSession extends AbstractMongoSession {
         final Document nativeQuery = buildNativeDocumentQueryFromCriteria(criteria, entity)
 
         final MongoCollection collection = getCollection(entity)
-        final DeleteResult deleteResult = collection.deleteMany((Bson)nativeQuery)
+        final DeleteResult deleteResult = collection.deleteMany((Bson) nativeQuery)
         if (deleteResult.wasAcknowledged()) {
             return deleteResult.deletedCount
         }

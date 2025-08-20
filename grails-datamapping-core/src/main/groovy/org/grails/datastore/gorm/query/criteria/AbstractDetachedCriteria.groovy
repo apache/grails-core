@@ -126,7 +126,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
                     throw new IllegalArgumentException("Argument [$associationPath] is not an association")
                 }
                 else {
-                    entity = ((Association)prop).associatedEntity
+                    entity = ((Association) prop).associatedEntity
                 }
             }
         }
@@ -137,7 +137,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
             throw new IllegalArgumentException("Argument [$associationPath] is not an association")
         }
 
-        Association a = (Association)prop
+        Association a = (Association) prop
         DetachedAssociationCriteria associationCriteria = associationCriteriaMap[associationPath]
         if (associationCriteria == null) {
             associationCriteria = new DetachedAssociationCriteria(a.associatedEntity.javaClass, a, associationPath, alias)
@@ -186,7 +186,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     }
 
     T getPersistentClass() {
-        (T)getPersistentEntity().getJavaClass()
+        (T) getPersistentEntity().getJavaClass()
     }
 
     PersistentEntity getPersistentEntity() {
@@ -212,7 +212,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         applyLazyCriteria()
         if (criterion instanceof Query.PropertyCriterion) {
             if (criterion.value instanceof Closure) {
-                criterion.value = buildQueryableCriteria((Closure)criterion.value)
+                criterion.value = buildQueryableCriteria((Closure) criterion.value)
             }
         }
         if (junctions)  {
@@ -1070,7 +1070,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
 
             Closure parentCallable = callable
             while (parentCallable.delegate instanceof Closure) {
-                parentCallable = (Closure)parentCallable.delegate
+                parentCallable = (Closure) parentCallable.delegate
             }
 
             def previous = parentCallable.delegate

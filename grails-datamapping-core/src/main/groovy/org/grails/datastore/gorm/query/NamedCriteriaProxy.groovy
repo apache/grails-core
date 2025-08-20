@@ -45,7 +45,7 @@ class NamedCriteriaProxy<D> implements GormQueryOperations<D> {
     private queryBuilder
 
     NamedCriteriaProxy(Closure criteriaClosure, PersistentEntity entity, List finders) {
-        this.criteriaClosure = (Closure)criteriaClosure.clone()
+        this.criteriaClosure = (Closure) criteriaClosure.clone()
         this.criteriaClosure.delegate = this
         this.entity = entity
         this.finders = finders
@@ -58,14 +58,14 @@ class NamedCriteriaProxy<D> implements GormQueryOperations<D> {
 
     def call(Object[] params) {
         if (params && params[-1] instanceof Closure) {
-            Closure additionalCriteriaClosure = (Closure)params[-1]
+            Closure additionalCriteriaClosure = (Closure) params[-1]
             params = params.length > 1 ? params[0..-2] : [:]
             if (params) {
                 if (params[-1] instanceof Map) {
                     if (params.length > 1) {
                         namedCriteriaParams = params[0..-2] as Object[]
                     }
-                    return list((Map)params[-1], additionalCriteriaClosure)
+                    return list((Map) params[-1], additionalCriteriaClosure)
                 } else {
                     namedCriteriaParams = params
                     return list(Collections.emptyMap(), additionalCriteriaClosure)
@@ -82,7 +82,7 @@ class NamedCriteriaProxy<D> implements GormQueryOperations<D> {
     }
 
     D get(Serializable id) {
-        id = (Serializable)entity.mappingContext.conversionService.convert(id, entity.identity.type)
+        id = (Serializable) entity.mappingContext.conversionService.convert(id, entity.identity.type)
         def getClosure = {
             queryBuilder = delegate
             invokeCriteriaClosure()

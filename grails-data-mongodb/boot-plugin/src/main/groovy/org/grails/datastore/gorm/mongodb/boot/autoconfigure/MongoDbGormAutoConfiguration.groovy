@@ -124,7 +124,7 @@ class MongoDbGormAutoConfiguration implements ApplicationContextAware {
         if (!(applicationContext instanceof ConfigurableApplicationContext)) {
             throw new IllegalArgumentException('MongoDbGormAutoConfiguration requires an instance of ConfigurableApplicationContext')
         }
-        this.applicationContext = (ConfigurableApplicationContext)applicationContext
+        this.applicationContext = (ConfigurableApplicationContext) applicationContext
     }
 
 }

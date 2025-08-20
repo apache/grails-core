@@ -83,7 +83,7 @@ class DomainMarkupRendererImpl implements DomainMarkupRenderer {
         List<DomainProperty> domainProperties = domainModelService.getListOutputProperties(domainClass)
         domainProperties.each { DomainProperty property ->
             if (property.persistentProperty instanceof Embedded) {
-                domainModelService.getOutputProperties(((Embedded)property.persistentProperty).associatedEntity).each { DomainProperty embedded ->
+                domainModelService.getOutputProperties(((Embedded) property.persistentProperty).associatedEntity).each { DomainProperty embedded ->
                     embedded.rootProperty = property
                     tableProperties.add(embedded)
                 }
@@ -108,7 +108,7 @@ class DomainMarkupRendererImpl implements DomainMarkupRenderer {
                 domainModelService.getInputProperties(domainClass).each { DomainProperty property ->
                     if (property.persistentProperty instanceof Embedded) {
                         callWithDelegate(contextDelegate, contextMarkupRenderer.embeddedInputContext(property) {
-                            domainModelService.getInputProperties(((Embedded)property.persistentProperty).associatedEntity).each { DomainProperty embedded ->
+                            domainModelService.getInputProperties(((Embedded) property.persistentProperty).associatedEntity).each { DomainProperty embedded ->
                                 embedded.rootProperty = property
                                 callWithDelegate(contextDelegate, renderInput(embedded))
                             }
@@ -128,7 +128,7 @@ class DomainMarkupRendererImpl implements DomainMarkupRenderer {
                 domainModelService.getOutputProperties(domainClass).each { DomainProperty property ->
                     if (property.persistentProperty instanceof Embedded) {
                         callWithDelegate(contextDelegate, contextMarkupRenderer.embeddedOutputContext(property) { ->
-                            domainModelService.getOutputProperties(((Embedded)property.persistentProperty).associatedEntity).each { DomainProperty embedded ->
+                            domainModelService.getOutputProperties(((Embedded) property.persistentProperty).associatedEntity).each { DomainProperty embedded ->
                                 embedded.rootProperty = property
                                 callWithDelegate(contextDelegate, renderOutput(embedded))
                             }

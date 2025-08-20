@@ -40,6 +40,6 @@ class OffsetTimeEncoder implements TypeEncoder, OffsetTimeBsonConverter {
 
     @Override
     void encode(BsonWriter writer, PersistentProperty property, Object value) {
-        write(writer, (OffsetTime)value)
+        write(writer, (OffsetTime) value)
     }
 }

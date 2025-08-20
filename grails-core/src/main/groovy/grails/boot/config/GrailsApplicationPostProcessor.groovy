@@ -87,7 +87,7 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
     GrailsApplicationPostProcessor(GrailsApplicationLifeCycle lifeCycle, ApplicationContext applicationContext, Class...classes) {
         this.lifeCycle = lifeCycle
         if (lifeCycle instanceof GrailsApplicationClass) {
-            this.applicationClass = (GrailsApplicationClass)lifeCycle
+            this.applicationClass = (GrailsApplicationClass) lifeCycle
         }
         else {
             this.applicationClass = null
@@ -166,7 +166,7 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
                     def pluginPropertySource = plugin.propertySource
                     if (pluginPropertySource) {
                         if (pluginPropertySource instanceof EnumerablePropertySource) {
-                            propertySources.addLast(new PrefixedMapPropertySource("grails.plugins.$plugin.name", (EnumerablePropertySource)pluginPropertySource))
+                            propertySources.addLast(new PrefixedMapPropertySource("grails.plugins.$plugin.name", (EnumerablePropertySource) pluginPropertySource))
                         }
                         propertySources.addLast(pluginPropertySource)
                     }
@@ -176,7 +176,7 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
             if (conversionService != null) {
                 config.setConversionService(conversionService)
             }
-            ((DefaultGrailsApplication)grailsApplication).config = config
+            ((DefaultGrailsApplication) grailsApplication).config = config
         }
     }
 

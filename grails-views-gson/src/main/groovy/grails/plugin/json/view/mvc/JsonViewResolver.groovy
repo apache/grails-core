@@ -63,13 +63,13 @@ class JsonViewResolver extends SmartViewResolver {
 
     JsonViewResolver(JsonViewTemplateEngine templateEngine, String suffix, String contentType) {
         super(templateEngine, suffix, contentType)
-        viewConfiguration = (JsonViewConfiguration)templateEngine.viewConfiguration
+        viewConfiguration = (JsonViewConfiguration) templateEngine.viewConfiguration
     }
 
     @PostConstruct
     void initialize() {
         if (rendererRegistry != null) {
-            def errorsRenderer = new ErrorsJsonViewRenderer((Class)Errors)
+            def errorsRenderer = new ErrorsJsonViewRenderer((Class) Errors)
             errorsRenderer.setJsonViewResolver(this)
             rendererRegistry.addRenderer(errorsRenderer)
             def defaultJsonRenderer = rendererRegistry.findRenderer(MimeType.JSON, Object)

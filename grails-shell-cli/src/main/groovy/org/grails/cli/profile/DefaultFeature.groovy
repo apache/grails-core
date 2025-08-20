@@ -75,7 +75,7 @@ class DefaultFeature implements Feature {
                 }
             }
         }
-        this.buildPlugins = (List<String>)configuration.get('build.plugins', [])
+        this.buildPlugins = (List<String>) configuration.get('build.plugins', [])
         this.buildRepositories = (List<String>) configuration.get('build.repositories', [])
     }
 

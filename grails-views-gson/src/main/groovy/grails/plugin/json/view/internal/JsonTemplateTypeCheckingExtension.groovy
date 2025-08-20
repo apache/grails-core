@@ -81,7 +81,7 @@ class JsonTemplateTypeCheckingExtension extends BuilderTypeCheckingExtension {
     boolean isPropertyDynamic(PropertyExpression propertyExpression) {
         def oe = propertyExpression.getObjectExpression()
         if (oe instanceof VariableExpression) {
-            return 'params'.equals(((VariableExpression)oe).name)
+            return 'params'.equals(((VariableExpression) oe).name)
         }
         return super.isPropertyDynamic(propertyExpression)
     }

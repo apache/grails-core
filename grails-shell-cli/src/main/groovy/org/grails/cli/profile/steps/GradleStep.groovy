@@ -72,7 +72,7 @@ class GradleStep extends AbstractStep {
     }
 
     protected void initialize() {
-        tasks = (List<String>)parameters.tasks
+        tasks = (List<String>) parameters.tasks
         baseArguments = parameters.baseArguments ?: ''
         passArguments = Boolean.valueOf(parameters.passArguments?.toString() ?: 'true')
     }

@@ -60,13 +60,13 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
     }
 
     GrailsTransactionAttribute(GrailsTransactionAttribute other) {
-        this((RuleBasedTransactionAttribute)other)
+        this((RuleBasedTransactionAttribute) other)
     }
 
     GrailsTransactionAttribute(RuleBasedTransactionAttribute other) {
         super(other)
         if (other instanceof GrailsTransactionAttribute) {
-            this.inheritRollbackOnly = ((GrailsTransactionAttribute)other).inheritRollbackOnly
+            this.inheritRollbackOnly = ((GrailsTransactionAttribute) other).inheritRollbackOnly
         }
     }
 

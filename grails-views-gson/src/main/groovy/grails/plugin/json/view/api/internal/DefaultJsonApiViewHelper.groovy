@@ -214,13 +214,13 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
 
                     Object prop = ((GroovyObject) object).getProperty(persistentProperty.name)
                     if (persistentProperty instanceof Embedded) {
-                        renderEmbeddedEntity(prop, (Association)persistentProperty, out, "${basePath}${persistentProperty.name}.".toString(), includes, excludes)
+                        renderEmbeddedEntity(prop, (Association) persistentProperty, out, "${basePath}${persistentProperty.name}.".toString(), includes, excludes)
                     } else if (persistentProperty instanceof EmbeddedCollection && prop instanceof Iterable) {
                         out.write(JsonOutput.OPEN_BRACKET)
                         Iterator iterator = ((Iterable) prop).iterator()
                         while (iterator.hasNext()) {
                             def o = iterator.next()
-                            renderEmbeddedEntity(o, (Association)persistentProperty, out, "${basePath}${persistentProperty.name}.".toString(), includes, excludes)
+                            renderEmbeddedEntity(o, (Association) persistentProperty, out, "${basePath}${persistentProperty.name}.".toString(), includes, excludes)
                             if (iterator.hasNext()) {
                                 out.write(JsonOutput.COMMA)
                             }
@@ -472,11 +472,11 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
                     out.write(generator.toJson(view.request.uri))
 
                     if (arguments.get(PAGINATION) instanceof Map) {
-                        Map paginationArgs = (Map)arguments.get(PAGINATION)
+                        Map paginationArgs = (Map) arguments.get(PAGINATION)
                         if (!paginationArgs.containsKey(PAGINATION_TOTAL) || !paginationArgs.containsKey(PAGINATION_RESROUCE)) {
                             throw new IllegalArgumentException('JSON API pagination arguments must contain resource and total')
                         }
-                        Integer total = (Integer)paginationArgs.get(PAGINATION_TOTAL)
+                        Integer total = (Integer) paginationArgs.get(PAGINATION_TOTAL)
                         Object resource = paginationArgs.get(PAGINATION_RESROUCE)
                         Parameters params = defaultPaginateParams(paginationArgs)
                         List<Link> links = getPaginationLinks(resource, total, params)
@@ -498,7 +498,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
 
     JsonOutput.JsonWritable renderIncluded(Object object, Map arguments) {
 
-        List<String> expandProperties = getExpandProperties((JsonView)view, arguments)
+        List<String> expandProperties = getExpandProperties((JsonView) view, arguments)
         if (!expandProperties.empty && includeAssociations(arguments)) {
 
             new JsonOutput.JsonWritable() {
@@ -580,6 +580,6 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
     }
 
     JsonApiIdRenderStrategy getIdGenerator() {
-        ((JsonView)view).jsonApiIdRenderStrategy
+        ((JsonView) view).jsonApiIdRenderStrategy
     }
 }

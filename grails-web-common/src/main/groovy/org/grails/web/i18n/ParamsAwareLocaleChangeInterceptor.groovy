@@ -75,7 +75,7 @@ class ParamsAwareLocaleChangeInterceptor extends LocaleChangeInterceptor {
         try {
             // choose first if multiple specified
             if (localeParam.getClass().isArray()) {
-                localeParam = ((Object[])localeParam)[0]
+                localeParam = ((Object[]) localeParam)[0]
             }
             def localeResolver = RequestContextUtils.getLocaleResolver(request)
             if (localeResolver == null) {
@@ -84,7 +84,7 @@ class ParamsAwareLocaleChangeInterceptor extends LocaleChangeInterceptor {
             }
             def localeEditor = new LocaleEditor()
             localeEditor.setAsText(localeParam?.toString())
-            localeResolver?.setLocale(request, response, (Locale)localeEditor.value)
+            localeResolver?.setLocale(request, response, (Locale) localeEditor.value)
             return true
         }
         catch (Exception e) {

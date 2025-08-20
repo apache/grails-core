@@ -52,10 +52,10 @@ class ViewCompilationException extends ViewException implements SourceCodeAware 
             return node.getLineNumber()
         }
         else if (cause instanceof MultipleCompilationErrorsException) {
-            MultipleCompilationErrorsException mce = (MultipleCompilationErrorsException)cause
+            MultipleCompilationErrorsException mce = (MultipleCompilationErrorsException) cause
             def message = mce.errorCollector.errors[0]
             if (message instanceof SyntaxErrorMessage) {
-                return ((SyntaxErrorMessage)message).getCause().line
+                return ((SyntaxErrorMessage) message).getCause().line
             }
         }
         return -1

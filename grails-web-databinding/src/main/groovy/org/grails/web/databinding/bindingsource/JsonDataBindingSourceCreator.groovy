@@ -62,7 +62,7 @@ class JsonDataBindingSourceCreator extends AbstractRequestBodyDataBindingSourceC
             return new SimpleMapDataBindingSource(createJsonMap(bindingSource))
         }
         else if (bindingSource instanceof JSONObject) {
-            return new SimpleMapDataBindingSource((JSONObject)bindingSource)
+            return new SimpleMapDataBindingSource((JSONObject) bindingSource)
         }
         else {
             return super.createDataBindingSource(mimeType, bindingTargetType, bindingSource)
@@ -83,7 +83,7 @@ class JsonDataBindingSourceCreator extends AbstractRequestBodyDataBindingSourceC
         }
         return new CollectionDataBindingSource() {
             List<DataBindingSource> getDataBindingSources() {
-                (List<DataBindingSource>)dataBindingSources
+                (List<DataBindingSource>) dataBindingSources
             }
         }
     }

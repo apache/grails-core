@@ -149,7 +149,7 @@ class ServletRenderContext extends AbstractRenderContext {
         ModelAndView modelAndView = getModelAndView()
         final viewModel = modelAndView.model
         if (arguments?.model instanceof Map) {
-            viewModel.putAll((Map)arguments.model)
+            viewModel.putAll((Map) arguments.model)
         }
         viewModel.putAll(model)
     }

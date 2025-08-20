@@ -77,7 +77,7 @@ class GenericGroovyTemplateResolver implements TemplateResolver {
         try {
             log.trace("Attempting to load class [$className] for template [$path]")
             def cls = classLoader.loadClass(className)
-            return (Class<? extends Template>)cls
+            return (Class<? extends Template>) cls
         } catch (Throwable e) {
         }
         return null

@@ -61,7 +61,7 @@ class MarkupViewResolver extends SmartViewResolver {
 
     MarkupViewResolver(MarkupViewTemplateEngine templateEngine, String suffix, String contentType) {
         super(templateEngine, suffix, contentType)
-        viewConfiguration = (MarkupViewConfiguration)templateEngine.viewConfiguration
+        viewConfiguration = (MarkupViewConfiguration) templateEngine.viewConfiguration
     }
 
     @PostConstruct

@@ -64,7 +64,7 @@ class MappingContextTraversableResolver implements TraversableResolver {
                 if (currentEntity == null) break
                 PersistentProperty prop = currentEntity.getPropertyByName(n.name)
                 if (prop instanceof Association) {
-                    Association association = (Association)prop
+                    Association association = (Association) prop
                     if (association.isOwningSide()) {
                         currentEntity = association.associatedEntity
                     }

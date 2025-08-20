@@ -100,7 +100,7 @@ class DefaultRendererRegistry extends ClassAndMimeTypeRegistry<Renderer, Rendere
     @Override
     def <T> void addRenderer(Renderer<T> renderer) {
         if (renderer instanceof ContainerRenderer) {
-            ContainerRenderer cr = (ContainerRenderer)renderer
+            ContainerRenderer cr = (ContainerRenderer) renderer
             addContainerRenderer(cr.componentType, cr)
         } else {
             Class targetType = renderer.targetType
@@ -142,7 +142,7 @@ class DefaultRendererRegistry extends ClassAndMimeTypeRegistry<Renderer, Rendere
         originalTargetClass = getTargetClassForContainer(originalTargetClass, object)
         def originalKey = new ContainerRendererCacheKey(containerType, originalTargetClass, mimeType)
 
-        Renderer<C> renderer = (Renderer<C>)containerRendererCache.getIfPresent(originalKey)
+        Renderer<C> renderer = (Renderer<C>) containerRendererCache.getIfPresent(originalKey)
 
         if (renderer == null) {
             def key = originalKey

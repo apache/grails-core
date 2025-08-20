@@ -64,8 +64,8 @@ class GroovyProxyFactory implements ProxyFactory {
         if (object == null) {
             return null
         }
-        MetaClass mc = unwrapHandleMetaClass(object instanceof GroovyObject ? ((GroovyObject)object).getMetaClass() : object.metaClass)
-        mc instanceof ProxyInstanceMetaClass ? (ProxyInstanceMetaClass)mc : null
+        MetaClass mc = unwrapHandleMetaClass(object instanceof GroovyObject ? ((GroovyObject) object).getMetaClass() : object.metaClass)
+        mc instanceof ProxyInstanceMetaClass ? (ProxyInstanceMetaClass) mc : null
     }
 
     @Override
@@ -101,7 +101,7 @@ class GroovyProxyFactory implements ProxyFactory {
         MetaClass metaClass = new ProxyInstanceMetaClass(resolveTargetMetaClass(proxy, type), session, key)
         if (proxy instanceof GroovyObject) {
             // direct assignment of MetaClass to GroovyObject
-            ((GroovyObject)proxy).setMetaClass(metaClass)
+            ((GroovyObject) proxy).setMetaClass(metaClass)
         } else {
             // call DefaultGroovyMethods.setMetaClass
             proxy.metaClass = metaClass
@@ -119,7 +119,7 @@ class GroovyProxyFactory implements ProxyFactory {
     }
 
     private MetaClass unwrapHandleMetaClass(MetaClass metaClass) {
-        (metaClass instanceof HandleMetaClass) ? ((HandleMetaClass)metaClass).getAdaptee() : metaClass
+        (metaClass instanceof HandleMetaClass) ? ((HandleMetaClass) metaClass).getAdaptee() : metaClass
     }
 
     @Override

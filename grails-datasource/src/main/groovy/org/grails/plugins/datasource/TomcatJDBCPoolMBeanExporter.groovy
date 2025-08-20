@@ -98,6 +98,6 @@ class TomcatJDBCPoolMBeanExporter extends MBeanExporter {
     @Override
     void setBeanFactory(BeanFactory beanFactory) {
         super.setBeanFactory(beanFactory)
-        this.beanFactory = (ListableBeanFactory)beanFactory
+        this.beanFactory = (ListableBeanFactory) beanFactory
     }
 }

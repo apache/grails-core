@@ -186,7 +186,7 @@ class GormEnhancer implements Closeable {
 
             Iterable<ConnectionSource> allConnectionSources = ((ConnectionSourcesProvider) datastore).getConnectionSources().allConnectionSources
             Collection<String> allConnectionSourceNames = allConnectionSources.findAll() { ConnectionSource connectionSource -> connectionSource.name != ConnectionSource.DEFAULT }
-                                                                              .collect() { ((ConnectionSource)it).name }
+                                                                              .collect() { ((ConnectionSource) it).name }
             qualifiers.addAll(allConnectionSourceNames)
         }
         return qualifiers
@@ -231,7 +231,7 @@ class GormEnhancer implements Closeable {
                     ClassPropertyFetcher cpf = ClassPropertyFetcher.forClass(entity)
                     Closure closure = cpf.getStaticPropertyValue(GormProperties.NAMED_QUERIES, Closure)
                     if (closure != null) {
-                        closure = (Closure)closure.clone()
+                        closure = (Closure) closure.clone()
                         def evaluator = new NamedQueriesBuilder()
                         namedQueries = evaluator.evaluate(closure)
                         NAMED_QUERIES.put(className, namedQueries)
@@ -270,7 +270,7 @@ class GormEnhancer implements Closeable {
             Datastore defaultDatastore = findDatastore(entity, ConnectionSource.DEFAULT)
             if ((defaultDatastore instanceof MultiTenantCapableDatastore)) {
 
-                MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)defaultDatastore
+                MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) defaultDatastore
                 if (multiTenantCapableDatastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
                     return Tenants.currentId(multiTenantCapableDatastore)
                 }

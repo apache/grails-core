@@ -96,7 +96,7 @@ trait ResponseRedirector implements WebAttributes {
             Class<?> objectClass = object.getClass()
             boolean isDomain = DomainClassArtefactHandler.isDomainClass(objectClass) && object instanceof GroovyObject
             if (isDomain) {
-                def id = ((GroovyObject)object).getProperty(GormProperties.IDENTITY)
+                def id = ((GroovyObject) object).getProperty(GormProperties.IDENTITY)
                 if (id != null) {
                     def args = [:]
                     args.put(LinkGenerator.ATTRIBUTE_RESOURCE, object)
@@ -137,7 +137,7 @@ trait ResponseRedirector implements WebAttributes {
      */
     @Generated
     Map getChainModel() {
-        (Map)getFlash().get(FlashScope.CHAIN_MODEL)
+        (Map) getFlash().get(FlashScope.CHAIN_MODEL)
     }
 
     /**

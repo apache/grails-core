@@ -100,10 +100,10 @@ class WithCodecHelper {
                     encoders.put(codecNameString, lookupEncoder(grailsApplication, codecNameString))
                 }
             }
-            builder.outEncoder(lookupEncoderFromMap(encoders, (String)codecInfoMap.get(OutputEncodingSettings.OUT_CODEC_NAME)))
-            builder.taglibEncoder(lookupEncoderFromMap(encoders, (String)codecInfoMap.get(OutputEncodingSettings.TAGLIB_CODEC_NAME)))
-            builder.expressionEncoder(lookupEncoderFromMap(encoders, (String)codecInfoMap.get(OutputEncodingSettings.EXPRESSION_CODEC_NAME)))
-            builder.staticEncoder(lookupEncoderFromMap(encoders, (String)codecInfoMap.get(OutputEncodingSettings.STATIC_CODEC_NAME)))
+            builder.outEncoder(lookupEncoderFromMap(encoders, (String) codecInfoMap.get(OutputEncodingSettings.OUT_CODEC_NAME)))
+            builder.taglibEncoder(lookupEncoderFromMap(encoders, (String) codecInfoMap.get(OutputEncodingSettings.TAGLIB_CODEC_NAME)))
+            builder.expressionEncoder(lookupEncoderFromMap(encoders, (String) codecInfoMap.get(OutputEncodingSettings.EXPRESSION_CODEC_NAME)))
+            builder.staticEncoder(lookupEncoderFromMap(encoders, (String) codecInfoMap.get(OutputEncodingSettings.STATIC_CODEC_NAME)))
             if (codecInfoMap.containsKey(OutputEncodingSettings.INHERIT_SETTING_NAME)) {
                 builder.inheritPreviousEncoders(codecInfoMap.get(OutputEncodingSettings.INHERIT_SETTING_NAME) as boolean)
             }
@@ -121,7 +121,7 @@ class WithCodecHelper {
         Map<String, Object> codecInfoMap = [:]
         if (codecInfo instanceof Map) {
             if (codecInfo.get(ALREADY_CANONICAL_KEY_NAME)) {
-                return (Map<String, Object>)codecInfo
+                return (Map<String, Object>) codecInfo
             }
             String allFallback = null
             String nameFallback = null
@@ -194,7 +194,7 @@ class WithCodecHelper {
             } else {
                 codecInfoMap = canonicalCodecInfo
             }
-            codecInfoMap = (Map<String, Object>)codecInfoMap.asImmutable()
+            codecInfoMap = (Map<String, Object>) codecInfoMap.asImmutable()
         }
         if (codecInfoMap == null) {
             codecInfoMap = parentSettings

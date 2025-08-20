@@ -73,7 +73,7 @@ trait TagLibraryInvoker extends WebAttributes {
      * @return The result
      */
     Object methodMissing(String methodName, Object argsObject) {
-        Object[] args = argsObject instanceof Object[] ? (Object[])argsObject : [argsObject] as Object[]
+        Object[] args = argsObject instanceof Object[] ? (Object[]) argsObject : [argsObject] as Object[]
         if (shouldHandleMethodMissing(methodName, args)) {
             TagLibraryLookup lookup = getTagLibraryLookup()
             if (lookup) {

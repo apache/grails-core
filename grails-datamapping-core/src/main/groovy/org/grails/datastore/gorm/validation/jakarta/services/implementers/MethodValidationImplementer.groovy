@@ -105,7 +105,7 @@ class MethodValidationImplementer implements ServiceEnhancer {
 
     @Override
     void enhance(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode) {
-        Statement body = (Statement)newMethodNode.code
+        Statement body = (Statement) newMethodNode.code
 
         // add parameter name data for the service
         weaveParameterNameData(domainClassNode, newMethodNode, abstractMethodNode)
@@ -117,7 +117,7 @@ class MethodValidationImplementer implements ServiceEnhancer {
                 domainClassNode
         )
 
-        Integer validatedMethodCount = (Integer)targetClassNode.getNodeMetaData(VALIDATED_METHOD)
+        Integer validatedMethodCount = (Integer) targetClassNode.getNodeMetaData(VALIDATED_METHOD)
         if (validatedMethodCount == null) {
             validatedMethodCount = 0
         }
@@ -145,7 +145,7 @@ class MethodValidationImplementer implements ServiceEnhancer {
         String validateMethodName = abstractMethodNode.exceptions?.contains(make(ConstraintViolationException)) ? 'jakartaValidate' : 'validate'
         MethodCallExpression validateCall = callThisD(ValidatedService, validateMethodName, args(varThis(), varX(methodField), argArray))
         if (body instanceof BlockStatement) {
-            ((BlockStatement)body).statements.add(0, stmt(validateCall))
+            ((BlockStatement) body).statements.add(0, stmt(validateCall))
         }
         else {
             body = new BlockStatement([
@@ -197,7 +197,7 @@ class MethodValidationImplementer implements ServiceEnhancer {
             constructorNode = new ConstructorNode(Modifier.PUBLIC, ZERO_PARAMETERS, null, new BlockStatement())
             innerClassNode.addConstructor(constructorNode)
         }
-        BlockStatement constructorBody = (BlockStatement)constructorNode.code
+        BlockStatement constructorBody = (BlockStatement) constructorNode.code
         constructorBody.addStatement(
             stmt(callExpression)
         )

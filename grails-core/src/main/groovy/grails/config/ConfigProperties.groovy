@@ -66,12 +66,12 @@ class ConfigProperties extends Properties {
 
     @Override
     Enumeration<Object> keys() {
-        return (Enumeration<Object>)propertyNames()
+        return (Enumeration<Object>) propertyNames()
     }
 
     @Override
     Set<Object> keySet() {
-        return (Set<Object>)stringPropertyNames()
+        return (Set<Object>) stringPropertyNames()
     }
 
     @Override

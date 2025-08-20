@@ -70,7 +70,7 @@ class OrderedGormTransformation extends AbstractASTTransformation implements Com
     Iterable<TransformationInvocation> collectAndOrderGormTransformations(AnnotatedNode annotatedNode) {
         List<AnnotationNode> annotations = new ArrayList<>(annotatedNode.getAnnotations())
         if (annotatedNode instanceof MethodNode) {
-            MethodNode mn = (MethodNode)annotatedNode
+            MethodNode mn = (MethodNode) annotatedNode
             for (classAnn in mn.getDeclaringClass().getAnnotations()) {
                 if (!annotations.any() { AnnotationNode ann ->
                     ann.classNode.name == classAnn.classNode.name ||

@@ -62,7 +62,7 @@ abstract class AbstractJsonViewContainerRenderer<C,T> extends DefaultJsonRendere
                 def contextArguments = context.getArguments()
                 def contextModel = contextArguments?.get(Views.MODEL)
                 if (contextModel instanceof Map) {
-                    model.putAll((Map)contextModel)
+                    model.putAll((Map) contextModel)
                 }
 
                 def request = webRequest.currentRequest

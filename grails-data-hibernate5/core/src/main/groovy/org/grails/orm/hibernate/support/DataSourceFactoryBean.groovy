@@ -43,7 +43,7 @@ class DataSourceFactoryBean implements FactoryBean<DataSource> {
 
     @Override
     DataSource getObject() throws Exception {
-        ((HibernateConnectionSource)datastore.connectionSources.getConnectionSource(connectionName)).dataSource
+        ((HibernateConnectionSource) datastore.connectionSources.getConnectionSource(connectionName)).dataSource
     }
 
     @Override

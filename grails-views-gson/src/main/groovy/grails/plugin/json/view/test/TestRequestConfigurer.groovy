@@ -54,7 +54,7 @@ class TestRequestConfigurer implements Request {
     TestRequestConfigurer(JsonView jsonView) {
         this.jsonView = jsonView
         if (jsonView instanceof HttpView) {
-            ((HttpView)jsonView).setRequest(this)
+            ((HttpView) jsonView).setRequest(this)
         }
     }
 

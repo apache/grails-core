@@ -342,7 +342,7 @@ class FormatTagLib implements TagLibrary {
     static Locale resolveLocale(Object localeAttr) {
         Locale locale
         if (localeAttr instanceof Locale) {
-            locale = (Locale)localeAttr
+            locale = (Locale) localeAttr
         } else if (localeAttr != null) {
             locale = StringUtils.parseLocaleString(localeAttr.toString())
         }

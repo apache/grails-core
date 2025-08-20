@@ -156,8 +156,8 @@ class TagLibraryResolverImpl implements ServletContextAware, GrailsApplicationAw
     protected URLClassLoader resolveRootLoader() {
         def classLoader = getClass().classLoader
         while (classLoader != null) {
-            if (classLoader instanceof URLClassLoader && ((URLClassLoader)classLoader).getURLs()) {
-                return (URLClassLoader)classLoader
+            if (classLoader instanceof URLClassLoader && ((URLClassLoader) classLoader).getURLs()) {
+                return (URLClassLoader) classLoader
             }
             classLoader = classLoader.parent
         }

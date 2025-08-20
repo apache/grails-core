@@ -108,7 +108,7 @@ trait RequestForwarder implements WebAttributes {
             }
         }
 
-        Map model = params.model instanceof Map ? (Map)params.model : Collections.EMPTY_MAP
+        Map model = params.model instanceof Map ? (Map) params.model : Collections.EMPTY_MAP
 
         HttpServletRequest request = webRequest.currentRequest
         HttpServletResponse response = webRequest.currentResponse

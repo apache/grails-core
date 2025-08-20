@@ -87,7 +87,7 @@ class ViewsTransform implements ASTTransformation, CompilationUnitAware, Transfo
             return
         }
         for (cn in classes) {
-            ClassNode classNode = (ClassNode)cn
+            ClassNode classNode = (ClassNode) cn
             if (!classNode.getNodeMetaData(APPLIED)) {
 
                 if (classNode.isScript()) {
@@ -105,15 +105,15 @@ class ViewsTransform implements ASTTransformation, CompilationUnitAware, Transfo
                     def runMethod = classNode.getMethod('run', GrailsASTUtils.ZERO_PARAMETERS)
                     def stm = runMethod.code
                     if (stm instanceof BlockStatement) {
-                        BlockStatement bs = (BlockStatement)stm
+                        BlockStatement bs = (BlockStatement) stm
 
                         def statements = bs.statements
                         Statement modelStatement = null
                         for (st in statements) {
                             if (st instanceof ExpressionStatement) {
-                                Expression exp = ((ExpressionStatement)st).expression
+                                Expression exp = ((ExpressionStatement) st).expression
                                 if (exp instanceof MethodCallExpression) {
-                                    MethodCallExpression mce = (MethodCallExpression)exp
+                                    MethodCallExpression mce = (MethodCallExpression) exp
                                     if (mce.methodAsString == 'model' && modelStatement == null) {
                                         def arguments = mce.getArguments()
                                         def args = arguments instanceof ArgumentListExpression ? ((ArgumentListExpression) arguments).getExpressions() : Collections.emptyList()
@@ -189,10 +189,10 @@ class ViewsTransform implements ASTTransformation, CompilationUnitAware, Transfo
                 if (args.size() == 1) {
                     def arg = args.get(0)
                     if (arg instanceof ClosureExpression) {
-                        Statement body = ((ClosureExpression)arg).code
+                        Statement body = ((ClosureExpression) arg).code
                         MapExpression map = new MapExpression()
                         if (body instanceof BlockStatement) {
-                            for (Statement st in ((BlockStatement)body).getStatements()) {
+                            for (Statement st in ((BlockStatement) body).getStatements()) {
                                 if (st instanceof ExpressionStatement) {
                                     def expr = ((ExpressionStatement) st).expression
                                     if (expr instanceof DeclarationExpression) {

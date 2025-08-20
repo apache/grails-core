@@ -73,7 +73,7 @@ class GormDispatcherRegistrar implements FactoryBean<GormDispatcherRegistrar>, I
             List<GormAnnotatedListener> listeners = []
             for (sub in subscribers) {
                 if (sub instanceof GormAnnotatedListener) {
-                    listeners.add((GormAnnotatedListener)sub)
+                    listeners.add((GormAnnotatedListener) sub)
                 }
                 else {
                     subscribedEvents.addAll(sub.getSubscribedEvents())
@@ -84,7 +84,7 @@ class GormDispatcherRegistrar implements FactoryBean<GormDispatcherRegistrar>, I
                 if (applicationEventPublisher instanceof ConfigurableApplicationEventPublisher) {
 
                     GormEventDispatcher eventDispatcher = new GormEventDispatcher(eventBus, datastore, subscribedEvents, listeners)
-                    ((ConfigurableApplicationEventPublisher)applicationEventPublisher).addApplicationListener(
+                    ((ConfigurableApplicationEventPublisher) applicationEventPublisher).addApplicationListener(
                             eventDispatcher
                     )
                 }

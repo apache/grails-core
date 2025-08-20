@@ -318,7 +318,7 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
                     log.debug("No template found for path [$path] and locale [$locale]")
                     return null
                 }
-                else if (!enableReloading || !((WritableScriptTemplate)template).wasModified()) {
+                else if (!enableReloading || !((WritableScriptTemplate) template).wasModified()) {
                     log.debug("Found cached template for path [$path] and locale [$locale]")
                     return template
                 }
@@ -400,7 +400,7 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
         if (template != null) {
 
             boolean isNull = template.is(NULL_ENTRY)
-            if (!isNull && ((WritableScriptTemplate)template).wasModified()) {
+            if (!isNull && ((WritableScriptTemplate) template).wasModified()) {
                 for (p in qualifiedPaths) {
                     cachedTemplates.invalidate(p)
                     resolveCache.invalidate(cacheKey)

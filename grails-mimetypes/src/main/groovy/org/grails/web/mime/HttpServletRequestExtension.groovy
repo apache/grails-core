@@ -73,7 +73,7 @@ class HttpServletRequestExtension {
      * @return A list of configured mime types
      */
     static MimeType[] getMimeTypes(HttpServletRequest request) {
-        MimeType[] result = (MimeType[])request.getAttribute(GrailsApplicationAttributes.REQUEST_FORMATS)
+        MimeType[] result = (MimeType[]) request.getAttribute(GrailsApplicationAttributes.REQUEST_FORMATS)
         if (!result) {
             WebApplicationContext context = WebApplicationContextUtils.getWebApplicationContext(request.servletContext)
             MimeType[] mimeTypes = context != null ? context.getBean(MimeUtility).getKnownMimeTypes() as MimeType[] : MimeType.getConfiguredMimeTypes()

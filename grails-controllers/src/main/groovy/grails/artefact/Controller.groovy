@@ -96,7 +96,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
     @Generated
     def withFormat(Closure callable) {
         HttpServletResponse response = GrailsWebRequest.lookup().currentResponse
-        mimeTypesSupport.withFormat((HttpServletResponse)response, callable)
+        mimeTypesSupport.withFormat((HttpServletResponse) response, callable)
     }
 
     /**
@@ -163,7 +163,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
      */
     @Generated
     ModelAndView getModelAndView() {
-        (ModelAndView)currentRequestAttributes().getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, 0)
+        (ModelAndView) currentRequestAttributes().getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, 0)
     }
 
     /**
@@ -230,14 +230,14 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
             throw new IllegalArgumentException("Invalid arguments to method 'redirect': $argMap")
         }
 
-        GrailsWebRequest webRequest = (GrailsWebRequest)RequestContextHolder.currentRequestAttributes()
+        GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes()
 
         if (this instanceof GroovyObject) {
-            GroovyObject controller = (GroovyObject)this
+            GroovyObject controller = (GroovyObject) this
 
             // if there are errors add it to the list of errors
             Errors controllerErrors = getErrorsInternal(webRequest)
-            Errors errors = (Errors)argMap.get(GormProperties.ERRORS)
+            Errors errors = (Errors) argMap.get(GormProperties.ERRORS)
             if (controllerErrors != null && errors != null) {
                 controllerErrors.addAllErrors(errors)
             }
@@ -305,7 +305,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
      */
     private synchronized boolean isTokenValid(GrailsWebRequest webRequest) {
         final request = webRequest.getCurrentRequest()
-        SynchronizerTokensHolder tokensHolderInSession = (SynchronizerTokensHolder)request.getSession(false)?.getAttribute(SynchronizerTokensHolder.HOLDER)
+        SynchronizerTokensHolder tokensHolderInSession = (SynchronizerTokensHolder) request.getSession(false)?.getAttribute(SynchronizerTokensHolder.HOLDER)
         if (!tokensHolderInSession) return false
 
         String tokenInRequest = webRequest.params[SynchronizerTokensHolder.TOKEN_KEY]
@@ -327,7 +327,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
      */
     private synchronized resetToken(GrailsWebRequest webRequest) {
         final request = webRequest.getCurrentRequest()
-        SynchronizerTokensHolder tokensHolderInSession = (SynchronizerTokensHolder)request.getSession(false)?.getAttribute(SynchronizerTokensHolder.HOLDER)
+        SynchronizerTokensHolder tokensHolderInSession = (SynchronizerTokensHolder) request.getSession(false)?.getAttribute(SynchronizerTokensHolder.HOLDER)
         String urlInRequest = webRequest.params[SynchronizerTokensHolder.TOKEN_URI]
         String tokenInRequest = webRequest.params[SynchronizerTokensHolder.TOKEN_KEY]
 
@@ -343,7 +343,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
         if (!(requestAttributes instanceof GrailsWebRequest)) {
             return ContextLoader.getCurrentWebApplicationContext()
         }
-        ((GrailsWebRequest)requestAttributes).getApplicationContext()
+        ((GrailsWebRequest) requestAttributes).getApplicationContext()
     }
 
     /**
@@ -445,7 +445,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
             commandObjectInstance = type.getDeclaredConstructor().newInstance()
             final o = GrailsMetaClassUtils.invokeMethodIfExists(commandObjectInstance, 'getErrors')
             if (o instanceof BindingResult) {
-                final BindingResult errors = (BindingResult)o
+                final BindingResult errors = (BindingResult) o
                 String msg = 'Error occurred initializing command object [' + commandObjectParameterName + ']. ' + e.getMessage()
                 ObjectError error = new ObjectError(commandObjectParameterName, msg)
                 errors.addError(error)
@@ -475,7 +475,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
         if (params != null && prefix != null) {
             def innerValue = params[prefix]
             if (innerValue instanceof DataBindingSource) {
-                commandParams = (DataBindingSource)innerValue
+                commandParams = (DataBindingSource) innerValue
             } else if (innerValue instanceof Map) {
                 commandParams = new SimpleMapDataBindingSource(innerValue)
             }
@@ -491,11 +491,11 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
         }
 
         Method handlerMethod
-        final List<ControllerExceptionHandlerMetaData> exceptionHandlerMetaDataInstances = (List<ControllerExceptionHandlerMetaData>)GrailsClassUtils.getStaticFieldValue(this.getClass(), ControllerActionTransformer.EXCEPTION_HANDLER_META_DATA_FIELD_NAME)
+        final List<ControllerExceptionHandlerMetaData> exceptionHandlerMetaDataInstances = (List<ControllerExceptionHandlerMetaData>) GrailsClassUtils.getStaticFieldValue(this.getClass(), ControllerActionTransformer.EXCEPTION_HANDLER_META_DATA_FIELD_NAME)
         if (exceptionHandlerMetaDataInstances) {
 
             // find all of the handler methods which could accept this exception type
-            final List<ControllerExceptionHandlerMetaData> matches = (List<ControllerExceptionHandlerMetaData>)exceptionHandlerMetaDataInstances.findAll { ControllerExceptionHandlerMetaData cemd ->
+            final List<ControllerExceptionHandlerMetaData> matches = (List<ControllerExceptionHandlerMetaData>) exceptionHandlerMetaDataInstances.findAll { ControllerExceptionHandlerMetaData cemd ->
                 cemd.exceptionType.isAssignableFrom(exceptionType)
             }
 

@@ -250,7 +250,7 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
             initializeVariables(profileName, cmd.grailsVersion)
 
             if (profileRepository instanceof MavenProfileRepository) {
-                MavenProfileRepository mpr = (MavenProfileRepository)profileRepository
+                MavenProfileRepository mpr = (MavenProfileRepository) profileRepository
                 String gormDep = mpr.profileDependencyVersions.versionProperties.get('gorm.version')
                 if (gormDep != null) {
                     variables['gorm.version'] = gormDep

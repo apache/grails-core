@@ -230,7 +230,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
             def unsets = new Document()
             BsonWriter writer = new BsonDocumentWriter(sets)
             writer.writeStartDocument()
-            DirtyCheckable dirty = (DirtyCheckable)value
+            DirtyCheckable dirty = (DirtyCheckable) value
             Set<String> processed = []
 
             def dirtyProperties = new ArrayList<String>(dirty.listDirtyPropertyNames())
@@ -264,14 +264,14 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                     Object v = access.getProperty(prop.name)
                     if (v != null) {
                         if (prop instanceof Embedded) {
-                            encodeEmbeddedUpdate(sets, unsets, (Association)prop, v)
+                            encodeEmbeddedUpdate(sets, unsets, (Association) prop, v)
                         }
                         else if (prop instanceof EmbeddedCollection) {
-                            encodeEmbeddedCollectionUpdate(access, sets, unsets, (Association)prop, v)
+                            encodeEmbeddedCollectionUpdate(access, sets, unsets, (Association) prop, v)
                         }
                         else {
                             def propKind = prop.getClass().superclass
-                            PropertyEncoder<? extends PersistentProperty> propertyEncoder = getPropertyEncoder((Class<? extends PersistentProperty>)propKind)
+                            PropertyEncoder<? extends PersistentProperty> propertyEncoder = getPropertyEncoder((Class<? extends PersistentProperty>) propKind)
                             propertyEncoder?.encode(writer, prop, v, access, encoderContext, codecRegistry)
                         }
 
@@ -291,7 +291,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                     }
                     else {
                         writer.writeName(attr)
-                        Codec<Object> codec = (Codec<Object>)codecRegistry.get(v.getClass())
+                        Codec<Object> codec = (Codec<Object>) codecRegistry.get(v.getClass())
                         codec.encode(writer, v, encoderContext)
                     }
                 }
@@ -300,7 +300,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
 
                 GormEnhancer.findStaticApi(entity.javaClass).withSession { Session mongoSession ->
                     if (mongoSession != null) {
-                        Document schemaless = (Document)mongoSession.getAttribute(value, SCHEMALESS_ATTRIBUTES)
+                        Document schemaless = (Document) mongoSession.getAttribute(value, SCHEMALESS_ATTRIBUTES)
                         if (schemaless != null) {
                             for (name in schemaless.keySet()) {
                                 def v = schemaless.get(name)
@@ -309,7 +309,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                                 }
                                 else {
                                     writer.writeName(name)
-                                    Codec<Object> codec = (Codec<Object>)codecRegistry.get(v.getClass())
+                                    Codec<Object> codec = (Codec<Object>) codecRegistry.get(v.getClass())
                                     codec.encode(writer, v, encoderContext)
                                 }
                             }
@@ -330,7 +330,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                 else if (association instanceof ToOne) {
                     def v = access.getProperty(association.name)
                     if (v instanceof DirtyCheckable) {
-                        if (((DirtyCheckable)v).hasChanged()) {
+                        if (((DirtyCheckable) v).hasChanged()) {
                             if (association instanceof Embedded) {
                                 encodeEmbeddedUpdate(sets, unsets, association, v)
                             }
@@ -340,7 +340,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                 else if (association instanceof EmbeddedCollection) {
                     def v = access.getProperty(association.name)
                     if (v instanceof DirtyCheckableCollection) {
-                        if (((DirtyCheckableCollection)v).hasChanged()) {
+                        if (((DirtyCheckableCollection) v).hasChanged()) {
                             encodeEmbeddedCollectionUpdate(access, sets, unsets, association, v)
                         }
                     }
@@ -381,7 +381,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
 
     protected void encodeEmbeddedCollectionUpdate(EntityAccess parentAccess, BsonDocument sets, Document unsets, Association association, Object v) {
         if (v instanceof Collection) {
-            if ((v instanceof DirtyCheckableCollection) && !((DirtyCheckableCollection)v).hasChangedSize()) {
+            if ((v instanceof DirtyCheckableCollection) && !((DirtyCheckableCollection) v).hasChangedSize()) {
                 int i = 0
                 for (o in (v as Collection)) {
                     def embeddedUpdate = encodeUpdate(o, createEntityAccess(o), EncoderContext.builder().build(), true)
@@ -408,7 +408,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                 // set so we overwrite existing
                 def associatedEntity = association.associatedEntity
                 def rootClass = associatedEntity.javaClass
-                PersistentEntityCodec entityCodec =  (PersistentEntityCodec)codecRegistry.get(rootClass)
+                PersistentEntityCodec entityCodec =  (PersistentEntityCodec) codecRegistry.get(rootClass)
                 def inverseProperty = association.inverseSide
                 List<BsonValue> documents = []
                 for (o in v) {
@@ -426,7 +426,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                         if (entity == null) {
                             throw new DatastoreException("Value [$o] is not a valid type for association [$association]")
                         }
-                        codec = (PersistentEntityCodec)codecRegistry.get(cls)
+                        codec = (PersistentEntityCodec) codecRegistry.get(cls)
                     }
                     def ea = createEntityAccess(entity, o)
                     if (inverseProperty != null) {
@@ -488,14 +488,14 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
 
                 def listCodec = codecRegistry.get(List)
                 def identifiers = listCodec.decode(reader, decoderContext)
-                MongoAttribute attr = (MongoAttribute)property.mapping.mappedForm
+                MongoAttribute attr = (MongoAttribute) property.mapping.mappedForm
                 if (attr?.isReference()) {
                     identifiers = identifiers.collect {
                         if (it instanceof DBRef) {
-                            return ((DBRef)it).id
+                            return ((DBRef) it).id
                         }
                         else if (it instanceof Map) {
-                            return ((Map)it).get(DB_REF_ID_FIELD)
+                            return ((Map) it).get(DB_REF_ID_FIELD)
                         }
                         return it
                     }
@@ -552,7 +552,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
         @Override
         void encode(BsonWriter writer, Association property, Object value, EntityAccess parentAccess, EncoderContext encoderContext, CodecRegistry codecRegistry) {
             boolean shouldEncodeIds = !property.isBidirectional() || (property instanceof ManyToMany)
-            MongoCodecSession mongoSession = (MongoCodecSession)AbstractDatastore.retrieveSession(MongoDatastore)
+            MongoCodecSession mongoSession = (MongoCodecSession) AbstractDatastore.retrieveSession(MongoDatastore)
             if (shouldEncodeIds) {
                 // if it is unidirectional we encode the values inside the current
                 // document, otherwise nothing to do, encoding foreign key stored in inverse side
@@ -571,18 +571,18 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
 
                     if (updateCollection) {
                         // update existing collection
-                        Collection identifiers = (Collection)mongoSession.getAttribute(parentAccess.entity, "${property}.ids")
+                        Collection identifiers = (Collection) mongoSession.getAttribute(parentAccess.entity, "${property}.ids")
                         if (identifiers == null) {
                             def entityReflector = FieldEntityAccess.getOrIntializeReflector(associatedEntity)
-                            identifiers = ((Collection)value).collect() {
+                            identifiers = ((Collection) value).collect() {
                                 entityReflector.getIdentifier(it)
                             }
                         }
-                        writer.writeName(MappingUtils.getTargetKey((PersistentProperty)property))
+                        writer.writeName(MappingUtils.getTargetKey((PersistentProperty) property))
                         def listCodec = codecRegistry.get(List)
 
                         def identifierList = identifiers.toList()
-                        MongoAttribute attr = (MongoAttribute)property.mapping.mappedForm
+                        MongoAttribute attr = (MongoAttribute) property.mapping.mappedForm
                         if (attr?.isReference()) {
                             def collectionName = mongoSession.getCollectionName(property.associatedEntity)
                             identifierList = identifierList.findAll() { it != null }.collect {
@@ -620,11 +620,11 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                     }
                     if (associationId != null) {
                         writer.writeName(MappingUtils.getTargetKey(property))
-                        MongoAttribute attr = (MongoAttribute)property.mapping.mappedForm
+                        MongoAttribute attr = (MongoAttribute) property.mapping.mappedForm
                         if (attr?.isReference()) {
                             def identityEncoder = codecRegistry.get(DBRef)
 
-                            MongoCodecSession mongoSession = (MongoCodecSession)AbstractDatastore.retrieveSession(MongoDatastore)
+                            MongoCodecSession mongoSession = (MongoCodecSession) AbstractDatastore.retrieveSession(MongoDatastore)
                             def ref = new DBRef(mongoSession.getCollectionName(associatedEntity), associationId)
                             identityEncoder.encode(writer, ref, encoderContext)
                         }
@@ -645,8 +645,8 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
 
         @Override
         void decode(BsonReader bsonReader, ToOne property, EntityAccess entityAccess, DecoderContext decoderContext, CodecRegistry codecRegistry) {
-            MongoCodecSession mongoSession = (MongoCodecSession)AbstractDatastore.retrieveSession(MongoDatastore)
-            MongoAttribute attr = (MongoAttribute)property.mapping.mappedForm
+            MongoCodecSession mongoSession = (MongoCodecSession) AbstractDatastore.retrieveSession(MongoDatastore)
+            MongoAttribute attr = (MongoAttribute) property.mapping.mappedForm
             boolean isLazy = isLazyAssociation(attr)
             def associatedEntity = property.associatedEntity
             if (associatedEntity == null) {
@@ -659,7 +659,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
             if (attr.reference && bsonReader.currentBsonType == BsonType.DOCUMENT) {
                 def dbRefCodec = codecRegistry.get(Document)
                 def dBRef = dbRefCodec.decode(bsonReader, decoderContext)
-                associationId = (Serializable)dBRef.get(DB_REF_ID_FIELD)
+                associationId = (Serializable) dBRef.get(DB_REF_ID_FIELD)
             }
             else {
                 switch (associatedEntity.identity.type) {
@@ -667,10 +667,10 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                         associationId = bsonReader.readObjectId()
                         break
                     case Long:
-                        associationId = (Long)bsonReader.readInt64()
+                        associationId = (Long) bsonReader.readInt64()
                         break
                     case Integer:
-                        associationId =  (Integer)bsonReader.readInt32()
+                        associationId =  (Integer) bsonReader.readInt32()
                         break
                     default:
                         associationId = bsonReader.readString()

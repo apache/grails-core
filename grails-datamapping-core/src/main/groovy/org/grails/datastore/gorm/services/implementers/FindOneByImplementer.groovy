@@ -46,7 +46,7 @@ class FindOneByImplementer extends FindAllByImplementer implements SingleResultS
 
     @Override
     void doImplement(ClassNode domainClassNode, ClassNode targetClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, boolean isArray) {
-        BlockStatement body = (BlockStatement)newMethodNode.getCode()
+        BlockStatement body = (BlockStatement) newMethodNode.getCode()
         Parameter[] parameters = newMethodNode.parameters
         if (parameters.length == 1 && parameters[0].name == GormProperties.IDENTITY) {
             // add a method that invokes get(id)

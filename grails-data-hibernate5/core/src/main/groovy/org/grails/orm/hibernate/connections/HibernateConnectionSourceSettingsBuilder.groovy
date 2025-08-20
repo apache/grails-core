@@ -41,7 +41,7 @@ class HibernateConnectionSourceSettingsBuilder extends ConfigurationBuilder<Hibe
         super(propertyResolver, configurationPrefix, fallBackConfiguration)
 
         if (fallBackConfiguration instanceof HibernateConnectionSourceSettings) {
-            fallBackHibernateSettings = (HibernateConnectionSourceSettings)fallBackConfiguration
+            fallBackHibernateSettings = (HibernateConnectionSourceSettings) fallBackConfiguration
         }
     }
 
@@ -56,7 +56,7 @@ class HibernateConnectionSourceSettingsBuilder extends ConfigurationBuilder<Hibe
 
     @Override
     HibernateConnectionSourceSettings build() {
-        HibernateConnectionSourceSettings finalSettings = (HibernateConnectionSourceSettings)super.build()
+        HibernateConnectionSourceSettings finalSettings = (HibernateConnectionSourceSettings) super.build()
         Map orgHibernateProperties = propertyResolver.getProperty('org.hibernate', Map, Collections.emptyMap())
         Properties additionalProperties = finalSettings.getHibernate().getAdditionalProperties()
         for (key in orgHibernateProperties.keySet()) {

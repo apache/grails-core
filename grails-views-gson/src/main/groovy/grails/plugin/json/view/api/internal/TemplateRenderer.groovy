@@ -78,7 +78,7 @@ class TemplateRenderer {
         else if (len == 3) {
             def var = argArray[0]
             def coll = argArray[1]
-            def model = (Map)argArray[2]
+            def model = (Map) argArray[2]
             jsonViewHelper.render(template: name, model: model, collection: coll, var: var.toString())
         }
 

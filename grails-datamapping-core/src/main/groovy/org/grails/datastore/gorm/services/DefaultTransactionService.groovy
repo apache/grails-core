@@ -46,7 +46,7 @@ class DefaultTransactionService implements TransactionService, Service {
     def <T> T withTransaction(
             @ClosureParams(value = SimpleType, options = 'org.springframework.transaction.TransactionStatus') Closure<T> callable) {
         if (datastore instanceof TransactionCapableDatastore) {
-            GrailsTransactionTemplate template = new GrailsTransactionTemplate(((TransactionCapableDatastore)datastore).transactionManager)
+            GrailsTransactionTemplate template = new GrailsTransactionTemplate(((TransactionCapableDatastore) datastore).transactionManager)
             return template.execute(callable)
         }
         else {
@@ -58,7 +58,7 @@ class DefaultTransactionService implements TransactionService, Service {
     def <T> T withRollback(
             @ClosureParams(value = SimpleType, options = 'org.springframework.transaction.TransactionStatus') Closure<T> callable) {
         if (datastore instanceof TransactionCapableDatastore) {
-            GrailsTransactionTemplate template = new GrailsTransactionTemplate(((TransactionCapableDatastore)datastore).transactionManager)
+            GrailsTransactionTemplate template = new GrailsTransactionTemplate(((TransactionCapableDatastore) datastore).transactionManager)
             return template.executeAndRollback(callable)
         }
         else {

@@ -122,7 +122,7 @@ class AstMethodDispatchUtils extends GeneralUtils {
 
     static Parameter[] paramsForArgs(Expression expression) {
         if (expression instanceof TupleExpression) {
-            TupleExpression te = (TupleExpression)expression
+            TupleExpression te = (TupleExpression) expression
             List<Parameter> params = []
             int i = 0
             for (exp in te.expressions) {

@@ -93,16 +93,16 @@ trait JsonView extends GrailsView {
      * @param arguments The arguments
      */
     void inherits(Map arguments) {
-        ResolvableGroovyTemplateEngine templateEngine = (ResolvableGroovyTemplateEngine)viewTemplate.templateEngine
+        ResolvableGroovyTemplateEngine templateEngine = (ResolvableGroovyTemplateEngine) viewTemplate.templateEngine
 
         def template = arguments.template
 
         if (template) {
-            Map model = (Map)arguments.model ?: [:]
+            Map model = (Map) arguments.model ?: [:]
             def templateUri = templateEngine
                     .viewUriResolver
                     .resolveTemplateUri(getControllerNamespace(), getControllerName(), template.toString())
-            GrailsViewTemplate parentTemplate = (GrailsViewTemplate)templateEngine.resolveTemplate(templateUri, locale)
+            GrailsViewTemplate parentTemplate = (GrailsViewTemplate) templateEngine.resolveTemplate(templateUri, locale)
             if (parentTemplate != null) {
                 ParentInfo parentInfo = new ParentInfo(
                     parentTemplate: parentTemplate,

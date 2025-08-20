@@ -56,7 +56,7 @@ class BootStrapClassRunner extends GrailsApplicationLifeCycleAdapter implements 
     @Override
     void onStartup(Map<String, Object> event) {
         if (grailsApplication && applicationContext && servletContext) {
-            GrailsConfigUtils.executeGrailsBootstraps(grailsApplication, (WebApplicationContext)applicationContext, servletContext, pluginManager)
+            GrailsConfigUtils.executeGrailsBootstraps(grailsApplication, (WebApplicationContext) applicationContext, servletContext, pluginManager)
         }
     }
 
@@ -65,7 +65,7 @@ class BootStrapClassRunner extends GrailsApplicationLifeCycleAdapter implements 
         if (grailsApplication && applicationContext) {
             for (GrailsClass cls in grailsApplication.getArtefacts(BootstrapArtefactHandler.TYPE)) {
                 try {
-                    ((GrailsBootstrapClass)cls).callDestroy()
+                    ((GrailsBootstrapClass) cls).callDestroy()
                 } catch (Throwable e) {
                     log.error('Error occurred running Bootstrap destroy method: ' + e.getMessage(), e)
                 }

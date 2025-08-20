@@ -122,7 +122,7 @@ trait GenericViewConfiguration implements ViewConfiguration, GrailsApplicationAw
 
     void readConfiguration(ConfigMap config) {
         String moduleName = viewModuleName
-        GroovyObject configObject = (GroovyObject)this
+        GroovyObject configObject = (GroovyObject) this
         if (config != null) {
             PropertyDescriptor[] descriptors =  BeanUtils.getPropertyDescriptors(GenericViewConfiguration)
             for (PropertyDescriptor desc in descriptors) {

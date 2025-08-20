@@ -49,7 +49,7 @@ class DataTestSetupSpecInterceptor implements IMethodInterceptor {
 
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {
-        configureDataTest((DataTest)invocation.instance)
+        configureDataTest((DataTest) invocation.instance)
         invocation.proceed()
     }
 
@@ -85,7 +85,7 @@ class DataTestSetupSpecInterceptor implements IMethodInterceptor {
 
     void configureDataTest(DataTest testInstance) {
         setupDataTestBeans(testInstance)
-        ConfigurableApplicationContext applicationContext = (ConfigurableApplicationContext)testInstance.applicationContext
+        ConfigurableApplicationContext applicationContext = (ConfigurableApplicationContext) testInstance.applicationContext
         applicationContext.getBean('constraintRegistry', ConstraintRegistry).addConstraint(UniqueConstraint)
 
         if (!testInstance.domainsHaveBeenMocked) {

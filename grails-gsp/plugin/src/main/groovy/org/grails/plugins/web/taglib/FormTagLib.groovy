@@ -326,9 +326,9 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         // If the value is the same as the name or if it is a boolean value,
         // reintroduce the attribute to the map according to the w3c rules, so it is output later
         if ((attrValue instanceof Boolean && attrValue) ||
-            (attrValue instanceof String && (((String)attrValue).equalsIgnoreCase('true') || ((String)attrValue).equalsIgnoreCase(attrName)))) {
+            (attrValue instanceof String && (((String) attrValue).equalsIgnoreCase('true') || ((String) attrValue).equalsIgnoreCase(attrName)))) {
             attrs.put(attrName, attrName)
-        } else if (attrValue instanceof String && !((String)attrValue).equalsIgnoreCase('false')) {
+        } else if (attrValue instanceof String && !((String) attrValue).equalsIgnoreCase('false')) {
             // If the value is not the string 'false', then we should just pass it on to
             // keep compatibility with existing code
             attrs.put(attrName, attrValue)

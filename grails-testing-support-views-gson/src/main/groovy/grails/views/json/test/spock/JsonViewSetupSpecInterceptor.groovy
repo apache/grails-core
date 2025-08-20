@@ -39,7 +39,7 @@ class JsonViewSetupSpecInterceptor implements IMethodInterceptor {
 
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {
-        JsonViewUnitTest test = (JsonViewUnitTest)invocation.instance
+        JsonViewUnitTest test = (JsonViewUnitTest) invocation.instance
         setup(test)
         invocation.proceed()
     }

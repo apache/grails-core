@@ -42,7 +42,7 @@ class ViewUtils {
             Object o = map.get(key)
             if (o == null)return defaultValue
             if (o instanceof Boolean) {
-                return (Boolean)o
+                return (Boolean) o
             }
             return Boolean.valueOf(o.toString())
         }
@@ -62,7 +62,7 @@ class ViewUtils {
         if (map.containsKey(key)) {
             def o = map.get(key)
             if (o instanceof Iterable) {
-                return ((Iterable)o).toList() as List<String>
+                return ((Iterable) o).toList() as List<String>
             }
             else {
                 return Arrays.asList(o.toString())

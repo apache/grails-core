@@ -40,6 +40,6 @@ class ArtefactAdditionEvent extends ApplicationEvent {
     }
 
     GrailsClass getArtefact() {
-        (GrailsClass)source
+        (GrailsClass) source
     }
 }

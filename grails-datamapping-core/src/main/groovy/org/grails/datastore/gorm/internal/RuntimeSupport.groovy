@@ -44,7 +44,7 @@ class RuntimeSupport {
     static Datastore findDefaultDatastore(Datastore[] datastores) {
         for (Datastore d in datastores) {
             if (d instanceof ConnectionSourcesProvider) {
-                ConnectionSourcesProvider provider = (ConnectionSourcesProvider)d
+                ConnectionSourcesProvider provider = (ConnectionSourcesProvider) d
                 if (ConnectionSource.DEFAULT == provider.getConnectionSources().defaultConnectionSource.name) {
                     return d
                 }

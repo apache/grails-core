@@ -455,10 +455,10 @@ class PropertyConfig extends Property {
 
     @Override
     PropertyConfig clone() throws CloneNotSupportedException {
-        PropertyConfig pc = (PropertyConfig)super.clone()
+        PropertyConfig pc = (PropertyConfig) super.clone()
 
         pc.fetch = fetchMode
-        pc.indexColumn = indexColumn != null ? (PropertyConfig)indexColumn.clone() : null
+        pc.indexColumn = indexColumn != null ? (PropertyConfig) indexColumn.clone() : null
         pc.cache = cache != null ? cache.clone() : cache
         pc.joinTable = joinTable.clone()
         if (typeParams != null) {

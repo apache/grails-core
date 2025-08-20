@@ -32,7 +32,7 @@ class GPathResultCollectionDataBindingSource implements CollectionDataBindingSou
 
     GPathResultCollectionDataBindingSource(GPathResult gpath) {
         dataBindingSources = gpath?.children()?.collect { child ->
-            def map = new GPathResultMap((GPathResult)child)
+            def map = new GPathResultMap((GPathResult) child)
             DataBindingSource bindingSource = new SimpleMapDataBindingSource(map)
             bindingSource
         }

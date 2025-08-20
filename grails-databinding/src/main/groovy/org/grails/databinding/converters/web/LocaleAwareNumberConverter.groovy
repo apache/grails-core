@@ -57,7 +57,7 @@ class LocaleAwareNumberConverter implements ValueConverter {
     Object convert(Object value) {
         def trimmedValue = value.toString().trim()
         def parsePosition = new ParsePosition(0)
-        def result = numberFormatter.parse((String)value, parsePosition).asType(getTargetType())
+        def result = numberFormatter.parse((String) value, parsePosition).asType(getTargetType())
         if (parsePosition.index != trimmedValue.size()) {
             throw new NumberFormatException("Unable to parse number [${value}]")
         }

@@ -163,7 +163,7 @@ class CodeGenConfig implements Cloneable, ConfigMap {
         Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()))
         for (Object yamlObject : yaml.loadAll(input)) {
             if (yamlObject instanceof Map) { // problem here with CompileStatic
-                mergeMap((Map)yamlObject)
+                mergeMap((Map) yamlObject)
             }
         }
     }
@@ -185,7 +185,7 @@ class CodeGenConfig implements Cloneable, ConfigMap {
             return null
         }
         else if (requiredType.isInstance(value)) {
-            return (T)value
+            return (T) value
         }
         if (requiredType == String) {
             return String.valueOf(value)
@@ -197,19 +197,19 @@ class CodeGenConfig implements Cloneable, ConfigMap {
             return booleanObject != null ? booleanObject.booleanValue() : Boolean.FALSE.booleanValue()
         } else if (requiredType == Integer) {
             if (value instanceof Number) {
-                return Integer.valueOf(((Number)value).intValue())
+                return Integer.valueOf(((Number) value).intValue())
             } else {
                 return Integer.valueOf(String.valueOf(value))
             }
         } else if (requiredType == Long) {
             if (value instanceof Number) {
-                return Long.valueOf(((Number)value).longValue())
+                return Long.valueOf(((Number) value).longValue())
             } else {
                 return Long.valueOf(String.valueOf(value))
             }
         } else if (requiredType == Double) {
             if (value instanceof Number) {
-                return Double.valueOf(((Number)value).doubleValue())
+                return Double.valueOf(((Number) value).doubleValue())
             } else {
                 return Double.valueOf(String.valueOf(value))
             }

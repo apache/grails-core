@@ -137,7 +137,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
         else {
             XML xml
             if (sourceXml instanceof XML) {
-                xml = (XML)sourceXml
+                xml = (XML) sourceXml
             } else {
                 xml = new XML(sourceXml)
             }

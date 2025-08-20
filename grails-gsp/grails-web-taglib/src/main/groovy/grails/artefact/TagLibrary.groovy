@@ -84,7 +84,7 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
 
     String getTaglibNamespace() {
         if (hasProperty('namespace')) {
-            return ((GroovyObject)this).getProperty('namespace')
+            return ((GroovyObject) this).getProperty('namespace')
         }
         return TagOutput.DEFAULT_NAMESPACE
     }
@@ -145,7 +145,7 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
                 if (tagLibrary != null) {
                     Object tagProperty = tagLibrary.getProperty(name)
                     if (tagProperty instanceof Closure) {
-                        result = ((Closure<?>)tagProperty).clone()
+                        result = ((Closure<?>) tagProperty).clone()
                     }
                 }
             }

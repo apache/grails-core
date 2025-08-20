@@ -154,7 +154,7 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
             Map urlAttrs = attrs
             final urlAttribute = attrs.get(ATTRIBUTE_URL)
             if (urlAttribute instanceof Map) {
-                urlAttrs = (Map)urlAttribute
+                urlAttrs = (Map) urlAttribute
             }
             if (!urlAttribute || urlAttribute instanceof Map) {
                 final controllerAttribute = urlAttrs.get(ATTRIBUTE_CONTROLLER)

@@ -58,6 +58,6 @@ class DirtyCheckingList extends DirtyCheckingCollection implements List {
     @Override
     Object remove(int index) {
         parent.markDirty(property)
-        target.remove((int)index)
+        target.remove((int) index)
     }
 }

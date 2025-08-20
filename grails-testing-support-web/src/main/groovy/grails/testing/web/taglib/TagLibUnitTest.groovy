@@ -67,7 +67,7 @@ trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnit
     }
 
     private Class<T> getTagLibTypeUnderTest() {
-        ParameterizedType parameterizedType = (ParameterizedType)getClass().genericInterfaces.find { genericInterface ->
+        ParameterizedType parameterizedType = (ParameterizedType) getClass().genericInterfaces.find { genericInterface ->
             genericInterface instanceof ParameterizedType &&
                     TagLibUnitTest.isAssignableFrom((Class)((ParameterizedType)genericInterface).rawType)
         }

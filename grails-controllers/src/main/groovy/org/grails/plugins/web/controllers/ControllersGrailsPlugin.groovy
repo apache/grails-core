@@ -111,7 +111,7 @@ class ControllersGrailsPlugin extends Plugin {
             return
         }
         def application = grailsApplication
-        if (application.isArtefactOfType(ControllerArtefactHandler.TYPE, (Class)event.source)) {
+        if (application.isArtefactOfType(ControllerArtefactHandler.TYPE, (Class) event.source)) {
             ApplicationContext context = applicationContext
             if (!context) {
                 if (log.isDebugEnabled()) {
@@ -120,7 +120,7 @@ class ControllersGrailsPlugin extends Plugin {
                 return
             }
 
-            GrailsControllerClass controllerClass = (GrailsControllerClass)application.addArtefact(ControllerArtefactHandler.TYPE, (Class)event.source)
+            GrailsControllerClass controllerClass = (GrailsControllerClass) application.addArtefact(ControllerArtefactHandler.TYPE, (Class)event.source)
             beans {
                 "${controllerClass.fullName}"(controllerClass.clazz) { bean ->
                     def beanScope = controllerClass.getScope()

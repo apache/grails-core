@@ -190,7 +190,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         def activeSpringProfile = System.getProperty(SPRING_PROFILES)
 
         // Is there a 'spring.config.activate.on-profile' property defined in the source map?
-        def sourceMapProfile1 = ((Map)((Map)((Map)sourceMap?.get(SPRING))?.get(CONFIG))?.get(ACTIVATE))?.get(ON_PROFILE)
+        def sourceMapProfile1 = ((Map) ((Map)((Map)sourceMap?.get(SPRING))?.get(CONFIG))?.get(ACTIVATE))?.get(ON_PROFILE)
         if (!sourceMapProfile1 && path == "$SPRING.$CONFIG.$ACTIVATE") {
             sourceMapProfile1 = sourceMap?.get(ON_PROFILE)
         }
@@ -207,7 +207,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         }
 
         // Is there a 'spring.profiles' property defined in the source map? (Old way of Spring profiles activation)
-        def sourceMapProfile2 = ((Map)sourceMap?.get(SPRING))?.get(PROFILES)
+        def sourceMapProfile2 = ((Map) sourceMap?.get(SPRING))?.get(PROFILES)
         if (!sourceMapProfile2 && path == SPRING) {
             sourceMapProfile2 = sourceMap?.get(PROFILES)
         }
@@ -250,7 +250,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                         if (list.size() > i) {
                             def v = list.get(i)
                             if (v instanceof Map) {
-                                ((Map)v).put(remainder, sourceValue)
+                                ((Map) v).put(remainder, sourceValue)
                             } else {
                                 Map newMap = [:]
                                 newMap.put(remainder, sourceValue)
@@ -271,7 +271,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
 
                         def v = nestedMap.get(index)
                         if (v instanceof Map) {
-                            ((Map)v).put(remainder, sourceValue)
+                            ((Map) v).put(remainder, sourceValue)
                         } else {
                             Map newMap = [:]
                             newMap.put(remainder, sourceValue)
@@ -304,16 +304,16 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                 newPathList.add(sourceKey)
                 NavigableMap subMap
                 if (currentValue instanceof NavigableMap) {
-                    subMap = (NavigableMap)currentValue
+                    subMap = (NavigableMap) currentValue
                 }
                 else {
                     subMap = new NavigableMap(targetMap.getRootConfig(), newPathList.asImmutable())
                     if (currentValue instanceof Map) {
-                        subMap.putAll((Map)currentValue)
+                        subMap.putAll((Map) currentValue)
                     }
                 }
                 String newPath = path ? "${path}.${sourceKey}" : sourceKey
-                mergeMaps(rootMap, newPath , subMap, (Map)sourceValue, parseFlatKeys)
+                mergeMaps(rootMap, newPath , subMap, (Map) sourceValue, parseFlatKeys)
                 newValue = subMap
             } else {
                 newValue = sourceValue
@@ -414,7 +414,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
 
             Object currentItem = currentMap.get(pathElement)
             if (currentItem instanceof NavigableMap) {
-                currentMap = (NavigableMap)currentItem
+                currentMap = (NavigableMap) currentItem
             } else if (createMissing) {
                 List<String> newPathList = []
                 newPathList.addAll(currentMap.getPath())
@@ -456,7 +456,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                     newPathList.addAll(path)
                     newPathList.add(stringKey)
 
-                    flattenKeys(flatConfig, (Map)value, newPathList.asImmutable(), forceStrings)
+                    flattenKeys(flatConfig, (Map) value, newPathList.asImmutable(), forceStrings)
                 } else {
                     String fullKey
                     if (path) {
@@ -466,12 +466,12 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                     }
                     if (value instanceof Collection) {
                         if (forceStrings) {
-                            flatConfig.put(fullKey, ((Collection)value).join(','))
+                            flatConfig.put(fullKey, ((Collection) value).join(','))
                         } else {
                             flatConfig.put(fullKey, value)
                         }
                         int index = 0
-                        for (Object item: (Collection)value) {
+                        for (Object item: (Collection) value) {
                             String collectionKey = "${fullKey}[${index}]".toString()
                             flatConfig.put(collectionKey, forceStrings ? String.valueOf(item) : item)
                             index++

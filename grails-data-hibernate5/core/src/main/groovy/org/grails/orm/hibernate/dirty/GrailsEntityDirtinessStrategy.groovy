@@ -118,7 +118,7 @@ class GrailsEntityDirtinessStrategy implements CustomEntityDirtinessStrategy {
                                             if (prop instanceof Embedded) {
                                                 def val = prop.reader.read(entity)
                                                 if (val instanceof DirtyCheckable) {
-                                                    return ((DirtyCheckable)val).hasChanged()
+                                                    return ((DirtyCheckable) val).hasChanged()
                                                 }
                                                 else {
                                                     return false

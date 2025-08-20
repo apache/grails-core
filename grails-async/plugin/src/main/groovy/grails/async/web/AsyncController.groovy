@@ -46,7 +46,7 @@ trait AsyncController {
      * @return a new {@link javax.servlet.AsyncContext}
      */
     AsyncContext startAsync() {
-        GrailsWebRequest webRequest = (GrailsWebRequest)RequestContextHolder.currentRequestAttributes()
+        GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes()
 
         HttpServletRequest request = webRequest.currentRequest
         WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request)

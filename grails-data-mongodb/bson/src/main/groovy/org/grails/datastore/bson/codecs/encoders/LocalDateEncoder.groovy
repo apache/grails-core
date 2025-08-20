@@ -40,6 +40,6 @@ class LocalDateEncoder implements TypeEncoder, LocalDateBsonConverter {
 
     @Override
     void encode(BsonWriter writer, PersistentProperty property, Object value) {
-        write(writer, (LocalDate)value)
+        write(writer, (LocalDate) value)
     }
 }

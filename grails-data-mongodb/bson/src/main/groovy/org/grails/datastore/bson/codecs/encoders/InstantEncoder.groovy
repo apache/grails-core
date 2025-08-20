@@ -40,6 +40,6 @@ class InstantEncoder implements TypeEncoder, InstantBsonConverter {
 
     @Override
     void encode(BsonWriter writer, PersistentProperty property, Object value) {
-        write(writer, (Instant)value)
+        write(writer, (Instant) value)
     }
 }

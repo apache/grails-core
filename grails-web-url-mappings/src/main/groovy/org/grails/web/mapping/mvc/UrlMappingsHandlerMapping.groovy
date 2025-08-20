@@ -168,7 +168,7 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
                     info.configure(webRequest)
                     if (info instanceof GrailsControllerUrlMappingInfo) {
                         request.setAttribute(MATCHED_REQUEST, info)
-                        request.setAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS, ((GrailsControllerUrlMappingInfo)info).controllerClass)
+                        request.setAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS, ((GrailsControllerUrlMappingInfo) info).controllerClass)
                         return info
                     }
                     else if (info.viewName || info.URI) {

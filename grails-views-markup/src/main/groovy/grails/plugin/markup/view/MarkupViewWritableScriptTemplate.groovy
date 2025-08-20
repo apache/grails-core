@@ -44,9 +44,9 @@ class MarkupViewWritableScriptTemplate extends GrailsViewTemplate {
 
     @Override
     Writable make(Map binding) {
-        MarkupView writableTemplate = (MarkupView)templateClass
+        MarkupView writableTemplate = (MarkupView) templateClass
                 .newInstance(templateEngine, binding, Collections.emptyMap(), configuration)
-        writableTemplate.viewTemplate = (GrailsViewTemplate)this
+        writableTemplate.viewTemplate = (GrailsViewTemplate) this
         writableTemplate.prettyPrint = prettyPrint
 
         writableTemplate.setSourceFile(sourceFile)

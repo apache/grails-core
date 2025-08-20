@@ -151,7 +151,7 @@ class PageRenderer implements ApplicationContextAware, ServletContextAware {
             String contentType = null
             String characterEncoding = 'UTF-8'
 
-            (HttpServletRequest)Proxy.newProxyInstance(HttpServletRequest.classLoader, [HttpServletRequest] as Class[], new InvocationHandler() {
+            (HttpServletRequest) Proxy.newProxyInstance(HttpServletRequest.classLoader, [HttpServletRequest] as Class[], new InvocationHandler() {
                 Object invoke(proxy, Method method, Object[] args) {
 
                     String methodName = method.name
@@ -332,7 +332,7 @@ class PageRenderer implements ApplicationContextAware, ServletContextAware {
             String contentType = null
             int bufferSize = 0
 
-            (HttpServletResponse)Proxy.newProxyInstance(HttpServletResponse.classLoader, [HttpServletResponse] as Class[], new InvocationHandler() {
+            (HttpServletResponse) Proxy.newProxyInstance(HttpServletResponse.classLoader, [HttpServletResponse] as Class[], new InvocationHandler() {
                 Object invoke(proxy, Method method, Object[] args) {
 
                     String methodName = method.name

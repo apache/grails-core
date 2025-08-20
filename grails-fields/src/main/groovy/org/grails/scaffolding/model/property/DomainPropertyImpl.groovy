@@ -55,7 +55,7 @@ class DomainPropertyImpl implements DomainProperty {
         this.domainClass = persistentProperty.owner
         Validator validator = mappingContext.getEntityValidator(domainClass)
         if (validator instanceof PersistentEntityValidator) {
-            this.constrained = new Constrained(((PersistentEntityValidator)validator).constrainedProperties.get(name))
+            this.constrained = new Constrained(((PersistentEntityValidator) validator).constrainedProperties.get(name))
         }
         if (this.constrained?.isNull()) {
             this.constrained = null
@@ -85,7 +85,7 @@ class DomainPropertyImpl implements DomainProperty {
     Class getAssociatedType() {
         if (persistentProperty instanceof Association) {
             if (persistentProperty instanceof Basic) {
-                ((Basic)persistentProperty).componentType
+                ((Basic) persistentProperty).componentType
             } else {
                 associatedEntity.javaClass
             }
@@ -95,7 +95,7 @@ class DomainPropertyImpl implements DomainProperty {
     }
 
     PersistentEntity getAssociatedEntity() {
-        ((Association)persistentProperty).associatedEntity
+        ((Association) persistentProperty).associatedEntity
     }
 
     boolean isRequired() {

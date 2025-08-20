@@ -88,7 +88,7 @@ abstract class AbstractWhereImplementer extends AbstractReadOperationImplementer
             DetachedCriteriaTransformer transformer = new DetachedCriteriaTransformer(sourceUnit)
             transformer.transformClosureExpression(domainClassNode, closureExpression)
 
-            BlockStatement body = (BlockStatement)newMethodNode.getCode()
+            BlockStatement body = (BlockStatement) newMethodNode.getCode()
 
             Expression argsExpression = findArgsExpression(newMethodNode)
             VariableExpression queryVar = varX('$query')

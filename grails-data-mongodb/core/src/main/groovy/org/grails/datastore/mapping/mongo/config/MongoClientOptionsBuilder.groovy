@@ -124,7 +124,7 @@ class MongoClientOptionsBuilder {
                         def value = propertyResolver.getProperty(propertyPath, '')
                         if (value) {
                             try {
-                                method.invoke(builder, Enum.valueOf((Class)argType, value))
+                                method.invoke(builder, Enum.valueOf((Class) argType, value))
                             } catch (Throwable e) {
                                 log.warn("Error occurred reading setting [$propertyPath]: ${e.message}", e)
                             }

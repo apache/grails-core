@@ -75,7 +75,7 @@ class CommandRegistry {
     Collection<Command> findCommands(ProfileRepository repository) {
         registeredCommands.values().collect() { Command cmd ->
             if (cmd instanceof ProfileRepositoryAware) {
-                ((ProfileRepositoryAware)cmd).profileRepository = repository
+                ((ProfileRepositoryAware) cmd).profileRepository = repository
             }
             return cmd
         }
@@ -96,7 +96,7 @@ class CommandRegistry {
         }
 
         commands.addAll(registeredCommands.values()
-                            .findAll { Command c -> (c instanceof ProjectCommand) || (c instanceof ProfileCommand) && ((ProfileCommand)c).profile == profile }
+                            .findAll { Command c -> (c instanceof ProjectCommand) || (c instanceof ProfileCommand) && ((ProfileCommand) c).profile == profile }
         )
         return commands
     }

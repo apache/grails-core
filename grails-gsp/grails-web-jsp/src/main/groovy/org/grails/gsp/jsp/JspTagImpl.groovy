@@ -88,7 +88,7 @@ class JspTagImpl implements JspTag {
 
     protected jakarta.servlet.jsp.tagext.JspTag createTagInstance() {
         checkInitialized()
-        (jakarta.servlet.jsp.tagext.JspTag)tagClass.newInstance()
+        (jakarta.servlet.jsp.tagext.JspTag) tagClass.newInstance()
     }
 
     void doTag(Writer targetWriter, Map<String,Object> attributes, Closure<?> body) {
@@ -106,7 +106,7 @@ class JspTagImpl implements JspTag {
             handleSimpleTag(simpleTag, attributes, pageContext, targetWriter, body)
         }
         else if (tag instanceof Tag) {
-            Tag theTag = (Tag)tag
+            Tag theTag = (Tag) tag
             withJspWriterDelegate(pageContext, targetWriter, {
 
                 try {
@@ -118,16 +118,16 @@ class JspTagImpl implements JspTag {
                         if (state == BodyTag.EVAL_BODY_BUFFERED && isBody()) {
                             bodyContent = pageContext.pushBody()
                             out = bodyContent
-                            BodyTag bodyTag = (BodyTag)theTag
+                            BodyTag bodyTag = (BodyTag) theTag
                             bodyTag.bodyContent = bodyContent
                             bodyTag.doInitBody()
                         }
                         out << body.call()
                         if (isIterationTag()) {
-                            state = ((IterationTag)theTag).doAfterBody()
+                            state = ((IterationTag) theTag).doAfterBody()
                             while (state != Tag.SKIP_BODY) {
                                 out << body.call()
-                                state = ((IterationTag)theTag).doAfterBody()
+                                state = ((IterationTag) theTag).doAfterBody()
                             }
                         }
                     }
@@ -141,7 +141,7 @@ class JspTagImpl implements JspTag {
                 }
                 catch (Throwable t) {
                     if (isTryCatchFinally() && theTag) {
-                        ((TryCatchFinally)theTag).doCatch(t)
+                        ((TryCatchFinally) theTag).doCatch(t)
                     }
                     else {
                         throw t
@@ -149,7 +149,7 @@ class JspTagImpl implements JspTag {
                 }
                 finally {
                     if (isTryCatchFinally() && theTag) {
-                        ((TryCatchFinally)theTag).doFinally()
+                        ((TryCatchFinally) theTag).doFinally()
                     }
                     pageContext.popTopTag()
                     theTag?.release()
@@ -175,7 +175,7 @@ class JspTagImpl implements JspTag {
                 tagBean.setPropertyValue(key, value)
             }
             else if (key && tag instanceof DynamicAttributes) {
-                ((DynamicAttributes)tag).setDynamicAttribute(null, key, value)
+                ((DynamicAttributes) tag).setDynamicAttribute(null, key, value)
             }
         }
     }
@@ -187,10 +187,10 @@ class JspTagImpl implements JspTag {
                 tag.parent = new TagAdapter(parentTag)
             }
             else if (tag instanceof Tag) {
-                tag.parent = (Tag)parentTag
+                tag.parent = (Tag) parentTag
             }
             else if (tag instanceof SimpleTag) {
-                tag.parent = (Tag)parentTag
+                tag.parent = (Tag) parentTag
             }
         }
     }

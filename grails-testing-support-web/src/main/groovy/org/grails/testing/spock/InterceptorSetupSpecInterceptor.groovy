@@ -33,7 +33,7 @@ class InterceptorSetupSpecInterceptor implements IMethodInterceptor {
 
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {
-        InterceptorUnitTest test = (InterceptorUnitTest)invocation.instance
+        InterceptorUnitTest test = (InterceptorUnitTest) invocation.instance
         setup(test)
         invocation.proceed()
     }

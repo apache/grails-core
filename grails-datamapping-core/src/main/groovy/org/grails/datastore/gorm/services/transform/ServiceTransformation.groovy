@@ -303,7 +303,7 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                         def implementedAnn = new AnnotationNode(ClassHelper.make(Implemented))
                         Class implementedClass = implementer.getClass()
                         if (implementer instanceof AdaptedImplementer) {
-                            implementedClass = ((AdaptedImplementer)implementer).getAdapted().getClass()
+                            implementedClass = ((AdaptedImplementer) implementer).getAdapted().getClass()
                         }
                         implementedAnn.setMember('by', classX(implementedClass))
                         methodImpl.addAnnotation(implementedAnn)

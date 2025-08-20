@@ -205,7 +205,7 @@ trait Validateable {
             Errors originalErrors = getErrors()
             for (originalError in originalErrors.allErrors) {
                 if (originalError instanceof FieldError) {
-                    if (originalErrors.getFieldError(((FieldError)originalError).field)?.bindingFailure) {
+                    if (originalErrors.getFieldError(((FieldError) originalError).field)?.bindingFailure) {
                         localErrors.addError(originalError)
                     }
                 } else {

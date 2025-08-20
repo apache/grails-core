@@ -439,14 +439,14 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
             if (defaultConstraints != null && namedArgs.containsKey('shared')) {
                 PropertyConfig sharedConstraints = mapping.columns.get(namedArgs.shared)
                 if (sharedConstraints != null) {
-                    newConfig = (PropertyConfig)sharedConstraints.clone()
+                    newConfig = (PropertyConfig) sharedConstraints.clone()
                 }
             }
             else if (mapping.columns.containsKey('*')) {
                 // apply global constraints constraints
                 PropertyConfig globalConstraints = mapping.columns.get('*')
                 if (globalConstraints != null) {
-                    newConfig = (PropertyConfig)globalConstraints.clone()
+                    newConfig = (PropertyConfig) globalConstraints.clone()
                 }
             }
 
@@ -472,7 +472,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
             property.maxSize = namedArgs.maxSize instanceof Number ? namedArgs.maxSize : property.maxSize
             property.minSize = namedArgs.minSize instanceof Number ? namedArgs.minSize : property.minSize
             if (namedArgs.size instanceof IntRange) {
-                property.size = (IntRange)namedArgs.size
+                property.size = (IntRange) namedArgs.size
             }
             property.max = namedArgs.max instanceof Comparable ? namedArgs.max : property.max
             property.min = namedArgs.min instanceof Comparable ? namedArgs.min : property.min
@@ -481,7 +481,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
 
             // Need to guard around calling getScale() for multi-column properties (issue #1048)
             if (namedArgs.scale instanceof Integer) {
-                property.scale = (Integer)namedArgs.scale
+                property.scale = (Integer) namedArgs.scale
             }
 
             if (namedArgs.fetch) {
@@ -664,7 +664,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
         }
         else if ('importFrom' == name && hasArgs && (args[0] instanceof Class)) {
             // ignore, handled by constraints
-            List<Closure> constraintsToImports = ClassPropertyFetcher.getStaticPropertyValuesFromInheritanceHierarchy((Class)args[0], GormProperties.CONSTRAINTS, Closure)
+            List<Closure> constraintsToImports = ClassPropertyFetcher.getStaticPropertyValuesFromInheritanceHierarchy((Class) args[0], GormProperties.CONSTRAINTS, Closure)
             if (constraintsToImports) {
 
                 List originalIncludes = this.methodMissingIncludes

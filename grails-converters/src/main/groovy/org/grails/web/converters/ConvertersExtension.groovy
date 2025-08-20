@@ -54,11 +54,11 @@ class ConvertersExtension {
                                                  GrailsWebRequest.lookup()?.applicationContext)
         }
         else {
-            return (T)ConverterUtil.invokeOriginalAsTypeMethod(instance, clazz)
+            return (T) ConverterUtil.invokeOriginalAsTypeMethod(instance, clazz)
         }
     }
 
     static <T> T  asType(Object[] array, Class<T> clazz) {
-        asType((Object)array, clazz)
+        asType((Object) array, clazz)
     }
 }

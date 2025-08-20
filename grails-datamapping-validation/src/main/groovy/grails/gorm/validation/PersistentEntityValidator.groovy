@@ -97,7 +97,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             }
 
             if (pp instanceof Association) {
-                Association association = (Association)pp
+                Association association = (Association) pp
                 if (cascade) {
                     cascadeToAssociativeProperty(obj, errors, entityReflector, association, validatedObjects)
                 }
@@ -133,7 +133,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
 
             if (associatedObject != null && proxyHandler?.isInitialized(associatedObject)) {
                 if (association.doesCascadeValidate(associatedObject)) {
-                    cascadeValidationToOne(parent, propertyName, (ToOne)association, errors, reflector, associatedObject, null, validatedObjects)
+                    cascadeValidationToOne(parent, propertyName, (ToOne) association, errors, reflector, associatedObject, null, validatedObjects)
                 }
                 else {
                     Errors existingErrors = retrieveErrors(associatedObject)
@@ -178,13 +178,13 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
 
         if (collection instanceof List || collection instanceof SortedSet) {
             int idx = 0
-            for (Object associatedObject : ((Collection)collection)) {
+            for (Object associatedObject : ((Collection) collection)) {
                 cascadeValidationToOne(parentObject, propertyName, association, errors, entityReflector, associatedObject, idx++, validatedObjects)
             }
         }
         else if (collection instanceof Collection) {
             Integer index = 0
-            for (Object associatedObject : ((Collection)collection)) {
+            for (Object associatedObject : ((Collection) collection)) {
                 cascadeValidationToOne(parentObject, propertyName, association, errors, entityReflector, associatedObject, index++, validatedObjects)
             }
         }
@@ -241,7 +241,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
 
         def validator = mappingContext.getEntityValidator(associatedEntity)
         if (validator instanceof PersistentEntityValidator) {
-            associatedConstrainedProperties = ((PersistentEntityValidator)validator).getConstrainedProperties()
+            associatedConstrainedProperties = ((PersistentEntityValidator) validator).getConstrainedProperties()
         }
         else {
             associatedConstrainedProperties = Collections.<String, ConstrainedProperty>emptyMap()
@@ -282,7 +282,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
                         associatedObject,
                         errors,
                         associatedReflector,
-                        (Association)associatedPersistentProperty,
+                        (Association) associatedPersistentProperty,
                         validatedObjects)
                 }
             }
@@ -326,7 +326,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             }
             else {
                 if (obj instanceof GroovyObject) {
-                    constrainedProperty.validate(obj, ((GroovyObject)obj).getProperty(constrainedPropertyName), errors)
+                    constrainedProperty.validate(obj, ((GroovyObject) obj).getProperty(constrainedPropertyName), errors)
                 }
             }
         }

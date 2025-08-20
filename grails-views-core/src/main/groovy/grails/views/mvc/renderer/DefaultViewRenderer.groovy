@@ -100,21 +100,21 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
         AbstractUrlBasedView view
         String namespace = webRequest.controllerNamespace
         if (namespace) {
-            view = (AbstractUrlBasedView)viewResolver.resolveView("/${namespace}${viewUri}", request, response)
+            view = (AbstractUrlBasedView) viewResolver.resolveView("/${namespace}${viewUri}", request, response)
         }
 
         if (view == null) {
-            view = (AbstractUrlBasedView)viewResolver.resolveView(viewUri, request, response)
+            view = (AbstractUrlBasedView) viewResolver.resolveView(viewUri, request, response)
         }
 
         if (view == null) {
             if (proxyHandler != null) {
-                object = (T)proxyHandler.unwrapIfProxy(object)
+                object = (T) proxyHandler.unwrapIfProxy(object)
             }
 
             def cls = object.getClass()
             // Try resolve template. Example /book/_book
-            view = (AbstractUrlBasedView)viewResolver.resolveView(cls, request, response)
+            view = (AbstractUrlBasedView) viewResolver.resolveView(cls, request, response)
         }
 
         if (view != null) {

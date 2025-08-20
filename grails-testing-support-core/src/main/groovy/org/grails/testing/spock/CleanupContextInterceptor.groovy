@@ -35,7 +35,7 @@ class CleanupContextInterceptor implements IMethodInterceptor {
             invocation.proceed()
         }
         finally {
-            ((GrailsUnitTest)invocation.instance).cleanupGrailsApplication()
+            ((GrailsUnitTest) invocation.instance).cleanupGrailsApplication()
         }
     }
 }

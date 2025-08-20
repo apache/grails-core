@@ -94,23 +94,23 @@ class GroovyScriptCommandTransform implements ASTTransformation {
                     Expression constructDescription = new ConstructorCallExpression(ClassHelper.make(CommandDescription), constructorArgs)
                     if (secondArg instanceof ClosureExpression) {
                         constructorArgs.addExpression(arguments.get(0))
-                        ClosureExpression closureExpression = (ClosureExpression)secondArg
+                        ClosureExpression closureExpression = (ClosureExpression) secondArg
                         def body = closureExpression.code
                         if (body instanceof BlockStatement) {
-                            BlockStatement bodyBlock = (BlockStatement)body
+                            BlockStatement bodyBlock = (BlockStatement) body
                             for (Statement s in bodyBlock.statements) {
                                 if (s instanceof ExpressionStatement) {
-                                    ExpressionStatement es = (ExpressionStatement)s
+                                    ExpressionStatement es = (ExpressionStatement) s
 
                                     def expr = es.expression
                                     if (expr instanceof MethodCallExpression) {
-                                        MethodCallExpression mce = (MethodCallExpression)expr
+                                        MethodCallExpression mce = (MethodCallExpression) expr
                                         def methodCallArgs = mce.getArguments()
 
                                         switch (mce.methodAsString) {
                                             case 'usage':
                                                 if (methodCallArgs instanceof ArgumentListExpression) {
-                                                    constructorArgs.addExpression(((ArgumentListExpression)methodCallArgs).getExpression(0))
+                                                    constructorArgs.addExpression(((ArgumentListExpression) methodCallArgs).getExpression(0))
                                                 }
 
                                                 break

@@ -167,6 +167,6 @@ class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyn
 
         }
 
-        return (BlockStatement)method.getCode()
+        return (BlockStatement) method.getCode()
     }
 }

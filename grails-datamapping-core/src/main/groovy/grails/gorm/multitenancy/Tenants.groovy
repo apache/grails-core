@@ -70,7 +70,7 @@ class Tenants {
     static Serializable currentId() {
         Datastore datastore = GormEnhancer.findSingleDatastore()
         if (datastore instanceof MultiTenantCapableDatastore) {
-            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)datastore
+            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) datastore
             return currentId(multiTenantCapableDatastore)
         }
         else {
@@ -105,7 +105,7 @@ class Tenants {
     static Serializable currentId(Class<? extends Datastore> datastoreClass) {
         Datastore datastore = GormEnhancer.findDatastoreByType(datastoreClass)
         if (datastore instanceof MultiTenantCapableDatastore) {
-            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)datastore
+            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) datastore
             def tenantId = CurrentTenant.get()
             if (tenantId != null) {
                 log.debug("Found tenant id [$tenantId] bound to thread local")
@@ -133,7 +133,7 @@ class Tenants {
     static <T> T withoutId(Closure<T> callable) {
         Datastore datastore = GormEnhancer.findSingleDatastore()
         if (datastore instanceof MultiTenantCapableDatastore) {
-            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)datastore
+            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) datastore
             return withoutId(multiTenantCapableDatastore, callable)
         } else {
             throw new UnsupportedOperationException('Datastore implementation does not support multi-tenancy')
@@ -150,7 +150,7 @@ class Tenants {
         Serializable tenantIdentifier = currentId()
         Datastore datastore = GormEnhancer.findSingleDatastore()
         if (datastore instanceof MultiTenantCapableDatastore) {
-            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)datastore
+            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) datastore
             return withId(multiTenantCapableDatastore, tenantIdentifier, callable)
         }
         else {
@@ -169,7 +169,7 @@ class Tenants {
         Serializable tenantIdentifier = currentId(datastoreClass)
         Datastore datastore = GormEnhancer.findDatastoreByType(datastoreClass)
         if (datastore instanceof MultiTenantCapableDatastore) {
-            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)datastore
+            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) datastore
             return withId(multiTenantCapableDatastore, tenantIdentifier, callable)
         }
         else {
@@ -186,7 +186,7 @@ class Tenants {
     static <T> T withId(Serializable tenantId, Closure<T> callable) {
         Datastore datastore = GormEnhancer.findSingleDatastore()
         if (datastore instanceof MultiTenantCapableDatastore) {
-            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)datastore
+            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) datastore
             return withId(multiTenantCapableDatastore, tenantId, callable)
         }
         else {
@@ -202,7 +202,7 @@ class Tenants {
     static <T> T withId(Class<? extends Datastore> datastoreClass, Serializable tenantId, Closure<T> callable) {
         Datastore datastore = GormEnhancer.findDatastoreByType(datastoreClass)
         if (datastore instanceof MultiTenantCapableDatastore) {
-            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore)datastore
+            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) datastore
             return withId(multiTenantCapableDatastore, tenantId, callable)
         }
         else {

@@ -49,7 +49,7 @@ class ConfigSupport {
                     Class.forName(source)
                 }
             })
-            ((PropertySourcesConfig)config).setConversionService(conversionService)
+            ((PropertySourcesConfig) config).setConversionService(conversionService)
         }
     }
 }

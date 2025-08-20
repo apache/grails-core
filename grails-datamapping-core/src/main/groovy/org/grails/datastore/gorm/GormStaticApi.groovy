@@ -214,7 +214,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * @return The DetachedCriteria instance
      */
     DetachedCriteria<D> whereAny(Closure callable) {
-        (DetachedCriteria<D>)new DetachedCriteria<D>(persistentClass).or(callable)
+        (DetachedCriteria<D>) new DetachedCriteria<D>(persistentClass).or(callable)
     }
 
     /**
@@ -257,7 +257,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * @return A list of object identifiers
      */
     List<Serializable> saveAll(Object... objectsToSave) {
-        (List<Serializable>)execute({ Session session ->
+        (List<Serializable>) execute({ Session session ->
             session.persist(Arrays.asList(objectsToSave))
         } as SessionCallback)
     }
@@ -268,7 +268,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * @return A list of object identifiers
      */
     List<Serializable> saveAll(Iterable<?> objectsToSave) {
-        (List<Serializable>)execute({ Session session ->
+        (List<Serializable>) execute({ Session session ->
             session.persist(objectsToSave)
         } as SessionCallback)
     }
@@ -341,7 +341,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * Retrieves an object from the datastore. eg. Book.get(1)
      */
     D get(Serializable id) {
-        (D)execute({ Session session ->
+        (D) execute({ Session session ->
             session.retrieve((Class)persistentClass, id)
         } as SessionCallback)
     }
@@ -353,7 +353,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * just delegates to {@link #get(Serializable)}
      */
     D read(Serializable id) {
-        (D)execute({ Session session ->
+        (D) execute({ Session session ->
             session.retrieve((Class)persistentClass, id)
         } as SessionCallback)
     }
@@ -362,7 +362,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * Retrieves an object from the datastore as a proxy. eg. Book.load(1)
      */
     D load(Serializable id) {
-        (D)execute({ Session session ->
+        (D) execute({ Session session ->
             session.proxy((Class)persistentClass, id)
         } as SessionCallback)
     }
@@ -389,7 +389,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * @return A list of identifiers
      */
     List<D> getAll(Serializable... ids) {
-        (List<D>)execute({ Session session ->
+        (List<D>) execute({ Session session ->
             session.retrieveAll(persistentClass, ids.flatten())
         } as SessionCallback)
     }
@@ -450,7 +450,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * @return The instance
      */
     D lock(Serializable id) {
-        (D)execute({ Session session ->
+        (D) execute({ Session session ->
             session.lock((Class)persistentClass, id)
         } as SessionCallback)
     }
@@ -556,7 +556,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * @return The number of persisted entities
      */
     Integer count() {
-        (Integer)execute({ Session session ->
+        (Integer) execute({ Session session ->
 
             def q = session.createQuery(persistentClass)
             q.projections().count()
@@ -594,7 +594,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * @return A list of results
      */
     List<D> list(Map params) {
-        (List<D>)execute({ Session session ->
+        (List<D>) execute({ Session session ->
             Query q = session.createQuery(persistentClass)
             DynamicFinder.populateArgumentsForCriteria(persistentClass, q, params)
             if (params?.max) {
@@ -610,7 +610,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * @return The list of all entities
      */
     List<D> list() {
-        (List<D>)execute({ Session session ->
+        (List<D>) execute({ Session session ->
             session.createQuery(persistentClass).list()
         } as SessionCallback)
     }
@@ -754,7 +754,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * @return A list of results
      */
     List<D> findAllWhere(Map queryMap, Map args) {
-        (List<D>)execute({ Session session ->
+        (List<D>) execute({ Session session ->
             Query q = session.createQuery(persistentClass)
 
             Map<String, Object> processedQueryMap = [:]
@@ -886,10 +886,10 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     def <T> T withTenant(Serializable tenantId, Closure<T> callable) {
         if (multiTenancyMode == MultiTenancyMode.DATABASE) {
-            Tenants.withId((Class<Datastore>)GormEnhancer.findDatastore(persistentClass, tenantId.toString()).getClass(), tenantId, callable)
+            Tenants.withId((Class<Datastore>) GormEnhancer.findDatastore(persistentClass, tenantId.toString()).getClass(), tenantId, callable)
         }
         else if (multiTenancyMode.isSharedConnection()) {
-            Tenants.withId((Class<Datastore>)GormEnhancer.findDatastore(persistentClass, ConnectionSource.DEFAULT).getClass(), tenantId, callable)
+            Tenants.withId((Class<Datastore>) GormEnhancer.findDatastore(persistentClass, ConnectionSource.DEFAULT).getClass(), tenantId, callable)
         }
         else {
             throw new UnsupportedOperationException("Method not supported in multi tenancy mode $multiTenancyMode")
@@ -1204,7 +1204,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         D result = findWhere(queryMap)
         if (!result) {
             def persistentMetaClass = GroovySystem.metaClassRegistry.getMetaClass(persistentClass)
-            result = (D)persistentMetaClass.invokeConstructor(queryMap)
+            result = (D) persistentMetaClass.invokeConstructor(queryMap)
             if (shouldSave) {
                 InvokerHelper.invokeMethod(result, 'save', null)
             }

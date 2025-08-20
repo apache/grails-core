@@ -56,7 +56,7 @@ class RxPromise<T>  implements Promise<T> {
     RxPromise(RxPromiseFactory promiseFactory, Closure callable, Scheduler scheduler) {
         this(promiseFactory, Single.create({ SingleSubscriber<? super T> singleSubscriber ->
             try {
-                singleSubscriber.onSuccess((T)callable.call())
+                singleSubscriber.onSuccess((T) callable.call())
             } catch (Throwable t) {
                 singleSubscriber.onError(t)
             }

@@ -106,7 +106,7 @@ trait ControllerUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWeb
                 T artefact = getArtefactInstance()
                 ProxyFactory factory = new ProxyFactory()
                 factory.setSuperclass(getTypeUnderTest())
-                _proxyInstance = (T)factory.create(new Class<?>[0], new Object[0], new ActionSettingMethodHandler(artefact, getWebRequest()))
+                _proxyInstance = (T) factory.create(new Class<?>[0], new Object[0], new ActionSettingMethodHandler(artefact, getWebRequest()))
             }
             _proxyInstance
         }

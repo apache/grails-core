@@ -91,7 +91,7 @@ abstract class GrailsArrayUtils {
     static Object add(Object array, int pos, Object newObject) {
 
         if (array == null) {
-            Object[] newArray = (Object[])Array.newInstance(newObject.getClass(), 1)
+            Object[] newArray = (Object[]) Array.newInstance(newObject.getClass(), 1)
             newArray[pos] = newObject
             return newArray
         }

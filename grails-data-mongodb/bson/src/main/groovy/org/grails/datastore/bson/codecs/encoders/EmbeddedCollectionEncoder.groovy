@@ -71,7 +71,7 @@ class EmbeddedCollectionEncoder implements PropertyEncoder<EmbeddedCollection> {
                         def childEntity = mappingContext.getPersistentEntity(cls.name)
                         if (childEntity != null) {
                             entity = childEntity
-                            codec = (BsonPersistentEntityCodec)codecRegistry.get(cls)
+                            codec = (BsonPersistentEntityCodec) codecRegistry.get(cls)
                         }
                         else {
                             continue
@@ -95,7 +95,7 @@ class EmbeddedCollectionEncoder implements PropertyEncoder<EmbeddedCollection> {
             writer.writeStartDocument()
 
             for (e in value) {
-                Map.Entry<String, Object> entry = (Map.Entry<String, Object>)e
+                Map.Entry<String, Object> entry = (Map.Entry<String, Object>) e
 
                 writer.writeName(entry.key)
 

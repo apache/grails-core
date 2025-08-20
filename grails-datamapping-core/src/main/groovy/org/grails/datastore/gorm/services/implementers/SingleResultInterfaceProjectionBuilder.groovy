@@ -50,7 +50,7 @@ trait SingleResultInterfaceProjectionBuilder extends InterfaceProjectionBuilder 
 
     Statement buildInterfaceProjection(ClassNode targetDomainClass, MethodNode abstractMethodNode, Expression queryMethodCall, Expression args, MethodNode newMethodNode) {
         ClassNode declaringClass = newMethodNode.declaringClass
-        ClassNode interfaceNode = (ClassNode)newMethodNode.getNodeMetaData(ServiceImplementer.RETURN_TYPE) ?: abstractMethodNode.returnType
+        ClassNode interfaceNode = (ClassNode) newMethodNode.getNodeMetaData(ServiceImplementer.RETURN_TYPE) ?: abstractMethodNode.returnType
         MethodNode methodTarget = buildInterfaceImpl(interfaceNode, declaringClass, targetDomainClass, abstractMethodNode)
         ClassNode innerClassNode = methodTarget.getDeclaringClass()
 

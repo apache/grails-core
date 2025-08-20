@@ -50,7 +50,7 @@ class DefaultMultiStepCommand extends MultiStepCommand {
 
         def description = data?.description
         if (description instanceof List) {
-            List descList = (List)description
+            List descList = (List) description
             if (descList) {
 
                 this.description = new CommandDescription(name: name, description: descList.get(0).toString(), usage: data?.usage)
@@ -58,7 +58,7 @@ class DefaultMultiStepCommand extends MultiStepCommand {
                 if (descList.size() > 1) {
                     for (arg in descList[1..-1]) {
                         if (arg instanceof Map) {
-                            Map map = (Map)arg
+                            Map map = (Map) arg
                             if (map.containsKey('usage')) {
                                 this.description.usage = map.get('usage')?.toString()
                             }
@@ -66,7 +66,7 @@ class DefaultMultiStepCommand extends MultiStepCommand {
                                 def completerClass = map.get('completer')
                                 if (completerClass) {
                                     try {
-                                        this.description.completer = (Completer)Thread.currentThread().contextClassLoader.loadClass(completerClass.toString()).getDeclaredConstructor().newInstance()
+                                        this.description.completer = (Completer) Thread.currentThread().contextClassLoader.loadClass(completerClass.toString()).getDeclaredConstructor().newInstance()
                                     } catch (e) {
                                         // ignore
                                     }

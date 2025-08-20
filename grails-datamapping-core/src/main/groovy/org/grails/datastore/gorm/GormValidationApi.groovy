@@ -76,7 +76,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
     Validator getValidator() {
         if (!internalValidator) {
             if (persistentEntity instanceof ValidatorProvider) {
-                internalValidator = ((ValidatorProvider)persistentEntity).validator
+                internalValidator = ((ValidatorProvider) persistentEntity).validator
             }
             if (!internalValidator) {
                 internalValidator = mappingContext.getEntityValidator(persistentEntity)
@@ -118,7 +118,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
 
             for (error in errors.allErrors) {
                 if (error instanceof FieldError) {
-                    if (((FieldError)error).bindingFailure) {
+                    if (((FieldError) error).bindingFailure) {
                         localErrors.addError(error)
                     }
                 } else {
@@ -127,7 +127,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
             }
 
             if (validator instanceof CascadingValidator) {
-                ((CascadingValidator)validator).validate(instance, localErrors, deepValidate)
+                ((CascadingValidator) validator).validate(instance, localErrors, deepValidate)
             } else if (validator instanceof org.grails.datastore.gorm.validation.CascadingValidator) {
                 ((org.grails.datastore.gorm.validation.CascadingValidator) validator).validate(instance, localErrors, deepValidate)
             } else {
@@ -156,7 +156,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * @return True if the instance is valid
      */
     boolean validate(D instance, Map arguments) {
-        doValidate(instance, arguments, (List)null)
+        doValidate(instance, arguments, (List) null)
     }
 
     /**
@@ -167,7 +167,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * @return True if the instance is valid
      */
     boolean validate(D instance, List fields) {
-        doValidate(instance, (Map)null, fields)
+        doValidate(instance, (Map) null, fields)
     }
 
     private ValidationErrors filterErrors(ValidationErrors errors, Set validatedFields, Object target) {
@@ -178,7 +178,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
         for (ObjectError error : errors.getAllErrors()) {
 
             if (error instanceof FieldError) {
-                FieldError fieldError = (FieldError)error
+                FieldError fieldError = (FieldError) error
                 if (!validatedFields.contains(fieldError.getField())) continue
             }
 
@@ -210,7 +210,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * @return True if the instance is valid
      */
     boolean validate(D instance) {
-        doValidate(instance, (Map)null, (List)null)
+        doValidate(instance, (Map) null, (List) null)
     }
 
     /**
@@ -220,7 +220,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      */
     Errors getErrors(D instance) {
         if (instance instanceof GormValidateable) {
-            GormValidateable gv = (GormValidateable)instance
+            GormValidateable gv = (GormValidateable) instance
             def errors = gv.errors
             if (errors == null) {
                 errors = resetErrors(instance)
@@ -229,7 +229,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
         }
         else {
 
-            Errors errors = (Errors)datastore.currentSession.getAttribute(instance, GormProperties.ERRORS)
+            Errors errors = (Errors) datastore.currentSession.getAttribute(instance, GormProperties.ERRORS)
             if (errors == null) {
                 errors = resetErrors(instance)
             }
@@ -277,7 +277,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
             return gv.hasErrors()
         }
         else {
-            Errors errors = (Errors)datastore.currentSession.getAttribute(instance, GormProperties.ERRORS)
+            Errors errors = (Errors) datastore.currentSession.getAttribute(instance, GormProperties.ERRORS)
             errors?.hasErrors()
         }
     }

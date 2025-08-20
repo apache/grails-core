@@ -56,7 +56,7 @@ class LinkGeneratorFactory implements ApplicationContextAware {
     LinkGenerator create(UrlMappings urlMappings) {
         def generator = new DefaultLinkGenerator(baseURL, contextPath)
         generator.grailsUrlConverter = urlConverter
-        generator.urlMappingsHolder = (UrlMappingsHolder)urlMappings
+        generator.urlMappingsHolder = (UrlMappingsHolder) urlMappings
         return generator
     }
 

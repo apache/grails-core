@@ -272,7 +272,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
             for (key in current.keySet()) {
                 def value = current.get(key)
                 if (value instanceof Map) {
-                    populateProperties(props, (Map)value, "${prefix}.$key")
+                    populateProperties(props, (Map) value, "${prefix}.$key")
                 }
                 else {
                     props.put("$prefix.$key".toString(), value)

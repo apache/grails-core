@@ -31,7 +31,7 @@ class UrlMappingSetupSpecInterceptor implements IMethodInterceptor {
 
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {
-        ((UrlMappingsUnitTest)invocation.instance).configuredMockedControllers()
+        ((UrlMappingsUnitTest) invocation.instance).configuredMockedControllers()
         invocation.proceed()
     }
 }

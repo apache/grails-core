@@ -89,7 +89,7 @@ class DirtyCheckingSupport {
                 else {
                     final value = entityReflector.getProperty(instance, a.name)
                     if (value instanceof PersistentCollection) {
-                        PersistentCollection coll = (PersistentCollection)value
+                        PersistentCollection coll = (PersistentCollection) value
                         if (coll.isInitialized()) {
                             if (coll.isDirty()) return true
                         }

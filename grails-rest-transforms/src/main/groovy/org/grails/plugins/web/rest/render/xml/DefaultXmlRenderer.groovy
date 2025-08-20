@@ -87,7 +87,7 @@ class DefaultXmlRenderer<T> implements Renderer<T> {
             if (htmlRenderer == null) {
                 htmlRenderer = new DefaultHtmlRenderer(targetType)
             }
-            htmlRenderer.render((Object)object, context)
+            htmlRenderer.render((Object) object, context)
         } else {
             if (object instanceof Errors) {
                 context.setStatus(HttpStatus.UNPROCESSABLE_ENTITY)

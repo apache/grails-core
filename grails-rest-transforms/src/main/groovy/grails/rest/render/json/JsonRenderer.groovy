@@ -99,7 +99,7 @@ class JsonRenderer <T> extends DefaultJsonRenderer<T> {
 
             marshaller = domainClassMarshaller
         } else if (!Collection.isAssignableFrom(targetType) && !Map.isAssignableFrom(targetType)) {
-            marshaller = (ObjectMarshaller<JSON>)new GroovyBeanMarshaller() {
+            marshaller = (ObjectMarshaller<JSON>) new GroovyBeanMarshaller() {
                 @Override
                 protected boolean includesProperty(Object o, String property) {
                     return includes == null || includes.contains(property)

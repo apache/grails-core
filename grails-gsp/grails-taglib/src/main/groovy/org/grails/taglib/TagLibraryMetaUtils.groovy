@@ -64,7 +64,7 @@ class TagLibraryMetaUtils {
 
     @CompileStatic
     static registerMethodMissingForTags(MetaClass metaClass, TagLibraryLookup gspTagLibraryLookup, String namespace, String name, boolean addAll = true, boolean overrideMethods = true) {
-        GroovyObject mc = (GroovyObject)metaClass
+        GroovyObject mc = (GroovyObject) metaClass
 
         if (overrideMethods || !doesMethodExist(metaClass, name, [Map, Closure] as Class[])) {
             mc.setProperty(name) { Map attrs, Closure body ->
@@ -104,7 +104,7 @@ class TagLibraryMetaUtils {
 
     @CompileStatic
     static void registerPropertyMissingForTag(MetaClass metaClass, String name, Object result) {
-        GroovyObject mc = (GroovyObject)metaClass
+        GroovyObject mc = (GroovyObject) metaClass
         mc.setProperty(GrailsClassUtils.getGetterName(name)) { -> result }
     }
 
@@ -141,7 +141,7 @@ class TagLibraryMetaUtils {
     }
 
     private static Object[] makeObjectArray(Object args) {
-        args instanceof Object[] ? (Object[])args : [args] as Object[]
+        args instanceof Object[] ? (Object[]) args : [args] as Object[]
     }
 
     @CompileStatic(TypeCheckingMode.SKIP) // workaround for GROOVY-6147 bug
@@ -212,7 +212,7 @@ class TagLibraryMetaUtils {
         }
         if (methodMissingClosure != null) {
             synchronized(mc) {
-                ((GroovyObject)mc).setProperty(method.name, methodMissingClosure)
+                ((GroovyObject) mc).setProperty(method.name, methodMissingClosure)
             }
         }
     }

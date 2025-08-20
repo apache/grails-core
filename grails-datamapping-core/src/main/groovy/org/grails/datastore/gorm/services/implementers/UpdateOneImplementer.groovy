@@ -80,7 +80,7 @@ class UpdateOneImplementer extends AbstractSaveImplementer implements SingleResu
         StaticMethodCallExpression lookupCall = callX(domainClassNode, 'get', varX(parameters[0]))
         VariableExpression entityVar = varX('$entity', domainClassNode)
 
-        BlockStatement body = (BlockStatement)newMethodNode.code
+        BlockStatement body = (BlockStatement) newMethodNode.code
         // def $entity = Foo.get(id)
         // if($entity != null) {
         //    ... bind parameters

@@ -70,7 +70,7 @@ trait DirtyCheckable {
      * @return True if the instance has any changes
      */
     boolean hasChanged() {
-        if (this instanceof EntityProxy && !((EntityProxy)this).isInitialized()) {
+        if (this instanceof EntityProxy && !((EntityProxy) this).isInitialized()) {
             return false
         }
         else {
@@ -83,7 +83,7 @@ trait DirtyCheckable {
      * @return True if the given property has any changes
      */
     boolean hasChanged(String propertyName) {
-        if (this instanceof EntityProxy && !((EntityProxy)this).isInitialized()) {
+        if (this instanceof EntityProxy && !((EntityProxy) this).isInitialized()) {
             return false
         }
         else {
@@ -109,7 +109,7 @@ trait DirtyCheckable {
             if (DirtyCheckingSupport.DIRTY_CLASS_MARKER.is($changedProperties)) {
                 trackChanges()
             }
-            $changedProperties.put(propertyName, ((GroovyObject)this).getProperty(propertyName))
+            $changedProperties.put(propertyName, ((GroovyObject) this).getProperty(propertyName))
         }
     }
 
@@ -148,7 +148,7 @@ trait DirtyCheckable {
      * @return A list of the dirty property names
      */
     List<String> listDirtyPropertyNames() {
-        if (this instanceof EntityProxy && !((EntityProxy)this).isInitialized()) {
+        if (this instanceof EntityProxy && !((EntityProxy) this).isInitialized()) {
             return Collections.emptyList()
         }
 

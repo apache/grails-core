@@ -60,10 +60,10 @@ class ExceptionUtils {
     static int extractLineNumber(CompilationFailedException e) {
         int lineNumber = -1
         if (e instanceof MultipleCompilationErrorsException) {
-            MultipleCompilationErrorsException mcee = (MultipleCompilationErrorsException)e
+            MultipleCompilationErrorsException mcee = (MultipleCompilationErrorsException) e
             Object message = mcee.errorCollector.errors.iterator().next()
             if (message instanceof SyntaxErrorMessage) {
-                SyntaxErrorMessage sem = (SyntaxErrorMessage)message
+                SyntaxErrorMessage sem = (SyntaxErrorMessage) message
                 lineNumber = sem.cause.line
             }
         }

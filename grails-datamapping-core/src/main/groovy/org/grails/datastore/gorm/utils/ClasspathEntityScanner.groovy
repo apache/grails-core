@@ -59,7 +59,7 @@ class ClasspathEntityScanner {
     ClasspathEntityScanner() {
         if (ClassUtils.isPresent('grails.persistence.Entity')) {
             try {
-                annotations.add((Class<? extends Annotation>)Class.forName('grails.persistence.Entity'))
+                annotations.add((Class<? extends Annotation>) Class.forName('grails.persistence.Entity'))
             } catch (Throwable e) {
                 log.error("Annotation [grails.persistence.Entity] found on classpath, but could not be loaded: ${e.message}", e)
             }

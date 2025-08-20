@@ -93,7 +93,7 @@ class Point extends Shape implements GeoJSON {
     static Point getPointAtIndex(List coords, int index) {
         def coord = coords.get(index)
         if (coord instanceof Point) {
-            return (Point)coord
+            return (Point) coord
         }
         else if (coord instanceof List) {
             return valueOf((List<Number>) coord)

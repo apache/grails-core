@@ -55,7 +55,7 @@ class MongoCollection extends Collection {
     }
 
     Query.Order getSort() {
-        return (Query.Order)super.getSort()
+        return (Query.Order) super.getSort()
     }
 
     /**
@@ -175,12 +175,12 @@ class MongoCollection extends Collection {
 
     @Override
     MongoAttribute property(@DelegatesTo(MongoAttribute) Closure propertyConfig) {
-        return (MongoAttribute)super.property(propertyConfig)
+        return (MongoAttribute) super.property(propertyConfig)
     }
 
     @Override
     MongoAttribute property(Map propertyConfig) {
-        return (MongoAttribute)super.property(propertyConfig)
+        return (MongoAttribute) super.property(propertyConfig)
     }
     /**
      * Definition of an index

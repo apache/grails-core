@@ -81,7 +81,7 @@ trait DataBinder {
             result = []
             result << (value instanceof String ? value : value.toString())
         } else if (value instanceof List) {
-            result = (List)value
+            result = (List) value
         }
         result
     }

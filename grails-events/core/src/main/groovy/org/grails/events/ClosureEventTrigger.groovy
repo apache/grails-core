@@ -49,7 +49,7 @@ class ClosureEventTrigger<T> implements EventTrigger<T> {
         this.subscriberClosure = subscriber
         this.reply = reply
         this.data = event.data
-        Closure closure = (Closure)subscriber
+        Closure closure = (Closure) subscriber
         Class[] parameterTypes = closure.parameterTypes
         this.argCount = parameterTypes.length
         this.eventArg = argCount == 1 && Event.isAssignableFrom(parameterTypes[0])
@@ -62,7 +62,7 @@ class ClosureEventTrigger<T> implements EventTrigger<T> {
 
     @Override
     Object proceed() {
-        int dataLength = data.getClass().isArray() ? ((Object[])data).length : 1
+        int dataLength = data.getClass().isArray() ? ((Object[]) data).length : 1
 
         boolean isSpread = !eventArg && dataLength > 1 && argCount == dataLength
         try {

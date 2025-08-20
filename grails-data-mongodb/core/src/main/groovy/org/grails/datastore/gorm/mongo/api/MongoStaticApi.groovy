@@ -105,7 +105,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
 
     @Override
     MongoCriteriaBuilder createCriteria() {
-        (MongoCriteriaBuilder)withSession { Session session ->
+        (MongoCriteriaBuilder) withSession { Session session ->
             def entity = session.mappingContext.getPersistentEntity(persistentClass.name)
             return new MongoCriteriaBuilder(entity.javaClass, session)
         }
@@ -113,7 +113,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
 
     @Override
     MongoDatabase getDB() {
-        (MongoDatabase)withSession({ AbstractMongoSession session ->
+        (MongoDatabase) withSession({ AbstractMongoSession session ->
             def databaseName = session.getDatabase(session.mappingContext.getPersistentEntity(persistentClass.name))
             session.getNativeInterface()
                     .getDatabase(databaseName)
@@ -123,7 +123,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
 
     @Override
     String getCollectionName() {
-        (String)withSession({ AbstractMongoSession session ->
+        (String) withSession({ AbstractMongoSession session ->
             def entity = session.mappingContext.getPersistentEntity(persistentClass.name)
             return session.getCollectionName(entity)
         })
@@ -131,7 +131,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
 
     @Override
     MongoCollection<Document> getCollection() {
-        (MongoCollection<Document>)withSession { AbstractMongoSession session ->
+        (MongoCollection<Document>) withSession { AbstractMongoSession session ->
             def entity = session.mappingContext.getPersistentEntity(persistentClass.name)
             return session.getCollection(entity)
         }
@@ -191,7 +191,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
 
     @Override
     List<D> aggregate(List pipeline, Function<AggregateIterable, AggregateIterable> doWithAggregate = Function.identity()) {
-        (List<D>)withSession({ AbstractMongoSession session ->
+        (List<D>) withSession({ AbstractMongoSession session ->
             def persistentEntity = session.mappingContext.getPersistentEntity(persistentClass.name)
             def mongoCollection = session.getCollection(persistentEntity)
             if (session instanceof MongoCodecSession) {
@@ -212,7 +212,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
 
     @Override
     List<D> aggregate(List pipeline, Function<AggregateIterable, AggregateIterable> doWithAggregate, ReadPreference readPreference) {
-        (List<D>)withSession({ AbstractMongoSession session ->
+        (List<D>) withSession({ AbstractMongoSession session ->
             def persistentEntity = session.mappingContext.getPersistentEntity(persistentClass.name)
             List<? extends Bson> newPipeline = preparePipeline(pipeline)
             def mongoCollection = session.getCollection(persistentEntity)
@@ -227,7 +227,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
 
     @Override
     List<D> search(String query, Map options = Collections.emptyMap()) {
-        (List<D>)withSession({ AbstractMongoSession session ->
+        (List<D>) withSession({ AbstractMongoSession session ->
             def persistentEntity = session.mappingContext.getPersistentEntity(persistentClass.name)
             def coll = session.getCollection(persistentEntity)
             if (session instanceof MongoCodecSession) {
@@ -256,7 +256,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
 
     @Override
     List<D> searchTop(String query, int limit = 5, Map options = Collections.emptyMap()) {
-        (List<D>)withSession({ AbstractMongoSession session ->
+        (List<D>) withSession({ AbstractMongoSession session ->
             def persistentEntity = session.mappingContext.getPersistentEntity(persistentClass.name)
 
             MongoCollection coll = session.getCollection(persistentEntity)
@@ -290,7 +290,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
     @Override
     @Deprecated
     Document getDbo(D instance) {
-        return ((MongoEntity)instance).dbo
+        return ((MongoEntity) instance).dbo
     }
 
     protected Bson wrapFilterWithMultiTenancy(Bson filter) {

@@ -367,7 +367,7 @@ abstract class ConfigurationBuilder<B, C> {
                                 value = propertyResolver.getProperty(propertyPathForArg, String)
                                 if (value != null) {
                                     try {
-                                        value = Enum.valueOf((Class)argType, value.toUpperCase())
+                                        value = Enum.valueOf((Class) argType, value.toUpperCase())
                                     } catch (Throwable e2) {
                                         // ignore e2 and throw original
                                         throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)

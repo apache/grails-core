@@ -44,7 +44,7 @@ abstract class AbstractRequestBodyDataBindingSourceCreator extends DefaultDataBi
     DataBindingSource createDataBindingSource(MimeType mimeType, Class bindingTargetType, Object bindingSource) throws DataBindingSourceCreationException {
         try {
             if (bindingSource instanceof HttpServletRequest) {
-                def req = (HttpServletRequest)bindingSource
+                def req = (HttpServletRequest) bindingSource
                 HttpMethod method = HttpMethod.valueOf(req.method)
                 if (req.contentLength != 0 && !ignoredRequestBodyMethods.contains(method)) {
                     def is = req.getInputStream()
@@ -52,11 +52,11 @@ abstract class AbstractRequestBodyDataBindingSourceCreator extends DefaultDataBi
                 }
             }
             if (bindingSource instanceof InputStream) {
-                def is = (InputStream)bindingSource
+                def is = (InputStream) bindingSource
                 return createBindingSource(is, 'UTF-8')
             }
             if (bindingSource instanceof Reader) {
-                def is = (Reader)bindingSource
+                def is = (Reader) bindingSource
                 return createBindingSource(is)
             }
 
@@ -79,16 +79,16 @@ abstract class AbstractRequestBodyDataBindingSourceCreator extends DefaultDataBi
                 return createCollectionBindingSource(is, req.getCharacterEncoding())
             }
             if (bindingSource instanceof HttpServletRequest) {
-                def req = (HttpServletRequest)bindingSource
+                def req = (HttpServletRequest) bindingSource
                 def is = req.getInputStream()
                 return createCollectionBindingSource(is, req.getCharacterEncoding())
             }
             if (bindingSource instanceof InputStream) {
-                def is = (InputStream)bindingSource
+                def is = (InputStream) bindingSource
                 return createCollectionBindingSource(is, 'UTF-8')
             }
             if (bindingSource instanceof Reader) {
-                def is = (Reader)bindingSource
+                def is = (Reader) bindingSource
                 return createCollectionBindingSource(is)
             }
 

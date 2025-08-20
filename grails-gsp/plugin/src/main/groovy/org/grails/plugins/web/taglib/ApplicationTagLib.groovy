@@ -253,7 +253,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         StringBuilder sb = new StringBuilder()
         // For some strange reason Groovy creates ClassCastExceptions internally in PogoMetaMethodSite.checkCall without this hack
         for (Iterator i = InvokerHelper.asIterator(attrs); i.hasNext();) {
-            Map.Entry e = (Map.Entry)i.next()
+            Map.Entry e = (Map.Entry) i.next()
             if (e.value != null) {
                 sb.append(' ')
                 sb.append(e.key)
@@ -371,11 +371,11 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     protected String doCreateLink(Map attrs) {
         Map urlAttrs = attrs
         if (attrs.url instanceof Map) {
-            urlAttrs = (Map)attrs.url
+            urlAttrs = (Map) attrs.url
         }
-        Map params = urlAttrs.params && urlAttrs.params instanceof Map ? (Map)urlAttrs.params : [:]
-        HttpServletRequest req = (HttpServletRequest)getProperty('request')
-        HttpServletResponse res = (HttpServletResponse)getProperty('response')
+        Map params = urlAttrs.params && urlAttrs.params instanceof Map ? (Map) urlAttrs.params : [:]
+        HttpServletRequest req = (HttpServletRequest) getProperty('request')
+        HttpServletResponse res = (HttpServletResponse) getProperty('response')
         def flowExecutionKey = req.getAttribute('flowExecutionKey')
         if (flowExecutionKey) {
             if (attrs.controller == null && attrs.action == null && attrs.url == null && attrs.uri == null) {

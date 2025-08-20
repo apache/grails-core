@@ -139,13 +139,13 @@ class HalJsonRenderer<T> extends AbstractLinkingRenderer<T> {
                     }
                     else {
                         final writtenObjects = [] as Set
-                        call(EMBEDDED_ATTRIBUTE, ((Collection)object)) { o ->
+                        call(EMBEDDED_ATTRIBUTE, ((Collection) object)) { o ->
                             if (o) {
                                 if (isDomainResource(o.getClass())) {
-                                    writeDomainWithEmbeddedAndLinks(context, o.class, o, (StreamingJsonBuilder.StreamingJsonDelegate)delegate, context.locale, mimeType, writtenObjects
+                                    writeDomainWithEmbeddedAndLinks(context, o.class, o, (StreamingJsonBuilder.StreamingJsonDelegate) delegate, context.locale, mimeType, writtenObjects
                                             , new Stack())
                                 } else {
-                                    writeSimpleObjectAndLink(o, context, (StreamingJsonBuilder.StreamingJsonDelegate)delegate, mimeType)
+                                    writeSimpleObjectAndLink(o, context, (StreamingJsonBuilder.StreamingJsonDelegate) delegate, mimeType)
                                 }
                             }
                         }
@@ -171,13 +171,13 @@ class HalJsonRenderer<T> extends AbstractLinkingRenderer<T> {
 
     protected renderEmbeddedAttributes(StreamingJsonBuilder.StreamingJsonDelegate writer, object, RenderContext context, MimeType mimeType) {
         final writtenObjects = [] as Set
-        writer.call(collectionName, ((Collection)object)) { o ->
+        writer.call(collectionName, ((Collection) object)) { o ->
             if (o) {
                 if (isDomainResource(o.getClass())) {
-                    writeDomainWithEmbeddedAndLinks(context, o.class, o, (StreamingJsonBuilder.StreamingJsonDelegate)delegate, context.locale, mimeType, writtenObjects
+                    writeDomainWithEmbeddedAndLinks(context, o.class, o, (StreamingJsonBuilder.StreamingJsonDelegate) delegate, context.locale, mimeType, writtenObjects
                             , new Stack())
                 } else {
-                    writeSimpleObjectAndLink(o, context, (StreamingJsonBuilder.StreamingJsonDelegate)delegate, mimeType)
+                    writeSimpleObjectAndLink(o, context, (StreamingJsonBuilder.StreamingJsonDelegate) delegate, mimeType)
                 }
             }
         }
@@ -266,7 +266,7 @@ class HalJsonRenderer<T> extends AbstractLinkingRenderer<T> {
                                 final associatedEntity = property.associatedEntity
                                 if (associatedEntity) {
                                     writtenObjects << value
-                                    writeDomainWithEmbeddedAndLinks(context, associatedEntity.javaClass, value, (StreamingJsonBuilder.StreamingJsonDelegate)delegate , locale, null, writtenObjects,
+                                    writeDomainWithEmbeddedAndLinks(context, associatedEntity.javaClass, value, (StreamingJsonBuilder.StreamingJsonDelegate) delegate , locale, null, writtenObjects,
                                             referenceStack)
                                 }
 
@@ -279,7 +279,7 @@ class HalJsonRenderer<T> extends AbstractLinkingRenderer<T> {
                             final associatedEntity = property.associatedEntity
                             if (associatedEntity) {
                                 writtenObjects << obj
-                                writeDomainWithEmbeddedAndLinks(context, associatedEntity.javaClass, obj, (StreamingJsonBuilder.StreamingJsonDelegate)delegate, locale, null, writtenObjects,
+                                writeDomainWithEmbeddedAndLinks(context, associatedEntity.javaClass, obj, (StreamingJsonBuilder.StreamingJsonDelegate) delegate, locale, null, writtenObjects,
                                         referenceStack)
                             }
                         }
@@ -338,7 +338,7 @@ class HalJsonRenderer<T> extends AbstractLinkingRenderer<T> {
     }
 
     protected void writeDomainProperty(value, String propertyName, jsonWriter) {
-        StreamingJsonBuilder.StreamingJsonDelegate builder = (StreamingJsonBuilder.StreamingJsonDelegate)jsonWriter
+        StreamingJsonBuilder.StreamingJsonDelegate builder = (StreamingJsonBuilder.StreamingJsonDelegate) jsonWriter
         builder.call(propertyName, value)
     }
 }

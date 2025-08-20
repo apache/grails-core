@@ -133,7 +133,7 @@ trait RestResponder {
                 statusCode = statusValue.intValue()
             } else {
                 if (statusValue instanceof HttpStatus) {
-                    statusCode = ((HttpStatus)statusValue).value()
+                    statusCode = ((HttpStatus) statusValue).value()
                 } else {
                     statusCode = statusValue.toString().toInteger()
                 }
@@ -147,7 +147,7 @@ trait RestResponder {
             value = proxyHandler.unwrapIfProxy(value)
         }
 
-        final webRequest = ((Controller)this).getWebRequest()
+        final webRequest = ((Controller) this).getWebRequest()
         List<String> formats = calculateFormats(webRequest.actionName, value, args)
         final response = webRequest.getCurrentResponse()
         MimeType[] mimeTypes = getResponseFormat(response)
@@ -225,7 +225,7 @@ trait RestResponder {
     }
 
     private callRender(Map args) {
-        ((ResponseRenderer)this).render(args)
+        ((ResponseRenderer) this).render(args)
     }
 
     private List<String> calculateFormats(String actionName, value, Map args) {

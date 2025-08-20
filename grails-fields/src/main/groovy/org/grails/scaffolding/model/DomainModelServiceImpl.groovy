@@ -71,12 +71,12 @@ class DomainModelServiceImpl implements DomainModelService {
         }
         Object scaffoldProp = GrailsClassUtils.getStaticPropertyValue(domainClass.javaClass, 'scaffold')
         if (scaffoldProp instanceof Map) {
-            Map scaffold = (Map)scaffoldProp
+            Map scaffold = (Map) scaffoldProp
             if (scaffold.containsKey('exclude')) {
                 if (scaffold.exclude instanceof Collection) {
-                    blacklist.addAll((Collection)scaffold.exclude)
+                    blacklist.addAll((Collection) scaffold.exclude)
                 } else if (scaffold.exclude instanceof String) {
-                    blacklist.add((String)scaffold.exclude)
+                    blacklist.add((String) scaffold.exclude)
                 }
             }
         }
@@ -153,7 +153,7 @@ class DomainModelServiceImpl implements DomainModelService {
         getInputProperties(domainClass).each { DomainProperty domainProperty ->
             PersistentProperty property = domainProperty.persistentProperty
             if (property instanceof Embedded) {
-                getInputProperties(((Embedded)property).associatedEntity).each { DomainProperty embedded ->
+                getInputProperties(((Embedded) property).associatedEntity).each { DomainProperty embedded ->
                     embedded.rootProperty = domainProperty
                     if (closure.call(embedded)) {
                         properties.add(embedded)

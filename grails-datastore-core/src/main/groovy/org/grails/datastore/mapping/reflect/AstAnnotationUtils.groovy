@@ -183,7 +183,7 @@ class AstAnnotationUtils {
         if (members != null && !members.isEmpty()) {
             for (Map.Entry<String, Object> memberEntry : members.entrySet()) {
                 Object value = memberEntry.getValue()
-                annotationToAdd.setMember(memberEntry.getKey(), value instanceof Expression ? (Expression)value : new ConstantExpression(value))
+                annotationToAdd.setMember(memberEntry.getKey(), value instanceof Expression ? (Expression) value : new ConstantExpression(value))
             }
         }
         return annotationToAdd

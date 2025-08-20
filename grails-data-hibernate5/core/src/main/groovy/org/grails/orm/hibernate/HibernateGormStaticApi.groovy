@@ -81,7 +81,7 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
 
     @Override
     GrailsHibernateTemplate getHibernateTemplate() {
-        return (GrailsHibernateTemplate)super.getHibernateTemplate()
+        return (GrailsHibernateTemplate) super.getHibernateTemplate()
     }
 
     @Override
@@ -110,7 +110,7 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
             )
 
             HibernateHqlQuery hibernateQuery = new HibernateHqlQuery(
-                    new HibernateSession((HibernateDatastore)datastore, sessionFactory),
+                    new HibernateSession((HibernateDatastore) datastore, sessionFactory),
                     persistentEntity,
                     query
             )
@@ -141,14 +141,14 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
     @Override
     GrailsCriteria createCriteria() {
         def builder = new HibernateCriteriaBuilder(persistentClass, sessionFactory)
-        builder.datastore = (AbstractHibernateDatastore)datastore
+        builder.datastore = (AbstractHibernateDatastore) datastore
         builder.conversionService = conversionService
         return builder
     }
 
     @Override
     D lock(Serializable id) {
-        (D)hibernateTemplate.lock((Class)persistentClass, convertIdentifier(id), LockMode.PESSIMISTIC_WRITE)
+        (D) hibernateTemplate.lock((Class)persistentClass, convertIdentifier(id), LockMode.PESSIMISTIC_WRITE)
     }
 
     @Override
@@ -212,7 +212,7 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
     }
 
     protected <T> T withQueryEvents(Query query, Closure<T> callable) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore)datastore
+        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
 
         def eventPublisher = hibernateDatastore.applicationEventPublisher
 
@@ -228,7 +228,7 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
     @Override
     protected void firePostQueryEvent(Session session, Criteria criteria, Object result) {
         if (result instanceof List) {
-            datastore.applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, new HibernateQuery(criteria, persistentEntity), (List)result))
+            datastore.applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, new HibernateQuery(criteria, persistentEntity), (List) result))
         }
         else {
             datastore.applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, new HibernateQuery(criteria, persistentEntity), Collections.singletonList(result)))

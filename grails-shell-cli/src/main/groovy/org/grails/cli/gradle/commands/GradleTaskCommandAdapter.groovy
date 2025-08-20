@@ -51,7 +51,7 @@ class GradleTaskCommandAdapter implements ProfileCommand {
     CommandDescription getDescription() {
         String description
         if (adapted instanceof Described) {
-            description = ((Described)adapted).description
+            description = ((Described) adapted).description
         }
         else {
             description = ''

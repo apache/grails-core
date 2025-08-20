@@ -98,7 +98,7 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
     @Override
     void setApplicationContext(ApplicationContext applicationContext) {
         if (applicationContext instanceof WebApplicationContext) {
-            WebApplicationContext wac = (WebApplicationContext)applicationContext
+            WebApplicationContext wac = (WebApplicationContext) applicationContext
             Holders.setServletContext(wac.servletContext)
             Holders.addApplicationDiscoveryStrategy(new ServletEnvironmentGrailsApplicationDiscoveryStrategy(wac.servletContext, applicationContext))
 

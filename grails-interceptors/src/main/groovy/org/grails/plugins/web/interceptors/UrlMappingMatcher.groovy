@@ -163,7 +163,7 @@ class UrlMappingMatcher implements Matcher {
         def value = arguments.get(type)
         if (!value) return defaultPattern
         if (value instanceof Pattern) {
-            return (Pattern)value
+            return (Pattern) value
         }
         else {
             def str = value.toString()

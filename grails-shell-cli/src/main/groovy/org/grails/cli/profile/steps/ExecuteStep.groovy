@@ -46,7 +46,7 @@ class ExecuteStep extends AbstractStep {
                                   .getDeclaredConstructor().newInstance() : null
             if (cmd instanceof Command) {
                 if (cmd instanceof ProfileCommand) {
-                    ((ProfileCommand)cmd).profile = command.profile
+                    ((ProfileCommand) cmd).profile = command.profile
                 }
                 this.target = cmd
             }

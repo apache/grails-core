@@ -127,7 +127,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 datastore.applicationEventPublisher?.publishEvent(new ValidationEvent(datastore, target))
 
                 if (validator instanceof CascadingValidator) {
-                    ((CascadingValidator)validator).validate(target, errors, deepValidate)
+                    ((CascadingValidator) validator).validate(target, errors, deepValidate)
                 } else if (validator instanceof org.grails.datastore.gorm.validation.CascadingValidator) {
                     ((org.grails.datastore.gorm.validation.CascadingValidator) validator).validate(target, errors, deepValidate)
                 } else {
@@ -269,7 +269,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             if (flush) {
                 flushSession(session)
             }
-            return (D)merged
+            return (D) merged
         }
     }
 
@@ -309,7 +309,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         IHibernateTemplate t = this.hibernateTemplate
         for (PersistentProperty prop in entity.associations) {
             if (prop instanceof ToOne && !(prop instanceof Embedded)) {
-                ToOne toOne = (ToOne)prop
+                ToOne toOne = (ToOne) prop
 
                 def propertyName = prop.name
                 def propValue = reflector.getProperty(target, propertyName)
@@ -329,7 +329,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
                 def otherSideReflector = datastore.mappingContext.getEntityReflector(otherSide)
                 try {
-                    def id = (Serializable)otherSideReflector.getProperty(propValue, identity.name)
+                    def id = (Serializable) otherSideReflector.getProperty(propValue, identity.name)
                     if (id) {
                         final Object associatedInstance = t.get(prop.type, id)
                         if (associatedInstance) {
@@ -449,7 +449,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     @CompileDynamic
     protected void setErrorsOnInstance(Object target, Errors errors) {
         if (target instanceof GormValidateable) {
-            ((GormValidateable)target).setErrors(errors)
+            ((GormValidateable) target).setErrors(errors)
         }
         else {
             target."$GormProperties.ERRORS" = errors
@@ -480,7 +480,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         if (target.hasProperty(GormProperties.VERSION)) {
             Object version = target."${GormProperties.VERSION}"
             if (version instanceof Long) {
-                target."${GormProperties.VERSION}" = ++((Long)version)
+                target."${GormProperties.VERSION}" = ++((Long) version)
             }
         }
     }

@@ -91,7 +91,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
     @Override
     void visit(SourceUnit source, AnnotationNode annotationNode, AnnotatedNode annotatedNode) {
         if (annotatedNode instanceof MethodNode) {
-            MethodNode methodNode = (MethodNode)annotatedNode
+            MethodNode methodNode = (MethodNode) annotatedNode
             Map<String, ClassNode> genericsSpec = GenericsUtils.createGenericsSpec(methodNode.declaringClass)
             weaveNewMethod(source, annotationNode, methodNode.getDeclaringClass(), methodNode, genericsSpec)
         }
@@ -328,7 +328,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
                 body
         )
 
-        List<MethodNode> decoratedMethods = (List<MethodNode>)methodNode.getNodeMetaData(DECORATED_METHODS)
+        List<MethodNode> decoratedMethods = (List<MethodNode>) methodNode.getNodeMetaData(DECORATED_METHODS)
         if (decoratedMethods == null) {
             decoratedMethods = []
             methodNode.putNodeMetaData(DECORATED_METHODS, decoratedMethods)

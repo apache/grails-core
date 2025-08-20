@@ -156,7 +156,7 @@ abstract class GroovyScriptCommand extends Script implements ProfileCommand, Pro
         def result = run()
         notify("${name}End", executionContext)
         if (result instanceof Boolean) {
-            return ((Boolean)result)
+            return ((Boolean) result)
         }
         return true
     }
@@ -168,7 +168,7 @@ abstract class GroovyScriptCommand extends Script implements ProfileCommand, Pro
      * @param args The arguments to the command
      */
     def methodMissing(String name, args) {
-        Object[] argsArray = (Object[])args
+        Object[] argsArray = (Object[]) args
         def commandName = GrailsNameUtils.getScriptName(name)
         def context = executionContext
         if (profile?.hasCommand(context, commandName)) {

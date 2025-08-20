@@ -73,11 +73,11 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
             // transaction is HibernateTransactionManager.HibernateTransactionObject private class instance
             // always set to manual; the base class doesn't because the OSIV has already registered a session
 
-            SessionHolder holder = (SessionHolder)TransactionSynchronizationManager.getResource(sessionFactory)
+            SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
             holder.session.setHibernateFlushMode(FlushMode.MANUAL)
         }
         else if (defaultFlushMode != FlushMode.AUTO) {
-            SessionHolder holder = (SessionHolder)TransactionSynchronizationManager.getResource(sessionFactory)
+            SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
             holder.session.setHibernateFlushMode(defaultFlushMode)
         }
     }
@@ -87,7 +87,7 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
         super.doRollback(status)
         if (isJdbcBatchVersionedData) {
             try {
-                SessionHolder holder = (SessionHolder)TransactionSynchronizationManager.getResource(sessionFactory)
+                SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
                 if (holder != null) {
                     Session session = holder.getSession()
                     JdbcCoordinator jdbcCoordinator = ((SessionImplementor) session).getJdbcCoordinator()

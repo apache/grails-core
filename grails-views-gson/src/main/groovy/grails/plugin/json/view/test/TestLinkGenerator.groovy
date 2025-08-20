@@ -58,7 +58,7 @@ class TestLinkGenerator implements LinkGenerator {
         else {
             Map urlObject = params
             if (params.url instanceof Map) {
-                urlObject = (Map)params.url
+                urlObject = (Map) params.url
             }
 
             def resource = urlObject.resource
@@ -88,7 +88,7 @@ class TestLinkGenerator implements LinkGenerator {
             }
         }
         if (params.params instanceof Map) {
-            url.append(WebUtils.toQueryString((Map)params.params, encoding))
+            url.append(WebUtils.toQueryString((Map) params.params, encoding))
         }
         return url.toString()
     }

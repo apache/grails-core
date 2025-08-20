@@ -89,7 +89,7 @@ class FileSystemInteractionImpl implements FileSystemInteraction {
         callable.call()
         if (spec.from && spec.into) {
             if (spec.from instanceof Iterable) {
-                copyAll((Iterable)spec.from, spec.into)
+                copyAll((Iterable) spec.from, spec.into)
             }
             else {
                 copy(spec.from, spec.into)
@@ -157,8 +157,8 @@ class FileSystemInteractionImpl implements FileSystemInteraction {
      */
     @Override
     File file(Object path) {
-        if (path instanceof File) return (File)path
-        else if (path instanceof Resource) return ((Resource)path).file
+        if (path instanceof File) return (File) path
+        else if (path instanceof Resource) return ((Resource) path).file
         else {
             def baseDir = executionContext.baseDir
             new File(baseDir ?: new File('.'), path.toString())
@@ -217,7 +217,7 @@ class FileSystemInteractionImpl implements FileSystemInteraction {
     @Override
     Resource resource(Object path) {
         if (!path) return null
-        if (path instanceof Resource) return (Resource)path
+        if (path instanceof Resource) return (Resource) path
         def f = file(path)
         if (f?.exists() && f.isFile()) {
             return new FileSystemResource(f)

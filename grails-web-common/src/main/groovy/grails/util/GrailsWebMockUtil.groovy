@@ -77,7 +77,7 @@ class GrailsWebMockUtil {
      * @return The GrailsWebRequest instance
      */
     static GrailsWebRequest bindMockWebRequest(ApplicationContext ctx, MockHttpServletRequest request, MockHttpServletResponse response) {
-        ServletContext servletContext = ctx instanceof WebApplicationContext && ((WebApplicationContext)ctx).getServletContext() != null ? ((WebApplicationContext)ctx).getServletContext() : request.getServletContext()
+        ServletContext servletContext = ctx instanceof WebApplicationContext && ((WebApplicationContext) ctx).getServletContext() != null ? ((WebApplicationContext) ctx).getServletContext() : request.getServletContext()
         GrailsWebRequest webRequest = new GrailsWebRequest(request, response, servletContext, ctx)
         request.setAttribute(GrailsApplicationAttributes.WEB_REQUEST, webRequest)
         for (ParameterCreationListener listener: ctx.getBeansOfType(ParameterCreationListener).values()) {

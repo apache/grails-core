@@ -38,6 +38,6 @@ class ZonedDateTimeEncoder implements SimpleEncoder.TypeEncoder, ZonedDateTimeBs
 
     @Override
     void encode(BsonWriter writer, PersistentProperty property, Object value) {
-        write(writer, (ZonedDateTime)value)
+        write(writer, (ZonedDateTime) value)
     }
 }

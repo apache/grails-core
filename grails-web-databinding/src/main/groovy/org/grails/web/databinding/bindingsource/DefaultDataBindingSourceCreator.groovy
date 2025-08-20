@@ -51,7 +51,7 @@ class DefaultDataBindingSourceCreator implements DataBindingSourceCreator {
         if (bindingSource instanceof DataBindingSource) {
             dataBindingSource = (DataBindingSource) bindingSource
         } else if (bindingSource instanceof HttpServletRequest) {
-            dataBindingSource = createDataBindingSource(bindingTargetType, (HttpServletRequest)bindingSource)
+            dataBindingSource = createDataBindingSource(bindingTargetType, (HttpServletRequest) bindingSource)
         } else if (bindingSource instanceof Map) {
             dataBindingSource = new SimpleMapDataBindingSource(DataBindingUtils.convertPotentialGStrings((Map) bindingSource))
         } else if (bindingSource) {

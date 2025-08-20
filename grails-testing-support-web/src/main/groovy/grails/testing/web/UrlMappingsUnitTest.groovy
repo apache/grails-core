@@ -46,7 +46,7 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
 
     void configuredMockedControllers() {
         for (Class c : controllersToMock) {
-            final GrailsControllerClass controllerArtefact = (GrailsControllerClass)grailsApplication.addArtefact(ControllerArtefactHandler.TYPE, c)
+            final GrailsControllerClass controllerArtefact = (GrailsControllerClass) grailsApplication.addArtefact(ControllerArtefactHandler.TYPE, c)
             controllerArtefact.initialize()
             defineBeans {
                 "$controllerArtefact.name"(c) { bean ->
@@ -237,12 +237,12 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
         }
 
         if (assertions.controller) {
-            if (!checkController((String)assertions.controller, throwEx)) {
+            if (!checkController((String) assertions.controller, throwEx)) {
                 return false
             }
         }
         if (assertions.action) {
-            if (!checkAction((String)assertions.controller, (String)assertions.action, throwEx)) {
+            if (!checkAction((String) assertions.controller, (String) assertions.action, throwEx)) {
                 return false
             }
         }
@@ -264,7 +264,7 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
             if (mapping) mappingInfos << mapping
         }
         else {
-            mappingInfos = mappingsHolder.matchAll((String)url, request.method).toList()
+            mappingInfos = mappingsHolder.matchAll((String) url, request.method).toList()
         }
 
         if (mappingInfos.size() == 0) {
@@ -281,7 +281,7 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
             mapping.configure(webRequest)
             for (key in assertionKeys) {
                 if (assertions.containsKey(key)) {
-                    String expected = (String)assertions[key]
+                    String expected = (String) assertions[key]
                     String actual = mapping."${key}Name"
 
                     switch (key) {
@@ -419,7 +419,7 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
     }
 
     GrailsControllerClass getControllerClass(String controller) {
-        (GrailsControllerClass)grailsApplication.getArtefactByLogicalPropertyName(ControllerArtefactHandler.TYPE, controller)
+        (GrailsControllerClass) grailsApplication.getArtefactByLogicalPropertyName(ControllerArtefactHandler.TYPE, controller)
     }
 
     @CompileDynamic

@@ -56,10 +56,10 @@ class BasicCollectionTypeEncoder implements PropertyEncoder<Basic> {
             final boolean isSet = Set.isAssignableFrom(collectionType)
 
             if (isSet) {
-                codec = (Codec<Object>)codecRegistry.get(List)
+                codec = (Codec<Object>) codecRegistry.get(List)
             }
             else {
-                codec = (Codec<Object>)codecRegistry.get(collectionType)
+                codec = (Codec<Object>) codecRegistry.get(collectionType)
             }
             codec.encode(writer,  isSet ? value as List : value, encoderContext)
             def parent = parentAccess.entity

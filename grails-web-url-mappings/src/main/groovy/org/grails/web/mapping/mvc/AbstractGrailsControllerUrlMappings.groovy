@@ -57,7 +57,7 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
         this.urlConverter = urlConverter
         def controllerArtefacts = grailsApplication.getArtefacts(ControllerArtefactHandler.TYPE)
         for (GrailsClass gc in controllerArtefacts) {
-            registerController((GrailsControllerClass)gc)
+            registerController((GrailsControllerClass) gc)
         }
 
         for (Map.Entry<ControllerKey, GrailsControllerClass> entry: deferredMappings.entrySet()) {

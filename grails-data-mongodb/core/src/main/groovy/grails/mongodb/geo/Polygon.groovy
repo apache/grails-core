@@ -97,19 +97,19 @@ class Polygon extends Shape implements GeoJSON {
             }
             else if (coords[0] instanceof List)
             {
-                if (((List)coords[0])[0] instanceof Number) {
+                if (((List) coords[0])[0] instanceof Number) {
                     return new Polygon([fromSingleCoordsList(coords)]) // case (2) above
                 }
-                else if (((List)coords[0])[0] instanceof Point) {
+                else if (((List) coords[0])[0] instanceof Point) {
                     return new Polygon(coords.collect { poly_ring ->
                         // each is a List<Point>
-                        return fromSingleCoordsList((List<Point>)poly_ring)
+                        return fromSingleCoordsList((List<Point>) poly_ring)
                     }) // case (3) above
                 }
-                else if (((List)coords[0])[0] instanceof List && ((List)((List)coords[0])[0])[0] instanceof Number) {
+                else if (((List) coords[0])[0] instanceof List && ((List) ((List)coords[0])[0])[0] instanceof Number) {
                     return new Polygon(coords.collect { poly_ring ->
                         // each is a List<Point>
-                        return fromSingleCoordsList((List<List<Number>>)poly_ring)
+                        return fromSingleCoordsList((List<List<Number>>) poly_ring)
                     }) // case (4) above
                 }
                 else {
@@ -137,10 +137,10 @@ class Polygon extends Shape implements GeoJSON {
 
         return coords.collect {
             if (it instanceof Point) {
-                return (Point)it
+                return (Point) it
             }
             else if (it instanceof List) {
-                return Point.valueOf((List<Number>)it)
+                return Point.valueOf((List<Number>) it)
             }
             else {
                 throw new IllegalArgumentException("Invalid coordinates: $coords")

@@ -72,11 +72,11 @@ abstract class AbstractStringQueryImplementer extends AbstractReadOperationImple
         Expression expr = annotationNode.getMember('value')
         VariableScope scope = newMethodNode.variableScope
         if (expr instanceof GStringExpression) {
-            GStringExpression gstring = (GStringExpression)expr
+            GStringExpression gstring = (GStringExpression) expr
             SourceUnit sourceUnit = abstractMethodNode.declaringClass.module.context
             QueryStringTransformer transformer = createQueryStringTransformer(sourceUnit, scope)
             Expression transformed = transformer.transformQuery(gstring)
-            BlockStatement body = (BlockStatement)newMethodNode.code
+            BlockStatement body = (BlockStatement) newMethodNode.code
             Expression argMap = findArgsExpression(newMethodNode)
             if (argMap != null) {
                 transformed = args(transformed, argMap)

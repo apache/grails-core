@@ -75,7 +75,7 @@ class DataSourceConnectionSourcesFactoryBean implements InitializingBean, Factor
         DataSourceConnectionSourceFactory factory = new DataSourceConnectionSourceFactory()
         this.connectionSources = ConnectionSourcesInitializer.create(factory, configuration)
         if (applicationContext instanceof ConfigurableApplicationContext) {
-            ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext)applicationContext
+            ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext) applicationContext
             for (ConnectionSource<DataSource, ConnectionSourceSettings> connectionSource in connectionSources.allConnectionSources) {
                 if (connectionSource.name != ConnectionSource.DEFAULT) {
                     String suffix = "_${connectionSource.name}"

@@ -68,7 +68,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
      */
     boolean instanceOf(D o, Class cls) {
         if (o instanceof EntityProxy) {
-            o = (D)((EntityProxy)o).getTarget()
+            o = (D) ((EntityProxy)o).getTarget()
         }
         return o in cls
     }
@@ -191,7 +191,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
     Serializable ident(D instance) {
         PersistentProperty identity = persistentEntity.getIdentity()
         if (identity != null) {
-            return (Serializable)instance[identity.name]
+            return (Serializable) instance[identity.name]
         }
         else {
             PersistentProperty[] idProperties = persistentEntity.getCompositeIdentity()
@@ -205,7 +205,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
                                 idInstance, propertName, entityReflector.getProperty(instance, propertName)
                         )
                     }
-                    return (Serializable)idInstance
+                    return (Serializable) idInstance
                 }
             }
         }
@@ -273,7 +273,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
      */
     boolean isDirty(D instance, String fieldName) {
         if (instance instanceof DirtyCheckable) {
-            return ((DirtyCheckable)instance).hasChanged(fieldName)
+            return ((DirtyCheckable) instance).hasChanged(fieldName)
         }
         return true
     }
@@ -286,7 +286,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
      */
     boolean isDirty(D instance) {
         if (instance instanceof DirtyCheckable) {
-            return ((DirtyCheckable)instance).hasChanged() || DirtyCheckingSupport.areAssociationsDirty(persistentEntity, instance)
+            return ((DirtyCheckable) instance).hasChanged() || DirtyCheckingSupport.areAssociationsDirty(persistentEntity, instance)
         }
         return true
     }
@@ -299,7 +299,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
      */
     List getDirtyPropertyNames(D instance) {
         if (instance instanceof DirtyCheckable) {
-            return ((DirtyCheckable)instance).listDirtyPropertyNames()
+            return ((DirtyCheckable) instance).listDirtyPropertyNames()
         }
         return []
     }
@@ -312,7 +312,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
      */
     Object getPersistentValue(D instance, String fieldName) {
         if (instance instanceof DirtyCheckable) {
-            return ((DirtyCheckable)instance).getOriginalValue(fieldName)
+            return ((DirtyCheckable) instance).getOriginalValue(fieldName)
         }
         return null
     }
@@ -330,8 +330,8 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
                     ConnectionSources connectionSources = ((ConnectionSourcesProvider) datastore).connectionSources
                     String connectionSourceName = connectionSources.defaultConnectionSource.name
                     if (connectionSourceName != ConnectionSource.DEFAULT) {
-                        GormValidationApi<D> validationApi = GormEnhancer.findValidationApi((Class<D>)instance.getClass(), connectionSourceName)
-                        hasErrors = !validationApi.validate((D)instance, params)
+                        GormValidationApi<D> validationApi = GormEnhancer.findValidationApi((Class<D>) instance.getClass(), connectionSourceName)
+                        hasErrors = !validationApi.validate((D) instance, params)
                     }
                     else {
                         hasErrors = !validateable.validate(params)

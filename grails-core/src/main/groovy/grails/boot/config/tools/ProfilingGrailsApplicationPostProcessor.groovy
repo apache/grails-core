@@ -38,7 +38,7 @@ class ProfilingGrailsApplicationPostProcessor extends GrailsApplicationPostProce
 
     ProfilingGrailsApplicationPostProcessor(GrailsApplicationLifeCycle lifeCycle, ApplicationContext applicationContext, Class... classes) {
         super(lifeCycle, applicationContext, classes)
-        ((ConfigurableApplicationContext)applicationContext).beanFactory.addBeanPostProcessor(this)
+        ((ConfigurableApplicationContext) applicationContext).beanFactory.addBeanPostProcessor(this)
     }
 
     @Override

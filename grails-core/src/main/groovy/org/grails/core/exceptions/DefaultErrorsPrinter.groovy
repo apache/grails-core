@@ -172,7 +172,7 @@ class DefaultErrorsPrinter extends DefaultStackTracePrinter implements CodeSnipp
                 MultipleCompilationErrorsException mcee = start
                 Object message = mcee.getErrorCollector().getErrors().iterator().next()
                 if (message instanceof SyntaxErrorMessage) {
-                    SyntaxErrorMessage sem = (SyntaxErrorMessage)message
+                    SyntaxErrorMessage sem = (SyntaxErrorMessage) message
                     final tmp = new FileSystemResource(sem.getCause().getSourceLocator())
                     if (tmp.exists()) {
                         res = tmp
@@ -197,7 +197,7 @@ class DefaultErrorsPrinter extends DefaultStackTracePrinter implements CodeSnipp
             MultipleCompilationErrorsException mcee = cause
             Object message = mcee.getErrorCollector().getErrors().iterator().next()
             if (message instanceof SyntaxErrorMessage) {
-                SyntaxErrorMessage sem = (SyntaxErrorMessage)message
+                SyntaxErrorMessage sem = (SyntaxErrorMessage) message
                 lineNumber = sem.getCause().getLine()
             }
         }

@@ -146,7 +146,7 @@ class BsonPersistentEntityCodec implements Codec {
                 }
 
                 if (isIdentifierProperty(name)) {
-                    getPropertyDecoder(Identity).decode(bsonReader, (Identity)persistentEntity.identity, access, decoderContext, codecRegistry)
+                    getPropertyDecoder(Identity).decode(bsonReader, (Identity) persistentEntity.identity, access, decoderContext, codecRegistry)
                     Object cachedInstance = retrieveCachedInstance(access)
 
                     if (cachedInstance != null) {
@@ -163,12 +163,12 @@ class BsonPersistentEntityCodec implements Codec {
                             access.setPropertyNoConversion(property.name, bsonReader.readString())
                         }
                         else {
-                            getPropertyDecoder((Class<? extends PersistentProperty>)propKind)?.decode(bsonReader, property, access, decoderContext, codecRegistry)
+                            getPropertyDecoder((Class<? extends PersistentProperty>) propKind)?.decode(bsonReader, property, access, decoderContext, codecRegistry)
                         }
 
                     }
                     else if (!abortReading && hasDynamicAttributes) {
-                        readSchemaless(bsonReader, ((DynamicAttributes)instance), name, decoderContext)
+                        readSchemaless(bsonReader, ((DynamicAttributes) instance), name, decoderContext)
                     }
                     else {
                         bsonReader.skipValue()
@@ -177,7 +177,7 @@ class BsonPersistentEntityCodec implements Codec {
                 }
             }
             else if (!abortReading) {
-                readSchemaless(bsonReader, ((DynamicAttributes)instance), name, decoderContext)
+                readSchemaless(bsonReader, ((DynamicAttributes) instance), name, decoderContext)
             }
             else {
                 bsonReader.skipValue()
@@ -210,7 +210,7 @@ class BsonPersistentEntityCodec implements Codec {
         if (includeIdentifier) {
             def id = access.getIdentifier()
             if (id != null) {
-                getPropertyEncoder(Identity).encode(writer, (Identity)entity.identity, id, access, encoderContext, codecRegistry)
+                getPropertyEncoder(Identity).encode(writer, (Identity) entity.identity, id, access, encoderContext, codecRegistry)
             }
         }
 
@@ -218,7 +218,7 @@ class BsonPersistentEntityCodec implements Codec {
             def propKind = prop.getClass().superclass
             Object v = access.getProperty(prop.name)
             if (v != null) {
-                PropertyEncoder<? extends PersistentProperty> encoder = getPropertyEncoder((Class<? extends PersistentProperty>)propKind)
+                PropertyEncoder<? extends PersistentProperty> encoder = getPropertyEncoder((Class<? extends PersistentProperty>) propKind)
                 encoder?.encode(writer, (PersistentProperty) prop, v, access, encoderContext, codecRegistry)
             }
         }
@@ -251,7 +251,7 @@ class BsonPersistentEntityCodec implements Codec {
         if (value instanceof DirtyCheckable) {
             BsonWriter writer = new BsonDocumentWriter(update)
             writer.writeStartDocument()
-            DirtyCheckable dirty = (DirtyCheckable)value
+            DirtyCheckable dirty = (DirtyCheckable) value
             Set<String> processed = []
 
             def dirtyProperties = new ArrayList<String>(dirty.listDirtyPropertyNames())
@@ -283,7 +283,7 @@ class BsonPersistentEntityCodec implements Codec {
                     if (v != null) {
                         if (prop instanceof Embedded) {
                             writer.writeName(prop.name)
-                            encodeUpdate(v, createEntityAccess(((Embedded)prop).associatedEntity, v), encoderContext, true)
+                            encodeUpdate(v, createEntityAccess(((Embedded) prop).associatedEntity, v), encoderContext, true)
                         }
                         else if (prop instanceof EmbeddedCollection) {
                             // TODO: embedded collections
@@ -291,7 +291,7 @@ class BsonPersistentEntityCodec implements Codec {
                         else {
                             def propKind = prop.getClass().superclass
                             if (prop instanceof PersistentProperty) {
-                                PropertyEncoder<? extends PersistentProperty> propertyEncoder = getPropertyEncoder((Class<? extends PersistentProperty>)propKind)
+                                PropertyEncoder<? extends PersistentProperty> propertyEncoder = getPropertyEncoder((Class<? extends PersistentProperty>) propKind)
                                 propertyEncoder?.encode(writer, prop, v, access, encoderContext, codecRegistry)
                             }
                         }
@@ -314,7 +314,7 @@ class BsonPersistentEntityCodec implements Codec {
                     }
                     else {
                         writer.writeName(attr)
-                        Codec<Object> codec = (Codec<Object>)codecRegistry.get(v.getClass())
+                        Codec<Object> codec = (Codec<Object>) codecRegistry.get(v.getClass())
                         codec.encode(writer, v, encoderContext)
                     }
                 }
@@ -341,7 +341,7 @@ class BsonPersistentEntityCodec implements Codec {
         for (name in attributes.keySet()) {
             writer.writeName(name)
             Object v = attributes.get(name)
-            Codec<Object> codec = (Codec<Object>)codecRegistry.get(v.getClass())
+            Codec<Object> codec = (Codec<Object>) codecRegistry.get(v.getClass())
             codec.encode(writer, v, encoderContext)
         }
     }
@@ -409,7 +409,7 @@ class BsonPersistentEntityCodec implements Codec {
 
         def codec = codecRegistry.get(targetClass)
 
-        BsonValue bsonValue = (BsonValue)codec.decode(bsonReader, decoderContext)
+        BsonValue bsonValue = (BsonValue) codec.decode(bsonReader, decoderContext)
         if (bsonValue != null) {
 
             def converter = CodecExtensions.getBsonConverter(bsonValue.getClass())

@@ -49,7 +49,7 @@ class SessionTenantResolver implements TenantResolver {
 
             def tenantId = requestAttributes.getAttribute(attributeName, RequestAttributes.SCOPE_SESSION)
             if (tenantId instanceof Serializable) {
-                return (Serializable)tenantId
+                return (Serializable) tenantId
             }
             else {
                 throw new TenantNotFoundException()

@@ -68,7 +68,7 @@ class InMemoryConnectionSources<T, S extends ConnectionSourceSettings> extends A
             throw new IllegalArgumentException('Argument [configuration] cannot be null')
         }
 
-        ConnectionSource<T, S> connectionSource = connectionSourceFactory.createRuntime(name, configuration, (S)this.defaultConnectionSource.getSettings())
+        ConnectionSource<T, S> connectionSource = connectionSourceFactory.createRuntime(name, configuration, (S) this.defaultConnectionSource.getSettings())
         if (connectionSource == null) {
             throw new IllegalStateException('ConnectionSource factory returned null')
         }

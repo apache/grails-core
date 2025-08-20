@@ -133,9 +133,9 @@ class CoreGrailsPlugin extends Plugin {
     @Override
     @CompileStatic
     void onChange(Map<String, Object> event) {
-        GenericApplicationContext applicationContext = (GenericApplicationContext)this.applicationContext
+        GenericApplicationContext applicationContext = (GenericApplicationContext) this.applicationContext
         if (event.source instanceof Resource) {
-            Resource res = (Resource)event.source
+            Resource res = (Resource) event.source
             if (res.filename.endsWith('.xml')) {
                 def xmlBeans = new DefaultListableBeanFactory()
                 new XmlBeanDefinitionReader(xmlBeans).loadBeanDefinitions(res)

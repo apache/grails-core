@@ -59,6 +59,6 @@ class GormAsyncStaticApi<D> implements PromiseDecoratorProvider {
     @CompileStatic
     <T> Promise<T> task(Closure<T> callable) {
         callable.delegate = staticApi.gormPersistentEntity.javaClass
-        (Promise<T>)Promises.createPromise(callable, decorators)
+        (Promise<T>) Promises.createPromise(callable, decorators)
     }
 }

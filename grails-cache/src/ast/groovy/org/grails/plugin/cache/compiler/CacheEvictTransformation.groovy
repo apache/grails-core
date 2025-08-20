@@ -73,7 +73,7 @@ class CacheEvictTransformation extends AbstractCacheTransformation {
 
         Expression allEntries = annotationNode.getMember('allEntries')
         if (allEntries instanceof ConstantExpression) {
-            clearAllEntries = ((ConstantExpression)allEntries).isTrueExpression()
+            clearAllEntries = ((ConstantExpression) allEntries).isTrueExpression()
             annotationNode.members.remove('allEntries')
         }
 

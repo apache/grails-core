@@ -61,7 +61,7 @@ class MongodbGrailsPlugin extends Plugin {
         }
         initializer.setSecondaryDatastore(hasHibernatePlugin())
 
-        return initializer.getBeanDefinitions((BeanDefinitionRegistry)applicationContext)
+        return initializer.getBeanDefinitions((BeanDefinitionRegistry) applicationContext)
     }
 
     @CompileStatic

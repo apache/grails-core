@@ -290,10 +290,10 @@ class Entity<P extends Property> {
 
     def propertyMissing(String name, Object val) {
         if (val instanceof Closure) {
-            property(name, (Closure)val)
+            property(name, (Closure) val)
         }
         else if (val instanceof Property) {
-            propertyConfigs[name] = ((P)val)
+            propertyConfigs[name] = ((P) val)
         }
         else {
             throw new MissingPropertyException(name, Entity)
@@ -304,10 +304,10 @@ class Entity<P extends Property> {
     def methodMissing(String name, Object args) {
         if (args && args.getClass().isArray()) {
             if (args[0] instanceof Closure) {
-                property(name, (Closure)args[0])
+                property(name, (Closure) args[0])
             }
             else if (args[0] instanceof Property) {
-                propertyConfigs[name] = (P)args[0]
+                propertyConfigs[name] = (P) args[0]
             }
             else if (args[0] instanceof Map) {
                 P property = getOrInitializePropertyConfig(name)
@@ -315,7 +315,7 @@ class Entity<P extends Property> {
                 if (args[-1] instanceof Closure) {
                     Property.configureExisting(
                             property,
-                            ((Closure)args[-1])
+                            ((Closure) args[-1])
                     )
 
                 }
@@ -336,7 +336,7 @@ class Entity<P extends Property> {
             // apply global constraints constraints
             P globalConstraints = propertyConfigs.get('*')
             if (globalConstraints != null) {
-                pc = (P)globalConstraints.clone()
+                pc = (P) globalConstraints.clone()
             }
         }
         else {
@@ -350,7 +350,7 @@ class Entity<P extends Property> {
     }
 
     protected P newProperty() {
-        (P)new Property()
+        (P) new Property()
     }
 
     protected P cloneGlobalConstraint() {

@@ -80,18 +80,18 @@ class HibernateGrailsPlugin extends Plugin {
                         Class.forName(source)
                     }
                 })
-                ((PropertySourcesConfig)config).setConversionService(conversionService)
+                ((PropertySourcesConfig) config).setConversionService(conversionService)
             }
 
             def domainClasses = grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE)
                                                  .collect() { GrailsClass cls -> cls.clazz }
 
-            def springInitializer = new HibernateDatastoreSpringInitializer((PropertyResolver)config, domainClasses)
+            def springInitializer = new HibernateDatastoreSpringInitializer((PropertyResolver) config, domainClasses)
             springInitializer.enableReload = Environment.isDevelopmentMode()
             springInitializer.registerApplicationIfNotPresent = false
             springInitializer.grailsPlugin = true
             dataSourceNames = springInitializer.dataSources
-            def beans = springInitializer.getBeanDefinitions((BeanDefinitionRegistry)applicationContext)
+            def beans = springInitializer.getBeanDefinitions((BeanDefinitionRegistry) applicationContext)
 
             beans.delegate = delegate
             beans.call()

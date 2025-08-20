@@ -53,7 +53,7 @@ class GrailsCorsConfiguration {
                 mappings.each { String key, Object value ->
                     GrailsDefaultCorsConfiguration corsConfiguration = new GrailsDefaultCorsConfiguration(grailsCorsMapping)
                     if (value instanceof Map) {
-                        TypeConvertingMap config = new TypeConvertingMap((Map)value)
+                        TypeConvertingMap config = new TypeConvertingMap((Map) value)
                         parseConfigList(config, 'allowedOrigins', corsConfiguration::setAllowedOrigins)
                         parseConfigList(config, 'allowedMethods', corsConfiguration::setAllowedMethods)
                         parseConfigList(config, 'allowedHeaders', corsConfiguration::setAllowedHeaders)

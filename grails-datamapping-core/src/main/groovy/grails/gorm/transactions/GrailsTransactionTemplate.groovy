@@ -52,11 +52,11 @@ class GrailsTransactionTemplate {
     }
 
     GrailsTransactionTemplate(PlatformTransactionManager transactionManager, TransactionDefinition transactionDefinition) {
-        this(transactionManager, transactionDefinition instanceof TransactionAttribute ? (TransactionAttribute)transactionDefinition : new GrailsTransactionAttribute(transactionDefinition))
+        this(transactionManager, transactionDefinition instanceof TransactionAttribute ? (TransactionAttribute) transactionDefinition : new GrailsTransactionAttribute(transactionDefinition))
     }
 
     GrailsTransactionTemplate(PlatformTransactionManager transactionManager, TransactionAttribute transactionAttribute) {
-        this(transactionManager, transactionAttribute instanceof CustomizableRollbackTransactionAttribute ? (CustomizableRollbackTransactionAttribute)transactionAttribute : new CustomizableRollbackTransactionAttribute(transactionAttribute))
+        this(transactionManager, transactionAttribute instanceof CustomizableRollbackTransactionAttribute ? (CustomizableRollbackTransactionAttribute) transactionAttribute : new CustomizableRollbackTransactionAttribute(transactionAttribute))
     }
 
     GrailsTransactionTemplate(PlatformTransactionManager transactionManager, CustomizableRollbackTransactionAttribute transactionAttribute) {
@@ -122,7 +122,7 @@ class GrailsTransactionTemplate {
             if (result instanceof ThrowableHolder) {
                 throw result.getThrowable()
             } else {
-                return (T)result
+                return (T) result
             }
         }
         catch (ThrowableHolderException e) {

@@ -133,10 +133,10 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
     ApplicationEventPublisher findEventPublisher(BeanDefinitionRegistry beanDefinitionRegistry) {
         ApplicationEventPublisher eventPublisher
         if (beanDefinitionRegistry instanceof ConfigurableApplicationContext) {
-            eventPublisher = new ConfigurableApplicationContextEventPublisher((ConfigurableApplicationContext)beanDefinitionRegistry)
+            eventPublisher = new ConfigurableApplicationContextEventPublisher((ConfigurableApplicationContext) beanDefinitionRegistry)
         }
         else if (resourcePatternResolver.resourceLoader instanceof ConfigurableApplicationContext) {
-            eventPublisher = new ConfigurableApplicationContextEventPublisher((ConfigurableApplicationContext)resourcePatternResolver.resourceLoader)
+            eventPublisher = new ConfigurableApplicationContextEventPublisher((ConfigurableApplicationContext) resourcePatternResolver.resourceLoader)
         }
         else {
             eventPublisher = new DefaultApplicationEventPublisher()
@@ -152,10 +152,10 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
     MessageSource findMessageSource(BeanDefinitionRegistry beanDefinitionRegistry) {
         MessageSource messageSource
         if (beanDefinitionRegistry instanceof MessageSource) {
-            messageSource = (MessageSource)beanDefinitionRegistry
+            messageSource = (MessageSource) beanDefinitionRegistry
         }
         else if (resourcePatternResolver.resourceLoader instanceof MessageSource) {
-            messageSource = (MessageSource)resourcePatternResolver.resourceLoader
+            messageSource = (MessageSource) resourcePatternResolver.resourceLoader
         }
         else {
             messageSource = new StaticMessageSource()

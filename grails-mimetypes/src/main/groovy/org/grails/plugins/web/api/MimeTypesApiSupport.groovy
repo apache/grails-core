@@ -40,11 +40,11 @@ import org.grails.web.util.GrailsApplicationAttributes
 class MimeTypesApiSupport {
 
     def <T> T withFormat(HttpServletRequest request, Closure<T> callable) {
-        return (T)withFormatInternal(request, getDefinedFormats(callable))
+        return (T) withFormatInternal(request, getDefinedFormats(callable))
     }
 
     def <T> T withFormat(HttpServletResponse response, Closure<T> callable) {
-        return (T)withFormatInternal(response, getDefinedFormats(callable))
+        return (T) withFormatInternal(response, getDefinedFormats(callable))
     }
 
     protected Object withFormatInternal(formatProvider, LinkedHashMap<String, Object> formats) {

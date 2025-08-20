@@ -34,7 +34,7 @@ abstract class AbstractStructuredDateBindingEditor<T> implements StructuredBindi
         final prefix = propertyName + '_'
         assert fieldValues.containsProperty(prefix + 'year'), "Can't populate a date without a year"
 
-        def yearString = (String)fieldValues.getPropertyValue(prefix + 'year')
+        def yearString = (String) fieldValues.getPropertyValue(prefix + 'year')
         def monthString = (String) fieldValues.getPropertyValue(prefix + 'month')
         def dayString = (String) fieldValues.getPropertyValue(prefix + 'day')
         def hourString = (String) fieldValues.getPropertyValue(prefix + 'hour')

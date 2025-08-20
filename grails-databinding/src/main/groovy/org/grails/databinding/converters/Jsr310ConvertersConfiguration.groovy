@@ -57,7 +57,7 @@ class Jsr310ConvertersConfiguration {
         new FormattedValueConverter() {
             @Override
             Object convert(Object value, String format) {
-                OffsetDateTime.parse((CharSequence)value, DateTimeFormatter.ofPattern(format))
+                OffsetDateTime.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
             }
 
             @Override
@@ -73,7 +73,7 @@ class Jsr310ConvertersConfiguration {
             @Override
             OffsetDateTime convert(Object value) {
                 convert(value) { String format ->
-                    OffsetDateTime.parse((CharSequence)value, DateTimeFormatter.ofPattern(format))
+                    OffsetDateTime.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
                 }
             }
 
@@ -120,7 +120,7 @@ class Jsr310ConvertersConfiguration {
             @Override
             OffsetTime convert(Object value) {
                 convert(value) { String format ->
-                    OffsetTime.parse((CharSequence)value, DateTimeFormatter.ofPattern(format))
+                    OffsetTime.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
                 }
             }
 
@@ -167,7 +167,7 @@ class Jsr310ConvertersConfiguration {
             @Override
             LocalDateTime convert(Object value) {
                 convert(value) { String format ->
-                    LocalDateTime.parse((CharSequence)value, DateTimeFormatter.ofPattern(format))
+                    LocalDateTime.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
                 }
             }
 
@@ -214,7 +214,7 @@ class Jsr310ConvertersConfiguration {
             @Override
             LocalDate convert(Object value) {
                 convert(value) { String format ->
-                    LocalDate.parse((CharSequence)value, DateTimeFormatter.ofPattern(format))
+                    LocalDate.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
                 }
             }
 
@@ -261,7 +261,7 @@ class Jsr310ConvertersConfiguration {
             @Override
             LocalTime convert(Object value) {
                 convert(value) { String format ->
-                    LocalTime.parse((CharSequence)value, DateTimeFormatter.ofPattern(format))
+                    LocalTime.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
                 }
             }
 
@@ -292,7 +292,7 @@ class Jsr310ConvertersConfiguration {
         new FormattedValueConverter() {
             @Override
             Object convert(Object value, String format) {
-                ZonedDateTime.parse((CharSequence)value, DateTimeFormatter.ofPattern(format))
+                ZonedDateTime.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
             }
 
             @Override
@@ -308,7 +308,7 @@ class Jsr310ConvertersConfiguration {
             @Override
             ZonedDateTime convert(Object value) {
                 convert(value) { String format ->
-                    ZonedDateTime.parse((CharSequence)value, DateTimeFormatter.ofPattern(format))
+                    ZonedDateTime.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
                 }
             }
 
@@ -405,7 +405,7 @@ class Jsr310ConvertersConfiguration {
                 formatStrings.each { String format ->
                     if (dateValue == null) {
                         try {
-                            dateValue = (T)callable.call(format)
+                            dateValue = (T) callable.call(format)
                         } catch (Exception e) {
                             firstException = firstException ?: e
                         }

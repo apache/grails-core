@@ -99,7 +99,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
 
         JsonOutput.JsonWritable jsonWritable = viewHelper.render(object, arguments, customizer)
         if (object instanceof Iterable) {
-            Iterable iterable = (Iterable)object
+            Iterable iterable = (Iterable) object
             int size = iterable.size()
             Object firstObject = size > 0 ? iterable.first() : null
             DefaultHalViewHelper helper = this
@@ -116,7 +116,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                         call(EMBEDDED_ATTRIBUTE, jsonWritable)
 
                         if (iterable instanceof PagedResultList) {
-                            call('totalCount', ((PagedResultList)iterable).getTotalCount())
+                            call('totalCount', ((PagedResultList) iterable).getTotalCount())
                         }
                     }
                     return out
@@ -137,12 +137,12 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
      */
     @Override
     JsonOutput.JsonWritable render(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer) {
-        render(object, (Map)null, customizer)
+        render(object, (Map) null, customizer)
     }
 
     @Override
     JsonOutput.JsonWritable render(Object object) {
-        render(object, (Map)null, (Closure)null)
+        render(object, (Map) null, (Closure) null)
     }
 
     @Override
@@ -164,7 +164,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
         def mimeType = view.mimeUtility?.getMimeTypeForExtension(name)
         this.contentType = mimeType?.name ?: name
         if (view instanceof HttpView) {
-            ((HttpView)view).response?.contentType(contentType)
+            ((HttpView) view).response?.contentType(contentType)
         }
     }
 
@@ -177,7 +177,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
     void links(Closure callable) {
         jsonDelegate.call(LINKS_ATTRIBUTE) {
 
-            callable.setDelegate(new HalStreamingJsonDelegate(this, (StreamingJsonDelegate)delegate))
+            callable.setDelegate(new HalStreamingJsonDelegate(this, (StreamingJsonDelegate) delegate))
             callable.call()
         }
     }
@@ -199,7 +199,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
             for (entry in model.entrySet()) {
                 def object = entry.value
                 if (object instanceof Iterable) {
-                    ((StreamingJsonDelegate) delegate).call(entry.key.toString(), (Iterable)object) { o ->
+                    ((StreamingJsonDelegate) delegate).call(entry.key.toString(), (Iterable) object) { o ->
                         ((StreamingJsonDelegate) delegate).call(HREF_ATTRIBUTE, linkGenerator.link(resource: o, absolute: true))
                         if (locale != null) {
                             ((StreamingJsonDelegate) delegate).call(HREFLANG_ATTRIBUTE, locale.toString())
@@ -308,7 +308,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
 
         List<String> incs = getIncludes(arguments)
         List<String> excs = getExcludes(arguments)
-        List<String> expandProperties = getExpandProperties((JsonView)view, arguments)
+        List<String> expandProperties = getExpandProperties((JsonView) view, arguments)
         boolean deep = ViewUtils.getBooleanFromMap(GrailsJsonViewHelper.DEEP, arguments)
         arguments.put(IncludeExcludeSupport.EXCLUDES_PROPERTY, excs)
         if (entity != null) {
@@ -341,7 +341,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
 
             if (!embeddedValues.isEmpty()) {
                 embedded {
-                    StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate = (StreamingJsonBuilder.StreamingJsonDelegate)getDelegate()
+                    StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate = (StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
                     for (entry in embeddedValues) {
                         def embeddedObject = entry.value
                         Association association = entry.key
@@ -358,7 +358,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                         }
                         else if (association instanceof ToMany) {
                             if (embeddedObject instanceof Iterable) {
-                                jsonDelegate.call(propertyName, (Iterable)embeddedObject) { e ->
+                                jsonDelegate.call(propertyName, (Iterable) embeddedObject) { e ->
                                     def associationJsonDelegate = (StreamingJsonDelegate) getDelegate()
 //                                    writeLinks(associationJsonDelegate, e, this.contentType)
                                     renderEntityProperties(associatedEntity, e, associationReflector, associationJsonDelegate)
@@ -384,12 +384,12 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
             def proxyHandler = mappingContext.proxyFactory
 
             embedded {
-                StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate = (StreamingJsonBuilder.StreamingJsonDelegate)getDelegate()
+                StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate = (StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
                 for (entry in model.entrySet()) {
                     Object embeddedObject = proxyHandler.unwrap(entry.value)
 
                     if (Iterable.isInstance(embeddedObject)) {
-                        jsonDelegate.call(entry.key.toString(), (Iterable)embeddedObject) { e ->
+                        jsonDelegate.call(entry.key.toString(), (Iterable) embeddedObject) { e ->
                             PersistentEntity entity = mappingContext.getPersistentEntity(e.getClass().name)
                             def entityReflector = mappingContext.getEntityReflector(entity)
                             def associationJsonDelegate = (StreamingJsonDelegate) getDelegate()
@@ -452,7 +452,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
         def propertyType = prop.type
         if (propVal != null) {
             if ((prop instanceof Simple) || (prop instanceof Basic)) {
-                if (((DefaultGrailsJsonViewHelper)viewHelper).isStringType(propertyType)) {
+                if (((DefaultGrailsJsonViewHelper) viewHelper).isStringType(propertyType)) {
                     jsonDelegate.call(propertyName, propVal.toString())
                 } else {
                     jsonDelegate.call(propertyName, propVal)
@@ -466,7 +466,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                     jsonDelegate.call(propertyName, propVal)
                 }
             } else if (prop instanceof Embedded) {
-                Embedded embedded = (Embedded)prop
+                Embedded embedded = (Embedded) prop
                 def childTemplate = view.templateEngine.resolveTemplate(propertyType, view.locale)
                 if (childTemplate != null) {
                     JsonOutput.JsonWritable jsonWritable = ((DefaultGrailsJsonViewHelper) viewHelper).renderChildTemplate(childTemplate, propertyType, propVal)
@@ -480,7 +480,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                     }
                 }
             } else if (prop instanceof EmbeddedCollection) {
-                EmbeddedCollection embedded = (EmbeddedCollection)prop
+                EmbeddedCollection embedded = (EmbeddedCollection) prop
                 PersistentEntity associatedEntity = embedded.associatedEntity
                 Class associatedType = associatedEntity.javaClass
                 EntityReflector embeddedReflector = associatedEntity.getMappingContext().getEntityReflector(associatedEntity)
@@ -495,7 +495,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                 }
                 else {
                     if (propVal instanceof Iterable) {
-                        jsonDelegate.call(embedded.name, (Iterable)propVal) { eo ->
+                        jsonDelegate.call(embedded.name, (Iterable) propVal) { eo ->
                             StreamingJsonDelegate associationJsonDelegate = (StreamingJsonDelegate) getDelegate()
                             renderEntityProperties(associatedEntity, eo, embeddedReflector , associationJsonDelegate)
                         }
@@ -514,7 +514,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
     void embedded(@DelegatesTo(StreamingJsonDelegate) Closure callable) {
         jsonDelegate.call(EMBEDDED_ATTRIBUTE) {
 
-            callable.setDelegate(new HalStreamingJsonDelegate(this, (StreamingJsonDelegate)delegate))
+            callable.setDelegate(new HalStreamingJsonDelegate(this, (StreamingJsonDelegate) delegate))
             callable.call()
         }
     }
@@ -527,7 +527,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
     void embedded(String contentType, @DelegatesTo(StreamingJsonDelegate) Closure callable) {
         jsonDelegate.call(EMBEDDED_ATTRIBUTE) {
 
-            callable.setDelegate(new HalStreamingJsonDelegate(contentType, this, (StreamingJsonDelegate)delegate))
+            callable.setDelegate(new HalStreamingJsonDelegate(contentType, this, (StreamingJsonDelegate) delegate))
             callable.call()
         }
     }
@@ -568,7 +568,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                 case 1:
                     final Object value = arr[0]
                     if (value instanceof Closure) {
-                        call(name, (Closure)value)
+                        call(name, (Closure) value)
                     }
                     else {
                         call(name, value)
@@ -579,7 +579,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                         final Object obj = arr[0]
                         final Closure callable = (Closure) arr[1]
                         if (obj instanceof Iterable) {
-                            call(name, (Iterable)obj, callable)
+                            call(name, (Iterable) obj, callable)
                             return null
                         }
                         else if (obj.getClass().isArray()) {

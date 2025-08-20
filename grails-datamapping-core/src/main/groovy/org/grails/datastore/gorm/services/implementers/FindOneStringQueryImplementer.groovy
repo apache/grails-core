@@ -47,7 +47,7 @@ class FindOneStringQueryImplementer extends AbstractStringQueryImplementer imple
 
     @Override
     protected Statement buildQueryReturnStatement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, Expression queryArg) {
-        ClassNode returnType = (ClassNode)newMethodNode.getNodeMetaData(RETURN_TYPE) ?: abstractMethodNode.returnType
+        ClassNode returnType = (ClassNode) newMethodNode.getNodeMetaData(RETURN_TYPE) ?: abstractMethodNode.returnType
         String methodToExecute = getFindMethodToInvoke(domainClassNode, newMethodNode, returnType)
 
         if (methodToExecute != 'find') {
@@ -84,7 +84,7 @@ class FindOneStringQueryImplementer extends AbstractStringQueryImplementer imple
             def queryAnnotation = AstUtils.findAnnotation(methodNode, getAnnotationType())
             def query = queryAnnotation.getMember('value')
             if (query instanceof GStringExpression) {
-                GStringExpression gstring = (GStringExpression)query
+                GStringExpression gstring = (GStringExpression) query
                 List<ConstantExpression> strings = gstring.strings
                 ConstantExpression stem = strings.first()
                 if (stem.text.toLowerCase(Locale.ENGLISH).contains('select')) {

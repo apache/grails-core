@@ -66,8 +66,8 @@ class ServiceRegistryFactoryBean implements FactoryBean<ServiceRegistry>, BeanFa
     @Override
     void setBeanFactory(BeanFactory beanFactory) throws BeansException {
         if (beanFactory instanceof ConfigurableListableBeanFactory) {
-            AutowireCapableBeanFactory autowireCapableBeanFactory = beanFactory instanceof AutowireCapableBeanFactory ? (AutowireCapableBeanFactory)beanFactory : null
-            ConfigurableListableBeanFactory configurableListableBeanFactory = (ConfigurableListableBeanFactory)beanFactory
+            AutowireCapableBeanFactory autowireCapableBeanFactory = beanFactory instanceof AutowireCapableBeanFactory ? (AutowireCapableBeanFactory) beanFactory : null
+            ConfigurableListableBeanFactory configurableListableBeanFactory = (ConfigurableListableBeanFactory) beanFactory
 
             for (org.grails.datastore.mapping.services.Service service in datastore.services) {
                 def serviceClass = service.getClass()

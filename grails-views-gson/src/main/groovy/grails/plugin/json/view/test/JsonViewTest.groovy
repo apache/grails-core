@@ -196,7 +196,7 @@ trait JsonViewTest {
             throw new IllegalArgumentException("No view or template found for URI $viewUri")
         }
 
-        def model = arguments.model instanceof Map ? (Map)arguments.model : [:]
+        def model = arguments.model instanceof Map ? (Map) arguments.model : [:]
         return produceResult(template, model, configurer)
     }
 

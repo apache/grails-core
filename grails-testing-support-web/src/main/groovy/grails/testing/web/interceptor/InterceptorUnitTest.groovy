@@ -60,7 +60,7 @@ trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
         }
         getHandlerInterceptor()
                 .setInterceptors(applicationContext.getBeansOfType(Interceptor).values() as Interceptor[])
-        (Interceptor)applicationContext.getBean(artefact.propertyName, interceptorClass)
+        (Interceptor) applicationContext.getBean(artefact.propertyName, interceptorClass)
     }
 
     /**
@@ -85,7 +85,7 @@ trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
                     modelAndView = (ModelAndView) modelAndViewObject
                 }
                 else if (result instanceof Map) {
-                    modelAndView =  new ModelAndView(info?.actionName ?: 'index', new HashMap<String, Object>((Map)result))
+                    modelAndView =  new ModelAndView(info?.actionName ?: 'index', new HashMap<String, Object>((Map) result))
                 }
                 else if (result instanceof ModelAndView) {
                     return (ModelAndView) result
@@ -128,7 +128,7 @@ trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
     }
 
     void mockArtefact(Class<?> interceptorClass) {
-        mockInterceptor((Class<? extends Interceptor>)interceptorClass)
+        mockInterceptor((Class<? extends Interceptor>) interceptorClass)
     }
 
     String getBeanName(Class<?> interceptorClass) {
@@ -136,7 +136,7 @@ trait InterceptorUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
     }
 
     private Class<T> getInterceptorTypeUnderTest() {
-        ParameterizedType parameterizedType = (ParameterizedType)getClass().genericInterfaces.find { genericInterface ->
+        ParameterizedType parameterizedType = (ParameterizedType) getClass().genericInterfaces.find { genericInterface ->
             genericInterface instanceof ParameterizedType &&
                     InterceptorUnitTest.isAssignableFrom((Class)((ParameterizedType)genericInterface).rawType)
         }

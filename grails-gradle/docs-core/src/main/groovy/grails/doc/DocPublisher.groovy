@@ -321,12 +321,12 @@ class DocPublisher {
 
         if (engine instanceof AsciiDocEngine) {
             // pass attributes to asciidoc
-            ((AsciiDocEngine)engine).attributes.putAll(
+            ((AsciiDocEngine) engine).attributes.putAll(
                     version: version,
                     apiDocs: "https://docs.grails.org/${version}/api/",
                     sourceRepo: sourceRepo
             )
-            ((AsciiDocEngine)engine).attributes.putAll(
+            ((AsciiDocEngine) engine).attributes.putAll(
                     engineProperties
             )
         }
@@ -597,7 +597,7 @@ class DocPublisher {
             String stringKey = String.valueOf(key)
             if (value != null) {
                 if (value instanceof Map) {
-                    flattenKeys(flatConfig, (Map)value, ((path + [stringKey]) as List<String>).asImmutable(), forceStrings)
+                    flattenKeys(flatConfig, (Map) value, ((path + [stringKey]) as List<String>).asImmutable(), forceStrings)
                 } else {
                     String fullKey
                     if (path) {
@@ -607,12 +607,12 @@ class DocPublisher {
                     }
                     if (value instanceof Collection) {
                         if (forceStrings) {
-                            flatConfig.put(fullKey, ((Collection)value).join(','))
+                            flatConfig.put(fullKey, ((Collection) value).join(','))
                         } else {
                             flatConfig.put(fullKey, value)
                         }
                         int index = 0
-                        for (Object item: (Collection)value) {
+                        for (Object item: (Collection) value) {
                             String collectionKey = "${fullKey}[${index}]".toString()
                             flatConfig.put(collectionKey, forceStrings ? String.valueOf(item) : item)
                             index++

@@ -79,6 +79,6 @@ class SpringEventTranslator implements ApplicationListener,  ApplicationContextA
 
     @Override
     void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        ((GenericApplicationContext)applicationContext).addApplicationListener(this)
+        ((GenericApplicationContext) applicationContext).addApplicationListener(this)
     }
 }

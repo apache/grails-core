@@ -71,7 +71,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
     }
 
     MockServletContext getServletContext() {
-        (MockServletContext)optionalServletContext
+        (MockServletContext) optionalServletContext
     }
 
     Map<String, String> getViews() {
@@ -122,7 +122,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
 
         def taglibObject = applicationContext.getBean(tagLib.fullName)
         if (taglibObject instanceof TagLibrary) {
-            ((TagLibrary)taglibObject).setTagLibraryLookup(tagLookup)
+            ((TagLibrary) taglibObject).setTagLibraryLookup(tagLookup)
         }
         taglibObject
     }
@@ -184,7 +184,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         String uri = null
         Map model
         if (args.containsKey('model')) {
-            model = (Map)args.model
+            model = (Map) args.model
         } else {
             model = [:]
         }

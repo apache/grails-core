@@ -428,7 +428,7 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
                 final targetClassNode = (name == 'rollbackFor' || name == 'rollbackForClassName') ? rollbackRuleAttributeClassNode : noRollbackRuleAttributeClassNode
                 name = 'rollbackRules'
                 if (expr instanceof ListExpression) {
-                    for (exprItem in ((ListExpression)expr).expressions) {
+                    for (exprItem in ((ListExpression) expr).expressions) {
                         appendRuleElement(methodBody, transactionAttributeVar, name, ctorX(targetClassNode, exprItem))
                     }
                 } else {

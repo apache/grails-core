@@ -121,7 +121,7 @@ class RenderSitemeshTagLib implements TagLibrary {
         if (!attrs.name) {
             return
         }
-        List names = ((attrs.name instanceof List) ? (List)attrs.name : [attrs.name])
+        List names = ((attrs.name instanceof List) ? (List) attrs.name : [attrs.name])
 
         def invokeBody = true
         for (i in 0..<names.size()) {
@@ -129,7 +129,7 @@ class RenderSitemeshTagLib implements TagLibrary {
             if (propertyValue) {
                 if (attrs.containsKey('equals')) {
                     if (attrs.equals instanceof List) {
-                        invokeBody = ((List)attrs.equals)[i] == propertyValue
+                        invokeBody = ((List) attrs.equals)[i] == propertyValue
                     } else {
                         invokeBody = attrs.equals == propertyValue
                     }

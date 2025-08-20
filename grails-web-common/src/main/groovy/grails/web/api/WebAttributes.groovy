@@ -48,7 +48,7 @@ trait WebAttributes {
 
     @Generated
     GrailsWebRequest currentRequestAttributes() {
-        (GrailsWebRequest)RequestContextHolder.currentRequestAttributes()
+        (GrailsWebRequest) RequestContextHolder.currentRequestAttributes()
     }
 
     /**

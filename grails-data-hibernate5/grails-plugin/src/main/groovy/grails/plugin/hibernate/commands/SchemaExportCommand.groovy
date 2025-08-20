@@ -69,7 +69,7 @@ class SchemaExportCommand implements ApplicationCommand {
         HibernateDatastore hibernateDatastore = applicationContext.getBean('hibernateDatastore', HibernateDatastore)
         hibernateDatastore = hibernateDatastore.getDatastoreForConnection(dataSourceName)
 
-        def serviceRegistry = ((SessionFactoryImplementor)hibernateDatastore.sessionFactory).getServiceRegistry()
+        def serviceRegistry = ((SessionFactoryImplementor) hibernateDatastore.sessionFactory).getServiceRegistry()
                                                                                             .getParentServiceRegistry()
         def metadata = hibernateDatastore.metadata
 
@@ -93,7 +93,7 @@ class SchemaExportCommand implements ApplicationCommand {
         schemaExport.execute(targetTypes, HibernateSchemaExport.Action.CREATE, metadata, serviceRegistry)
 
         if (schemaExport.exceptions) {
-            def e = (Exception)schemaExport.exceptions[0]
+            def e = (Exception) schemaExport.exceptions[0]
             e.printStackTrace()
             return false
         }

@@ -40,6 +40,6 @@ class PeriodEncoder implements TypeEncoder, PeriodBsonConverter {
 
     @Override
     void encode(BsonWriter writer, PersistentProperty property, Object value) {
-        write(writer, (Period)value)
+        write(writer, (Period) value)
     }
 }

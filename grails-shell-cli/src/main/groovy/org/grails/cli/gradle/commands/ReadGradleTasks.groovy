@@ -53,7 +53,7 @@ class ReadGradleTasks extends ListReadingCachedGradleOperation<String> {
     @Override
     List<String> readFromGradle(ProjectConnection connection) {
         SystemOutErrCapturer.withNullOutput {
-            FetchAllTaskSelectorsBuildAction.AllTasksModel allTasksModel = (FetchAllTaskSelectorsBuildAction.AllTasksModel)connection.action(new FetchAllTaskSelectorsBuildAction(projectContext.getBaseDir())).run()
+            FetchAllTaskSelectorsBuildAction.AllTasksModel allTasksModel = (FetchAllTaskSelectorsBuildAction.AllTasksModel) connection.action(new FetchAllTaskSelectorsBuildAction(projectContext.getBaseDir())).run()
             Collection<String> allTaskSelectors = []
 
             if (allTasksModel.currentProject) {

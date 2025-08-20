@@ -135,7 +135,7 @@ abstract class AbstractProfile implements Profile {
             for (clsName in  commandsMap.keySet()) {
                 def fileName = commandsMap[clsName].toString()
                 if (fileName.endsWith('.groovy')) {
-                    GroovyScriptCommand cmd = (GroovyScriptCommand)classLoader.loadClass(clsName.toString()).newInstance()
+                    GroovyScriptCommand cmd = (GroovyScriptCommand) classLoader.loadClass(clsName.toString()).newInstance()
                     cmd.profile = this
                     cmd.profileRepository = profileRepository
                     internalCommands.add(cmd)
@@ -146,7 +146,7 @@ abstract class AbstractProfile implements Profile {
                         Map<String, Object> data = new Yaml(new SafeConstructor(new LoaderOptions())).<Map>load(yamlCommand.getInputStream())
                         Command cmd = new DefaultMultiStepCommand(clsName.toString(), this, data)
                         Object minArguments = data?.minArguments
-                        cmd.minArguments = minArguments instanceof Integer ? (Integer)minArguments : 1
+                        cmd.minArguments = minArguments instanceof Integer ? (Integer) minArguments : 1
                         internalCommands.add(cmd)
                     }
 
@@ -192,16 +192,16 @@ abstract class AbstractProfile implements Profile {
             }
         }
 
-        this.repositories = (List<String>)navigableConfig.get('repositories', [])
+        this.repositories = (List<String>) navigableConfig.get('repositories', [])
 
-        this.buildRepositories = (List<String>)navigableConfig.get('build.repositories', [])
-        this.buildPlugins = (List<String>)navigableConfig.get('build.plugins', [])
-        this.buildExcludes = (List<String>)navigableConfig.get('build.excludes', [])
-        this.buildMerge = (List<String>)navigableConfig.get('build.merge', null)
-        this.parentTargetFolder = (String)navigableConfig.get('skeleton.parent.target', null)
-        this.skeletonExcludes = (List<String>)navigableConfig.get('skeleton.excludes', [])
-        this.binaryExtensions = (List<String>)navigableConfig.get('skeleton.binaryExtensions', [])
-        this.executablePatterns = (List<String>)navigableConfig.get('skeleton.executable', [])
+        this.buildRepositories = (List<String>) navigableConfig.get('build.repositories', [])
+        this.buildPlugins = (List<String>) navigableConfig.get('build.plugins', [])
+        this.buildExcludes = (List<String>) navigableConfig.get('build.excludes', [])
+        this.buildMerge = (List<String>) navigableConfig.get('build.merge', null)
+        this.parentTargetFolder = (String) navigableConfig.get('skeleton.parent.target', null)
+        this.skeletonExcludes = (List<String>) navigableConfig.get('skeleton.excludes', [])
+        this.binaryExtensions = (List<String>) navigableConfig.get('skeleton.binaryExtensions', [])
+        this.executablePatterns = (List<String>) navigableConfig.get('skeleton.executable', [])
     }
 
     String getDescription() {
@@ -368,7 +368,7 @@ abstract class AbstractProfile implements Profile {
 
             def commandNameCompleter = new StringsCompleter(cmd.name)
             if (cmd instanceof Completer) {
-                completers << new ArgumentCompleter(commandNameCompleter, (Completer)cmd)
+                completers << new ArgumentCompleter(commandNameCompleter, (Completer) cmd)
             } else {
                 if (description.completer) {
                     if (description.flags) {
@@ -410,7 +410,7 @@ abstract class AbstractProfile implements Profile {
                 def name = command.name
                 if (!commandsByName.containsKey(name) && !excludes.contains(name)) {
                     if (command instanceof ProfileRepositoryAware) {
-                        ((ProfileRepositoryAware)command).setProfileRepository(profileRepository)
+                        ((ProfileRepositoryAware) command).setProfileRepository(profileRepository)
                     }
                     commandsByName.put(name, command)
                     def desc = command.description
@@ -421,10 +421,10 @@ abstract class AbstractProfile implements Profile {
                         }
                     }
                     if (command instanceof ProjectContextAware) {
-                        ((ProjectContextAware)command).projectContext = context
+                        ((ProjectContextAware) command).projectContext = context
                     }
                     if (command instanceof ProfileCommand) {
-                        ((ProfileCommand)command).profile = this
+                        ((ProfileCommand) command).profile = this
                     }
                 }
             }
@@ -433,7 +433,7 @@ abstract class AbstractProfile implements Profile {
 
             def parents = getExtends()
             if (parents) {
-                excludes = (List)configuration.navigate('command', 'excludes') ?: []
+                excludes = (List) configuration.navigate('command', 'excludes') ?: []
                 registerParentCommands(context, parents, registerCommand)
             }
         }

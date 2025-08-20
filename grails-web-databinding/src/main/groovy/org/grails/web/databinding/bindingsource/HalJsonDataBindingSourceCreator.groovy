@@ -53,7 +53,7 @@ class HalJsonDataBindingSourceCreator extends JsonDataBindingSourceCreator {
                 jsonMap = new LinkedHashMap(jsonMap)
                 def embedded = jsonMap.get(HAL_EMBEDDED_ELEMENT)
                 if (embedded instanceof Map) {
-                    jsonMap.putAll((Map)embedded)
+                    jsonMap.putAll((Map) embedded)
                 }
             }
             return jsonMap

@@ -55,7 +55,7 @@ class NavigableMapPropertySource extends MapPropertySource {
     Object getProperty(String name) {
         def value = super.getProperty(name)
         if (value instanceof OriginTrackedValue) {
-            return ((OriginTrackedValue)value).value
+            return ((OriginTrackedValue) value).value
         } else if (value instanceof NavigableMap || value instanceof NavigableMap.NullSafeNavigator) {
             return null
         }

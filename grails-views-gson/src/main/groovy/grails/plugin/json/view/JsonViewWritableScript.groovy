@@ -178,10 +178,10 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
         if (args.length == 1) {
             def val = args[0]
             if (val instanceof JsonOutput.JsonUnescaped) {
-                this.json((JsonOutput.JsonUnescaped)val)
+                this.json((JsonOutput.JsonUnescaped) val)
             }
             else if (val instanceof JsonOutput.JsonWritable) {
-                this.json((JsonOutput.JsonWritable)val)
+                this.json((JsonOutput.JsonWritable) val)
             }
             else {
                 json.call(val)

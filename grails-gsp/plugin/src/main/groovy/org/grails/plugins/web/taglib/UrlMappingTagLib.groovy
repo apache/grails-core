@@ -69,7 +69,7 @@ class UrlMappingTagLib implements TagLibrary {
     Closure include = { Map attrs, body ->
         if (attrs.action && !attrs.controller) {
             def controller = request?.getAttribute(GrailsApplicationAttributes.CONTROLLER)
-            def controllerName = ((GroovyObject)controller)?.getProperty('controllerName')
+            def controllerName = ((GroovyObject) controller)?.getProperty('controllerName')
             attrs.controller = controllerName
         }
 
@@ -86,7 +86,7 @@ class UrlMappingTagLib implements TagLibrary {
             if (attrs.plugin != null) {
                 mapping.pluginName = attrs.plugin as String
             }
-            out << UrlMappingUtils.includeForUrlMappingInfo(request, response, mapping, (Map)(attrs.model ?: [:]), linkGenerator)?.content
+            out << UrlMappingUtils.includeForUrlMappingInfo(request, response, mapping, (Map) (attrs.model ?: [:]), linkGenerator)?.content
         }
     }
 
@@ -120,7 +120,7 @@ class UrlMappingTagLib implements TagLibrary {
      * @attr fragment The link fragment (often called anchor tag) to use
      */
     Closure paginate = { Map attrsMap ->
-        TypeConvertingMap attrs = (TypeConvertingMap)attrsMap
+        TypeConvertingMap attrs = (TypeConvertingMap) attrsMap
         def writer = out
         if (attrs.total == null) {
             throwTagError('Tag [paginate] is missing required attribute [total]')
@@ -136,7 +136,7 @@ class UrlMappingTagLib implements TagLibrary {
         if (!max) max = (attrs.int('max') ?: 10)
 
         Map linkParams = [:]
-        if (attrs.params instanceof Map) linkParams.putAll((Map)attrs.params)
+        if (attrs.params instanceof Map) linkParams.putAll((Map) attrs.params)
         linkParams.offset = offset - max
         linkParams.max = max
         if (params.sort) linkParams.sort = params.sort
@@ -212,7 +212,7 @@ class UrlMappingTagLib implements TagLibrary {
             // display firststep link when beginstep is not firststep
             if (beginstep > firststep && !attrs.boolean('omitFirst')) {
                 linkParams.offset = 0
-                writer << callLink((Map)stepAttrs.clone()) { firststep.toString() }
+                writer << callLink((Map) stepAttrs.clone()) { firststep.toString() }
             }
             //show a gap if beginstep isn't immediately after firststep, and if were not omitting first or rev
             if (beginstep > firststep + 1 && (!attrs.boolean('omitFirst') || !attrs.boolean('omitPrev'))) {
@@ -226,7 +226,7 @@ class UrlMappingTagLib implements TagLibrary {
                 }
                 else {
                     linkParams.offset = (i - 1) * max
-                    writer << callLink((Map)stepAttrs.clone()) { i.toString() }
+                    writer << callLink((Map) stepAttrs.clone()) { i.toString() }
                 }
             }
 
@@ -237,7 +237,7 @@ class UrlMappingTagLib implements TagLibrary {
             // display laststep link when endstep is not laststep
             if (endstep < laststep && !attrs.boolean('omitLast')) {
                 linkParams.offset = (laststep - 1) * max
-                writer << callLink((Map)stepAttrs.clone()) { laststep.toString() }
+                writer << callLink((Map) stepAttrs.clone()) { laststep.toString() }
             }
         }
 
@@ -354,7 +354,7 @@ class UrlMappingTagLib implements TagLibrary {
         linkAttrs.action = action
         linkAttrs.namespace = namespace
 
-        writer << callLink((Map)linkAttrs) {
+        writer << callLink((Map) linkAttrs) {
             title
         }
         writer << '</th>'

@@ -36,7 +36,7 @@ class TemplateNamespacedTagDispatcher extends NamespacedTagDispatcher {
     }
 
     def methodMissing(String name, Object args) {
-        ((GroovyObject)getMetaClass()).setProperty(name, { Object[] varArgs ->
+        ((GroovyObject) getMetaClass()).setProperty(name, { Object[] varArgs ->
             callRender(argsToAttrs(name, varArgs), filterBodyAttr(varArgs))
         })
         callRender(argsToAttrs(name, args), filterBodyAttr(args))
@@ -54,9 +54,9 @@ class TemplateNamespacedTagDispatcher extends NamespacedTagDispatcher {
         Map<String, Object> attr = [:]
         attr.template = name
         if (args instanceof Object[]) {
-            Object[] tagArgs = ((Object[])args)
+            Object[] tagArgs = ((Object[]) args)
             if (tagArgs.length > 0 && tagArgs[0] instanceof Map) {
-                Map<String, Object> modelMap = (Map<String, Object>)tagArgs[0]
+                Map<String, Object> modelMap = (Map<String, Object>) tagArgs[0]
                 Object encodeAs = modelMap.remove(TagOutput.ENCODE_AS_ATTRIBUTE_NAME)
                 if (encodeAs != null) {
                     attr.put(TagOutput.ENCODE_AS_ATTRIBUTE_NAME, encodeAs)
@@ -69,7 +69,7 @@ class TemplateNamespacedTagDispatcher extends NamespacedTagDispatcher {
 
     protected Object filterBodyAttr(Object args) {
         if (args instanceof Object[]) {
-            Object[] tagArgs = ((Object[])args)
+            Object[] tagArgs = ((Object[]) args)
             if (tagArgs.length > 0) {
                 for (Object arg : tagArgs) {
                     if (!(arg instanceof Map)) {

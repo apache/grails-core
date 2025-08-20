@@ -43,7 +43,7 @@ abstract class AbstractTraitApplyingGormASTTransformation extends AbstractGormAS
     void visit(SourceUnit source, AnnotationNode annotationNode, AnnotatedNode annotatedNode) {
         this.sourceUnit = source
         if (annotatedNode instanceof ClassNode) {
-            visit(source, annotationNode, (ClassNode)annotatedNode)
+            visit(source, annotationNode, (ClassNode) annotatedNode)
         }
     }
 

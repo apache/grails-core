@@ -86,7 +86,7 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
         this.compileStatic = configuration.compileStatic
 
         JsonGenerator.Options options = new JsonGenerator.Options()
-        JsonViewGeneratorConfiguration config = ((JsonViewConfiguration)configuration).generator
+        JsonViewGeneratorConfiguration config = ((JsonViewConfiguration) configuration).generator
 
         if (!config.escapeUnicode) {
             options.disableUnicodeEscaping()

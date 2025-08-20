@@ -117,7 +117,7 @@ class JakartaValidatorRegistry extends DefaultValidatorRegistry implements Valid
         if (ann != null && isAvailable()) {
             def validator = validatorFactory.getValidator()
             if (validator instanceof GormValidatorAdapter) {
-                return (Validator)validator
+                return (Validator) validator
             }
             else {
                 return new GormValidatorAdapter(validator)

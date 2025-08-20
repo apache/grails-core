@@ -131,6 +131,6 @@ class HibernateGormAutoConfiguration implements ApplicationContextAware,BeanFact
         if (!(applicationContext instanceof ConfigurableApplicationContext)) {
             throw new IllegalArgumentException('Neo4jAutoConfiguration requires an instance of ConfigurableApplicationContext')
         }
-        this.applicationContext = (ConfigurableApplicationContext)applicationContext
+        this.applicationContext = (ConfigurableApplicationContext) applicationContext
     }
 }

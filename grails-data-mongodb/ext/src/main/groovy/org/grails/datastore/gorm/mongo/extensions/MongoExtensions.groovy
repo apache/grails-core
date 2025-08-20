@@ -71,11 +71,11 @@ class MongoExtensions {
 
     static <T> T asType(Document document, Class<T> cls) {
         if (Document.isAssignableFrom(cls)) {
-            return (T)document
+            return (T) document
         }
         else {
             def datastore = GormEnhancer.findDatastore(cls)
-            AbstractMongoSession session = (AbstractMongoSession)datastore.currentSession
+            AbstractMongoSession session = (AbstractMongoSession) datastore.currentSession
             if (session != null) {
                 return session.decode(cls, document)
             }
@@ -90,11 +90,11 @@ class MongoExtensions {
 
     static <T> T asType(FindIterable iterable, Class<T> cls) {
         if (FindIterable.isAssignableFrom(cls)) {
-            return (T)iterable
+            return (T) iterable
         }
         else {
             def datastore = GormEnhancer.findDatastore(cls)
-            AbstractMongoSession session = (AbstractMongoSession)datastore.currentSession
+            AbstractMongoSession session = (AbstractMongoSession) datastore.currentSession
 
             if (session != null) {
                 return session.decode(cls, iterable)
@@ -107,11 +107,11 @@ class MongoExtensions {
 
     static <T> List<T> toList(FindIterable iterable, Class<T> cls) {
         def datastore = GormEnhancer.findDatastore(cls)
-        AbstractMongoSession session = (AbstractMongoSession)datastore.currentSession
+        AbstractMongoSession session = (AbstractMongoSession) datastore.currentSession
 
-        MongoEntityPersister p = (MongoEntityPersister)session.getPersister(cls)
+        MongoEntityPersister p = (MongoEntityPersister) session.getPersister(cls)
         if (p)
-            return new MongoQuery.MongoResultList(((FindIterable<Document>)iterable).iterator(), 0, p)
+            return new MongoQuery.MongoResultList(((FindIterable<Document>) iterable).iterator(), 0, p)
         else {
             throw new IllegalArgumentException("Cannot convert DBCursor [$iterable] to writer type $cls. Type is not a persistent entity")
         }
@@ -123,14 +123,14 @@ class MongoExtensions {
         for (key in document.keySet()) {
             def value = document.get(key)
             if (value instanceof Document) {
-                value = toDBObject((Document)value)
+                value = toDBObject((Document) value)
             }
             else if (value instanceof Collection) {
-                Collection col = (Collection)value
+                Collection col = (Collection) value
                 Collection newCol = []
                 for (i in col) {
                     if (i instanceof Document) {
-                        newCol << toDBObject((Document)i)
+                        newCol << toDBObject((Document) i)
                     }
                     else {
                         newCol << i
@@ -261,7 +261,7 @@ class MongoExtensions {
     static Document findOne(MongoCollection<Document> collection, ObjectId id) {
         def query = new Document()
         query.put(AbstractMongoObectEntityPersister.MONGO_ID_FIELD, id)
-        collection.find((Bson)query)
+        collection.find((Bson) query)
                 .limit(1)
                 .first()
     }
@@ -269,7 +269,7 @@ class MongoExtensions {
     static Document findOne(MongoCollection<Document> collection, CharSequence id) {
         def query = new Document()
         query.put(AbstractMongoObectEntityPersister.MONGO_ID_FIELD, id)
-        collection.find((Bson)query)
+        collection.find((Bson) query)
                 .limit(1)
                 .first()
     }
@@ -278,7 +278,7 @@ class MongoExtensions {
         def query = new Document()
         query.put(AbstractMongoObectEntityPersister.MONGO_ID_FIELD, id)
         collection
-                .find((Bson)query, type)
+                .find((Bson) query, type)
                 .limit(1)
                 .first()
     }

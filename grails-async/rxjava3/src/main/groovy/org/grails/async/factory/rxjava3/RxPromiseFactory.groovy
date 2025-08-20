@@ -77,10 +77,10 @@ class RxPromiseFactory extends AbstractPromiseFactory {
         new RxPromise<T>(this, Observable.concat(
             promises.collect { Promise p ->
                 if (p instanceof BoundPromise) {
-                    return Observable.just(((BoundPromise)p).value) as Observable<T>
+                    return Observable.just(((BoundPromise) p).value) as Observable<T>
                 }
                 else {
-                    return ((RxPromise)p).toObservable() as Observable<T>
+                    return ((RxPromise) p).toObservable() as Observable<T>
                 }
             }
         ).toList())
@@ -90,7 +90,7 @@ class RxPromiseFactory extends AbstractPromiseFactory {
     @Override
     <T> Promise<List<T>> onError(List<Promise<T>> promises, Closure<?> callable) {
         new RxPromise(this, Observable.concat(
-                promises.collect { ((RxPromise<T>)it).toObservable() }
+                promises.collect { ((RxPromise<T>) it).toObservable() }
         ).toList())
         .onError(callable) as Promise<List<T>>
     }

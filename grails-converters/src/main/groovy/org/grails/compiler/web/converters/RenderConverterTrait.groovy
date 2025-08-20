@@ -39,7 +39,7 @@ trait RenderConverterTrait {
      */
     @Generated
     void render(Converter<?> converter) {
-        GrailsWebRequest webRequest = (GrailsWebRequest)RequestContextHolder.currentRequestAttributes()
+        GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes()
         HttpServletResponse response = webRequest.currentResponse
         webRequest.renderView = false
         converter.render(response)

@@ -57,14 +57,14 @@ class JspTagLibImpl implements JspTagLib {
         JspTag tag = getTag(name)
 
         if (tag) {
-            Object[] args = (Object[])argsParam
+            Object[] args = (Object[]) argsParam
             if (args == null || args.length == 0) {
                 args = [[:]] as Object[]
             }
 
-            Map<String, Object> attrs = args[0] instanceof Map ? (Map)args[0] : [:]
-            Closure body = args[0] instanceof Closure ? (Closure)args[0] : null
-            if (args.size() > 1) body = args[1] instanceof Closure ? (Closure)args[1] : null
+            Map<String, Object> attrs = args[0] instanceof Map ? (Map) args[0] : [:]
+            Closure body = args[0] instanceof Closure ? (Closure) args[0] : null
+            if (args.size() > 1) body = args[1] instanceof Closure ? (Closure) args[1] : null
             if (body == null && args.size() > 1) {
                 body = { args[1] }
             }

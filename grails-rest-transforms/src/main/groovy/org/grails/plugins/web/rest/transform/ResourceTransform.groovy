@@ -136,7 +136,7 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
             ClassNode superClassNode
             Expression superClassAttribute = annotationNode.getMember(ATTR_SUPER_CLASS)
             if (superClassAttribute instanceof ClassExpression) {
-                superClassNode = ((ClassExpression)superClassAttribute).getType()
+                superClassNode = ((ClassExpression) superClassAttribute).getType()
             } else {
                 superClassNode = ClassHelper.make(RestfulController)
             }
@@ -149,7 +149,7 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
             newControllerClassNode.addAnnotation(transactionalAnn)
 
             final readOnlyAttr = annotationNode.getMember(ATTR_READY_ONLY)
-            boolean isReadOnly = readOnlyAttr != null && ((ConstantExpression)readOnlyAttr).trueExpression
+            boolean isReadOnly = readOnlyAttr != null && ((ConstantExpression) readOnlyAttr).trueExpression
             addConstructor(newControllerClassNode, parent, isReadOnly)
 
             List<ClassInjector> injectors = ArtefactTypeAstTransformation.findInjectors(ControllerArtefactHandler.TYPE, GrailsAwareInjectionOperation.getClassInjectors())
@@ -175,7 +175,7 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
                     responseFormatsExpression.addExpression(responseFormatsAttr)
                 }
                 else if (responseFormatsAttr instanceof ListExpression) {
-                    responseFormatsExpression = (ListExpression)responseFormatsAttr
+                    responseFormatsExpression = (ListExpression) responseFormatsAttr
                     for (Expression expr in responseFormatsExpression.expressions) {
                         if (expr.text.equalsIgnoreCase('html')) hasHtml = true; break
                     }

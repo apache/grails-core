@@ -81,7 +81,7 @@ abstract class AbstractProjectionImplementer extends AbstractDetachedCriteriaSer
 
     @Override
     void implementWithQuery(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode, BlockStatement body, VariableExpression detachedCriteriaVar, Expression queryArgs) {
-        String propertyName = (String)abstractMethodNode.getNodeMetaData(RESOLVED_PROPERTY_NAME)
+        String propertyName = (String) abstractMethodNode.getNodeMetaData(RESOLVED_PROPERTY_NAME)
         assert propertyName != null : "Bug in ${getClass().name} transform logic. Method implement should never be called before doesImplement(..) check"
 
         body.addStatements([

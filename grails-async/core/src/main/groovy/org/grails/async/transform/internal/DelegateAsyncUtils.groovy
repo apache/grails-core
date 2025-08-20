@@ -41,7 +41,7 @@ class DelegateAsyncUtils {
     static Collection<PromiseDecorator> getPromiseDecorators(Object target, Collection<PromiseDecorator> additional) {
         Collection<PromiseDecorator> decorators = []
         if (target instanceof PromiseDecoratorProvider) {
-            decorators.addAll(((PromiseDecoratorProvider)target).getDecorators())
+            decorators.addAll(((PromiseDecoratorProvider) target).getDecorators())
         }
         if (additional) {
             decorators.addAll(additional)

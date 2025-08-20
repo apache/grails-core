@@ -39,7 +39,7 @@ class WebCleanupInterceptor implements IMethodInterceptor {
 
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {
-        GrailsWebUnitTest test = (GrailsWebUnitTest)invocation.instance
+        GrailsWebUnitTest test = (GrailsWebUnitTest) invocation.instance
         cleanup(test)
         invocation.proceed()
     }

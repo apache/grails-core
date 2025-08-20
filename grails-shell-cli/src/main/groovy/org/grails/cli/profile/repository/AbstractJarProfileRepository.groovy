@@ -135,7 +135,7 @@ abstract class AbstractJarProfileRepository implements ProfileRepository {
             super.getCommands(context)
             for (cmd in internalCommands) {
                 if (cmd instanceof ProjectContextAware) {
-                    ((ProjectContextAware)cmd).setProjectContext(context)
+                    ((ProjectContextAware) cmd).setProjectContext(context)
                 }
                 commandsByName[cmd.name] = cmd
             }

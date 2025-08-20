@@ -41,7 +41,7 @@ class DefaultApplicationEventPublisher implements ConfigurableApplicationEventPu
         for (listener in applicationListeners) {
             if (listener instanceof SmartApplicationListener) {
                 SmartApplicationListener smartApplicationListener = (SmartApplicationListener) listener
-                if (!smartApplicationListener.supportsEventType((Class<ApplicationEvent>)event.getClass())) {
+                if (!smartApplicationListener.supportsEventType((Class<ApplicationEvent>) event.getClass())) {
                     continue
                 }
                 else if (!smartApplicationListener.supportsSourceType(event.source.getClass())) {
@@ -58,7 +58,7 @@ class DefaultApplicationEventPublisher implements ConfigurableApplicationEventPu
             def eventObject = new PayloadApplicationEvent<Object>(this, event)
             if (listener instanceof SmartApplicationListener) {
                 SmartApplicationListener smartApplicationListener = (SmartApplicationListener) listener
-                if (!smartApplicationListener.supportsEventType((Class<ApplicationEvent>)eventObject.getClass())) {
+                if (!smartApplicationListener.supportsEventType((Class<ApplicationEvent>) eventObject.getClass())) {
                     continue
                 }
                 else if (!smartApplicationListener.supportsSourceType(eventObject.source.getClass())) {

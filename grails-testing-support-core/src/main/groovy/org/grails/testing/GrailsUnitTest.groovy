@@ -103,7 +103,7 @@ trait GrailsUnitTest {
         binding.setVariable('application', grailsApplication)
         bb.setBinding(binding)
         bb.beans(closure)
-        bb.registerBeans((BeanDefinitionRegistry)applicationContext)
+        bb.registerBeans((BeanDefinitionRegistry) applicationContext)
         applicationContext.beanFactory.preInstantiateSingletons()
     }
 
@@ -111,7 +111,7 @@ trait GrailsUnitTest {
         Class clazz = plugin.getClass()
         try {
             Method doWithSpringMethod = clazz.getMethod('doWithSpring')
-            Closure config = (Closure)doWithSpringMethod.invoke(plugin)
+            Closure config = (Closure) doWithSpringMethod.invoke(plugin)
             if (config != null) {
                 defineBeans(config)
                 return
@@ -120,7 +120,7 @@ trait GrailsUnitTest {
 
         try {
             Method doWithSpringField = clazz.getMethod('getDoWithSpring')
-            defineBeans((Closure)doWithSpringField.invoke(plugin))
+            defineBeans((Closure) doWithSpringField.invoke(plugin))
         } catch (NoSuchFieldException e) {}
     }
 
@@ -143,17 +143,17 @@ trait GrailsUnitTest {
     void cleanupGrailsApplication() {
         if (_grailsApplication != null) {
             if (_grailsApplication instanceof DefaultGrailsApplication) {
-                ((DefaultGrailsApplication)_grailsApplication).clear()
+                ((DefaultGrailsApplication) _grailsApplication).clear()
             }
 
             ApplicationContext applicationContext = _grailsApplication.getParentContext()
             if (applicationContext instanceof ConfigurableApplicationContext) {
                 if (((ConfigurableApplicationContext) applicationContext).isActive()) {
                     if (_grailsApplication.mainContext instanceof Closeable) {
-                        ((Closeable)_grailsApplication.mainContext).close()
+                        ((Closeable) _grailsApplication.mainContext).close()
                     }
                     if (applicationContext instanceof Closeable) {
-                        ((Closeable)applicationContext).close()
+                        ((Closeable) applicationContext).close()
                     }
                 }
             }

@@ -419,7 +419,7 @@ class SimpleDataBinder implements DataBinder {
         if (field) {
             def genericType = field.genericType
             if (genericType instanceof ParameterizedType) {
-                ParameterizedType pt = (ParameterizedType)genericType
+                ParameterizedType pt = (ParameterizedType) genericType
                 Class rawType = pt.getRawType()
                 if (Map.isAssignableFrom(rawType)) {
                     referencedType = pt.getActualTypeArguments()[1]
@@ -467,7 +467,7 @@ class SimpleDataBinder implements DataBinder {
         if (obj[propertyName] == null) {
             obj[propertyName] = [:]
         }
-        return (Map)obj[propertyName]
+        return (Map) obj[propertyName]
     }
 
     protected Collection initializeCollection(obj, String propertyName, Class type, boolean reuseExistingCollectionIfExists = true) {
@@ -479,7 +479,7 @@ class SimpleDataBinder implements DataBinder {
             val = getDefaultCollectionInstanceForType(type)
             obj[propertyName] = val
         }
-        return (Collection)val
+        return (Collection) val
     }
 
     protected getDefaultCollectionInstanceForType(Class type) {
@@ -542,7 +542,7 @@ class SimpleDataBinder implements DataBinder {
                 if (annotation) {
                     def valueClass = getValueOfBindUsing(annotation)
                     if (Closure.isAssignableFrom(valueClass)) {
-                        Closure closure = (Closure)valueClass.newInstance(null, null)
+                        Closure closure = (Closure) valueClass.newInstance(null, null)
                         converter = new ClosureValueConverter(converterClosure: closure.curry(obj), targetType: field.type)
                     }
                 } else {
@@ -632,7 +632,7 @@ class SimpleDataBinder implements DataBinder {
         def propertyType
         def propertyGetter
         if (metaProperty instanceof MetaBeanProperty) {
-            def mbp = (MetaBeanProperty)metaProperty
+            def mbp = (MetaBeanProperty) metaProperty
             propertyType = mbp.getter?.returnType ?: mbp.field?.type
             if (propertyType && (propertyType.interface || Modifier.isAbstract(propertyType.modifiers))) {
                 propertyType = mbp.field?.type
@@ -659,9 +659,9 @@ class SimpleDataBinder implements DataBinder {
             if (propertyValue instanceof Map) {
                 if (Collection.isAssignableFrom(propertyType) &&
                    propertyValue.size() == 1 &&
-                   ((Map)propertyValue)[propertyValue.keySet()[0]] instanceof List) {
+                   ((Map) propertyValue)[propertyValue.keySet()[0]] instanceof List) {
                     def key = propertyValue.keySet()[0]
-                    List list = (List)((Map)propertyValue)[key]
+                    List list = (List) ((Map)propertyValue)[key]
                     addElementsToCollection(obj, propName, list)
                 } else {
                     if (obj[propName] == null) {
@@ -672,9 +672,9 @@ class SimpleDataBinder implements DataBinder {
             } else if (propertyValue instanceof DataBindingSource) {
                 if (Collection.isAssignableFrom(propertyType) &&
                    propertyValue.size() == 1 &&
-                   ((Map)propertyValue)[propertyValue.getPropertyNames()[0]] instanceof List) {
+                   ((Map) propertyValue)[propertyValue.getPropertyNames()[0]] instanceof List) {
                     def key = propertyValue.getPropertyNames()[0]
-                    List list = (List)((Map)propertyValue)[key]
+                    List list = (List) ((Map)propertyValue)[key]
                     addElementsToCollection(obj, propName, list)
                 } else {
                     if (obj[propName] == null) {
@@ -776,7 +776,7 @@ class SimpleDataBinder implements DataBinder {
                 if (annotation) {
                     def valueClass = getValueOfBindInitializer(annotation)
                     if (Closure.isAssignableFrom(valueClass)) {
-                        Closure closure = (Closure)valueClass.newInstance(null, null)
+                        Closure closure = (Closure) valueClass.newInstance(null, null)
                         initializer = new ClosureValueInitializer(initializerClosure: closure.curry(obj), targetType: field.type)
                     }
                 }
@@ -793,7 +793,7 @@ class SimpleDataBinder implements DataBinder {
         assert annotation instanceof BindInitializer
         def value
         if (annotation instanceof BindInitializer) {
-            value = ((BindInitializer)annotation).value()
+            value = ((BindInitializer) annotation).value()
         }
         value
     }

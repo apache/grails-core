@@ -53,7 +53,7 @@ class UniqueConstraint extends AbstractConstraint {
     UniqueConstraint(Class<?> constraintOwningClass, String constraintPropertyName, Object constraintParameter, MessageSource messageSource) {
         super(constraintOwningClass, constraintPropertyName, constraintParameter, messageSource)
         if (constraintParameter instanceof Iterable) {
-            for (property in ((Iterable)constraintParameter)) {
+            for (property in ((Iterable) constraintParameter)) {
                 group.add(property.toString())
             }
         }

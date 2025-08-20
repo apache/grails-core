@@ -56,7 +56,7 @@ class DefaultMappingContextFactoryBean implements FactoryBean<MappingContext>, I
         this.messageSource = messageSource
         this.grailsApplication = grailsApplication
         if (messageSource instanceof ApplicationContext) {
-            this.applicationContext = (ApplicationContext)messageSource
+            this.applicationContext = (ApplicationContext) messageSource
         }
         else {
             applicationContext = null

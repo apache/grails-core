@@ -95,7 +95,7 @@ class FindAllByImplementer extends AbstractArrayOrIterableResultImplementer impl
 
     @Override
     void doImplement(ClassNode domainClassNode, ClassNode targetClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, boolean isArray) {
-        BlockStatement body = (BlockStatement)newMethodNode.getCode()
+        BlockStatement body = (BlockStatement) newMethodNode.getCode()
         ClassNode returnType = newMethodNode.returnType
         String methodName = newMethodNode.name
         Parameter[] parameters = newMethodNode.parameters

@@ -40,7 +40,7 @@ class GrailsWebDataBindingListener extends DataBindingListenerAdapter {
 
     @Override
     void bindingError(BindingError error, errors) {
-        BindingResult bindingResult = (BindingResult)errors
+        BindingResult bindingResult = (BindingResult) errors
         String className = error.object?.getClass()?.getName()
         String classAsPropertyName = GrailsNameUtils.getPropertyNameRepresentation(className)
         String propertyName = error.getPropertyName()

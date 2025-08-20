@@ -48,7 +48,7 @@ class CommandCompleter implements Completer {
             }
         }
         if (cmd instanceof Completer) {
-            return ((Completer)cmd).complete(buffer, cursor, candidates)
+            return ((Completer) cmd).complete(buffer, cursor, candidates)
         }
         return cursor
     }

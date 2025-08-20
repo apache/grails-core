@@ -39,14 +39,14 @@ class WebSetupInterceptor implements IMethodInterceptor {
 
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {
-        GrailsWebUnitTest test = (GrailsWebUnitTest)invocation.instance
+        GrailsWebUnitTest test = (GrailsWebUnitTest) invocation.instance
         setup(test)
         invocation.proceed()
     }
 
     void setup(GrailsWebUnitTest test) {
         def applicationContext = test.applicationContext
-        GrailsMockHttpServletRequest request = new GrailsMockHttpServletRequest((ServletContext)test.servletContext)
+        GrailsMockHttpServletRequest request = new GrailsMockHttpServletRequest((ServletContext) test.servletContext)
         request.setAttribute(DispatcherServlet.LOCALE_RESOLVER_ATTRIBUTE, applicationContext.getBean('localeResolver'))
         request.method = 'GET'
         GrailsMockHttpServletResponse response = new GrailsMockHttpServletResponse()

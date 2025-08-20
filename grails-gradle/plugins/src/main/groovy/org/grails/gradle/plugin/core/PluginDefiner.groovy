@@ -46,14 +46,14 @@ class PluginDefiner {
     }
 
     void methodMissing(String name, args) {
-        Object[] argArray = (Object[])args
+        Object[] argArray = (Object[]) args
 
         if (!argArray) {
             throw new MissingMethodException(name, GrailsExtension, args)
         }
         else {
             if (argArray[0] instanceof Map) {
-                Map notation = (Map)argArray[0]
+                Map notation = (Map) argArray[0]
                 if (!notation.containsKey('group')) {
                     notation.put('group', 'org.grails.plugins')
                 }

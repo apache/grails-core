@@ -145,7 +145,7 @@ class MimeType {
         if (ctx == null) {
             ctx = GrailsWebRequest.lookup()?.getApplicationContext()
         }
-        (MimeType[])(ctx?.containsBean(MimeType.BEAN_NAME) ? ctx?.getBean(MimeType.BEAN_NAME, MimeType[]) : DEFAULTS)
+        (MimeType[]) (ctx?.containsBean(MimeType.BEAN_NAME) ? ctx?.getBean(MimeType.BEAN_NAME, MimeType[]) : DEFAULTS)
     }
 
     /**

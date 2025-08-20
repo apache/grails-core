@@ -33,7 +33,7 @@ class DataTestCleanupInterceptor implements IMethodInterceptor {
 
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {
-        cleanupDataTest((DataTest)invocation.instance)
+        cleanupDataTest((DataTest) invocation.instance)
         invocation.proceed()
     }
 

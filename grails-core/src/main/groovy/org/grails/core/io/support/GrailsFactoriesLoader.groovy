@@ -47,7 +47,7 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
      * @param factoryClass the interface or abstract class representing the factory
      */
     static <T> List<T> loadFactories(Class<T> factoryClass) {
-        (List<T>)loadFactoriesWithArguments(factoryClass, GrailsFactoriesLoader.classLoader)
+        (List<T>) loadFactoriesWithArguments(factoryClass, GrailsFactoriesLoader.classLoader)
     }
 
     /**
@@ -58,7 +58,7 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
      * @param classLoader the ClassLoader to use for loading (can be {@code null} to use the default)
      */
     static <T> List<T> loadFactories(Class<T> factoryClass, ClassLoader classLoader) {
-        (List<T>)loadFactoriesWithArguments(factoryClass, classLoader, NO_ARGUMENTS)
+        (List<T>) loadFactoriesWithArguments(factoryClass, classLoader, NO_ARGUMENTS)
     }
 
     static <T> List<T> loadFactoriesWithArguments(Class<T> factoryClass, ClassLoader classLoader, Object[] arguments) {
@@ -121,7 +121,7 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
     static <T> T loadFactory(Class<T> factoryClass, ClassLoader classLoader, Object... arguments) {
         def all = loadFactoriesWithArguments(factoryClass, classLoader, arguments)
         if (all) {
-            return (T)all.get(0)
+            return (T) all.get(0)
         }
     }
 }

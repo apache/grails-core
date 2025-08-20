@@ -29,7 +29,7 @@ class GeometryCollection extends ArrayList<GeoJSON> implements GeoJSON {
     List<? extends Object> asList() {
         collect() { GeoJSON current ->
             GeoJSONType.convertToGeoDocument(
-                    (Shape)current)
+                    (Shape) current)
         }
     }
 

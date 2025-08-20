@@ -96,7 +96,7 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
         Expression datastoreAttribute = annotationNode.getMember('datastore')
         ClassNode defaultType = hasDataSourceProperty ? make(MultipleConnectionSourceCapableDatastore) : make(Datastore)
         boolean hasSpecificDatastore = datastoreAttribute instanceof ClassExpression
-        ClassNode datastoreType = hasSpecificDatastore ? ((ClassExpression)datastoreAttribute).getType().getPlainNodeReference() : defaultType
+        ClassNode datastoreType = hasSpecificDatastore ? ((ClassExpression) datastoreAttribute).getType().getPlainNodeReference() : defaultType
         Parameter connectionNameParam = param(STRING_TYPE, 'connectionName')
         MethodCallExpression datastoreLookupCall
         MethodCallExpression datastoreLookupDefaultCall

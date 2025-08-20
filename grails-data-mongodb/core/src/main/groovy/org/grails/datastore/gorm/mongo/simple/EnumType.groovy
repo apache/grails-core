@@ -86,10 +86,10 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
      */
     private static Class getCollectionType(PersistentProperty property) {
         if (property instanceof Basic) {
-            return ((Basic)property).componentType
+            return ((Basic) property).componentType
         }
         else if (property instanceof Association) {
-            return ((Association)property).associatedEntity.javaClass
+            return ((Association) property).associatedEntity.javaClass
         }
         return null
     }
@@ -109,7 +109,7 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
             return false
         }
         else {
-            Basic basic = (Basic)property
+            Basic basic = (Basic) property
             return basic.componentType.isEnum()
         }
     }
@@ -145,9 +145,9 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
             if (isOrdinalTypeEnum(property)) {
                 value = ((Enum) value).ordinal()
             } else if (value.hasProperty(GormProperties.IDENTITY)) {
-                value = getId((Enum)value)
+                value = getId((Enum) value)
             } else {
-                value = ((Enum)value).name()
+                value = ((Enum) value).name()
             }
         }
 
@@ -246,7 +246,7 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
         Class propertyType = property.getType()
 
         if (isOrdinalTypeEnum(property)) {
-            return getEnumValueForOrdinal((Number)value, propertyType)
+            return getEnumValueForOrdinal((Number) value, propertyType)
         }
 
         def finalValue

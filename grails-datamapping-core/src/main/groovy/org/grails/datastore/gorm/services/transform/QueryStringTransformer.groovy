@@ -66,7 +66,7 @@ class QueryStringTransformer extends ClassCodeExpressionTransformer {
     GStringExpression transformQuery(GStringExpression query) {
         Expression transformed = transform(query)
         transformed = transformPropertyExpressions(transformed)
-        GStringExpression transformedGString = (GStringExpression)transformed
+        GStringExpression transformedGString = (GStringExpression) transformed
 
         int i = 0
         List<ConstantExpression> newStrings = []
@@ -77,7 +77,7 @@ class QueryStringTransformer extends ClassCodeExpressionTransformer {
             if (i < values.size()) {
                 Expression valueExpr = values[i++]
                 if (valueExpr instanceof ConstantExpression) {
-                    ConstantExpression valueConstant = (ConstantExpression)valueExpr
+                    ConstantExpression valueConstant = (ConstantExpression) valueExpr
                     String newConstant = exp.value.toString() + valueConstant.value.toString()
                     if (currentConstant != null) {
                         currentConstant = constX(currentConstant.value.toString() + newConstant)
@@ -127,25 +127,25 @@ class QueryStringTransformer extends ClassCodeExpressionTransformer {
             return transformPropertyExpressions(exp)
         }
         else if (exp instanceof MethodCallExpression) {
-            MethodCallExpression mce = (MethodCallExpression)exp
+            MethodCallExpression mce = (MethodCallExpression) exp
             Expression methodTarget = mce.objectExpression
             if (methodTarget instanceof ClosureExpression && mce.methodAsString == 'call') {
-                ClosureExpression closureExpression = (ClosureExpression)methodTarget
+                ClosureExpression closureExpression = (ClosureExpression) methodTarget
                 Statement body = closureExpression.code
                 if (body instanceof BlockStatement) {
                     def statements = ((BlockStatement) body).statements
                     if (statements.size() == 1) {
                         for (stmt in statements) {
                             if (stmt instanceof ExpressionStatement) {
-                                def stmtExpr = ((ExpressionStatement)stmt).expression
+                                def stmtExpr = ((ExpressionStatement) stmt).expression
                                 if (stmtExpr instanceof DeclarationExpression) {
-                                    return transformDeclarationExpression((DeclarationExpression)stmtExpr)
+                                    return transformDeclarationExpression((DeclarationExpression) stmtExpr)
                                 }
                             }
                             else if (stmt instanceof ReturnStatement) {
-                                def stmtExpr = ((ReturnStatement)stmt).expression
+                                def stmtExpr = ((ReturnStatement) stmt).expression
                                 if (stmtExpr instanceof DeclarationExpression) {
-                                    return transformDeclarationExpression((DeclarationExpression)stmtExpr)
+                                    return transformDeclarationExpression((DeclarationExpression) stmtExpr)
                                 }
                             }
                         }
@@ -155,7 +155,7 @@ class QueryStringTransformer extends ClassCodeExpressionTransformer {
         }
 
         if (exp instanceof VariableExpression) {
-            VariableExpression var = (VariableExpression)exp
+            VariableExpression var = (VariableExpression) exp
             def declared = variableScope.getDeclaredVariable(var.name)
             if (declared != null) {
                 return varX(declared)
@@ -169,7 +169,7 @@ class QueryStringTransformer extends ClassCodeExpressionTransformer {
 
     Expression transformDeclarationExpression(DeclarationExpression dec) {
         if (dec.leftExpression instanceof VariableExpression && dec.rightExpression instanceof EmptyExpression) {
-            VariableExpression declaredVar = (VariableExpression)dec.leftExpression
+            VariableExpression declaredVar = (VariableExpression) dec.leftExpression
             ClassNode variableType = declaredVar.type
             String variableName = declaredVar.name
             if (AstUtils.isDomainClass(variableType)) {
@@ -178,16 +178,16 @@ class QueryStringTransformer extends ClassCodeExpressionTransformer {
             }
         }
         else if (dec.leftExpression instanceof VariableExpression && dec.rightExpression instanceof PropertyExpression) {
-            VariableExpression declaredVar = (VariableExpression)dec.leftExpression
+            VariableExpression declaredVar = (VariableExpression) dec.leftExpression
             ClassNode variableType = declaredVar.type
             String variableName = declaredVar.name
             if (AstUtils.isDomainClass(variableType)) {
-                PropertyExpression pe = (PropertyExpression)dec.rightExpression
+                PropertyExpression pe = (PropertyExpression) dec.rightExpression
                 Expression obj = pe.objectExpression
                 String currentProperty = pe.propertyAsString
                 StringBuilder path = new StringBuilder()
                 if (obj instanceof  VariableExpression) {
-                    VariableExpression ve = (VariableExpression)obj
+                    VariableExpression ve = (VariableExpression) obj
                     ClassNode declaredType = declaredQueryTargets.get(ve.name)
                     if (declaredType == null) {
                         AstUtils.error(sourceUnit, dec, "Invalid property path $path in query")
@@ -260,21 +260,21 @@ class QueryStringTransformer extends ClassCodeExpressionTransformer {
         propertyPath.add(p.propertyAsString)
         Expression obj = p.objectExpression
         while (obj instanceof PropertyExpression) {
-            PropertyExpression nextProperty = (PropertyExpression)obj
+            PropertyExpression nextProperty = (PropertyExpression) obj
             propertyPath.add(nextProperty.propertyAsString)
             obj = nextProperty.objectExpression
         }
         if (obj instanceof VariableExpression) {
-            propertyPath.add(((VariableExpression)obj).name)
+            propertyPath.add(((VariableExpression) obj).name)
         }
         return propertyPath.reverse()
     }
     Expression transformPropertyExpressions(Expression exp) {
         if (exp instanceof PropertyExpression) {
-            PropertyExpression pe = (PropertyExpression)exp
+            PropertyExpression pe = (PropertyExpression) exp
             Expression targetObject = pe.objectExpression
             if (targetObject instanceof VariableExpression) {
-                VariableExpression var = (VariableExpression)targetObject
+                VariableExpression var = (VariableExpression) targetObject
                 ClassNode domainType = declaredQueryTargets.get(var.name)
                 if (domainType != null) {
                     String propertyName = pe.propertyAsString

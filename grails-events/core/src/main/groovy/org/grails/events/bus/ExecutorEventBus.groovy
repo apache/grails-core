@@ -52,7 +52,7 @@ class ExecutorEventBus extends AbstractEventBus {
     protected Callable buildNotificationCallable(Event event, Collection<Subscription> eventSubscriptions, Closure reply) {
         Executor executor = this.executor
         if (executor instanceof ExecutorService) {
-            ExecutorService executorService = (ExecutorService)this.executor
+            ExecutorService executorService = (ExecutorService) this.executor
             return {
                 executorService.submit {
                     for (Subscription subscription in eventSubscriptions) {

@@ -75,9 +75,9 @@ class HibernateRuntimeUtils {
         MetaClass mc = isGormValidateable ? null : GroovySystem.metaClassRegistry.getMetaClass(target.getClass())
         def errors = new ValidationErrors(target)
 
-        Errors originalErrors = isGormValidateable ? ((GormValidateable)target).getErrors() : (Errors) mc.getProperty(target, GormProperties.ERRORS)
+        Errors originalErrors = isGormValidateable ? ((GormValidateable) target).getErrors() : (Errors) mc.getProperty(target, GormProperties.ERRORS)
         for (Object o in originalErrors.fieldErrors) {
-            FieldError fe = (FieldError)o
+            FieldError fe = (FieldError) o
             if (fe.isBindingFailure()) {
                 errors.addError(new FieldError(fe.getObjectName(),
                         fe.field,
@@ -90,7 +90,7 @@ class HibernateRuntimeUtils {
         }
 
         if (isGormValidateable) {
-            ((GormValidateable)target).setErrors(errors)
+            ((GormValidateable) target).setErrors(errors)
         }
         else {
             mc.setProperty(target, GormProperties.ERRORS, errors)
@@ -148,9 +148,9 @@ class HibernateRuntimeUtils {
             try {
                 if (value instanceof Number && (targetType == Long || targetType == Integer)) {
                     if (targetType == Long) {
-                        value = ((Number)value).toLong()
+                        value = ((Number) value).toLong()
                     } else {
-                        value = ((Number)value).toInteger()
+                        value = ((Number) value).toInteger()
                     }
                 } else if (value instanceof String && targetType in Number) {
                     String strValue = value.trim()

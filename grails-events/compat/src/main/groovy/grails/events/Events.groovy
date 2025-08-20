@@ -133,7 +133,7 @@ trait Events {
     def <E extends Event<?>> Bus notify(Object key, Closure<E> supplier) {
         if (eventBus == null) throw new IllegalStateException('EventBus not present. Event notification attempted outside of application context.')
         LoggerFactory.getLogger(getClass()).warn("The class [${getClass()}] used the legacy Reactor 2 event bus and needs to be re-compiled")
-        eventBus.notify((CharSequence)key.toString(), supplier.call())
+        eventBus.notify((CharSequence) key.toString(), supplier.call())
         return eventBus
     }
 
