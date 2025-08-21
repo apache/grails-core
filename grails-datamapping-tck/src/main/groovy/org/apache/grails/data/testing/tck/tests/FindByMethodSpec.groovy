@@ -335,7 +335,7 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         Book.findOrCreateByAuthorBetween('A', 'B')
 
         then:
-        thrown ConfigurationException
+        thrown MissingMethodException
 
         when:
         Book.findOrCreateByAuthorGreaterThanEquals('B')
@@ -403,13 +403,13 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         Book.findOrSaveByAuthorGreaterThan('B')
 
         then:
-        thrown MissingMethodException
+        thrown ConfigurationException
 
         when:
         Book.findOrSaveByAuthorLessThan('B')
 
         then:
-        thrown MissingMethodException
+        thrown ConfigurationException
 
         when:
         Book.findOrSaveByAuthorBetween('A', 'B')
@@ -421,13 +421,13 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         Book.findOrSaveByAuthorGreaterThanEquals('B')
 
         then:
-        thrown MissingMethodException
+        thrown ConfigurationException
 
         when:
         Book.findOrSaveByAuthorLessThanEquals('B')
 
         then:
-        thrown MissingMethodException
+        thrown ConfigurationException
 
         // GemFire doesn't like these...
 //        when:
