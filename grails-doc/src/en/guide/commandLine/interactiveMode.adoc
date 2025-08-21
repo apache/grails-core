@@ -73,7 +73,7 @@ Creates an application
                           assertj, mockito, spring-boot-starter-undertow,
                           github-workflow-java-ci, jrebel, testcontainers, sqlserver,
                           grails-console, views-markup, asset-pipeline-grails, views-json,
-                          gorm-neo4j, asciidoctor, embedded-mongodb, grails-web-console,
+                          gorm-neo4j, asciidoctor, grails-web-console,
                           logbackGroovy, mongo-sync, shade, geb, properties
   -g, --gorm=GORM Implementation
                         Which GORM Implementation to configure. Possible values: hibernate,
@@ -116,7 +116,6 @@ Available Features
 
   Database
   database-migration                  Adds support for Liquibase database migrations. The Database Migration plugin helps you manage database changes while developing Grails applications.
-  embedded-mongodb                    Executes an embedded mongo database for integration or functional testing
   gorm-hibernate5 (+)                 Adds support for Hibernate5 using GORM
   gorm-mongodb                        Configures GORM for MongoDB for Groovy applications
   gorm-neo4j                          Configures GORM for Neo4j for Groovy applications
