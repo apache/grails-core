@@ -560,7 +560,7 @@ class FormFieldsTagLib {
 		def innerAttributes = attributes.clone()
 		innerAttributes.remove('bean')
 		innerAttributes.remove('prefix')
-		//'except' is a reserved word for the 'all' tag
+		//'except' is a reserved word for the 'all' tag: https://github.com/grails/fields/issues/12
 		innerAttributes.remove('except')
 		new BeanAndPrefix(bean: bean, prefix: prefix, innerAttributes: innerAttributes)
 	}
