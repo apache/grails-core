@@ -18,7 +18,7 @@
  */
 package org.grails.testing.context.junit4;
 
-import org.springframework.boot.test.context.SpringBootContextLoader;
+import grails.boot.test.GrailsApplicationContextLoader;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.test.context.ContextConfiguration;
@@ -29,7 +29,7 @@ import java.lang.annotation.*;
  * @author Graeme Rocher
  * @since 3.0
  */
-@ContextConfiguration(loader = SpringBootContextLoader.class)
+@ContextConfiguration(loader = GrailsApplicationContextLoader.class)
 @Documented
 @Inherited
 @Retention(RetentionPolicy.RUNTIME)
