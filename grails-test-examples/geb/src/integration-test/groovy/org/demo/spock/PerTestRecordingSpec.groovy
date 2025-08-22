@@ -19,73 +19,85 @@
 
 package org.demo.spock
 
+import spock.lang.Stepwise
+
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 
+import org.demo.spock.pages.HomePage
+import org.demo.spock.pages.UploadPage
+
+@Stepwise
 @Integration
 class PerTestRecordingSpec extends ContainerGebSpec {
 
-    void 'first test'() {
+    void '(setup) running a test to create a recording'() {
         when: 'visiting the home page'
-        go('/')
+        to HomePage
 
         then: 'the page loads correctly'
-        title.contains('Welcome to Grails')
+        title == 'Welcome to Grails'
     }
 
-    void 'second test'() {
-        when: 'visiting another page'
-        go('https://grails.apache.org/')
+    void '(setup) running a second test to create another recording'() {
+        when: 'visiting another page than the previous test'
+        to UploadPage
         
-        and: 'ensuring file size is different'
+        and: 'pausing to ensure the recorded file size is different'
         Thread.sleep(1000)
 
         then: 'the page loads correctly'
-        title.contains('Grails')
+        title == 'Upload Test'
     }
 
-    void 'verify last recording directory'() {
-        when:
+    void 'the recordings of the previous two tests are different'() {
+        when: 'getting the configured base recording directory'
         // Logic from GrailsGebSettings
-        String recordingDirectoryName = System.getProperty('grails.geb.recording.directory', 'build/gebContainer/recordings')
-        File baseRecordingDir = new File(recordingDirectoryName)
+        def recordingDirectoryName = System.getProperty(
+                'grails.geb.recording.directory',
+                'build/gebContainer/recordings'
+        )
+        def baseRecordingDir = new File(recordingDirectoryName)
         
-        then: 'base recording directory should exist'
+        then: 'the base recording directory exists'
         baseRecordingDir.exists()
 
-        when: 'get most recent recording directory'
+        when: 'getting the most recent recording directory'
         // Find the timestamped recording directory (should be the most recent one)
         File recordingDir = null
-        File[] timestampedDirs = baseRecordingDir.listFiles({ File dir ->
-            dir.isDirectory() && dir.name.matches('\\d{8}_\\d{6}')
+        def timestampedDirs = baseRecordingDir.listFiles({ File dir ->
+            dir.isDirectory() && dir.name ==~ /^\d{8}_\d{6}$/
         } as FileFilter)
 
-        if (timestampedDirs && timestampedDirs.length > 0) {
+        if (timestampedDirs) {
             // Get the most recent directory
             recordingDir = timestampedDirs.sort { it.name }.last()
         }
 
-        and: 'Get all recording files (mp4 or flv)'
-        File[] recordingFiles = recordingDir?.listFiles({ File file ->
-            file.isFile() && (file.name.endsWith('.mp4') || file.name.endsWith('.flv')) && file.name.contains(this.class.getSimpleName())
+        then: 'the recording directory should be found'
+        recordingDir != null
+
+        when: 'getting all video recording files (mp4 or flv) from the recording directory'
+        def recordingFiles = recordingDir?.listFiles({ File file ->
+            isVideoFile(file) && file.name.contains(this.class.simpleName)
         } as FileFilter)
 
-        then: 'recording directory should exist'
-        recordingDir != null
-        recordingDir.exists()
-
-        and: 'recording files should be created for each test method'
+        then: 'recording files should exist for each test method'
         recordingFiles != null
         recordingFiles.length >= 2 // At least 2 files for the first two test methods
 
-        and: 'recording files should have different content (different sizes)'
+        and: 'the recording files should have different content (different sizes)'
         // Sort by last modified time to get the most recent files
-        File[] sortedFiles = recordingFiles.sort { it.lastModified() }
-        File secondLastFile = sortedFiles[sortedFiles.length - 2]
-        File lastFile = sortedFiles[sortedFiles.length - 1]
+        def sortedFiles = recordingFiles.sort { it.lastModified() }
+        def secondLastFile = sortedFiles[sortedFiles.length - 2]
+        def lastFile = sortedFiles[sortedFiles.length - 1]
 
         // Files should have different sizes (allowing for small variations due to timing)
         long sizeDifference = Math.abs(lastFile.length() - secondLastFile.length())
         sizeDifference > 1000 // Expect at least 1KB difference
+    }
+
+    private static boolean isVideoFile(File file) {
+        return file.isFile() && (file.name.endsWith('.mp4') || file.name.endsWith('.flv'))
     }
 }
