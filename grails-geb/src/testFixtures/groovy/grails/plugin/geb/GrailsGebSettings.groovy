@@ -47,7 +47,7 @@ class GrailsGebSettings {
     String tracingEnabled
     String recordingDirectoryName
     String reportingDirectoryName
-    boolean recordingRestartPerTest
+    boolean restartRecordingContainerPerTest
     VncRecordingMode recordingMode
     VncRecordingFormat recordingFormat
     LocalDateTime startTime
@@ -65,7 +65,7 @@ class GrailsGebSettings {
         recordingFormat = VncRecordingFormat.valueOf(
                 System.getProperty('grails.geb.recording.format', DEFAULT_RECORDING_FORMAT.name())
         )
-        recordingRestartPerTest = Boolean.parseBoolean(System.getProperty('grails.geb.recording.restartPerTest', false.toString()))
+        restartRecordingContainerPerTest = Boolean.parseBoolean(System.getProperty('grails.geb.recording.restartRecordingContainerPerTest', false.toString()))
         implicitlyWait = getIntProperty('grails.geb.timeouts.implicitlyWait', DEFAULT_TIMEOUT_IMPLICITLY_WAIT)
         pageLoadTimeout = getIntProperty('grails.geb.timeouts.pageLoad', DEFAULT_TIMEOUT_PAGE_LOAD)
         scriptTimeout = getIntProperty('grails.geb.timeouts.script', DEFAULT_TIMEOUT_SCRIPT)

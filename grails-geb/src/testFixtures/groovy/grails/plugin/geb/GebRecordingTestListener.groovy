@@ -55,7 +55,7 @@ class GebRecordingTestListener extends AbstractRunListener {
         } catch (NotFoundException e) {
             // Handle the case where VNC recording container doesn't have a recording file
             // This can happen when per-test recording is enabled and a test doesn't use the browser
-            if (containerHolder.grailsGebSettings.recordingRestartPerTest &&
+            if (containerHolder.grailsGebSettings.restartRecordingContainerPerTest &&
                 e.message?.contains('/newScreen.mp4')) {
                 log.debug("No VNC recording found for test '{}' - this is expected for tests that don't use the browser",
                          iteration.displayName)

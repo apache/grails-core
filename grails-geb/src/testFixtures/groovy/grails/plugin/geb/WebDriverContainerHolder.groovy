@@ -261,7 +261,7 @@ class WebDriverContainerHolder {
      * Should be called BEFORE each test starts.
      */
     void restartVncRecordingContainer() {
-        if (!grailsGebSettings.recordingEnabled || !grailsGebSettings.recordingRestartPerTest || !currentContainer) {
+        if (!grailsGebSettings.recordingEnabled || !grailsGebSettings.restartRecordingContainerPerTest || !currentContainer) {
             return
         }
         try {
