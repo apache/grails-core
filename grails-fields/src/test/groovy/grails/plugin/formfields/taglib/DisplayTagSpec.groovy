@@ -28,7 +28,7 @@ import grails.plugin.formfields.mock.Product
 import grails.testing.web.taglib.TagLibUnitTest
 import spock.lang.Issue
 
-@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/45')
+@Issue('https://github.com/grails/fields/issues/45')
 class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<FormFieldsTagLib> {
 
 	FormFieldsTemplateService mockFormFieldsTemplateService = Mock(FormFieldsTemplateService)
@@ -148,7 +148,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 		applyTemplate('<f:display bean="personInstance" property="name" displayStyle="custom" theme="test"/>', [personInstance: personInstance]) == 'theme Custom: Bart Simpson'
 	}
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/88')
+	@Issue('https://github.com/grails/fields/issues/88')
 	void 'display tag will use body for rendering value'() {
 		given:
 		views["/_fields/default/_displayWrapper.gsp"] = '<dt>${label}</dt><dd>${value}</dd>'
@@ -160,7 +160,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 		applyTemplate('<f:display bean="personInstance" property="name">${value.reverse()}</f:display>', [personInstance: personInstance]) == '<dt>Name</dt><dd>nospmiS traB</dd>'
 	}
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/192')
+	@Issue('https://github.com/grails/fields/issues/192')
 	void 'display tag will use body for rendering value2'() {
 		given:
 		views["/_fields/default/_displayWrapper.gsp"] = '<dt>${label}</dt><dd>${value}</dd>'
@@ -172,7 +172,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 		applyTemplate('<f:display bean="personInstance" property="gender">${value.name()}</f:display>', [personInstance: personInstance]) == '<dt>Gender</dt><dd>Male</dd>'
 	}
 
-    @Issue('https://github.com/grails-fields-plugin/grails-fields/issues/135')
+    @Issue('https://github.com/grails/fields/issues/135')
     void 'numeric properties are not converted to Strings in display template'() {
         given:
         views["/_fields/default/_displayWrapper.gsp"] = '<dt>${label}</dt><dd>${value}</dd>'
@@ -191,7 +191,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
         applyTemplate('<f:with bean="personInstance"><f:display property="name"/></f:with>', [personInstance: personInstance]) == personInstance.name
     }
 
-    @Issue('https://github.com/grails-fields-plugin/grails-fields/issues/160')
+    @Issue('https://github.com/grails/fields/issues/160')
     void 'renders transients using g:fieldValue'() {
         expect:
         applyTemplate('<f:display bean="personInstance" property="transientText"/>', [personInstance: personInstance]) == personInstance.transientText

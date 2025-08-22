@@ -23,7 +23,7 @@ import grails.testing.web.taglib.TagLibUnitTest
 import spock.lang.Issue
 import grails.plugin.formfields.*
 
-@Issue('https://github.com/grails-fields-plugin/grails-fields/pull/17')
+@Issue('https://github.com/grails/fields/pull/17')
 class ExtraAttributesSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<FormFieldsTagLib> {
 
 	def mockFormFieldsTemplateService = Mock(FormFieldsTemplateService)
@@ -172,7 +172,7 @@ class ExtraAttributesSpec extends AbstractFormFieldsTagLibSpec implements TagLib
 		applyTemplate('<f:input bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == '<input type="text" foo="bar" name="name" value="Bart Simpson" required="" id="name" />'
 	}
 
-	@Issue("https://github.com/grails-fields-plugin/grails-fields/pull/49")
+	@Issue("https://github.com/grails/fields/pull/49")
     void 'arbitrary attributes prefixed with input- are not passed to the field template'() {
         given:
         views["/_fields/default/_wrapper.gsp"] = '<foo>${foo}</foo>'
@@ -257,7 +257,7 @@ class ExtraAttributesSpec extends AbstractFormFieldsTagLibSpec implements TagLib
         applyTemplate('<f:display bean="personInstance" property="name" input-foo="bar"/>', [personInstance: personInstance]) == '<span>bar</span>'
     }
 
-	@Issue("https://github.com/grails-fields-plugin/grails-fields/pull/49")
+	@Issue("https://github.com/grails/fields/pull/49")
     void 'arbitrary attributes prefixed with input- on f:field are passed to the default input'() {
         given:
         views["/_fields/default/_wrapper.gsp"] = '${widget}'

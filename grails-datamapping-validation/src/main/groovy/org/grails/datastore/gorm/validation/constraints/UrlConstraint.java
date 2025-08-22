@@ -55,7 +55,7 @@ public class UrlConstraint extends AbstractConstraint {
         RegexValidator domainValidator;
 
         if (constraintParameter instanceof Boolean || constraintParameter instanceof UrlValidator) {
-            // See https://github.com/grails/grails-core/issues/10993
+            // See https://github.com/apache/grails-core/issues/10993
             // When using "importFrom" the constraintParameter is the UrlValidator even if it was defined as
             // url: true, so we want the same behavior.
             domainValidator = null;

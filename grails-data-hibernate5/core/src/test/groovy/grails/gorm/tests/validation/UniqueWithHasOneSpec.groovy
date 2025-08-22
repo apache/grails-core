@@ -32,7 +32,7 @@ import spock.lang.Specification
  * @author Graeme Rocher
  * @since 1.0
  */
-@Issue('https://github.com/grails/grails-data-mapping/issues/1004')
+@Issue('https://github.com/apache/grails-data-mapping/issues/1004')
 class UniqueWithHasOneSpec extends Specification {
 
     @AutoCleanup @Shared HibernateDatastore hibernateDatastore = new HibernateDatastore(getClass().getPackage())

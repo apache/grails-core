@@ -31,7 +31,7 @@ import spock.lang.Specification
  */
 class MultipleDataSourcesWithEventsSpec extends Specification {
 
-    @Issue('https://github.com/grails/grails-core/issues/10451')
+    @Issue('https://github.com/apache/grails-core/issues/10451')
     void "Test multiple data sources register the correct events"() {
         given:"A configuration for multiple data sources"
         Map config = [

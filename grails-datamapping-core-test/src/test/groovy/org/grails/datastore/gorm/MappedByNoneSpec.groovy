@@ -27,7 +27,7 @@ import spock.lang.Issue
 /**
  * @author graemerocher
  */
-@Issue('https://github.com/grails/grails-core/issues/669')
+@Issue('https://github.com/apache/grails-core/issues/669')
 class MappedByNoneSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
         manager.domainClasses.addAll([Player, SoftballTeamPreference])

@@ -32,7 +32,7 @@ import spock.lang.Specification
 /**
  * Created by graemerocher on 29/05/2017.
  */
-@Issue('https://github.com/grails/gorm-hibernate5/issues/36')
+@Issue('https://github.com/grails/grails-data-hibernate5/issues/36')
 class UniqueWithinGroupSpec extends Specification {
 
     @AutoCleanup

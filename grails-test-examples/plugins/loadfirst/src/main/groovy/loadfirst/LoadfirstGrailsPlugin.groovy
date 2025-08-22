@@ -40,5 +40,5 @@ This plugin should be loaded before the loadsecond plugin because loadsecond exp
     def profiles = ['web']
 
     // URL to the plugin's documentation
-    def documentation = "http://grails.org/plugin/loadfirst"
+    def documentation = "https://grails.apache.org/plugins.html"
 }

@@ -40,7 +40,7 @@ Brief summary/description of the plugin.
     def profiles = ['web']
 
     // URL to the plugin's documentation
-    def documentation = "http://grails.org/plugin/issue11005"
+    def documentation = "https://grails.apache.org/plugins.html"
 
     // Extra (optional) plugin metadata
 

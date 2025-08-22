@@ -27,7 +27,7 @@ import spock.lang.Issue
  */
 class TransientsSpec extends GormDatastoreSpec {
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/574')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/574')
     void "Test transients are actually transient"() {
         when:
         TransientChild child = new TransientChild(name:"Bob", transientProperty: "blah")

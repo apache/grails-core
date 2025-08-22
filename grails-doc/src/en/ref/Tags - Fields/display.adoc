@@ -122,4 +122,4 @@ Any additional attributes are passed to the rendered template.
 
 ==== Special case for rendering all properties of a bean
 
-When `f:display` is used without a `property` then all bean properties are rendered. This is done with the `grails-app/views/templates/_fields/_list.gsp` template. The default template can be found link:https://github.com/grails-fields-plugin/grails-fields/blob/master/grails-app/views/templates/_fields/_list.gsp[on GitHub]
+When `f:display` is used without a `property` then all bean properties are rendered. This is done with the `grails-app/views/templates/_fields/_list.gsp` template. The default template can be found link:https://github.com/apache/grails-core/blob/HEAD/grails-fields/grails-app/views/templates/_fields/_list.gsp[on GitHub]

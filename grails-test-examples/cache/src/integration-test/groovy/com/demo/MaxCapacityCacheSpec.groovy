@@ -27,7 +27,7 @@ import spock.lang.Unroll
 
 /**
  * This test case validates the documented cache configuration behavior and fix for
- * issue https://github.com/grails-plugins/grails-cache/issues/62
+ * issue https://github.com/apache/grails-cache/issues/62
  */
 @Integration
 class MaxCapacityCacheSpec extends Specification {

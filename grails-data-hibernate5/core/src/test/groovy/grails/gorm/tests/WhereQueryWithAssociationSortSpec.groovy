@@ -31,7 +31,7 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         manager.domainClasses.addAll([Club, Team])
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/9860')
+    @Issue('https://github.com/apache/grails-core/issues/9860')
     void "Test sort with where query that queries association"() {
         given:"some test data"
         def c = new Club(name: "Manchester United").save()

@@ -379,7 +379,7 @@ class DataServiceSpec extends Specification {
         products[0].name == "Apple"
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/960')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/960')
     void "test findBy dynamic finder with @Join doesn't return proxies"() {
         given:
         ProductService productService = datastore.getService(ProductService)
