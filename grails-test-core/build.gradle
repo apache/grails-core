@@ -31,6 +31,7 @@ dependencies {
     implementation platform(project(':grails-bom'))
 
     api 'org.springframework:spring-tx'
+    
 
     api 'org.springframework.boot:spring-boot-test'
     // Testing

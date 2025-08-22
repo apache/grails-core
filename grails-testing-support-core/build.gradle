@@ -47,7 +47,8 @@ dependencies {
 
     api project(':grails-databinding')
     api project(':grails-datamapping-core')
-    api project(':grails-test-core')
+    api project(':grails-core')
+    api('org.spockframework:spock-core') { transitive = false }
     api 'org.springframework.boot:spring-boot-test'
     api('org.spockframework:spock-spring') { transitive = false }
     api 'org.junit.jupiter:junit-jupiter-api'

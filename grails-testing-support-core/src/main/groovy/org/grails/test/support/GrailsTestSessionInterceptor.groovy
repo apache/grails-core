@@ -57,9 +57,12 @@ class GrailsTestSessionInterceptor {
             datasourceNames << ConnectionSource.DEFAULT
         }
         
-        for (name in applicationContext.grailsApplication.config.keySet()) {
-            if (name.startsWith('dataSource_')) {
-                datasourceNames << name - 'dataSource_'
+        // Check for additional datasources by looking for sessionFactory beans
+        String[] beanNames = applicationContext.getBeanNamesForType(SessionFactory)
+        for (String beanName : beanNames) {
+            if (beanName.startsWith('sessionFactory_')) {
+                String datasourceName = beanName.substring('sessionFactory_'.length())
+                datasourceNames << datasourceName
             }
         }
         
@@ -88,7 +91,13 @@ class GrailsTestSessionInterceptor {
         }
         
         // Check for property-based configuration
-        def value = test.hasProperty(WITH_SESSION) ? test[WITH_SESSION] : null
+        def value = null
+        if (test instanceof Map) {
+            value = test[WITH_SESSION]
+        } else if (test.metaClass.hasProperty(test, WITH_SESSION)) {
+            value = test[WITH_SESSION]
+        }
+        
         if (value instanceof Boolean && value) {
             // Bind sessions for all datasources if withSession = true
             datasourcesToBind.addAll(sessionFactories.keySet())
@@ -133,7 +142,7 @@ class GrailsTestSessionInterceptor {
             
             Session session = sessionFactory.openSession()
             // Set flush mode to MANUAL to match OISV behavior
-            session.hibernateFlushMode = FlushMode.MANUAL
+            session.flushMode = FlushMode.MANUAL
             
             SessionHolder holder = new SessionHolder(session)
             TransactionSynchronizationManager.bindResource(sessionFactory, holder)

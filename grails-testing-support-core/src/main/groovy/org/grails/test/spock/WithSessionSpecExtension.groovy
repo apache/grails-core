@@ -72,13 +72,13 @@ class WithSessionSpecExtension implements IAnnotationDrivenExtension<WithSession
                 
                 // Configure datasources from annotation
                 if (annotation.datasources().length > 0) {
-                    // Create a mock test object with datasources property
-                    def testWrapper = new Expando()
-                    testWrapper.withSession = annotation.datasources() as List
-                    sessionInterceptor.shouldBindSessions(testWrapper)
+                    // Create a simple map with datasources list
+                    def testConfig = [withSession: annotation.datasources() as List]
+                    sessionInterceptor.shouldBindSessions(testConfig)
                 } else {
                     // Bind all datasources
-                    sessionInterceptor.shouldBindSessions([withSession: true])
+                    def testConfig = [withSession: true]
+                    sessionInterceptor.shouldBindSessions(testConfig)
                 }
                 
                 try {
