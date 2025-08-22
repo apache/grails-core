@@ -52,7 +52,7 @@ class CircularOneToManySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager>
 
     }
 
-    @Issue('https://github.com/grails/gorm-mongodb/issues/7')
+    @Issue('https://github.com/grails/grails-data-mongodb/issues/7')
     void "Test that deleting a child doesn't not delete the parent in a circular association"() {
         given: "A circular one-to-many"
         new Profile(name: "Fred")

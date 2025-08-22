@@ -129,7 +129,7 @@ class Project {
         people.size() == 2
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/982')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/982')
     def "test transform method that operates on returned query"() {
         given: "A bunch of people"
         createPeople()

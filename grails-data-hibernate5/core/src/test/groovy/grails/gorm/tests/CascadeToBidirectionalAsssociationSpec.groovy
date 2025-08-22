@@ -26,7 +26,7 @@ import spock.lang.Issue
 /**
  * Created by graemerocher on 01/02/16.
  */
-@Issue('https://github.com/grails/grails-core/issues/9290')
+@Issue('https://github.com/apache/grails-core/issues/9290')
 class CascadeToBidirectionalAsssociationSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
         manager.domainClasses.addAll([Club, Team, Player, Contract])

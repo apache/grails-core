@@ -166,7 +166,7 @@ class JsonViewTemplateResolverSpec extends Specification {
         RequestContextHolder.setRequestAttributes(null)
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/10582')
+    @Issue('https://github.com/apache/grails-core/issues/10582')
     void 'Test that the template resolver works for a Request URI'() {
         given: 'a viewResolver with a mock template resolver'
         def smartResolver = new JsonViewResolver()

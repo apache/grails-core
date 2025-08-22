@@ -23,7 +23,7 @@ import grails.plugin.formfields.mock.*
 import grails.testing.services.ServiceUnitTest
 import spock.lang.*
 
-@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/39')
+@Issue('https://github.com/grails/fields/issues/39')
 class AssociationTypeTemplatesSpec extends BuildsAccessorFactory implements ServiceUnitTest<FormFieldsTemplateService> {
 
 	Author authorInstance

@@ -31,7 +31,7 @@ You can specify a different profile with the `--profile` argument:
 $ grails create-app myapp --profile=rest-api
 ----
 
-Profiles encapsulate the project commands, templates, and plugins that are designed to work for a given profile. The source for the profiles can be found https://github.com/grails-profiles[on GitHub], and the profiles themselves are published as JAR files to the Grails central repository.
+Profiles encapsulate the project commands, templates, and plugins that are designed to work for a given profile. The source for the profiles can be found https://github.com/apache/grails-core/tree/HEAD/grails-profiles[on GitHub], and the profiles themselves are published as JAR files to the Grails central repository.
 
 To find out what profiles are available, use the link:{commandLineRef}list-profiles.html[list-profiles] command:
 

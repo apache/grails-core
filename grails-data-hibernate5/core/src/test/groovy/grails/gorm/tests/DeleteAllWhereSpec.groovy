@@ -31,7 +31,7 @@ class DeleteAllWhereSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManage
         manager.domainClasses.addAll([Club])
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/969')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/969')
     void "test delete all type conversion"() {
         given:
         new Club(name: "Manchester United").save()

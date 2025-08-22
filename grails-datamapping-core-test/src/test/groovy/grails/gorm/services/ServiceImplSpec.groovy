@@ -366,7 +366,7 @@ class ServiceImplSpec extends Specification {
 
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/968')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/968')
     void "Test @where with association query"() {
         given:
         ProductService productService = datastore.getService(ProductService)

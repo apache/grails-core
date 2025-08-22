@@ -32,7 +32,7 @@ class CustomIdProxySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
         manager.domainClasses.addAll([CustomIdCompany, CustomIdTeam])
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/813')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/813')
     void "Test custom id with proxies"() {
         when:
         CustomIdCompany c = new CustomIdCompany([slug: 'mycompany']).insert()

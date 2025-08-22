@@ -42,9 +42,9 @@ class DatabaseMigrationGrailsPlugin extends Plugin {
     def author = 'Kazuki YAMAMOTO'
     def authorEmail = ''
     def description = 'Grails Database Migration Plugin'
-    def documentation = 'http://grails.org/plugin/database-migration'
+    def documentation = 'https://docs.grails.org/latest/grails-data/hibernate5/manual/index.html#databaseMigration'
     def license = 'APACHE'
-    def scm = [url: 'https://github.com/grails-plugins/grails-database-migration']
+    def scm = [url: 'https://github.com/apache/grails-core']
 
     @Override
     Closure doWithSpring() {

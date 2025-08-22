@@ -60,9 +60,9 @@ class HibernateGrailsPlugin extends Plugin {
     def pluginExcludes = ['src/templates/**']
 
     def license = 'APACHE'
-    def organization = [name: 'Grails', url: 'https://grails.org']
-    def issueManagement = [system: 'Github', url: 'https://github.com/grails/grails-data-mapping/issues']
-    def scm = [url: 'https://github.com/grails/grails-data-mapping']
+    def organization = [name: 'Grails', url: 'https://grails.apache.org']
+    def issueManagement = [system: 'Github', url: 'https://github.com/apache/grails-core/issues']
+    def scm = [url: 'https://github.com/apache/grails-core']
 
     Set<String> dataSourceNames
 

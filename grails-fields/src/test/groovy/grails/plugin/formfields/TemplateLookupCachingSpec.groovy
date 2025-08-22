@@ -26,7 +26,7 @@ import org.grails.gsp.io.GroovyPageResourceScriptSource
 import org.springframework.core.io.ByteArrayResource
 import spock.lang.*
 
-@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/5')
+@Issue('https://github.com/grails/fields/issues/5')
 class TemplateLookupCachingSpec extends BuildsAccessorFactory implements ServiceUnitTest<FormFieldsTemplateService> {
 
 	GrailsConventionGroovyPageLocator mockGroovyPageLocator = Mock()

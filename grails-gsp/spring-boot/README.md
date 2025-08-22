@@ -19,7 +19,7 @@ grails-boot
 
 Grails integrations with Spring Boot
 
-GORM Spring Boot plugins have been moved to [boot-plugins](https://github.com/grails/grails-data-mapping/tree/6.1.x/boot-plugins)
+GORM Spring Boot plugins have been moved to [hibernate5](https://github.com/apache/grails-core/tree/HEAD/grails-data-hibernate5) & [mongodb](https://github.com/apache/grails-core/tree/HEAD/grails-data-mongodb)
 
 To run Spring Boot App
 ```shell

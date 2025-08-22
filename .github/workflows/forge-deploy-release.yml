@@ -82,12 +82,11 @@ jobs:
         working-directory: grails-forge
         env:
           IMAGE_NAME: us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}/${{ secrets.GCP_APP_NAME }}:${{ needs.build.outputs.release_version }}
+          TEST_BUILD_REPRODUCIBLE: "true"
         run: >
           ./gradlew
           grails-forge-web-netty:dockerBuildNative
           -PdockerImageName=${{ env.IMAGE_NAME }}
-        env:
-          TEST_BUILD_REPRODUCIBLE: "true"
       - name: "📤 Push Container to Google Cloud Artifact Registry"
         env:
           IMAGE_NAME: us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}/${{ secrets.GCP_APP_NAME }}:${{ needs.build.outputs.release_version }}
@@ -139,12 +138,11 @@ jobs:
         working-directory: grails-forge
         env:
           IMAGE_NAME: us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}/${{ secrets.GCP_APP_NAME }}-analytics:${{ needs.build.outputs.release_version }}
+          TEST_BUILD_REPRODUCIBLE: "true"
         run: >
           ./gradlew
           grails-forge-analytics-postgres:dockerBuildNative
           -PdockerImageName=${{ env.IMAGE_NAME }}
-        env:
-          TEST_BUILD_REPRODUCIBLE: "true"
       - name: "📤 Push Container to Google Cloud Artifact Registry"
         env:
           IMAGE_NAME: us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}/${{ secrets.GCP_APP_NAME }}-analytics:${{ needs.build.outputs.release_version }}

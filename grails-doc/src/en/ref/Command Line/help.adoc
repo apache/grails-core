@@ -146,7 +146,7 @@ Creates an application
                           assertj, mockito, spring-boot-starter-undertow,
                           github-workflow-java-ci, jrebel, testcontainers, sqlserver,
                           grails-console, views-markup, asset-pipeline-grails, views-json,
-                          gorm-neo4j, asciidoctor, embedded-mongodb, grails-web-console,
+                          gorm-neo4j, asciidoctor, grails-web-console,
                           logbackGroovy, mongo-sync, shade, geb, properties
   -g, --gorm=GORM Implementation
                         Which GORM Implementation to configure. Possible values: hibernate,

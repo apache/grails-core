@@ -26,7 +26,7 @@ This plugin integrates [Geb](https://groovy.apache.org/geb/) with [Grails](https
 
 If you are looking for examples on how to write Geb tests, check:
 
-[Geb/Grails example project](https://github.com/grails-samples/geb-example-grails) or [Grails functional test suite](https://github.com/grails/grails-functional-tests) where Geb tests are used extensively.
+[Geb/Grails example project](https://github.com/grails-samples/geb-example-grails) or [Grails functional test suite](https://github.com/apache/grails-core/tree/HEAD/grails-test-examples) where Geb tests are used extensively.
 For further reference please see the [Geb documentation](https://groovy.apache.org/geb/).
 
 ## Usage
