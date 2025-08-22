@@ -18,9 +18,10 @@
  */
 package grails.plugin.geb
 
-import com.github.dockerjava.api.exception.NotFoundException
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
+import com.github.dockerjava.api.exception.NotFoundException
 import org.spockframework.runtime.AbstractRunListener
 import org.spockframework.runtime.model.ErrorInfo
 import org.spockframework.runtime.model.IterationInfo

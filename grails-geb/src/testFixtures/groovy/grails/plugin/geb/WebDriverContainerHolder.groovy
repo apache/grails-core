@@ -271,7 +271,7 @@ class WebDriverContainerHolder {
 
             VncRecordingContainer vncContainer = vncRecordingContainerField.get(currentContainer) as VncRecordingContainer
 
-            if (vncContainer != null) {
+            if (vncContainer) {
                 // Stop the current VNC recording container
                 vncContainer.stop()
                 // Create and start a new VNC recording container for the next test
@@ -282,7 +282,7 @@ class WebDriverContainerHolder {
                 vncRecordingContainerField.set(currentContainer, newVncContainer)
                 newVncContainer.start()
 
-                log.debug("Successfully restarted VNC recording container")
+                log.debug('Successfully restarted VNC recording container')
             }
         } catch (Exception e) {
             log.warn("Failed to restart VNC recording container: ${e.message}", e)
