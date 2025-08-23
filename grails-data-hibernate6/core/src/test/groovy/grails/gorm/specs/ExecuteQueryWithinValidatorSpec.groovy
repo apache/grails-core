@@ -30,6 +30,7 @@ import spock.lang.Specification
 /**
  * Created by graemerocher on 17/02/2017.
  */
+//TODO Not able to distinguish correctly a field projection without an alias
 class ExecuteQueryWithinValidatorSpec extends Specification {
 
     @AutoCleanup @Shared HibernateDatastore hibernateDatastore = new HibernateDatastore(Named, NameType)
