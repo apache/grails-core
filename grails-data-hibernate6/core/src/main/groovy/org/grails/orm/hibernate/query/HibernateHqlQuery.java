@@ -70,29 +70,140 @@ public class HibernateHqlQuery extends Query {
             , String sqlString
             , boolean isNative
         ) {
-        var q = isNative ? session.createNativeQuery(sqlString, Object.class) : session.createQuery(sqlString, Object.class);
+        var clazz = getTarget(sqlString,persistentEntity.getJavaClass());
+        var q = isNative ? session.createNativeQuery(sqlString,clazz) : session.createQuery(sqlString, clazz);
         var hibernateSession = new HibernateSession( dataStore, sessionFactory);
         HibernateHqlQuery hibernateHqlQuery = new HibernateHqlQuery(hibernateSession, null, q);
         hibernateHqlQuery.setFlushMode(session.getHibernateFlushMode());
         return hibernateHqlQuery;
     }
 
-    public static HibernateHqlQuery createHqlQuery(org.hibernate.Session session
-            , org.hibernate.query.Query q
-            , HibernateDatastore dataStore
-            , SessionFactory sessionFactory
-            , PersistentEntity persistentEntity
-    ) {
-        var hibernateSession = new HibernateSession( dataStore, sessionFactory);
-        switch (session.getHibernateFlushMode()) {
-            case AUTO, ALWAYS:
-                hibernateSession.setFlushMode(FlushModeType.AUTO);
-                break;
-            default:
-                hibernateSession.setFlushMode(FlushModeType.COMMIT);
+    /**
+     * Determine the number of top-level projections in the HQL query.
+     * Returns 0 if there is no explicit SELECT clause (implicit entity projection),
+     * 1 if there is a single top-level projection expression (including constructs like DISTINCT x or NEW map(...)),
+     * and 2 if there are two or more top-level projection expressions (e.g. "select a, b from ...").
+     *
+     * Notes:
+     * - Commas within parentheses or string literals are ignored.
+     * - Constructor expressions like "new map(a as n, b as m)" count as a single projection.
+     * - Aggregate and function calls with commas in their argument lists are handled by parentheses tracking.
+     */
+    static int countHqlProjections(CharSequence hql) {
+        if (hql == null) return 0;
+        String s = hql.toString().trim();
+        if (s.isEmpty()) return 0;
+        // Find select and from in a case-insensitive way
+        String lower = s.toLowerCase();
+        int selectIdx = lower.indexOf("select ");
+        if (selectIdx < 0) {
+            // no explicit select -> implicit single entity projection following "from"
+            return 0;
         }
-        return new HibernateHqlQuery(hibernateSession, persistentEntity, q);
+        // Ensure this select occurs before the corresponding from
+        int fromIdx = lower.indexOf(" from ", selectIdx);
+        if (fromIdx < 0) {
+            // malformed or incomplete query; treat as one projection if select exists
+            fromIdx = s.length();
+        }
+        int selectStart = selectIdx + "select".length();
+        // Extract the select clause between 'select' and 'from'
+        String sel = s.substring(selectStart, fromIdx).trim();
+        if (sel.isEmpty()) return 0;
+        // Strip leading DISTINCT/ALL keywords
+        String selLower = sel.toLowerCase();
+        if (selLower.startsWith("distinct ")) {
+            sel = sel.substring("distinct ".length()).trim();
+            selLower = sel.toLowerCase();
+        } else if (selLower.startsWith("all ")) {
+            sel = sel.substring("all ".length()).trim();
+            selLower = sel.toLowerCase();
+        }
+        // Now count top-level commas ignoring those within parentheses and string literals
+        int depth = 0;
+        boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+        int topLevelCommas = 0;
+        char singleQuote = '\'';
+        char doubleQuote = '"';
+        char leftParen = '(';        // Left parenthesis
+        char rightParen = ')';       // Right parenthesis
+        char comma = ',';            // Comma
+
+
+
+        for (int i = 0; i < sel.length(); i++) {
+            char c = sel.charAt(i);
+            // handle quotes (simple handling: toggle on quote not escaped by another same quote)
+            if (!inDoubleQuote && c ==singleQuote) {
+                // handle doubled single quotes inside strings
+                if (inSingleQuote) {
+                    if (i + 1 < sel.length() && sel.charAt(i + 1) == singleQuote) {
+                        i++ ;// skip escaped quote
+                        continue;
+                    } else {
+                        inSingleQuote = false;
+                        continue;
+                    }
+                } else {
+                    inSingleQuote = true;
+                    continue;
+                }
+            }
+            if (!inSingleQuote && c == doubleQuote) {
+                inDoubleQuote = !inDoubleQuote;
+                continue;
+            }
+            if (inSingleQuote || inDoubleQuote) continue;
+            if (c == leftParen) { depth++ ; continue ;}
+            if (c == rightParen && depth > 0) { depth-- ; continue; }
+            if (c == comma && depth == 0) { topLevelCommas++; }
+        }
+        if (topLevelCommas == 0) return 1;
+        return 2;
     }
+
+
+    static Class getTarget(CharSequence hql, Class clazz) {
+        int projections = countHqlProjections(hql);
+        switch(projections) {
+            case 0:
+                return clazz; // No explicit SELECT - implicit entity projection
+            case 1:
+                // Single projection - check if it's a property access (contains dot)
+                if (isPropertyProjection(hql)) {
+                    return Object.class; // For scalar results like "select h.name"
+                } else {
+                    return clazz; // For entity projections like "select h"
+                }
+            default:
+                return Object[].class; // Multiple projections
+        }
+    }
+
+    private static boolean isPropertyProjection(CharSequence hql) {
+        String s = hql.toString().toLowerCase().trim();
+        int selectIdx = s.indexOf("select ");
+        if (selectIdx < 0) return false;
+
+        int fromIdx = s.indexOf(" from ", selectIdx);
+        if (fromIdx < 0) fromIdx = s.length();
+
+        String selectClause = s.substring(selectIdx + "select ".length(), fromIdx).trim();
+
+        // Remove DISTINCT/ALL if present
+        if (selectClause.startsWith("distinct ")) {
+            selectClause = selectClause.substring("distinct ".length()).trim();
+        } else if (selectClause.startsWith("all ")) {
+            selectClause = selectClause.substring("all ".length()).trim();
+        }
+
+        // Only return true for clear property projections (containing dots)
+        // This is the safest approach - only treat selections with dots as scalar projections
+        return selectClause.contains(".");
+    }
+
+
 
 
     public void setFlushMode(FlushMode flushMode) {
