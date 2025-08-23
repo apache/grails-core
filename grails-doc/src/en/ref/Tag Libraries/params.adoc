@@ -41,7 +41,7 @@ class BookController {
 }
 ----
 
-To perform data binding (see xref:theWebLayer/dataBinding.adoc[data binding] in the user guide):
+To perform data binding (see link:{guidePath}theWebLayer.html#dataBinding[data binding] in the user guide):
 
 [source,groovy]
 ----
@@ -54,7 +54,7 @@ def save() {
 === Description
 
 
-The standard Servlet API provides access to parameters with the `HttpServletRequest` object. Although Grails provides the same capability through the xref:../ref/Controllers/request.adoc[request] object, it goes a bit further by providing a mutable map of request parameters called `params`.
+The standard Servlet API provides access to parameters with the `HttpServletRequest` object. Although Grails provides the same capability through the link:{controllersRefFromRef}request.html[request] object, it goes a bit further by providing a mutable map of request parameters called `params`.
 
 The `params` object can be indexed into using the array index operator or de-reference operator, so given the URL `/hello?foo=bar` you can access `foo` with
 
@@ -62,7 +62,7 @@ The `params` object can be indexed into using the array index operator or de-ref
 println params.foo
 ----
 
-The params object can also be used to bind request parameters onto the properties of a domain class using either the constructor or the xref:../ref/Domain%20Classes/properties.adoc[properties] property:
+The params object can also be used to bind request parameters onto the properties of a domain class using either the constructor or the link:{domainClassesRefFromRef}properties.html[properties] property:
 
 [source,groovy]
 ----
@@ -71,4 +71,4 @@ book = Book.get(1)
 book.properties = params
 ----
 
-For further reading see xref:theWebLayer/dataBinding.adoc[data binding] in the user guide.
+For further reading see link:{guidePath}theWebLayer.html#dataBinding[data binding] in the user guide.

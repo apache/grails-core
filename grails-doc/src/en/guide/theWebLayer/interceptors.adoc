@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Grails provides standalone Interceptors using the link:../ref/Command%20Line/create-interceptor.html[create-interceptor] command:
+Grails provides standalone Interceptors using the link:{commandLineRef}create-interceptor.html[create-interceptor] command:
 
 [source,bash]
 ----

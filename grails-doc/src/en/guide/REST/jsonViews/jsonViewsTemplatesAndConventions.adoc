@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-There are a few useful conventions you can follow when creating JSON views. For example if you have a domain class called `Book`, then creating a template located at `grails-app/views/book/_book.gson` and using the link:../ref/Controllers/respond.html[respond] method will result in rendering the template:
+There are a few useful conventions you can follow when creating JSON views. For example if you have a domain class called `Book`, then creating a template located at `grails-app/views/book/_book.gson` and using the link:{controllersRef}respond.html[respond] method will result in rendering the template:
 
 [source,groovy]
 ----

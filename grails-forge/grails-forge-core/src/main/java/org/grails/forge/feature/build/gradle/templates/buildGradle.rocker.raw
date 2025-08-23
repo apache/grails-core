@@ -114,13 +114,6 @@ run {
 
 }
 
-@if (features.contains("springloaded")) {
-run {
-    jvmArgs("-noverify", "-javaagent:agent/springloaded-1.2.8.RELEASE.jar")
-}
-
-}
-
 @if (features.contains("spock")) {
 tasks.withType(Test) {
     useJUnitPlatform()

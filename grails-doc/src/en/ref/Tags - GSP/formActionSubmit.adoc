@@ -69,13 +69,13 @@ Attributes
 * `plugin` (optional) - The name of the plugin which provides the controller
 * `id` (optional) - The id to use in the link
 * `fragment` (optional) - The link fragment (often called anchor tag) to use
-* `mapping` (optional) - The xref:../guide/theWebLayer/urlmappings/namedMappings.adoc to use to rewrite the link
+* `mapping` (optional) - The link:{guidePath}/theWebLayer.html#namedMappings to use to rewrite the link
 * `method` (optional) - The HTTP method specified in the corresponding URL mapping
 * `params` (optional) - A map containing URL query parameters for the link
 * `url` (optional) - A Map containing the action, controller, id etc.
 * `uri` (optional) - A string for a relative path in the running app.
 * `relativeUri` (optional) - Used to specify a uri relative to the current path.
-* `absolute` (optional) - If `true` will prefix the link target address with the value of the `grails.serverURL` property from the application configuration, or http://localhost:<port> if there is no setting in the config and not running in production.
+* `absolute` (optional) - If `true` will prefix the link target address with the value of the `grails.serverURL` property from the application configuration, or http://localhost:8080 if there is no setting in the config and not running in production.
 * `base` (optional) - Sets the prefix to be added to the link target address, typically an absolute server URL. This overrides the behaviour of the `absolute` property if both are specified.
 * `event` (optional) - The name of a Webflow event to trigger for the flow associated with the given `action`. Requires the Webflow plugin.
 

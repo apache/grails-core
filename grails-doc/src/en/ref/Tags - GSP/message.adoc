@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-Resolves a message from the given code or error. Normally used in conjunction with xref:eachError.adoc[eachError]
+Resolves a message from the given code or error. Normally used in conjunction with xref:eachError.html[eachError]
 
 
 === Examples

@@ -27,7 +27,7 @@ under the License.
 
 === Grails Forge @grailsVersion (@serverURL)
 
-Grails Forge generates example project for the Grails® framework (https://grails.org).
+Grails Forge generates example project for the Grails® framework (https://grails.apache.org).
 
 The API is defined by the OpenAPI 3 specification @serverURL/swagger/views/swagger-ui/index.html
 

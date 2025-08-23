@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Variables can be defined within a GSP using the xref:../../../../ref/Tags%20-%20GSP/set.adoc[set] tag:
+Variables can be defined within a GSP using the link:{gspTagsRef}set.html[set] tag:
 
 [source,xml]
 ----
@@ -44,7 +44,7 @@ Variables can also be placed in one of the following scopes:
 
 * `page` - Scoped to the current page (default)
 * `request` - Scoped to the current request
-* `flash` - Placed within xref:../../../../ref/Controllers/flash.adoc[flash] scope and hence available for the next request
+* `flash` - Placed within link:{controllersRef}flash.html[flash] scope and hence available for the next request
 * `session` - Scoped for the user session
 * `application` - Application-wide scope.
 

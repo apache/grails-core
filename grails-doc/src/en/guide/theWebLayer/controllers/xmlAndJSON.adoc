@@ -21,7 +21,7 @@ under the License.
 ==== Using the render method to output XML
 
 
-Grails supports a few different ways to produce XML and JSON responses. The first is the link:../ref/Controllers/render.html[render] method.
+Grails supports a few different ways to produce XML and JSON responses. The first is the link:{controllersRef}render.html[render] method.
 
 The `render` method can be passed a block of code to do mark-up building in XML:
 

@@ -57,4 +57,4 @@ GORM 8 addresses known issues from previous versions, providing a more reliable 
 
 GORM 8 offers a powerful ORM solution for Java-based applications. Leverage the latest Java, Gradle, Hibernate, MongoDB, Neo4J, and Spring versions to build robust data-centric applications. GORM 8 provides a unified API for simplified data access and management, supporting traditional SQL databases, NoSQL data stores like MongoDB, and graph databases like Neo4J.
 
-For comprehensive changes and in-depth information about GORM 8, explore the official GitHub repository and release notes. Get started with GORM 8 and explore its full capabilities in the https://gorm.grails.org/latest/documentation.html[GORM 8 Documentation].
+For comprehensive changes and in-depth information about GORM 8, explore the official GitHub repository and release notes. Get started with GORM 8 and explore its full capabilities in the https://docs.grails.org/latest/grails-data/[GORM Documentation].

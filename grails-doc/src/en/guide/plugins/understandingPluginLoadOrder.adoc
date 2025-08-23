@@ -81,7 +81,7 @@ if (manager?.hasGrailsPlugin("controllers")) {
 }
 ----
 
-Here the Hibernate plugin will only register an `OpenSessionInViewInterceptor` if the `controllers` plugin has been loaded. The `manager` variable is an instance of the {apiDocs}grails/plugins/GrailsPluginManager.html[GrailsPluginManager] interface and it provides methods to interact with other plugins.
+Here the Hibernate plugin will only register an `OpenSessionInViewInterceptor` if the `controllers` plugin has been loaded. The `manager` variable is an instance of the link:{api}grails/plugins/GrailsPluginManager.html[GrailsPluginManager] interface and it provides methods to interact with other plugins.
 
 You can also use the `loadBefore` property to specify one or more plugins that your plugin should load before:
 
@@ -104,7 +104,7 @@ def scopes = [excludes:'war']
 
 In this example, the plugin will only load in the 'development' and 'test' environments. Nor will it be packaged into the WAR file, because it's excluded from the 'war' phase. This allows `development-only` plugins to not be packaged for production use.
 
-The full list of available scopes are defined by the enum {apiDocs}grails/util/BuildScope.html[BuildScope], but here's a summary:
+The full list of available scopes are defined by the enum link:{api}grails/util/BuildScope.html[BuildScope], but here's a summary:
 
 * `test` - when running tests
 * `functional-test` - when running functional tests

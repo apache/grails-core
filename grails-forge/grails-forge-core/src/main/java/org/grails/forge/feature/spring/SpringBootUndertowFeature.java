@@ -58,6 +58,6 @@ public class SpringBootUndertowFeature extends SpringBootEmbeddedServlet {
 
     @Override
     public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
-        return selectedFeatures.stream().anyMatch(f -> f instanceof SpringBootUndertowFeature) || options.getServletImpl() == ServletImpl.UNDERTOW;
+        return options.getServletImpl() == ServletImpl.UNDERTOW;
     }
 }

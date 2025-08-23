@@ -60,6 +60,6 @@ public class SpringBootTomcatFeature extends SpringBootEmbeddedServlet {
 
     @Override
     public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
-        return selectedFeatures.stream().anyMatch(f -> f instanceof SpringBootTomcatFeature) || options.getServletImpl() == ServletImpl.TOMCAT;
+        return options.getServletImpl() == ServletImpl.TOMCAT;
     }
 }

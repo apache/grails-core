@@ -50,7 +50,7 @@ class @project.getClassName()GrailsPlugin extends Plugin {
    }
 
    // URL to the plugin's documentation
-       def documentation = "https://grails.github.io/@project.getClassName()/"
+       def documentation = "https://grails-plugins.github.io/@project.getClassName()/"
 
        // Extra (optional) plugin metadata
 

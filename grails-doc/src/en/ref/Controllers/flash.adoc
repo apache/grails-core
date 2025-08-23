@@ -50,4 +50,4 @@ class BookController {
 
 The flash object is a Map (a hash) which you can use to store key value pairs. These values are transparently stored inside the session and then cleared at the end of the next request.
 
-This pattern lets you use HTTP redirects (which is useful for https://www.theserverside.com/tt/articles/article.tss?l=RedirectAfterPost[redirect after post]) and retain values that can be retrieved from the flash object.
+This pattern lets you use HTTP redirects (which is useful for https://www.theserverside.com/news/1365146/Redirect-After-Post[redirect after post]) and retain values that can be retrieved from the flash object.

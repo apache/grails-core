@@ -23,7 +23,7 @@ Grails provides a number of hooks to leverage the different parts of the system 
 ==== Hooking into the Grails Spring configuration
 
 
-First, you can hook in Grails runtime configuration overriding the `doWithSpring` method from the {apiDocs}grails/plugins/Plugin.html[Plugin] class and returning a closure that defines additional beans. For example the following snippet is from one of the core Grails plugins that provides link:i18n.html[i18n] support:
+First, you can hook in Grails runtime configuration overriding the `doWithSpring` method from the link:{api}grails/plugins/Plugin.html[Plugin] class and returning a closure that defines additional beans. For example the following snippet is from one of the core Grails plugins that provides link:i18n.html[i18n] support:
 
 [source,groovy]
 ----
@@ -71,7 +71,7 @@ Closure doWithSpring() {{->
 }}
 ----
 
-If you need to customize the servlet you can use Spring Boot's http://docs.spring.io/spring-boot/docs/current/api/org/springframework/boot/context/embedded/ServletRegistrationBean.html[ServletRegistrationBean]:
+If you need to customize the servlet you can use Spring Boot's {springbootapi}org/springframework/boot/web/servlet/ServletRegistrationBean.html[ServletRegistrationBean]:
 
 [source,groovy]
 ----
@@ -95,7 +95,7 @@ Closure doWithSpring() {{->
 }}
 ----
 
-However, if you want to control the order of filter registrations you will need to use Spring Boot's http://docs.spring.io/spring-boot/docs/current/api/org/springframework/boot/web/servlet/FilterRegistrationBean.html[FilterRegistrationBean]:
+However, if you want to control the order of filter registrations you will need to use Spring Boot's {springbootapi}org/springframework/boot/web/servlet/FilterRegistrationBean.html[FilterRegistrationBean]:
 
 [source,groovy]
 ----

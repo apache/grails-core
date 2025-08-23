@@ -50,7 +50,7 @@ grails my-script
 
 === Description
 
-Each script extends from the super class {apiDocs}org/grails/cli/profile/commands/script/GroovyScriptCommand.html[GroovyScriptCommand] which provides an API for achieving a number of different tasks.
+Each script extends from the super class link:{apiFromRef}org/grails/cli/profile/commands/script/GroovyScriptCommand.html[GroovyScriptCommand] which provides an API for achieving a number of different tasks.
 
 === Invoking Gradle
 
@@ -68,6 +68,6 @@ You can run any other Grails scripts by simply invoking the method:
 testApp()
 ----
 
-Code generation can be performed using the {apiDocs}org/grails/cli/profile/commands/templates/TemplateRenderer.html[TemplateRenderer API]
+Code generation can be performed using the link:{apiFromRef}org/grails/cli/profile/commands/templates/TemplateRenderer.html[TemplateRenderer API]
 
-For more information, see the section on link:{guidePath}/commandLine.html#creatingCustomScripts[creating custom scripts].
+For more information, see the section on link:{guidePath}commandLine.html#creatingCustomScripts[creating custom scripts].

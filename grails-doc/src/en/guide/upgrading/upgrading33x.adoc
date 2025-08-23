@@ -84,7 +84,7 @@ Grails 4.0 is built on Spring 5 and Spring Boot 2.1. See the https://github.com/
 
 Grails 4.x supports a minimum version of Hibernate 5.4 and GORM 7.x. Several changes have been made to GORM to support the newer version of Hibernate and simplify GORM itself.
 
-The details of these changes are covered in the  link:{hibernate5Guide}/manual/index.html#upgradeNotes[GORM upgrade documentation].
+The details of these changes are covered in the  link:{hibernate5Guide}index.html#upgradeNotes[GORM upgrade documentation].
 
 ### Spring Boot 2.1 Actuator
 
@@ -159,7 +159,7 @@ spring:
 
 The above configuration prevents the server from restarting when views or message bundles are changed.
 
-NOTE: You can use Spring Developer Tools in combination with a browser extension such as the https://chrome.google.com/webstore/detail/livereload/jnihajbhpnppcggbcgedagnkighmdlei[Chrome LiveReload extension] to get automatic browser
+NOTE: You can use Spring Developer Tools in combination with a browser extension such as the https://chromewebstore.google.com/detail/livereload/jnihajbhpnppcggbcgedagnkighmdlei[Chrome LiveReload extension] to get automatic browser
 refresh when you change anything in your Grails application.
 
 ### Spring Boot Gradle Plugin Changes
@@ -371,10 +371,10 @@ seleniumSafariDriverVersion=3.14.0
 <1> Includes https://plugins.gradle.org/plugin/com.energizedwork.webdriver-binaries[Webdriver binaries Gradle plugin].
 <2> Set the appropriate https://chromedriver.chromium.org[Webdriver for Chrome version].
 <3> Set the appropriate https://github.com/mozilla/geckodriver/releases[Webdriver for Firefox version].
-<4> Includes the https://github.com/apache/grails-geb[Grails Geb Plugin dependency] which has a transitive dependency to `geb-spock`. This is the dependency necessary to work with https://www.gebish.org[Geb] and Spock.
+<4> Includes the https://github.com/apache/grails-geb[Grails Geb Plugin dependency] which has a transitive dependency to `geb-spock`. This is the dependency necessary to work with https://groovy.apache.org/geb/[Geb] and Spock.
 <5> Selenium and different driver dependencies.
 
-Create also a http://www.gebish.org/manual/current/#configuration[Geb Configuration] file at `src/integration-test/resources/GebConfig.groovy`.
+Create also a https://groovy.apache.org/geb/manual/current/#configuration[Geb Configuration] file at `src/integration-test/resources/GebConfig.groovy`.
 
 [source, groovy]
 .src/integration-test/resources/GebConfig.groovy

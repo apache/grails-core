@@ -42,6 +42,6 @@ name inList: ["Joe", "Fred", "Bob"]
 
 Constrains a value so that it must be contained within the given list.
 
-This constraint influences  link:{hibernate5Guide}/manual/index.html#constraints[schema generation].
+This constraint influences  link:{hibernate5GuideFromRef}index.html#constraints[schema generation].
 
 Error Code: `className.propertyName.not.inList`

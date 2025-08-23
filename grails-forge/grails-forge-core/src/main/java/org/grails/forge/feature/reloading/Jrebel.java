@@ -53,6 +53,6 @@ public class Jrebel implements ReloadingFeature {
 
     @Override
     public String getDocumentation() {
-        return "https://docs.micronaut.io/latest/guide/index.html#jrebel";
+        return "https://manuals.jrebel.com/jrebel/standalone/springboot.html";
     }
 }

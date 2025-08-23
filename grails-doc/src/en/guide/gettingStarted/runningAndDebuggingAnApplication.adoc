@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Grails applications can be run with the built in Tomcat server using the link:../ref/Command%20Line/run-app.html[run-app] command which will load a server on port 8080 by default:
+Grails applications can be run with the built in Tomcat server using the link:{commandLineRef}run-app.html[run-app] command which will load a server on port 8080 by default:
 
 [source,bash]
 ----
@@ -54,7 +54,7 @@ Alternatively, you can run your app with the following command and then attach a
 grails run-app --debug-jvm
 ----
 
-More information on the link:../ref/Command%20Line/run-app.html[run-app] command can be found in the reference guide.
+More information on the link:{commandLineRef}run-app.html[run-app] command can be found in the reference guide.
 
 
 
@@ -73,4 +73,4 @@ For debugging a Grails app, you have two options. You can either right-click on 
 [source,console]
 $ ./gradlew bootRun --debug-jvm
 
-For more information on the `bootRun` command, please refer to the link:../ref/Command%20Line/bootRun.html[bootRun section of the Grails reference guide].
+For more information on the `bootRun` command, please refer to the link:{commandLineRef}bootRun.html[bootRun section of the Grails reference guide].

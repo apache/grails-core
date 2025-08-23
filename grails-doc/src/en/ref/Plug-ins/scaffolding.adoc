@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-The `scaffolding` plugin configures Grails' support for CRUD via link:{guidePath}/scaffolding.html[scaffolding].
+The `scaffolding` plugin configures Grails' support for CRUD via link:{guidePath}scaffolding.html[scaffolding].
 
 
 === Examples
@@ -48,4 +48,4 @@ class BookController {
 === Description
 
 
-Refer to the section on link:{guidePath}/scaffolding.html[scaffolding] in the Grails user guide which details Grails' scaffolding support.
+Refer to the section on link:{guidePath}scaffolding.html[scaffolding] in the Grails user guide which details Grails' scaffolding support.

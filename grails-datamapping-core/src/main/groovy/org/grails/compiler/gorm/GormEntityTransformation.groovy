@@ -284,7 +284,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
 
 
         // now process named query associations
-        // see https://grails.github.io/grails-doc/latest/ref/Domain%20Classes/namedQueries.html
+        // see https://docs.grails.org/latest/ref/Domain%20Classes/namedQueries.html
 
         // for each method call create a named query proxy lookup
         def thisClassNode = classNode

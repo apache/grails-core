@@ -39,7 +39,7 @@ class CachingLinkGeneratorSpec extends Specification {
     GrailsWebRequest request
 
     void setup() {
-        linkGenerator = new MyCachingLinkGenerator("http://grails.org/")
+        linkGenerator = new MyCachingLinkGenerator("https://grails.apache.org/")
         request = GrailsWebMockUtil.bindMockWebRequest()
         linkGenerator.requestStateLookupStrategy = new DefaultRequestStateLookupStrategy(request)
     }

@@ -42,6 +42,6 @@ b.discard() // changes won't be applied now
 === Description
 
 
-The `discard` method informs the persistence context that the instance should not be saved. The `discard` method is equivalent to using Hibernate's https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernate5Version}/org/hibernate/Session.html#evict(java/lang/Object).html[evict] method.
+The `discard` method informs the persistence context that the instance should not be saved. The `discard` method is equivalent to using Hibernate's https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernate5Version}/org/hibernate/Session.html#evict(java/lang/Object)[evict] method.
 
 NOTE: Note that this method will not clean or reset the object with the original values; it will just prevent it from being automatically saved by Grails.

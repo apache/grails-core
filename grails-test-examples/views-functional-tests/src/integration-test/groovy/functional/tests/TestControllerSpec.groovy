@@ -38,7 +38,7 @@ class TestControllerSpec extends HttpClientSpec {
         super.init()
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/10582')
+    @Issue('https://github.com/apache/grails-core/issues/10582')
     void 'test responding after an action triggered by a HTTP 401 response is possible'() {
         when:
         HttpRequest request = HttpRequest.GET("/test/triggerUnauthorized")

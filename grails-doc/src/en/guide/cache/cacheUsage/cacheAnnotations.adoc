@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-The link:{api}/grails/plugin/cache/Cacheable.html[Cacheable] and link:{api}/grails/plugin/cache/CacheEvict.html[CacheEvict] annotations provided by the plugin have counterparts with the same names provided by Spring.
+The link:{api}grails/plugin/cache/Cacheable.html[Cacheable] and link:{api}grails/plugin/cache/CacheEvict.html[CacheEvict] annotations provided by the plugin have counterparts with the same names provided by Spring.
 
 However, unlike the Spring versions, these apply AST transformations, avoiding the need to create runtime proxies.
 

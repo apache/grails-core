@@ -49,7 +49,7 @@ public class DatabaseMigrationPlugin implements MigrationFeature {
 
     @Override
     public String getDocumentation() {
-        return "https://grails.github.io/grails-database-migration/latest/";
+        return "https://docs.grails.org/latest/grails-data/hibernate5/manual/index.html#databaseMigration";
     }
 
     @Override

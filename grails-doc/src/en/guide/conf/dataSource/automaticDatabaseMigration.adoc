@@ -31,4 +31,4 @@ It's tempting to switch to `update` so you retain existing data and only update 
 
 Grails supports migrations with Liquibase plugin.
 
-*  link:{hibernate5Guide}/manual/index.html#databaseMigration[Database Migration]
+*  link:{hibernate5Guide}#databaseMigration[Database Migration]

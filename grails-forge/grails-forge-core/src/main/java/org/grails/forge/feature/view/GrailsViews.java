@@ -49,7 +49,7 @@ public abstract class GrailsViews implements OneOfFeature {
 
     @Override
     public String getDocumentation() {
-        return "https://views.grails.org/";
+        return "https://docs.grails.org/latest/guide/theWebLayer.html";
     }
 
     public GrailsWeb getGrailsWeb() {

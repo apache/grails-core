@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-http://stateless.co/hal_specification.html[HAL] is a standard exchange format commonly used when developing REST APIs that follow HATEOAS principals. An example HAL document representing a list of orders can be seen below:
+https://stateless.co/hal_specification.html[HAL] is a standard exchange format commonly used when developing REST APIs that follow HATEOAS principals. An example HAL document representing a list of orders can be seen below:
 
 [source,javascript]
 ----
@@ -305,7 +305,7 @@ beans = {
 
 In the above example the first bean defines a HAL renderer for a single book instance that returns a Mime Type of `application/vnd.books.org.book+json`. The second bean defines the Mime Type used to render a collection of books (in this case `application/vnd.books.org.booklist+json`).
 
-NOTE: `application/vnd.books.org.booklist+json` is an example of a media-range (http://www.w3.org/Protocols/rfc2616/rfc2616.html - Header Field Definitions).  This example uses entity (book) and operation (list) to form the media-range values but in reality, it may not be necessary to create a separate Mime type for each operation.  Further, it may not be necessary to create Mime types at the entity level.  See the section on "Versioning REST resources" for further information about how to define your own Mime types.
+NOTE: `application/vnd.books.org.booklist+json` is an example of a media-range (https://www.w3.org/Protocols/rfc2616/rfc2616.html - Header Field Definitions).  This example uses entity (book) and operation (list) to form the media-range values but in reality, it may not be necessary to create a separate Mime type for each operation.  Further, it may not be necessary to create Mime types at the entity level.  See the section on "Versioning REST resources" for further information about how to define your own Mime types.
 
 With this in place issuing a request for the new Mime Type returns the necessary HAL:
 

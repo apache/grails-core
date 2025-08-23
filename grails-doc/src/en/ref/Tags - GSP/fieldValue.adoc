@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-Inspects a bean which has been the subject of xref:../guide/theWebLayer/controllers/dataBinding.adoc[data binding] and obtains the value of the field. If the bean had `errors` during data binding then the originally submitted value is returned from the bean's `errors` object else the value from the bean's property is returned. The value returned will be HTML-encoded.
+Inspects a bean which has been the subject of link:{guidePath}/theWebLayer.html#dataBinding[data binding] and obtains the value of the field. If the bean had `errors` during data binding then the originally submitted value is returned from the bean's `errors` object else the value from the bean's property is returned. The value returned will be HTML-encoded.
 
 
 === Examples

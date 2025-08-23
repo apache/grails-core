@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-If you have collections of objects you often need to sort and filter them. Use the xref:../../../../ref/Tags%20-%20GSP/findAll.adoc[findAll] and xref:../../../../ref/Tags%20-%20GSP/grep.adoc[grep] tags for these tasks:
+If you have collections of objects you often need to sort and filter them. Use the link:{gspTagsRef}findAll.html[findAll] and link:{gspTagsRef}grep.html[grep] tags for these tasks:
 
 [,xml]
 ----
@@ -27,7 +27,7 @@ Stephen King's Books:
 </g:findAll>
 ----
 
-The `expr` attribute contains a Groovy expression that can be used as a filter. The xref:../../../../ref/Tags%20-%20GSP/grep.adoc[grep] tag does a similar job, for example filtering by class:
+The `expr` attribute contains a Groovy expression that can be used as a filter. The link:{gspTagsRef}grep.html[grep] tag does a similar job, for example filtering by class:
 
 [source,xml]
 ----

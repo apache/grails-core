@@ -46,7 +46,7 @@ class PersonInheritanceSpec extends HttpClientSpec {
         rsp.body() == '{"dob":"01/01/1970","lastName":"Doe","firstName":"John"}'
     }
 
-    @Issue("https://github.com/grails/grails-views/issues/234")
+    @Issue("https://github.com/apache/grails-views/issues/234")
     void 'test template inheritance does not produce NPE when model variable is null'() {
         when:
         HttpRequest request = HttpRequest.GET('/person-inheritance/npe')

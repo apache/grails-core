@@ -29,7 +29,7 @@ import spock.lang.Issue
  * @author Graeme Rocher
  */
 class DirtyCheckTransformationSpec extends Specification {
-    @Issue('https://github.com/grails/grails-data-mapping/issues/894')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/894')
     void "Test transform doesn't make getters require static compilation"() {
         when:"A Dirty checkable class with generic types is parsed"
         def gcl = new GroovyClassLoader()
@@ -163,7 +163,7 @@ abstract class AbstractContent {
     }
 
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/917')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/917')
     void "Test dirty check with with custom setter"() {
         when:"A Dirty checkable class with generic types is parsed"
         def gcl = new GroovyClassLoader()
@@ -192,7 +192,7 @@ class Author  {
         child.name == "Stephen King"
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/917')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/917')
     void "Test dirty check with with custom getter"() {
         when:"A Dirty checkable class with generic types is parsed"
         def gcl = new GroovyClassLoader()
@@ -327,7 +327,7 @@ class FundProduct {
         book.getOriginalValue('title') == null
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/629')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/629')
     void "Test that dirty checking does not mark the object of dirty if a setter is called with the same value"() {
         when: "A new book is created"
         def book = new Book(title: "The Stand")
@@ -394,7 +394,7 @@ class FundProduct {
         b.hasChanged("age")
     }
 
-    @Issue("https://github.com/grails/grails-data-mapping/issues/744")
+    @Issue("https://github.com/apache/grails-data-mapping/issues/744")
     void "Test that listDirtyPropertyNames does not include the entity name"() {
         when: "A new book is created"
         def book = new Book(title: "Book Title", releaseDate: new Date())

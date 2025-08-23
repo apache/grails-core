@@ -21,7 +21,7 @@ under the License.
 ==== Form Basics
 
 
-GSP supports many different tags for working with HTML forms and fields, the most basic of which is the xref:../../../../ref/Tags%20-%20GSP/form.adoc[form] tag. This is a controller/action aware version of the regular HTML form tag. The `url` attribute lets you specify which controller and action to map to:
+GSP supports many different tags for working with HTML forms and fields, the most basic of which is the link:{gspTagsRef}form.html[form] tag. This is a controller/action aware version of the regular HTML form tag. The `url` attribute lets you specify which controller and action to map to:
 
 [source,xml]
 ----
@@ -36,12 +36,12 @@ In this case we create a form called `myForm` that submits to the ``BookControll
 
 In addition to easy construction of forms, GSP supports custom tags for dealing with different types of fields, including:
 
-* xref:../../../../ref/Tags%20-%20GSP/textField.adoc[textField] - For input fields of type 'text'
-* xref:../../../../ref/Tags%20-%20GSP/passwordField.adoc[passwordField] - For input fields of type 'password'
-* xref:../../../../ref/Tags%20-%20GSP/checkBox.adoc[checkBox] - For input fields of type 'checkbox'
-* xref:../../../../ref/Tags%20-%20GSP/radio.adoc[radio] - For input fields of type 'radio'
-* xref:../../../../ref/Tags%20-%20GSP/hiddenField.adoc[hiddenField] - For input fields of type 'hidden'
-* xref:../../../../ref/Tags%20-%20GSP/select.adoc[select] - For dealing with HTML select boxes
+* link:{gspTagsRef}textField.html[textField] - For input fields of type 'text'
+* link:{gspTagsRef}passwordField.html[passwordField] - For input fields of type 'password'
+* link:{gspTagsRef}checkBox.html[checkBox] - For input fields of type 'checkbox'
+* link:{gspTagsRef}radio.html[radio] - For input fields of type 'radio'
+* link:{gspTagsRef}hiddenField.html[hiddenField] - For input fields of type 'hidden'
+* link:{gspTagsRef}select.html[select] - For dealing with HTML select boxes
 
 Each of these allows GSP expressions for the value:
 
@@ -50,13 +50,13 @@ Each of these allows GSP expressions for the value:
 <g:textField name="myField" value="${myValue}" />
 ----
 
-GSP also contains extended helper versions of the above tags such as xref:../../../../ref/Tags%20-%20GSP/radioGroup.adoc[radioGroup] (for creating groups of xref:../../../../ref/Tags%20-%20GSP/radio.adoc[radio] tags), xref:../../../../ref/Tags%20-%20GSP/localeSelect.adoc[localeSelect], xref:../../../../ref/Tags%20-%20GSP/currencySelect.adoc[currencySelect] and xref:../../../../ref/Tags%20-%20GSP/timeZoneSelect.adoc[timeZoneSelect] (for selecting locales, currencies and time zones respectively).
+GSP also contains extended helper versions of the above tags such as link:{gspTagsRef}radioGroup.html[radioGroup] (for creating groups of link:{gspTagsRef}radio.html[radio] tags), link:{gspTagsRef}localeSelect.html[localeSelect], link:{gspTagsRef}currencySelect.html[currencySelect] and link:{gspTagsRef}timeZoneSelect.html[timeZoneSelect] (for selecting locales, currencies and time zones respectively).
 
 
 ==== Multiple Submit Buttons
 
 
-The age-old problem of dealing with multiple submit buttons is also handled elegantly with Grails using the xref:../../../../ref/Tags%20-%20GSP/formActionSubmit.adoc[formActionSubmit] tag. It is just like a regular submit, but lets you specify an alternative controller & action to submit to:
+The age-old problem of dealing with multiple submit buttons is also handled elegantly with Grails using the link:{gspTagsRef}formActionSubmit.html[formActionSubmit] tag. It is just like a regular submit, but lets you specify an alternative controller & action to submit to:
 
 [source,xml]
 ----

@@ -69,6 +69,6 @@ public class GrailsWebConsole implements Feature {
 
     @Override
     public String getDocumentation() {
-        return "https://plugins.grails.org/plugin/sheehan/console";
+        return "https://github.com/grails-plugins/grails-web-console";
     }
 }

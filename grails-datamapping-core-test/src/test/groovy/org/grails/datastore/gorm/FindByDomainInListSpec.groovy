@@ -27,7 +27,7 @@ import spock.lang.Issue
 /**
  * @author graemerocher
  */
-@Issue('https://github.com/grails/grails-core/issues/2674')
+@Issue('https://github.com/apache/grails-core/issues/2674')
 class FindByDomainInListSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
         manager.domainClasses.addAll([BookAuthor, AuthorBook])

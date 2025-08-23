@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-Executes  link:{hibernate5Guide}/manual/index.html#hql[HQL queries]
+Executes  link:{hibernate5GuideFromRef}index.html#hql[HQL queries]
 
 
 === Examples

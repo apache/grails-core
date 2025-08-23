@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-GSP also supports logical and iterative tags out of the box. For logic there are xref:../../../../ref/Tags%20-%20GSP/if.adoc[if], xref:../../../../ref/Tags%20-%20GSP/else.adoc[else] and xref:../../../../ref/Tags%20-%20GSP/elseif.adoc[elseif] tags for use with branching:
+GSP also supports logical and iterative tags out of the box. For logic there are link:{gspTagsRef}if.html[if], link:{gspTagsRef}else.html[else] and link:{gspTagsRef}elseif.html[elseif] tags for use with branching:
 
 [,xml]
 ----
@@ -29,7 +29,7 @@ GSP also supports logical and iterative tags out of the box. For logic there are
 </g:else>
 ----
 
-Use xref:../../../../ref/Tags%20-%20GSP/each.adoc[each] and xref:../../../../ref/Tags%20-%20GSP/while.adoc[while] tags for iteration:
+Use link:{gspTagsRef}each.html[each] and link:{gspTagsRef}while.html[while] tags for iteration:
 
 [,xml]
 ----

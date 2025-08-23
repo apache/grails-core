@@ -68,7 +68,6 @@ import org.springframework.web.context.ServletContextAware;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.ViewResolver;
 
-import org.grails.plugins.web.taglib.SitemeshTagLib;
 import org.grails.plugins.web.taglib.RenderTagLib;
 
 import jakarta.servlet.ServletContext;
@@ -241,7 +240,7 @@ public class GspAutoConfiguration {
 
     protected static class TagLibraryLookupRegistrar implements ImportBeanDefinitionRegistrar {
 
-        public static final Class<?>[] DEFAULT_TAGLIB_CLASSES=new Class<?>[] { SitemeshTagLib.class, RenderTagLib.class, RenderSitemeshTagLib.class };
+        public static final Class<?>[] DEFAULT_TAGLIB_CLASSES=new Class<?>[] { RenderTagLib.class, RenderSitemeshTagLib.class };
 
         @Override
         public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {

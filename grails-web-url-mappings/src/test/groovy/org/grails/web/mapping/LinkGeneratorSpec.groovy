@@ -39,10 +39,10 @@ import spock.lang.Specification
  */
 class LinkGeneratorSpec extends Specification {
 
-    def baseUrl = "http://myserver.com/foo"
+    def baseUrl = "https://myserver.com/foo"
     def context = "/bar"
     def resourcePath = ''
-    def someAbsoluteUrl = "http://www.grails.org/"
+    def someAbsoluteUrl = "https://grails.apache.org/"
     def resource = null
     def linkParams = [:]
     def pluginManager
@@ -283,9 +283,9 @@ class LinkGeneratorSpec extends Specification {
         then:
             cacheKey == "resourcehttp://localhost[absolute:true]"
         when:
-            cacheKey = cachingGenerator.makeKey(CachingLinkGenerator.RESOURCE_PREFIX, [absolute:true, base: "http://some.other.host"]);
+            cacheKey = cachingGenerator.makeKey(CachingLinkGenerator.RESOURCE_PREFIX, [absolute:true, base: "https://some.other.host"]);
         then:
-            cacheKey == "resourcehttp://some.other.host[absolute:true, base:http://some.other.host]"
+            cacheKey == "resourcehttps://some.other.host[absolute:true, base:https://some.other.host]"
     }
     
     @Issue('GRAILS-10883')

@@ -72,7 +72,7 @@ class GroovyPageWithJSPTagsTests extends Specification implements TagLibUnitTest
         GroovySystem.metaClassRegistry.removeMetaClass(TagLibraryResolverImpl)
     }
 
-    @Issue(['GRAILS-4573', 'https://github.com/grails/grails-core/issues/3926'])
+    @Issue(['GRAILS-4573', 'https://github.com/apache/grails-core/issues/3926'])
     def testIterativeTags() {
         given:
         def template = '''
@@ -91,7 +91,7 @@ class GroovyPageWithJSPTagsTests extends Specification implements TagLibUnitTest
         output.contains('1 . 1<br/>2 . 2<br/>3 . 3<br/>')
     }
 
-    @Issue(['GRAILS-3797', 'https://github.com/grails/grails-core/issues/1537'])
+    @Issue(['GRAILS-3797', 'https://github.com/apache/grails-core/issues/1537'])
     @PendingFeature(reason = 'until we upgrade to next version of test support')
     def testGRAILS3797() {
         given:
@@ -135,7 +135,7 @@ class GroovyPageWithJSPTagsTests extends Specification implements TagLibUnitTest
         output.contains('grails="rocks"')
     }
 
-    @Issue(['GRAILS-3845', 'https://github.com/grails/grails-core/issues/8830'])
+    @Issue(['GRAILS-3845', 'https://github.com/apache/grails-core/issues/8830'])
     def testNestedJSPTags() {
         given:
         def template = '''

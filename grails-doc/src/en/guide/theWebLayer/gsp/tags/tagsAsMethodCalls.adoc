@@ -18,7 +18,7 @@ under the License.
 ////
 
 [[tagsAsMethodCalls,Tags as method calls]]
-One major different between GSP tags and other tagging technologies is that GSP tags can be called as either regular tags or as method calls from xref:theWebLayer/controllers.adoc[controllers], xref:taglibs.adoc[tag libraries] or GSP views.
+One major different between GSP tags and other tagging technologies is that GSP tags can be called as either regular tags or as method calls from link:#controllers[controllers], link:#taglibs[tag libraries] or GSP views.
 
 
 ==== Tags as method calls from GSPs

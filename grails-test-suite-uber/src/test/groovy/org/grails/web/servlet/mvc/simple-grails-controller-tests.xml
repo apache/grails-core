@@ -17,7 +17,7 @@
   ~  specific language governing permissions and limitations
   ~  under the License.
   -->
-<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "https://www.springframework.org/dtd/spring-beans.dtd">
 
 <beans default-autowire="byType">
 	<bean id="grailsApplication" class="org.grails.spring.beans.factory.GrailsApplicationFactoryBean">

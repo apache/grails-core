@@ -68,7 +68,7 @@ class WithNewSessionAndExistingTransactionSpec extends GrailsDataTckSpec<GrailsD
         manager.hibernateSession.isOpen()
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/10426')
+    @Issue('https://github.com/apache/grails-core/issues/10426')
     void "Test with withNewSession with nested transaction"() {
         when:"An existing transaction not to pick up the current session"
         manager.sessionFactory.currentSession
@@ -103,7 +103,7 @@ class WithNewSessionAndExistingTransactionSpec extends GrailsDataTckSpec<GrailsD
         manager.hibernateSession.isOpen()
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/10448')
+    @Issue('https://github.com/apache/grails-core/issues/10448')
     void "Test with withNewSession with existing transaction"() {
 
         when:"the connection pool is obtained"

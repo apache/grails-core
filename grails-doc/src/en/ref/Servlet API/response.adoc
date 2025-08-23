@@ -47,8 +47,8 @@ class BookController {
 
 The Servlet API's `HttpServletResponse` class can be used within Grails to perform all typical activities such as writing out binary data, writing directly to the response and sending error response codes to name but a few. Refer to the documentation on the {jakartaee}jakarta/servlet/http/HttpServletResponse.html[HttpServletResponse] class in the Servlet API for more information. Grails provides the following additional methods and/or properties on the `response` object
 
-* `format` - The request format, used for link:{guidePath}/theWebLayer.html#contentNegotiation[Content Negotiation].
-* `withFormat(Closure)` - The withFormat method, used for link:{guidePath}/theWebLayer.html#contentNegotiation[Content Negotiation].
+* `format` - The request format, used for link:{guidePath}theWebLayer.html#contentNegotiation[Content Negotiation].
+* `withFormat(Closure)` - The withFormat method, used for link:{guidePath}theWebLayer.html#contentNegotiation[Content Negotiation].
 
 Grails also overrides the left shift operator on the `response` object making it easier to write to the response writer:
 

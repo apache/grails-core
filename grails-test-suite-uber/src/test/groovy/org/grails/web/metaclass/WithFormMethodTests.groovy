@@ -77,7 +77,7 @@ class WithFormMethodTests {
 
     @Test
     void testTokenInvalidWithEmptyTokenHolder() {
-        def url = "http://grails.org/submit"
+        def url = "https://grails.apache.org/submit"
 
         request.session.setAttribute(SynchronizerTokensHolder.HOLDER,new SynchronizerTokensHolder())
 
@@ -95,7 +95,7 @@ class WithFormMethodTests {
 
     @Test
     void testTokenInvalid() {
-        def url = "https://grails.org/submit"
+        def url = "https://grails.apache.org/submit"
 
         SynchronizerTokensHolder tokensHolder = new SynchronizerTokensHolder()
         tokensHolder.generateToken(url)
@@ -115,7 +115,7 @@ class WithFormMethodTests {
 
     @Test
     void testTokenValid() {
-        def url = "http://grails.org/submit"
+        def url = "https://grails.apache.org/submit"
 
         SynchronizerTokensHolder tokensHolder = new SynchronizerTokensHolder()
         def token = tokensHolder.generateToken(url)
@@ -135,8 +135,8 @@ class WithFormMethodTests {
 
     @Test
     void testNonEmptyHolderStays() {
-        def url1 = "http://grails.org/submit1"
-        def url2 = "http://grails.org/submit2"
+        def url1 = "https://grails.apache.org/submit1"
+        def url2 = "https://grails.apache.org/submit2"
 
         SynchronizerTokensHolder tokensHolder = new SynchronizerTokensHolder()
         def token1 = tokensHolder.generateToken(url1)
@@ -160,7 +160,7 @@ class WithFormMethodTests {
 
     @Test
     void testEmptyHolderIsDeleted() {
-        def url = "http://grails.org/submit"
+        def url = "https://grails.apache.org/submit"
 
         SynchronizerTokensHolder tokensHolder = new SynchronizerTokensHolder()
         def token = tokensHolder.generateToken(url)
@@ -180,7 +180,7 @@ class WithFormMethodTests {
 
     @Test
     void testHandleDoubleSubmit() {
-        def url = "https://grails.org/submit"
+        def url = "https://grails.apache.org/submit"
 
         SynchronizerTokensHolder tokensHolder = new SynchronizerTokensHolder()
         def token = tokensHolder.generateToken(url)
@@ -208,8 +208,8 @@ class WithFormMethodTests {
 
     @Test
     void testHandleSubmitOfTwoForms() {
-        def url1 = "https://grails.org/submit1"
-        def url2 = "https://grails.org/submit2"
+        def url1 = "https://grails.apache.org/submit1"
+        def url2 = "https://grails.apache.org/submit2"
 
         SynchronizerTokensHolder tokensHolder = new SynchronizerTokensHolder()
         def token1 = tokensHolder.generateToken(url1)
@@ -243,8 +243,8 @@ class WithFormMethodTests {
 
     @Test
     void testHandleSubmitOfTwoFormsWithSameURL() {
-        def url1 = "https://grails.org/submit"
-        def url2 = "https://grails.org/submit"
+        def url1 = "https://grails.apache.org/submit"
+        def url2 = "https://grails.apache.org/submit"
 
         SynchronizerTokensHolder tokensHolder = new SynchronizerTokensHolder()
         def token1 = tokensHolder.generateToken(url1)

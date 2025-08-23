@@ -19,7 +19,7 @@ under the License.
 
 == Usage
 
-To render markup, inject the link:api/org/grails/scaffolding/markup/DomainMarkupRenderer.html[DomainMarkupRenderer].
+To render markup, inject the link:{api}org/grails/scaffolding/markup/DomainMarkupRenderer.html[DomainMarkupRenderer].
 
 [source,groovy,indent=1]
 DomainMarkupRenderer domainMarkupRenderer
@@ -32,7 +32,7 @@ Then execute one of the methods provided:
 
 A string containing all of the markup will be returned.
 
-Each of the methods requires a link:{gormApiDocs}/org/grails/datastore/mapping/model/PersistentEntity.html[PersistentEntity] that represents the given domain class. To retrieve the link:{gormApiDocs}/org/grails/datastore/mapping/model/PersistentEntity.html[PersistentEntity], inject the mapping context and pass in the fully qualified domain class name.
+Each of the methods requires a link:{api}/org/grails/datastore/mapping/model/PersistentEntity.html[PersistentEntity] that represents the given domain class. To retrieve the link:{api}/org/grails/datastore/mapping/model/PersistentEntity.html[PersistentEntity], inject the mapping context and pass in the fully qualified domain class name.
 
 [source,groovy,indent=1]
 ----
