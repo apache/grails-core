@@ -70,8 +70,11 @@ public class HibernateHqlQuery extends Query {
             , String sqlString
             , boolean isNative
         ) {
-        var clazz = getTarget(sqlString,persistentEntity.getJavaClass());
-        var q = isNative ? session.createNativeQuery(sqlString,clazz) : session.createQuery(sqlString, clazz);
+
+        // Normalize only for HQL (not for native SQL)
+        String hqlToUse = isNative ? sqlString : normalizeNonAliasedSelect(sqlString);
+        var clazz = getTarget(hqlToUse, persistentEntity.getJavaClass());
+        var q = isNative ? session.createNativeQuery(sqlString, clazz) : session.createQuery(hqlToUse, clazz);
         var hibernateSession = new HibernateSession( dataStore, sessionFactory);
         HibernateHqlQuery hibernateHqlQuery = new HibernateHqlQuery(hibernateSession, null, q);
         hibernateHqlQuery.setFlushMode(session.getHibernateFlushMode());
@@ -165,20 +168,162 @@ public class HibernateHqlQuery extends Query {
 
 
     static Class getTarget(CharSequence hql, Class clazz) {
-        int projections = countHqlProjections(hql);
+        // Normalize non-aliased queries to an aliased form, then reuse the logic
+        String normalized = normalizeNonAliasedSelect(hql == null ? null : hql.toString());
+
+        int projections = countHqlProjections(normalized);
         switch(projections) {
             case 0:
                 return clazz; // No explicit SELECT - implicit entity projection
             case 1:
-                // Single projection - check if it's a property access (contains dot)
-                if (isPropertyProjection(hql)) {
-                    return Object.class; // For scalar results like "select h.name"
+                // Single projection - property vs entity
+                if (isPropertyProjection(normalized)) {
+                    return Object.class; // Scalar result
                 } else {
-                    return clazz; // For entity projections like "select h"
+                    return clazz;        // Entity result
                 }
             default:
                 return Object[].class; // Multiple projections
         }
+    }
+
+    /**
+     * If the HQL query has no alias in the FROM clause, inject a synthetic alias ("e")
+     * and qualify the SELECT projection accordingly. Only SELECT is adjusted; the rest
+     * of the query is left intact (WHERE/JOIN conditions are valid as-is in HQL).
+     *
+     * Examples:
+     *   "select nameType from NameType where lower(nameType)=:nameType"
+     *      -> "select e.nameType from NameType e where lower(nameType)=:nameType"
+     *   "select NameType from NameType"
+     *      -> "select e from NameType e"
+     *   "select name from Person"
+     *      -> "select e.name from Person e"
+     */
+    private static String normalizeNonAliasedSelect(String hql) {
+        if (hql == null) return null;
+        String s = hql.trim();
+        if (s.isEmpty()) return s;
+
+        String lower = s.toLowerCase();
+        int selectIdx = lower.indexOf("select ");
+        if (selectIdx < 0) {
+            // No explicit select -> nothing to normalize for target detection
+            return s;
+        }
+        int fromIdx = lower.indexOf(" from ", selectIdx);
+        if (fromIdx < 0) {
+            // Malformed or incomplete; leave as-is
+            return s;
+        }
+
+        // Extract SELECT clause original text
+        int selectStart = selectIdx + "select ".length();
+        String selectClauseOrig = s.substring(selectStart, fromIdx).trim();
+        String selectClauseLower = lower.substring(selectStart, fromIdx).trim();
+
+        // Extract FROM head to detect alias: "from Entity [as] alias ..."
+        int afterFrom = fromIdx + " from ".length();
+        int endOfFromHead = afterFrom;
+        // read entity name token
+        while (endOfFromHead < s.length()) {
+            char ch = s.charAt(endOfFromHead);
+            if (Character.isWhitespace(ch)) break;
+            endOfFromHead++;
+        }
+        String entityName = s.substring(afterFrom, endOfFromHead).trim();
+        if (entityName.isEmpty()) return s;
+
+        // Skip spaces
+        int cur = endOfFromHead;
+        while (cur < s.length() && Character.isWhitespace(s.charAt(cur))) cur++;
+
+        // Optional "as"
+        boolean hasAlias = false;
+        String alias = null;
+        int aliasStart = cur;
+        if (cur + 2 < s.length()) {
+            String nextWord = s.substring(cur, Math.min(cur + 2, s.length())).toLowerCase();
+        }
+        if (cur + 2 < s.length() && s.substring(cur, Math.min(cur + 2, s.length())).equalsIgnoreCase("as")) {
+            cur += 2;
+            while (cur < s.length() && Character.isWhitespace(s.charAt(cur))) cur++;
+        }
+
+        // Try to read alias token unless we hit a clause keyword
+        int aliasEnd = cur;
+        while (aliasEnd < s.length()) {
+            char ch = s.charAt(aliasEnd);
+            if (Character.isWhitespace(ch)) break;
+            aliasEnd++;
+        }
+        String maybeAlias = (cur < aliasEnd) ? s.substring(cur, aliasEnd) : "";
+
+        // Keywords that indicate no alias present
+        String maybeAliasLower = maybeAlias.toLowerCase();
+        boolean isClauseKeyword = maybeAliasLower.isEmpty()
+                || maybeAliasLower.equals("where")
+                || maybeAliasLower.equals("join")
+                || maybeAliasLower.equals("left")
+                || maybeAliasLower.equals("right")
+                || maybeAliasLower.equals("inner")
+                || maybeAliasLower.equals("outer")
+                || maybeAliasLower.equals("group")
+                || maybeAliasLower.equals("order")
+                || maybeAliasLower.equals("having");
+
+        if (!isClauseKeyword) {
+            hasAlias = true;
+            alias = maybeAlias;
+        }
+
+        if (hasAlias) {
+            // Already aliased; no normalization needed
+            return s;
+        }
+
+        // Inject synthetic alias
+        String syntheticAlias = "e";
+
+        // Adjust SELECT clause:
+        // Preserve DISTINCT/ALL prefix
+        String prefix = "";
+        String projOrig = selectClauseOrig;
+        String projLower = selectClauseLower;
+        if (projLower.startsWith("distinct ")) {
+            prefix = selectClauseOrig.substring(0, selectClauseOrig.length() - projOrig.substring("distinct ".length()).length());
+            projOrig = selectClauseOrig.substring("distinct ".length()).trim();
+            projLower = projLower.substring("distinct ".length()).trim();
+            prefix = "distinct ";
+        } else if (projLower.startsWith("all ")) {
+            prefix = "all ";
+            projOrig = selectClauseOrig.substring("all ".length()).trim();
+            projLower = projLower.substring("all ".length()).trim();
+        }
+
+        String adjustedProjection = projOrig;
+        // If projection equals entity name -> "select e"
+        if (projLower.equals(entityName.toLowerCase())) {
+            adjustedProjection = syntheticAlias;
+        }
+        // If projection has no dot, treat as property -> qualify with alias
+        else if (!projLower.contains("(") && !projLower.contains(".") && !projLower.startsWith("new ")) {
+            adjustedProjection = syntheticAlias + "." + projOrig;
+        }
+        // else leave as-is (functions, constructor expr, already-qualified, etc.)
+
+        // Build normalized SELECT ... FROM ... (inject alias right after entity name)
+        StringBuilder out = new StringBuilder();
+        out.append("select ").append(prefix).append(adjustedProjection);
+        // Original FROM and the rest
+        String tail = s.substring(fromIdx); // starts with " from "
+        // Insert alias after entity name in tail
+        StringBuilder tailOut = new StringBuilder();
+        tailOut.append(" from ").append(entityName).append(" ").append(syntheticAlias);
+        // Append the remainder after entity name in the FROM head
+        tailOut.append(s.substring(endOfFromHead));
+        out.append(tailOut);
+        return out.toString();
     }
 
     private static boolean isPropertyProjection(CharSequence hql) {
