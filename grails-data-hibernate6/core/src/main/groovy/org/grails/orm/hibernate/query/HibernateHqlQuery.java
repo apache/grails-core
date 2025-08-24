@@ -1,6 +1,8 @@
 package org.grails.orm.hibernate.query;
 
 import jakarta.persistence.FlushModeType;
+import org.apache.groovy.parser.antlr4.util.StringUtils;
+import org.codehaus.groovy.util.StringUtil;
 import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
@@ -74,7 +76,12 @@ public class HibernateHqlQuery extends Query {
         // Normalize only for HQL (not for native SQL)
         String hqlToUse = isNative ? sqlString : normalizeNonAliasedSelect(sqlString);
         var clazz = getTarget(hqlToUse, persistentEntity.getJavaClass());
-        var q = isNative ? session.createNativeQuery(sqlString, clazz) : session.createQuery(hqlToUse, clazz);
+        org.hibernate.query.Query q = null;
+        if (StringUtils.isEmpty(hqlToUse)) {
+           session.createQuery("from " + clazz.getName(), clazz);
+        } else {
+            q = isNative ? session.createNativeQuery(hqlToUse, clazz) : session.createQuery(hqlToUse, clazz);
+        }
         var hibernateSession = new HibernateSession( dataStore, sessionFactory);
         HibernateHqlQuery hibernateHqlQuery = new HibernateHqlQuery(hibernateSession, null, q);
         hibernateHqlQuery.setFlushMode(session.getHibernateFlushMode());

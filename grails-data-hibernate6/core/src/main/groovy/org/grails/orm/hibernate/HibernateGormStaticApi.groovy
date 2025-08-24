@@ -45,15 +45,12 @@ import org.hibernate.NonUniqueResultException
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.jpa.QueryHints
-import org.hibernate.query.NativeQuery
 import org.hibernate.query.Query
 import org.hibernate.query.criteria.JpaPredicate
 import org.springframework.core.convert.ConversionService
 import org.springframework.orm.hibernate5.SessionHolder
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionSynchronizationManager
-
-import jakarta.persistence.FlushModeType
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
 
@@ -234,55 +231,18 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
-    D find(CharSequence query, Map queryNamedArgs, Map args) {
-        queryNamedArgs = new LinkedHashMap(queryNamedArgs)
-        args = new LinkedHashMap(args)
-        if(query instanceof GString) {
-            query = buildNamedParameterQueryFromGString((GString) query, queryNamedArgs)
-        }
-
-        String queryString = query.toString()
-        query = normalizeMultiLineQueryString(queryString)
-
-        def template = hibernateTemplate
-        queryNamedArgs = new HashMap(queryNamedArgs)
-        return (D) template.execute { Session session ->
-            def hqlQuery = HibernateHqlQuery.createHqlQuery(session, datastore as HibernateDatastore, sessionFactory, persistentEntity, queryString, false)
-            template.applySettings(hqlQuery.getQuery());
-            hqlQuery.populateQuerySettings(queryNamedArgs)
-            hqlQuery.populateQuerySettings(args)
-            hqlQuery.populateQueryWithNamedArguments(queryNamedArgs)
-            hqlQuery.singleResult()
-        }
+    D find(CharSequence query, Map namedParams, Map args) {
+        doSingleInternal(query,namedParams,[],args)
     }
 
     @Override
-    D find(CharSequence query, Collection params, Map args) {
-        def result = numberedParameterQuery(query, args, params)
-        result ? result.first() : null
+    D find(CharSequence query, Collection positionalParams, Map args) {
+       doSingleInternal(query,[:],positionalParams,args)
     }
 
     @Override
-    List<D> findAll(CharSequence query, Map params, Map args) {
-
-        params = new LinkedHashMap(params)
-        args = new LinkedHashMap(args)
-        if(query instanceof GString) {
-            query = buildNamedParameterQueryFromGString((GString) query, params)
-        }
-
-        String queryString = query.toString()
-        queryString = normalizeMultiLineQueryString(queryString)
-
-        def template = hibernateTemplate
-        return (List<D>) template.execute { Session session ->
-            def hibernateHqlQuery = HibernateHqlQuery.createHqlQuery(session, datastore as HibernateDatastore, sessionFactory, persistentEntity,queryString, false)
-            template.applySettings(hibernateHqlQuery.getQuery())
-            hibernateHqlQuery.populateQuerySettings(params)
-            hibernateHqlQuery.populateQuerySettings(args)
-            hibernateHqlQuery.populateQueryWithNamedArguments(params)
-            hibernateHqlQuery.list()
-        }
+    List<D> findAll(CharSequence query, Map namedParams, Map args) {
+      doListInternal(query,namedParams,[],args)
     }
 
     @CompileDynamic // required for Hibernate 5.2 compatibility
@@ -345,14 +305,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     List executeQuery(CharSequence query) {
-        if(query instanceof GString) {
-            Map params = [:]
-            String hql = buildNamedParameterQueryFromGString((GString)query, params)
-            return executeQuery(hql, params, Collections.emptyMap())
-        }
-        else {
-            return super.executeQuery(query)
-        }
+        return doListInternal(query, [:], [], [:])
     }
 
     @Override
@@ -369,50 +322,22 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     D find(CharSequence query) {
-        if(query instanceof GString) {
-            Map params = [:]
-            String hql = buildNamedParameterQueryFromGString((GString)query, params)
-            return find(hql, params, Collections.emptyMap())
-        }
-        else {
-            return (D)super.find(query)
-        }
+       doSingleInternal(query,[:],[],[:])
     }
 
     @Override
     D find(CharSequence query, Map params) {
-        if(query instanceof GString) {
-            Map newParams = new LinkedHashMap(params)
-            String hql = buildNamedParameterQueryFromGString((GString)query, newParams)
-            return find(hql, newParams, newParams)
-        }
-        else {
-            return (D)super.find(query, params)
-        }
+        doSingleInternal(query, params, [], [:])
     }
 
     @Override
     List<D> findAll(CharSequence query, Map params) {
-        if(query instanceof GString) {
-            Map newParams = new LinkedHashMap(params)
-            String hql = buildNamedParameterQueryFromGString((GString)query, newParams)
-            return findAll(hql, newParams, newParams)
-        }
-        else {
-            return super.findAll(query, params)
-        }
+        doListInternal(query, params, [], [:])
     }
 
     @Override
     List executeQuery(CharSequence query, Map args) {
-        if(query instanceof GString) {
-            Map newParams = new LinkedHashMap(args)
-            String hql = buildNamedParameterQueryFromGString((GString)query, newParams)
-            return executeQuery(hql, newParams, newParams)
-        }
-        else {
-            return super.executeQuery(query, args)
-        }
+        return doListInternal(query, [:], [], args)
     }
 
 
@@ -451,23 +376,83 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
-    List executeQuery(CharSequence query, Map params, Map args) {
-        def template = hibernateTemplate
-        args = new HashMap(args)
-        params = new HashMap(params)
+    List executeQuery(CharSequence query, Map namedParams, Map args) {
+      return doListInternal(query, namedParams, [],  args)
+    }
 
-        if(query instanceof GString) {
-            query = buildNamedParameterQueryFromGString((GString) query, params)
+    @SuppressWarnings('GroovyAssignabilityCheck')
+    private List doListInternal(CharSequence queryString,
+                                Map namedParams,
+                                Collection positionalParams,
+                                Map args) {
+        def template = hibernateTemplate
+        if (queryString instanceof  GString) {
+            if (positionalParams) {
+                queryString = buildOrdinalParameterQueryFromGString((GString)queryString, positionalParams as List)
+            } else {
+                queryString = buildNamedParameterQueryFromGString((GString)queryString, namedParams)
+            }
         }
+        String hql = normalizeMultiLineQueryString(queryString?.toString())
+        Map argCopy = args != null ? new HashMap(args) : Collections.emptyMap()
 
         return (List<D>) template.execute { Session session ->
-//            Query q = (Query) session.createQuery(query.toString(),Object.class)
-            def hibernateHqlQuery = HibernateHqlQuery.createHqlQuery(session, datastore as HibernateDatastore, sessionFactory, persistentEntity, query.toString(), false)
+            def hibernateHqlQuery = HibernateHqlQuery.createHqlQuery(
+                    session, datastore as HibernateDatastore, sessionFactory, persistentEntity, hql, false)
             template.applySettings(hibernateHqlQuery.getQuery())
-            hibernateHqlQuery.populateQuerySettings(params)
-            hibernateHqlQuery.populateQuerySettings(args)
-            hibernateHqlQuery.populateQueryWithNamedArguments(params)
+
+            // apply query settings (max, offset, cache, etc.)
+            hibernateHqlQuery.populateQuerySettings(argCopy)
+
+            // apply parameters
+            if (namedParams) {
+                Map namedCopy = new HashMap(namedParams)
+                hibernateHqlQuery.populateQueryWithNamedArguments(namedCopy)
+            } else if (positionalParams) {
+                List positionalList = (positionalParams instanceof List) ? (List) positionalParams : new ArrayList(positionalParams)
+                hibernateHqlQuery.populateQueryWithIndexedArguments(positionalList)
+            }
+
+            // execute
             hibernateHqlQuery.list()
+        }
+    }
+
+    @SuppressWarnings('GroovyAssignabilityCheck')
+    private D doSingleInternal(CharSequence queryString,
+                                Map namedParams,
+                                Collection positionalParams,
+                                Map args) {
+        def template = hibernateTemplate
+        if (queryString instanceof  GString) {
+            if (positionalParams) {
+                queryString = buildOrdinalParameterQueryFromGString((GString)queryString, positionalParams as List)
+            } else {
+                queryString = buildNamedParameterQueryFromGString((GString)queryString, namedParams)
+            }
+        }
+        String hql = normalizeMultiLineQueryString(queryString?.toString())
+        Map argCopy = args != null ? new HashMap(args) : Collections.emptyMap()
+
+        return (D) template.execute { Session session ->
+            def hibernateHqlQuery = HibernateHqlQuery.createHqlQuery(
+                    session, datastore as HibernateDatastore, sessionFactory, persistentEntity, hql, false)
+            template.applySettings(hibernateHqlQuery.getQuery())
+
+            // apply query settings (max, offset, cache, etc.)
+            hibernateHqlQuery.populateQuerySettings(argCopy)
+
+            // apply parameters
+            if (namedParams) {
+                Map namedCopy = new HashMap(namedParams)
+                hibernateHqlQuery.populateQueryWithNamedArguments(namedCopy)
+            } else if (positionalParams) {
+                List positionalList = (positionalParams instanceof List) ? (List) positionalParams : new ArrayList(positionalParams)
+                hibernateHqlQuery.populateQueryWithIndexedArguments(positionalList)
+            }
+
+            // execute
+            hibernateHqlQuery.singleResult()
         }
     }
 
@@ -492,13 +477,13 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
-    List executeQuery(CharSequence query, Collection params, Map args) {
-        numberedParameterQuery(query, args, params)
+    List executeQuery(CharSequence query, Collection positionalParams, Map args) {
+        return doListInternal(query,[:], positionalParams, args)
     }
 
     @Override
-    List<D> findAll(CharSequence query, Collection params, Map args) {
-        numberedParameterQuery(query, args, params)
+    List<D> findAll(CharSequence query, Collection positionalParams, Map args) {
+        doListInternal(query,[:], positionalParams, args)
     }
 
     @Override

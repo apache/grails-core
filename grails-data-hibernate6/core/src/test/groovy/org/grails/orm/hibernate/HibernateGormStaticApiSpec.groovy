@@ -226,7 +226,11 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
 
         when:
-        def updated = HibernateGormStaticApiEntity.executeUpdate("update HibernateGormStaticApiEntity set name = 'updated' where name = 'test'")
+        def updated
+        HibernateGormStaticApiEntity.withNewTransaction { status ->
+            updated = HibernateGormStaticApiEntity.executeUpdate("update HibernateGormStaticApiEntity set name = 'updated' where name = 'test'")
+
+        }
         def instance = HibernateGormStaticApiEntity.first()
 
         then:
