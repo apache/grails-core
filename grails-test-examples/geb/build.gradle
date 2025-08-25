@@ -72,6 +72,17 @@ dependencies {
 
 tasks.withType(Test).configureEach {
     systemProperty('grails.geb.recording.mode', 'RECORD_ALL')
+    doLast {
+        // Delete all but the two most recent recording directories to save space
+        def baseDir = file(System.getProperty('grails.geb.recording.directory', 'build/gebContainer/recordings'))
+        if (!baseDir.isDirectory()) return
+        def dirs = (baseDir.listFiles() ?: [])
+                .findAll { it.directory && it.name ==~ /^\d{8}_\d{6}$/ }
+                .sort { it.name }
+        if (dirs.size() > 2) {
+            delete(dirs.dropRight(2)) // keep the two most recent
+        }
+    }
 }
 
 apply {
