@@ -115,7 +115,7 @@ class WebDriverContainerHolder {
                 grailsGebSettings.recordingFormat
         )
 
-        currentContainer.tap {
+        currentContainer.with {
             withEnv('SE_ENABLE_TRACING', grailsGebSettings.tracingEnabled)
             withAccessToHost(true)
             withImagePullPolicy(PullPolicy.ageBased(Duration.of(1, ChronoUnit.DAYS)))
