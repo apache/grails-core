@@ -28,11 +28,11 @@ import groovy.transform.CompileStatic
  * @since 4.1
  */
 @CompileStatic
-class DirtyCheckingSet extends DirtyCheckingCollection implements Set {
+class DirtyCheckingSet<T> extends DirtyCheckingCollection<T> {
 
-    @Delegate Set target
+    @Delegate Set<T> target
 
-    DirtyCheckingSet(Set target, DirtyCheckable parent, String property) {
+    DirtyCheckingSet(Set<T> target, DirtyCheckable parent, String property) {
         super(target, parent, property)
         this.target = target
     }

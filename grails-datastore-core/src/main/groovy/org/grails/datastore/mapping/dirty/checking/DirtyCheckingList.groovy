@@ -28,11 +28,11 @@ import groovy.transform.CompileStatic
  * @since 4.1
  */
 @CompileStatic
-class DirtyCheckingList extends DirtyCheckingCollection implements List {
+class DirtyCheckingList<T> extends DirtyCheckingCollection<T> {
 
-    @Delegate List target
+    @Delegate List<T> target
 
-    DirtyCheckingList(List target, DirtyCheckable parent, String property) {
+    DirtyCheckingList(List<T> target, DirtyCheckable parent, String property) {
         super(target, parent, property)
         this.target = target
     }
@@ -44,20 +44,20 @@ class DirtyCheckingList extends DirtyCheckingCollection implements List {
     }
 
     @Override
-    Object set(int index, Object element) {
+    T set(int index, T element) {
         parent.markDirty(property)
         target.set(index, element)
     }
 
     @Override
-    void add(int index, Object element) {
+    void add(int index, T element) {
         parent.markDirty(property)
         target.add(index, element)
     }
 
 
     @Override
-    Object remove(int index) {
+    T remove(int index) {
         parent.markDirty(property)
         target.remove((int)index)
     }

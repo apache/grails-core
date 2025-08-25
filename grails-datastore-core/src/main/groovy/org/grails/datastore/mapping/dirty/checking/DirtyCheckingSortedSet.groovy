@@ -29,11 +29,11 @@ import groovy.transform.CompileStatic
  * @since 5.0
  */
 @CompileStatic
-class DirtyCheckingSortedSet extends DirtyCheckingCollection implements SortedSet {
+class DirtyCheckingSortedSet<T> extends DirtyCheckingCollection<T> {
 
-    @Delegate SortedSet target
+    @Delegate SortedSet<T> target
 
-    DirtyCheckingSortedSet(SortedSet target, DirtyCheckable parent, String property) {
+    DirtyCheckingSortedSet(SortedSet<T> target, DirtyCheckable parent, String property) {
         super(target, parent, property)
         this.target = target
     }
