@@ -149,7 +149,14 @@ class WebDriverContainerHolder {
             // If no driver was set in GebConfig.groovy, default to Chrome
             gebConfig.driverConf = { ->
                 log.info('Using default Chrome RemoteWebDriver for {}', currentContainer.seleniumAddress)
-                new RemoteWebDriver(currentContainer.seleniumAddress, new ChromeOptions())
+                new RemoteWebDriver(currentContainer.seleniumAddress, new ChromeOptions().tap {
+                    // See https://issues.chromium.org/issues/42323769
+                    setExperimentalOption('prefs', [
+                            'credentials_enable_service': false,
+                            'profile.password_manager_enabled': false,
+                            'profile.password_manager_leak_detection': false
+                    ])
+                })
             }
         }
 
