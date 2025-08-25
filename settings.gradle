@@ -349,6 +349,7 @@ include(
         'grails-test-examples-datasources',
         'grails-test-examples-namespaces',
         'grails-test-examples-geb',
+        'grails-test-examples-geb-gebconfig',
         'grails-test-examples-gorm',
         'grails-test-examples-gsp-layout',
         'grails-test-examples-gsp-sitemesh3',
@@ -376,6 +377,7 @@ project(':grails-test-examples-app3').projectDir = file('grails-test-examples/ap
 project(':grails-test-examples-external-configuration').projectDir = file('grails-test-examples/external-configuration')
 project(':grails-test-examples-datasources').projectDir = file('grails-test-examples/datasources')
 project(':grails-test-examples-geb').projectDir = file('grails-test-examples/geb')
+project(':grails-test-examples-geb-gebconfig').projectDir = file('grails-test-examples/geb-gebconfig')
 project(':grails-test-examples-namespaces').projectDir = file('grails-test-examples/namespaces')
 project(':grails-test-examples-gorm').projectDir = file('grails-test-examples/gorm')
 project(':grails-test-examples-gsp-layout').projectDir = file('grails-test-examples/gsp-layout')
