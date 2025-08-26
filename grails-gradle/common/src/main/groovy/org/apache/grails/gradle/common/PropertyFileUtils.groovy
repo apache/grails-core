@@ -26,6 +26,7 @@ import org.codehaus.groovy.runtime.IOGroovyMethods
 
 @CompileStatic
 final class PropertyFileUtils {
+
     private final static Pattern TIME_REGEX = ~'^#(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)(?:,|\\s).*$'
 
     private PropertyFileUtils() {
