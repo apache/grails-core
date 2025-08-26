@@ -118,6 +118,11 @@ public class HibernateQuery extends Query {
         return this;
     }
 
+    public Query count() {
+        projections.count();
+        return this;
+    }
+
     @Override
     public Query isNull(String property) {
         detachedCriteria.isNull(property);

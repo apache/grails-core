@@ -2,7 +2,6 @@ package org.grails.orm.hibernate.query;
 
 import jakarta.persistence.FlushModeType;
 import org.apache.groovy.parser.antlr4.util.StringUtils;
-import org.codehaus.groovy.util.StringUtil;
 import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
@@ -70,15 +69,17 @@ public class HibernateHqlQuery extends Query {
             , SessionFactory sessionFactory
             , PersistentEntity persistentEntity
             , String sqlString
-            , boolean isNative
-        ) {
+            , boolean isNative,
+            boolean isUpdate) {
 
         // Normalize only for HQL (not for native SQL)
         String hqlToUse = isNative ? sqlString : normalizeNonAliasedSelect(sqlString);
         var clazz = getTarget(hqlToUse, persistentEntity.getJavaClass());
         org.hibernate.query.Query q = null;
         if (StringUtils.isEmpty(hqlToUse)) {
-           session.createQuery("from " + clazz.getName(), clazz);
+           q = session.createQuery("from " + clazz.getName(), clazz);
+        } else if (isUpdate) {
+            q = session.createQuery(hqlToUse);
         } else {
             q = isNative ? session.createNativeQuery(hqlToUse, clazz) : session.createQuery(hqlToUse, clazz);
         }
@@ -437,6 +438,10 @@ public class HibernateHqlQuery extends Query {
 
     public org.hibernate.query.Query getQuery() {
         return query;
+    }
+
+    public int executeUpdate() {
+        return query.executeUpdate();
     }
 
 }
