@@ -58,6 +58,6 @@ class User {
 }
 ----
 
-This constraint influences  link:{hibernate5Guide}/manual/index.html#constraints[schema generation].
+This constraint influences  link:{hibernate5GuideFromRef}index.html#constraints[schema generation].
 
 Error Code: `className.propertyName.min.notmet`

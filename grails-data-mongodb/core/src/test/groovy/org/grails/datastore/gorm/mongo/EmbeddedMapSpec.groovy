@@ -32,7 +32,7 @@ class EmbeddedMapSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
         manager.addAllDomainClasses([EmbeddedMapPerson])
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/691')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/691')
     void "Test that persisting and loading an embedded map works as expected"() {
         when: "An entity with a map is persisted"
         new EmbeddedMapPerson(name: "John Doe",

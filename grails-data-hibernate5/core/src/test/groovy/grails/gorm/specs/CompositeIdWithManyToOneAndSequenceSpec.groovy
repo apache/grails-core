@@ -37,7 +37,7 @@ class CompositeIdWithManyToOneAndSequenceSpec extends Specification {
     @Shared PlatformTransactionManager transactionManager = datastore.transactionManager
 
     @Rollback
-    @Issue('https://github.com/grails/grails-data-mapping/issues/835')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/835')
     void "Test composite id many to one and sequence"() {
 
         when:"a many to one association is created"

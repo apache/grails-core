@@ -20,6 +20,7 @@ package org.grails.forge.feature.build.gradle;
 
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.Category;
+import org.grails.forge.feature.FeaturePhase;
 import org.grails.forge.feature.OneOfFeature;
 
 public interface GradleBuildSrcFeature extends OneOfFeature {
@@ -37,5 +38,10 @@ public interface GradleBuildSrcFeature extends OneOfFeature {
     @Override
     default String getCategory() {
         return Category.CONFIGURATION;
+    }
+
+    @Override
+    default int getOrder() {
+        return FeaturePhase.BUILD.getOrder();
     }
 }

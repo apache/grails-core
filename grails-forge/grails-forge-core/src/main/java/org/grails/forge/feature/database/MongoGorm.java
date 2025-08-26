@@ -52,7 +52,7 @@ public class MongoGorm extends GormOneOfFeature {
 
     @Override
     public String getDescription() {
-        return "Configures GORM for MongoDB for Groovy applications";
+        return "Configure GORM for using MongoDB.";
     }
 
     @Override
@@ -82,6 +82,6 @@ public class MongoGorm extends GormOneOfFeature {
     @Nullable
     @Override
     public String getThirdPartyDocumentation() {
-        return "https://gorm.grails.org/latest/mongodb/manual/";
+        return "https://docs.grails.org/latest/grails-data/mongodb/manual/";
     }
 }

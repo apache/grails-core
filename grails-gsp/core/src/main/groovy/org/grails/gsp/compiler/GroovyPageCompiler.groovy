@@ -21,7 +21,7 @@ package org.grails.gsp.compiler
 import grails.config.ConfigMap
 import org.apache.commons.logging.LogFactory
 import org.apache.commons.logging.Log
-import org.apache.grails.common.properties.PropertyFileUtils
+import org.apache.grails.gradle.common.PropertyFileUtils
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.Phases

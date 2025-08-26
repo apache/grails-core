@@ -34,7 +34,7 @@ class DetachedCriteriaAssociationQuerySpec extends GrailsDataTckSpec<GrailsDataC
         manager.addAllDomainClasses([BookA, Genre])
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/776')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/776')
     void "test that detached nested criteria work for association queries"() {
         when: "an object is queried with a detached association query"
         new BookA(genre: new Genre(description: "horror").save()).save(flush: true)

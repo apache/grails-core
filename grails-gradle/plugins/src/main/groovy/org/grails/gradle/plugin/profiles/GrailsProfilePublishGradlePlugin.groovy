@@ -25,7 +25,7 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.tasks.GenerateMavenPom
 import org.gradle.api.tasks.bundling.Jar
-import org.grails.gradle.plugin.publishing.GrailsPublishGradlePlugin
+import org.apache.grails.gradle.publish.GrailsPublishGradlePlugin
 
 import javax.inject.Inject
 

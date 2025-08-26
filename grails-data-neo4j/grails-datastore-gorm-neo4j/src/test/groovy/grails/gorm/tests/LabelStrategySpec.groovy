@@ -190,7 +190,7 @@ class LabelStrategySpec extends GormDatastoreSpec {
         verifyLabelsForId(finalSubclassInstance.id, ['FinalSubClass', 'SubClass'])
     }
 
-    @Issue('https://github.com/grails/gorm-neo4j/issues/98')
+    @Issue('https://github.com/grails/grails-data-neo4j/issues/98')
     void 'test abstract classes can contribute to labels'() {
         when:
         def subclassInstance = new LabeledSub(name: 'parent name', profession: 'foo').save(flush: true)

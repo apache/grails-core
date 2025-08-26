@@ -101,7 +101,7 @@ class EmbeddedSpec extends HttpClientSpec {
         ''')
     }
 
-    @Issue('https://github.com/grails/grails-views/issues/171')
+    @Issue('https://github.com/apache/grails-views/issues/171')
     void 'test render can handle a domain with an embedded and includes src/groovy class'() {
         when:
         HttpRequest request = HttpRequest.GET('/embedded/embeddedWithIncludes')
@@ -120,7 +120,7 @@ class EmbeddedSpec extends HttpClientSpec {
         ''')
     }
 
-    @Issue('https://github.com/grails/grails-views/issues/171')
+    @Issue('https://github.com/apache/grails-views/issues/171')
     void 'Test jsonapi render can handle a domain with an embedded and includes src/groovy class'() {
         when:
         HttpRequest request = HttpRequest.GET('/embedded/embeddedWithIncludesJsonapi')

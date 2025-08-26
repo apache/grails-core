@@ -19,7 +19,7 @@ under the License.
 
 http://jsonapi.org/[JSON API] is a standard format for representing JSON.
 
-The JSON views plugin for Grails provides JSON API support out-of-the-box. All JSON views have access to the `jsonapi` instance which implements link:{api}/grails/plugin/json/view/api/JsonApiViewHelper.html[JsonApiViewHelper].
+The JSON views plugin for Grails provides JSON API support out-of-the-box. All JSON views have access to the `jsonapi` instance which implements link:{api}grails/plugin/json/view/api/JsonApiViewHelper.html[JsonApiViewHelper].
 
 Grails views makes a best effort to conform to the JSON API standard, however that only applies to the format of the data. The specification makes many assertions about response codes, url conventions, and other server related concepts that are overreaching.
 
@@ -222,11 +222,11 @@ json jsonapi.render(book, [expand: "author"]) //can also be a list of strings
 
 == Includes / Excludes
 
-The JSON API implementation in Grails supports the same includes and excludes support as normal json views. Please see the section on link:gsonRendering[rendering] for details.
+The JSON API implementation in Grails supports the same includes and excludes support as normal json views. Please see the section on link:#gson[rendering] for details.
 
 == Identifier Rendering
 
-Grails provides a way to customize the rendering of your domain class identifiers. To override the default behavior, register a bean that implements link:groovydoc/grails/plugin/json/view/api/jsonapi/JsonApiIdRenderStrategy.html[JsonApiIdRenderStrategy].
+Grails provides a way to customize the rendering of your domain class identifiers. To override the default behavior, register a bean that implements link:{api}grails/plugin/json/view/api/jsonapi/JsonApiIdRenderStrategy.html[JsonApiIdRenderStrategy].
 
 [source,groovy]
 .grails-app/conf/spring/resources.groovy

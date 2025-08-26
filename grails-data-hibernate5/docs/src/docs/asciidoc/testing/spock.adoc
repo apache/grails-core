@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-https://docs.spockframework.org[Spock] is the recommended tool for writing unit tests with GORM and is trivial to setup.
+https://spockframework.org/spock/docs/[Spock] is the recommended tool for writing unit tests with GORM and is trivial to setup.
 
 ==== GORM with Hibernate and Spock Basics
 

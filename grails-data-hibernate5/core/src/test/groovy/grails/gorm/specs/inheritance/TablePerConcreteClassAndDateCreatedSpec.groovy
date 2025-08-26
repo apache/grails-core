@@ -26,7 +26,7 @@ import spock.lang.Issue
 /**
  * Created by graemerocher on 29/05/2017.
  */
-@Issue('https://github.com/grails/grails-data-mapping/issues/937')
+@Issue('https://github.com/apache/grails-data-mapping/issues/937')
 class TablePerConcreteClassAndDateCreatedSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
         manager.addAllDomainClasses([Vehicle, Spaceship])

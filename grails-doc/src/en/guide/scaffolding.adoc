@@ -155,7 +155,7 @@ grails generate-all com.bookstore.Book
 ==== Customizing the Generated Views
 
 
-The views adapt to link:constraints.html[Validation constraints]. For example you can change the order that fields appear in the views simply by re-ordering the constraints in the builder:
+The views adapt to link:validation.html[Validation constraints]. For example you can change the order that fields appear in the views simply by re-ordering the constraints in the builder:
 
 [source,groovy]
 ----
@@ -198,7 +198,7 @@ def constraints = {
 ==== The Fields Plugin
 
 
-The Grails scaffolding templates make use of the https://views.grails.org/snapshot/fields/[Fields Plugin]. Once you've generated the scaffold views, you can customize the forms and tables using the `Taglib` provided by the plugin (see the https://views.grails.org/snapshot/fields/[Fields plugin docs] for details).
+The Grails scaffolding templates make use of the link:theWebLayer.html#fields[Fields Plugin]. Once you've generated the scaffold views, you can customize the forms and tables using the `Taglib` provided by the plugin (see the link:theWebLayer.html#fields[Fields plugin docs] for details).
 
 [source,xml]
 ----
@@ -210,5 +210,5 @@ The Grails scaffolding templates make use of the https://views.grails.org/snapsh
 ==== Customizing the Scaffolding templates
 
 
-The templates used by Grails to generate the controller and views can be customized by installing the templates with the link:../ref/Command%20Line/install-templates.html[install-templates] command.
+The templates used by Grails to generate the controller and views can be customized by installing the templates with the link:{commandLineRef}install-templates.html[install-templates] command.
 

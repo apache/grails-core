@@ -64,7 +64,7 @@ class MultiTenancyBidirectionalManyToManySpec extends Specification {
     }
 
     @Rollback
-    @Issue("https://github.com/grails/gorm-hibernate5/issues/58")
+    @Issue("https://github.com/grails/grails-data-hibernate5/issues/58")
     void "test hasMany and 'in' query with multi-tenancy" () {
         given:
         createSomeUsers()

@@ -20,7 +20,7 @@ This project has not been updated for Grails 7 yet and is not included in the bu
 
 ## An automatic GraphQL schema generator for GORM
 
-Current documentation https://grails.github.io/gorm-graphql/latest/guide/index.html
+Current documentation https://grails.github.io/grails-data-graphql/3.0.x/hibernate/guide/index.html
 
 
 ### Dependencies

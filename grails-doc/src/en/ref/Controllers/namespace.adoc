@@ -73,4 +73,4 @@ class AdminController {
 }
 ----
 
-See the link:{guidePath}/theWebLayer.html#namespacedControllers[namespaced controllers] docs for more information.
+See the link:{guidePath}theWebLayer.html#namespacedControllers[namespaced controllers] docs for more information.

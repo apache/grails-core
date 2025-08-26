@@ -21,7 +21,7 @@ Brief summary/description of the plugin.
     def profiles = ['web']
 
     // URL to the plugin's documentation
-    def documentation = "http://grails.org/plugin/@grails.codegen.projectName@"
+    def documentation = "https://grails-plugins.github.io/@grails.codegen.projectName@"
 
     // Extra (optional) plugin metadata
 

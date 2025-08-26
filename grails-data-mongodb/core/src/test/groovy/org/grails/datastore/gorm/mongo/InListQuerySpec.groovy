@@ -32,7 +32,7 @@ class InListQuerySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
         manager.domainClasses += [Pet, Person, PetType]
     }
 
-    @Issue('https://github.com/grails/gorm-mongodb/issues/11')
+    @Issue('https://github.com/grails/grails-data-mongodb/issues/11')
     void "Test that in list works for where queries and single-ended associations"() {
         given: "Some test data"
         createPets()

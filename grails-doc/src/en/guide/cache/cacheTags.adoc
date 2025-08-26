@@ -19,4 +19,4 @@ under the License.
 
 The plugin provides GSP tags which are useful for caching the result of evaluating sections of markup.  These tags allow for the result of evaluating sections of markup to be cached so subsequent renderings of the same markup do not have to result in the markup being evaluated again.  These tags support automatic cache eviction with the use of a time to live (ttl) attribute.
 
-See the documentation for the link:{tags}/block.html[block] and link:{tags}/render.html[render] tags for more details.
+See the documentation for the link:{cacheTagsRef}block.html[block] and link:{cacheTagsRef}render.html[render] tags for more details.

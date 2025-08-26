@@ -36,12 +36,12 @@ public class LogbackGroovy implements LoggingFeature {
 
     @Override
     public String getTitle() {
-        return "Logback Logging with Groovy config";
+        return "Logback Groovy config";
     }
 
     @Override
     public String getDescription() {
-        return "Gives you the ability to use groovy to configure logback instead of XML.";
+        return "Enables Logback configuration with Groovy as an alternative to XML.";
     }
 
     @Override

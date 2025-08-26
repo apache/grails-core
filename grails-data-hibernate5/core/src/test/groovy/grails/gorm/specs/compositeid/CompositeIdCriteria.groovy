@@ -35,7 +35,7 @@ class CompositeIdCriteria extends Specification {
   @AutoCleanup
   HibernateDatastore datastore = new HibernateDatastore(CompositeIdToMany, CompositeIdSimple, Author, Book)
 
-  @Issue("https://github.com/grails/gorm-hibernate5/issues/234")
+  @Issue("https://github.com/grails/grails-data-hibernate5/issues/234")
   def "test that composite to-many properties can be queried using JPA"() {
     Author _author = new Author(name: "Author").save()
     Book _book = new Book(title: "Book").save()
@@ -66,7 +66,7 @@ class CompositeIdCriteria extends Specification {
     query.list() == [compositeIdSimple]
   }
 
-  @Issue("https://github.com/grails/grails-data-mapping/issues/1351")
+  @Issue("https://github.com/apache/grails-data-mapping/issues/1351")
   def "test that composite to-many can be used in criteria"() {
     Author _author = new Author(name: "Author").save()
     Book _book = new Book(title: "Book").save()

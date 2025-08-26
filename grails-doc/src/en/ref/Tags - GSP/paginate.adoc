@@ -87,7 +87,7 @@ Attributes
 * `omitLast` (optional) -  If set to true, the last page link will only be shown when the last page is within the offset
 * `max` (optional) - The number of records to display per page (defaults to 10). Used ONLY if `params.max` is empty
 * `maxsteps` (optional) - The number of steps displayed for pagination (defaults to 10). Used ONLY if `params.maxsteps` is empty
-* `mapping` (optional) - The xref:../guide/theWebLayer/urlmappings/namedMappings.adoc[named URL mapping] to use to rewrite the link
+* `mapping` (optional) - The link:{guidePath}/theWebLayer.html#namedMappings[named URL mapping] to use to rewrite the link
 * `offset` (optional) - Used ONLY if `params.offset` is empty
 
 

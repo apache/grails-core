@@ -107,6 +107,11 @@ include::gettingStarted/creatingArtefacts.adoc[]
 
 include::gettingStarted/generatingAnApplication.adoc[]
 
+[[developmentReloading]]
+=== Development Reloading
+
+include::gettingStarted/developmentReloading.adoc[]
+
 [[upgrading]]
 == Upgrading from previous versions of Grails
 

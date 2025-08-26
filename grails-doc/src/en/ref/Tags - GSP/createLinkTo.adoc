@@ -21,7 +21,7 @@ under the License.
 == createLinkTo
 
 
-WARNING: Deprecated: Use xref:resource.adoc[resource] instead.
+WARNING: Deprecated: Use xref:resource.html[resource] instead.
 
 
 === Purpose
@@ -71,6 +71,6 @@ Attributes
 
 * `dir` (optional) - the name of the directory containing the resource
 * `file` (optional) - the name of the resource file
-* `absolute` (optional) - If `true` will prefix the link target address with the value of the `grails.serverURL` property from the application configuration, or http://localhost:<port> if there is no setting in the config and not running in production.
+* `absolute` (optional) - If `true` will prefix the link target address with the value of the `grails.serverURL` property from the application configuration, or http://localhost:8080 if there is no setting in the config and not running in production.
 * `base` (optional) - Sets the prefix to be added to the link target address, typically an absolute server URL. This overrides the behaviour of the `absolute` property if both are specified.
 

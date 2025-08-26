@@ -15,6 +15,7 @@
  *  limitations under the License.
  */
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.apache.grails.forge.buildlogic.shadowjar.GrailsGroovyExtensionTransformer
 import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowLicenseTransform
 import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowNoticeTransform
 
@@ -100,8 +101,9 @@ shadowJarTask.configure { ShadowJar it ->
     it.mergeServiceFiles()
     it.mergeServiceFiles('META-INF/grails.factories')
 
-    // groovy extensions are shipped with grails-core
-    it.mergeGroovyExtensionModules()
+    // groovy extensions are shipped with grails-core, use our own transformer instead of mergeGroovyExtensionModules()
+    // for property file reproducibility
+    it.transform(GrailsGroovyExtensionTransformer)
 
     // combines all NOTICE files
     it.transform(GrailsShadowNoticeTransform) {
@@ -117,6 +119,8 @@ shadowJarTask.configure { ShadowJar it ->
     it.exclude(
             'DISCLAIMER', // because we include our own jars, we need to exclude any files that we include
             'META-INF/DEPENDENCIES', // until we publish our own SBOM, this won't be correct so exclude
+            'META-INF/grails-plugin.xml', // we do not start or compile a grails application so these files are not needed (grails-core, url mappings, etc plugins)
+            'META-INF/grails-plugin.xml.asc', // avoid signing artifacts
             'about.html' // restatement of the Eclipse Distribution License - Version 1.0 for jakarta
     )
 }

@@ -37,7 +37,7 @@ class CircularCascadeSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         manager.addAllDomainClasses([SchoolPerson, ActivityValidate, SportValidate, TeamValidate, ArenaValidate])
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/967')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/967')
     void "test circular cascade does not stackoverflow with persistent entity validator"() {
         given:
         SchoolPerson splinter = new SchoolPerson(name: 'Master Splinter')
@@ -75,7 +75,7 @@ class CircularCascadeSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         }
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/1006')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/1006')
     void "test multiple child associations are validated"() {
         given:
         addValidator(ActivityValidate, SportValidate, TeamValidate, ArenaValidate)

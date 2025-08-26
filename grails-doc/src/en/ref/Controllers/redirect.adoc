@@ -88,7 +88,7 @@ class SomeController {
 * `mapping` (optional) - The <<namedMappings,named URL mapping>> to use to rewrite the link
 * `params` (optional) - a map containing request parameters
 * `url` (optional) - a map containing the action, controller, id, etc.
-* `absolute` (optional) - If `true` (default) will prefix the link target address with the value of the `grails.serverURL` property from `application.yml`, or http://localhost:<port> if there is no value in `application.yml` and not running in the production environment. If `false` a partial URI is generated for the `Location` header.
+* `absolute` (optional) - If `true` (default) will prefix the link target address with the value of the `grails.serverURL` property from `application.yml`, or http://localhost:8080 if there is no value in `application.yml` and not running in the production environment. If `false` a partial URI is generated for the `Location` header.
 * `base` (optional) - Sets the prefix to be added to the link target address, typically an absolute server URL. This overrides the behaviour of the `absolute` property if both are specified.
 * `permanent` (optional) - Defaults to `false`.  If `true`, the redirect will be issued with a PERMANENT style HTTP status code. If `moved` is true: MOVED_PERMANENTLY (301). Otherwise, PERMANENT_REDIRECT (308).
 * `moved` (optional) - Defaults to `true`.  When `true`, the redirect will be issued with a MOVED style HTTP status code. If `permanent` is true: MOVED_PERMANTENTLY (301). Otherwise, MOVED_TEMPORARILY (302).

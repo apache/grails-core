@@ -29,7 +29,7 @@ import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Specification
 
-@Issue('https://github.com/grails/gorm-hibernate5/issues/78')
+@Issue('https://github.com/grails/grails-data-hibernate5/issues/78')
 @Rollback
 class HasManyWithInQuerySpec extends Specification {
 

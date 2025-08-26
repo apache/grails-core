@@ -19,7 +19,7 @@ under the License.
 
 The idea behind creating a new profile is that you can setup a default set of commands and plugins that are tailored to a particular technology or organisation.
 
-To create a new profile you can use the link:../ref/Command%20Line/create-profile.html[create-profile] command which will create a new empty profile that extends the base profile:
+To create a new profile you can use the link:{commandLineRef}create-profile.html[create-profile] command which will create a new empty profile that extends the base profile:
 
 [source,bash]
 ----

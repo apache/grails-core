@@ -35,7 +35,7 @@ class HibernateDirtyCheckingSpec extends Specification {
     @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(Person)
 
     @Rollback
-    @Issue('https://github.com/grails/grails-core/issues/10613')
+    @Issue('https://github.com/apache/grails-core/issues/10613')
     void    "Test that presence of beforeInsert doesn't impact dirty properties"() {
         given: 'a new person'
         def person = new Person(name: 'John', occupation: 'Grails developer').save(flush:true)

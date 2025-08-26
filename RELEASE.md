@@ -338,3 +338,30 @@ In the event that artifacts differ, simply copy them to your project directory a
     cd ~/project
     rsync -av grails-verify/grails/etc/bin/results/ etc/bin/results/
 ```
+
+# Appendix: Versioning
+
+As Apache Grails is built on the Spring Framework(Spring Boot), we follow the Spring release versioning scheme and also release soon after a Spring Boot release.
+
+The versioning scheme format:
+
+- MAJOR.MINOR.PATCH[-MODIFIER]
+
+Where:
+
+- MAJOR: Indicates significant changes that may include breaking changes. If incremented, may involve a significant amount of work to upgrade.
+- MINOR: Represents new features that are backward compatible. If incremented, should involve little to no work to upgrade.
+- PATCH: Refers to backward-compatible bug fixes. If incremented, should involve no work.
+- MODIFIER: is an optional modifier such that `<COUNT>` is an incremented 1-based number:
+  - For milestones, we will use `-M<COUNT>`.
+  - For release candidates, we will use `-RC<COUNT>`.
+  - For snapshots, we will use `-SNAPSHOT`.
+  - For final releases, there will be no modifier.
+
+Snapshot versions are used for ongoing development and can be updated frequently.
+
+Milestones are used for progress before the release is considered feature complete and Release Candidates are when the features are considered complete.  
+
+These release type definitions differ from the official [ASF definitions](https://apache.org/legal/release-policy.html#release-types) in that our Milestone and Release Candidates go through the same release process as the final release and are official project releases for public use.
+
+After an RC release has been vetted by the community, then a final release will follow without a modifier.

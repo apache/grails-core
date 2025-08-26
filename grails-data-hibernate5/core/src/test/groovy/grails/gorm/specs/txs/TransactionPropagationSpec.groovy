@@ -36,7 +36,7 @@ class TransactionPropagationSpec extends Specification {
 
     @AutoCleanup @Shared HibernateDatastore hibernateDatastore = new HibernateDatastore(Book)
 
-    @Issue('https://github.com/grails/grails-core/issues/10801')
+    @Issue('https://github.com/apache/grails-core/issues/10801')
     void "test transaction propagation settings"() {
         when:
         TransactionalService service = new TransactionalService()

@@ -55,7 +55,7 @@ class GlobalConstraintWithCompositeIdSpec extends Specification {
     PlatformTransactionManager transactionManager = hibernateDatastore.transactionManager
 
     @Rollback
-    @Issue('https://github.com/grails/grails-core/issues/10457')
+    @Issue('https://github.com/apache/grails-core/issues/10457')
     void "test global constraints with composite id"() {
         when:
         ParentB parent = new ParentB(code: "AAA", desc: "BBB")
@@ -68,7 +68,7 @@ class GlobalConstraintWithCompositeIdSpec extends Specification {
     }
 
     @Rollback
-    @Issue('https://github.com/grails/grails-data-mapping/issues/877')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/877')
     void "test global constraints with unique constraint"() {
         given:
         PersistentEntity entity = hibernateDatastore.mappingContext.getPersistentEntity(DomainB.name)

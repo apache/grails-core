@@ -15,8 +15,8 @@ buildscript {
     }
 }
 
-version "0.1"
-group "@grails.app.group@"
+version = "0.1"
+group = "@grails.app.group@"
 
 @buildPlugins@
 
@@ -40,6 +40,6 @@ dependencies {
 
 compileJava.options.release = 17
 
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
     useJUnitPlatform()
 }

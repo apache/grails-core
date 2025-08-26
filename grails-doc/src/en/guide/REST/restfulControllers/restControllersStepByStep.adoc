@@ -55,7 +55,7 @@ DELETE,/books/${id},delete
 
 NOTE: The `create` and `edit` actions are already required if you plan to implement an HTML interface for the REST resource. They are there in order to render appropriate HTML forms to create and edit a resource. They can be discarded if that is not a requirement.
 
-The key to implementing REST actions is the link:../ref/Controllers/respond.html[respond] method introduced in Grails 2.3. The `respond` method tries to produce the most appropriate response for the requested content type (JSON, XML, HTML etc.)
+The key to implementing REST actions is the link:{controllersRef}respond.html[respond] method introduced in Grails 2.3. The `respond` method tries to produce the most appropriate response for the requested content type (JSON, XML, HTML etc.)
 
 
 ==== Implementing the 'index' action

@@ -46,7 +46,7 @@ class Book {
 }
 ----
 
-Refer to the user guide section on  link:{hibernate5Guide}/manual/index.html#ormdsl[ORM Mapping] for more information.
+Refer to the user guide section on  link:{hibernate5GuideFromRef}index.html#ormdsl[ORM Mapping] for more information.
 
 
 === Global Database Mapping

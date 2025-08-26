@@ -176,7 +176,7 @@ class DomainClassPropertyAccessorSpec extends BuildsAccessorFactory {
         propertyAccessor.domainProperty == null
     }
 
-	@Issue('https://github.com/gpc/fields/issues/37')
+	@Issue('https://github.com/grails/fields/issues/37')
     void "resolves constraints of the '#property' property when the intervening path is null"() {
         given:
         def book = new Book()
@@ -232,7 +232,7 @@ class DomainClassPropertyAccessorSpec extends BuildsAccessorFactory {
         propertyAccessor.constraints.inList == ["USA", "UK", "Canada"]
     }
 
-	@Issue('https://github.com/gpc/fields/issues/38')
+	@Issue('https://github.com/grails/fields/issues/38')
     void "label keys for '#property' are '#labels'"() {
         given:
         def bean = beanType.list().find { it.class == beanType }
@@ -250,7 +250,7 @@ class DomainClassPropertyAccessorSpec extends BuildsAccessorFactory {
         Author   | 'books[0].title' | ['author.books.title.label', 'book.title.label']
     }
 
-	@Issue('https://github.com/gpc/fields/issues/340')
+	@Issue('https://github.com/grails/fields/issues/340')
 	void "label keys for '#property' are '#labels' when addPathFromRoot == true"() {
 		given:
 		config.setAt('grails.plugin.fields.i18n.addPathFromRoot', true)
@@ -329,7 +329,7 @@ class DomainClassPropertyAccessorSpec extends BuildsAccessorFactory {
         propertyAccessor.invalid
     }
 
-    @Issue('https://github.com/gpc/fields/issues/160')
+    @Issue('https://github.com/grails/fields/issues/160')
     void "resolves transient property"() {
         given:
         def propertyAccessor = factory.accessorFor(person, "transientText")
@@ -346,7 +346,7 @@ class DomainClassPropertyAccessorSpec extends BuildsAccessorFactory {
         propertyAccessor.constraints.nullable
     }
 
-    @Issue('https://github.com/gpc/fields/issues/160')
+    @Issue('https://github.com/grails/fields/issues/160')
     void "resolves id property that has no constraints"() {
         given:
         def propertyAccessor = factory.accessorFor(person, "id")

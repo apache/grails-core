@@ -21,7 +21,7 @@ under the License.
 === Type Conversion Methods
 
 
-If you prefer to avoid the overhead of link:theWebLayer.html#dataBinding[data binding] and simply want to convert incoming parameters (typically Strings) into another more appropriate type the link:../ref/Controllers/params.html[params] object has a number of convenience methods for each type:
+If you prefer to avoid the overhead of link:theWebLayer.html#dataBinding[data binding] and simply want to convert incoming parameters (typically Strings) into another more appropriate type the link:{controllersRef}params.html[params] object has a number of convenience methods for each type:
 
 [source,groovy]
 ----
@@ -45,7 +45,7 @@ These same type conversion methods are also available on the `attrs` parameter o
 
 A common use case is dealing with multiple request parameters of the same name. For example you could get a query string such as `?name=Bob&name=Judy`.
 
-In this case dealing with one parameter and dealing with many has different semantics since Groovy's iteration mechanics for `String` iterate over each character. To avoid this problem the link:../ref/Controllers/params.html[params] object provides a `list` method that always returns a list:
+In this case dealing with one parameter and dealing with many has different semantics since Groovy's iteration mechanics for `String` iterate over each character. To avoid this problem the link:{controllersRef}params.html[params] object provides a `list` method that always returns a list:
 
 [source,groovy]
 ----

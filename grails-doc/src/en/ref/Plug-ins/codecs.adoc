@@ -49,7 +49,7 @@ assert "<p>Hello World!</p>" == "&lt;p&gt;Hello World!&lt;/p&gt;".decodeHTML()
 === Description
 
 
-This plugin searches for classes with names that end in the convention `Codec` and dynamically registers `encodeAs<<Codec>>` and `decode<<Codec>>` methods on `java.lang.Object` so that any data can be encoded and decoded. For more information refer to the section of link:{guidePath}/security.html#codecs[Encoding and Decoding Objects] in the user guide.
+This plugin searches for classes with names that end in the convention `Codec` and dynamically registers `encodeAs<<Codec>>` and `decode<<Codec>>` methods on `java.lang.Object` so that any data can be encoded and decoded. For more information refer to the section of link:{guidePath}security.html#codecs[Encoding and Decoding Objects] in the user guide.
 
 Provided Codecs:
 

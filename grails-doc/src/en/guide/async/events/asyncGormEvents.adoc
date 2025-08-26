@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-GORM defines a link:{gormApiDocs}/org/grails/datastore/mapping/engine/event/package-summary.html[number of useful events] that you can listen for.
+GORM defines a link:{api}/org/grails/datastore/mapping/engine/event/package-summary.html[number of useful events] that you can listen for.
 
 To subscribe for an event just define a `Subscriber` that receives the event type as an argument:
 

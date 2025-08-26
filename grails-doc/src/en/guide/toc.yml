@@ -33,6 +33,7 @@ gettingStarted:
   supportedJakartaEEContainers: Supported Jakarta EE Containers
   creatingArtefacts: Creating Artefacts
   generatingAnApplication: Generating an Application
+  developmentReloading: Development Reloading
 upgrading:
   title: Upgrading from the previous versions
   upgrading60x: Upgrading from Grails 6 to Grails 7

@@ -35,7 +35,7 @@ class DefaultRendererRegistrySpec extends Specification {
         when:"A HAL collection renderer is specified"
             registry.addRenderer(new HalJsonCollectionRenderer(URL))
             def list = new LinkedList()
-            list << new URL("https://grails.org")
+            list << new URL("https://grails.apache.org")
         then:"The renderer is available"
             registry.findContainerRenderer(MimeType.HAL_JSON, LinkedList, list) != null
 
@@ -49,7 +49,7 @@ class DefaultRendererRegistrySpec extends Specification {
 
         then:"An errors renderer can be found"
             registry.findContainerRenderer(MimeType.XML, Errors, new BeanPropertyBindingResult("foo", "bar"))
-            !registry.findContainerRenderer(MimeType.XML, List, new URL("https://grails.org"))
+            !registry.findContainerRenderer(MimeType.XML, List, new URL("https://grails.apache.org"))
 
         when:"A collection renderer is specified"
             registry.addContainerRenderer(URL, new AbstractRenderer(List, MimeType.XML) {
@@ -58,10 +58,10 @@ class DefaultRendererRegistrySpec extends Specification {
                     //To change body of implemented methods use File | Settings | File Templates.
                 }
             })
-            List<URL> list =  [new URL("https://grails.org")]
+            List<URL> list =  [new URL("https://grails.apache.org")]
 
         then:"A renderer is found"
-            registry.findContainerRenderer(MimeType.XML, List, new URL("https://grails.org"))
+            registry.findContainerRenderer(MimeType.XML, List, new URL("https://grails.apache.org"))
             registry.findContainerRenderer(MimeType.XML, List, list)
     }
 
@@ -80,8 +80,8 @@ class DefaultRendererRegistrySpec extends Specification {
         expect:"A renderer is found"
             registry.findRenderer(mimeType, URL)
             registry.findRenderer(mimeType, URL).mimeTypes.contains mimeType
-            registry.findRenderer(mimeType, new URL("https://grails.org"))
-            registry.findRenderer(mimeType, new URL("https://grails.org")).mimeTypes.contains mimeType
+            registry.findRenderer(mimeType, new URL("https://grails.apache.org"))
+            registry.findRenderer(mimeType, new URL("https://grails.apache.org")).mimeTypes.contains mimeType
     }
 
     void "Test that registry returns appropriate renderer for subclass"() {

@@ -29,7 +29,7 @@ class EmbeddedUnsetSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
         manager.addAllDomainClasses([EmbeddedPetOwner, EmbeddedPet])
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/718')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/718')
     void "Test unset value from embedded collection"() {
         given:
         EmbeddedPetOwner o = new EmbeddedPetOwner(name: "bob", pets: [new EmbeddedPet(name: "fido")])

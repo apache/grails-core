@@ -33,8 +33,9 @@ runningAndDebuggingAnApplication: 2.8 Running and Debugging an Application
 testingAnApplication: 2.9 Testing an Application
 deployingAnApplication: 2.10 Deploying an Application
 supportedJakartaEEContainers: 2.11 Supported Jakarta EE Containers
-generatingAnApplication: 2.12 Generating an Application
-creatingArtefacts: 2.13 Creating Artefacts
+creatingArtefacts: 2.12 Creating Artefacts
+generatingAnApplication: 2.13 Generating an Application
+developmentReloading: 2.14 Development Reloading
 conf: 3. Configuration
 config: 3.1 Basic Configuration
 builtInOptions: 3.1.1 Built in options

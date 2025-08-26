@@ -70,4 +70,4 @@ render book as XML
 // or render book as JSON
 ----
 
-Why the separation between converters and renderers? Well a renderer has more flexibility to use whatever rendering technology you chose. When implementing a custom renderer you could use http://wiki.fasterxml.com/JacksonHome[Jackson], http://code.google.com/p/google-gson/[Gson] or any Java library to implement the renderer. Converters on the other hand are very much tied to Grails' own marshalling implementation.
+Why the separation between converters and renderers? Well a renderer has more flexibility to use whatever rendering technology you chose. When implementing a custom renderer you could use https://github.com/FasterXML/jackson/[Jackson], https://github.com/google/gson[Google Gson] or any Java library to implement the renderer. Converters on the other hand are very much tied to Grails' own marshalling implementation.

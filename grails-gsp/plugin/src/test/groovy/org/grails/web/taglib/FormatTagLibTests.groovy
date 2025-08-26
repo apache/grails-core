@@ -61,7 +61,7 @@ class FormatTagLibTests extends AbstractGrailsTagTests {
         assertOutputEquals 'X', template, [somebool: false]
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/9159')
+    @Issue('https://github.com/apache/grails-core/issues/9159')
     @Test
     void testFormatDateWithStreamCharBufferFormat() {
         def calender = new GregorianCalendar(1980,1,3)

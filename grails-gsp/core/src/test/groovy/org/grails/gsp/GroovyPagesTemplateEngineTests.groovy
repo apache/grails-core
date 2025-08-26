@@ -86,7 +86,7 @@ class GroovyPagesTemplateEngineTests {
 
     @Test
     void testEstablishNameForResource() {
-        def res = new UrlResource("http://grails.org/some.path/foo.gsp")
+        def res = new UrlResource("https://grails.apache.org/some.path/foo.gsp")
 
         def gpte = new GroovyPagesTemplateEngine()
         gpte.afterPropertiesSet()

@@ -41,7 +41,7 @@ b = b.merge()
 === Description
 
 
-The `merge` method is similar in function to the link:save.html[save] method, but not in behaviour. `merge` allows the merging of "detached" instances such as those stored in the HTTP link:../Controllers/session.html[session]. Each persistent instance is associated with a persistence context. A new persistence context is created for each link:../Controllers/request.html[request]. The result is that objects stored in the HTTP session lose their persistence context on subsequent requests. In this case you can't simply call link:save.html[save] as the domain class is not associated with a current context.
+The `merge` method is similar in function to the link:save.html[save] method, but not in behaviour. `merge` allows the merging of "detached" instances such as those stored in the HTTP link:{controllersRefFromRef}session.html[session]. Each persistent instance is associated with a persistence context. A new persistence context is created for each link:{controllersRefFromRef}request.html[request]. The result is that objects stored in the HTTP session lose their persistence context on subsequent requests. In this case you can't simply call link:save.html[save] as the domain class is not associated with a current context.
 
 The `merge` method on the other hand lets you merge a detached object's state back into the current Hibernate session. Unlike the `save` method this method returns a new instance of the class representing the re-attached object. In other words you *must* write code like this:
 
@@ -58,7 +58,7 @@ ____
 Copy the state of the given object onto the persistent object with the same identifier. If there is no persistent instance currently associated with the session, it will be loaded. If the given instance is unsaved, save a copy of and return it as a newly persistent instance.
 ____
 
-The `merge` method is equivalent to the Hibernate https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernate5Version}/org/hibernate/Session.html#merge(java/lang/Object).html[merge] method.
+The `merge` method is equivalent to the Hibernate https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernate5Version}/org/hibernate/Session.html#merge(java/lang/Object)[merge] method.
 
 Parameters:
 

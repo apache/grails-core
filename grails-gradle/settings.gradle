@@ -52,6 +52,9 @@ buildCache {
 
 rootProject.name = 'grails-gradle'
 
+include 'grails-gradle-common'
+project(':grails-gradle-common').projectDir = file('common')
+
 include 'grails-gradle-plugins'
 project(':grails-gradle-plugins').projectDir = file('plugins')
 

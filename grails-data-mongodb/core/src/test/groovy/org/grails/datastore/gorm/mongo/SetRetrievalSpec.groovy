@@ -36,7 +36,7 @@ class SetRetrievalSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
         manager.addAllDomainClasses([Team, Player])
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/675')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/675')
     void "Test retrieve an existing set"() {
         when:"a set is retrieved"
         MongoDatabase db = Team.DB

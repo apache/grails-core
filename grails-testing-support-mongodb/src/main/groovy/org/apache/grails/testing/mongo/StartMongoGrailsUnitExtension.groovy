@@ -67,7 +67,7 @@ class StartMongoGrailsUnitExtension extends AbstractMongoGrailsExtension impleme
 
         // TODO: we could collect the tests based on their requirements and then create a resource lock and spin up X
         // containers.  This would allow for much faster execution since we wouldn't be build up & tearing down
-        // every time.  https://spockframework.org/spock/docs/2.0/parallel_execution.html
+        // every time.  https://spockframework.org/spock/docs/2.3/parallel_execution.html
 
         spec.addSetupSpecInterceptor { invocation ->
             FieldInfo dbContainerField = spec.getSpecsBottomToTop().findResult { SpecInfo s -> s.fields.find { it.shared && MongoDBContainer.isAssignableFrom(it.type) && it.name == 'dbContainer' } }

@@ -31,7 +31,7 @@ class UniqueFalseConstraintSpec extends Specification {
 
     @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(User)
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/1059')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/1059')
     void 'unique:false constraint is ignored and does not behave as unique:true'() {
         given: 'a user'
         def user1 = new User(name: 'John')

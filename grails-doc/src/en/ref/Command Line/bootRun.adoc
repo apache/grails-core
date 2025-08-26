@@ -50,7 +50,7 @@ Gradle Arguments: \<<gradle-args>>
 Additional Arguments <<*args>>:
 
 * `server.port` - The port to use.
-For more args, see {springBootReference}/html/application-properties.html#appendix.application-properties.server[Spring Boot Application Properties].
+For more args, see {springBootHowTo}properties-and-configuration.html#page-title[Spring Boot Application Properties].
 
 
 This command starts Grails in an embedded servlet container that can serve HTTP requests. The default container is https://tomcat.apache.org[Tomcat] but alternative containers are supported by altering the Spring boot starter in `build.gradle`.
@@ -62,4 +62,4 @@ This command starts Grails in an embedded servlet container that can serve HTTP 
 runtimeOnly "org.springframework.boot:spring-boot-starter-jetty"
 ----
 
-For more information see the Spring Boot documentation on {springBootReference}/html/howto.html#howto.webserver[Embedded Containers].
+For more information see the Spring Boot documentation on {springBootHowTo}webserver.html#page-title[Embedded Containers].

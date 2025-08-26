@@ -41,7 +41,7 @@ class CompositeIdWithDeepOneToManyMappingSpec extends Specification {
     PlatformTransactionManager transactionManager = datastore.transactionManager
 
     @Rollback
-    @Issue('https://github.com/grails/grails-data-mapping/issues/660')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/660')
     void 'test composite id with nested one-to-many mappings'() {
         when:
         def grandParent = new GrandParent(luckyNumber: 7, name: "Fred")

@@ -120,76 +120,49 @@ Closure determinePropertyName = { String groupId, String artifactId, String vers
     throw new GradleException("Could not determine artifact property key for $groupId:$artifactId:$version")
 }
 
-publishing {
-    if (!isReleaseVersion) {
-        repositories {
-            maven {
-                credentials {
-                    username = System.getenv('MAVEN_PUBLISH_USERNAME')
-                    password = System.getenv('MAVEN_PUBLISH_PASSWORD')
+ext {
+    pomDescription = 'Grails Gradle BOM (Bill of Materials) for managing dependency versions used in Gradle builds for Grails Projects'
+    pomCustomization = { xml ->
+        def root = xml.asNode()
+
+        def propertiesNode = root.properties ? root.properties[0] : root.appendNode('properties')
+
+        def depMgmt = root.dependencyManagement?.getAt(0)
+        def deps = depMgmt?.dependencies?.getAt(0)
+        if (deps) {
+            Map<String, String> pomProperties = [:]
+            deps.dependency.each { dep ->
+                String groupId = dep.groupId.text().trim()
+                String artifactId = dep.artifactId.text().trim()
+                boolean isBom = dep.scope.text().trim() == 'import'
+
+                String inlineVersion = dep.version.text().trim()
+                if (inlineVersion == 'null') {
+                    inlineVersion = null
                 }
-                url = System.getenv('MAVEN_PUBLISH_URL') ?: 'https://repository.apache.org/content/repositories/snapshots'
+
+                if (inlineVersion) {
+                    String propertyName = determinePropertyName(groupId, artifactId, inlineVersion, isBom)
+                    if (propertyName) {
+                        // Replace the version in the pom with a property reference
+                        String propertyReference = "\${${propertyName}}"
+                        dep.version[0].value = propertyReference
+
+                        // Add an entry in the <properties> node with the actual version number
+                        pomProperties.put(propertyName, inlineVersion)
+                    }
+                } else if (!inlineVersion) {
+                    throw new GradleException('Dependency $groupId:$artifactId does not have a version.')
+                }
             }
-        }
-    }
 
-    // used for e2e testing
-    // publishAllPublicationsToTestCaseMavenRepoRepository
-    repositories {
-        maven {
-            name = 'TestCaseMavenRepo'
-            url = rootProject.layout.projectDirectory.dir('../build/local-maven')
-        }
-    }
-
-    publications {
-        maven(MavenPublication) {
-            from components.javaPlatform
-
-            pom.withXml { xml ->
-                def root = xml.asNode()
-
-                def propertiesNode = root.properties ? root.properties[0] : root.appendNode('properties')
-
-                def depMgmt = root.dependencyManagement?.getAt(0)
-                def deps = depMgmt?.dependencies?.getAt(0)
-                if (deps) {
-                    Map<String, String> pomProperties = [:]
-                    deps.dependency.each { dep ->
-                        String groupId = dep.groupId.text().trim()
-                        String artifactId = dep.artifactId.text().trim()
-                        boolean isBom = dep.scope.text().trim() == 'import'
-
-                        String inlineVersion = dep.version.text().trim()
-                        if (inlineVersion == 'null') {
-                            inlineVersion = null
-                        }
-
-                        if (inlineVersion) {
-                            String propertyName = determinePropertyName(groupId, artifactId, inlineVersion, isBom)
-                            if (propertyName) {
-                                // Replace the version in the pom with a property reference
-                                String propertyReference = "\${${propertyName}}"
-                                dep.version[0].value = propertyReference
-
-                                // Add an entry in the <properties> node with the actual version number
-                                pomProperties.put(propertyName, inlineVersion)
-                            }
-                        } else if (!inlineVersion) {
-                            throw new GradleException('Dependency $groupId:$artifactId does not have a version.')
-                        }
-                    }
-
-                    for (Map.Entry<String, String> property : pomProperties.entrySet()) {
-                        propertiesNode.appendNode(property.key, property.value)
-                    }
-                }
+            for (Map.Entry<String, String> property : pomProperties.entrySet()) {
+                propertiesNode.appendNode(property.key, property.value)
             }
         }
     }
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/checksum-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/signing-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }

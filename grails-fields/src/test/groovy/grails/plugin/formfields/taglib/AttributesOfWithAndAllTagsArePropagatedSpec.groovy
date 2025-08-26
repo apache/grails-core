@@ -29,7 +29,7 @@ import spock.lang.Unroll
 
 
 @Unroll
-@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/210')
+@Issue('https://github.com/grails/fields/issues/210')
 class AttributesOfWithAndAllTagsArePropagatedSpec extends AbstractFormFieldsTagLibSpec  implements TagLibUnitTest<FormFieldsTagLib> {
 
 	FormFieldsTemplateService mockFormFieldsTemplateService = Mock(FormFieldsTemplateService)

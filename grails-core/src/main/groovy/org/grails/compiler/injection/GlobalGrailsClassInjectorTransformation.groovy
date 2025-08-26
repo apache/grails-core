@@ -34,7 +34,7 @@ import groovy.xml.StreamingMarkupBuilder
 import groovy.xml.XmlSlurper
 import groovy.xml.slurpersupport.GPathResult
 import org.apache.grails.common.compiler.GroovyTransformOrder
-import org.apache.grails.common.properties.PropertyFileUtils
+import org.apache.grails.gradle.common.PropertyFileUtils
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper

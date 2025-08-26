@@ -60,4 +60,4 @@ static mapping = {
 }
 ----
 
-See the section on  link:{hibernate5Guide}/manual/index.html#fetching[Eager vs Lazing Fetching] in the user guide.
+See the section on  link:{hibernate5GuideFromRef}index.html#fetching[Eager vs Lazing Fetching] in the user guide.

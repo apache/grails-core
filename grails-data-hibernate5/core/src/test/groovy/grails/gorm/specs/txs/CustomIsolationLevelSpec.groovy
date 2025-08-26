@@ -36,7 +36,7 @@ class CustomIsolationLevelSpec extends Specification {
     @AutoCleanup @Shared HibernateDatastore hibernateDatastore = new HibernateDatastore(Product, Attribute)
 
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/952')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/952')
     void "test custom isolation level"() {
         expect:
         new ProductService().listProducts().size() == 0

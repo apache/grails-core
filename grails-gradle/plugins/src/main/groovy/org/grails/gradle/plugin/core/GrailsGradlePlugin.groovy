@@ -26,6 +26,7 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
 import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
+import org.apache.grails.gradle.common.PropertyFileUtils
 import org.apache.tools.ant.filters.EscapeUnicode
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.api.Action
@@ -167,34 +168,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
                     }
                 }
             """.stripIndent(16)
-        }
-    }
-
-    // TODO: this is copied from grails-common, but we should consider moving grails-common up to grails-gradle once
-    // the publish plugin is moved out of grails-core
-    static void makePropertiesFileReproducible(File factoriesFile) {
-        String sourceDateEpoch = System.getenv('SOURCE_DATE_EPOCH')
-        if (!sourceDateEpoch) {
-            sourceDateEpoch = LocalDate.now(ZoneOffset.UTC)
-                    .atStartOfDay(ZoneOffset.UTC)
-                    .toEpochSecond().toString()
-        }
-
-        Pattern timeRegex = Pattern.compile('^#(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)(?:,|\\s).*$')
-
-        List<String> lines = factoriesFile.readLines(StandardCharsets.ISO_8859_1.name())
-
-        boolean dateReplaced = false
-        factoriesFile.withWriter { BufferedWriter writer ->
-            lines.each { String line ->
-                if (!dateReplaced && timeRegex.matcher(line).matches()) {
-                    dateReplaced = true
-                    writer.writeLine("# SOURCE_DATE_EPOCH = ${sourceDateEpoch}" as String)
-                    return
-                }
-
-                writer.writeLine(line)
-            }
         }
     }
 
@@ -403,7 +376,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                         entry key: me.key, value: me.value
                     }
                 }
-                makePropertiesFileReproducible(buildInfoFile)
+                PropertyFileUtils.makePropertiesFileReproducible(buildInfoFile)
             }
 
             TaskContainer tasks = project.tasks

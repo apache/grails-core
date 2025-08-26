@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-The `i18n` plugin configures Grails' support for link:{guidePath}/i18n.html[Internationalization].
+The `i18n` plugin configures Grails' support for link:{guidePath}i18n.html[Internationalization].
 
 
 === Examples
@@ -46,7 +46,7 @@ default.not.found.message={0} not found with id {1}
 === Description
 
 
-Refer to the section on link:{guidePath}/i18n.html[Internationalization] in the Grails user guide which details Grails' i18n support.
+Refer to the section on link:{guidePath}i18n.html[Internationalization] in the Grails user guide which details Grails' i18n support.
 
 Configured Spring Beans:
 

@@ -560,7 +560,7 @@ class FormFieldsTagLib {
 		def innerAttributes = attributes.clone()
 		innerAttributes.remove('bean')
 		innerAttributes.remove('prefix')
-		//'except' is a reserved word for the 'all' tag: https://github.com/grails-fields-plugin/grails-fields/issues/12
+		//'except' is a reserved word for the 'all' tag: https://github.com/grails/fields/issues/12
 		innerAttributes.remove('except')
 		new BeanAndPrefix(bean: bean, prefix: prefix, innerAttributes: innerAttributes)
 	}
@@ -715,7 +715,7 @@ class FormFieldsTagLib {
 			}
 		}
 
-		// TODO: https://github.com/gpc/fields/issues/392
+		// TODO: https://github.com/apache/grails-core/issues/14198
 		boolean datePicker = model.type in [Date, Calendar, java.sql.Date, java.sql.Time, LocalDate, LocalDateTime]
 		if (!datePicker) {
 			attrs.remove('selectDateClass')

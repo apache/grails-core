@@ -38,7 +38,7 @@ class JsonViewGrailsPlugin extends Plugin {
     def profiles = ['web']
 
     // URL to the plugin's documentation
-    def documentation = "https://grails.github.io/grails-views/latest"
+    def documentation = "https://docs.grails.org/snapshot/guide/theWebLayer.html#gson"
 
     // Extra (optional) plugin metadata
 
@@ -46,16 +46,16 @@ class JsonViewGrailsPlugin extends Plugin {
     def license = "APACHE"
 
     // Details of company behind the plugin (if there is one)
-    def organization = [name: 'Grails', url: 'https://grails.org']
+    def organization = [name: 'Grails', url: 'https://grails.apache.org']
 
     // Any additional developers beyond the author specified above.
     def developers = [ [ name: "Graeme Rocher", email: "graeme.rocher@gmail.com" ]]
 
     // Location of the plugin's issue tracker.
-    def issueManagement = [ system: "Github", url: "https://github.com/grails/grails-views/issues" ]
+    def issueManagement = [ system: "Github", url: "https://github.com/apache/grails-core/issues" ]
 
     // Online location of the plugin's browseable source code.
-    def scm = [ url: "https://github.com/grails/grails-views" ]
+    def scm = [ url: "https://github.com/apache/grails-core" ]
 
     Closure doWithSpring() { {->
             jsonApiIdRenderStrategy(DefaultJsonApiIdRenderer)

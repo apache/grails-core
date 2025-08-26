@@ -377,7 +377,7 @@ class FormFieldsTemplateServiceSpec extends BuildsAccessorFactory implements Ser
 		render(template: template.path) == 'THEME CLASS AND PROPERTY TEMPLATE'
 	}
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/88')
+	@Issue('https://github.com/grails/fields/issues/88')
     void "resolves template from controller views directory"() {
 		given:
 		setupCommonTemplates()
@@ -444,7 +444,7 @@ class FormFieldsTemplateServiceSpec extends BuildsAccessorFactory implements Ser
 
 
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/39')
+	@Issue('https://github.com/grails/fields/issues/39')
 	void "resolves template by property type from controller views directory"() {
 		given:
 		setupCommonTemplates()
@@ -509,7 +509,7 @@ class FormFieldsTemplateServiceSpec extends BuildsAccessorFactory implements Ser
 	}
 
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/88')
+	@Issue('https://github.com/grails/fields/issues/88')
     void "resolves template by from controller and action views directory"() {
         given:
 		setupCommonTemplates()
@@ -545,7 +545,7 @@ class FormFieldsTemplateServiceSpec extends BuildsAccessorFactory implements Ser
     }
 
 
-    @Issue('https://github.com/grails-fields-plugin/grails-fields/issues/39')
+    @Issue('https://github.com/grails/fields/issues/39')
 	void "resolves template by property type from controller and action views directory"() {
 		given:
 		setupCommonTemplates()
@@ -583,7 +583,7 @@ class FormFieldsTemplateServiceSpec extends BuildsAccessorFactory implements Ser
 	}
 
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/33')
+	@Issue('https://github.com/grails/fields/issues/33')
 	void "resolves template by property name from controller and action views directory"() {
 		given:
 		setupCommonTemplates()
@@ -747,7 +747,7 @@ class FormFieldsTemplateServiceSpec extends BuildsAccessorFactory implements Ser
 		render(template: template.path) == 'GENERIC ENUM TEMPLATE'
 	}
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/19')
+	@Issue('https://github.com/grails/fields/issues/19')
 	def "property template gets resolved by the property's interface"() {
 		given:
 		views["/_fields/default/_wrapper.gsp"] = 'DEFAULT FIELD TEMPLATE'
@@ -838,7 +838,7 @@ class FormFieldsTemplateServiceSpec extends BuildsAccessorFactory implements Ser
 
 	}
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/pull/16')
+	@Issue('https://github.com/grails/fields/pull/16')
 	void 'resolves template without a bean just based on property path'() {
 		given:
 		views["/_fields/default/_wrapper.gsp"] = 'DEFAULT FIELD TEMPLATE'
@@ -865,7 +865,7 @@ class FormFieldsTemplateServiceSpec extends BuildsAccessorFactory implements Ser
 
 	}
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/pull/16')
+	@Issue('https://github.com/grails/fields/pull/16')
 	void 'resolves controller template without a bean just based on property path'() {
 		given:
 		views["/_fields/default/_wrapper.gsp"] = 'DEFAULT FIELD TEMPLATE'
@@ -894,7 +894,7 @@ class FormFieldsTemplateServiceSpec extends BuildsAccessorFactory implements Ser
 		render(template: template.path) == 'THEME CONTROLLER FIELD TEMPLATE'
 	}
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/pull/33')
+	@Issue('https://github.com/grails/fields/pull/33')
 	void 'resolves controller action template without a bean just based on property path'() {
 		given:
 		views["/_fields/default/_wrapper.gsp"] = 'DEFAULT FIELD TEMPLATE'
@@ -925,7 +925,7 @@ class FormFieldsTemplateServiceSpec extends BuildsAccessorFactory implements Ser
 		render(template: template.path) == 'THEME ACTION FIELD TEMPLATE'
 	}
 
-    @Issue('https://github.com/gpc/grails-fields/issues/144')
+    @Issue('https://github.com/grails/fields/issues/144')
     void "resolves template for property type object Byte array"() {
         given:
         views["/_fields/default/_wrapper.gsp"] = 'DEFAULT FIELD TEMPLATE'
@@ -957,13 +957,13 @@ class FormFieldsTemplateServiceSpec extends BuildsAccessorFactory implements Ser
 
 	}
 
-    @Issue('https://github.com/grails-fields-plugin/grails-fields/pull/164')
+    @Issue('https://github.com/grails/fields/pull/164')
     void "does not fail if constrained property is null"() {
         expect:
         null == service.getWidget(null, Object)
     }
 
-    @Issue('https://github.com/gpc/grails-fields/issues/183')
+    @Issue('https://github.com/grails/fields/issues/183')
     void "resolves template for property type simple type byte array"() {
         given:
         views["/_fields/default/_wrapper.gsp"] = 'DEFAULT FIELD TEMPLATE'

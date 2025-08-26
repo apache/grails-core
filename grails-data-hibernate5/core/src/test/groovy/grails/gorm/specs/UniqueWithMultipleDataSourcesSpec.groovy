@@ -57,7 +57,7 @@ class UniqueWithMultipleDataSourcesSpec extends Specification {
 
     @Rollback
     @Ignore
-    @Issue('https://github.com/grails/grails-core/issues/10481')
+    @Issue('https://github.com/apache/grails-core/issues/10481')
     void "test multiple data sources and unique constraint"() {
         when:
         Abc abc = new Abc(temp: "testing")

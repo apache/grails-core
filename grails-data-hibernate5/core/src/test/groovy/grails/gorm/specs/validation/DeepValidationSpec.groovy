@@ -34,7 +34,7 @@ class DeepValidationSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManage
     }
 
     @Rollback
-    @Issue('https://github.com/grails/grails-data-mapping/issues/1033')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/1033')
     void "performs deep validation correctly"() {
 
         when: "save market with failing custom validator on child"

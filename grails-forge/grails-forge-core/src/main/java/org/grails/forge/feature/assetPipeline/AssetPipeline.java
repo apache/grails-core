@@ -50,13 +50,15 @@ public class AssetPipeline implements DefaultFeature {
 
     @Override
     public String getTitle() {
-        return "Asset Pipeline Core";
+        return "Asset Pipeline";
     }
 
     @NonNull
     @Override
     public String getDescription() {
-        return "The Asset-Pipeline is a plugin used for managing and processing static assets in JVM applications primarily via Gradle (however not mandatory). Read more at https://github.com/bertramdev/asset-pipeline";
+        return "Asset Pipeline is used for managing and processing static assets " +
+                "(such as JavaScript, CSS and image files) in Grails applications. " +
+                "Read more at https://github.com/wondrify/asset-pipeline.";
     }
 
     @Override
@@ -118,10 +120,7 @@ public class AssetPipeline implements DefaultFeature {
 
     @Override
     public String getDocumentation() {
-        return "https://github.com/bertramdev/asset-pipeline#readme";
-
-        // The site is currently offline (2024-11-28), replace the above when online again
-        // return "https://www.asset-pipeline.com/manual/";
+        return "https://github.com/wondrify/asset-pipeline#readme";
     }
 
     @Override

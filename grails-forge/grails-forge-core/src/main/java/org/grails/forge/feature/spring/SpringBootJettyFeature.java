@@ -58,6 +58,6 @@ public class SpringBootJettyFeature extends SpringBootEmbeddedServlet {
 
     @Override
     public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
-        return selectedFeatures.stream().anyMatch(f -> f instanceof SpringBootJettyFeature) || options.getServletImpl() == ServletImpl.JETTY;
+        return options.getServletImpl() == ServletImpl.JETTY;
     }
 }

@@ -64,7 +64,7 @@ tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
     it.jvm {
         jvmArgs('--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED', '--add-opens', 'java.base/java.io=ALL-UNNAMED')
     }
-    it.baseDirFollowsSourceDir()
+    it.baseDirFollowsSourceFile()
     it.sourceDir layout.projectDirectory.dir('src/docs/asciidoc')
     it.outputDir = layout.buildDirectory.dir('asciidoc/manual')
 

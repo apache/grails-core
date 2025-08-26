@@ -31,7 +31,7 @@ class EventsWithAbstractInheritanceSpec extends GrailsDataTckSpec<GrailsDataMong
         manager.addAllDomainClasses([ConcreteEventDomain])
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/701')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/701')
     def 'Test that events work with abstract inheritance'() {
         when: "An entity is saved"
         ConcreteEventDomain ced = new ConcreteEventDomain(name: "Bob").save(flush: true)

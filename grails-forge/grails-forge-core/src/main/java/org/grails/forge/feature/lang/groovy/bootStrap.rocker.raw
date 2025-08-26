@@ -23,11 +23,7 @@ under the License.
 
 package @project.getPackageName()
 
-import jakarta.servlet.ServletContext
-
 class BootStrap {
-
-    ServletContext servletContext
 
     def init = {
     }

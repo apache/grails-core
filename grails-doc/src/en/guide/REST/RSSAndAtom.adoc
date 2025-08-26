@@ -17,4 +17,4 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-No direct support is provided for RSS or Atom within Grails. You could construct RSS or ATOM feeds with the link:../ref/Controllers/render.html[render] method's XML capability.
+No direct support is provided for RSS or Atom within Grails. You could construct RSS or ATOM feeds with the link:{controllersRef}render.html[render] method's XML capability.

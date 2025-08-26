@@ -36,7 +36,7 @@ class GormDirtyCheckingSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> 
         student.isDirty()
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/12453')
+    @Issue('https://github.com/apache/grails-core/issues/12453')
     void "test Boolean property getters"() {
 
         when:

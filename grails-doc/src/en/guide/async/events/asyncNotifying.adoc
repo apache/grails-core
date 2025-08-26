@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-The simplest way to trigger event notification is via the link:{asyncApi}/grails/events/annotation/Publisher.html[Publisher] annotation.
+The simplest way to trigger event notification is via the link:{api}grails/events/annotation/Publisher.html[Publisher] annotation.
 
 For example:
 
@@ -48,6 +48,6 @@ import grails.events.*
 include::{sourcedir}/grails-events/transform/src/test/groovy/grails/events/ManualPubSubSpec.groovy[tags=publisher]
 ----
 
-Notice in the above example, the link:{asyncApi}/grails/events/EventPublisher.html[EventPublisher] trait is explicitly implemented.
+Notice in the above example, the link:{api}grails/events/EventPublisher.html[EventPublisher] trait is explicitly implemented.
 
 Although generally the annotation approach is recommended because it is simpler and more concise, the `EventPublisher` trait does provide more flexibility in terms of being able to publish multiple events in a single method and so on.

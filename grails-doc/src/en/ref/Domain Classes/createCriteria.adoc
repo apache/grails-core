@@ -63,7 +63,7 @@ def results = c.list (max: 10, offset: 10) {
 }
 ----
 
-Because that query includes pagination parameters (max and offset), this will return a link:{gormApiDocs}/grails/orm/PagedResultList.html[PagedResultList] which has a `getTotalCount()` method to return the total number of matching records for pagination. Two queries are still run, but they are run for you and the results and total count are combined in the `PagedResultList`.
+Because that query includes pagination parameters (max and offset), this will return a link:{apiFromRef}grails/orm/PagedResultList.html[PagedResultList] which has a `getTotalCount()` method to return the total number of matching records for pagination. Two queries are still run, but they are run for you and the results and total count are combined in the `PagedResultList`.
 
 [source,groovy]
 ----
@@ -74,7 +74,7 @@ println "Rendering ${results.size()} Accounts of ${results.totalCount}"
 === Description
 
 
-Criteria queries are a type-safe, advanced way to query that uses a Groovy builder to construct potentially complex queries. It is a much better alternative to using a StringBuilder to dynamically construct an HQL query. Refer to the user guide section on  link:{hibernate5Guide}/manual/index.html#criteria[Criteria] for usage instructions.
+Criteria queries are a type-safe, advanced way to query that uses a Groovy builder to construct potentially complex queries. It is a much better alternative to using a StringBuilder to dynamically construct an HQL query. Refer to the user guide section on  link:{hibernate5GuideFromRef}index.html#criteria[Criteria] for usage instructions.
 
 Method reference:
 
@@ -88,7 +88,7 @@ Method reference:
 |*listDistinct*|If subqueries or associations are used, one may end up with the same row multiple times in the result set. In Hibernate one would do a "CriteriaSpecification.DISTINCT_ROOT_ENTITY". In Grails one can do it by just using this method.
 |===
 
-WARNING: The `listDistinct()` method does not work well with the pagination options `maxResult` and `firstResult`. If you need distinct results with pagination, we currently recommend that you use HQL. You can find out more information from https://floledermann.blogspot.com/2007/10/solving-hibernate-criterias-distinct.html[this blog post].
+WARNING: The `listDistinct()` method does not work well with the pagination options `maxResult` and `firstResult`. If you need distinct results with pagination, we currently recommend that you use HQL.
 
 If you invoke the builder with no method name
 

@@ -49,7 +49,7 @@ class DetachedCriteriaProjectionSpec extends Specification {
     }
 
     @Rollback
-    @Issue('https://github.com/grails/grails-data-mapping/issues/792')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/792')
     def 'closure projection fails'() {
         setup:
         final detachedCriteria = new DetachedCriteria(DetachedEntity).build {

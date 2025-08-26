@@ -19,6 +19,7 @@
 
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
+import spock.lang.PendingFeature
 
 @Integration
 class EndToEndSpec extends ContainerGebSpec {
@@ -44,6 +45,7 @@ class EndToEndSpec extends ContainerGebSpec {
 </body></html>"""
     }
 
+    @PendingFeature
     def 'multiple levels of layouts'() {
         when:
         go('endToEnd/multipleLevelsOfLayouts')

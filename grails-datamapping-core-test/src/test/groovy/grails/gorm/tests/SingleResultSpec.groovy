@@ -28,7 +28,7 @@ import spock.lang.Issue
  */
 class SingleResultSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/872')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/872')
     void "test single result state"() {
         when:
         def query = manager.session.createQuery(TestEntity)
