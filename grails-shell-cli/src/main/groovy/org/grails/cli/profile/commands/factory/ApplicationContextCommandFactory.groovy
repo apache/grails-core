@@ -29,18 +29,19 @@ import org.grails.cli.profile.Profile
  * @since 3.0
  */
 class ApplicationContextCommandFactory implements CommandFactory {
+
     @Override
     Collection<Command> findCommands(Profile profile, boolean inherited) {
-        if(inherited) return Collections.emptyList()
+        if (inherited) return Collections.emptyList()
 
         try {
             def classLoader = Thread.currentThread().contextClassLoader
             Class registry
             try {
-                registry = classLoader.loadClass("grails.dev.commands.ApplicationContextCommandRegistry")
+                registry = classLoader.loadClass('grails.dev.commands.ApplicationContextCommandRegistry')
             } catch (ClassNotFoundException cnf) {
                 try {
-                    registry = ApplicationContextCommandFactory.classLoader.loadClass("grails.dev.commands.ApplicationContextCommandRegistry")
+                    registry = ApplicationContextCommandFactory.classLoader.loadClass('grails.dev.commands.ApplicationContextCommandRegistry')
                 } catch (ClassNotFoundException ignored) {
                     return []
                 }

@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class Publication implements Serializable {
+
     Long id
     Long version
     String title
@@ -30,56 +31,56 @@ class Publication implements Serializable {
     Boolean paperback = true
 
     static mapping = {
-        title index:true
-        paperback index:true
-        datePublished index:true
+        title(index: true)
+        paperback(index: true)
+        datePublished(index: true)
     }
 
     static namedQueries = {
 
         lastPublishedBefore { date ->
             uniqueResult = true
-            le 'datePublished', date
-            order 'datePublished', 'desc'
+            le('datePublished', date)
+            order('datePublished', 'desc')
         }
 
         recentPublications {
             def now = new Date()
-            gt 'datePublished', now - 365
+            gt('datePublished', now - 365)
         }
 
         publicationsWithBookInTitle {
-            like 'title', 'Book%'
+            like('title', 'Book%')
         }
 
         recentPublicationsByTitle { title ->
             recentPublications()
-            eq 'title', title
+            eq('title', title)
         }
 
         latestBooks {
             maxResults(10)
-            order("datePublished", "desc")
+            order('datePublished', 'desc')
         }
 
         publishedBetween { start, end ->
-            between 'datePublished', start, end
+            between('datePublished', start, end)
         }
 
         publishedAfter { date ->
-            gt 'datePublished', date
+            gt('datePublished', date)
         }
 
         paperbackOrRecent {
             or {
                 def now = new Date()
-                gt 'datePublished', now - 365
+                gt('datePublished', now - 365)
                 paperbacks()
             }
         }
 
         paperbacks {
-            eq 'paperback', true
+            eq('paperback', true)
         }
 
         paperbackAndRecent {

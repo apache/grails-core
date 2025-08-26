@@ -19,14 +19,15 @@
 package org.grails.encoder.impl
 
 import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.GStringImpl
 
 import grails.util.GrailsMetaClassUtils
-import org.codehaus.groovy.runtime.GStringImpl
 import org.grails.encoder.CodecFactory
 import org.grails.encoder.CodecMetaClassSupport
 
 @CompileStatic
 class StandaloneCodecLookup extends BasicCodecLookup {
+
     boolean registerMetaMethods = true
     boolean cacheLookupsInMetaMethods = true
     Collection<Class<? extends Object>> targetClassesForMetaMethods = [
@@ -49,18 +50,18 @@ class StandaloneCodecLookup extends BasicCodecLookup {
     @Override
     protected void registerCodecs() {
         codecFactoryClasses.each { Class clazz ->
-            registerCodecFactory((CodecFactory)clazz.getDeclaredConstructor().newInstance())
+            registerCodecFactory((CodecFactory) clazz.getDeclaredConstructor().newInstance())
         }
     }
 
     @Override
-    public void registerCodecFactory(CodecFactory codecFactory) {
+    void registerCodecFactory(CodecFactory codecFactory) {
         super.registerCodecFactory(codecFactory)
         registerMetaMethods(codecFactory)
     }
 
     protected registerMetaMethods(CodecFactory codecFactory) {
-        if(registerMetaMethods && targetClassesForMetaMethods) {
+        if (registerMetaMethods && targetClassesForMetaMethods) {
             new CodecMetaClassSupport().configureCodecMethods(codecFactory, cacheLookupsInMetaMethods, resolveMetaClasses())
         }
     }

@@ -27,6 +27,7 @@ import grails.rest.render.ContainerRenderer
  * @since 2.3
  */
 class AtomCollectionRenderer extends AtomRenderer implements ContainerRenderer {
+
     final Class componentType
 
     AtomCollectionRenderer(Class componentType) {

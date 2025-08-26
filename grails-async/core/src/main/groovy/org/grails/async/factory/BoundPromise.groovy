@@ -18,10 +18,11 @@
  */
 package org.grails.async.factory
 
-import grails.async.Promise
+import java.util.concurrent.TimeUnit
+
 import groovy.transform.CompileStatic
 
-import java.util.concurrent.TimeUnit
+import grails.async.Promise
 
 /**
  * A bound promise is a promise which is already resolved and doesn't require any asynchronous processing to calculate the value

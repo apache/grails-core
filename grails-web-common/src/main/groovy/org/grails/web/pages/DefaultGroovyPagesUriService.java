@@ -18,10 +18,10 @@
  */
 package org.grails.web.pages;
 
-import groovy.lang.GroovyObject;
-
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import groovy.lang.GroovyObject;
 
 import org.springframework.util.Assert;
 
@@ -34,10 +34,10 @@ import org.springframework.util.Assert;
  */
 public class DefaultGroovyPagesUriService extends GroovyPagesUriSupport {
 
-    ConcurrentMap<TupleStringKey, String> templateURICache = new ConcurrentHashMap<TupleStringKey, String>();
-    ConcurrentMap<TupleStringKey, String> deployedViewURICache = new ConcurrentHashMap<TupleStringKey, String>();
-    ConcurrentMap<ControllerObjectKey, String> controllerNameCache = new ConcurrentHashMap<ControllerObjectKey, String>();
-    ConcurrentMap<TupleStringKey, String> noSuffixViewURICache = new ConcurrentHashMap<TupleStringKey, String>();
+    ConcurrentMap<TupleStringKey, String> templateURICache = new ConcurrentHashMap<>();
+    ConcurrentMap<TupleStringKey, String> deployedViewURICache = new ConcurrentHashMap<>();
+    ConcurrentMap<ControllerObjectKey, String> controllerNameCache = new ConcurrentHashMap<>();
+    ConcurrentMap<TupleStringKey, String> noSuffixViewURICache = new ConcurrentHashMap<>();
 
     private static class TupleStringKey {
         String keyPart1;
@@ -47,7 +47,6 @@ public class DefaultGroovyPagesUriService extends GroovyPagesUriSupport {
             this.keyPart1 = keyPart1;
             this.keyPart2 = keyPart2;
         }
-
 
         @Override
         public boolean equals(Object o) {
@@ -117,7 +116,7 @@ public class DefaultGroovyPagesUriService extends GroovyPagesUriSupport {
         String uri = templateURICache.get(key);
         if (uri == null) {
             uri = super.getTemplateURI(controllerName, templateName);
-            String prevuri=templateURICache.putIfAbsent(key, uri);
+            String prevuri = templateURICache.putIfAbsent(key, uri);
             if (prevuri != null) {
                 return prevuri;
             }
@@ -162,7 +161,7 @@ public class DefaultGroovyPagesUriService extends GroovyPagesUriSupport {
     @Override
     public String getNoSuffixViewURI(GroovyObject controller, String viewName) {
         Assert.notNull(controller, "Argument [controller] cannot be null");
-        return getNoSuffixViewURI(getLogicalControllerName(controller),viewName);
+        return getNoSuffixViewURI(getLogicalControllerName(controller), viewName);
     }
 
     /* (non-Javadoc)

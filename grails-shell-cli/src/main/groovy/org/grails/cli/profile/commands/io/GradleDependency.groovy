@@ -64,20 +64,20 @@ class GradleDependency {
         }
         artifactString.append(variantCall ?: '"' + groupArtifactVersion + '"')
 
-        def ln = System.getProperty("line.separator")
+        def ln = System.getProperty('line.separator')
 
         if (hasExclusions) {
-            artifactString.append(") {").append(ln)
+            artifactString.append(') {').append(ln)
             for (e in dependency.exclusions) {
-                artifactString.append("    ")
-                        .append("exclude")
+                artifactString.append('    ')
+                        .append('exclude')
 
-                artifactString.append(" group: ").append('"').append(e.groupId).append('",')
-                artifactString.append(" module: ").append('"').append(e.artifactId).append('"')
+                artifactString.append(' group: ').append('"').append(e.groupId).append('",')
+                artifactString.append(' module: ').append('"').append(e.artifactId).append('"')
 
                 artifactString.append(ln)
             }
-            artifactString.append("}")
+            artifactString.append('}')
         }
         this.dependency = artifactString.toString()
     }

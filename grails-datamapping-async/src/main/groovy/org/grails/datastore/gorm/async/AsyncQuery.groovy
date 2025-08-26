@@ -40,7 +40,6 @@ class AsyncQuery<E> implements PromiseDecoratorProvider {
         }
     } as PromiseDecorator ]
 
-
     AsyncQuery(GormOperations<E> gormOperations) {
         this.gormOperations = gormOperations
     }

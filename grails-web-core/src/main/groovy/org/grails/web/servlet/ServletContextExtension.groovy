@@ -29,10 +29,10 @@ import jakarta.servlet.ServletContext
 class ServletContextExtension {
 
     static propertyMissing(ServletContext context, String name, value) {
-        context.setAttribute name, value
+        context.setAttribute(name, value)
     }
     
     static propertyMissing(ServletContext context, String name) {
-        context.getAttribute name
+        context.getAttribute(name)
     }
 }

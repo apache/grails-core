@@ -19,9 +19,9 @@
 package org.grails.cli.profile
 
 import org.eclipse.aether.graph.Dependency
+
 import org.grails.config.NavigableMap
 import org.grails.io.support.Resource
-
 
 /**
  * An interface that describes a feature of a profile. Different profiles may share many common features even if the profile itself is different.

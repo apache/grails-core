@@ -24,8 +24,8 @@ import org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverte
 
 import java.nio.charset.StandardCharsets
 
-conversionRule 'clr', ColorConverter
-conversionRule 'wex', WhitespaceThrowableProxyConverter
+conversionRule('clr', ColorConverter)
+conversionRule('wex', WhitespaceThrowableProxyConverter)
 
 // See http://logback.qos.ch/manual/groovy.html for details on configuration
 appender('STDOUT', ConsoleAppender) {

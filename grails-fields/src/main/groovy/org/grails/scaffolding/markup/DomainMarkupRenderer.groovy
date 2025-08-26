@@ -44,7 +44,6 @@ interface DomainMarkupRenderer {
      */
     String renderListOutput(PersistentEntity domainClass)
 
-
     /**
      * Designed to render a form that will allow users to create or edit domain class instances.
      *

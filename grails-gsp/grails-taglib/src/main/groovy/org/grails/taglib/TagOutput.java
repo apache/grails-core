@@ -19,17 +19,18 @@
 
 package org.grails.taglib;
 
+import java.io.Writer;
+import java.util.Map;
+
 import groovy.lang.Closure;
 import groovy.lang.GroovyObject;
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation;
+
 import org.grails.encoder.Encoder;
 import org.grails.taglib.encoder.OutputContext;
 import org.grails.taglib.encoder.OutputEncodingStack;
 import org.grails.taglib.encoder.OutputEncodingStackAttributes;
 import org.grails.taglib.encoder.WithCodecHelper;
-
-import java.io.Writer;
-import java.util.Map;
 
 /**
  * Created by lari on 16/07/14.
@@ -56,7 +57,7 @@ public class TagOutput {
         if (!(attrs instanceof GroovyPageAttributes)) {
             attrs = new GroovyPageAttributes(attrs, false);
         }
-        ((GroovyPageAttributes)attrs).setGspTagSyntaxCall(false);
+        ((GroovyPageAttributes) attrs).setGspTagSyntaxCall(false);
         Closure actualBody = createOutputCapturingClosure(tagLib, body, outputContext);
 
         final GroovyPageTagWriter tagOutput = new GroovyPageTagWriter();
@@ -109,7 +110,7 @@ public class TagOutput {
 
                 if (returnsObject && bodyResult != null && !(bodyResult instanceof Writer)) {
                     if (taglibEncoder != null) {
-                        bodyResult=taglibEncoder.encode(bodyResult);
+                        bodyResult = taglibEncoder.encode(bodyResult);
                     }
                     return bodyResult;
                 }
@@ -167,7 +168,7 @@ public class TagOutput {
     @SuppressWarnings("rawtypes")
     public static final class ConstantClosure extends Closure {
         private static final long serialVersionUID = 1L;
-        private static final Class[] EMPTY_CLASS_ARR=new Class[0];
+        private static final Class[] EMPTY_CLASS_ARR = new Class[0];
         final Object retval;
 
         public ConstantClosure(Object retval) {

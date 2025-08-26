@@ -30,7 +30,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
  * @author Graeme Rocher
  * @since 1.0
  */
-public abstract class PendingUpdateAdapter<E, K> extends PendingOperationAdapter<E, K> implements PendingUpdate<E, K>{
+public abstract class PendingUpdateAdapter<E, K> extends PendingOperationAdapter<E, K> implements PendingUpdate<E, K> {
 
     private EntityAccess entityAccess;
 
@@ -56,7 +56,7 @@ public abstract class PendingUpdateAdapter<E, K> extends PendingOperationAdapter
     @Override
     public Object getObject() {
         final EntityAccess ea = getEntityAccess();
-        if(ea != null) {
+        if (ea != null) {
             return ea.getEntity();
         }
         return null;

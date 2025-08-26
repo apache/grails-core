@@ -18,8 +18,6 @@
  */
 package org.grails.cli.profile.commands
 
-
-
 /**
  *  Creates a profile
  *
@@ -27,22 +25,23 @@ package org.grails.cli.profile.commands
  * @since 3.1
  */
 class CreateProfileCommand extends CreateAppCommand {
-    public static final String NAME = "create-profile"
+
+    public static final String NAME = 'create-profile'
 
     CreateProfileCommand() {
-        description.description = "Creates a profile"
-        description.usage = "create-profile [NAME]"
+        description.description = 'Creates a profile'
+        description.usage = 'create-profile [NAME]'
     }
 
     @Override
     protected void populateDescription() {
-        description.argument(name: "Profile Name", description: "The name of the plugin to create.", required: false)
+        description.argument(name: 'Profile Name', description: 'The name of the plugin to create.', required: false)
     }
 
     @Override
     String getName() { NAME }
 
     @Override
-    protected String getDefaultProfile() { "profile" }
+    protected String getDefaultProfile() { 'profile' }
 
 }

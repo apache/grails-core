@@ -21,6 +21,7 @@ package grails.plugin.json.renderer
 
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
+
 import org.springframework.validation.Errors
 
 /**
@@ -31,6 +32,7 @@ import org.springframework.validation.Errors
  */
 @InheritConstructors
 @CompileStatic
-class ErrorsJsonViewRenderer extends AbstractJsonViewContainerRenderer<Errors, Object>{
+class ErrorsJsonViewRenderer extends AbstractJsonViewContainerRenderer<Errors, Object> {
+
     final Class<Object> componentType = Object
 }

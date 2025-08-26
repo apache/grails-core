@@ -18,20 +18,23 @@
  */
 package org.grails.plugins.web.taglib
 
-import grails.artefact.TagLibrary
-import grails.gsp.TagLib
-import groovy.transform.CompileStatic
-import org.grails.plugins.web.GrailsTagDateHelper
 import java.math.RoundingMode
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.text.NumberFormat
-import org.grails.encoder.CodecLookup
-import org.grails.encoder.Encoder
-import org.grails.web.servlet.mvc.GrailsWebRequest
+
+import groovy.transform.CompileStatic
+
 import org.springframework.context.MessageSource
 import org.springframework.context.NoSuchMessageException
 import org.springframework.util.StringUtils
+
+import grails.artefact.TagLibrary
+import grails.gsp.TagLib
+import org.grails.encoder.CodecLookup
+import org.grails.encoder.Encoder
+import org.grails.plugins.web.GrailsTagDateHelper
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * The base application tag library for Grails many of which take inspiration from Rails helpers (thanks guys! :)
@@ -46,7 +49,7 @@ import org.springframework.util.StringUtils
 @TagLib
 class FormatTagLib implements TagLibrary {
 
-    static returnObjectForTags = ['formatBoolean','formatDate','formatNumber','encodeAs']
+    static returnObjectForTags = ['formatBoolean', 'formatDate', 'formatNumber', 'encodeAs']
 
     MessageSource messageSource
     CodecLookup codecLookup
@@ -92,8 +95,8 @@ class FormatTagLib implements TagLibrary {
      * @attr locale Force the locale for formatting.
      */
     Closure formatBoolean = { attrs ->
-        if (!attrs.containsKey("boolean")) {
-            throwTagError("Tag [formatBoolean] is missing required attribute [boolean]")
+        if (!attrs.containsKey('boolean')) {
+            throwTagError('Tag [formatBoolean] is missing required attribute [boolean]')
         }
 
         def b = attrs['boolean']
@@ -175,7 +178,7 @@ class FormatTagLib implements TagLibrary {
         def dateFormat
         if (!type) {
             if (!format && formatName) {
-                format = messageHelper(formatName,null,null,locale)
+                format = messageHelper(formatName, null, null, locale)
                 if (!format) {
                     throwTagError("Attribute [formatName] of Tag [formatDate] specifies a format key [$formatName] that does not exist within a message bundle!")
                 }
@@ -187,10 +190,10 @@ class FormatTagLib implements TagLibrary {
             dateFormat = grailsTagDateHelper.getFormatFromPattern(format, timeZone, locale)
         }
         else {
-            if (type=='DATE') {
+            if (type == 'DATE') {
                 dateFormat = grailsTagDateHelper.getDateFormat(dateStyle, timeZone, locale)
             }
-            else if (type=='TIME') {
+            else if (type == 'TIME') {
                 dateFormat = grailsTagDateHelper.getTimeFormat(timeStyle, timeZone, locale)
             }
             else { // 'both' or 'datetime'
@@ -229,7 +232,7 @@ class FormatTagLib implements TagLibrary {
      */
     Closure formatNumber = { attrs ->
         if (!attrs.containsKey('number')) {
-            throwTagError("Tag [formatNumber] is missing required attribute [number]")
+            throwTagError('Tag [formatNumber] is missing required attribute [number]')
         }
 
         def number = attrs.number
@@ -242,13 +245,13 @@ class FormatTagLib implements TagLibrary {
 
         if (type == null) {
             if (!format && formatName) {
-                format = messageHelper(formatName,null,null,locale)
+                format = messageHelper(formatName, null, null, locale)
                 if (!format) {
                     throwTagError("Attribute [formatName] of Tag [formatNumber] specifies a format key [$formatName] that does not exist within a message bundle!")
                 }
             }
             else if (!format) {
-                format = messageHelper("number.format", { messageHelper("default.number.format", "0", null, locale) } ,null ,locale)
+                format = messageHelper('number.format', { messageHelper('default.number.format', '0', null, locale) }, null, locale)
             }
         }
 
@@ -269,7 +272,7 @@ class FormatTagLib implements TagLibrary {
                 decimalFormat = NumberFormat.getPercentInstance(locale)
             }
             else {
-                throwTagError("Attribute [type] of Tag [formatNumber] specifies an unknown type. Known types are currency, number and percent.")
+                throwTagError('Attribute [type] of Tag [formatNumber] specifies an unknown type. Known types are currency, number and percent.')
             }
         }
 
@@ -328,7 +331,7 @@ class FormatTagLib implements TagLibrary {
         try {
             formatted = decimalFormat.format(number)
         }
-        catch(ArithmeticException e) {
+        catch (ArithmeticException e) {
             // if roundingMode is UNNECESSARY and ArithemeticException raises, just return original number formatted with default number formatting
             formatted = NumberFormat.getNumberInstance(locale).format(number)
         }
@@ -339,7 +342,7 @@ class FormatTagLib implements TagLibrary {
     static Locale resolveLocale(Object localeAttr) {
         Locale locale
         if (localeAttr instanceof Locale) {
-            locale = (Locale)localeAttr
+            locale = (Locale) localeAttr
         } else if (localeAttr != null) {
             locale = StringUtils.parseLocaleString(localeAttr.toString())
         }
@@ -359,7 +362,7 @@ class FormatTagLib implements TagLibrary {
      */
     Closure encodeAs = { attrs, body ->
         if (!attrs.codec) {
-            throwTagError("Tag [encodeAs] requires a codec name in the [codec] attribute")
+            throwTagError('Tag [encodeAs] requires a codec name in the [codec] attribute')
         }
         Encoder encoder = codecLookup.lookupEncoder(attrs.codec.toString())
         return encoder.encode(body())

@@ -32,6 +32,7 @@ import groovy.transform.builder.SimpleStrategy
 @CompileStatic
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 class DiscriminatorConfig {
+
     /**
      * The discriminator value
      */

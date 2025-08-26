@@ -18,14 +18,16 @@
  */
 package org.grails.plugins.i18n
 
-import grails.plugins.Plugin
-import grails.util.BuildSettings
-import grails.util.GrailsUtil
+import java.nio.file.Files
+
 import groovy.util.logging.Slf4j
+
 import org.springframework.context.support.ReloadableResourceBundleMessageSource
 import org.springframework.core.io.FileSystemResource
 
-import java.nio.file.Files
+import grails.plugins.Plugin
+import grails.util.BuildSettings
+import grails.util.GrailsUtil
 
 /**
  * Configures Grails' internationalisation support.
@@ -36,7 +38,7 @@ import java.nio.file.Files
 @Slf4j
 class I18nGrailsPlugin extends Plugin {
 
-    String baseDir = "grails-app/i18n"
+    String baseDir = 'grails-app/i18n'
     String version = GrailsUtil.getGrailsVersion()
     String watchedResources = "file:./${baseDir}/**/*.properties".toString()
 
@@ -45,7 +47,7 @@ class I18nGrailsPlugin extends Plugin {
         def ctx = applicationContext
         def application = grailsApplication
         if (!ctx) {
-            log.debug("Application context not found. Can't reload")
+            log.debug(/Application context not found. Can't reload/)
             return
         }
 
@@ -73,10 +75,10 @@ class I18nGrailsPlugin extends Plugin {
                     }
                     // by using an OutputStream the unicode characters will be escaped
                     new File(resourcesDir, eventFile.name).withOutputStream {
-                        properties.store(it, "")
+                        properties.store(it, '')
                     }
                     new File(classesDir, eventFile.name).withOutputStream {
-                        properties.store(it, "")
+                        properties.store(it, '')
                     }
                 } else {
                     // otherwise just copy the file as is

@@ -19,14 +19,15 @@
 
 package org.grails.datastore.gorm.jdbc.connections;
 
-import org.grails.datastore.mapping.config.Settings;
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import javax.sql.DataSource;
+
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
-import javax.sql.DataSource;
+import org.grails.datastore.mapping.config.Settings;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
 
 /**
  * A {@link DataSourceConnectionSourceFactory} for building data sources that could come from spring

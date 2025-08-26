@@ -23,9 +23,9 @@ import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.MethodCall
 import org.codehaus.groovy.ast.expr.MethodCallExpression
-import org.grails.compiler.injection.GrailsASTUtils
 import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport.TypeCheckingDSL
 
+import org.grails.compiler.injection.GrailsASTUtils
 
 /**
  *
@@ -34,27 +34,27 @@ import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport.Type
 class CriteriaTypeCheckingExtension extends TypeCheckingDSL {
 
     @Override
-    public Object run() {
+    Object run() {
         setup { newScope() }
 
         finish { scopeExit() }
-        
+
         methodNotFound { ClassNode receiver, String name, ArgumentListExpression argList, ClassNode[] argTypes, MethodCall call ->
             def dynamicCall
-            if(currentScope.processingCriteriaClosure) {
-                dynamicCall = makeDynamic (call)
+            if (currentScope.processingCriteriaClosure) {
+                dynamicCall = makeDynamic(call)
             }
             dynamicCall
         }
-        
+
         afterMethodCall { MethodCall call ->
-            if(isCriteriaCall(call)) {
+            if (isCriteriaCall(call)) {
                 scopeExit()
             }
         }
-        
+
         beforeMethodCall { MethodCall call ->
-            if(isCriteriaCall(call)) {
+            if (isCriteriaCall(call)) {
                 newScope {
                     processingCriteriaClosure = true
                 }
@@ -62,11 +62,11 @@ class CriteriaTypeCheckingExtension extends TypeCheckingDSL {
         }
         null
     }
-    
+
     protected boolean isCriteriaCall(MethodCall call) {
-        call instanceof MethodCallExpression && 
-            call.objectExpression instanceof ClassExpression && 
-            GrailsASTUtils.isDomainClass(call.objectExpression.type, null) && 
+        call instanceof MethodCallExpression &&
+            call.objectExpression instanceof ClassExpression &&
+            GrailsASTUtils.isDomainClass(call.objectExpression.type, null) &&
             (call.method.value == 'withCriteria' || call.method.value == 'createCriteria')
     }
 }

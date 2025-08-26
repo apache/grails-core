@@ -50,7 +50,7 @@ public class SoftKey<T> extends SoftReference<T> {
             return false;
         }
         @SuppressWarnings("unchecked")
-        SoftKey<T> other = (SoftKey<T>)obj;
+        SoftKey<T> other = (SoftKey<T>) obj;
         if (hash != other.hash) {
             return false;
         }

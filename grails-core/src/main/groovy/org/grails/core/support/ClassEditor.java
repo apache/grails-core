@@ -50,7 +50,7 @@ public class ClassEditor extends PropertyEditorSupport {
 
     @Override
     public String getAsText() {
-        return ((Class<?>)getValue()).getName();
+        return ((Class<?>) getValue()).getName();
     }
 
     @Override

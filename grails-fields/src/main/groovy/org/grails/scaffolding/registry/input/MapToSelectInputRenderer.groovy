@@ -68,7 +68,7 @@ trait MapToSelectInputRenderer<T> implements DomainInputRenderer {
                 options.each { String key, String value ->
                     Map attrs = [value: key]
                     if (selected == key) {
-                        attrs.selected = ""
+                        attrs.selected = ''
                     }
                     option(value, attrs)
                 }

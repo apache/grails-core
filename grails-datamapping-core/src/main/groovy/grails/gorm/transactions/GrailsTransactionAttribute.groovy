@@ -21,12 +21,11 @@ package grails.gorm.transactions
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
+
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.interceptor.NoRollbackRuleAttribute
 import org.springframework.transaction.interceptor.RollbackRuleAttribute
 import org.springframework.transaction.interceptor.RuleBasedTransactionAttribute
-
-
 
 /**
  * Used to configure a {@link GrailsTransactionTemplate}
@@ -38,11 +37,12 @@ import org.springframework.transaction.interceptor.RuleBasedTransactionAttribute
 @InheritConstructors
 @Slf4j
 class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
-    private static final long serialVersionUID = 1L;
-    private boolean inheritRollbackOnly = true;
 
-    public GrailsTransactionAttribute(org.springframework.transaction.interceptor.TransactionAttribute other) {
-        super();
+    private static final long serialVersionUID = 1L
+    private boolean inheritRollbackOnly = true
+
+    GrailsTransactionAttribute(org.springframework.transaction.interceptor.TransactionAttribute other) {
+        super()
         propagationBehavior = other.propagationBehavior
         isolationLevel = other.isolationLevel
         timeout = other.timeout
@@ -50,8 +50,8 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
         name = other.name
     }
 
-    public GrailsTransactionAttribute(TransactionDefinition other) {
-        super();
+    GrailsTransactionAttribute(TransactionDefinition other) {
+        super()
         propagationBehavior = other.propagationBehavior
         isolationLevel = other.isolationLevel
         timeout = other.timeout
@@ -59,26 +59,24 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
         name = other.name
     }
 
-    public GrailsTransactionAttribute(GrailsTransactionAttribute other) {
-        this((RuleBasedTransactionAttribute)other);
+    GrailsTransactionAttribute(GrailsTransactionAttribute other) {
+        this((RuleBasedTransactionAttribute) other)
     }
 
-    public GrailsTransactionAttribute(RuleBasedTransactionAttribute other) {
+    GrailsTransactionAttribute(RuleBasedTransactionAttribute other) {
         super(other)
-        if(other instanceof GrailsTransactionAttribute) {
-            this.inheritRollbackOnly = ((GrailsTransactionAttribute)other).inheritRollbackOnly
+        if (other instanceof GrailsTransactionAttribute) {
+            this.inheritRollbackOnly = ((GrailsTransactionAttribute) other).inheritRollbackOnly
         }
     }
 
-    public boolean isInheritRollbackOnly() {
-        return inheritRollbackOnly;
+    boolean isInheritRollbackOnly() {
+        return inheritRollbackOnly
     }
 
     @Override
     boolean rollbackOn(Throwable ex) {
-        if (log.isTraceEnabled()) {
-            log.trace("Applying rules to determine whether transaction should rollback on $ex");
-        }
+        log.trace('Applying rules to determine whether transaction should rollback on {}', ex.toString())
 
         RollbackRuleAttribute winner = null
         int deepest = Integer.MAX_VALUE
@@ -94,13 +92,11 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
             }
         }
 
-        if (log.isTraceEnabled()) {
-            log.trace("Winning rollback rule is: $winner" );
-        }
+        log.trace('Winning rollback rule is: {}', winner)
 
         // User superclass behavior (rollback on unchecked) if no rule matches.
         if (winner == null) {
-            log.trace("No relevant rollback rule found: applying default rules")
+            log.trace('No relevant rollback rule found: applying default rules')
 
             // always rollback regardless if it is a checked or unchecked exception since Groovy doesn't differentiate those
             return true
@@ -109,7 +105,7 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
         return !(winner instanceof NoRollbackRuleAttribute)
     }
 
-    public void setInheritRollbackOnly(boolean inheritRollbackOnly) {
-        this.inheritRollbackOnly = inheritRollbackOnly;
+    void setInheritRollbackOnly(boolean inheritRollbackOnly) {
+        this.inheritRollbackOnly = inheritRollbackOnly
     }
 }

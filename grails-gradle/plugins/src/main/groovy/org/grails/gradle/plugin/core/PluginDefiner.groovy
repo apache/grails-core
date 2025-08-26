@@ -18,13 +18,15 @@
  */
 package org.grails.gradle.plugin.core
 
-import grails.util.BuildSettings
-import grails.util.Environment
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ProjectDependency
+
+import grails.util.BuildSettings
+import grails.util.Environment
 
 /**
  * Makes it easier to define Grails plugins and also makes them aware of the development environment so that they can be run inline without creating a JAR
@@ -34,6 +36,7 @@ import org.gradle.api.artifacts.ProjectDependency
  */
 @PackageScope
 class PluginDefiner {
+
     final Project project
     final exploded
 
@@ -43,40 +46,40 @@ class PluginDefiner {
     }
 
     void methodMissing(String name, args) {
-        Object[] argArray = (Object[])args
+        Object[] argArray = (Object[]) args
 
-        if(!argArray) {
+        if (!argArray) {
             throw new MissingMethodException(name, GrailsExtension, args)
         }
         else {
-            if(argArray[0] instanceof Map) {
-                Map notation = (Map)argArray[0]
-                if(!notation.containsKey('group')) {
-                    notation.put('group','org.grails.plugins')
+            if (argArray[0] instanceof Map) {
+                Map notation = (Map) argArray[0]
+                if (!notation.containsKey('group')) {
+                    notation.put('group', 'org.grails.plugins')
                 }
             }
-            else if(argArray[0] instanceof CharSequence) {
+            else if (argArray[0] instanceof CharSequence) {
                 String str = argArray[0].toString()
 
                 if (str.startsWith(':')) {
                     argArray[0] = "org.grails.plugins$str".toString()
                 }
             }
-            else if(Environment.isDevelopmentRun()&& (argArray[0] instanceof ProjectDependency)) {
+            else if (Environment.isDevelopmentRun() && (argArray[0] instanceof ProjectDependency)) {
                 ProjectDependency pd = argArray[0]
                 project.dependencies.add(name, project.files(new File(pd.dependencyProject.projectDir, BuildSettings.BUILD_RESOURCES_PATH)))
             }
-            project.dependencies.add(name, *argArray )
+            project.dependencies.add(name, *argArray)
         }
     }
 
     @CompileStatic
     Dependency project(String path) {
-        if(Environment.isDevelopmentRun()) {
-            project.dependencies.project(path:path, configuration:'exploded')
+        if (Environment.isDevelopmentRun()) {
+            project.dependencies.project(path: path, configuration: 'exploded')
         }
         else {
-            project.dependencies.project(path:path)
+            project.dependencies.project(path: path)
         }
     }
 }

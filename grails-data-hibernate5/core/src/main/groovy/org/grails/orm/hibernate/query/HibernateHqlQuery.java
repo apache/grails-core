@@ -19,15 +19,16 @@
 
 package org.grails.orm.hibernate.query;
 
+import java.util.List;
+
+import org.springframework.context.ApplicationEventPublisher;
+
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.event.PostQueryEvent;
 import org.grails.datastore.mapping.query.event.PreQueryEvent;
-import org.springframework.context.ApplicationEventPublisher;
-
-import java.util.List;
 
 /**
  * A query implementation for HQL queries
@@ -55,7 +56,7 @@ public class HibernateHqlQuery extends Query {
         PreQueryEvent preQueryEvent = new PreQueryEvent(datastore, this);
         applicationEventPublisher.publishEvent(preQueryEvent);
 
-        if(uniqueResult) {
+        if (uniqueResult) {
             query.setMaxResults(1);
             List results = query.list();
             applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, this, results));

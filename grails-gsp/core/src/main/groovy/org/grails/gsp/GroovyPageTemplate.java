@@ -18,12 +18,13 @@
  */
 package org.grails.gsp;
 
+import java.util.Map;
+
 import groovy.lang.Writable;
 import groovy.text.Template;
+
 import org.grails.taglib.encoder.OutputContextLookup;
 import org.grails.taglib.encoder.OutputContextLookupHelper;
-
-import java.util.Map;
 
 /**
  * Knows how to make in instance of GroovyPageWritable.
@@ -67,7 +68,7 @@ public class GroovyPageTemplate implements Template, Cloneable {
     public void setAllowSettingContentType(boolean allowSettingContentType) {
         this.allowSettingContentType = allowSettingContentType;
     }
-    
+
     @Override
     public Object clone() {
         GroovyPageTemplate cloned = new GroovyPageTemplate(metaInfo);

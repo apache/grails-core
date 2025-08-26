@@ -19,7 +19,15 @@
 
 package org.grails.scaffolding
 
-import org.grails.scaffolding.markup.*
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+
+import org.grails.scaffolding.markup.ContextMarkupRenderer
+import org.grails.scaffolding.markup.ContextMarkupRendererImpl
+import org.grails.scaffolding.markup.DomainMarkupRenderer
+import org.grails.scaffolding.markup.DomainMarkupRendererImpl
+import org.grails.scaffolding.markup.PropertyMarkupRenderer
+import org.grails.scaffolding.markup.PropertyMarkupRendererImpl
 import org.grails.scaffolding.model.DomainModelService
 import org.grails.scaffolding.model.DomainModelServiceImpl
 import org.grails.scaffolding.model.property.DomainPropertyFactory
@@ -27,8 +35,6 @@ import org.grails.scaffolding.model.property.DomainPropertyFactoryImpl
 import org.grails.scaffolding.registry.DomainInputRendererRegistry
 import org.grails.scaffolding.registry.DomainOutputRendererRegistry
 import org.grails.scaffolding.registry.DomainRendererRegisterer
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
 
 @Configuration
 class ScaffoldingBeanConfiguration {

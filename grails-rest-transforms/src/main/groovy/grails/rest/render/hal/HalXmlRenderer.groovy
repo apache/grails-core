@@ -18,19 +18,21 @@
  */
 package grails.rest.render.hal
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.PropertyAccessorFactory
+import org.springframework.http.HttpMethod
+
 import grails.converters.XML
 import grails.rest.Link
 import grails.rest.render.RenderContext
 import grails.rest.render.util.AbstractLinkingRenderer
-import groovy.transform.CompileStatic
 import grails.web.mime.MimeType
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.web.xml.PrettyPrintXMLStreamWriter
 import org.grails.web.xml.StreamingMarkupWriter
 import org.grails.web.xml.XMLStreamWriter
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.types.ToOne
-import org.springframework.beans.PropertyAccessorFactory
-import org.springframework.http.HttpMethod
 
 /**
  * Renders domain instances in HAL XML format (see http://stateless.co/hal_specification.html)
@@ -42,9 +44,9 @@ import org.springframework.http.HttpMethod
 class HalXmlRenderer<T> extends AbstractLinkingRenderer<T> {
 
     public static final MimeType MIME_TYPE = MimeType.HAL_XML
-    public static final String RESOURCE_TAG = "resource"
-    public static final String LINK_TAG = "link"
-    public static final String RELATIONSHIP_ATTRIBUTE = "rel"
+    public static final String RESOURCE_TAG = 'resource'
+    public static final String LINK_TAG = 'link'
+    public static final String RELATIONSHIP_ATTRIBUTE = 'rel'
 
     private static final MimeType[] DEFAULT_MIME_TYPES = [MIME_TYPE] as MimeType[]
 
@@ -184,10 +186,10 @@ class HalXmlRenderer<T> extends AbstractLinkingRenderer<T> {
         }
 
         if (link.templated) {
-            writer.attribute(TEMPLATED_ATTRIBUTE,"true")
+            writer.attribute(TEMPLATED_ATTRIBUTE, 'true')
         }
         if (link.deprecated) {
-            writer.attribute(DEPRECATED_ATTRIBUTE,"true")
+            writer.attribute(DEPRECATED_ATTRIBUTE, 'true')
         }
         writer.end()
     }

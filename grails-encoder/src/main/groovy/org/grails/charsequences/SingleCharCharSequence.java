@@ -30,7 +30,7 @@ class SingleCharCharSequence implements CharSequence, CharArrayAccessible {
     private final char ch;
 
     SingleCharCharSequence(int c) {
-        this((char)c);
+        this((char) c);
     }
     
     SingleCharCharSequence(char ch) {

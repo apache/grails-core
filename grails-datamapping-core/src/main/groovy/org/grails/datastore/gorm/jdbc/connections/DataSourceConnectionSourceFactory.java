@@ -19,23 +19,28 @@
 
 package org.grails.datastore.gorm.jdbc.connections;
 
-import org.grails.datastore.mapping.config.Settings;
-import org.grails.datastore.mapping.core.connections.*;
-import org.grails.datastore.gorm.jdbc.DataSourceBuilder;
-import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
+import java.io.Serializable;
+import java.util.Collections;
+import java.util.Map;
+
+import javax.naming.NamingException;
+import javax.sql.DataSource;
+
 import org.springframework.core.env.PropertyResolver;
 import org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 import org.springframework.jndi.JndiObjectFactoryBean;
 
-import javax.naming.NamingException;
-import javax.sql.DataSource;
-import java.io.Serializable;
-import java.util.Collections;
-import java.util.Map;
+import org.grails.datastore.gorm.jdbc.DataSourceBuilder;
+import org.grails.datastore.mapping.config.Settings;
+import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;
+import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 
 /**
- * A {@link ConnectionSourceFactory} for creating JDBC {@link DataSource} connections
+ * A {@link org.grails.datastore.mapping.core.connections.ConnectionSourceFactory} for creating JDBC {@link DataSource} connections
  *
  * @author Graeme Rocher
  * @since 6.0
@@ -45,10 +50,10 @@ public class DataSourceConnectionSourceFactory extends AbstractConnectionSourceF
     protected <F extends ConnectionSourceSettings> DataSourceSettings buildSettings(String name, PropertyResolver configuration, F fallbackSettings, boolean isDefaultDataSource) {
         String configurationPrefix = isDefaultDataSource ? Settings.SETTING_DATASOURCE : Settings.SETTING_DATASOURCES + '.' + name;
         DataSourceSettingsBuilder builder;
-        if(isDefaultDataSource) {
+        if (isDefaultDataSource) {
             String qualified = Settings.SETTING_DATASOURCES + '.' + Settings.SETTING_DATASOURCE;
             Map config = configuration.getProperty(qualified, Map.class, Collections.emptyMap());
-            if(!config.isEmpty()) {
+            if (!config.isEmpty()) {
                 builder = new DataSourceSettingsBuilder(configuration, qualified);
             }
             else {
@@ -66,7 +71,7 @@ public class DataSourceConnectionSourceFactory extends AbstractConnectionSourceF
     public ConnectionSource<DataSource, DataSourceSettings> create(String name, DataSourceSettings settings) {
 
         DataSource dataSource;
-        if(settings.getJndiName() != null && !settings.getJndiName().isEmpty()) {
+        if (settings.getJndiName() != null && !settings.getJndiName().isEmpty()) {
             JndiObjectFactoryBean jndiObjectFactoryBean = new JndiObjectFactoryBean();
             jndiObjectFactoryBean.setExpectedType(DataSource.class);
             jndiObjectFactoryBean.setJndiName(settings.getJndiName());
@@ -75,7 +80,7 @@ public class DataSourceConnectionSourceFactory extends AbstractConnectionSourceF
             } catch (NamingException e) {
                 throw new ConfigurationException("Unable to configure JNDI data source: " + e.getMessage(), e);
             }
-            dataSource = (DataSource)jndiObjectFactoryBean.getObject();
+            dataSource = (DataSource) jndiObjectFactoryBean.getObject();
             dataSource = proxy(dataSource, settings);
             return new DefaultConnectionSource<>(name, dataSource, settings);
         }
@@ -91,15 +96,15 @@ public class DataSourceConnectionSourceFactory extends AbstractConnectionSourceF
             String url = settings.getUrl();
             Class type = settings.getType();
 
-            if(properties != null && !properties.isEmpty()) {
+            if (properties != null && !properties.isEmpty()) {
                 dataSourceBuilder.properties(settings.toProperties());
             }
             dataSourceBuilder.url(url);
 
-            if(driverClassName != null) {
+            if (driverClassName != null) {
                 dataSourceBuilder.driverClassName(driverClassName);
             }
-            if(username != null && password != null) {
+            if (username != null && password != null) {
                 dataSourceBuilder.username(username);
                 dataSourceBuilder.password(password);
             }
@@ -115,10 +120,10 @@ public class DataSourceConnectionSourceFactory extends AbstractConnectionSourceF
     }
 
     protected DataSource proxy(DataSource dataSource, DataSourceSettings settings) {
-        if(settings.isLazy()) {
+        if (settings.isLazy()) {
             dataSource = new LazyConnectionDataSourceProxy(dataSource);
         }
-        if(settings.isTransactionAware()) {
+        if (settings.isTransactionAware()) {
             dataSource = new TransactionAwareDataSourceProxy(dataSource);
         }
         return dataSource;

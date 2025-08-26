@@ -21,6 +21,7 @@ package org.grails.datastore.mapping.simple;
 import java.util.Map;
 
 import org.springframework.context.ApplicationEventPublisher;
+
 import org.grails.datastore.mapping.core.AbstractSession;
 import org.grails.datastore.mapping.engine.Persister;
 import org.grails.datastore.mapping.model.MappingContext;

@@ -18,17 +18,17 @@
  */
 package grails.gsp.boot;
 
-import grails.config.Config;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.MutablePropertySources;
+import org.springframework.core.io.Resource;
 
+import grails.config.Config;
 import grails.core.ArtefactHandler;
 import grails.core.ArtefactInfo;
 import grails.core.GrailsClass;
 import org.grails.config.PropertySourcesConfig;
 import org.grails.core.AbstractGrailsApplication;
 import org.grails.datastore.mapping.model.MappingContext;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.MutablePropertySources;
-import org.springframework.core.io.Resource;
 
 public class StandaloneGrailsApplication extends AbstractGrailsApplication {
 

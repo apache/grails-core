@@ -18,11 +18,11 @@
  */
 package org.grails.core.io;
 
-import org.springframework.core.io.Resource;
-
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.springframework.core.io.Resource;
 
 /**
  *
@@ -31,8 +31,8 @@ import java.util.Map;
  * @author Graeme Rocher
  * @since 2.0
  */
-public class StaticResourceLocator implements ResourceLocator{
-    private Map<String,Resource> classToResourceMap = new HashMap<String,Resource>();
+public class StaticResourceLocator implements ResourceLocator {
+    private Map<String, Resource> classToResourceMap = new HashMap<>();
 
     public void setSearchLocation(String searchLocation) {
         // do nothing

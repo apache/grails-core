@@ -61,7 +61,6 @@ public interface CommandLine {
      */
     List<String> getRemainingArgs();
 
-
     /**
      * @return The remaining arguments as an array
      */
@@ -99,7 +98,6 @@ public interface CommandLine {
      * @return The remaining args as one big string without undeclared options
      */
     String getRemainingArgsWithOptionsString();
-
 
     /**
      * @return The remaining args separated by the line separator char

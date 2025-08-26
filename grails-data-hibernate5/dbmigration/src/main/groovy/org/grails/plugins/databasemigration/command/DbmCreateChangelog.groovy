@@ -19,8 +19,10 @@
 package org.grails.plugins.databasemigration.command
 
 import groovy.transform.CompileStatic
+
 import liquibase.serializer.ChangeLogSerializer
 import liquibase.serializer.ChangeLogSerializerFactory
+
 import org.grails.plugins.databasemigration.DatabaseMigrationException
 
 @CompileStatic

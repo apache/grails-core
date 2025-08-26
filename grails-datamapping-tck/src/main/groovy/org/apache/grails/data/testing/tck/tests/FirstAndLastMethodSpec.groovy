@@ -18,11 +18,12 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import spock.lang.PendingFeatureIf
+
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.PersonWithCompositeKey
 import org.apache.grails.data.testing.tck.domains.SimpleWidget
 import org.apache.grails.data.testing.tck.domains.SimpleWidgetWithNonStandardId
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.PendingFeatureIf
 
 class FirstAndLastMethodSpec extends GrailsDataTckSpec {
 
@@ -162,9 +163,7 @@ class FirstAndLastMethodSpec extends GrailsDataTckSpec {
     }
 
     @PendingFeatureIf(
-            value = {
-                System.getProperty('hibernate5.gorm.suite')
-            },
+            value = { System.getProperty('hibernate5.gorm.suite') },
             reason = 'Was previously @Ignore'
     )
     void "Test first and last method with composite key"() {

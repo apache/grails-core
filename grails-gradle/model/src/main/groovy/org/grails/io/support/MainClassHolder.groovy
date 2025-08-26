@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 
 @CompileStatic
 class MainClassHolder {
+
     File classFile
     String className
 }

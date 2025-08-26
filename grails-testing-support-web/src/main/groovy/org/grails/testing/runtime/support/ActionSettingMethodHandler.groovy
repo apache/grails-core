@@ -19,13 +19,15 @@
 
 package org.grails.testing.runtime.support
 
-import grails.web.Action
-import groovy.transform.CompileStatic
-import javassist.util.proxy.MethodHandler
-import org.grails.web.servlet.mvc.GrailsWebRequest
-
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
+
+import groovy.transform.CompileStatic
+
+import javassist.util.proxy.MethodHandler
+
+import grails.web.Action
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 @CompileStatic
 class ActionSettingMethodHandler implements MethodHandler {

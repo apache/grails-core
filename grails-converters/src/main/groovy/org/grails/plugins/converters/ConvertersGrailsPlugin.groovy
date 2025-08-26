@@ -20,8 +20,6 @@ package org.grails.plugins.converters
 
 import grails.converters.JSON
 import grails.converters.XML
-import grails.core.GrailsApplication
-import grails.core.support.GrailsApplicationAware
 import grails.plugins.Plugin
 import grails.util.GrailsUtil
 import org.grails.plugins.codecs.JSONCodec
@@ -42,7 +40,7 @@ import org.grails.web.converters.marshaller.xml.ValidationErrorsMarshaller as Xm
 class ConvertersGrailsPlugin extends Plugin {
 
     def version = GrailsUtil.getGrailsVersion()
-    def observe = ["controllers"]
+    def observe = ['controllers']
     def dependsOn = [controllers: version, domainClass: version]
     def providedArtefacts = [
         JSONCodec,
@@ -50,21 +48,23 @@ class ConvertersGrailsPlugin extends Plugin {
     ]
 
     @Override
-    Closure doWithSpring() {{->
-        jsonErrorsMarshaller(JsonErrorsMarshaller)
+    Closure doWithSpring() {
+        { ->
+            jsonErrorsMarshaller(JsonErrorsMarshaller)
 
-        xmlErrorsMarshaller(XmlErrorsMarshaller)
+            xmlErrorsMarshaller(XmlErrorsMarshaller)
 
-        convertersConfigurationInitializer(ConvertersConfigurationInitializer)
+            convertersConfigurationInitializer(ConvertersConfigurationInitializer)
 
-        errorsXmlMarshallerRegisterer(ObjectMarshallerRegisterer) {
-            marshaller = { XmlErrorsMarshaller om -> }
-            converterClass = XML
+            errorsXmlMarshallerRegisterer(ObjectMarshallerRegisterer) {
+                marshaller = { XmlErrorsMarshaller om -> }
+                converterClass = XML
+            }
+
+            errorsJsonMarshallerRegisterer(ObjectMarshallerRegisterer) {
+                marshaller = { JsonErrorsMarshaller om -> }
+                converterClass = JSON
+            }
         }
-
-        errorsJsonMarshallerRegisterer(ObjectMarshallerRegisterer) {
-            marshaller = { JsonErrorsMarshaller om -> }
-            converterClass = JSON
-        }
-    }}
+    }
 }

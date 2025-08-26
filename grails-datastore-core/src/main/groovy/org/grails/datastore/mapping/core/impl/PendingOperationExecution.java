@@ -35,7 +35,7 @@ public class PendingOperationExecution {
             preOperation.run();
         }
         pendingOperation.run();
-        if(!pendingOperation.isVetoed()) {
+        if (!pendingOperation.isVetoed()) {
             List<PendingOperation> cascadeOperations = pendingOperation.getCascadeOperations();
             for (PendingOperation cascadeOperation : cascadeOperations) {
                 cascadeOperation.run();

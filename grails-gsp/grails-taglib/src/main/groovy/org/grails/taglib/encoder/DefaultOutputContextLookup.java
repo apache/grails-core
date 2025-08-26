@@ -18,6 +18,10 @@
  */
 package org.grails.taglib.encoder;
 
+import java.io.Writer;
+
+import org.springframework.core.Ordered;
+
 import grails.core.GrailsApplication;
 import grails.util.Holders;
 import org.grails.encoder.DefaultEncodingStateRegistry;
@@ -26,12 +30,9 @@ import org.grails.encoder.EncodingStateRegistryLookup;
 import org.grails.encoder.EncodingStateRegistryLookupHolder;
 import org.grails.taglib.AbstractTemplateVariableBinding;
 import org.grails.taglib.TemplateVariableBinding;
-import org.springframework.core.Ordered;
-
-import java.io.Writer;
 
 public class DefaultOutputContextLookup implements OutputContextLookup, EncodingStateRegistryLookup, Ordered {
-    private ThreadLocal<OutputContext> outputContextThreadLocal = new ThreadLocal<OutputContext>(){
+    private ThreadLocal<OutputContext> outputContextThreadLocal = new ThreadLocal<>() {
         @Override
         protected OutputContext initialValue() {
             return new DefaultOutputContext();
@@ -40,7 +41,7 @@ public class DefaultOutputContextLookup implements OutputContextLookup, Encoding
 
     @Override
     public OutputContext lookupOutputContext() {
-        if(EncodingStateRegistryLookupHolder.getEncodingStateRegistryLookup()==null) {
+        if (EncodingStateRegistryLookupHolder.getEncodingStateRegistryLookup() == null) {
             // TODO: improve EncodingStateRegistry solution so that global state doesn't have to be used
             EncodingStateRegistryLookupHolder.setEncodingStateRegistryLookup(this);
         }

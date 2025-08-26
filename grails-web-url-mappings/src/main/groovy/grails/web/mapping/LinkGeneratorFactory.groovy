@@ -19,13 +19,15 @@
 
 package grails.web.mapping
 
-import grails.web.CamelCaseUrlConverter
-import grails.web.UrlConverter
 import groovy.transform.CompileStatic
-import org.grails.web.mapping.DefaultLinkGenerator
+
 import org.springframework.beans.BeansException
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
+
+import grails.web.CamelCaseUrlConverter
+import grails.web.UrlConverter
+import org.grails.web.mapping.DefaultLinkGenerator
 
 /**
  * Helper class for creating a {@link LinkGenerator}. Useful for testing
@@ -38,7 +40,7 @@ class LinkGeneratorFactory implements ApplicationContextAware {
 
     UrlMappingsFactory urlMappingsFactory = new UrlMappingsFactory()
     UrlConverter urlConverter = new CamelCaseUrlConverter()
-    String baseURL = "http://localhost"
+    String baseURL = 'http://localhost'
     String contextPath = null
 
     LinkGenerator create(Class mappingsClass) {
@@ -54,7 +56,7 @@ class LinkGeneratorFactory implements ApplicationContextAware {
     LinkGenerator create(UrlMappings urlMappings) {
         def generator = new DefaultLinkGenerator(baseURL, contextPath)
         generator.grailsUrlConverter = urlConverter
-        generator.urlMappingsHolder = (UrlMappingsHolder)urlMappings
+        generator.urlMappingsHolder = (UrlMappingsHolder) urlMappings
         return generator
     }
 

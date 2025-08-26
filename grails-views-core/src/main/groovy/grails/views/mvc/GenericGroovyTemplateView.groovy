@@ -19,8 +19,17 @@
 
 package grails.views.mvc
 
+import groovy.text.Template
+import groovy.transform.CompileStatic
+
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+
+import org.springframework.http.HttpStatus
+import org.springframework.web.servlet.LocaleResolver
+import org.springframework.web.servlet.view.AbstractUrlBasedView
+
 import grails.config.Config
-import grails.core.support.GrailsConfigurationAware
 import grails.views.ResolvableGroovyTemplateEngine
 import grails.views.api.GrailsView
 import grails.views.api.HttpView
@@ -29,16 +38,8 @@ import grails.views.api.http.Response
 import grails.views.mvc.http.DelegatingParameters
 import grails.web.http.HttpHeaders
 import grails.web.mime.MimeType
-import groovy.text.Template
-import groovy.transform.CompileStatic
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
-import org.springframework.http.HttpStatus
-import org.springframework.web.servlet.LocaleResolver
-import org.springframework.web.servlet.view.AbstractUrlBasedView
-
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 
 /**
  * An implementation of the Spring AbstractUrlBaseView class for ResolvableGroovyTemplateEngine
@@ -52,7 +53,7 @@ class GenericGroovyTemplateView extends AbstractUrlBasedView {
     LocaleResolver localeResolver
     Config configuration
 
-    private String defaultEncoding = "UTF-8"
+    private String defaultEncoding = 'UTF-8'
 
     void setTemplateEngine(ResolvableGroovyTemplateEngine templateEngine) {
         this.templateEngine = templateEngine
@@ -69,19 +70,19 @@ class GenericGroovyTemplateView extends AbstractUrlBasedView {
         def qualifiers = []
         def v = httpServletRequest.getHeader(HttpHeaders.ACCEPT_VERSION)
         MimeType mimeType = GrailsWebRequest.lookup(httpServletRequest) != null ? httpServletResponse.mimeType : null
-        if(mimeType != null && mimeType != MimeType.ALL) {
+        if (mimeType != null && mimeType != MimeType.ALL) {
             qualifiers.add(mimeType.extension)
         }
-        if(v != null) {
+        if (v != null) {
             qualifiers.add(v)
         }
         Template template = templateEngine.resolveTemplate(url, locale, qualifiers as String[])
-        if(template != null) {
+        if (template != null) {
 
             if (!httpServletResponse.contentType) {
-                httpServletResponse.setContentType( getContentType() )
+                httpServletResponse.setContentType(getContentType())
             }
-            httpServletResponse.setCharacterEncoding( defaultEncoding )
+            httpServletResponse.setCharacterEncoding(defaultEncoding)
 
             def writable = template.make(map)
             prepareWritable(writable, httpServletRequest, httpServletResponse, locale)
@@ -91,7 +92,7 @@ class GenericGroovyTemplateView extends AbstractUrlBasedView {
                 // now write the writable
                 writable.writeTo(writer)
             } catch (RuntimeException e) {
-                if(!httpServletResponse.isCommitted()) {
+                if (!httpServletResponse.isCommitted()) {
                     // set back to HTML to errors are rendered correctly
                     httpServletResponse.setContentType(MimeType.HTML.name)
                 }
@@ -129,7 +130,7 @@ class GenericGroovyTemplateView extends AbstractUrlBasedView {
             def httpView = (HttpView) writable
             httpView.setResponse(new HttpViewResponse(httpServletResponse))
             httpView.setRequest(new HttpViewRequest(httpServletRequest))
-            if(webRequest != null) {
+            if (webRequest != null) {
                 httpView.setParams(new DelegatingParameters(webRequest.getParams()))
             }
         }
@@ -137,7 +138,7 @@ class GenericGroovyTemplateView extends AbstractUrlBasedView {
 
     @CompileStatic
     private static class HttpViewRequest implements Request {
-        final HttpServletRequest request;
+        final HttpServletRequest request
 
         HttpViewRequest(HttpServletRequest request) {
             this.request = request
@@ -210,7 +211,7 @@ class GenericGroovyTemplateView extends AbstractUrlBasedView {
         @Override
         void headers(Map<String, String> namesAndValues) {
             for (entry in namesAndValues.entrySet()) {
-                header entry.key, entry.value
+                header(entry.key, entry.value)
             }
         }
 

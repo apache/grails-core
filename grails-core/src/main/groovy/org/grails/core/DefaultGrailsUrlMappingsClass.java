@@ -18,11 +18,12 @@
  */
 package org.grails.core;
 
-import grails.core.GrailsUrlMappingsClass;
-import groovy.lang.Closure;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import groovy.lang.Closure;
+
+import grails.core.GrailsUrlMappingsClass;
 
 public class DefaultGrailsUrlMappingsClass extends AbstractGrailsClass implements GrailsUrlMappingsClass {
 
@@ -38,7 +39,7 @@ public class DefaultGrailsUrlMappingsClass extends AbstractGrailsClass implement
     public Closure<?> getMappingsClosure() {
         Closure<?> result = getStaticPropertyValue(MAPPINGS_CLOSURE, Closure.class);
         if (result == null) {
-            throw new RuntimeException(MAPPINGS_CLOSURE + " closure does not exists for class " +  getClazz().getName());
+            throw new RuntimeException(MAPPINGS_CLOSURE + " closure does not exists for class " + getClazz().getName());
         }
         return result;
     }

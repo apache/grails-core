@@ -18,14 +18,14 @@
  */
 package grails.views.resolve
 
+import groovy.text.Template
+import groovy.transform.CompileStatic
+
 import grails.plugins.GrailsPluginManager
 import grails.plugins.PluginManagerAware
 import grails.views.ViewConfiguration
-import groovy.text.Template
-import groovy.transform.CompileStatic
 import org.grails.io.support.GrailsResourceUtils
 import org.grails.plugins.BinaryGrailsPlugin
-
 
 /**
  * A template resolver capable of looking through the installed Grails plugins and finding a template within the scope of the plugin
@@ -35,6 +35,7 @@ import org.grails.plugins.BinaryGrailsPlugin
  */
 @CompileStatic
 class PluginAwareTemplateResolver extends GenericGroovyTemplateResolver implements PluginManagerAware {
+
     GrailsPluginManager pluginManager
 
     PluginAwareTemplateResolver(ViewConfiguration viewConfiguration) {
@@ -50,15 +51,15 @@ class PluginAwareTemplateResolver extends GenericGroovyTemplateResolver implemen
     @Override
     Class<? extends Template> resolveTemplateClass(String path) {
         Class<? extends Template> applicationTemplate = super.resolveTemplateClass(path)
-        if(applicationTemplate == null) {
+        if (applicationTemplate == null) {
             // try global template
             applicationTemplate = resolveTemplateClass(null, path)
         }
-        if(applicationTemplate == null && pluginManager != null) {
+        if (applicationTemplate == null && pluginManager != null) {
             // search plugins for template
-            for( plugin in pluginManager.allPlugins ) {
+            for (plugin in pluginManager.allPlugins) {
                 Class<? extends Template> pluginTemplate = resolveTemplateClass(plugin.fileSystemShortName, path)
-                if(pluginTemplate != null) {
+                if (pluginTemplate != null) {
                     return pluginTemplate
                 }
             }
@@ -69,9 +70,9 @@ class PluginAwareTemplateResolver extends GenericGroovyTemplateResolver implemen
     @Override
     URL resolveTemplate(String path) {
         URL applicationTemplate = super.resolveTemplate(path)
-        if(applicationTemplate == null && pluginManager != null) {
-            for( plugin in pluginManager.allPlugins ) {
-                if(plugin instanceof BinaryGrailsPlugin) {
+        if (applicationTemplate == null && pluginManager != null) {
+            for (plugin in pluginManager.allPlugins) {
+                if (plugin instanceof BinaryGrailsPlugin) {
                     BinaryGrailsPlugin binaryGrailsPlugin = (BinaryGrailsPlugin) plugin
                     File projectDirectory = binaryGrailsPlugin.getProjectDirectory()
                     if (projectDirectory != null) {

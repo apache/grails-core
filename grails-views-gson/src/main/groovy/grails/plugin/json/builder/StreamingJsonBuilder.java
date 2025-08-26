@@ -18,12 +18,20 @@
  */
 package grails.plugin.json.builder;
 
-import groovy.json.JsonException;
-import groovy.lang.*;
-
 import java.io.IOException;
 import java.io.Writer;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import groovy.json.JsonException;
+import groovy.lang.Closure;
+import groovy.lang.DelegatesTo;
+import groovy.lang.GString;
+import groovy.lang.GroovyObjectSupport;
+import groovy.lang.Writable;
 
 /**
  * Temporary fork of {@link groovy.json.StreamingJsonBuilder} until Groovy 2.4.5 is out.
@@ -440,7 +448,7 @@ public class StreamingJsonBuilder extends GroovyObjectSupport {
         if (args != null && Object[].class.isAssignableFrom(args.getClass())) {
             Object[] arr = (Object[]) args;
             try {
-                switch(arr.length) {
+                switch (arr.length) {
                     case 0:
                         call(name);
                         break;
@@ -460,17 +468,17 @@ public class StreamingJsonBuilder extends GroovyObjectSupport {
                         final Object second = arr[1];
                         final boolean isClosure = second instanceof Closure;
 
-                        if(isClosure && first instanceof Map ) {
+                        if (isClosure && first instanceof Map) {
                             final Closure callable = (Closure) second;
-                            call(name, (Map)first, callable);
+                            call(name, (Map) first, callable);
                         }
-                        else if(isClosure && first instanceof Iterable) {
+                        else if (isClosure && first instanceof Iterable) {
                             final Iterable coll = (Iterable) first;
                             final Closure callable = (Closure) second;
                             call(name, coll, callable);
                         }
-                        else if(isClosure && first.getClass().isArray()) {
-                            final Iterable coll = Arrays.asList((Object[])first);
+                        else if (isClosure && first.getClass().isArray()) {
+                            final Iterable coll = Arrays.asList((Object[]) first);
                             final Closure callable = (Closure) second;
                             call(name, coll, callable);
                         }
@@ -532,10 +540,10 @@ public class StreamingJsonBuilder extends GroovyObjectSupport {
                     switch (len) {
                         case 1:
                             final Object value = arr[0];
-                            if(value instanceof Closure) {
-                                call(name, (Closure)value);
+                            if (value instanceof Closure) {
+                                call(name, (Closure) value);
                             }
-                            else if(value instanceof Writable) {
+                            else if (value instanceof Writable) {
                                 call(name, (Writable) value);
                             }
                             else {
@@ -543,15 +551,15 @@ public class StreamingJsonBuilder extends GroovyObjectSupport {
                             }
                             return null;
                         case 2:
-                            if(arr[len -1] instanceof Closure) {
+                            if (arr[len - 1] instanceof Closure) {
                                 final Object obj = arr[0];
                                 final Closure callable = (Closure) arr[1];
-                                if(obj instanceof Iterable) {
-                                    call(name, (Iterable)obj, callable);
+                                if (obj instanceof Iterable) {
+                                    call(name, (Iterable) obj, callable);
                                     return null;
                                 }
-                                else if(obj.getClass().isArray()) {
-                                    call(name, Arrays.asList( (Object[])obj), callable);
+                                else if (obj.getClass().isArray()) {
+                                    call(name, Arrays.asList((Object[]) obj), callable);
                                     return null;
                                 }
                                 else {
@@ -594,7 +602,7 @@ public class StreamingJsonBuilder extends GroovyObjectSupport {
          * @throws IOException
          *         If an I/O error occurs
          */
-        public void call(String name, Object...array) throws IOException {
+        public void call(String name, Object... array) throws IOException {
             if (generator.isExcludingFieldsNamed(name)) {
                 return;
             }
@@ -630,7 +638,7 @@ public class StreamingJsonBuilder extends GroovyObjectSupport {
          * @throws IOException
          *         If an I/O error occurs
          */
-        public void call(String name, Iterable coll, @DelegatesTo(value = StreamingJsonDelegate.class, strategy = Closure.DELEGATE_FIRST)  Closure c) throws IOException {
+        public void call(String name, Iterable coll, @DelegatesTo(value = StreamingJsonDelegate.class, strategy = Closure.DELEGATE_FIRST) Closure c) throws IOException {
             if (generator.isExcludingFieldsNamed(name)) {
                 return;
             }
@@ -647,8 +655,8 @@ public class StreamingJsonBuilder extends GroovyObjectSupport {
          * @throws IOException
          *         If an I/O error occurs
          */
-        public void call(String name, Collection coll, @DelegatesTo(value = StreamingJsonDelegate.class, strategy = Closure.DELEGATE_FIRST)  Closure c) throws IOException {
-            call(name, (Iterable)coll, c);
+        public void call(String name, Collection coll, @DelegatesTo(value = StreamingJsonDelegate.class, strategy = Closure.DELEGATE_FIRST) Closure c) throws IOException {
+            call(name, (Iterable) coll, c);
         }
 
         /**
@@ -693,7 +701,7 @@ public class StreamingJsonBuilder extends GroovyObjectSupport {
          * @throws IOException
          *         If an I/O error occurs
          */
-        public void call(String name,@DelegatesTo(value = StreamingJsonDelegate.class, strategy = Closure.DELEGATE_FIRST) Closure value) throws IOException {
+        public void call(String name, @DelegatesTo(value = StreamingJsonDelegate.class, strategy = Closure.DELEGATE_FIRST) Closure value) throws IOException {
             if (generator.isExcludingFieldsNamed(name)) {
                 return;
             }
@@ -732,7 +740,7 @@ public class StreamingJsonBuilder extends GroovyObjectSupport {
         public void call(String name, Writable json) throws IOException {
             writeName(name);
             verifyValue();
-            if(json instanceof GString) {
+            if (json instanceof GString) {
                 writer.write(generator.toJson(json.toString()));
             }
             else {
@@ -744,14 +752,13 @@ public class StreamingJsonBuilder extends GroovyObjectSupport {
             this.first = first;
         }
 
-
         private void writeObjects(Iterable coll, @DelegatesTo(value = StreamingJsonDelegate.class, strategy = Closure.DELEGATE_FIRST) Closure c) throws IOException {
             verifyValue();
             writeCollectionWithClosure(writer, coll, c, generator);
         }
 
         protected void verifyValue() {
-            if(state == State.VALUE) {
+            if (state == State.VALUE) {
                 throw new IllegalStateException("Cannot write value when value has just been written. Write a name first!");
             }
             else {
@@ -759,12 +766,11 @@ public class StreamingJsonBuilder extends GroovyObjectSupport {
             }
         }
 
-
         protected void writeName(String name) throws IOException {
             if (generator.isExcludingFieldsNamed(name)) {
                 return;
             }
-            if(state == State.NAME) {
+            if (state == State.NAME) {
                 throw new IllegalStateException("Cannot write a name when a name has just been written. Write a value first!");
             }
             else {
@@ -857,5 +863,3 @@ public class StreamingJsonBuilder extends GroovyObjectSupport {
         }
     }
 }
-
-

@@ -18,9 +18,9 @@
  */
 package org.grails.datastore.mapping.query;
 
-import org.grails.datastore.mapping.query.api.QueryableCriteria;
-
 import java.util.Collection;
+
+import org.grails.datastore.mapping.query.api.QueryableCriteria;
 
 /**
  * Factory for creating {@link org.grails.datastore.mapping.query.Query.Criterion} instances
@@ -76,7 +76,6 @@ public class Restrictions {
     public static Query.In in(String property, QueryableCriteria subquery) {
         return new Query.In(property, subquery);
     }
-
 
     /**
      * Restricts the property to be in the list of given values

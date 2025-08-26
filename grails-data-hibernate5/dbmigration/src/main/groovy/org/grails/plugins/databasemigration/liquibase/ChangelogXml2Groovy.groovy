@@ -39,20 +39,20 @@ class ChangelogXml2Groovy {
      */
     static String convert(String xml) {
         def groovy = new StringBuilder('databaseChangeLog = {')
-        groovy.append NEWLINE
+        groovy.append(NEWLINE)
 
         new XmlParser(false, false).parseText(xml).each { Node node ->
             convertNode(node, groovy, 1)
         }
-        groovy.append '}'
-        groovy.append NEWLINE
+        groovy.append('}')
+        groovy.append(NEWLINE)
         groovy.toString()
     }
 
     protected static void convertNode(Node node, StringBuilder groovy, int indentLevel) {
 
-        groovy.append NEWLINE
-        appendWithIndent indentLevel, groovy, (String) node.name()
+        groovy.append(NEWLINE)
+        appendWithIndent(indentLevel, groovy, (String) node.name())
 
         String mixedText
         def children = []
@@ -64,17 +64,17 @@ class ChangelogXml2Groovy {
             }
         }
 
-        appendAttrs groovy, node, mixedText
+        appendAttrs(groovy, node, mixedText)
 
         if (children) {
-            groovy.append ' {'
+            groovy.append(' {')
             for (child in children) {
                 convertNode((Node) child, groovy, indentLevel + 1)
             }
-            appendWithIndent indentLevel, groovy, '}'
-            groovy.append NEWLINE
+            appendWithIndent(indentLevel, groovy, '}')
+            groovy.append(NEWLINE)
         } else {
-            groovy.append NEWLINE
+            groovy.append(NEWLINE)
         }
     }
 
@@ -84,28 +84,28 @@ class ChangelogXml2Groovy {
         String delimiter = ''
 
         if (text) {
-            local.append '"""'
-            local.append text.replaceAll(/(\$|\\)/, /\\$1/)
-            local.append '"""'
+            local.append('"""')
+            local.append(text.replaceAll(/(\$|\\)/, /\\$1/))
+            local.append('"""')
             delimiter = ', '
         }
 
         node.attributes().each { name, value ->
-            local.append delimiter
-            local.append name
+            local.append(delimiter)
+            local.append(name)
             local.append(': "').append(((String) value).replaceAll(/(\$|\\|\\n)/, /\\$1/)).append('"')
             delimiter = ', '
         }
 
         if (local.length()) {
-            groovy.append '('
-            groovy.append local.toString()
-            groovy.append ')'
+            groovy.append('(')
+            groovy.append(local.toString())
+            groovy.append(')')
         }
     }
 
     protected static void appendWithIndent(int indentLevel, StringBuilder groovy, String s) {
-        indentLevel.times { groovy.append '    ' }
-        groovy.append s
+        indentLevel.times { groovy.append('    ') }
+        groovy.append(s)
     }
 }

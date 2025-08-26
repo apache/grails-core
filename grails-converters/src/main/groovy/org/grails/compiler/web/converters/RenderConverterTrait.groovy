@@ -19,15 +19,17 @@
 
 package org.grails.compiler.web.converters
 
-import grails.artefact.Enhances
 import groovy.transform.Generated
-import org.grails.web.converters.Converter
-import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.springframework.web.context.request.RequestContextHolder
 
 import jakarta.servlet.http.HttpServletResponse
 
-@Enhances(["Controller", "Interceptor"])
+import org.springframework.web.context.request.RequestContextHolder
+
+import grails.artefact.Enhances
+import org.grails.web.converters.Converter
+import org.grails.web.servlet.mvc.GrailsWebRequest
+
+@Enhances(['Controller', 'Interceptor'])
 trait RenderConverterTrait {
 
     /**
@@ -37,9 +39,9 @@ trait RenderConverterTrait {
      */
     @Generated
     void render(Converter<?> converter) {
-        GrailsWebRequest webRequest = (GrailsWebRequest)RequestContextHolder.currentRequestAttributes()
+        GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes()
         HttpServletResponse response = webRequest.currentResponse
         webRequest.renderView = false
-        converter.render response
+        converter.render(response)
     }
 }

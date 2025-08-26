@@ -18,6 +18,7 @@
  */
 
 package grails.events.subscriber
+
 /**
  * An event subscriber
  *
@@ -50,7 +51,6 @@ interface Subjects {
      */
     Subscription subscribe(CharSequence event, Subscriber subscriber)
 
-
     /**
      * Clear all listeners for the given event
      *
@@ -59,6 +59,5 @@ interface Subjects {
      * @return The subscriber
      */
     Subjects unsubscribeAll(CharSequence event)
-
 
 }

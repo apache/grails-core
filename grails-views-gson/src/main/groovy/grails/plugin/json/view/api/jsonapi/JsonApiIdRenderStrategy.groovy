@@ -20,6 +20,7 @@
 package grails.plugin.json.view.api.jsonapi
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.mapping.model.PersistentProperty
 
 @CompileStatic

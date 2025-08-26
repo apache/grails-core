@@ -18,9 +18,9 @@
  */
 package grails.core.gsp;
 
-import grails.core.InjectableGrailsClass;
-
 import java.util.Set;
+
+import grails.core.InjectableGrailsClass;
 
 /**
  * Represents a Grails tab library class.
@@ -56,5 +56,6 @@ public interface GrailsTagLibClass extends InjectableGrailsClass {
     String getNamespace();
 
     Object getEncodeAsForTag(String tagName);
+
     Object getDefaultEncodeAs();
 }

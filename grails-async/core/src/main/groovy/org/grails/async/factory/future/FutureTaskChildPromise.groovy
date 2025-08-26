@@ -19,18 +19,18 @@
 
 package org.grails.async.factory.future
 
-import grails.async.Promise
-import grails.async.PromiseFactory
-import groovy.transform.AutoFinal
-import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
-import org.grails.async.factory.BoundPromise
-
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import java.util.concurrent.locks.ReentrantLock
+
+import groovy.transform.AutoFinal
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+
+import grails.async.Promise
+import grails.async.PromiseFactory
+import org.grails.async.factory.BoundPromise
 
 /**
  * A child promise of a {@link FutureTaskPromise}
@@ -54,7 +54,7 @@ class FutureTaskChildPromise<T> implements Promise<T> {
 
     FutureTaskChildPromise(PromiseFactory promiseFactory, Promise<T> parent, Closure<T> callable) {
         this.parent = parent
-        this.callable = promiseFactory.applyDecorators(callable,null)
+        this.callable = promiseFactory.applyDecorators(callable, null)
         this.promiseFactory = promiseFactory
     }
 

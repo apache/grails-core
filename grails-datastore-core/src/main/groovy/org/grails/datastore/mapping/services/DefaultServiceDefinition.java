@@ -18,11 +18,11 @@
  */
 package org.grails.datastore.mapping.services;
 
-import groovy.transform.Internal;
-
 import java.util.Optional;
 import java.util.ServiceConfigurationError;
 import java.util.function.Supplier;
+
+import groovy.transform.Internal;
 
 /**
  * Default implementation of {@link ServiceDefinition}.

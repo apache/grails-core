@@ -18,9 +18,9 @@
  */
 package grails.validation;
 
-import groovy.lang.Range;
-
 import java.util.List;
+
+import groovy.lang.Range;
 
 /**
  * A interface for something that is constrained by various criteria

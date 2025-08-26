@@ -19,6 +19,7 @@
 package org.grails.spring.beans.factory
 
 import groovy.transform.CompileStatic
+
 import org.springframework.aop.target.HotSwappableTargetSource
 import org.springframework.beans.factory.FactoryBean
 import org.springframework.beans.factory.InitializingBean
@@ -31,9 +32,9 @@ import org.springframework.beans.factory.InitializingBean
  */
 @CompileStatic
 class HotSwappableTargetSourceFactoryBean implements FactoryBean<HotSwappableTargetSource>, InitializingBean {
+
     protected HotSwappableTargetSource targetSource
     protected Object target
-
 
     @Override
     HotSwappableTargetSource getObject() throws Exception {

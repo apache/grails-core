@@ -70,7 +70,7 @@ class DirtyCheckingMap implements Map, DirtyCheckableCollection {
     @Override
     Object remove(Object key) {
         parent.markDirty(property)
-        target.remove key
+        target.remove(key)
     }
 
     @Override

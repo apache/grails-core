@@ -19,8 +19,9 @@
 
 package grails.build.proxy
 
-import grails.util.BuildSettings
 import groovy.transform.CompileStatic
+
+import grails.util.BuildSettings
 
 /**
  * An Authenticator that authenticates via System properties
@@ -33,10 +34,10 @@ class SystemPropertiesAuthenticator extends Authenticator {
 
     @Override
     protected PasswordAuthentication getPasswordAuthentication() {
-        if(getRequestorType() == RequestorType.PROXY) {
+        if (getRequestorType() == RequestorType.PROXY) {
             return new PasswordAuthentication(
-                    System.getProperty(BuildSettings.PROXY_HTTP_USER, ""),
-                    System.getProperty(BuildSettings.PROXY_HTTP_PASSWORD, "").toCharArray());
+                    System.getProperty(BuildSettings.PROXY_HTTP_USER, ''),
+                    System.getProperty(BuildSettings.PROXY_HTTP_PASSWORD, '').toCharArray())
         }
         return null
     }

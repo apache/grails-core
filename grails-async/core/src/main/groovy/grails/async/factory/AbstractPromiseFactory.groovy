@@ -18,17 +18,18 @@
  */
 package grails.async.factory
 
+import java.util.concurrent.ConcurrentLinkedQueue
+
+import groovy.transform.AutoFinal
+import groovy.transform.CompileStatic
+
 import grails.async.Promise
 import grails.async.PromiseFactory
 import grails.async.PromiseList
 import grails.async.PromiseMap
 import grails.async.decorator.PromiseDecorator
 import grails.async.decorator.PromiseDecoratorLookupStrategy
-import groovy.transform.AutoFinal
-import groovy.transform.CompileStatic
 import org.grails.async.factory.BoundPromise
-
-import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * Abstract implementation of the {@link grails.async.PromiseFactory} interface, subclasses should extend
@@ -59,13 +60,13 @@ abstract class AbstractPromiseFactory implements PromiseFactory {
     }
 
     <T> Closure<T> applyDecorators(Closure<T> closure, List<PromiseDecorator> decorators) {
-        List<PromiseDecorator> allDecorators = decorators != null ? new ArrayList<PromiseDecorator>(decorators): new ArrayList<PromiseDecorator>()
+        List<PromiseDecorator> allDecorators = decorators != null ? new ArrayList<PromiseDecorator>(decorators) : new ArrayList<PromiseDecorator>()
         for (PromiseDecoratorLookupStrategy lookupStrategy : lookupStrategies) {
             allDecorators.addAll(lookupStrategy.findDecorators())
         }
         def decoratedClosure = closure
         if (!allDecorators.empty) {
-            for(PromiseDecorator decorator : allDecorators) {
+            for (PromiseDecorator decorator : allDecorators) {
                 decoratedClosure = decorator.decorate(decoratedClosure)
             }
         }
@@ -76,7 +77,7 @@ abstract class AbstractPromiseFactory implements PromiseFactory {
      * @see PromiseFactory#createPromise(java.util.List)
      */
     <T> Promise<List<T>> createPromise(List<Closure<T>> closures) {
-        return createPromise(closures,null)
+        return createPromise(closures, null)
     }
 
     /**
@@ -99,7 +100,7 @@ abstract class AbstractPromiseFactory implements PromiseFactory {
      */
     <T> Promise<List<T>> createPromise(Promise<T>... promises) {
         PromiseList<T> promiseList = new PromiseList<>()
-        for(Promise<T> promise : promises) {
+        for (Promise<T> promise : promises) {
             promiseList.add(promise)
         }
         return promiseList
@@ -133,7 +134,7 @@ abstract class AbstractPromiseFactory implements PromiseFactory {
     }
 
     protected <T> Promise<T> createPromiseInternal(Closure<T> closure) {
-       return createPromise(closure)
+        return createPromise(closure)
     }
 
     /**

@@ -18,11 +18,10 @@
  */
 package grails.util;
 
-import groovy.util.ObjectGraphBuilder;
-
 import java.lang.reflect.Field;
 import java.util.Collection;
 
+import groovy.util.ObjectGraphBuilder;
 import org.codehaus.groovy.runtime.InvokerHelper;
 
 /**
@@ -50,7 +49,7 @@ public class DomainBuilder extends ObjectGraphBuilder {
     public static class DefaultGrailsChildPropertySetter implements ChildPropertySetter {
         public void setChild(Object parent, Object child, String parentName, String propertyName) {
             if (isCollection(parent, child, parentName, propertyName)) {
-                String propName = propertyName.substring(0,1).toUpperCase() + propertyName.substring(1);
+                String propName = propertyName.substring(0, 1).toUpperCase() + propertyName.substring(1);
                 String methodName = "addTo" + propName;
                 InvokerHelper.invokeMethod(parent, methodName, child);
             }

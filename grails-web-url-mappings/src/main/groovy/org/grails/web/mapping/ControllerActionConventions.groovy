@@ -26,11 +26,11 @@ package org.grails.web.mapping
  */
 class ControllerActionConventions {
 
-    static String ACTION_SAVE = "save"
-    static String ACTION_UPDATE = "update"
-    static String ACTION_SHOW = "show"
-    static String ACTION_INDEX = "index"
-    static String ACTION_DELETE = "delete"
-    static String ACTION_EDIT = "edit"
-    static String ACTION_CREATE = "create"
+    static String ACTION_SAVE = 'save'
+    static String ACTION_UPDATE = 'update'
+    static String ACTION_SHOW = 'show'
+    static String ACTION_INDEX = 'index'
+    static String ACTION_DELETE = 'delete'
+    static String ACTION_EDIT = 'edit'
+    static String ACTION_CREATE = 'create'
 }

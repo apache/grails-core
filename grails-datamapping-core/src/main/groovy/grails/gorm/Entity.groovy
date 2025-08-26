@@ -18,7 +18,6 @@
  */
 package grails.gorm
 
-
 /**
  * Trait added to all domain classes
  *

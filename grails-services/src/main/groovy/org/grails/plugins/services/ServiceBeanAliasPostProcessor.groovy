@@ -18,16 +18,18 @@
  */
 package org.grails.plugins.services
 
-import grails.artefact.Artefact
-import grails.util.GrailsNameUtils
 import groovy.transform.CompileStatic
-import org.grails.core.artefact.ServiceArtefactHandler
+
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.beans.factory.support.GenericBeanDefinition
 import org.springframework.core.AliasRegistry
+
+import grails.artefact.Artefact
+import grails.util.GrailsNameUtils
+import org.grails.core.artefact.ServiceArtefactHandler
 
 /**
  * Registers bean aliases for service beans provided by plugins.
@@ -53,7 +55,7 @@ class ServiceBeanAliasPostProcessor implements BeanFactoryPostProcessor {
                 BeanDefinition beanDefinition = beanFactory.getBeanDefinition(beanName)
                 if (beanDefinition instanceof GenericBeanDefinition) {
                     GenericBeanDefinition genericBeanDefinition = (GenericBeanDefinition) beanDefinition
-                    if(genericBeanDefinition.hasBeanClass()) {
+                    if (genericBeanDefinition.hasBeanClass()) {
 
                         Class beanClass = genericBeanDefinition.beanClass
                         Artefact artefactAnn = beanClass?.getAnnotation(Artefact)
@@ -76,16 +78,15 @@ class ServiceBeanAliasPostProcessor implements BeanFactoryPostProcessor {
                         }
                     }
 
-
                 }
             }
         }
-        if(!aliasNamesToListOfBeanNames.isEmpty()) {
+        if (!aliasNamesToListOfBeanNames.isEmpty()) {
             aliasNamesToListOfBeanNames.each { String aliasName, List<String> listOfBeanNames ->
                 // only register the alias if their is only
                 // one candidate target bean for the alias
                 if (listOfBeanNames.size() == 1) {
-                    beanFactory.registerAlias listOfBeanNames[0], aliasName
+                    beanFactory.registerAlias(listOfBeanNames[0], aliasName)
                 }
             }
         }

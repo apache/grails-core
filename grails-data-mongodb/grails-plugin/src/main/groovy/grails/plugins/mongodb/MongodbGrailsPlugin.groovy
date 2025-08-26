@@ -19,21 +19,24 @@
 
 package grails.plugins.mongodb
 
-import grails.core.GrailsClass
-import grails.mongodb.bootstrap.MongoDbDataStoreSpringInitializer
-import grails.plugins.GrailsPlugin
-import grails.plugins.Plugin
-import grails.util.Metadata
 import groovy.transform.CompileStatic
-import org.grails.core.artefact.DomainClassArtefactHandler
-import org.grails.datastore.gorm.plugin.support.ConfigSupport
-import org.grails.datastore.mapping.mongo.MongoDatastore
+
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.core.env.PropertyResolver
 import org.springframework.transaction.PlatformTransactionManager
 
+import grails.core.GrailsClass
+import grails.mongodb.bootstrap.MongoDbDataStoreSpringInitializer
+import grails.plugins.GrailsPlugin
+import grails.plugins.Plugin
+import grails.util.Metadata
+import org.grails.core.artefact.DomainClassArtefactHandler
+import org.grails.datastore.gorm.plugin.support.ConfigSupport
+import org.grails.datastore.mapping.mongo.MongoDatastore
+
 class MongodbGrailsPlugin extends Plugin {
+
     def license = 'Apache 2.0 License'
     def organization = [name: 'Grails', url: 'https://grails.apache.org/']
     def issueManagement = [system: 'Github', url: 'https://github.com/apache/grails-core/issues']
@@ -53,17 +56,17 @@ class MongodbGrailsPlugin extends Plugin {
         initializer.registerApplicationIfNotPresent = false
 
         def applicationName = Metadata.getCurrent().getApplicationName()
-        if(!applicationName.contains('@')) {
+        if (!applicationName.contains('@')) {
             initializer.databaseName = applicationName
         }
         initializer.setSecondaryDatastore(hasHibernatePlugin())
 
-        return initializer.getBeanDefinitions((BeanDefinitionRegistry)applicationContext)
+        return initializer.getBeanDefinitions((BeanDefinitionRegistry) applicationContext)
     }
 
     @CompileStatic
     protected boolean hasHibernatePlugin() {
-        manager.allPlugins.any() { GrailsPlugin plugin -> plugin.name ==~ /hibernate\d*/}
+        manager.allPlugins.any() { GrailsPlugin plugin -> plugin.name ==~ /hibernate\d*/ }
     }
 
     @Override

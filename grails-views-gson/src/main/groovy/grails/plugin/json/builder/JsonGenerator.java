@@ -18,10 +18,6 @@
  */
 package grails.plugin.json.builder;
 
-import groovy.lang.Closure;
-import groovy.transform.stc.ClosureParams;
-import groovy.transform.stc.FromString;
-
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -29,6 +25,10 @@ import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
 import java.util.TimeZone;
+
+import groovy.lang.Closure;
+import groovy.transform.stc.ClosureParams;
+import groovy.transform.stc.FromString;
 
 /**
  * Temporary fork of groovy JsonGenerator until Groovy 2.5.0 is out.
@@ -253,7 +253,7 @@ public interface JsonGenerator {
          *                  a parameter of the given type
          */
         public <T> Options addConverter(Class<T> type,
-                                        @ClosureParams(value=FromString.class, options={"T","T,String"})
+                                        @ClosureParams(value = FromString.class, options = {"T", "T,String"})
                                                 Closure<?> closure)
         {
             Converter converter = new DefaultJsonGenerator.ClosureConverter(type, closure);

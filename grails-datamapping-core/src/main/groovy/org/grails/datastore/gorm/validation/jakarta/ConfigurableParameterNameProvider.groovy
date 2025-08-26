@@ -19,11 +19,12 @@
 
 package org.grails.datastore.gorm.validation.jakarta
 
+import java.lang.reflect.Constructor
+import java.lang.reflect.Method
+
 import groovy.transform.CompileStatic
 
 import jakarta.validation.ParameterNameProvider
-import java.lang.reflect.Constructor
-import java.lang.reflect.Method
 
 /**
  * A configurable parameter name provider
@@ -32,9 +33,9 @@ import java.lang.reflect.Method
  * @since 6.1
  */
 @CompileStatic
-class ConfigurableParameterNameProvider implements ParameterNameProvider{
+class ConfigurableParameterNameProvider implements ParameterNameProvider {
 
-    public static final String PREFIX = "arg"
+    public static final String PREFIX = 'arg'
     private Map<MethodKey, List<String>> parameterNames = [:]
 
     /**
@@ -45,7 +46,7 @@ class ConfigurableParameterNameProvider implements ParameterNameProvider{
      * @param parameterNames The parameter names
      */
     void addParameterNames(String methodName, Class[] parameterTypes, List<String> names) {
-        if(methodName != null && parameterTypes != null && names != null) {
+        if (methodName != null && parameterTypes != null && names != null) {
             parameterNames.put(new MethodKey(methodName, parameterTypes), names)
         }
     }
@@ -53,8 +54,8 @@ class ConfigurableParameterNameProvider implements ParameterNameProvider{
     @Override
     List<String> getParameterNames(Constructor<?> constructor) {
         Class[] parameterTypes = constructor.parameterTypes
-        List<String> existing = parameterNames.get(new MethodKey("<init>", parameterTypes))
-        if(existing != null) {
+        List<String> existing = parameterNames.get(new MethodKey('<init>', parameterTypes))
+        if (existing != null) {
             return existing
         }
         else {
@@ -67,7 +68,7 @@ class ConfigurableParameterNameProvider implements ParameterNameProvider{
     List<String> getParameterNames(Method method) {
         Class[] parameterTypes = method.parameterTypes
         List<String> existing = parameterNames.get(new MethodKey(method.name, parameterTypes))
-        if(existing != null) {
+        if (existing != null) {
             return existing
         }
         else {

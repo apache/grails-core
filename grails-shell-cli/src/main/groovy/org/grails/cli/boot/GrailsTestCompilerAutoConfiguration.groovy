@@ -18,11 +18,12 @@
  */
 package org.grails.cli.boot
 
-import grails.util.Environment
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.customizers.ImportCustomizer
+
+import grails.util.Environment
 import org.grails.cli.compiler.AstUtils
 import org.grails.cli.compiler.CompilerAutoConfiguration
 import org.grails.cli.compiler.DependencyCustomizer
@@ -35,18 +36,18 @@ import org.grails.cli.compiler.DependencyCustomizer
 class GrailsTestCompilerAutoConfiguration extends CompilerAutoConfiguration {
 
     public static final String[] DEFAULT_IMPORTS = [
-        "spock.lang",
-        "grails.test.mixin",
-        "grails.test.mixin.integration",
-        "grails.test.mixin.support",
-        "grails.artefact" ] as String[]
+        'spock.lang',
+        'grails.test.mixin',
+        'grails.test.mixin.integration',
+        'grails.test.mixin.support',
+        'grails.artefact' ] as String[]
 
     ClassNode lastMatch = null
 
     @Override
     boolean matches(ClassNode classNode) {
-        def matches = AstUtils.subclasses(classNode, "Specification")
-        if(matches) {
+        def matches = AstUtils.subclasses(classNode, 'Specification')
+        if (matches) {
             lastMatch = classNode
         }
         return matches
@@ -54,14 +55,14 @@ class GrailsTestCompilerAutoConfiguration extends CompilerAutoConfiguration {
 
     @Override
     void applyImports(ImportCustomizer imports) throws CompilationFailedException {
-        imports.addStarImports(DEFAULT_IMPORTS);
+        imports.addStarImports(DEFAULT_IMPORTS)
     }
 
     @Override
     void applyDependencies(DependencyCustomizer dependencies) throws CompilationFailedException {
-        if(lastMatch != null) {
-            def annotation = GrailsApplicationCompilerAutoConfiguration.createGrabAnnotation("org.apache.grails.testing", "grails-testing-support-core", Environment.class.getPackage().getImplementationVersion(), null, null, true)
-            lastMatch.addAnnotation(annotation);
+        if (lastMatch != null) {
+            def annotation = GrailsApplicationCompilerAutoConfiguration.createGrabAnnotation('org.apache.grails.testing', 'grails-testing-support-core', Environment.getPackage().getImplementationVersion(), null, null, true)
+            lastMatch.addAnnotation(annotation)
         }
     }
 }

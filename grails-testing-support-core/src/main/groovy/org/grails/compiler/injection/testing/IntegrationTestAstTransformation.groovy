@@ -18,28 +18,43 @@
  */
 package org.grails.compiler.injection.testing
 
-import grails.boot.test.GrailsApplicationContextLoader
-import grails.boot.config.GrailsAutoConfiguration
-import grails.testing.mixin.integration.Integration
-import groovy.transform.CompileStatic
-import org.apache.grails.common.compiler.GroovyTransformOrder
-import org.codehaus.groovy.ast.*
-import org.codehaus.groovy.ast.expr.*
-import org.codehaus.groovy.ast.stmt.*
-import org.codehaus.groovy.transform.TransformWithPriority
+import java.lang.reflect.Modifier
 
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.ast.ASTNode
+import org.codehaus.groovy.ast.AnnotatedNode
+import org.codehaus.groovy.ast.AnnotationNode
+import org.codehaus.groovy.ast.ClassHelper
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.FieldNode
+import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.Parameter
+import org.codehaus.groovy.ast.PropertyNode
+import org.codehaus.groovy.ast.expr.ArgumentListExpression
+import org.codehaus.groovy.ast.expr.BinaryExpression
+import org.codehaus.groovy.ast.expr.BooleanExpression
+import org.codehaus.groovy.ast.expr.ClassExpression
+import org.codehaus.groovy.ast.expr.ConstantExpression
+import org.codehaus.groovy.ast.expr.DeclarationExpression
+import org.codehaus.groovy.ast.expr.Expression
+import org.codehaus.groovy.ast.expr.GStringExpression
+import org.codehaus.groovy.ast.expr.MethodCallExpression
+import org.codehaus.groovy.ast.expr.VariableExpression
+import org.codehaus.groovy.ast.stmt.BlockStatement
+import org.codehaus.groovy.ast.stmt.EmptyStatement
+import org.codehaus.groovy.ast.stmt.ExpressionStatement
+import org.codehaus.groovy.ast.stmt.IfStatement
+import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
-import org.grails.compiler.injection.GrailsASTUtils
-import org.grails.io.support.MainClassFinder
-import org.grails.testing.context.junit4.GrailsJunit4ClassRunner
-import org.grails.testing.context.junit4.GrailsTestConfiguration
+import org.codehaus.groovy.transform.TransformWithPriority
+
 import org.junit.runner.RunWith
+
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory
@@ -49,7 +64,17 @@ import org.springframework.context.ApplicationContextAware
 import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.context.web.WebAppConfiguration
 
-import java.lang.reflect.Modifier
+import grails.boot.config.GrailsAutoConfiguration
+import grails.boot.test.GrailsApplicationContextLoader
+import grails.testing.mixin.integration.Integration
+import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.grails.compiler.injection.GrailsASTUtils
+import org.grails.io.support.MainClassFinder
+import org.grails.testing.context.junit4.GrailsJunit4ClassRunner
+import org.grails.testing.context.junit4.GrailsTestConfiguration
+
+import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
 
 /**
  * @author Graeme Rocher
@@ -59,7 +84,7 @@ import java.lang.reflect.Modifier
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 class IntegrationTestAstTransformation implements ASTTransformation, TransformWithPriority {
 
-    static final ClassNode MY_TYPE = new ClassNode(Integration.class)
+    static final ClassNode MY_TYPE = new ClassNode(Integration)
     public static final ClassNode CONTEXT_CONFIG_ANNOTATION = ClassHelper.make(ContextConfiguration)
     public static final ClassNode GRAILS_APPLICATION_CONTEXT_LOADER = ClassHelper.make(GrailsApplicationContextLoader)
     public static final ClassNode WEB_APP_CONFIGURATION = ClassHelper.make(WebAppConfiguration)
@@ -67,7 +92,7 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
     public static final ClassNode SPRING_APPLICATION_CONFIGURATION_CLASS_NODE = ClassHelper.make(GrailsTestConfiguration)
     public static final ClassNode RUN_WITH_ANNOTATION_NODE = ClassHelper.make(RunWith)
     public static final ClassNode SPRING_JUNIT4_CLASS_RUNNER = ClassHelper.make(GrailsJunit4ClassRunner)
-    public static final String SPEC_CLASS = "spock.lang.Specification"
+    public static final String SPEC_CLASS = 'spock.lang.Specification'
 
     @Override
     void visit(ASTNode[] astNodes, SourceUnit source) {
@@ -116,8 +141,8 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
             // first add context configuration
             // Example: @ContextConfiguration(loader = GrailsApplicationContextLoader, classes = Application)
             def contextConfigAnn = new AnnotationNode(CONTEXT_CONFIG_ANNOTATION)
-            contextConfigAnn.addMember("loader", new ClassExpression(GRAILS_APPLICATION_CONTEXT_LOADER))
-            contextConfigAnn.addMember("classes", new ClassExpression(applicationClassNode))
+            contextConfigAnn.addMember('loader', new ClassExpression(GRAILS_APPLICATION_CONTEXT_LOADER))
+            contextConfigAnn.addMember('classes', new ClassExpression(applicationClassNode))
             classNode.addAnnotation(contextConfigAnn)
 
             enhanceGebSpecWithPort(classNode)
@@ -126,12 +151,12 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
             // Must be a JUnit 4 test so add JUnit spring annotations
             // @RunWith(SpringJUnit4ClassRunner)
             def runWithAnnotation = new AnnotationNode(RUN_WITH_ANNOTATION_NODE)
-            runWithAnnotation.addMember("value", new ClassExpression(SPRING_JUNIT4_CLASS_RUNNER))
+            runWithAnnotation.addMember('value', new ClassExpression(SPRING_JUNIT4_CLASS_RUNNER))
             classNode.addAnnotation(runWithAnnotation)
 
             // @SpringApplicationConfiguration(classes = Application)
             def contextConfigAnn = new AnnotationNode(SPRING_APPLICATION_CONFIGURATION_CLASS_NODE)
-            contextConfigAnn.addMember("classes", new ClassExpression(applicationClassNode))
+            contextConfigAnn.addMember('classes', new ClassExpression(applicationClassNode))
             classNode.addAnnotation(contextConfigAnn)
         }
 
@@ -139,7 +164,7 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
         // @SpringBootTest
         def servletApi = null
         try {
-            servletApi = Class.forName("jakarta.servlet.ServletContext", false, getClass().classLoader)
+            servletApi = Class.forName('jakarta.servlet.ServletContext', false, getClass().classLoader)
         }
         catch (Exception e) {
             // ignore
@@ -150,14 +175,14 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
                 GrailsASTUtils.addAnnotationOrGetExisting(
                         classNode, SpringBootTest, [
                         webEnvironment: propX(classX(SpringBootTest.WebEnvironment), 'RANDOM_PORT'),
-                        useMainMethod : propX(classX(SpringBootTest.UseMainMethod), 'ALWAYS')
+                        useMainMethod: propX(classX(SpringBootTest.UseMainMethod), 'ALWAYS')
                 ] as Map<String, Object>
                 )
 
-                if (classNode.getProperty("serverPort") == null) {
-                    def serverPortField = new FieldNode("serverPort", Modifier.PROTECTED, ClassHelper.Integer_TYPE, classNode, new ConstantExpression(8080))
+                if (classNode.getProperty('serverPort') == null) {
+                    def serverPortField = new FieldNode('serverPort', Modifier.PROTECTED, ClassHelper.Integer_TYPE, classNode, new ConstantExpression(8080))
                     def valueAnnotation = new AnnotationNode(ClassHelper.make(Value))
-                    valueAnnotation.setMember("value", new ConstantExpression('${local.server.port}'))
+                    valueAnnotation.setMember('value', new ConstantExpression('${local.server.port}'))
                     serverPortField.addAnnotation(valueAnnotation)
 
                     classNode.addProperty(new PropertyNode(serverPortField, Modifier.PUBLIC, null, null))
@@ -174,18 +199,18 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
         def body = new BlockStatement()
 
         def ctxClass = ClassHelper.make(ApplicationContext)
-        def p = new Parameter(ctxClass, "ctx")
+        def p = new Parameter(ctxClass, 'ctx')
 
-        def getBeanFactoryMethodCall = new MethodCallExpression(new VariableExpression(p), "getAutowireCapableBeanFactory", GrailsASTUtils.ZERO_ARGUMENTS)
+        def getBeanFactoryMethodCall = new MethodCallExpression(new VariableExpression(p), 'getAutowireCapableBeanFactory', GrailsASTUtils.ZERO_ARGUMENTS)
 
-        def args = new ArgumentListExpression(new VariableExpression("this"), new ConstantExpression(AutowireCapableBeanFactory.AUTOWIRE_BY_NAME), new ConstantExpression(Boolean.FALSE))
-        def autoMethodCall = new MethodCallExpression(getBeanFactoryMethodCall, "autowireBeanProperties", args)
+        def args = new ArgumentListExpression(new VariableExpression('this'), new ConstantExpression(AutowireCapableBeanFactory.AUTOWIRE_BY_NAME), new ConstantExpression(Boolean.FALSE))
+        def autoMethodCall = new MethodCallExpression(getBeanFactoryMethodCall, 'autowireBeanProperties', args)
         body.addStatement(new ExpressionStatement(autoMethodCall))
-        classNode.addMethod("setApplicationContext", Modifier.PUBLIC, ClassHelper.VOID_TYPE, [p] as Parameter[], null, body)
+        classNode.addMethod('setApplicationContext', Modifier.PUBLIC, ClassHelper.VOID_TYPE, [p] as Parameter[], null, body)
     }
 
     protected void enhanceGebSpecWithPort(ClassNode classNode) {
-        if (GrailsASTUtils.isSubclassOf(classNode, "geb.spock.GebSpec")) {
+        if (GrailsASTUtils.isSubclassOf(classNode, 'geb.spock.GebSpec')) {
             def contextPathParameter = new Parameter(ClassHelper.make(String), 'serverContextPath')
             def cpValueAnnotation = new AnnotationNode(ClassHelper.make(Value))
             cpValueAnnotation.setMember('value', new ConstantExpression('${server.servlet.context-path:/}'))
@@ -196,7 +221,7 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
             spValueAnnotation.setMember('value', new ConstantExpression('${local.server.port}'))
             serverPortParameter.addAnnotation(spValueAnnotation)
 
-            Expression urlExpression = new GStringExpression('http://localhost:${serverPort}${serverContextPath}', [new ConstantExpression('http://localhost:'), new ConstantExpression(""), new ConstantExpression("")], [new VariableExpression('serverPort'), new VariableExpression('serverContextPath')] as List<Expression>)
+            Expression urlExpression = new GStringExpression('http://localhost:${serverPort}${serverContextPath}', [new ConstantExpression('http://localhost:'), new ConstantExpression(''), new ConstantExpression('')], [new VariableExpression('serverPort'), new VariableExpression('serverContextPath')] as List<Expression>)
 
             Expression baseUrlVariableExpression = new VariableExpression('$baseUrl', ClassHelper.make(String))
             Expression declareBaseUrlExpression = new DeclarationExpression(baseUrlVariableExpression, Token.newSymbol(Types.EQUALS, 0, 0), new MethodCallExpression(urlExpression, 'toString', new ArgumentListExpression()))
@@ -210,10 +235,10 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
             methodBody.addStatement(ifUrlEndsWithSlashStatement)
             def systemClassExpression = new ClassExpression(ClassHelper.make(System))
             def args = new ArgumentListExpression()
-            args.addExpression(new ConstantExpression("geb.build.baseUrl"))
+            args.addExpression(new ConstantExpression('geb.build.baseUrl'))
             args.addExpression(baseUrlVariableExpression)
-            methodBody.addStatement(new ExpressionStatement(new MethodCallExpression(systemClassExpression, "setProperty", args)))
-            def method = new MethodNode("configureGebBaseUrl", Modifier.PUBLIC, ClassHelper.VOID_TYPE, [contextPathParameter, serverPortParameter] as Parameter[], null, methodBody)
+            methodBody.addStatement(new ExpressionStatement(new MethodCallExpression(systemClassExpression, 'setProperty', args)))
+            def method = new MethodNode('configureGebBaseUrl', Modifier.PUBLIC, ClassHelper.VOID_TYPE, [contextPathParameter, serverPortParameter] as Parameter[], null, methodBody)
             method.addAnnotation(new AnnotationNode(ClassHelper.make(Autowired)))
             classNode.addMethod(method)
         }

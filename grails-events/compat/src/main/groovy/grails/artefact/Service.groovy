@@ -28,5 +28,4 @@ import grails.events.Events
  * @deprecated Here for compatibility, do not use directly
  */
 @Deprecated
-trait Service extends Events {
-}
+trait Service extends Events {}

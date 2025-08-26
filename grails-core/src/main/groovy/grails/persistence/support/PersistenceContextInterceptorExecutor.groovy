@@ -19,6 +19,7 @@
 package grails.persistence.support
 
 import groovy.transform.CompileStatic
+
 import org.springframework.context.ApplicationContext
 
 /**
@@ -44,7 +45,6 @@ class PersistenceContextInterceptorExecutor {
     void destroyPersistenceContext() {
         destroyPersistenceContextInternal(persistenceContextInterceptors)
     }
-
 
     static void initPersistenceContext(ApplicationContext appCtx) {
         if (appCtx) {
@@ -75,6 +75,5 @@ class PersistenceContextInterceptorExecutor {
             }
         }
     }
-
 
 }

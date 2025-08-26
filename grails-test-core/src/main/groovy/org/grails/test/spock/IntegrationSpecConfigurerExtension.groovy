@@ -18,18 +18,21 @@
  */
 package org.grails.test.spock
 
-import grails.util.Holders
+import java.lang.annotation.Annotation
+
 import groovy.transform.CompileStatic
-import org.grails.test.support.GrailsTestInterceptor
-import org.grails.test.support.GrailsTestMode
+
 import org.spockframework.runtime.extension.IAnnotationDrivenExtension
 import org.spockframework.runtime.extension.IMethodInterceptor
 import org.spockframework.runtime.extension.IMethodInvocation
 import org.spockframework.runtime.model.FeatureInfo
 import org.spockframework.runtime.model.SpecInfo
+
 import org.springframework.context.ApplicationContext
 
-import java.lang.annotation.Annotation
+import grails.util.Holders
+import org.grails.test.support.GrailsTestInterceptor
+import org.grails.test.support.GrailsTestMode
 
 /**
  * Spock extension that can be applied to Integration tests to make them Grails aware
@@ -43,20 +46,18 @@ class IntegrationSpecConfigurerExtension implements IAnnotationDrivenExtension<A
 
     void visitSpecAnnotation(Annotation annotation, SpecInfo spec) {
         final context = Holders.getApplicationContext()
-        if(context) {
-            for(FeatureInfo info in spec.getAllFeatures()) {
+        if (context) {
+            for (FeatureInfo info in spec.getAllFeatures()) {
                 info.addInterceptor(new IntegrationSpecMethodInterceptor(context))
             }
         }
 
     }
 
-
     @CompileStatic
     class IntegrationSpecMethodInterceptor implements IMethodInterceptor {
         ApplicationContext applicationContext
         GrailsTestMode mode
-
 
         IntegrationSpecMethodInterceptor(ApplicationContext applicationContext) {
             this.applicationContext = applicationContext
@@ -67,8 +68,8 @@ class IntegrationSpecConfigurerExtension implements IAnnotationDrivenExtension<A
         @Override
         void intercept(IMethodInvocation invocation) {
             final instance = invocation.instance ?: invocation.sharedInstance
-            if(instance) {
-                GrailsTestInterceptor interceptor = new GrailsTestInterceptor(instance, mode, applicationContext, ["Spec", "Specification", "Tests", "Test"] as String[])
+            if (instance) {
+                GrailsTestInterceptor interceptor = new GrailsTestInterceptor(instance, mode, applicationContext, ['Spec', 'Specification', 'Tests', 'Test'] as String[])
                 interceptor.wrap {
                     invocation.proceed()
                 }

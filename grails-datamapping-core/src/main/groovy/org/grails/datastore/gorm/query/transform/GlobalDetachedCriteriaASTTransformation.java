@@ -18,7 +18,8 @@
  */
 package org.grails.datastore.gorm.query.transform;
 
-import org.apache.grails.common.compiler.GroovyTransformOrder;
+import java.util.List;
+
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.ModuleNode;
@@ -28,7 +29,7 @@ import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
 import org.codehaus.groovy.transform.TransformWithPriority;
 
-import java.util.List;
+import org.apache.grails.common.compiler.GroovyTransformOrder;
 
 /**
  * Global version of the detached query transformer
@@ -36,7 +37,7 @@ import java.util.List;
  * @author Graeme Rocher
  * @since 1.0
  */
-@GroovyASTTransformation(phase= CompilePhase.CANONICALIZATION)
+@GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 public class GlobalDetachedCriteriaASTTransformation implements ASTTransformation, TransformWithPriority {
     /**
      * The method is invoked when an AST Transformation is active. For local transformations, it is invoked once

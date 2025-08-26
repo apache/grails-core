@@ -36,8 +36,8 @@ class DateInputRenderer implements DomainInputRenderer {
 
     @Override
     Closure renderInput(Map defaultAttributes, DomainProperty property) {
-        defaultAttributes.type = "date"
-        defaultAttributes.placeholder = "YYYY-MM-DD"
+        defaultAttributes.type = 'date'
+        defaultAttributes.placeholder = 'YYYY-MM-DD'
         return { ->
             input(defaultAttributes)
         }

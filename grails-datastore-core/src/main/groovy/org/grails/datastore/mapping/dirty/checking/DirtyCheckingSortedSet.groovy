@@ -21,7 +21,6 @@ package org.grails.datastore.mapping.dirty.checking
 
 import groovy.transform.CompileStatic
 
-
 /**
  * Dirty checks sorted sets
  *

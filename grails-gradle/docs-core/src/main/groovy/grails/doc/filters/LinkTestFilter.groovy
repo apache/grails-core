@@ -18,13 +18,12 @@
  */
 package grails.doc.filters
 
+import org.radeox.api.engine.WikiRenderEngine
+import org.radeox.filter.context.FilterContext
 import org.radeox.filter.regex.RegexTokenFilter
 import org.radeox.regex.MatchResult
-import org.radeox.filter.context.FilterContext
-import org.radeox.api.engine.WikiRenderEngine
-import org.radeox.util.StringBufferWriter
-import org.radeox.filter.interwiki.InterWiki
 import org.radeox.util.Encoder
+import org.radeox.util.StringBufferWriter
 
 /**
  * @author Graeme Rocher
@@ -61,8 +60,8 @@ class LinkTestFilter extends RegexTokenFilter {
         String original = name
 
         if (name == null) {
-           buffer.append(Encoder.escape(result.group(0)))
-           return
+            buffer.append(Encoder.escape(result.group(0)))
+            return
         }
 
         // trim the name and unescape it
@@ -70,7 +69,7 @@ class LinkTestFilter extends RegexTokenFilter {
 
         // Is there an alias like [alias|link] ?
         int pipeIndex = name.indexOf('|')
-        String alias = ""
+        String alias = ''
         if (-1 != pipeIndex) {
             alias = name.substring(0, pipeIndex)
             name = name.substring(pipeIndex + 1)
@@ -78,14 +77,14 @@ class LinkTestFilter extends RegexTokenFilter {
 
         int hashIndex = name.lastIndexOf('#')
 
-        String hash = ""
+        String hash = ''
         if (-1 != hashIndex && hashIndex != name.length() - 1) {
             hash = name.substring(hashIndex + 1)
             name = name.substring(0, hashIndex)
         }
 
-        if (name.indexOf("http://")>-1 || name.indexOf("https://")>-1) {
-            buffer << "<a href=\"${name}${hash ? '#'+hash:''}\" target=\"blank\">${Encoder.escape(alias)}</a>"
+        if (name.indexOf('http://') > -1 || name.indexOf('https://') > -1) {
+            buffer << "<a href=\"${name}${hash ? '#' + hash : ''}\" target=\"blank\">${Encoder.escape(alias)}</a>"
             return
         }
 

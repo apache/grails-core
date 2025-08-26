@@ -18,10 +18,11 @@
  */
 package grails.artefact
 
-import grails.util.Holders
-import grails.validation.Constrained
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
+
+import grails.util.Holders
+import grails.validation.Constrained
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.web.plugins.support.DefaultConstrainedDiscovery

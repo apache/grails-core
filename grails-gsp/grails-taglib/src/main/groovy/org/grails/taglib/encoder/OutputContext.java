@@ -18,11 +18,11 @@
  */
 package org.grails.taglib.encoder;
 
+import java.io.Writer;
+
 import grails.core.GrailsApplication;
 import org.grails.encoder.EncodingStateRegistry;
 import org.grails.taglib.AbstractTemplateVariableBinding;
-
-import java.io.Writer;
 
 /**
  * Created by lari on 02/01/15.
@@ -31,17 +31,22 @@ public interface OutputContext {
     EncodingStateRegistry getEncodingStateRegistry();
 
     OutputEncodingStack getCurrentOutputEncodingStack();
+
     void setCurrentOutputEncodingStack(OutputEncodingStack outputEncodingStack);
 
     Writer getCurrentWriter();
+
     void setCurrentWriter(Writer writer);
 
     AbstractTemplateVariableBinding createAndRegisterRootBinding();
+
     AbstractTemplateVariableBinding getBinding();
+
     void setBinding(AbstractTemplateVariableBinding binding);
 
     GrailsApplication getGrailsApplication();
 
     void setContentType(String contentType);
+
     boolean isContentTypeAlreadySet();
 }

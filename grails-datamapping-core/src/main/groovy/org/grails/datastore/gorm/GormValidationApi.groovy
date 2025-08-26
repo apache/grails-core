@@ -18,8 +18,17 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.validation.CascadingValidator
 import groovy.transform.CompileStatic
+
+import jakarta.persistence.FlushModeType
+
+import org.springframework.context.ApplicationEventPublisher
+import org.springframework.validation.Errors
+import org.springframework.validation.FieldError
+import org.springframework.validation.ObjectError
+import org.springframework.validation.Validator
+
+import grails.gorm.validation.CascadingValidator
 import org.grails.datastore.gorm.support.BeforeValidateHelper
 import org.grails.datastore.gorm.validation.ValidatorProvider
 import org.grails.datastore.mapping.core.Datastore
@@ -29,13 +38,6 @@ import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.validation.ValidationErrors
-import org.springframework.context.ApplicationEventPublisher
-import org.springframework.validation.Errors
-import org.springframework.validation.FieldError
-import org.springframework.validation.ObjectError
-import org.springframework.validation.Validator
-
-import jakarta.persistence.FlushModeType
 
 /**
  * Methods used for validating GORM instances.
@@ -47,7 +49,7 @@ import jakarta.persistence.FlushModeType
 @CompileStatic
 class GormValidationApi<D> extends AbstractGormApi<D> {
 
-    public static final String ARGUMENT_DEEP_VALIDATE = "deepValidate";
+    public static final String ARGUMENT_DEEP_VALIDATE = 'deepValidate'
 
     private Validator internalValidator
     BeforeValidateHelper beforeValidateHelper
@@ -73,10 +75,10 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
 
     Validator getValidator() {
         if (!internalValidator) {
-            if(persistentEntity instanceof ValidatorProvider) {
-                internalValidator = ((ValidatorProvider)persistentEntity).validator
+            if (persistentEntity instanceof ValidatorProvider) {
+                internalValidator = ((ValidatorProvider) persistentEntity).validator
             }
-            if(!internalValidator) {
+            if (!internalValidator) {
                 internalValidator = mappingContext.getEntityValidator(persistentEntity)
             }
         }
@@ -96,17 +98,17 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
             deepValidate = ClassUtils.getBooleanFromMap(ARGUMENT_DEEP_VALIDATE, arguments)
         }
 
-        if(hasDatastore) {
+        if (hasDatastore) {
             currentSession = datastore.currentSession
             previousFlushMode = currentSession.flushMode
             currentSession.setFlushMode(FlushModeType.COMMIT)
         }
         try {
-            beforeValidateHelper.invokeBeforeValidate instance, fields
+            beforeValidateHelper.invokeBeforeValidate(instance, fields)
             fireEvent(instance, fields)
 
             Validator validator = getValidator()
-            if(validator == null) {
+            if (validator == null) {
                 return true
             }
 
@@ -116,20 +118,20 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
 
             for (error in errors.allErrors) {
                 if (error instanceof FieldError) {
-                    if (((FieldError)error).bindingFailure) {
-                        localErrors.addError error
+                    if (((FieldError) error).bindingFailure) {
+                        localErrors.addError(error)
                     }
                 } else {
-                    localErrors.addError error
+                    localErrors.addError(error)
                 }
             }
 
             if (validator instanceof CascadingValidator) {
-                ((CascadingValidator)validator).validate instance, localErrors, deepValidate
+                ((CascadingValidator) validator).validate(instance, localErrors, deepValidate)
             } else if (validator instanceof org.grails.datastore.gorm.validation.CascadingValidator) {
-                ((org.grails.datastore.gorm.validation.CascadingValidator) validator).validate instance, localErrors, deepValidate
+                ((org.grails.datastore.gorm.validation.CascadingValidator) validator).validate(instance, localErrors, deepValidate)
             } else {
-                validator.validate instance, localErrors
+                validator.validate(instance, localErrors)
             }
 
             if (fields) {
@@ -140,7 +142,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
 
             return !getErrors(instance).hasErrors()
         } finally {
-            if(previousFlushMode != null) {
+            if (previousFlushMode != null) {
                 currentSession.setFlushMode(previousFlushMode)
             }
         }
@@ -154,7 +156,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * @return True if the instance is valid
      */
     boolean validate(D instance, Map arguments) {
-        doValidate instance, arguments, (List)null
+        doValidate(instance, arguments, (List) null)
     }
 
     /**
@@ -165,7 +167,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * @return True if the instance is valid
      */
     boolean validate(D instance, List fields) {
-        doValidate instance, (Map)null, fields
+        doValidate(instance, (Map) null, fields)
     }
 
     private ValidationErrors filterErrors(ValidationErrors errors, Set validatedFields, Object target) {
@@ -176,7 +178,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
         for (ObjectError error : errors.getAllErrors()) {
 
             if (error instanceof FieldError) {
-                FieldError fieldError = (FieldError)error
+                FieldError fieldError = (FieldError) error
                 if (!validatedFields.contains(fieldError.getField())) continue
             }
 
@@ -208,9 +210,8 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * @return True if the instance is valid
      */
     boolean validate(D instance) {
-        doValidate instance, (Map)null, (List)null
+        doValidate(instance, (Map) null, (List) null)
     }
-
 
     /**
      * Obtains the errors for an instance
@@ -218,8 +219,8 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * @return The {@link Errors} instance
      */
     Errors getErrors(D instance) {
-        if(instance instanceof GormValidateable) {
-            GormValidateable gv = (GormValidateable)instance
+        if (instance instanceof GormValidateable) {
+            GormValidateable gv = (GormValidateable) instance
             def errors = gv.errors
             if (errors == null) {
                 errors = resetErrors(instance)
@@ -228,7 +229,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
         }
         else {
 
-            Errors errors = (Errors)datastore.currentSession.getAttribute(instance, GormProperties.ERRORS)
+            Errors errors = (Errors) datastore.currentSession.getAttribute(instance, GormProperties.ERRORS)
             if (errors == null) {
                 errors = resetErrors(instance)
             }
@@ -248,7 +249,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * @param errors The errors
      */
     void setErrors(D instance, Errors errors) {
-        if(instance instanceof GormValidateable) {
+        if (instance instanceof GormValidateable) {
             GormValidateable gv = (GormValidateable) instance
             gv.errors = errors
         }
@@ -271,12 +272,12 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * @return True if errors exist
      */
     boolean hasErrors(D instance) {
-        if(instance instanceof GormValidateable) {
+        if (instance instanceof GormValidateable) {
             GormValidateable gv = (GormValidateable) instance
             return gv.hasErrors()
         }
         else {
-            Errors errors = (Errors)datastore.currentSession.getAttribute(instance, GormProperties.ERRORS)
+            Errors errors = (Errors) datastore.currentSession.getAttribute(instance, GormProperties.ERRORS)
             errors?.hasErrors()
         }
     }
