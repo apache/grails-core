@@ -18,22 +18,24 @@
  */
 package org.grails.plugins.web.async.mvc
 
-import grails.async.Promise
-import grails.async.PromiseList
-import grails.async.web.AsyncGrailsWebRequest
 import groovy.transform.CompileStatic
-import org.grails.plugins.web.async.GrailsAsyncContext
-import org.grails.web.errors.GrailsExceptionResolver
-import org.grails.web.util.GrailsApplicationAttributes
-import org.grails.web.servlet.mvc.ActionResultTransformer
-import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.springframework.web.context.request.async.WebAsyncManager
-import org.springframework.web.context.request.async.WebAsyncUtils
-import org.springframework.web.servlet.ModelAndView
 
 import jakarta.servlet.AsyncContext
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+
+import org.springframework.web.context.request.async.WebAsyncManager
+import org.springframework.web.context.request.async.WebAsyncUtils
+import org.springframework.web.servlet.ModelAndView
+
+import grails.async.Promise
+import grails.async.PromiseList
+import grails.async.web.AsyncGrailsWebRequest
+import org.grails.plugins.web.async.GrailsAsyncContext
+import org.grails.web.errors.GrailsExceptionResolver
+import org.grails.web.servlet.mvc.ActionResultTransformer
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.GrailsApplicationAttributes
 
 /**
  * Handles an Async response from a controller

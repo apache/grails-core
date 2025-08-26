@@ -19,6 +19,7 @@
 package org.grails.plugins.databasemigration.liquibase
 
 import groovy.transform.CompileStatic
+
 import liquibase.command.CommandResultsBuilder
 import liquibase.command.CommandScope
 import liquibase.command.core.DiffChangelogCommandStep
@@ -31,6 +32,7 @@ import liquibase.database.ObjectQuotingStrategy
 import liquibase.diff.DiffResult
 import liquibase.diff.output.DiffOutputControl
 import liquibase.serializer.ChangeLogSerializerFactory
+
 import grails.util.GrailsStringUtils
 
 @CompileStatic

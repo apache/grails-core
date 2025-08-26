@@ -19,6 +19,7 @@
 package grails.async.services
 
 import groovy.transform.CompileStatic
+
 import grails.persistence.support.PersistenceContextInterceptorExecutor
 import grails.async.decorator.PromiseDecorator
 

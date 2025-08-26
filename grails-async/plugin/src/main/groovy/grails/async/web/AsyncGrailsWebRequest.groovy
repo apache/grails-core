@@ -26,14 +26,15 @@ import org.springframework.context.ApplicationContext
 import org.springframework.util.Assert
 import org.springframework.web.context.request.async.AsyncWebRequest
 
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.function.Consumer
+
 import jakarta.servlet.AsyncContext
 import jakarta.servlet.AsyncEvent
 import jakarta.servlet.AsyncListener
 import jakarta.servlet.ServletContext
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.function.Consumer
 
 /**
  * Implementation of Spring 4.0 {@link AsyncWebRequest} interface for Grails

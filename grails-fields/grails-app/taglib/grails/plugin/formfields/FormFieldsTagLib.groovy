@@ -18,12 +18,26 @@
  */
 package grails.plugin.formfields
 
-import grails.util.GrailsStringUtils
+import java.sql.Blob
+import java.text.NumberFormat
+import java.time.LocalDate
+import java.time.LocalDateTime
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovy.xml.MarkupBuilder
 import groovy.xml.MarkupBuilderHelper
+
 import jakarta.servlet.http.HttpServletRequest
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.MessageSource
+import org.springframework.context.MessageSourceResolvable
+import org.springframework.context.NoSuchMessageException
+import org.springframework.web.servlet.LocaleResolver
+
+import grails.util.GrailsStringUtils
 import org.grails.buffer.FastStringWriter
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -41,17 +55,6 @@ import org.grails.scaffolding.model.DomainModelService
 import org.grails.scaffolding.model.property.Constrained
 import org.grails.scaffolding.model.property.DomainPropertyFactory
 import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.context.MessageSource
-import org.springframework.context.MessageSourceResolvable
-import org.springframework.context.NoSuchMessageException
-import org.springframework.web.servlet.LocaleResolver
-
-import java.sql.Blob
-import java.text.NumberFormat
-import java.time.LocalDate
-import java.time.LocalDateTime
 
 import static FormFieldsTemplateService.toPropertyNameFormat
 

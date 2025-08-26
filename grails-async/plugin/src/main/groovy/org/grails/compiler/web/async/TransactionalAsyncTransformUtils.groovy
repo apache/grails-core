@@ -18,12 +18,14 @@
  */
 package org.grails.compiler.web.async
 
-import grails.async.services.TransactionalPromiseDecorator
+import java.lang.reflect.Method
+
 import groovy.transform.CompileStatic
+
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.annotation.Transactional
 
-import java.lang.reflect.Method
+import grails.async.services.TransactionalPromiseDecorator
 
 /**
  * Utility methods for use by Async transformations

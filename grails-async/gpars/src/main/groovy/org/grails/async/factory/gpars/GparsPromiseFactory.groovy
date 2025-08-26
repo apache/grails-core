@@ -18,17 +18,18 @@
  */
 package org.grails.async.factory.gpars
 
-import grails.async.Promise
-import grails.async.PromiseList
+import java.util.concurrent.TimeUnit
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
+
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowVariable
 
+import grails.async.Promise
+import grails.async.PromiseList
 import grails.async.factory.AbstractPromiseFactory
-
-import java.util.concurrent.TimeUnit
 
 /**
  * GPars implementation of the {@link grails.async.PromiseFactory} interface

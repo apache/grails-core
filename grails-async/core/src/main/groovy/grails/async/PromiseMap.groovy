@@ -18,10 +18,10 @@
  */
 package grails.async
 
+import java.util.concurrent.TimeUnit
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
-
-import java.util.concurrent.TimeUnit
 
 /**
  * A map-like structure for promises that allows waiting for all values in the map to be populated before

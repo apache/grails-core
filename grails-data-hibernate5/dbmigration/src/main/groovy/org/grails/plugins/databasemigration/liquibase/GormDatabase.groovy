@@ -19,6 +19,7 @@
 package org.grails.plugins.databasemigration.liquibase
 
 import groovy.transform.CompileStatic
+
 import liquibase.database.DatabaseConnection
 import liquibase.database.OfflineConnection
 import liquibase.exception.DatabaseException
@@ -27,11 +28,12 @@ import liquibase.snapshot.DatabaseSnapshot
 import liquibase.snapshot.JdbcDatabaseSnapshot
 import liquibase.snapshot.SnapshotControl
 import liquibase.structure.DatabaseObject
-import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataSources
 import org.hibernate.dialect.Dialect
 import org.hibernate.service.ServiceRegistry
+
+import org.grails.orm.hibernate.HibernateDatastore
 
 @CompileStatic
 class GormDatabase extends HibernateDatabase {

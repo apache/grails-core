@@ -18,13 +18,14 @@
  */
 package org.grails.async.factory
 
-import grails.async.Promise
-import grails.async.PromiseList
-import grails.async.factory.AbstractPromiseFactory
+import java.util.concurrent.TimeUnit
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
 
-import java.util.concurrent.TimeUnit
+import grails.async.Promise
+import grails.async.PromiseList
+import grails.async.factory.AbstractPromiseFactory
 
 /**
  * A {@link grails.async.PromiseFactory} implementation that constructors promises that execute synchronously.

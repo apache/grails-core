@@ -18,10 +18,11 @@
  */
 package org.grails.plugins.databasemigration.liquibase
 
-import grails.config.Config
-import grails.core.GrailsApplication
+import java.sql.Connection
+
 import groovy.sql.Sql
 import groovy.transform.CompileStatic
+
 import liquibase.Scope
 import liquibase.change.AbstractChange
 import liquibase.change.ChangeMetaData
@@ -40,10 +41,12 @@ import liquibase.parser.core.ParsedNode
 import liquibase.parser.core.ParsedNodeException
 import liquibase.resource.ResourceAccessor
 import liquibase.statement.SqlStatement
-import org.grails.plugins.databasemigration.DatabaseMigrationTransactionManager
+
 import org.springframework.context.ApplicationContext
 
-import java.sql.Connection
+import grails.config.Config
+import grails.core.GrailsApplication
+import org.grails.plugins.databasemigration.DatabaseMigrationTransactionManager
 
 import static org.grails.plugins.databasemigration.PluginConstants.DATA_SOURCE_NAME_KEY
 

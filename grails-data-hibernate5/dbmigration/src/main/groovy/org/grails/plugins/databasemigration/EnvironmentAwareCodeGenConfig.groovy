@@ -20,6 +20,7 @@ package org.grails.plugins.databasemigration
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
 import org.grails.config.CodeGenConfig
 
 @CompileStatic

@@ -19,12 +19,13 @@
 
 package org.grails.plugins.databasemigration
 
-import grails.gorm.transactions.GrailsTransactionTemplate
 import org.springframework.context.ApplicationContext
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.DefaultTransactionDefinition
 import org.springframework.util.Assert
+
+import grails.gorm.transactions.GrailsTransactionTemplate
 
 /**
  * Created by Jim on 7/15/2016.

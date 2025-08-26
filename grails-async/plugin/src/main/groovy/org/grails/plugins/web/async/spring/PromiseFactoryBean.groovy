@@ -19,11 +19,13 @@
 
 package org.grails.plugins.web.async.spring
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.FactoryBean
+
 import grails.async.PromiseFactory
 import grails.async.Promises
-import groovy.transform.CompileStatic
 import org.grails.async.factory.PromiseFactoryBuilder
-import org.springframework.beans.factory.FactoryBean
 
 /**
  * Factory bean for Spring integration

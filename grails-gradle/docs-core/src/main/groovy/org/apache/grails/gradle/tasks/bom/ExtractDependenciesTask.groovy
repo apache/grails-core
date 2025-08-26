@@ -21,6 +21,8 @@ package org.apache.grails.gradle.tasks.bom
 
 import java.util.regex.Pattern
 
+import io.spring.gradle.dependencymanagement.org.apache.maven.model.Model
+import io.spring.gradle.dependencymanagement.org.apache.maven.model.io.xpp3.MavenXpp3Reader
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
@@ -42,9 +44,6 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-
-import io.spring.gradle.dependencymanagement.org.apache.maven.model.Model
-import io.spring.gradle.dependencymanagement.org.apache.maven.model.io.xpp3.MavenXpp3Reader
 
 /**
  * Grails Bom files define their dependencies in a series of maps, this task takes those maps and generates an

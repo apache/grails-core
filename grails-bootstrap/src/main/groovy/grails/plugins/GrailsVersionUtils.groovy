@@ -18,11 +18,11 @@
  */
 package grails.plugins
 
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 
 import grails.plugins.metadata.GrailsPlugin
-
-import java.util.regex.Pattern
 
 @CompileStatic
 class GrailsVersionUtils {

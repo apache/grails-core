@@ -19,17 +19,18 @@
 
 package org.grails.plugins.databasemigration.liquibase
 
+import java.nio.file.FileSystem
+import java.nio.file.FileSystems
+import java.nio.file.Path
+import java.nio.file.Paths
+
 import groovy.transform.CompileStatic
+
 import liquibase.resource.AbstractPathResourceAccessor
 import liquibase.resource.PathResource
 import liquibase.resource.Resource
 import liquibase.resource.ResourceAccessor
 import liquibase.resource.ZipPathHandler
-
-import java.nio.file.FileSystem
-import java.nio.file.FileSystems
-import java.nio.file.Path
-import java.nio.file.Paths
 
 @CompileStatic
 class EmbeddedJarPathHandler extends ZipPathHandler {

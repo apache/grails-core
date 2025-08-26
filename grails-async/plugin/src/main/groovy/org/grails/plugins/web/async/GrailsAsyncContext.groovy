@@ -18,12 +18,13 @@
  */
 package org.grails.plugins.web.async
 
-import grails.async.web.AsyncGrailsWebRequest
-import grails.persistence.support.PersistenceContextInterceptor
 import jakarta.servlet.AsyncContext
 import jakarta.servlet.AsyncListener
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+
+import grails.async.web.AsyncGrailsWebRequest
+import grails.persistence.support.PersistenceContextInterceptor
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.WebUtils
 

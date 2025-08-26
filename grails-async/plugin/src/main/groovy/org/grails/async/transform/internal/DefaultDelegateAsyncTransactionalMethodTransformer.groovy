@@ -18,6 +18,8 @@
  */
 package org.grails.async.transform.internal
 
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
@@ -36,15 +38,15 @@ import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
-import org.grails.compiler.injection.GrailsASTUtils
-import org.grails.compiler.web.async.TransactionalAsyncTransformUtils
-import grails.transaction.TransactionManagerAware
 import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.syntax.Types
+
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.annotation.Transactional
 
-import java.lang.reflect.Modifier
+import org.grails.compiler.injection.GrailsASTUtils
+import org.grails.compiler.web.async.TransactionalAsyncTransformUtils
+import grails.transaction.TransactionManagerAware
 
 /**
  * Modifies the @DelegateAsync transform to take into account transactional services. New instance should be created per class transform, as state is held.

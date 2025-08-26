@@ -18,17 +18,19 @@
  */
 package org.grails.plugins.databasemigration.liquibase
 
+import java.sql.Connection
+
 import groovy.transform.CompileStatic
+
 import liquibase.Liquibase
 import liquibase.database.Database
 import liquibase.exception.DatabaseException
 import liquibase.exception.LiquibaseException
 import liquibase.integration.spring.SpringLiquibase
 import liquibase.resource.ResourceAccessor
+
 import org.springframework.context.ApplicationContext
 import org.springframework.core.io.DefaultResourceLoader
-
-import java.sql.Connection
 
 import static org.grails.plugins.databasemigration.PluginConstants.DATA_SOURCE_NAME_KEY
 

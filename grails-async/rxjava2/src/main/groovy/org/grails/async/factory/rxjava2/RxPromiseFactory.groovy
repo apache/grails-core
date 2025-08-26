@@ -19,17 +19,19 @@
 
 package org.grails.async.factory.rxjava2
 
-import grails.async.Promise
-import grails.async.PromiseList
-import grails.async.factory.AbstractPromiseFactory
+import java.util.concurrent.TimeUnit
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
+
 import io.reactivex.Observable
 import io.reactivex.Single
 import io.reactivex.schedulers.Schedulers
-import org.grails.async.factory.BoundPromise
 
-import java.util.concurrent.TimeUnit
+import grails.async.Promise
+import grails.async.PromiseList
+import grails.async.factory.AbstractPromiseFactory
+import org.grails.async.factory.BoundPromise
 
 /**
  * An RxJava {@link grails.async.PromiseFactory} implementation

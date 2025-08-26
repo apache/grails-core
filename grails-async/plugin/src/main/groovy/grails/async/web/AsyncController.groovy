@@ -20,16 +20,18 @@
 package grails.async.web
 
 import groovy.transform.CompileStatic
-import org.grails.plugins.web.async.GrailsAsyncContext
-import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.grails.web.util.GrailsApplicationAttributes
+
+import jakarta.servlet.AsyncContext
+import jakarta.servlet.http.HttpServletRequest
+
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.async.AsyncWebRequest
 import org.springframework.web.context.request.async.WebAsyncManager
 import org.springframework.web.context.request.async.WebAsyncUtils
 
-import jakarta.servlet.AsyncContext
-import jakarta.servlet.http.HttpServletRequest
+import org.grails.plugins.web.async.GrailsAsyncContext
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.GrailsApplicationAttributes
 
 /**
  * Exposes a startAsync() method for access to the Servlet 3.x API

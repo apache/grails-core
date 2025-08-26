@@ -19,6 +19,7 @@
 package org.grails.plugins.databasemigration.liquibase
 
 import groovy.transform.CompileStatic
+
 import liquibase.changelog.ChangeLogChild
 import liquibase.changelog.ChangeSet
 import liquibase.serializer.ChangeLogSerializer

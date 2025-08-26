@@ -18,17 +18,18 @@
  */
 package grails.async.factory
 
+import java.util.concurrent.ConcurrentLinkedQueue
+
+import groovy.transform.AutoFinal
+import groovy.transform.CompileStatic
+
 import grails.async.Promise
 import grails.async.PromiseFactory
 import grails.async.PromiseList
 import grails.async.PromiseMap
 import grails.async.decorator.PromiseDecorator
 import grails.async.decorator.PromiseDecoratorLookupStrategy
-import groovy.transform.AutoFinal
-import groovy.transform.CompileStatic
 import org.grails.async.factory.BoundPromise
-
-import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * Abstract implementation of the {@link grails.async.PromiseFactory} interface, subclasses should extend

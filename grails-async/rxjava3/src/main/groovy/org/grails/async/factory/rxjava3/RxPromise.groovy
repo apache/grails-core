@@ -19,10 +19,14 @@
 
 package org.grails.async.factory.rxjava3
 
-import grails.async.Promise
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Observer
 import io.reactivex.rxjava3.core.Scheduler
@@ -34,11 +38,9 @@ import io.reactivex.rxjava3.functions.Consumer
 import io.reactivex.rxjava3.functions.Function
 import io.reactivex.rxjava3.subjects.ReplaySubject
 import io.reactivex.rxjava3.subjects.Subject
-import org.grails.async.factory.BoundPromise
 
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
+import grails.async.Promise
+import org.grails.async.factory.BoundPromise
 
 /**
  * Promise based on RxJava 3.x

@@ -19,9 +19,10 @@
 package org.grails.plugins.web.async
 
 import groovy.transform.CompileStatic
-import org.grails.web.servlet.mvc.GrailsWebRequest
+
 import grails.async.decorator.PromiseDecorator
 import grails.async.decorator.PromiseDecoratorLookupStrategy
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * A promise decorated lookup strategy that binds a WebRequest to the promise thread

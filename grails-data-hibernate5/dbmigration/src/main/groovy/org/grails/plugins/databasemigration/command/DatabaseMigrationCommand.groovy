@@ -18,11 +18,16 @@
  */
 package org.grails.plugins.databasemigration.command
 
-import grails.config.ConfigMap
+import java.nio.file.Path
+import java.text.DateFormat
+import java.text.ParseException
+import java.text.SimpleDateFormat
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
+
 import liquibase.Contexts
 import liquibase.LabelExpression
 import liquibase.Liquibase
@@ -67,14 +72,11 @@ import liquibase.statement.core.RawSqlStatement
 import liquibase.structure.core.Catalog
 import liquibase.util.LiquibaseUtil
 import liquibase.util.StreamUtil
+
+import grails.config.ConfigMap
 import org.grails.build.parsing.CommandLine
 import org.grails.plugins.databasemigration.DatabaseMigrationException
 import org.grails.plugins.databasemigration.NoopVisitor
-
-import java.nio.file.Path
-import java.text.DateFormat
-import java.text.ParseException
-import java.text.SimpleDateFormat
 
 import static org.grails.plugins.databasemigration.DatabaseMigrationGrailsPlugin.getDataSourceName
 import static org.grails.plugins.databasemigration.DatabaseMigrationGrailsPlugin.isDefaultDataSource

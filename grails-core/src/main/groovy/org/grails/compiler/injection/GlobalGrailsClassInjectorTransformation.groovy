@@ -25,7 +25,6 @@ import java.nio.charset.StandardCharsets
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.springframework.core.CollectionFactory
 import groovy.xml.MarkupBuilder
 import groovy.xml.StreamingMarkupBuilder
 import groovy.xml.XmlSlurper
@@ -43,6 +42,8 @@ import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.TransformWithPriority
+
+import org.springframework.core.CollectionFactory
 
 import grails.artefact.Artefact
 import grails.compiler.ast.ClassInjector

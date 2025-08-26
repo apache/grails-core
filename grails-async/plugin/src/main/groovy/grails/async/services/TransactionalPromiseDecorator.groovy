@@ -18,9 +18,12 @@
  */
 package grails.async.services
 
+import java.lang.annotation.Annotation
+import java.lang.reflect.Method
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
-import grails.async.decorator.PromiseDecorator
+
 import org.springframework.beans.BeanWrapper
 import org.springframework.beans.PropertyAccessorFactory
 import org.springframework.transaction.PlatformTransactionManager
@@ -31,8 +34,7 @@ import org.springframework.transaction.support.TransactionCallback
 import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.util.ReflectionUtils
 
-import java.lang.annotation.Annotation
-import java.lang.reflect.Method
+import grails.async.decorator.PromiseDecorator
 
 /**
  * A {@link PromiseDecorator} that wraps a {@link grails.async.Promise} in a transaction

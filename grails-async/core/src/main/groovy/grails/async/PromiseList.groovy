@@ -18,10 +18,10 @@
  */
 package grails.async
 
+import java.util.concurrent.TimeUnit
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
-
-import java.util.concurrent.TimeUnit
 
 /**
  * A list of promises

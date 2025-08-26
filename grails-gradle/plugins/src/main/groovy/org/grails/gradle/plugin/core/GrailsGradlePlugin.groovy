@@ -23,6 +23,8 @@ import javax.inject.Inject
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
+import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
+import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
 import org.apache.tools.ant.filters.EscapeUnicode
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.api.Action
@@ -54,8 +56,6 @@ import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.process.JavaForkOptions
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 
-import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
-import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
 import org.springframework.boot.gradle.dsl.SpringBootExtension
 import org.springframework.boot.gradle.plugin.ResolveMainClassName
 import org.springframework.boot.gradle.plugin.SpringBootPlugin

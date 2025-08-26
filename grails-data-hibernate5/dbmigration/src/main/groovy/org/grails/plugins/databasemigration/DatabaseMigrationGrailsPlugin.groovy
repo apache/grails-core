@@ -18,15 +18,17 @@
  */
 package org.grails.plugins.databasemigration
 
-import grails.plugins.Plugin
+import javax.sql.DataSource
+
 import liquibase.parser.ChangeLogParser
 import liquibase.parser.ChangeLogParserFactory
+
+import org.springframework.context.ApplicationContext
+
+import grails.plugins.Plugin
 import org.grails.plugins.databasemigration.liquibase.GrailsLiquibase
 import org.grails.plugins.databasemigration.liquibase.GrailsLiquibaseFactory
 import org.grails.plugins.databasemigration.liquibase.GroovyChangeLogParser
-import org.springframework.context.ApplicationContext
-
-import javax.sql.DataSource
 
 class DatabaseMigrationGrailsPlugin extends Plugin {
 

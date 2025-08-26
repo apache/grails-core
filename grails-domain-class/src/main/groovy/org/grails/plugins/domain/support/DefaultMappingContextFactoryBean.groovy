@@ -19,9 +19,17 @@
 
 package org.grails.plugins.domain.support
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.FactoryBean
+import org.springframework.beans.factory.InitializingBean
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.ApplicationContext
+import org.springframework.context.MessageSource
+import org.springframework.core.env.PropertyResolver
+
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
-import groovy.transform.CompileStatic
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.gorm.validation.constraints.factory.ConstraintFactory
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry
@@ -29,12 +37,6 @@ import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettingsBuilder
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
-import org.springframework.beans.factory.FactoryBean
-import org.springframework.beans.factory.InitializingBean
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.ApplicationContext
-import org.springframework.context.MessageSource
-import org.springframework.core.env.PropertyResolver
 
 /**
  * A factory bean for creating the default mapping context where an implementation of GORM is not present
