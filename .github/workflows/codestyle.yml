@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Code Style
+name: "Code Style"
 on:
   push:
     branches:
@@ -25,8 +25,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  codestyle:
-    name: "Check Code Style"
+  check_core_projects:
+    name: "Core Projects"
     runs-on: ubuntu-24.04
     steps:
       - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
@@ -44,6 +44,36 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔎 Check Core Projects"
         run: ./gradlew codeStyle
+      - name: "📤 Upload Failure Reports"
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-reports
+          path: '**/build/reports/'
+  check_gradle_plugin_projects:
+    name: "Gradle Plugin Projects"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: 17
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔎 Check Gradle Plugin Projects"
         working-directory: grails-gradle
         run: ./gradlew codeStyle
+      - name: "📤 Upload Failure Reports"
+        if: failure()
+        uses: actions/upload-artifact@v4
+        working-directory: grails-gradle
+        with:
+          name: gradle-plugin-reports
+          path: '**/build/reports/'
