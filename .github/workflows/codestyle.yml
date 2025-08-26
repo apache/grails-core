@@ -43,7 +43,7 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔎 Check Core Projects"
-        run: ./gradlew codeStyle
+        run: ./gradlew codeStyle --continue
       - name: "📤 Upload Failure Reports"
         if: failure()
         uses: actions/upload-artifact@v4
@@ -71,7 +71,7 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔎 Check Gradle Plugin Projects"
         working-directory: grails-gradle
-        run: ./gradlew codeStyle
+        run: ./gradlew codeStyle --continue
       - name: "📤 Upload Failure Reports"
         if: failure()
         uses: actions/upload-artifact@v4
