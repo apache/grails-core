@@ -42,7 +42,7 @@ public class MicronautHttpClient implements Feature {
 
     @Override
     public String getDescription() {
-        return "Adds support for the Micronaut HTTP client";
+        return "Add support for the Micronaut HTTP client.";
     }
 
     @Override

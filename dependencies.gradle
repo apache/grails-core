@@ -26,7 +26,7 @@ ext {
             'asciidoctor-gradle-jvm.version': '4.0.4',
             'asciidoctorj.version'          : '3.0.0',
             'asset-pipeline-gradle.version' : '5.0.15',
-            'byte-buddy.version'            : '1.17.6',
+            'byte-buddy.version'            : '1.17.7',
             'commons-text.version'          : '1.13.1',
             'directory-watcher.version'     : '0.19.1',
             'gradle-spock.version'          : '2.3-groovy-3.0',
@@ -39,7 +39,7 @@ ext {
             'jquery.version'                : '3.7.1',
             'objenesis.version'             : '3.4',
             'gradle-spock.version'          : '2.3-groovy-3.0',
-            'spring-boot.version'           : '3.5.4',
+            'spring-boot.version'           : '3.5.5',
             'springloaded.version'          : '1.2.8.RELEASE',
     ]
 

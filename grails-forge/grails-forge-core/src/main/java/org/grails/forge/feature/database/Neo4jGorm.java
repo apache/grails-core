@@ -44,7 +44,7 @@ public class Neo4jGorm extends GormOneOfFeature {
 
     @Override
     public String getDescription() {
-        return "Configures GORM for Neo4j for Groovy applications";
+        return "Configure GORM for using Neo4j";
     }
 
     @Override

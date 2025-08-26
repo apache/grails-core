@@ -55,7 +55,7 @@ public class GradleSettingsFile implements GradleSettingsFileFeature {
 
     @Override
     public String getDescription() {
-        return "Generate Gradle Settings File for use in multi-project builds and with Gradle Settings Plugins";
+        return "Add a Gradle settings file for multi-project builds or for applying settings plugins.";
     }
 
     @Override

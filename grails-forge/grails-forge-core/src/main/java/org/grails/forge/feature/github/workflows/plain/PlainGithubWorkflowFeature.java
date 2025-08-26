@@ -36,12 +36,12 @@ public class PlainGithubWorkflowFeature extends GitHubWorkflowFeature {
 
     @Override
     public String getTitle() {
-        return "Basic Java CI Workflow";
+        return "GitHub Actions CI Workflow";
     }
 
     @Override
     public String getDescription() {
-        return "Adds a Github Actions Workflow to Build and Test Grails Application";
+        return "Add a GitHub Actions workflow that builds and tests the project.";
     }
 
     @Override

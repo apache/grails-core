@@ -33,4 +33,9 @@ abstract class SpringBootEmbeddedServlet implements OneOfFeature, DefaultFeature
     public String getCategory() {
         return Category.SERVER;
     }
+
+    @Override
+    public boolean isVisible() {
+        return false;
+    }
 }

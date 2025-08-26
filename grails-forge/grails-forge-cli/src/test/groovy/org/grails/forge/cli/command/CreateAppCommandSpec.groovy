@@ -96,9 +96,10 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
 
         then:
         noExceptionThrown()
-        baos.toString().contains("$previewFeature.name [PREVIEW]")
+        previewFeature == null
+        //baos.toString().contains("$previewFeature.name [PREVIEW]")
         communityFeature == null
-//        baos.toString().contains("$communityFeature.name [COMMUNITY]")
+        //baos.toString().contains("$communityFeature.name [COMMUNITY]")
 
         cleanup:
         System.setOut(old)
