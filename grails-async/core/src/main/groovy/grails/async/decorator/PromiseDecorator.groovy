@@ -33,5 +33,5 @@ interface PromiseDecorator {
      * @param c The closure to decorate
      * @return The decorated closure
      */
-    <D> Closure<D> decorate(Closure<D> c)
+    <D> Closure<D> decorate (Closure<D> c)
 }
