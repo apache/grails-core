@@ -35,7 +35,7 @@ import java.util.Set;
  */
 public class CollectionUtils {
 
-    private CollectionUtils () {
+    private CollectionUtils() {
         // static only
     }
 

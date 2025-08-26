@@ -33,7 +33,7 @@ final class PropertyFileUtils {
         // prevent  instantiation
     }
 
-    static ByteArrayInputStream makePropertiesOutputReproducible (ByteArrayOutputStream propertyOutputStream) {
+    static ByteArrayInputStream makePropertiesOutputReproducible(ByteArrayOutputStream propertyOutputStream) {
         List<String> lines = propertyOutputStream.toString(StandardCharsets.ISO_8859_1.name()).readLines()
 
         ByteArrayOutputStream toWrite = new ByteArrayOutputStream()
