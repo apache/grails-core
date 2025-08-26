@@ -73,7 +73,6 @@ jobs:
       - name: "📤 Upload Failure Reports"
         if: failure()
         uses: actions/upload-artifact@v4
-        working-directory: grails-gradle
         with:
           name: gradle-plugin-reports
-          path: '**/build/reports/'
+          path: 'grails-gradle/**/build/reports/'
