@@ -49,7 +49,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: core-reports
-          path: '**/build/reports/'
+          path: |
+            **/build/reports/checkstyle/
+            **/build/reports/codenarc/
   check_gradle_plugin_projects:
     name: "Gradle Plugin Projects"
     runs-on: ubuntu-24.04
@@ -75,4 +77,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gradle-plugin-reports
-          path: 'grails-gradle/**/build/reports/'
+          path: |
+            grails-gradle/**/build/reports/checkstyle/
+            grails-gradle/**/build/reports/codenarc/
