@@ -1,0 +1,58 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Grails provides a set of default application profiles that serve as foundational templates for generating various types of projects.
+These profiles encapsulate specific commands, templates, plugins, and configurations tailored to different development needs, allowing developers to quickly generate applications or plugins with predefined structures.
+The profiles are resolved from Maven Central by default.
+
+Default profiles include `base`, `web`, `rest-api`, `plugin`, `web-plugin`, `rest-api-plugin` and `profile`. Most extend from other profiles to promote reusability and consistency.
+
+Available profiles can be listed, when not inside a Grails' project directory:
+
+[source,bash]
+----
+$ grails list-plugins
+----
+
+[source,bash]
+----
+| Available Profiles
+--------------------
+* base - The base profile extended by other profiles
+* plugin - Profile for plugins designed to work across all profiles
+* profile - A profile for creating new Grails profiles
+* rest-api - Profile for REST API applications
+* rest-api-plugin - Profile for REST API plugins
+* web - Profile for Web applications
+* web-plugin - Profile for Plugins designed for Web applications
+----
+
+The `base` profile acts as the foundational layer extended by most other profiles, providing essential skeleton directories, core dependencies, and basic commands that form the backbone of any Grails project.
+It ensures a standardized starting point without imposing specific application paradigms.
+
+For application development, the `web` profile is the default when creating a new Grails app, optimized for full-stack web applications with features like GSP views, controllers, and the asset pipeline.
+The `rest-api` profile, on the other hand, targets REST API-centric projects, emphasizing RESTful endpoints, JSON handling, and configurations suitable for backend services.
+
+The `plugin` profile is designed for creating reusable plugins that can integrate across various Grails applications.
+Similarly, the `web-plugin` profile focuses on plugins tailored specifically for web applications, inheriting from the web and plugin profiles.
+The `rest-api-plugin` profile is specialized for developing plugins that provide REST API functionality, inheriting from the rest-api and plugin profiles, enabling the creation of modular, reusable components focused on API endpoints.
+
+Lastly, the `profile` profile is intended for developers creating custom profiles.
+
+These profiles collectively enable flexible project generation while maintaining Grails' convention-over-configuration philosophy.
