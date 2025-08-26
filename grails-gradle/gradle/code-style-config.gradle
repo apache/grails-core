@@ -36,9 +36,11 @@ extensions.configure(CodeNarcExtension) {
 }
 
 // Do not run Code Style checks if the property 'skipCodeStyle' is defined
-if (findProperty('skipCodeStyle')) {
-    tasks.withType(Checkstyle).configureEach { enabled = false }
-    tasks.withType(CodeNarc).configureEach { enabled = false }
+tasks.withType(Checkstyle).configureEach {
+    onlyIf { !project.hasProperty('skipCodeStyle') }
+}
+tasks.withType(CodeNarc).configureEach {
+    onlyIf { !project.hasProperty('skipCodeStyle') }
 }
 
 tasks.register('codeStyle') {
