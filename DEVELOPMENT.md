@@ -19,6 +19,7 @@ limitations under the License.
 * onlyHibernate5Tests - runs only a hibernate5 related test
 * onlyMongodbTests - runs only a mongodb related test
 * onlyCoreTests - runs tests that do not include mongo, hibernate, or functional
+* skipCodeStyle - does not run code style checks
 * skipFunctionalTests - does not run the functional tests
 * skipHibernate5Tests - does not run hibernate5 related tests
 * skipMongodbTests - does not run mongo related tests
