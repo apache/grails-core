@@ -27,7 +27,7 @@ Available profiles can be listed, when not inside a Grails' project directory:
 
 [source,bash]
 ----
-$ grails list-plugins
+$ grails list-profiles
 ----
 
 [source,bash]
