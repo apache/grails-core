@@ -69,13 +69,13 @@
             <version>1.2.1</version>
         </dependency>
         <dependency>
-            <!-- use version from https://github.com/apache/grails-core/blob/7.0.x/gradle.properties-->
+            <!-- use version from https://github.com/apache/grails-core/blob/7.0.x/gradle.properties -->
             <groupId>io.micronaut</groupId>
             <artifactId>micronaut-http-client</artifactId>
-            <version>4.6.5</version>
+            <version>4.9.10</version>
         </dependency>
         <dependency>
-            <!-- use version from https://github.com/apache/grails-core/blob/7.0.x/gradle.properties-->
+            <!-- use version from https://github.com/apache/grails-core/blob/7.0.x/gradle.properties -->
             <groupId>io.micronaut.serde</groupId>
             <artifactId>micronaut-serde-jackson</artifactId>
             <version>2.11.0</version>
