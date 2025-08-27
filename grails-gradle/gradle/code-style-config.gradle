@@ -37,9 +37,11 @@ extensions.configure(CodeNarcExtension) {
 
 // Do not run Code Style checks if the property 'skipCodeStyle' is defined
 tasks.withType(Checkstyle).configureEach {
+    group = 'verification'
     onlyIf { !project.hasProperty('skipCodeStyle') }
 }
 tasks.withType(CodeNarc).configureEach {
+    group = 'verification'
     onlyIf { !project.hasProperty('skipCodeStyle') }
 }
 
@@ -50,20 +52,10 @@ tasks.register('codeStyle') {
     dependsOn(tasks.withType(CodeNarc))
 }
 
-tasks.named('checkstyleMain') {
-    group = 'verification'
-}
-
 tasks.named('checkstyleTest') {
-    group = 'verification'
     enabled = false // Do not check test sources at this time
 }
 
-tasks.named('codenarcMain') {
-    group = 'verification'
-}
-
 tasks.named('codenarcTest') {
-    group = 'verification'
     enabled = false // Do not check test sources at this time
 }
