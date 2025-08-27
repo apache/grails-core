@@ -277,7 +277,6 @@ jobs:
           ./gradlew publish aggregateChecksums aggregatePublishedArtifacts
           --no-build-cache
           --rerun-tasks
-          -Dorg.gradle.internal.publish.checksums.insecure=true
       - name: "📤 Upload grails-gradle checksums"
         uses: actions/upload-artifact@v4
         with:
@@ -381,7 +380,8 @@ jobs:
         working-directory: 'grails-forge'
         run: >
           ./gradlew publish aggregateChecksums aggregatePublishedArtifacts
-          -Dorg.gradle.internal.publish.checksums.insecure=true --no-build-cache --rerun-tasks
+          --no-build-cache
+          --rerun-tasks
       - name: "📤 Upload grails-forge checksums"
         uses: actions/upload-artifact@v4
         with:
