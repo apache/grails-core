@@ -80,3 +80,32 @@ jobs:
           path: |
             grails-gradle/**/build/reports/checkstyle/
             grails-gradle/**/build/reports/codenarc/
+  check_gradle_forge_projects:
+    name: "Gradle Forge Projects"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: 17
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔎 Check Gradle Forge Projects"
+        working-directory: grails-forge
+        run: ./gradlew codeStyle
+      - name: "📤 Upload Failure Reports"
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-plugin-reports
+          path: |
+            grails-forge/**/build/reports/checkstyle/
+            grails-forge/**/build/reports/checkstyleNohttp/
+            grails-forge/**/build/reports/codenarc/
