@@ -270,10 +270,10 @@ include::commandLine/creatingCustomCommands.adoc[]
 
 include::profiles.adoc[]
 
-[[defaultProfiles]]
-=== Default Grails Profiles
+[[standardProfiles]]
+=== Standard Grails Profiles
 
-include::profiles/defaultProfiles.adoc[]
+include::profiles/standardProfiles.adoc[]
 
 [[webProfile]]
 ==== Web Profile

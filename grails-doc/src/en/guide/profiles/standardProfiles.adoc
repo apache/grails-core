@@ -17,11 +17,11 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Grails provides a set of default application profiles that serve as foundational templates for generating various types of projects.
+Grails provides a set of standard application profiles that serve as foundational templates for generating various types of projects.
 These profiles encapsulate specific commands, templates, plugins, and configurations tailored to different development needs, allowing developers to quickly generate applications or plugins with predefined structures.
-The profiles are resolved from Maven Central by default.
+The standard profiles are resolved from Maven Central.
 
-Default profiles include `base`, `web`, `rest-api`, `plugin`, `web-plugin`, `rest-api-plugin` and `profile`. Most extend from other profiles to promote reusability and consistency.
+Standard profiles include `base`, `web`, `rest-api`, `plugin`, `web-plugin`, `rest-api-plugin` and `profile`. Most extend from other profiles to promote reusability and consistency.
 
 Available profiles can be listed, when not inside a Grails' project directory:
 
