@@ -41,7 +41,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Core Projects"
         run: ./gradlew codeStyle
       - name: "📤 Upload Failure Reports"
@@ -68,7 +68,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Gradle Plugin Projects"
         working-directory: grails-gradle
         run: ./gradlew codeStyle
@@ -80,8 +80,8 @@ jobs:
           path: |
             grails-gradle/**/build/reports/checkstyle/
             grails-gradle/**/build/reports/codenarc/
-  check_gradle_forge_projects:
-    name: "Gradle Forge Projects"
+  check_grails_forge_projects:
+    name: "Forge Projects"
     runs-on: ubuntu-24.04
     steps:
       - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
@@ -96,15 +96,15 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@v4
         with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
-      - name: "🔎 Check Gradle Forge Projects"
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
+      - name: "🔎 Check Forge Projects"
         working-directory: grails-forge
         run: ./gradlew codeStyle
       - name: "📤 Upload Failure Reports"
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: gradle-plugin-reports
+          name: forge-reports
           path: |
             grails-forge/**/build/reports/checkstyle/
             grails-forge/**/build/reports/checkstyleNohttp/
