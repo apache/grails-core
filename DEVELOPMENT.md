@@ -14,7 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Various properties that control which tasks to run
+# Development
+
+## Useful Custom Gradle tasks
+
+These tasks can be run like so:
+
+`./gradlew publishGuide`
+
+* `codeStyle` - runs all code style checks
+* `publishGuide` - generates the user guide in the `grails-doc/build/original-guide`
+
+## Various properties that control which tasks to run
 
 These can be set on the command line like so:
 
@@ -32,5 +43,5 @@ These can be set on the command line like so:
 * `skipMongodbTests` - does not run mongo related tests
 * `skipTests` - no tests will run
 
-# Start a mongo docker container (containers will start by default)
+## Start a mongo docker container (containers will start by default)
 `docker run -d  --name mongo-on-docker  -p 27017:27017 mongo`
