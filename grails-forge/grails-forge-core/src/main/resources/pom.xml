@@ -78,7 +78,7 @@
             <!-- use version from https://github.com/apache/grails-core/blob/7.0.x/gradle.properties -->
             <groupId>io.micronaut.serde</groupId>
             <artifactId>micronaut-serde-jackson</artifactId>
-            <version>2.11.0</version>
+            <version>2.15.1</version>
         </dependency>
     </dependencies>
 </project>
