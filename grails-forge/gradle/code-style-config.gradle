@@ -1,0 +1,103 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+import com.diffplug.gradle.spotless.SpotlessExtension
+import io.spring.nohttp.gradle.NoHttpExtension
+
+apply plugin: 'checkstyle'
+apply plugin: 'codenarc'
+apply plugin: 'com.diffplug.spotless'
+apply plugin: 'io.spring.nohttp' // enforce https everywhere
+
+extensions.configure(SpotlessExtension) {
+    // Explicit `it` is required in extension configuration block
+    it.java {
+        target('src/main/java/**/*.java')
+        // Formatters:
+        licenseHeaderFile(rootProject.layout.projectDirectory.file('config/spotless.license.java'))
+    }
+    it.groovy {
+        target('src/main/groovy/**')
+        // Formatters:
+        licenseHeaderFile(rootProject.layout.projectDirectory.file('config/spotless.license.java'))
+    }
+    it.format('javaMisc') {
+        target(
+                'src/main/**/module-info.java',
+                'src/main/**/package-info.java',
+        )
+        // Formatters:
+        licenseHeaderFile(rootProject.layout.projectDirectory.file('config/spotless.license.java'), '\\/\\*\\*')
+    }
+}
+
+extensions.configure(CheckstyleExtension) {
+    // Explicit `it` is required in extension configuration
+    it.configDirectory = rootProject.layout.projectDirectory.dir('config/checkstyle').asFile
+    it.toolVersion = checkstyleVersion
+}
+
+extensions.configure(CodeNarcExtension) {
+    // Explicit `it` is required in extension configuration
+    it.configFile = rootProject.layout.projectDirectory.file('../etc/config/codenarc/codenarc.groovy').asFile
+    it.toolVersion = codenarcVersion
+}
+
+extensions.configure(NoHttpExtension) {
+    // Explicit `it` is required in extension configuration block
+    it.source.exclude(
+            'build/**',
+            'src/main/resources/assets/**',
+            'src/main/resources/main/pom.xml',
+            'src/test/**',
+    )
+}
+
+// Do not run Code Style checks if the property 'skipCodeStyle' is defined
+tasks.withType(Checkstyle).configureEach {
+    group = 'verification'
+    onlyIf { !project.hasProperty('skipCodeStyle') }
+}
+tasks.withType(CodeNarc).configureEach {
+    group = 'verification'
+    onlyIf { !project.hasProperty('skipCodeStyle') }
+}
+
+tasks.register('codeStyle') {
+    group = 'verification'
+    description = 'Runs code style checks'
+    dependsOn(tasks.withType(Checkstyle))
+    dependsOn(tasks.withType(CodeNarc))
+}
+
+tasks.named('checkstyleTest') {
+    enabled = false // Do not check test sources at this time
+}
+
+tasks.named('checkstyleMain') {
+    dependsOn('spotlessCheck')
+}
+
+gradle.taskGraph.whenReady {
+    if (tasks.findByName('codenarcTest')) {
+        tasks.named('codenarcTest') {
+            enabled = false // Do not check test sources at this time
+        }
+    }
+}
