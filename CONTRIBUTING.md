@@ -239,7 +239,8 @@ changes.
 
 ## Code Style
 
-Grails code style mostly mirrors the Spring Framework's [Style Guide](https://github.com/spring-projects/spring-framework/blob/main/CONTRIBUTING.md#source-code-style).  We are currently working on a more detailed proposal under ticket [#13754](https://github.com/apache/grails-core/issues/13754).
+Grails has a limited set of code styles enforced by Checkstyle (for Java) and CodeNarc (for Groovy).
+To check compliance with the code styles, run the `codeStyle` Gradle task.
 
 ### Commit Messages
 
