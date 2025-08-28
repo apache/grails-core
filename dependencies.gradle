@@ -23,7 +23,7 @@
 ext {
     gradleBomDependencyVersions = [
             'ant.version'                   : '1.10.15',
-            'asciidoctor-gradle-jvm.version': '4.0.4',
+            'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.0',
             'asset-pipeline-gradle.version' : '5.0.15',
             'byte-buddy.version'            : '1.17.7',
