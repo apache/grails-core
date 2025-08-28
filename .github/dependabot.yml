@@ -27,9 +27,7 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
   - package-ecosystem: gradle
-    directories:
-      - "/"
-      - "/grails-forge"
+    directory: "/grails-forge"
     schedule:
       interval: daily
     open-pull-requests-limit: 10
