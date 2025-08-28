@@ -82,13 +82,34 @@ combinedGroovydoc.configure { Groovydoc gdoc ->
                 possibleSources
             }
             .flatten()
-    gdoc.source(sources.collect { SourceSet it -> [it.allSource.srcDirs, it.allSource.srcDirs] }.flatten().findAll { File srcDir ->
-        if (!(srcDir.name in ['java', 'groovy'])) {
-            return false
-        }
 
-        srcDir.exists()
-    }.unique())
+    List<File> baseSourceDirs = sources
+            .collect { SourceSet it -> it.allSource.srcDirs }
+            .flatten()
+            .findAll { File srcDir ->
+                if (!(srcDir.name in ['java', 'groovy'])) {
+                    return false
+                }
+                srcDir.exists()
+            }
+
+    // Collect source directories from included builds (composite builds)
+    // Gradle will not provide the included build projects or source sets, so we inspect the file system
+    List<File> includedBuildSourceDirs = gradle.includedBuilds
+            .collectMany { includedBuild ->
+                def sourceDirs = []
+                includedBuild.projectDir.eachDir { File dir ->
+                    ['src/main/java', 'src/main/groovy'].each { rel ->
+                        File sourceDir = new File(dir, rel)
+                        if (sourceDir.isDirectory()) {
+                            sourceDirs << sourceDir
+                        }
+                    }
+                }
+                sourceDirs
+            }
+
+    gdoc.source(project.files((baseSourceDirs + includedBuildSourceDirs).unique()))
 
     gdoc.classpath = files(sources.collect { SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten().unique())
     gdoc.destinationDir = project.layout.buildDirectory.dir('combined-api/api').get().asFile
