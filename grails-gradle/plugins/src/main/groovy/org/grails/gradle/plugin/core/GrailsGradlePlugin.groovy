@@ -18,15 +18,13 @@
  */
 package org.grails.gradle.plugin.core
 
-import grails.util.BuildSettings
-import grails.util.Environment
-import grails.util.GrailsNameUtils
-import grails.util.Metadata
+import javax.inject.Inject
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
 import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
 import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
-import org.apache.grails.gradle.common.PropertyFileUtils
 import org.apache.tools.ant.filters.EscapeUnicode
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.api.Action
@@ -57,6 +55,18 @@ import org.gradle.api.tasks.testing.Test
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.process.JavaForkOptions
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
+
+import org.springframework.boot.gradle.dsl.SpringBootExtension
+import org.springframework.boot.gradle.plugin.ResolveMainClassName
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+import org.springframework.boot.gradle.tasks.bundling.BootArchive
+import org.springframework.boot.gradle.tasks.run.BootRun
+
+import grails.util.BuildSettings
+import grails.util.Environment
+import grails.util.GrailsNameUtils
+import grails.util.Metadata
+import org.apache.grails.gradle.common.PropertyFileUtils
 import org.grails.build.parsing.CommandLineParser
 import org.grails.gradle.plugin.agent.AgentTasksEnhancer
 import org.grails.gradle.plugin.commands.ApplicationContextCommandTask
@@ -65,17 +75,6 @@ import org.grails.gradle.plugin.model.GrailsClasspathToolingModelBuilder
 import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
 import org.grails.io.support.FactoriesLoaderSupport
-import org.springframework.boot.gradle.dsl.SpringBootExtension
-import org.springframework.boot.gradle.plugin.ResolveMainClassName
-import org.springframework.boot.gradle.plugin.SpringBootPlugin
-import org.springframework.boot.gradle.tasks.bundling.BootArchive
-import org.springframework.boot.gradle.tasks.run.BootRun
-
-import javax.inject.Inject
-import java.nio.charset.StandardCharsets
-import java.time.LocalDate
-import java.time.ZoneOffset
-import java.util.regex.Pattern
 
 /**
  * The main Grails gradle plugin implementation
@@ -161,13 +160,13 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 return null
             }
 
-            """
+            '''
                 withConfig(configuration) {
                     imports {
                         star 'java.time'
                     }
                 }
-            """.stripIndent(16)
+            '''.stripIndent(16)
         }
     }
 
@@ -277,12 +276,12 @@ class GrailsGradlePlugin extends GroovyPlugin {
     protected void excludeDependencies(Project project) {
         // Perhaps change to check that if this is a Grails plugin, don't exclude?
         // Adding an exclusion to every dependency in a pom is very verbose and
-        // greatly increases the size of the pom. 
+        // greatly increases the size of the pom.
         // It would be nice to have documented in a comment why this global exclude is in here
         String slf4jPreventExclusion = project.properties['slf4jPreventExclusion']
         if (!slf4jPreventExclusion || slf4jPreventExclusion != 'true') {
             project.configurations.configureEach { Configuration configuration ->
-                configuration.exclude group: 'org.slf4j', module: 'slf4j-simple'
+                configuration.exclude(group: 'org.slf4j', module: 'slf4j-simple')
             }
         }
     }
@@ -290,13 +289,13 @@ class GrailsGradlePlugin extends GroovyPlugin {
     protected void configureProfile(Project project) {
         if (!project.configurations.names.contains(GrailsClasspathToolingModelBuilder.PROFILE_CONFIGURATION_NAME)) {
             project.configurations.register(GrailsClasspathToolingModelBuilder.PROFILE_CONFIGURATION_NAME).configure { Configuration profileConfiguration ->
-                profileConfiguration.description = "Configuration that allows for finding profile artifacts so commands, scripts, and other helpers can be found by the Grails Shell"
+                profileConfiguration.description = 'Configuration that allows for finding profile artifacts so commands, scripts, and other helpers can be found by the Grails Shell'
                 profileConfiguration.canBeConsumed = false
                 profileConfiguration.canBeResolved = true
                 profileConfiguration.transitive = true
 
                 profileConfiguration.defaultDependencies { DependencySet deps ->
-                    String defaultProfileCoordinates = "org.apache.grails.profiles:${System.getProperty("grails.profile") ?: getDefaultProfile()}:${project.properties['grailsVersion'] ?: BuildSettings.grailsVersion}" as String
+                    String defaultProfileCoordinates = "org.apache.grails.profiles:${System.getProperty('grails.profile') ?: getDefaultProfile()}:${project.properties['grailsVersion'] ?: BuildSettings.grailsVersion}" as String
                     project.logger.info('No Grails profile is defined for project {}, defaulting to: {}', project.name, defaultProfileCoordinates)
                     deps.add(
                             project.dependencies.create(defaultProfileCoordinates)
@@ -309,7 +308,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                         project.logger.info('Dependency: {}:{} did not define a version, defaulting to grails version {}', details.requested.group, details.requested.name, grailsVersion)
 
                         details.useVersion(grailsVersion)
-                        details.because("Grails Profile defined without a version, defaulting to configured Grails Version")
+                        details.because('Grails Profile defined without a version, defaulting to configured Grails Version')
                     }
                 }
             }
@@ -359,12 +358,13 @@ class GrailsGradlePlugin extends GroovyPlugin {
             File resourcesDir = SourceSets.findMainSourceSet(project).output.resourcesDir
             File buildInfoFile = new File(resourcesDir, 'META-INF/grails.build.info')
 
-
             Task buildPropertiesTask = project.tasks.create('buildProperties')
-            Map<String, Object> buildPropertiesContents = ['grails.env'            : Environment.isSystemSet() ? Environment.getCurrent().getName() : Environment.PRODUCTION.getName(),
-                                                           'info.app.name'         : project.name,
-                                                           'info.app.version'      : project.version instanceof Serializable ? project.version : project.version.toString(),
-                                                           'info.app.grailsVersion': project.properties.get('grailsVersion')]
+            Map<String, Object> buildPropertiesContents = [
+                'grails.env': Environment.isSystemSet() ? Environment.getCurrent().getName() : Environment.PRODUCTION.getName(),
+                'info.app.name': project.name,
+                'info.app.version': project.version instanceof Serializable ? project.version : project.version.toString(),
+                'info.app.grailsVersion': project.properties.get('grailsVersion')
+            ]
 
             buildPropertiesTask.inputs.properties(buildPropertiesContents)
             buildPropertiesTask.outputs.file(buildInfoFile)
@@ -373,7 +373,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 ant.mkdir(dir: buildInfoFile.parentFile)
                 ant.propertyfile(file: buildInfoFile) {
                     for (me in buildPropertiesTask.inputs.properties) {
-                        entry key: me.key, value: me.value
+                        entry(key: me.key, value: me.value)
                     }
                 }
                 PropertyFileUtils.makePropertiesFileReproducible(buildInfoFile)
@@ -556,18 +556,18 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 }
             }
 
-            task.systemProperty Metadata.APPLICATION_NAME, project.name
-            task.systemProperty Metadata.APPLICATION_VERSION, (project.version instanceof Serializable ? project.version : project.version.toString())
-            task.systemProperty Metadata.APPLICATION_GRAILS_VERSION, grailsVersion
-            task.systemProperty Environment.KEY, defaultGrailsEnv
-            task.systemProperty Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: ''
+            task.systemProperty(Metadata.APPLICATION_NAME, project.name)
+            task.systemProperty(Metadata.APPLICATION_VERSION, (project.version instanceof Serializable ? project.version : project.version.toString()))
+            task.systemProperty(Metadata.APPLICATION_GRAILS_VERSION, grailsVersion)
+            task.systemProperty(Environment.KEY, defaultGrailsEnv)
+            task.systemProperty(Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: '')
             if (task.minHeapSize == null) {
                 task.minHeapSize = '768m'
             }
             if (task.maxHeapSize == null) {
                 task.maxHeapSize = '768m'
             }
-            task.jvmArgs '-XX:+TieredCompilation', '-XX:TieredStopAtLevel=1', '-XX:CICompilerCount=3'
+            task.jvmArgs('-XX:+TieredCompilation', '-XX:TieredStopAtLevel=1', '-XX:CICompilerCount=3')
 
             // Copy GRAILS_FORK_OPTS into the fork. Or use GRAILS_OPTS if no fork options provided
             // This allows run-app etc. to run using appropriate settings and allows users to provided
@@ -575,15 +575,15 @@ class GrailsGradlePlugin extends GroovyPlugin {
             def envMap = System.getenv()
             String opts = envMap.GRAILS_FORK_OPTS ?: envMap.GRAILS_OPTS
             if (opts) {
-                task.jvmArgs opts.split(' ')
+                task.jvmArgs(opts.split(' '))
             }
         }
 
         TaskContainer tasks = project.tasks
 
         String grailsEnvSystemProperty = System.getProperty(Environment.KEY)
-        tasks.withType(Test).each systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.TEST.getName())
-        tasks.withType(JavaExec).each systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.DEVELOPMENT.getName())
+        tasks.withType(Test).each(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.TEST.getName()))
+        tasks.withType(JavaExec).each(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.DEVELOPMENT.getName()))
     }
 
     protected void configureConsoleTask(Project project) {
@@ -686,7 +686,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
                 if (springBootMainClassName && propertyMainClassName) {
                     if (springBootMainClassName != propertyMainClassName) {
-                        throw new GradleException("If overriding the mainClass, the property 'mainClass' and the springboot.mainClass must be set to the same value")
+                        throw new GradleException(/If overriding the mainClass, the property 'mainClass' and the springboot.mainClass must be set to the same value/)
                     }
                 }
 
@@ -732,7 +732,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 it.dependsOn(findMainClassTask)
                 it.configuredMainClassName.convention(GrailsGradlePlugin.getMainClassProvider(project))
             }
-        } else if (!FindMainClassTask.class.isAssignableFrom(existingTask.class)) {
+        } else if (!FindMainClassTask.isAssignableFrom(existingTask.class)) {
             project.logger.warn('Grails Projects typically register a findMainClass task to force the MainClass resolution for Spring Boot. This task already exists so this will not occur.')
         }
     }
@@ -758,9 +758,9 @@ class GrailsGradlePlugin extends GroovyPlugin {
             }
 
             Map<String, String> replaceTokens = [
-                    'info.app.name'         : project.name,
-                    'info.app.version'      : project.version?.toString(),
-                    'info.app.grailsVersion': grailsVersion
+                'info.app.name': project.name,
+                'info.app.version': project.version?.toString(),
+                'info.app.grailsVersion': grailsVersion
             ]
 
             task.from(project.relativePath('src/main/templates')) { spec ->
@@ -769,12 +769,12 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
             if (!native2ascii) {
                 task.from(sourceSet.resources) { spec ->
-                    spec.include '**/*.properties'
+                    spec.include('**/*.properties')
                     spec.filter(ReplaceTokens, tokens: replaceTokens)
                 }
             } else if (!grailsExt.native2asciiAnt) {
                 task.from(sourceSet.resources) { spec ->
-                    spec.include '**/*.properties'
+                    spec.include('**/*.properties')
                     spec.filter(ReplaceTokens, tokens: replaceTokens)
                     spec.filter(EscapeUnicode)
                 }
@@ -782,16 +782,16 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
             task.from(sourceSet.resources) { spec ->
                 spec.filter(ReplaceTokens, tokens: replaceTokens)
-                spec.include '**/*.groovy'
-                spec.include '**/*.yml'
-                spec.include '**/*.xml'
+                spec.include('**/*.groovy')
+                spec.include('**/*.yml')
+                spec.include('**/*.xml')
             }
 
             task.from(sourceSet.resources) { spec ->
-                spec.exclude '**/*.properties'
-                spec.exclude '**/*.groovy'
-                spec.exclude '**/*.yml'
-                spec.exclude '**/*.xml'
+                spec.exclude('**/*.properties')
+                spec.exclude('**/*.groovy')
+                spec.exclude('**/*.yml')
+                spec.exclude('**/*.xml')
             }
         }
     }
@@ -822,7 +822,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
                     // devtools' automatic restart mechanism uses a specialized classloader setup, which can interfere
                     // with Grails' plugin management and bean wiring when running CLI scripts via Gradle
-                    it.systemProperty 'spring.devtools.restart.enabled', 'false'
+                    it.systemProperty('spring.devtools.restart.enabled', 'false')
 
                     List<Object> args = []
                     def otherArgs = project.findProperty('args')
@@ -853,7 +853,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
                     // devtools' automatic restart mechanism uses a specialized classloader setup, which can interfere
                     // with Grails' plugin management and bean wiring when running CLI commands via Gradle
-                    it.systemProperty 'spring.devtools.restart.enabled', 'false'
+                    it.systemProperty('spring.devtools.restart.enabled', 'false')
 
                     List<Object> args = []
                     def otherArgs = project.findProperty('args')

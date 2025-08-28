@@ -93,7 +93,7 @@ dependencies {
 Because all Grails projects will apply the Grails Gradle plugin, the BOM is automatically applied.
 You can override a version in the BOM by setting the associated Gradle property.
 The possible gradle properties are generated as part of this documentation.
-Please see xref:../ref/Versions/Grails BOM.adoc[Grails BOM Dependencies] for a quick reference.
+Please see link:{versionsRef}Grails BOM.html[Grails BOM Dependencies] for a quick reference.
 
 ==== 5. Coordinate Changes
 
@@ -201,7 +201,7 @@ This will initiate the build process with the new Gradle version.
 
 ==== 11. Grails CLI
 
-Both the legacy `grails-shell-cli` and `grails-forge-cli` are now included with Grails 7. Please see the xref:../guide/gettingStarted#downloadingAndInstalling[Downloading & Installing] section of this guide for important background on how to use the Grails CLI commands.
+Both the legacy `grails-shell-cli` and `grails-forge-cli` are now included with Grails 7. Please see the link:gettingStarted.html#downloadingAndInstalling[Downloading & Installing] section of this guide for important background on how to use the Grails CLI commands.
 
 ==== 12. Breaking changes
 
@@ -257,7 +257,7 @@ jakartaeeMigration {
 7. `org.grails.plugins.databinding.DataBindingGrailsPlugin` -> `DataBindingConfiguration`
 
 ===== 12.4 Micronaut in Grails is now supported via the Micronaut Spring Boot Starter
-- This change was made based on community input: https://github.com/orgs/grails/discussions/13517
+- This change was made based on community input: https://github.com/apache/grails-core/discussions/13517
 - The removal of Micronaut enabled simplification of the Grails codebase and the return of Live Reload via https://github.com/HotswapProjects/HotswapAgent
 - The Micronaut Parent Context is no longer in Grails by default.
 - The following dependencies are no longer included in Grails or grails-bom: io.micronaut:micronaut-\*, io.micronaut.cache:micronaut-cache-core, io.micronaut.groovy:micronaut-runtime-groovy and io.micronaut.spring:micronaut-spring-*
@@ -316,7 +316,7 @@ The previous method using WebDriver binaries remains supported for backward comp
 
 ====== Key Features
 
-By extending your test classes with `ContainerGebSpec`, your tests will automatically leverage a containerized browser provided by https://www.testcontainers.org[Testcontainers]. This setup eliminates the need for managing browser versions and ensures consistent test environments.
+By extending your test classes with `ContainerGebSpec`, your tests will automatically leverage a containerized browser provided by https://java.testcontainers.org/[Testcontainers]. This setup eliminates the need for managing browser versions and ensures consistent test environments.
 
 ====== Requirements
 
@@ -421,4 +421,4 @@ ServletContext servletContext
 
 For Grails 7, as was the case with Grails 4 and 5 and shell-generated applications in 6, Spring Boot Developer Tools is used by default for development reloading within generated applications.
 
-To learn more about development reloading options, please see the xref:../guide/gettingStarted#developmentReloading[Development Reloading] section of this guide.
+To learn more about development reloading options, please see the link:gettingStarted.html#developmentReloading[Development Reloading] section of this guide.

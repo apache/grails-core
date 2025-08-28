@@ -18,13 +18,14 @@
  */
 package org.grails.compiler.injection;
 
-import grails.compiler.ast.ClassInjector;
+import java.security.CodeSource;
+
 import groovy.lang.GroovyClassLoader;
 import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.Phases;
 
-import java.security.CodeSource;
+import grails.compiler.ast.ClassInjector;
 
 /**
  * A class loader that is aware of Groovy sources and injection operations.
@@ -59,7 +60,7 @@ public class GrailsAwareClassLoader extends GroovyClassLoader {
     public void setClassInjectors(ClassInjector[] classInjectors) {
         this.classInjectors = classInjectors;
     }
-    
+
     /**
      * @see groovy.lang.GroovyClassLoader#createCompilationUnit(org.codehaus.groovy.control.CompilerConfiguration, java.security.CodeSource)
      */

@@ -21,8 +21,9 @@ package org.grails.datastore.mapping.transactions;
 import java.util.Deque;
 import java.util.concurrent.LinkedBlockingDeque;
 
-import org.grails.datastore.mapping.core.Session;
 import org.springframework.transaction.support.ResourceHolderSupport;
+
+import org.grails.datastore.mapping.core.Session;
 
 /**
  * Holds a reference to one or more sessions.
@@ -32,7 +33,7 @@ import org.springframework.transaction.support.ResourceHolderSupport;
  */
 public class SessionHolder extends ResourceHolderSupport {
 
-    private Deque<Session> sessions = new LinkedBlockingDeque<Session>();
+    private Deque<Session> sessions = new LinkedBlockingDeque<>();
     private Object creator = null;
 
     public SessionHolder(Session session) {
@@ -50,7 +51,7 @@ public class SessionHolder extends ResourceHolderSupport {
 
     public Transaction<?> getTransaction() {
         final Session session = getSession();
-        if(session != null && session.hasTransaction()) {
+        if (session != null && session.hasTransaction()) {
             return session.getTransaction();
         }
         return null;

@@ -191,7 +191,7 @@ Spring Boot 2.7 comes with new features, performance enhancements, and compatibi
 
 #### 11. Micronaut 3.9.3:
 
-Grails 6 is shipped with Micronaut 3.9.3. If you are using specific Micronaut features, refer to the https://docs.micronaut.io/3.9.3/guide/index.html#upgrading[Upgrading to Micronaut 3.x guide].
+Grails 6 is shipped with Micronaut 3.9.3. If you are using specific Micronaut features, refer to the https://micronaut-projects.github.io/micronaut-docs-mn3/3.9.3/guide/#upgrading[Upgrading to Micronaut 3.x guide].
 
 Micronaut 3.9.3 brings new capabilities, improvements, and bug fixes, empowering your application with a powerful and lightweight microservices framework.
 

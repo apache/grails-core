@@ -18,7 +18,7 @@
  */
 package org.grails.datastore.gorm
 
-import groovy.transform.CompileStatic;
+import groovy.transform.CompileStatic
 
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.DatastoreUtils
@@ -38,22 +38,22 @@ abstract class AbstractDatastoreApi {
     }
 
     protected <T> T execute(SessionCallback<T> callback) {
-        if(datastore == null) {
-            throw new IllegalStateException("Cannot execute session callback with null datastore")
+        if (datastore == null) {
+            throw new IllegalStateException('Cannot execute session callback with null datastore')
         }
-        DatastoreUtils.execute datastore, callback
+        DatastoreUtils.execute(datastore, callback)
     }
 
     protected void execute(VoidSessionCallback callback) {
-        if(datastore == null) {
-            throw new IllegalStateException("Cannot execute session callback with null datastore")
+        if (datastore == null) {
+            throw new IllegalStateException('Cannot execute session callback with null datastore')
         }
-        DatastoreUtils.execute datastore, callback
+        DatastoreUtils.execute(datastore, callback)
     }
 
     Datastore getDatastore() {
-        if(datastore == null) {
-            throw new IllegalStateException("No datastore configured in stateless mode")
+        if (datastore == null) {
+            throw new IllegalStateException('No datastore configured in stateless mode')
         }
         return datastore
     }

@@ -20,7 +20,7 @@ Brief summary/description of the plugin.
 '''
 
     // URL to the plugin's documentation
-    def documentation = "http://grails.org/plugin/@plugin.short.name@"
+    def documentation = "https://grails-plugins.github.io/@plugin.short.name@"
 
     // Extra (optional) plugin metadata
 

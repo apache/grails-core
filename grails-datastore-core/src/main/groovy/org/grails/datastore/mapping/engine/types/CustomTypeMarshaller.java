@@ -74,7 +74,7 @@ public interface CustomTypeMarshaller<T, N, Q> {
      * @param nativeQuery The nativeQuery
      * @return The native query
      */
-    Q query(@SuppressWarnings("rawtypes") PersistentProperty property,  Query.PropertyCriterion criterion, Q nativeQuery);
+    Q query(@SuppressWarnings("rawtypes") PersistentProperty property, Query.PropertyCriterion criterion, Q nativeQuery);
 
     /**
      * Converts a value from its native form

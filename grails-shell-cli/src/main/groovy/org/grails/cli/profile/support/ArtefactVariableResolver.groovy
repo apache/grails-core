@@ -18,8 +18,9 @@
  */
 package org.grails.cli.profile.support
 
-import grails.util.GrailsNameUtils
 import groovy.transform.CompileStatic
+
+import grails.util.GrailsNameUtils
 import org.grails.cli.profile.ExecutionContext
 import org.grails.cli.profile.commands.templates.SimpleTemplate
 
@@ -29,6 +30,7 @@ import org.grails.cli.profile.commands.templates.SimpleTemplate
  */
 @CompileStatic
 class ArtefactVariableResolver {
+
     /**
      * The artifact name and package
      */
@@ -51,12 +53,12 @@ class ArtefactVariableResolver {
     }
 
     Map createVariables() {
-        if(artifactPackage) {
+        if (artifactPackage) {
             variables['artifact.package.name'] = artifactPackage
-            variables['artifact.package.path'] = artifactPackage?.replace('.','/')
+            variables['artifact.package.path'] = artifactPackage?.replace('.', '/')
             variables['artifact.package'] = "package $artifactPackage\n".toString()
         }
-        if(convention && artifactName.endsWith(convention)) {
+        if (convention && artifactName.endsWith(convention)) {
             artifactName = artifactName.substring(0, artifactName.length() - convention.length())
         }
         variables['artifact.name'] = artifactName
@@ -68,7 +70,7 @@ class ArtefactVariableResolver {
         String destinationName = new SimpleTemplate(pathToResolve).render(variables)
         File destination = new File(context.baseDir, destinationName).absoluteFile
 
-        if(!destination.getParentFile().exists()) {
+        if (!destination.getParentFile().exists()) {
             destination.getParentFile().mkdirs()
         }
         return destination

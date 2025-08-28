@@ -18,17 +18,16 @@
  */
 package org.grails.web.converters.configuration;
 
-import groovy.lang.Closure;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import groovy.lang.Closure;
+
 import grails.core.support.proxy.DefaultProxyHandler;
 import grails.core.support.proxy.ProxyHandler;
-
 import org.grails.web.converters.Converter;
 import org.grails.web.converters.marshaller.ClosureObjectMarshaller;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
@@ -49,7 +48,7 @@ public class DefaultConverterConfiguration<C extends Converter> implements Conve
     private ConverterConfiguration<C> delegate;
     private String encoding;
     private boolean prettyPrint = false;
-    private final SortedSet<Entry> objectMarshallers = new TreeSet<Entry>();
+    private final SortedSet<Entry> objectMarshallers = new TreeSet<>();
     private Converter.CircularReferenceBehaviour circularReferenceBehaviour;
     private ProxyHandler proxyHandler;
     private boolean cacheObjectMarshallerByClass = true;
@@ -63,7 +62,7 @@ public class DefaultConverterConfiguration<C extends Converter> implements Conve
     }
 
     public Converter.CircularReferenceBehaviour getCircularReferenceBehaviour() {
-        return circularReferenceBehaviour != null ? circularReferenceBehaviour : (delegate != null ? delegate.getCircularReferenceBehaviour(): null);
+        return circularReferenceBehaviour != null ? circularReferenceBehaviour : (delegate != null ? delegate.getCircularReferenceBehaviour() : null);
     }
 
     public boolean isPrettyPrint() {
@@ -75,7 +74,7 @@ public class DefaultConverterConfiguration<C extends Converter> implements Conve
     }
 
     public List<ObjectMarshaller<C>> getOrderedObjectMarshallers() {
-        List<ObjectMarshaller<C>> list = new ArrayList<ObjectMarshaller<C>>();
+        List<ObjectMarshaller<C>> list = new ArrayList<>();
         for (Entry entry : objectMarshallers) {
             list.add(entry.marshaller);
         }
@@ -137,11 +136,11 @@ public class DefaultConverterConfiguration<C extends Converter> implements Conve
     }
 
     public void registerObjectMarshaller(Class<?> c, int priority, Closure callable) {
-        registerObjectMarshaller(new ClosureObjectMarshaller<C>(c, callable), priority);
+        registerObjectMarshaller(new ClosureObjectMarshaller<>(c, callable), priority);
     }
 
     public void registerObjectMarshaller(Class<?> c, Closure callable) {
-        registerObjectMarshaller(new ClosureObjectMarshaller<C>(c, callable));
+        registerObjectMarshaller(new ClosureObjectMarshaller<>(c, callable));
     }
 
     public ObjectMarshaller<C> getMarshaller(Object o) {

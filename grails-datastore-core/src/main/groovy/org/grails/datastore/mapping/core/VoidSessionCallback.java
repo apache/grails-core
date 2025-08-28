@@ -18,8 +18,6 @@
  */
 package org.grails.datastore.mapping.core;
 
-import org.grails.datastore.mapping.core.Session;
-
 /**
  * @author Burt Beckwith
  */

@@ -18,10 +18,10 @@
  */
 package org.grails.gsp.jsp;
 
-import groovy.lang.Closure;
-
 import java.io.Writer;
 import java.util.Map;
+
+import groovy.lang.Closure;
 
 /**
  * An interface that represents a JSP tag that can be invoked by Grails
@@ -34,7 +34,7 @@ public interface JspTag {
      * @param targetWriter The writer the tag should write to
      * @param attributes The tag attributes
      */
-    void doTag(Writer targetWriter, Map<String,Object> attributes);
+    void doTag(Writer targetWriter, Map<String, Object> attributes);
 
     /**
      * Invokes a tag with a closure representing the body of the tag
@@ -42,7 +42,7 @@ public interface JspTag {
      * @param attributes The tag attributes
      * @param body The body of the tag
      */
-    void doTag(Writer targetWriter, Map<String,Object> attributes, Closure<?> body);
+    void doTag(Writer targetWriter, Map<String, Object> attributes, Closure<?> body);
 
     /**
      * @return Return true if the tag class implements the TryCatchFinally interface

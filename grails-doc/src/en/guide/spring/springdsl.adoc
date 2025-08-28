@@ -19,7 +19,7 @@ under the License.
 
 This Bean builder in Grails aims to provide a simplified way of wiring together dependencies that uses Spring at its core.
 
-In addition, Spring's regular way of configuration (via XML and annotations) is static and difficult to modify and configure at runtime, other than programmatic XML creation which is both error prone and verbose. Grails' {apiDocs}grails/spring/BeanBuilder.html[BeanBuilder] changes all that by making it possible to programmatically wire together components at runtime, allowing you to adapt the logic based on system properties or environment variables.
+In addition, Spring's regular way of configuration (via XML and annotations) is static and difficult to modify and configure at runtime, other than programmatic XML creation which is both error prone and verbose. Grails' link:{api}grails/spring/BeanBuilder.html[BeanBuilder] changes all that by making it possible to programmatically wire together components at runtime, allowing you to adapt the logic based on system properties or environment variables.
 
 This enables the code to adapt to its environment and avoids unnecessary duplication of code (having different Spring configs for test, development and production environments)
 
@@ -27,7 +27,7 @@ This enables the code to adapt to its environment and avoids unnecessary duplica
 ==== The BeanBuilder class
 
 
-Grails provides a {apiDocs}grails/spring/BeanBuilder.html[grails.spring.BeanBuilder] class that uses dynamic Groovy to construct bean definitions. The basics are as follows:
+Grails provides a link:{api}grails/spring/BeanBuilder.html[grails.spring.BeanBuilder] class that uses dynamic Groovy to construct bean definitions. The basics are as follows:
 
 [source,groovy]
 ----

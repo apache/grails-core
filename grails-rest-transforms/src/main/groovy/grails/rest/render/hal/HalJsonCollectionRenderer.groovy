@@ -20,9 +20,7 @@ package grails.rest.render.hal
 
 import grails.rest.render.ContainerRenderer
 import grails.util.GrailsNameUtils
-
 import grails.web.mime.MimeType
-
 
 /**
  * A HAL JSON renderer for a collection of objects

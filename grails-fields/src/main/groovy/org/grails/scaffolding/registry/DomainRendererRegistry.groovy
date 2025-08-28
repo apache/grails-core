@@ -19,10 +19,11 @@
 
 package org.grails.scaffolding.registry
 
-import org.grails.scaffolding.model.property.DomainProperty
+import java.util.concurrent.atomic.AtomicInteger
+
 import groovy.transform.CompileStatic
 
-import java.util.concurrent.atomic.AtomicInteger
+import org.grails.scaffolding.model.property.DomainProperty
 
 /**
  * A registry of domain property renderers sorted by priority and order of addition
@@ -32,15 +33,15 @@ import java.util.concurrent.atomic.AtomicInteger
 @CompileStatic
 abstract class DomainRendererRegistry<T extends DomainRenderer> {
 
-    protected SortedSet<Entry> domainRegistryEntries = new TreeSet<Entry>();
+    protected SortedSet<Entry> domainRegistryEntries = new TreeSet<Entry>()
 
-    protected final AtomicInteger RENDERER_SEQUENCE = new AtomicInteger(0);
+    protected final AtomicInteger RENDERER_SEQUENCE = new AtomicInteger(0)
 
     void registerDomainRenderer(T domainRenderer, Integer priority) {
         domainRegistryEntries.add(new Entry(domainRenderer, priority))
     }
 
-    public SortedSet<Entry> getDomainRegistryEntries() {
+    SortedSet<Entry> getDomainRegistryEntries() {
         this.domainRegistryEntries
     }
 
@@ -55,8 +56,8 @@ abstract class DomainRendererRegistry<T extends DomainRenderer> {
 
     private class Entry implements Comparable<Entry> {
         protected final T renderer
-        private final int priority;
-        private final int seq;
+        private final int priority
+        private final int seq
 
         Entry(T renderer, int priority) {
             this.renderer = renderer
@@ -64,8 +65,8 @@ abstract class DomainRendererRegistry<T extends DomainRenderer> {
             seq = RENDERER_SEQUENCE.incrementAndGet()
         }
 
-        public int compareTo(Entry entry) {
-            return priority == entry.priority ? entry.seq - seq : entry.priority - priority;
+        int compareTo(Entry entry) {
+            return priority == entry.priority ? entry.seq - seq : entry.priority - priority
         }
     }
 }

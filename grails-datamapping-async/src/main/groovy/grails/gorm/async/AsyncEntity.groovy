@@ -20,6 +20,7 @@
 package grails.gorm.async
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.async.GormAsyncStaticApi
@@ -32,6 +33,7 @@ import org.grails.datastore.gorm.async.GormAsyncStaticApi
  */
 @CompileStatic
 trait AsyncEntity<D> extends GormEntity<D> {
+
     /**
      * @return The async version of the GORM static API
      */

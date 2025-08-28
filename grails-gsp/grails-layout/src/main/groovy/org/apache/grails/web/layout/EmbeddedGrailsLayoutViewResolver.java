@@ -22,9 +22,9 @@ import java.util.Locale;
 
 import jakarta.servlet.ServletContext;
 
-import org.grails.web.servlet.view.LayoutViewResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -33,6 +33,8 @@ import org.springframework.web.context.ServletContextAware;
 import org.springframework.web.servlet.SmartView;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.ViewResolver;
+
+import org.grails.web.servlet.view.LayoutViewResolver;
 
 public class EmbeddedGrailsLayoutViewResolver implements LayoutViewResolver, Ordered, ServletContextAware, ApplicationContextAware {
 

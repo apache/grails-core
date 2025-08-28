@@ -19,12 +19,13 @@
 
 package org.grails.datastore.gorm.services.implementers
 
-import grails.gorm.services.Where
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.stmt.Statement
+
+import grails.gorm.services.Where
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.mapping.reflect.AstUtils
 
@@ -42,7 +43,7 @@ class FindAllWhereImplementer extends AbstractWhereImplementer implements Iterab
 
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
-        if( isAnnotated(domainClass, methodNode )) {
+        if (isAnnotated(domainClass, methodNode)) {
             return isCompatibleReturnType(domainClass, methodNode, methodNode.returnType, methodNode.name)
         }
         return false
@@ -55,13 +56,13 @@ class FindAllWhereImplementer extends AbstractWhereImplementer implements Iterab
 
     @Override
     protected String getQueryMethodToExecute(ClassNode domainClass, MethodNode newMethodNode) {
-        return "list"
+        return 'list'
     }
 
     @Override
     protected ClassNode resolveDomainClassFromSignature(ClassNode currentDomainClassNode, MethodNode methodNode) {
         ClassNode returnType = methodNode.returnType
-        if(returnType.isArray()) {
+        if (returnType.isArray()) {
             return returnType.componentType
         }
         else {

@@ -69,7 +69,7 @@ class BookController {
 }
 ----
 
-To render a different view, use the link:../ref/Controllers/render.html[render] method:
+To render a different view, use the link:{controllersRef}render.html[render] method:
 
 [source,groovy]
 ----

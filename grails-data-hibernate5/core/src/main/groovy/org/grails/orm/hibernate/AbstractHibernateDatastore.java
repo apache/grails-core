@@ -18,36 +18,6 @@
  */
 package org.grails.orm.hibernate;
 
-import grails.gorm.multitenancy.Tenants;
-import groovy.lang.Closure;
-import org.grails.datastore.gorm.validation.registry.support.ValidatorRegistries;
-import org.grails.datastore.gorm.events.AutoTimestampEventListener;
-import org.grails.datastore.mapping.config.Settings;
-import org.grails.datastore.mapping.core.AbstractDatastore;
-import org.grails.datastore.mapping.core.Datastore;
-import org.grails.datastore.mapping.core.DatastoreAware;
-import org.grails.datastore.mapping.core.connections.*;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.datastore.mapping.multitenancy.*;
-import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException;
-import org.grails.datastore.mapping.multitenancy.resolvers.FixedTenantResolver;
-import org.grails.datastore.mapping.transactions.TransactionCapableDatastore;
-import org.grails.datastore.mapping.validation.ValidatorRegistry;
-import org.grails.orm.hibernate.cfg.HibernateMappingContext;
-import org.grails.orm.hibernate.connections.HibernateConnectionSource;
-import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
-import org.grails.datastore.gorm.jdbc.schema.DefaultSchemaHandler;
-import org.grails.datastore.gorm.jdbc.schema.SchemaHandler;
-import org.grails.orm.hibernate.event.listener.AbstractHibernateEventListener;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.springframework.beans.BeanUtils;
-import org.springframework.context.*;
-import org.springframework.core.env.PropertyResolver;
-
-import jakarta.annotation.PreDestroy;
-import javax.sql.DataSource;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.Serializable;
@@ -55,6 +25,51 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
+
+import javax.sql.DataSource;
+
+import groovy.lang.Closure;
+
+import jakarta.annotation.PreDestroy;
+
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.MessageSource;
+import org.springframework.context.MessageSourceAware;
+import org.springframework.core.env.PropertyResolver;
+
+import grails.gorm.multitenancy.Tenants;
+import org.grails.datastore.gorm.events.AutoTimestampEventListener;
+import org.grails.datastore.gorm.jdbc.schema.DefaultSchemaHandler;
+import org.grails.datastore.gorm.jdbc.schema.SchemaHandler;
+import org.grails.datastore.gorm.validation.registry.support.ValidatorRegistries;
+import org.grails.datastore.mapping.config.Settings;
+import org.grails.datastore.mapping.core.AbstractDatastore;
+import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.core.DatastoreAware;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.core.connections.ConnectionSources;
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore;
+import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;
+import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.multitenancy.AllTenantsResolver;
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
+import org.grails.datastore.mapping.multitenancy.SchemaMultiTenantCapableDatastore;
+import org.grails.datastore.mapping.multitenancy.TenantResolver;
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException;
+import org.grails.datastore.mapping.multitenancy.resolvers.FixedTenantResolver;
+import org.grails.datastore.mapping.transactions.TransactionCapableDatastore;
+import org.grails.datastore.mapping.validation.ValidatorRegistry;
+import org.grails.orm.hibernate.cfg.HibernateMappingContext;
+import org.grails.orm.hibernate.connections.HibernateConnectionSource;
+import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
+import org.grails.orm.hibernate.event.listener.AbstractHibernateEventListener;
 
 /**
  * Datastore implementation that uses a Hibernate SessionFactory underneath.
@@ -109,18 +124,18 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
         Class<? extends SchemaHandler> schemaHandlerClass = settings.getDataSource().getSchemaHandler();
         this.schemaHandler = BeanUtils.instantiateClass(schemaHandlerClass);
         this.tenantResolver = multiTenantResolver;
-        if(multiTenantResolver instanceof DatastoreAware) {
+        if (multiTenantResolver instanceof DatastoreAware) {
             ((DatastoreAware) multiTenantResolver).setDatastore(this);
         }
     }
 
     protected AbstractHibernateDatastore(MappingContext mappingContext, SessionFactory sessionFactory, PropertyResolver config, ApplicationContext applicationContext, String dataSourceName) {
         super(mappingContext, config, (ConfigurableApplicationContext) applicationContext);
-        this.connectionSources = new SingletonConnectionSources<>(new HibernateConnectionSource(dataSourceName, sessionFactory, null, null ), config);
+        this.connectionSources = new SingletonConnectionSources<>(new HibernateConnectionSource(dataSourceName, sessionFactory, null, null), config);
         this.sessionFactory = sessionFactory;
         this.dataSourceName = dataSourceName;
         initializeConverters(mappingContext);
-        if(applicationContext != null) {
+        if (applicationContext != null) {
             setApplicationContext(applicationContext);
         }
 
@@ -128,7 +143,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
         passReadOnlyToHibernate = config.getProperty(CONFIG_PROPERTY_PASS_READONLY_TO_HIBERNATE, Boolean.class, false);
         isCacheQueries = config.getProperty(CONFIG_PROPERTY_CACHE_QUERIES, Boolean.class, false);
 
-        if( config.getProperty(SETTING_AUTO_FLUSH, Boolean.class, false) ) {
+        if (config.getProperty(SETTING_AUTO_FLUSH, Boolean.class, false)) {
             this.defaultFlushModeName = FlushMode.AUTO.name();
             defaultFlushMode = FlushMode.AUTO.level;
         }
@@ -167,7 +182,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
 
     @Override
     public Datastore getDatastoreForTenantId(Serializable tenantId) {
-        if(getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
+        if (getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
             return getDatastoreForConnection(tenantId.toString());
         }
         else {
@@ -191,16 +206,16 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
      * @param connectionName The name of the connection
      * @return The child data store
      */
-    public abstract  AbstractHibernateDatastore getDatastoreForConnection(String connectionName);
+    public abstract AbstractHibernateDatastore getDatastoreForConnection(String connectionName);
 
     public Iterable<Serializable> resolveTenantIds() {
-        if(this.tenantResolver instanceof AllTenantsResolver) {
-            return ((AllTenantsResolver)tenantResolver).resolveTenantIds();
+        if (this.tenantResolver instanceof AllTenantsResolver) {
+            return ((AllTenantsResolver) tenantResolver).resolveTenantIds();
         }
-        else if(this.multiTenantMode == MultiTenancySettings.MultiTenancyMode.DATABASE) {
+        else if (this.multiTenantMode == MultiTenancySettings.MultiTenancyMode.DATABASE) {
             List<Serializable> tenantIds = new ArrayList<>();
             for (ConnectionSource connectionSource : this.connectionSources.getAllConnectionSources()) {
-                if(!ConnectionSource.DEFAULT.equals(connectionSource.getName())) {
+                if (!ConnectionSource.DEFAULT.equals(connectionSource.getName())) {
                     tenantIds.add(connectionSource.getName());
                 }
             }
@@ -260,7 +275,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
      * @return The {@link DataSource} being used by this datastore instance
      */
     public DataSource getDataSource() {
-        return ((HibernateConnectionSource)this.connectionSources.getDefaultConnectionSource()).getDataSource();
+        return ((HibernateConnectionSource) this.connectionSources.getDefaultConnectionSource()).getDataSource();
     }
 
     // for testing
@@ -366,17 +381,16 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
 
     @Override
     public <T1> T1 withNewSession(Serializable tenantId, Closure<T1> callable) {
-        if(getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
+        if (getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
             AbstractHibernateDatastore datastore = getDatastoreForConnection(tenantId.toString());
             SessionFactory sessionFactory = datastore.getSessionFactory();
 
-            return datastore.getHibernateTemplate().executeWithExistingOrCreateNewSession( sessionFactory, callable);
+            return datastore.getHibernateTemplate().executeWithExistingOrCreateNewSession(sessionFactory, callable);
         }
         else {
             return withNewSession(callable);
         }
     }
-
 
     /**
      * Enable the tenant id filter for the given datastore and entity
@@ -384,7 +398,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
      */
     public void enableMultiTenancyFilter() {
         Serializable currentId = Tenants.currentId(this);
-        if(ConnectionSource.DEFAULT.equals(currentId)) {
+        if (ConnectionSource.DEFAULT.equals(currentId)) {
             disableMultiTenancyFilter();
         }
         else {
@@ -395,7 +409,6 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
                     .setParameter(GormProperties.TENANT_IDENTITY, currentId);
         }
     }
-
 
     /**
      * Disable the tenant id filter for the given datastore and entity
@@ -410,8 +423,8 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
     protected <T> Closure<T> prepareMultiTenantClosure(final Closure<T> callable) {
         final boolean isMultiTenant = getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR;
         Closure<T> multiTenantCallable;
-        if(isMultiTenant) {
-            multiTenantCallable = new Closure<T>(this) {
+        if (isMultiTenant) {
+            multiTenantCallable = new Closure<>(this) {
                 @Override
                 public T call(Object... args) {
                     enableMultiTenancyFilter();

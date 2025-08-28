@@ -41,7 +41,7 @@ book.delete()
 === Description
 
 
-The `delete` method informs the persistence context that a persistent instance should be deleted. Equivalent to the Hibernate https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernate5Version}/org/hibernate/Session.html#delete(java/lang/Object).html[delete] method.
+The `delete` method informs the persistence context that a persistent instance should be deleted. Equivalent to the Hibernate https://javadoc.io/doc/org.hibernate/hibernate-core/{hibernate5Version}/org/hibernate/Session.html#delete(java/lang/Object)[delete] method.
 
 WARNING: Calling `delete` on a transient instance will result in an error
 

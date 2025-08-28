@@ -16,7 +16,10 @@
  */
 package org.grails.gradle.plugin.profiles
 
+import javax.inject.Inject
+
 import groovy.transform.CompileStatic
+
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -34,9 +37,8 @@ import org.gradle.api.plugins.GroovyPlugin
 import org.gradle.api.plugins.JavaLibraryPlugin
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
-import org.grails.gradle.plugin.profiles.tasks.ProfileCompilerTask
 
-import javax.inject.Inject
+import org.grails.gradle.plugin.profiles.tasks.ProfileCompilerTask
 
 import static org.gradle.api.plugins.BasePlugin.BUILD_GROUP
 
@@ -79,10 +81,10 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
             }
         }
 
-        project.configurations.named("apiElements")
+        project.configurations.named('apiElements')
                 .configure { it.extendsFrom(runtimeOnlyConfiguration.get()) }
 
-        project.configurations.named("runtimeElements")
+        project.configurations.named('runtimeElements')
                 .configure { it.extendsFrom(runtimeOnlyConfiguration.get()) }
 
         TaskProvider<Task> processProfileResourcesTask = project.tasks.register('processProfileResources')
@@ -131,13 +133,13 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
 
         TaskProvider<ProfileCompilerTask> compileTask = project.tasks.register('compileProfile', ProfileCompilerTask)
         compileTask.configure { ProfileCompilerTask it ->
-            it.destinationDirectory.set project.layout.buildDirectory.dir('classes/profile')
-            it.config.set project.layout.projectDirectory.file('profile.yml')
+            it.destinationDirectory.set(project.layout.buildDirectory.dir('classes/profile'))
+            it.config.set(project.layout.projectDirectory.file('profile.yml'))
             Map<String, String> artifactIdMappings = [:]
             project.rootProject.subprojects.each { p ->
                 project.evaluationDependsOn(p.path)
                 String artifactId = p.findProperty('pomArtifactId')
-                if(artifactId) {
+                if (artifactId) {
                     artifactIdMappings[p.name] = artifactId
                 }
             }
@@ -145,7 +147,7 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
 
             // The profile task serves 2 purposes, it compiles the groovy files & it generates the profile.yml
             // for this reason the source must be set to include all possible files
-            it.source project.provider {
+            it.source(project.provider {
                 def commandsDirectory = project.layout.projectDirectory.dir('commands')
                 def templatesDirectory = project.layout.projectDirectory.dir('templates')
                 def skeletonDirectory = project.layout.projectDirectory.dir('skeleton')
@@ -161,7 +163,7 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
                     dirs << skeletonDirectory
                 }
                 project.files(dirs)
-            }
+            })
             it.classpath = project.files(runtimeOnlyConfiguration.get(), project.configurations.named('runtimeClasspath').get())
         }
 
@@ -219,7 +221,7 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
             task.doLast {
                 def readmeFile = profileReadme.get().asFile
                 if (!readmeFile.exists()) {
-                    readmeFile.text = "Profiles are templates and do not have javadoc."
+                    readmeFile.text = 'Profiles are templates and do not have javadoc.'
                 }
             }
         }

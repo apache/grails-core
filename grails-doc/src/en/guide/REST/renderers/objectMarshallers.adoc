@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Grails' Converters feature the notion of an {apiDocs}org/grails/web/converters/marshaller/ObjectMarshaller.html[ObjectMarshaller] and each type can have a registered `ObjectMarshaller`. You can register custom `ObjectMarshaller` instances to completely customize response rendering. For example, you can define the following in `BootStrap.init`:
+Grails' Converters feature the notion of an link:{api}org/grails/web/converters/marshaller/ObjectMarshaller.html[ObjectMarshaller] and each type can have a registered `ObjectMarshaller`. You can register custom `ObjectMarshaller` instances to completely customize response rendering. For example, you can define the following in `BootStrap.init`:
 
 [source,groovy]
 ----
@@ -29,7 +29,7 @@ XML.registerObjectMarshaller Book, { Book book, XML xml ->
 }
 ----
 
-You can customize the formatting of an individual value this way too. For example the http://grails.org/plugin/jodatime[JodaTime plugin] does the following to support rendering of JodaTime dates in JSON output:
+You can customize the formatting of an individual value this way too. For example, the https://grails-plugins.github.io/grails-joda-time/index.html[JodaTime plugin] does the following to support rendering of JodaTime dates in JSON output:
 
 [source,groovy]
 ----

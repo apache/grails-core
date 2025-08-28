@@ -63,7 +63,7 @@ Attributes
 * `url` - (optional) The URL to retrieve the content from and apply a layout to
 * `contentType` (optional) - The content type to use, default is "text/html"
 * `encoding` (optional) - The encoding to use
-* `params` (optional) - The params to pass onto the page object (retrievable with the xref:pageProperty.adoc[pageProperty] tag)
+* `params` (optional) - The params to pass onto the page object (retrievable with the xref:pageProperty.html[pageProperty] tag)
 * `model` (optional) - The model (as java.util.Map) to pass to the view and layout templates
 
 

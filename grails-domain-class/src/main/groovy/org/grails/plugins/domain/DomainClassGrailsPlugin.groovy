@@ -35,26 +35,28 @@ import org.grails.plugins.domain.support.ValidatorRegistryFactoryBean
  */
 class DomainClassGrailsPlugin extends Plugin {
 
-    def watchedResources = ["file:./grails-app/domain/**/*.groovy",
-                            "file:./plugins/*/grails-app/domain/**/*.groovy"]
+    def watchedResources = ['file:./grails-app/domain/**/*.groovy',
+                            'file:./plugins/*/grails-app/domain/**/*.groovy']
 
     def version = GrailsUtil.getGrailsVersion()
-    def dependsOn = [i18n:version]
+    def dependsOn = [i18n: version]
     def loadAfter = ['controllers', 'dataSource']
 
-    Closure doWithSpring() {{->
-        GrailsApplication application = grailsApplication
-        validateableConstraintsEvaluator(DefaultConstraintEvaluatorFactoryBean) { bean ->
-            bean.lazyInit = true
+    Closure doWithSpring() {
+        { ->
+            GrailsApplication application = grailsApplication
+            validateableConstraintsEvaluator(DefaultConstraintEvaluatorFactoryBean) { bean ->
+                bean.lazyInit = true
+            }
+            "${ConstraintsEvaluator.BEAN_NAME}"(ConstraintEvaluatorAdapter, ref('validateableConstraintsEvaluator'))  { bean ->
+                bean.lazyInit = true
+            }
+            grailsDomainClassMappingContext(DefaultMappingContextFactoryBean, application, applicationContext)  { bean ->
+                bean.lazyInit = true
+            }
+            gormValidatorRegistry(ValidatorRegistryFactoryBean)  { bean ->
+                bean.lazyInit = true
+            }
         }
-        "${ConstraintsEvaluator.BEAN_NAME}"(ConstraintEvaluatorAdapter, ref("validateableConstraintsEvaluator"))  { bean ->
-            bean.lazyInit = true
-        }
-        grailsDomainClassMappingContext(DefaultMappingContextFactoryBean, application, applicationContext)  { bean ->
-            bean.lazyInit = true
-        }
-        gormValidatorRegistry(ValidatorRegistryFactoryBean)  { bean ->
-            bean.lazyInit = true
-        }
-    }}
+    }
 }

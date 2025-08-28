@@ -19,10 +19,10 @@
 
 package org.grails.datastore.mapping.core.connections;
 
-import org.springframework.core.env.PropertyResolver;
-
 import java.io.Closeable;
 import java.util.Map;
+
+import org.springframework.core.env.PropertyResolver;
 
 /**
  * Models multiple connection sources
@@ -38,6 +38,7 @@ public interface ConnectionSources<T, S extends ConnectionSourceSettings> extend
      * @return Obtains the base configuration
      */
     PropertyResolver getBaseConfiguration();
+
     /**
      * @return The factory used to create new connections
      */
@@ -75,7 +76,6 @@ public interface ConnectionSources<T, S extends ConnectionSourceSettings> extend
      */
     ConnectionSource<T, S> addConnectionSource(String name, PropertyResolver configuration);
 
-
     /**
      * Adds a new {@link ConnectionSource}
      *
@@ -85,7 +85,7 @@ public interface ConnectionSources<T, S extends ConnectionSourceSettings> extend
      *
      * @throws org.grails.datastore.mapping.core.exceptions.ConfigurationException if the configuration is invalid
      */
-    ConnectionSource<T, S> addConnectionSource(String name, Map<String,Object> configuration);
+    ConnectionSource<T, S> addConnectionSource(String name, Map<String, Object> configuration);
 
     /**
      * Adds a listener
@@ -93,5 +93,5 @@ public interface ConnectionSources<T, S extends ConnectionSourceSettings> extend
      * @param listener The listener
      * @return This connection sources
      */
-    ConnectionSources<T,S> addListener(ConnectionSourcesListener<T,S> listener);
+    ConnectionSources<T, S> addListener(ConnectionSourcesListener<T, S> listener);
 }

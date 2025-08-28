@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-Allows access to the domain class properties as a Map and is typically used for link:{guidePath}/theWebLayer.html#dataBinding[data binding] to perform type conversions allowing properties to be set from request parameters or other Maps.
+Allows access to the domain class properties as a Map and is typically used for link:{guidePath}theWebLayer.html#dataBinding[data binding] to perform type conversions allowing properties to be set from request parameters or other Maps.
 
 
 === Examples

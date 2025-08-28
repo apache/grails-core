@@ -19,6 +19,7 @@
 package grails.core;
 
 import org.codehaus.groovy.ast.ClassNode;
+
 import org.springframework.core.Ordered;
 
 /**
@@ -48,11 +49,13 @@ public interface ArtefactHandler extends Ordered {
      * @return The aretfact type, as a String
      */
     String getType();
+
     /**
      * @param classNode The ClassNode instance
      * @return True if the given ClassNode instance is an instance of the Artefact type
      */
     boolean isArtefact(ClassNode classNode);
+
     /**
      * <p>Called by the GrailsApplication whenever it needs to know if a given class
      * is considered to be the kind of artefact represented by this handler.</p>

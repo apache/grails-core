@@ -19,24 +19,26 @@
 
 package org.grails.events.rxjava
 
-import grails.events.Event
-import grails.events.subscriber.Subscriber
-import grails.events.trigger.EventTrigger
-import grails.events.subscriber.Subscription
+import java.util.concurrent.Callable
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.grails.events.bus.AbstractEventBus
-import org.grails.events.registry.ClosureSubscription
-import org.grails.events.registry.EventSubscriberSubscription
+
 import rx.Scheduler
 import rx.functions.Action1
 import rx.schedulers.Schedulers
 import rx.subjects.PublishSubject
 import rx.subjects.Subject
 
-import java.util.concurrent.Callable
-import java.util.concurrent.ConcurrentHashMap
+import grails.events.Event
+import grails.events.subscriber.Subscriber
+import grails.events.subscriber.Subscription
+import grails.events.trigger.EventTrigger
+import org.grails.events.bus.AbstractEventBus
+import org.grails.events.registry.ClosureSubscription
+import org.grails.events.registry.EventSubscriberSubscription
 
 /**
  * An EventBus implementation that uses RxJava
@@ -82,8 +84,8 @@ class RxEventBus extends AbstractEventBus {
     protected Callable buildNotificationCallable(Event event, Collection<Subscription> eventSubscriptions, Closure reply) {
         return {
             PublishSubject sub = subjects.get(event.id)
-            if(sub.hasObservers() && !sub.hasCompleted()) {
-                if(reply != null) {
+            if (sub.hasObservers() && !sub.hasCompleted()) {
+                if (reply != null) {
                     sub.onNext(new EventWithReply(event, reply))
                 }
                 else {
@@ -99,10 +101,10 @@ class RxEventBus extends AbstractEventBus {
 
         RxClosureSubscription(CharSequence eventId, Map<CharSequence, Collection<Subscription>> subscriptions, Closure subscriber, Subject subject, Scheduler scheduler) {
             super(eventId, subscriptions, subscriber)
-            this.subscription = subject.observeOn(scheduler).subscribe( { eventObject ->
+            this.subscription = subject.observeOn(scheduler).subscribe({ eventObject ->
                 Event event
                 Closure reply = null
-                if(eventObject  instanceof EventWithReply) {
+                if (eventObject instanceof EventWithReply) {
                     def eventWithReply = (EventWithReply) eventObject
                     event = eventWithReply.event
                     reply = eventWithReply.reply
@@ -113,14 +115,14 @@ class RxEventBus extends AbstractEventBus {
 
                 EventTrigger trigger = buildTrigger(event as Event, reply)
                 trigger.proceed()
-            }  as Action1, { Throwable t ->
+            } as Action1, { Throwable t ->
                 log.error("Error occurred triggering event listener for event [$eventId]: ${t.message}", t)
             } as Action1<Throwable>)
         }
 
         @Override
         Subscription cancel() {
-            if(!subscription.unsubscribed) {
+            if (!subscription.unsubscribed) {
                 subscription.unsubscribe()
             }
             super.cancel()
@@ -148,7 +150,7 @@ class RxEventBus extends AbstractEventBus {
 
         @Override
         Subscription cancel() {
-            if(!subscription.unsubscribed) {
+            if (!subscription.unsubscribed) {
                 subscription.unsubscribe()
             }
             super.cancel()

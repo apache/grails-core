@@ -44,7 +44,7 @@ public interface TestFeature extends OneOfFeature {
 
     @Override
     default String getCategory() {
-        return Category.VALIDATION;
+        return Category.TESTING;
     }
 
     @Override

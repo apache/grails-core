@@ -24,6 +24,7 @@ import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.Project;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
+import org.grails.forge.feature.Category;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.FeatureContext;
@@ -66,6 +67,11 @@ public class GebWithTestcontainers implements DefaultFeature {
     }
 
     @Override
+    public String getCategory() {
+        return Category.TESTING;
+    }
+
+    @Override
     public int getOrder() {
         return FeaturePhase.TEST.getOrder();
     }
@@ -82,7 +88,7 @@ public class GebWithTestcontainers implements DefaultFeature {
 
     @Override
     public String getThirdPartyDocumentation() {
-        return "https://www.gebish.org/manual/current/";
+        return "https://groovy.apache.org/geb/manual/current/";
     }
 
     @Override

@@ -19,15 +19,16 @@
 
 package org.grails.datastore.gorm.services.implementers
 
+import java.beans.Introspector
+
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
-import org.grails.datastore.mapping.reflect.AstUtils
 
-import java.beans.Introspector
+import org.grails.datastore.mapping.reflect.AstUtils
 
 import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
@@ -62,12 +63,11 @@ abstract class AbstractProjectionImplementer extends AbstractDetachedCriteriaSer
     }
 
     protected boolean isValidPropertyType(ClassNode returnType, ClassNode propertyType) {
-        if(propertyType == null) return false
+        if (propertyType == null) return false
         else {
             returnType == propertyType || AstUtils.isSubclassOfOrImplementsInterface(returnType, propertyType)
         }
     }
-
 
     @Override
     protected boolean lookupById() {
@@ -79,10 +79,9 @@ abstract class AbstractProjectionImplementer extends AbstractDetachedCriteriaSer
         // no-op
     }
 
-
     @Override
     void implementWithQuery(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode, BlockStatement body, VariableExpression detachedCriteriaVar, Expression queryArgs) {
-        String propertyName = (String)abstractMethodNode.getNodeMetaData(RESOLVED_PROPERTY_NAME)
+        String propertyName = (String) abstractMethodNode.getNodeMetaData(RESOLVED_PROPERTY_NAME)
         assert propertyName != null : "Bug in ${getClass().name} transform logic. Method implement should never be called before doesImplement(..) check"
 
         body.addStatements([
@@ -92,10 +91,10 @@ abstract class AbstractProjectionImplementer extends AbstractDetachedCriteriaSer
     }
 
     protected String getProjectionName() {
-        "property"
+        'property'
     }
 
     protected String getQueryMethodToInvoke(ClassNode domainClassNode, MethodNode newMethodNode) {
-        "find"
+        'find'
     }
 }

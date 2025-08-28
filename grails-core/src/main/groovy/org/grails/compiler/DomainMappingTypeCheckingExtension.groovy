@@ -23,26 +23,27 @@ import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.MethodCall
 import org.codehaus.groovy.ast.stmt.EmptyStatement
-import org.grails.compiler.injection.GrailsASTUtils
 import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport.TypeCheckingDSL
+
+import org.grails.compiler.injection.GrailsASTUtils
 
 /**
  *
  * @since 2.4
  */
 class DomainMappingTypeCheckingExtension extends TypeCheckingDSL {
-    
+
     @Override
-    public Object run() {
+    Object run() {
         setup { newScope() }
 
         finish { scopeExit() }
-        
+
         beforeVisitClass { ClassNode classNode ->
             def mappingProperty = classNode.getField('mapping')
-            if(mappingProperty && mappingProperty.isStatic() && mappingProperty.initialExpression instanceof ClosureExpression) {
+            if (mappingProperty && mappingProperty.isStatic() && mappingProperty.initialExpression instanceof ClosureExpression) {
                 def sourceUnit = classNode?.module?.context
-                if(GrailsASTUtils.isDomainClass(classNode, sourceUnit)) {
+                if (GrailsASTUtils.isDomainClass(classNode, sourceUnit)) {
                     newScope {
                         mappingClosureCode = mappingProperty.initialExpression.code
                     }
@@ -56,23 +57,23 @@ class DomainMappingTypeCheckingExtension extends TypeCheckingDSL {
         }
 
         afterVisitClass { ClassNode classNode ->
-            if(currentScope.mappingClosureCode) {
+            if (currentScope.mappingClosureCode) {
                 def mappingProperty = classNode.getField('mapping')
                 mappingProperty.initialExpression.code = currentScope.mappingClosureCode
                 currentScope.checkingMappingClosure = true
-                withTypeChecker { visitClosureExpression mappingProperty.initialExpression }
+                withTypeChecker { visitClosureExpression(mappingProperty.initialExpression) }
             }
             scopeExit()
         }
 
         methodNotFound { ClassNode receiver, String name, ArgumentListExpression argList, ClassNode[] argTypes, MethodCall call ->
             def dynamicCall
-            if(currentScope.mappingClosureCode && currentScope.checkingMappingClosure) {
-                dynamicCall = makeDynamic (call)
+            if (currentScope.mappingClosureCode && currentScope.checkingMappingClosure) {
+                dynamicCall = makeDynamic(call)
             }
             dynamicCall
         }
-        
+
         null
     }
 }

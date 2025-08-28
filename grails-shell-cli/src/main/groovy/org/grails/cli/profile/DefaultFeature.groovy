@@ -22,12 +22,14 @@ package org.grails.cli.profile
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+
 import org.eclipse.aether.graph.Dependency
-import org.grails.config.NavigableMap
-import org.grails.io.support.Resource
 import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.SafeConstructor
+
+import org.grails.config.NavigableMap
+import org.grails.io.support.Resource
 
 import static org.grails.cli.profile.ProfileUtil.createDependency
 
@@ -41,6 +43,7 @@ import static org.grails.cli.profile.ProfileUtil.createDependency
 @ToString(includes = ['profile', 'name'])
 @CompileStatic
 class DefaultFeature implements Feature {
+
     final Profile profile
     final String name
     final Resource location
@@ -53,13 +56,13 @@ class DefaultFeature implements Feature {
         this.profile = profile
         this.name = name
         this.location = location
-        def featureYml = location.createRelative("feature.yml")
+        def featureYml = location.createRelative('feature.yml')
         Map<String, Object> featureConfig = new Yaml(new SafeConstructor(new LoaderOptions())).<Map<String, Object>>load(featureYml.getInputStream())
         configuration.merge(featureConfig)
-        def dependenciesConfig = configuration.get("dependencies")
+        def dependenciesConfig = configuration.get('dependencies')
 
-        if(dependenciesConfig instanceof List) {
-            for(entry in ((List) dependenciesConfig)) {
+        if (dependenciesConfig instanceof List) {
+            for (entry in ((List) dependenciesConfig)) {
                 if (entry instanceof Map) {
                     def scope = (String) entry.scope
                     def os = entry.os
@@ -72,27 +75,27 @@ class DefaultFeature implements Feature {
                 }
             }
         }
-        this.buildPlugins = (List<String>)configuration.get("build.plugins", [])
-        this.buildRepositories = (List<String>) configuration.get("build.repositories", [])
+        this.buildPlugins = (List<String>) configuration.get('build.plugins', [])
+        this.buildRepositories = (List<String>) configuration.get('build.repositories', [])
     }
 
     @Override
     String getDescription() {
-        configuration.get("description", '').toString()
+        configuration.get('description', '').toString()
     }
 
     static boolean isSupportedOs(String os) {
         os = os.toLowerCase(Locale.ENGLISH).trim()
-        String osName = System.getProperty("os.name")?.toLowerCase(Locale.ENGLISH) ?: "unix"
+        String osName = System.getProperty('os.name')?.toLowerCase(Locale.ENGLISH) ?: 'unix'
         switch (os) {
-            case "windows":
-                return osName.contains("windows")
-            case "osx":
-                return osName.contains("mac os x") || osName.contains("darwin") || osName.contains("osx")
-            case "unix":
-                return osName.contains("mac os x") || osName.contains("darwin") || osName.contains("osx") ||
-                        osName.contains("sunos") || osName.contains("solaris") || osName.contains("linux") ||
-                        osName.contains("freebsd")
+            case 'windows':
+                return osName.contains('windows')
+            case 'osx':
+                return osName.contains('mac os x') || osName.contains('darwin') || osName.contains('osx')
+            case 'unix':
+                return osName.contains('mac os x') || osName.contains('darwin') || osName.contains('osx') ||
+                        osName.contains('sunos') || osName.contains('solaris') || osName.contains('linux') ||
+                        osName.contains('freebsd')
             default:
                 return false
         }

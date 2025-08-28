@@ -44,7 +44,7 @@ withForm {
 === Description
 
 
-The `withForm` method requires the use of the `useToken` attribute in a link:{gspdocs}/ref/Tags/form.html[form]
+The `withForm` method requires the use of the `useToken` attribute in a link:{gspTagsRefFromRef}form.html[form]
 
 [source,xml]
 ----
@@ -62,4 +62,4 @@ withForm {
 }
 ----
 
-See link:{guidePath}/theWebLayer.html#formtokens[Handling Duplicate Form Submissions] for more information.
+See link:{guidePath}theWebLayer.html#formtokens[Handling Duplicate Form Submissions] for more information.

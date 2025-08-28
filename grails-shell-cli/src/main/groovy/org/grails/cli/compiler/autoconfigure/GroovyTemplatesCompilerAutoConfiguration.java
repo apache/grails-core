@@ -35,21 +35,21 @@ import org.grails.cli.groovy.GroovyTemplate;
  */
 public class GroovyTemplatesCompilerAutoConfiguration extends CompilerAutoConfiguration {
 
-	@Override
-	public boolean matches(ClassNode classNode) {
-		return AstUtils.hasAtLeastOneAnnotation(classNode, "EnableGroovyTemplates");
-	}
+    @Override
+    public boolean matches(ClassNode classNode) {
+        return AstUtils.hasAtLeastOneAnnotation(classNode, "EnableGroovyTemplates");
+    }
 
-	@Override
-	public void applyDependencies(DependencyCustomizer dependencies) {
-		dependencies.ifAnyMissingClasses("groovy.text.TemplateEngine").add("groovy-templates");
-	}
+    @Override
+    public void applyDependencies(DependencyCustomizer dependencies) {
+        dependencies.ifAnyMissingClasses("groovy.text.TemplateEngine").add("groovy-templates");
+    }
 
-	@Override
-	public void applyImports(ImportCustomizer imports) {
-		imports.addStarImports("groovy.text");
-		imports.addImports(EnableGroovyTemplates.class.getCanonicalName());
-		imports.addStaticImport(GroovyTemplate.class.getName(), "template");
-	}
+    @Override
+    public void applyImports(ImportCustomizer imports) {
+        imports.addStarImports("groovy.text");
+        imports.addImports(EnableGroovyTemplates.class.getCanonicalName());
+        imports.addStaticImport(GroovyTemplate.class.getName(), "template");
+    }
 
 }

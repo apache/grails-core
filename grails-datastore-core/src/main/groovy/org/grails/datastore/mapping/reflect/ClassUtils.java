@@ -29,7 +29,7 @@ import java.util.Map;
  * @since 5.0
  */
 public class ClassUtils {
-    public static final Map<Class<?>, Class<?>> PRIMITIVE_TYPE_COMPATIBLE_CLASSES = new HashMap<Class<?>, Class<?>>();
+    public static final Map<Class<?>, Class<?>> PRIMITIVE_TYPE_COMPATIBLE_CLASSES = new HashMap<>();
 
     /**
      * Just add two entries to the class compatibility map
@@ -93,11 +93,12 @@ public class ClassUtils {
             }
             return clazz.isAssignableFrom(primitiveClass);
         }
-        else if(type.isArray() && Iterable.class.isAssignableFrom(clazz)) {
+        else if (type.isArray() && Iterable.class.isAssignableFrom(clazz)) {
             return true;
         }
         return clazz.isAssignableFrom(type);
     }
+
     /**
      * Determine whether the {@link Class} identified by the supplied name is present
      * and can be loaded. Will return {@code false} if either the class or
@@ -129,9 +130,9 @@ public class ClassUtils {
         if (map == null) return false;
         if (map.containsKey(key)) {
             Object o = map.get(key);
-            if (o == null)return false;
+            if (o == null) return false;
             if (o instanceof Boolean) {
-                return (Boolean)o;
+                return (Boolean) o;
             }
             return Boolean.valueOf(o.toString());
         }
@@ -160,7 +161,7 @@ public class ClassUtils {
     public static boolean isMultiTenant(Class clazz) {
         Class<?>[] allInterfacesForClass = org.springframework.util.ClassUtils.getAllInterfacesForClass(clazz);
         for (Class anInterface : allInterfacesForClass) {
-            if(anInterface.getSimpleName().equals("MultiTenant")) {
+            if (anInterface.getSimpleName().equals("MultiTenant")) {
                 return true;
             }
         }

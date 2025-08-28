@@ -26,9 +26,10 @@ import grails.persistence.Entity
  */
 @Entity
 class ClassWithHungarianNotation implements Serializable {
+
     Integer iSize
 
     static constraints = {
-        iSize nullable: true
+        iSize(nullable: true)
     }
 }

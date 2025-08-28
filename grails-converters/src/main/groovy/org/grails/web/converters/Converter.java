@@ -18,11 +18,11 @@
  */
 package org.grails.web.converters;
 
-import groovy.lang.Closure;
-
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
+
+import groovy.lang.Closure;
 
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -73,7 +73,7 @@ public interface Converter<W> {
         PATH;
 
         public static List<String> allowedValues() {
-            List<String> v = new ArrayList<String>();
+            List<String> v = new ArrayList<>();
             for (CircularReferenceBehaviour crb : values()) {
                 v.add(crb.name());
             }

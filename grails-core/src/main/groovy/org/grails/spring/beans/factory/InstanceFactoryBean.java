@@ -55,7 +55,6 @@ public class InstanceFactoryBean<T> implements FactoryBean<T> {
         return object;
     }
 
-
     public void setObject(T object) {
         this.object = object;
     }

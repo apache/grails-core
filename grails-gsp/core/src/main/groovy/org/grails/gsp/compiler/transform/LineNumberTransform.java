@@ -18,12 +18,48 @@
  */
 package org.grails.gsp.compiler.transform;
 
-import org.apache.grails.common.compiler.GroovyTransformOrder;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotationNode;
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport;
 import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.ast.expr.*;
+import org.codehaus.groovy.ast.expr.ArgumentListExpression;
+import org.codehaus.groovy.ast.expr.ArrayExpression;
+import org.codehaus.groovy.ast.expr.AttributeExpression;
+import org.codehaus.groovy.ast.expr.BinaryExpression;
+import org.codehaus.groovy.ast.expr.BitwiseNegationExpression;
+import org.codehaus.groovy.ast.expr.BooleanExpression;
+import org.codehaus.groovy.ast.expr.CastExpression;
+import org.codehaus.groovy.ast.expr.ClassExpression;
+import org.codehaus.groovy.ast.expr.ClosureExpression;
+import org.codehaus.groovy.ast.expr.ClosureListExpression;
+import org.codehaus.groovy.ast.expr.ConstantExpression;
+import org.codehaus.groovy.ast.expr.ConstructorCallExpression;
+import org.codehaus.groovy.ast.expr.DeclarationExpression;
+import org.codehaus.groovy.ast.expr.ElvisOperatorExpression;
+import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.FieldExpression;
+import org.codehaus.groovy.ast.expr.GStringExpression;
+import org.codehaus.groovy.ast.expr.ListExpression;
+import org.codehaus.groovy.ast.expr.MapEntryExpression;
+import org.codehaus.groovy.ast.expr.MapExpression;
+import org.codehaus.groovy.ast.expr.MethodCallExpression;
+import org.codehaus.groovy.ast.expr.MethodPointerExpression;
+import org.codehaus.groovy.ast.expr.NotExpression;
+import org.codehaus.groovy.ast.expr.PostfixExpression;
+import org.codehaus.groovy.ast.expr.PrefixExpression;
+import org.codehaus.groovy.ast.expr.PropertyExpression;
+import org.codehaus.groovy.ast.expr.RangeExpression;
+import org.codehaus.groovy.ast.expr.SpreadExpression;
+import org.codehaus.groovy.ast.expr.SpreadMapExpression;
+import org.codehaus.groovy.ast.expr.StaticMethodCallExpression;
+import org.codehaus.groovy.ast.expr.TernaryExpression;
+import org.codehaus.groovy.ast.expr.TupleExpression;
+import org.codehaus.groovy.ast.expr.UnaryMinusExpression;
+import org.codehaus.groovy.ast.expr.UnaryPlusExpression;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.classgen.BytecodeExpression;
 import org.codehaus.groovy.control.CompilePhase;
@@ -31,11 +67,10 @@ import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
 import org.codehaus.groovy.transform.TransformWithPriority;
+
 import org.springframework.util.ReflectionUtils;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.List;
+import org.apache.grails.common.compiler.GroovyTransformOrder;
 
 /**
  * Convert line number information to that based on the line number array passed
@@ -43,12 +78,12 @@ import java.util.List;
  *
  * @author Andrew Eisenberg
  */
-@GroovyASTTransformation(phase=CompilePhase.SEMANTIC_ANALYSIS)
+@GroovyASTTransformation(phase = CompilePhase.SEMANTIC_ANALYSIS)
 public class LineNumberTransform implements ASTTransformation, TransformWithPriority {
 
     // LOG statements commented out because they were causing
     // compilation problems when used outside of grails
-//    static final Log LOG = LogFactory.getLog(LineNumberTransform)
+    // static final Log LOG = LogFactory.getLog(LineNumberTransform)
 
     public void visit(ASTNode[] nodes, SourceUnit source) {
         List<ClassNode> classes = source.getAST().getClasses();
@@ -84,8 +119,8 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
     }
 
     String extractSourceName(AnnotationNode node) {
-        ConstantExpression newName = (ConstantExpression)node.getMember("sourceName");
-        return (String)newName.getValue();
+        ConstantExpression newName = (ConstantExpression) node.getMember("sourceName");
+        return (String) newName.getValue();
     }
 
     AnnotationNode findAnnotation(ClassNode clazz) {
@@ -101,12 +136,12 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
     }
 
     int[] extractLineNumberArray(AnnotationNode node) {
-        ListExpression lineNumberArray = (ListExpression)node.getMember("lines");
+        ListExpression lineNumberArray = (ListExpression) node.getMember("lines");
         // make assumption that this is a simple array of constants
-        List<Integer> numbers = new ArrayList<Integer>();
+        List<Integer> numbers = new ArrayList<>();
         for (Expression e : lineNumberArray.getExpressions()) {
             if (e instanceof ConstantExpression) {
-                numbers.add((Integer)((ConstantExpression)e).getValue());
+                numbers.add((Integer) ((ConstantExpression) e).getValue());
             }
             else {
                 numbers.add(-1);
@@ -133,13 +168,15 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
 
         LineNumberVisitor(int[] lineNumbers) {
             this.lineNumbers = lineNumbers;
-//            if (LOG.isDebugEnabled()) {
-//                String numbers = "Line numbers: ";
-//                for (int number : lineNumbers) {
-//                    numbers += number + ", ";
-//                }
-//                LOG.debug numbers
-//            }
+            /*
+            if (LOG.isDebugEnabled()) {
+                String numbers = "Line numbers: ";
+                for (int number : lineNumbers) {
+                    numbers += number + ", ";
+                }
+                LOG.debug numbers
+            }
+            */
         }
 
         @Override
@@ -172,9 +209,10 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitMethodCallExpression(expression);
         }
+
         @Override
         public void visitStaticMethodCallExpression(StaticMethodCallExpression expression) {
-             // LOG.debug "Transforming expression '${expression}':"
+            // LOG.debug "Transforming expression '${expression}':"
 
             if (expression.getLineNumber() >= 0 && expression.getLineNumber() < lineNumbers.length) {
                 // LOG.debug "   start from ${expression.lineNumber} to ${lineNumbers[expression.lineNumber - 1]}"
@@ -187,6 +225,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitStaticMethodCallExpression(expression);
         }
+
         @Override
         public void visitConstructorCallExpression(ConstructorCallExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -202,6 +241,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitConstructorCallExpression(expression);
         }
+
         @Override
         public void visitBinaryExpression(BinaryExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -217,6 +257,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitBinaryExpression(expression);
         }
+
         @Override
         public void visitTernaryExpression(TernaryExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -232,6 +273,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitTernaryExpression(expression);
         }
+
         @Override
         public void visitShortTernaryExpression(ElvisOperatorExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -247,6 +289,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitShortTernaryExpression(expression);
         }
+
         @Override
         public void visitPostfixExpression(PostfixExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -262,6 +305,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitPostfixExpression(expression);
         }
+
         @Override
         public void visitPrefixExpression(PrefixExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -277,6 +321,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitPrefixExpression(expression);
         }
+
         @Override
         public void visitBooleanExpression(BooleanExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -292,6 +337,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitBooleanExpression(expression);
         }
+
         @Override
         public void visitNotExpression(NotExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -307,6 +353,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitNotExpression(expression);
         }
+
         @Override
         public void visitClosureExpression(ClosureExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -322,6 +369,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitClosureExpression(expression);
         }
+
         @Override
         public void visitTupleExpression(TupleExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -337,6 +385,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitTupleExpression(expression);
         }
+
         @Override
         public void visitListExpression(ListExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -352,6 +401,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitListExpression(expression);
         }
+
         @Override
         public void visitArrayExpression(ArrayExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -367,6 +417,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitArrayExpression(expression);
         }
+
         @Override
         public void visitMapExpression(MapExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -382,6 +433,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitMapExpression(expression);
         }
+
         @Override
         public void visitMapEntryExpression(MapEntryExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -397,6 +449,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitMapEntryExpression(expression);
         }
+
         @Override
         public void visitRangeExpression(RangeExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -412,6 +465,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitRangeExpression(expression);
         }
+
         @Override
         public void visitSpreadExpression(SpreadExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -427,6 +481,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitSpreadExpression(expression);
         }
+
         @Override
         public void visitSpreadMapExpression(SpreadMapExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -442,6 +497,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitSpreadMapExpression(expression);
         }
+
         @Override
         public void visitMethodPointerExpression(
                 MethodPointerExpression expression) {
@@ -458,6 +514,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitMethodPointerExpression(expression);
         }
+
         @Override
         public void visitUnaryMinusExpression(UnaryMinusExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -473,6 +530,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitUnaryMinusExpression(expression);
         }
+
         @Override
         public void visitUnaryPlusExpression(UnaryPlusExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -488,6 +546,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitUnaryPlusExpression(expression);
         }
+
         @Override
         public void visitBitwiseNegationExpression(BitwiseNegationExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -503,6 +562,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitBitwiseNegationExpression(expression);
         }
+
         @Override
         public void visitCastExpression(CastExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -518,6 +578,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitCastExpression(expression);
         }
+
         @Override
         public void visitConstantExpression(ConstantExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -533,6 +594,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitConstantExpression(expression);
         }
+
         @Override
         public void visitClassExpression(ClassExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -548,6 +610,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitClassExpression(expression);
         }
+
         @Override
         public void visitDeclarationExpression(DeclarationExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -563,6 +626,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitDeclarationExpression(expression);
         }
+
         @Override
         public void visitPropertyExpression(PropertyExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -578,6 +642,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitPropertyExpression(expression);
         }
+
         @Override
         public void visitAttributeExpression(AttributeExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -593,6 +658,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitAttributeExpression(expression);
         }
+
         @Override
         public void visitFieldExpression(FieldExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -608,6 +674,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitFieldExpression(expression);
         }
+
         @Override
         public void visitGStringExpression(GStringExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -623,6 +690,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitGStringExpression(expression);
         }
+
         @Override
         public void visitArgumentlistExpression(ArgumentListExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -638,6 +706,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitArgumentlistExpression(expression);
         }
+
         @Override
         public void visitClosureListExpression(ClosureListExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -653,6 +722,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitClosureListExpression(expression);
         }
+
         @Override
         public void visitBytecodeExpression(BytecodeExpression expression) {
             // LOG.debug "Transforming expression '${expression}':"
@@ -668,6 +738,7 @@ public class LineNumberTransform implements ASTTransformation, TransformWithPrio
             }
             super.visitBytecodeExpression(expression);
         }
+
         @Override
         protected SourceUnit getSourceUnit() {
             return null;

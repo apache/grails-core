@@ -18,8 +18,6 @@
  */
 package org.grails.core.io;
 
-import grails.util.Environment;
-
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
@@ -29,17 +27,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.grails.io.support.GrailsResourceUtils;
-import org.grails.plugins.BinaryGrailsPlugin;
-import grails.plugins.GrailsPlugin;
-import grails.plugins.GrailsPluginManager;
-import grails.plugins.PluginManagerAware;
 import org.springframework.context.ResourceLoaderAware;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResourceLoader;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+
+import grails.plugins.GrailsPlugin;
+import grails.plugins.GrailsPluginManager;
+import grails.plugins.PluginManagerAware;
+import grails.util.Environment;
+import org.grails.io.support.GrailsResourceUtils;
+import org.grails.plugins.BinaryGrailsPlugin;
 
 /**
  * Default ResourceLocator implementation that doesn't take into account servlet loading.
@@ -57,11 +57,11 @@ public class DefaultResourceLocator implements ResourceLocator, ResourceLoaderAw
     protected static final Resource NULL_RESOURCE = new ByteArrayResource("null".getBytes());
 
     protected PathMatchingResourcePatternResolver patchMatchingResolver;
-    protected List<String> classSearchDirectories = new ArrayList<String>();
-    protected List<String> resourceSearchDirectories = new ArrayList<String>();
-    protected Map<String, Resource> classNameToResourceCache = new ConcurrentHashMap<String, Resource>();
-    protected Map<String, Resource> uriToResourceCache = new ConcurrentHashMap<String, Resource>();
-    protected ResourceLoader defaultResourceLoader =  new FileSystemResourceLoader();
+    protected List<String> classSearchDirectories = new ArrayList<>();
+    protected List<String> resourceSearchDirectories = new ArrayList<>();
+    protected Map<String, Resource> classNameToResourceCache = new ConcurrentHashMap<>();
+    protected Map<String, Resource> uriToResourceCache = new ConcurrentHashMap<>();
+    protected ResourceLoader defaultResourceLoader = new FileSystemResourceLoader();
     protected GrailsPluginManager pluginManager;
     protected boolean warDeployed = Environment.isWarDeployed();
 
@@ -168,7 +168,7 @@ public class DefaultResourceLocator implements ResourceLocator, ResourceLoaderAw
             String fullPluginName = info.pluginName;
             for (GrailsPlugin plugin : pluginManager.getAllPlugins()) {
                 if (plugin.getFileSystemName().equals(fullPluginName) && (plugin instanceof BinaryGrailsPlugin)) {
-                    return ((BinaryGrailsPlugin)plugin).getResource(info.uri);
+                    return ((BinaryGrailsPlugin) plugin).getResource(info.uri);
                 }
             }
         }
@@ -210,7 +210,7 @@ public class DefaultResourceLocator implements ResourceLocator, ResourceLoaderAw
 
     private List<String> getSearchPatternForExtension(String classNameWithPathSeparator, String... extensions) {
 
-        List<String> searchPatterns = new ArrayList<String>();
+        List<String> searchPatterns = new ArrayList<>();
         for (String extension : extensions) {
             String filename = classNameWithPathSeparator + extension;
             for (String classSearchDirectory : classSearchDirectories) {

@@ -19,6 +19,16 @@
 
 package grails.plugin.json.builder;
 
+import java.io.IOException;
+import java.io.StringReader;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 import groovy.json.JsonException;
 import groovy.json.JsonLexer;
 import groovy.json.JsonToken;
@@ -27,12 +37,8 @@ import groovy.lang.Writable;
 import groovy.util.Expando;
 import org.apache.groovy.json.internal.CharBuf;
 import org.apache.groovy.json.internal.Chr;
-import org.grails.buffer.FastStringWriter;
 
-import jakarta.validation.constraints.NotNull;
-import java.io.*;
-import java.net.URL;
-import java.util.*;
+import org.grails.buffer.FastStringWriter;
 
 /**
  * Temporary fork of {@link groovy.json.JsonOutput} until Groovy 2.5.0 is out.

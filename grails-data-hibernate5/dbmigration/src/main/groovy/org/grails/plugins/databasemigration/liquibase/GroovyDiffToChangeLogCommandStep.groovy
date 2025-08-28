@@ -19,6 +19,7 @@
 package org.grails.plugins.databasemigration.liquibase
 
 import groovy.transform.CompileStatic
+
 import liquibase.command.CommandResultsBuilder
 import liquibase.command.CommandScope
 import liquibase.command.core.DiffChangelogCommandStep
@@ -31,33 +32,34 @@ import liquibase.database.ObjectQuotingStrategy
 import liquibase.diff.DiffResult
 import liquibase.diff.output.DiffOutputControl
 import liquibase.serializer.ChangeLogSerializerFactory
+
 import grails.util.GrailsStringUtils
 
 @CompileStatic
 class GroovyDiffToChangeLogCommandStep extends DiffChangelogCommandStep {
 
-    public static final String[] COMMAND_NAME = new String[] {"groovyDiffChangelog"}
+    public static final String[] COMMAND_NAME = new String[] {'groovyDiffChangelog'}
 
     @Override
     void run(CommandResultsBuilder resultsBuilder) {
         CommandScope commandScope = resultsBuilder.getCommandScope()
-        Database referenceDatabase = commandScope.getArgumentValue(ReferenceDbUrlConnectionCommandStep.REFERENCE_DATABASE_ARG);
-        String changeLogFile = commandScope.getArgumentValue(CHANGELOG_FILE_ARG);
+        Database referenceDatabase = commandScope.getArgumentValue(ReferenceDbUrlConnectionCommandStep.REFERENCE_DATABASE_ARG)
+        String changeLogFile = commandScope.getArgumentValue(CHANGELOG_FILE_ARG)
 
-        InternalSnapshotCommandStep.logUnsupportedDatabase(referenceDatabase, this.getClass());
+        InternalSnapshotCommandStep.logUnsupportedDatabase(referenceDatabase, this.getClass())
 
         DiffCommandStep diffCommandStep = new DiffCommandStep()
 
-        DiffResult diffResult = diffCommandStep.createDiffResult(resultsBuilder);
+        DiffResult diffResult = diffCommandStep.createDiffResult(resultsBuilder)
 
-        PrintStream outputStream = new PrintStream(resultsBuilder.getOutputStream());
+        PrintStream outputStream = new PrintStream(resultsBuilder.getOutputStream())
 
-        ObjectQuotingStrategy originalStrategy = referenceDatabase.getObjectQuotingStrategy();
+        ObjectQuotingStrategy originalStrategy = referenceDatabase.getObjectQuotingStrategy()
 
         DiffOutputControl diffOutputControl = (DiffOutputControl) resultsBuilder.getResult(DiffOutputControlCommandStep.DIFF_OUTPUT_CONTROL.getName())
 
         try {
-            referenceDatabase.setObjectQuotingStrategy(ObjectQuotingStrategy.QUOTE_ALL_OBJECTS);
+            referenceDatabase.setObjectQuotingStrategy(ObjectQuotingStrategy.QUOTE_ALL_OBJECTS)
             if (GrailsStringUtils.trimToNull(changeLogFile) == null) {
                 createDiffToChangeLogObject(diffResult, diffOutputControl, false).print(outputStream, ChangeLogSerializerFactory.instance.getSerializer('groovy'))
             } else {
@@ -65,10 +67,10 @@ class GroovyDiffToChangeLogCommandStep extends DiffChangelogCommandStep {
             }
         }
         finally {
-            referenceDatabase.setObjectQuotingStrategy(originalStrategy);
-            outputStream.flush();
+            referenceDatabase.setObjectQuotingStrategy(originalStrategy)
+            outputStream.flush()
         }
-        resultsBuilder.addResult("statusCode", 0);
+        resultsBuilder.addResult('statusCode', 0)
 
     }
 

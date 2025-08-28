@@ -28,7 +28,7 @@ import spock.lang.Issue
 class OneToManyUpdateSpec extends GormDatastoreSpec {
 
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/575')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/575')
     void "Test updates to one to many don't create duplicate relationships"() {
         given:" a one to many relationship"
         Club club = new Club(name:"Manchester United")
@@ -91,7 +91,7 @@ class OneToManyUpdateSpec extends GormDatastoreSpec {
 
     }
 
-    @Issue('https://github.com/grails/gorm-neo4j/issues/26')
+    @Issue('https://github.com/grails/grails-data-neo4j/issues/26')
     void "test that setting an association to null clears the relationship"() {
         given:
         Club c = new Club(name: "Manchester United").save(validate:false)

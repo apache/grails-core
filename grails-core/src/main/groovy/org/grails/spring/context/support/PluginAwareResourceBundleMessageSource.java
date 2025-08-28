@@ -18,6 +18,24 @@
  */
 package org.grails.spring.context.support;
 
+import java.io.File;
+import java.io.FilenameFilter;
+import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Properties;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.io.support.ResourcePatternResolver;
+
 import grails.core.DefaultGrailsApplication;
 import grails.core.GrailsApplication;
 import grails.core.GrailsApplicationClass;
@@ -32,23 +50,6 @@ import grails.util.GrailsStringUtils;
 import org.grails.core.io.CachingPathMatchingResourcePatternResolver;
 import org.grails.core.support.internal.tools.ClassRelativeResourcePatternResolver;
 import org.grails.plugins.BinaryGrailsPlugin;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.core.io.support.ResourcePatternResolver;
-
-import java.io.File;
-import java.io.FilenameFilter;
-import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Properties;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * A ReloadableResourceBundleMessageSource that is capable of loading message sources from plugins.
@@ -60,11 +61,11 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
     private static final String GRAILS_APP_I18N_PATH_COMPONENT = "/grails-app/i18n/";
     protected GrailsApplication application;
     protected GrailsPluginManager pluginManager;
-    protected List<String> pluginBaseNames = new ArrayList<String>();
+    protected List<String> pluginBaseNames = new ArrayList<>();
     private ResourceLoader localResourceLoader;
     private PathMatchingResourcePatternResolver resourceResolver;
-    private ConcurrentMap<Locale, CacheEntry<PropertiesHolder>> cachedMergedPluginProperties = new ConcurrentHashMap<Locale, CacheEntry<PropertiesHolder>>();
-    private ConcurrentMap<Locale, CacheEntry<PropertiesHolder>> cachedMergedBinaryPluginProperties = new ConcurrentHashMap<Locale, CacheEntry<PropertiesHolder>>();
+    private ConcurrentMap<Locale, CacheEntry<PropertiesHolder>> cachedMergedPluginProperties = new ConcurrentHashMap<>();
+    private ConcurrentMap<Locale, CacheEntry<PropertiesHolder>> cachedMergedBinaryPluginProperties = new ConcurrentHashMap<>();
     private long pluginCacheMillis = Long.MIN_VALUE;
     private boolean searchClasspath = false;
     private String messageBundleLocationPattern = "classpath*:*.properties";
@@ -93,21 +94,21 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
         if (pluginCacheMillis == Long.MIN_VALUE) {
             pluginCacheMillis = cacheMillis;
         }
-        
+
         if (localResourceLoader == null) {
             return;
         }
 
         Resource[] resources;
-        if(Environment.isDevelopmentEnvironmentAvailable()) {
+        if (Environment.isDevelopmentEnvironmentAvailable()) {
             File[] propertiesFiles = new File(BuildSettings.BASE_DIR, GRAILS_APP_I18N_PATH_COMPONENT).listFiles(new FilenameFilter() {
                 @Override
                 public boolean accept(File dir, String name) {
                     return name.endsWith(".properties");
                 }
             });
-            if(propertiesFiles != null && propertiesFiles.length > 0) {
-                List<Resource> resourceList = new ArrayList<Resource>(propertiesFiles.length);
+            if (propertiesFiles != null && propertiesFiles.length > 0) {
+                List<Resource> resourceList = new ArrayList<>(propertiesFiles.length);
                 for (File propertiesFile : propertiesFiles) {
                     resourceList.add(new FileSystemResource(propertiesFile));
                 }
@@ -118,14 +119,14 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
             }
         }
         else {
-            if(searchClasspath) {
+            if (searchClasspath) {
                 resources = resourceResolver.getResources(messageBundleLocationPattern);
             }
             else {
                 DefaultGrailsApplication defaultGrailsApplication = (DefaultGrailsApplication) application;
-                if(defaultGrailsApplication != null) {
+                if (defaultGrailsApplication != null) {
                     GrailsApplicationClass applicationClass = defaultGrailsApplication.getApplicationClass();
-                    if(applicationClass != null) {
+                    if (applicationClass != null) {
                         ResourcePatternResolver resourcePatternResolver = new ClassRelativeResourcePatternResolver(applicationClass.getClass());
                         resources = resourcePatternResolver.getResources(messageBundleLocationPattern);
                     }
@@ -139,22 +140,21 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
             }
         }
 
-        List<String> basenames = new ArrayList<String>();
+        List<String> basenames = new ArrayList<>();
         for (Resource resource : resources) {
             String filename = resource.getFilename();
             String baseName = GrailsStringUtils.getFileBasename(filename);
             int i = baseName.indexOf('_');
-            if(i > -1) {
+            if (i > -1) {
                 baseName = baseName.substring(0, i);
             }
-            if(!basenames.contains(baseName) && !baseName.equals(""))
+            if (!basenames.contains(baseName) && !baseName.equals(""))
                 basenames.add(baseName);
         }
 
-        setBasenames(basenames.toArray( new String[basenames.size()]));
+        setBasenames(basenames.toArray(new String[basenames.size()]));
 
     }
-
 
     @Override
     protected String resolveCodeWithoutArguments(String code, Locale locale) {
@@ -177,7 +177,7 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
      * cached forever.
      */
     protected PropertiesHolder getMergedPluginProperties(final Locale locale) {
-        return CacheEntry.getValue(cachedMergedPluginProperties, locale, cacheMillis, new Callable<PropertiesHolder>() {
+        return CacheEntry.getValue(cachedMergedPluginProperties, locale, cacheMillis, new Callable<>() {
             @Override
             public PropertiesHolder call() throws Exception {
                 Properties mergedProps = new Properties();
@@ -210,9 +210,9 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
         }
         return null;
     }
-    
+
     protected PropertiesHolder getMergedBinaryPluginProperties(final Locale locale) {
-        return CacheEntry.getValue(cachedMergedBinaryPluginProperties, locale, cacheMillis, new Callable<PropertiesHolder>() {
+        return CacheEntry.getValue(cachedMergedBinaryPluginProperties, locale, cacheMillis, new Callable<>() {
             @Override
             public PropertiesHolder call() throws Exception {
                 Properties mergedProps = new Properties();
@@ -277,7 +277,6 @@ public class PluginAwareResourceBundleMessageSource extends ReloadableResourceBu
         }
     }
 
-    
     /**
      * Set the number of seconds to cache the list of matching properties files loaded from plugin.
      * <ul>

@@ -19,10 +19,11 @@
 
 package org.apache.grails.data.testing.tck.domains
 
-import grails.persistence.Entity;
+import grails.persistence.Entity
 
 @Entity
 class ClassWithNoArgBeforeValidate implements Serializable {
+
     Long id
     Long version
     def noArgCounter = 0
@@ -33,6 +34,6 @@ class ClassWithNoArgBeforeValidate implements Serializable {
     }
 
     static constraints = {
-        name blank: false
+        name(blank: false)
     }
 }

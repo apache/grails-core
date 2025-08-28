@@ -19,6 +19,7 @@
 package org.grails.gradle.plugin.commands
 
 import groovy.transform.CompileStatic
+
 import org.gradle.api.tasks.JavaExec
 
 /**
@@ -31,8 +32,8 @@ import org.gradle.api.tasks.JavaExec
 class ApplicationContextCommandTask extends JavaExec {
 
     ApplicationContextCommandTask() {
-        mainClass.set("grails.ui.command.GrailsApplicationContextCommandRunner")
-        dependsOn("classes", "findMainClass")
+        mainClass.set('grails.ui.command.GrailsApplicationContextCommandRunner')
+        dependsOn('classes', 'findMainClass')
         systemProperties(System.properties.findAll { it.key.toString().startsWith('grails.') } as Map<String, Object>)
     }
 

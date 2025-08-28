@@ -17,18 +17,27 @@
  *  under the License.
  */
 
-package org.grails.databinding.converters;
+package org.grails.databinding.converters
+
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.OffsetDateTime
+import java.time.OffsetTime
+import java.time.Period
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+
+import jakarta.inject.Inject
+
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
 
 import grails.databinding.TypedStructuredBindingEditor
 import grails.databinding.converters.FormattedValueConverter
 import grails.databinding.converters.ValueConverter
 import org.grails.plugins.databinding.DataBindingConfigurationProperties
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
-
-import jakarta.inject.Inject
-import java.time.*
-import java.time.format.DateTimeFormatter
 
 @Configuration
 class Jsr310ConvertersConfiguration {
@@ -48,7 +57,7 @@ class Jsr310ConvertersConfiguration {
         new FormattedValueConverter() {
             @Override
             Object convert(Object value, String format) {
-                OffsetDateTime.parse((CharSequence)value, DateTimeFormatter.ofPattern(format))
+                OffsetDateTime.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
             }
 
             @Override
@@ -64,7 +73,7 @@ class Jsr310ConvertersConfiguration {
             @Override
             OffsetDateTime convert(Object value) {
                 convert(value) { String format ->
-                    OffsetDateTime.parse((CharSequence)value, DateTimeFormatter.ofPattern(format))
+                    OffsetDateTime.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
                 }
             }
 
@@ -111,7 +120,7 @@ class Jsr310ConvertersConfiguration {
             @Override
             OffsetTime convert(Object value) {
                 convert(value) { String format ->
-                    OffsetTime.parse((CharSequence)value, DateTimeFormatter.ofPattern(format))
+                    OffsetTime.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
                 }
             }
 
@@ -158,7 +167,7 @@ class Jsr310ConvertersConfiguration {
             @Override
             LocalDateTime convert(Object value) {
                 convert(value) { String format ->
-                    LocalDateTime.parse((CharSequence)value, DateTimeFormatter.ofPattern(format))
+                    LocalDateTime.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
                 }
             }
 
@@ -205,7 +214,7 @@ class Jsr310ConvertersConfiguration {
             @Override
             LocalDate convert(Object value) {
                 convert(value) { String format ->
-                    LocalDate.parse((CharSequence)value, DateTimeFormatter.ofPattern(format))
+                    LocalDate.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
                 }
             }
 
@@ -221,7 +230,7 @@ class Jsr310ConvertersConfiguration {
         new CustomDateBindingEditor<LocalDate>() {
             @Override
             LocalDate getDate(Calendar c) {
-                LocalDate.of(c.get(Calendar.YEAR), c.get(Calendar.MONTH)+1, c.get(Calendar.DAY_OF_MONTH))
+                LocalDate.of(c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH))
             }
 
             @Override
@@ -252,7 +261,7 @@ class Jsr310ConvertersConfiguration {
             @Override
             LocalTime convert(Object value) {
                 convert(value) { String format ->
-                    LocalTime.parse((CharSequence)value, DateTimeFormatter.ofPattern(format))
+                    LocalTime.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
                 }
             }
 
@@ -283,7 +292,7 @@ class Jsr310ConvertersConfiguration {
         new FormattedValueConverter() {
             @Override
             Object convert(Object value, String format) {
-                ZonedDateTime.parse((CharSequence)value, DateTimeFormatter.ofPattern(format))
+                ZonedDateTime.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
             }
 
             @Override
@@ -299,7 +308,7 @@ class Jsr310ConvertersConfiguration {
             @Override
             ZonedDateTime convert(Object value) {
                 convert(value) { String format ->
-                    ZonedDateTime.parse((CharSequence)value, DateTimeFormatter.ofPattern(format))
+                    ZonedDateTime.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
                 }
             }
 
@@ -389,20 +398,20 @@ class Jsr310ConvertersConfiguration {
         T convert(Object value, Closure callable) {
             T dateValue
             if (value instanceof String) {
-                if(!value) {
+                if (!value) {
                     return null
                 }
                 def firstException
                 formatStrings.each { String format ->
                     if (dateValue == null) {
                         try {
-                            dateValue = (T)callable.call(format)
+                            dateValue = (T) callable.call(format)
                         } catch (Exception e) {
                             firstException = firstException ?: e
                         }
                     }
                 }
-                if(dateValue == null && firstException) {
+                if (dateValue == null && firstException) {
                     throw firstException
                 }
             }

@@ -24,6 +24,7 @@ package grails.web.mvc
  * change the response.
  */
 interface GrailsResponseMutator {
+
     /**
      * Do not mutate the response & stop any processing of it.
      */

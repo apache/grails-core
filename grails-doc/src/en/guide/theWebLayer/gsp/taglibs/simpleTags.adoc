@@ -44,7 +44,7 @@ def formatBook = { attrs, body ->
 }
 ----
 
-Although this approach may be tempting it is not very clean. A better approach would be to reuse the xref:../../../../ref/Tags%20-%20GSP/render.adoc[render] tag:
+Although this approach may be tempting it is not very clean. A better approach would be to reuse the link:{gspTagsRef}render.html[render] tag:
 
 [source,groovy]
 ----

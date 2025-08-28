@@ -21,6 +21,7 @@ package grails.plugin.json.view.test
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+
 import org.springframework.http.HttpStatus
 
 /**
@@ -32,6 +33,7 @@ import org.springframework.http.HttpStatus
 @CompileStatic
 @Canonical
 class JsonRenderResult {
+
     /**
      * The status
      */

@@ -19,11 +19,12 @@
 
 package org.grails.datastore.gorm.validation.constraints;
 
-import grails.gorm.validation.ConstrainedProperty;
+import java.util.List;
+
 import org.springframework.context.MessageSource;
 import org.springframework.validation.Errors;
 
-import java.util.List;
+import grails.gorm.validation.ConstrainedProperty;
 
 /**
  * A constraint that validates the property is contained within the supplied list.

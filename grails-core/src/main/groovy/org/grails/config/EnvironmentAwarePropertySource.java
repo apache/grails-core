@@ -19,13 +19,14 @@
 
 package org.grails.config;
 
-import grails.util.Environment;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.env.PropertySources;
 
-import java.util.ArrayList;
-import java.util.List;
+import grails.util.Environment;
 
 /**
  * A PropertySource aware of the Grails environment and that resolves keys based on the environment from other property sources
@@ -50,35 +51,35 @@ public class EnvironmentAwarePropertySource extends EnumerablePropertySource<Pro
     @Override
     public Object getProperty(String name) {
         initialize();
-        if(!propertyNames.contains(name)) {
+        if (!propertyNames.contains(name)) {
             return null;
         }
 
         Environment env = Environment.getCurrent();
         String key = "environments." + env.getName() + '.' + name;
-        for(PropertySource propertySource : source) {
-            if(propertySource != this) {
+        for (PropertySource propertySource : source) {
+            if (propertySource != this) {
                 Object value = propertySource.getProperty(key);
-                if(value != null) return value;
+                if (value != null) return value;
             }
         }
         return null;
     }
 
     private void initialize() {
-        if(propertyNames == null) {
+        if (propertyNames == null) {
             propertyNames = new ArrayList<>();
             Environment env = Environment.getCurrent();
             String key = "environments." + env.getName();
-            for(PropertySource propertySource : source) {
+            for (PropertySource propertySource : source) {
 
-                if((propertySource != this) &&
+                if ((propertySource != this) &&
                         !propertySource.getName().contains("plugin") && // plugin default configuration is not allowed to be environment aware (GRAILS-12123)
                         propertySource instanceof EnumerablePropertySource) {
-                    EnumerablePropertySource enumerablePropertySource = (EnumerablePropertySource)propertySource;
+                    EnumerablePropertySource enumerablePropertySource = (EnumerablePropertySource) propertySource;
 
-                    for(String propertyName : enumerablePropertySource.getPropertyNames()) {
-                        if(propertyName.startsWith(key) && propertyName.length() > key.length()) {
+                    for (String propertyName : enumerablePropertySource.getPropertyNames()) {
+                        if (propertyName.startsWith(key) && propertyName.length() > key.length()) {
                             propertyNames.add(propertyName.substring(key.length() + 1));
                         }
                     }

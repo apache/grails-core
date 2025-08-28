@@ -37,7 +37,7 @@ public class SupplierUtil {
      * @return A new supplier that will cache the result
      */
     public static <T> Supplier<T> memoized(Supplier<T> actual) {
-        return new Supplier<T>() {
+        return new Supplier<>() {
             Supplier<T> delegate = this::initialize;
             boolean initialized;
 
@@ -65,7 +65,7 @@ public class SupplierUtil {
      * @return A new supplier that will cache the result
      */
     public static <T> Supplier<T> memoizedNonEmpty(Supplier<T> actual) {
-        return new Supplier<T>() {
+        return new Supplier<>() {
             Supplier<T> delegate = this::initialize;
             boolean initialized;
 

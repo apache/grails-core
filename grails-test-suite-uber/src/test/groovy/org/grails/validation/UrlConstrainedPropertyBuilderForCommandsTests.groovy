@@ -35,7 +35,7 @@ class UrlConstrainedPropertyBuilderForCommandsTests extends Specification implem
 
     void 'test a valid url'() {
         given:
-        def cmd = new UrlConstraintsCommand(url: 'http://grails.org')
+        def cmd = new UrlConstraintsCommand(url: 'https://grails.apache.org')
 
         expect:
         cmd.validate()

@@ -19,8 +19,9 @@
 
 package grails.events.emitter
 
-import grails.events.Event
 import org.springframework.transaction.event.TransactionPhase
+
+import grails.events.Event
 
 /**
  * An emitter sends events

@@ -21,13 +21,12 @@ package org.grails.cli.gradle.cache
 
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
-import org.gradle.tooling.ProjectConnection
+
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.SafeConstructor
 import org.yaml.snakeyaml.representer.Representer
-
 
 /**
  * Cached Gradle operation that reads a Map
@@ -38,6 +37,7 @@ import org.yaml.snakeyaml.representer.Representer
 @InheritConstructors
 @CompileStatic
 abstract class MapReadingCachedGradleOperation <V> extends CachedGradleOperation<Map<String, V>> {
+
     @Override
     Map<String, V> readFromCached(File f) {
         def map = (Map<String, Object>) f.withReader { BufferedReader r ->
@@ -45,7 +45,7 @@ abstract class MapReadingCachedGradleOperation <V> extends CachedGradleOperation
         }
         Map<String, V> newMap = [:]
 
-        for(entry in map.entrySet()) {
+        for (entry in map.entrySet()) {
             newMap.put(entry.key, createMapValue(entry.value))
         }
         return newMap
@@ -58,11 +58,11 @@ abstract class MapReadingCachedGradleOperation <V> extends CachedGradleOperation
         def options = new DumperOptions()
         options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK)
         Map toWrite = data.collectEntries { String key, V val ->
-            if(val instanceof Iterable) {
-                return [(key):val.collect() { it.toString() }]
+            if (val instanceof Iterable) {
+                return [(key): val.collect() { it.toString() }]
             }
             else {
-                return [(key):val.toString()]
+                return [(key): val.toString()]
             }
         }
         new Yaml(new SafeConstructor(new LoaderOptions()), new Representer(options), options).dump(toWrite, writer)

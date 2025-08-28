@@ -18,9 +18,14 @@
  */
 package org.grails.build.parsing;
 
-import grails.util.Environment;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
-import java.util.*;
+import grails.util.Environment;
 
 /**
  * Implementation of the {@link CommandLine} interface.
@@ -32,8 +37,8 @@ public class DefaultCommandLine implements CommandLine {
 
     Properties systemProperties = new Properties();
     LinkedHashMap<String, Object> undeclaredOptions = new LinkedHashMap<>();
-    LinkedHashMap<String, SpecifiedOption> declaredOptions = new LinkedHashMap<String, SpecifiedOption>();
-    List<String> remainingArgs = new ArrayList<String>();
+    LinkedHashMap<String, SpecifiedOption> declaredOptions = new LinkedHashMap<>();
+    List<String> remainingArgs = new ArrayList<>();
     private String environment;
     private String commandName;
     private String[] rawArguments;
@@ -151,7 +156,7 @@ public class DefaultCommandLine implements CommandLine {
         final Iterator<Map.Entry<String, Object>> i = undeclaredOptions.entrySet().iterator();
         while (i.hasNext()) {
             Map.Entry<String, Object> next = i.next();
-            if(!i.hasNext()) {
+            if (!i.hasNext()) {
                 return next;
             }
         }
@@ -174,10 +179,10 @@ public class DefaultCommandLine implements CommandLine {
     private String remainingArgsToString(String separator, boolean includeOptions) {
         StringBuilder sb = new StringBuilder();
         String sep = "";
-        List<String> args = new ArrayList<String>(remainingArgs);
-        if(includeOptions) {
+        List<String> args = new ArrayList<>(remainingArgs);
+        if (includeOptions) {
             for (Map.Entry<String, Object> entry : undeclaredOptions.entrySet()) {
-                if (entry.getValue() instanceof Boolean && ((Boolean)entry.getValue())) {
+                if (entry.getValue() instanceof Boolean && ((Boolean) entry.getValue())) {
                     args.add('-' + entry.getKey());
                 }
                 else {

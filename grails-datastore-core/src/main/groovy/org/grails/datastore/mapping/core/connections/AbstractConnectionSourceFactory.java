@@ -19,12 +19,13 @@
 
 package org.grails.datastore.mapping.core.connections;
 
-import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
-import org.grails.datastore.mapping.multitenancy.TenantResolver;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.PropertyResolver;
 
-import java.util.List;
+import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
+import org.grails.datastore.mapping.multitenancy.TenantResolver;
 
 /**
  * Abstract implementation of the {@link ConnectionSourceFactory} interface
@@ -61,11 +62,11 @@ public abstract class AbstractConnectionSourceFactory<T, S extends ConnectionSou
     public ConnectionSource<T, S> create(String name, PropertyResolver configuration) {
         ConnectionSourceSettingsBuilder builder = new ConnectionSourceSettingsBuilder(configuration);
         ConnectionSourceSettings fallbackSettings = builder.build();
-        if(tenantResolver != null) {
+        if (tenantResolver != null) {
             fallbackSettings.getMultiTenancy().setTenantResolver(tenantResolver);
         }
-        if(customTypes != null) {
-            fallbackSettings.getCustom().getTypes().addAll( this.customTypes );
+        if (customTypes != null) {
+            fallbackSettings.getCustom().getTypes().addAll(this.customTypes);
         }
         return create(name, configuration, fallbackSettings);
     }

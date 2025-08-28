@@ -120,7 +120,6 @@ public interface EncodedAppender {
 
     public void close() throws IOException;
     
-    
     /**
      * When enabled, will encode all input regardless of it's current state
      * disables double-encoding prevention.

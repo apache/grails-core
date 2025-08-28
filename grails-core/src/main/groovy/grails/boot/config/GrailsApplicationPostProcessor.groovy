@@ -19,28 +19,9 @@
 
 package grails.boot.config
 
-import grails.boot.GrailsApp
-import grails.config.Settings
-import grails.core.DefaultGrailsApplication
-import grails.core.GrailsApplication
-import grails.core.GrailsApplicationClass
-import grails.core.GrailsApplicationLifeCycle
-import grails.plugins.DefaultGrailsPluginManager
-import grails.plugins.GrailsPlugin
-import grails.plugins.GrailsPluginManager
-import grails.spring.BeanBuilder
-import grails.util.Environment
-import grails.util.Holders
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.grails.config.NavigableMap
-import org.grails.config.PrefixedMapPropertySource
-import org.grails.config.PropertySourcesConfig
-import org.grails.core.exceptions.GrailsConfigurationException
-import org.grails.core.lifecycle.ShutdownOperations
-import org.grails.datastore.mapping.model.MappingContext
-import org.grails.spring.DefaultRuntimeSpringConfiguration
-import org.grails.spring.RuntimeSpringConfigUtilities
+
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
@@ -61,6 +42,27 @@ import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.EnumerablePropertySource
 import org.springframework.core.io.Resource
 
+import grails.boot.GrailsApp
+import grails.config.Settings
+import grails.core.DefaultGrailsApplication
+import grails.core.GrailsApplication
+import grails.core.GrailsApplicationClass
+import grails.core.GrailsApplicationLifeCycle
+import grails.plugins.DefaultGrailsPluginManager
+import grails.plugins.GrailsPlugin
+import grails.plugins.GrailsPluginManager
+import grails.spring.BeanBuilder
+import grails.util.Environment
+import grails.util.Holders
+import org.grails.config.NavigableMap
+import org.grails.config.PrefixedMapPropertySource
+import org.grails.config.PropertySourcesConfig
+import org.grails.core.exceptions.GrailsConfigurationException
+import org.grails.core.lifecycle.ShutdownOperations
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.spring.DefaultRuntimeSpringConfiguration
+import org.grails.spring.RuntimeSpringConfigUtilities
+
 /**
  * A {@link BeanDefinitionRegistryPostProcessor} that enhances any ApplicationContext with plugin manager capabilities
  *
@@ -70,6 +72,7 @@ import org.springframework.core.io.Resource
 @CompileStatic
 @Slf4j
 class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, ApplicationListener<ApplicationContextEvent> {
+
     static final boolean RELOADING_ENABLED = Environment.isReloadingAgentEnabled()
 
     final GrailsApplication grailsApplication
@@ -83,8 +86,8 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
 
     GrailsApplicationPostProcessor(GrailsApplicationLifeCycle lifeCycle, ApplicationContext applicationContext, Class...classes) {
         this.lifeCycle = lifeCycle
-        if(lifeCycle instanceof GrailsApplicationClass) {
-            this.applicationClass = (GrailsApplicationClass)lifeCycle
+        if (lifeCycle instanceof GrailsApplicationClass) {
+            this.applicationClass = (GrailsApplicationClass) lifeCycle
         }
         else {
             this.applicationClass = null
@@ -92,14 +95,14 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
         this.classes = classes != null ? classes : [] as Class[]
         grailsApplication = applicationClass != null ? new DefaultGrailsApplication(applicationClass) : new DefaultGrailsApplication()
         pluginManager = applicationContext?.getBeanNamesForType(GrailsPluginManager) ? applicationContext.getBean(GrailsPluginManager) : new DefaultGrailsPluginManager(grailsApplication)
-        if(applicationContext != null) {
+        if (applicationContext != null) {
             setApplicationContext(applicationContext)
         }
     }
 
     protected final void initializeGrailsApplication(ApplicationContext applicationContext) {
-        if(applicationContext == null) {
-            throw new IllegalStateException("ApplicationContext should not be null")
+        if (applicationContext == null) {
+            throw new IllegalStateException('ApplicationContext should not be null')
         }
         Environment.setInitializing(true)
         grailsApplication.applicationContext = applicationContext
@@ -126,7 +129,7 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
         // register plugin provided classes first, this gives the oppurtunity
         // for application classes to override those provided by a plugin
         pluginManager.registerProvidedArtefacts(grailsApplication)
-        for(cls in classes) {
+        for (cls in classes) {
             grailsApplication.addArtefact(cls)
         }
     }
@@ -134,46 +137,46 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
     protected void loadApplicationConfig() {
         org.springframework.core.env.Environment environment = applicationContext.getEnvironment()
         ConfigurableConversionService conversionService = null
-        if(environment instanceof ConfigurableEnvironment) {
-            if(environment instanceof AbstractEnvironment) {
+        if (environment instanceof ConfigurableEnvironment) {
+            if (environment instanceof AbstractEnvironment) {
                 conversionService = environment.getConversionService()
                 conversionService.addConverter(new Converter<String, Resource>() {
                     @Override
-                    public Resource convert(String source) {
-                        return applicationContext.getResource(source);
+                    Resource convert(String source) {
+                        return applicationContext.getResource(source)
                     }
-                });
+                })
                 conversionService.addConverter(new Converter<NavigableMap.NullSafeNavigator, String>() {
                     @Override
-                    public String convert(NavigableMap.NullSafeNavigator source) {
-                        return null;
+                    String convert(NavigableMap.NullSafeNavigator source) {
+                        return null
                     }
-                });
+                })
                 conversionService.addConverter(new Converter<NavigableMap.NullSafeNavigator, Object>() {
                     @Override
-                    public Object convert(NavigableMap.NullSafeNavigator source) {
-                        return null;
+                    Object convert(NavigableMap.NullSafeNavigator source) {
+                        return null
                     }
-                });
+                })
             }
             def propertySources = environment.getPropertySources()
             def plugins = pluginManager.allPlugins
-            if(plugins) {
-                for(GrailsPlugin plugin in plugins.reverse()) {
+            if (plugins) {
+                for (GrailsPlugin plugin in plugins.reverse()) {
                     def pluginPropertySource = plugin.propertySource
-                    if(pluginPropertySource) {
-                        if(pluginPropertySource instanceof EnumerablePropertySource) {
-                            propertySources.addLast( new PrefixedMapPropertySource( "grails.plugins.$plugin.name", (EnumerablePropertySource)pluginPropertySource ) )
+                    if (pluginPropertySource) {
+                        if (pluginPropertySource instanceof EnumerablePropertySource) {
+                            propertySources.addLast(new PrefixedMapPropertySource("grails.plugins.$plugin.name", (EnumerablePropertySource) pluginPropertySource))
                         }
-                        propertySources.addLast pluginPropertySource
+                        propertySources.addLast(pluginPropertySource)
                     }
                 }
             }
             def config = new PropertySourcesConfig(propertySources)
-            if(conversionService != null) {
-                config.setConversionService( conversionService )
+            if (conversionService != null) {
+                config.setConversionService(conversionService)
             }
-            ((DefaultGrailsApplication)grailsApplication).config = config
+            ((DefaultGrailsApplication) grailsApplication).config = config
         }
     }
 
@@ -186,7 +189,7 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
         // first register plugin beans
         pluginManager.doRuntimeConfiguration(springConfig)
 
-        if(loadExternalBeans) {
+        if (loadExternalBeans) {
             // now allow overriding via application
 
             def context = application.mainContext
@@ -213,11 +216,11 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
             }
         }
 
-        if(lifeCycle) {
+        if (lifeCycle) {
             def withSpring = lifeCycle.doWithSpring()
-            if(withSpring) {
+            if (withSpring) {
                 def bb = new BeanBuilder(null, springConfig, application.classLoader)
-                bb.beans withSpring
+                bb.beans(withSpring)
             }
         }
 
@@ -239,13 +242,13 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
 
     @Override
     void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        if(this.applicationContext != applicationContext && applicationContext != null) {
+        if (this.applicationContext != applicationContext && applicationContext != null) {
             this.applicationContext = applicationContext
             initializeGrailsApplication(applicationContext)
-            if(applicationContext instanceof ConfigurableApplicationContext) {
+            if (applicationContext instanceof ConfigurableApplicationContext) {
                 def configurable = (ConfigurableApplicationContext) applicationContext
                 configurable.addApplicationListener(this)
-                configurable.environment.addActiveProfile( grailsApplication.getConfig().getProperty(Settings.PROFILE, String, "web"))
+                configurable.environment.addActiveProfile(grailsApplication.getConfig().getProperty(Settings.PROFILE, String, 'web'))
             }
         }
     }
@@ -258,9 +261,9 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
             // Only act if the event is for our context
             Collection<GrailsApplicationLifeCycle> lifeCycleBeans = context.getBeansOfType(GrailsApplicationLifeCycle).values()
             if (event instanceof ContextRefreshedEvent) {
-                if (context.containsBean("grailsDomainClassMappingContext")) {
+                if (context.containsBean('grailsDomainClassMappingContext')) {
                     grailsApplication.setMappingContext(
-                        context.getBean("grailsDomainClassMappingContext", MappingContext)
+                        context.getBean('grailsDomainClassMappingContext', MappingContext)
                     )
                 }
                 Environment.setInitializing(false)
@@ -282,7 +285,7 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
                     lifeCycle.onStartup(eventMap)
                 }
             }
-            else if(event instanceof ContextClosedEvent) {
+            else if (event instanceof ContextClosedEvent) {
                 Map<String, Object> eventMap = [:]
                 eventMap.put('source', pluginManager)
                 for (GrailsApplicationLifeCycle lifeCycle in lifeCycleBeans.asList().reverse()) {

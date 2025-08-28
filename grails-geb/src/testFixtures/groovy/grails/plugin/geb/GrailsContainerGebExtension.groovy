@@ -18,18 +18,19 @@
  */
 package grails.plugin.geb
 
-import grails.plugin.geb.support.LocalhostDownloadSupport
-import grails.testing.mixin.integration.Integration
+import java.time.LocalDateTime
+
 import groovy.transform.CompileStatic
 import groovy.transform.TailRecursive
-import groovy.util.logging.Slf4j
+
 import org.spockframework.runtime.extension.IGlobalExtension
 import org.spockframework.runtime.model.MethodInfo
 import org.spockframework.runtime.model.SpecInfo
 import org.spockframework.runtime.model.parallel.ExclusiveResource
 import org.spockframework.runtime.model.parallel.ResourceAccessMode
 
-import java.time.LocalDateTime
+import grails.plugin.geb.support.LocalhostDownloadSupport
+import grails.testing.mixin.integration.Integration
 
 /**
  * A Spock Extension that manages the Testcontainers lifecycle for a {@link grails.plugin.geb.ContainerGebSpec}
@@ -41,7 +42,6 @@ import java.time.LocalDateTime
  * @author James Daugherty
  * @since 4.1
  */
-@Slf4j
 @CompileStatic
 class GrailsContainerGebExtension implements IGlobalExtension {
 

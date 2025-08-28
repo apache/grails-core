@@ -19,5 +19,5 @@
 package org.grails.gsp;
 
 public interface GroovyPageSourceDecorator {
-	StringBuilder decorate(StringBuilder source);
+    StringBuilder decorate(StringBuilder source);
 }

@@ -17,4 +17,4 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-The plugin provides a service named link:{api}/grails/plugin/cache/GrailsCacheAdminService.html[GrailsCacheAdminService] which support various methods for administering caches.
+The plugin provides a service named link:{api}grails/plugin/cache/GrailsCacheAdminService.html[GrailsCacheAdminService] which support various methods for administering caches.

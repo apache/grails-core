@@ -19,13 +19,14 @@
 
 package grails.test.hibernate
 
-import grails.config.Config
 import groovy.transform.CompileStatic
-import org.grails.config.PropertySourcesConfig
-import org.grails.orm.hibernate.HibernateDatastore
-import org.grails.orm.hibernate.cfg.Settings
+
 import org.hibernate.Session
 import org.hibernate.SessionFactory
+import spock.lang.AutoCleanup
+import spock.lang.Shared
+import spock.lang.Specification
+
 import org.springframework.boot.env.PropertySourceLoader
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.MutablePropertySources
@@ -38,9 +39,11 @@ import org.springframework.core.io.support.SpringFactoriesLoader
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.interceptor.DefaultTransactionAttribute
-import spock.lang.AutoCleanup
-import spock.lang.Shared
-import spock.lang.Specification
+
+import grails.config.Config
+import org.grails.config.PropertySourcesConfig
+import org.grails.orm.hibernate.HibernateDatastore
+import org.grails.orm.hibernate.cfg.Settings
 
 /**
  * Specification for Hibernate tests
@@ -56,22 +59,22 @@ abstract class HibernateSpec extends Specification {
 
     void setupSpec() {
 
-        List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader.class, getClass().getClassLoader())
+        List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader, getClass().getClassLoader())
         ResourceLoader resourceLoader = new DefaultResourceLoader()
         MutablePropertySources propertySources = new MutablePropertySources()
-        PropertySourceLoader ymlLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains("yml") }
+        PropertySourceLoader ymlLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains('yml') }
         if (ymlLoader) {
-            load(resourceLoader, ymlLoader, "application.yml").each {
+            load(resourceLoader, ymlLoader, 'application.yml').each {
                 propertySources.addLast(it)
             }
         }
-        PropertySourceLoader groovyLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains("groovy") }
+        PropertySourceLoader groovyLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains('groovy') }
         if (groovyLoader) {
-            load(resourceLoader, groovyLoader, "application.groovy").each {
+            load(resourceLoader, groovyLoader, 'application.groovy').each {
                 propertySources.addLast(it)
             }
         }
-        propertySources.addFirst(new MapPropertySource("defaults", getConfiguration()))
+        propertySources.addFirst(new MapPropertySource('defaults', getConfiguration()))
         Config config = new PropertySourcesConfig(propertySources)
         List<Class> domainClasses = getDomainClasses()
         String packageName = getPackageToScan(config)
@@ -106,7 +109,7 @@ abstract class HibernateSpec extends Specification {
      * @return The configuration
      */
     Map getConfiguration() {
-        Collections.singletonMap(Settings.SETTING_DB_CREATE, "create-drop")
+        Collections.singletonMap(Settings.SETTING_DB_CREATE, 'create-drop')
     }
 
     /**

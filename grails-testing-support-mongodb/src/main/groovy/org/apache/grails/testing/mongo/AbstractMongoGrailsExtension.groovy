@@ -29,6 +29,7 @@ import org.testcontainers.utility.DockerImageName
  * @author James Daugherty
  */
 abstract class AbstractMongoGrailsExtension {
+
     final static int DEFAULT_MONGO_PORT = 27017
     final static String DEFAULT_MONGO_VERSION = '7.0.19'
     final static String MONGO_VERSION_PROPERTY = 'mongodbContainerVersion'

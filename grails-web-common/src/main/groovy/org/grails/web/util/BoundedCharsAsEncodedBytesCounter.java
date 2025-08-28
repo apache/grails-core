@@ -18,8 +18,6 @@
  */
 package org.grails.web.util;
 
-import org.grails.buffer.StringCharArrayAccessor;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.BufferOverflowException;
@@ -29,6 +27,8 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
+
+import org.grails.buffer.StringCharArrayAccessor;
 
 /**
  * Counts chars encoded as bytes up to a certain limit (capacity of byte buffer).

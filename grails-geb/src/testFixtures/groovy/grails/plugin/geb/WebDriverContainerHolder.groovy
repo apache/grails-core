@@ -18,16 +18,20 @@
  */
 package grails.plugin.geb
 
+import java.lang.reflect.Field
+import java.time.Duration
+import java.time.temporal.ChronoUnit
+import java.util.function.Supplier
+
+import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.PackageScope
+
 import com.github.dockerjava.api.model.ContainerNetwork
 import geb.Browser
 import geb.Configuration
 import geb.spock.SpockGebTestManagerBuilder
 import geb.test.GebTestManager
-import grails.plugin.geb.serviceloader.ServiceRegistry
-import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
-import groovy.transform.PackageScope
-import groovy.util.logging.Slf4j
 import org.openqa.selenium.WebDriver
 import org.openqa.selenium.chrome.ChromeOptions
 import org.openqa.selenium.remote.RemoteWebDriver
@@ -39,11 +43,7 @@ import org.testcontainers.containers.PortForwardingContainer
 import org.testcontainers.containers.VncRecordingContainer
 import org.testcontainers.images.PullPolicy
 
-import java.lang.reflect.Field
-
-import java.time.Duration
-import java.time.temporal.ChronoUnit
-import java.util.function.Supplier
+import grails.plugin.geb.serviceloader.ServiceRegistry
 
 /**
  * Responsible for initializing a {@link org.testcontainers.containers.BrowserWebDriverContainer BrowserWebDriverContainer}
@@ -53,7 +53,6 @@ import java.util.function.Supplier
  * @author James Daugherty
  * @since 4.1
  */
-@Slf4j
 @CompileStatic
 class WebDriverContainerHolder {
 
@@ -114,16 +113,16 @@ class WebDriverContainerHolder {
         )
 
         Map prefs = [
-                "credentials_enable_service"             : false,
-                "profile.password_manager_enabled"       : false,
-                "profile.password_manager_leak_detection": false
+            'credentials_enable_service': false,
+            'profile.password_manager_enabled': false,
+            'profile.password_manager_leak_detection': false
         ]
 
         ChromeOptions chromeOptions = new ChromeOptions()
         // TODO: guest would be preferred, but this causes issues with downloads
         // see https://issues.chromium.org/issues/42323769
         // chromeOptions.addArguments("--guest")
-        chromeOptions.setExperimentalOption("prefs", prefs)
+        chromeOptions.setExperimentalOption('prefs', prefs)
 
         currentContainer.tap {
             withEnv('SE_ENABLE_TRACING', grailsGebSettings.tracingEnabled)
@@ -183,12 +182,14 @@ class WebDriverContainerHolder {
     private GebTestManager createTestManager() {
         new SpockGebTestManagerBuilder()
                 .withReportingEnabled(currentConfiguration.reporting)
-                .withBrowserCreator(new Supplier<Browser>() {
-                    @Override
-                    Browser get() {
-                        currentBrowser
-                    }
-                })
+                .withBrowserCreator(
+                        new Supplier<Browser>() {
+                            @Override
+                            Browser get() {
+                                currentBrowser
+                            }
+                        }
+                )
                 .build()
     }
 
@@ -290,4 +291,3 @@ class WebDriverContainerHolder {
         }
     }
 }
-

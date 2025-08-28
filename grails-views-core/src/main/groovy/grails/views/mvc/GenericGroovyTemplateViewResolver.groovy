@@ -20,12 +20,14 @@
 package grails.views.mvc
 
 import groovy.transform.CompileStatic
-import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.springframework.web.servlet.View
-import org.springframework.web.servlet.ViewResolver
 
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+
+import org.springframework.web.servlet.View
+import org.springframework.web.servlet.ViewResolver
+
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * A UrlBasedViewResolver for ResolvableGroovyTemplateEngine
@@ -51,7 +53,7 @@ class GenericGroovyTemplateViewResolver implements ViewResolver {
                 def controller = webRequest.controllerClass
                 View view
                 if (controller && controller.namespace) {
-                    String namespacePrefix = "/" + controller.namespace
+                    String namespacePrefix = '/' + controller.namespace
                     if (!viewName.startsWith(namespacePrefix)) {
                         view = smartViewResolver.resolveView(namespacePrefix + viewName, currentRequest, webRequest.response)
                     }

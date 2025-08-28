@@ -18,11 +18,12 @@
  */
 package org.grails.encoder.impl;
 
+import org.springframework.web.util.HtmlUtils;
+
 import org.grails.encoder.CodecFactory;
 import org.grails.encoder.CodecIdentifier;
 import org.grails.encoder.Decoder;
 import org.grails.encoder.Encoder;
-import org.springframework.web.util.HtmlUtils;
 
 public class XMLCodecFactory implements CodecFactory {
     protected Encoder encoder = new BasicXMLEncoder();

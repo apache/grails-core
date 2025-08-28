@@ -56,8 +56,8 @@ Partial list, for illustration purposes:
 | `./grails test run-app` | `./gradlew bootRun -Dgrails.env=test` | run-app is a Grails Script from the Base Grails Profile commands directory and ultimately calls the Gradle bootRun task
 | `./grails package` | `./gradlew assemble -Dgrails.env=prod` | package is a YAML file from the Base Grails Profile commands directory which is converted by YamlCommandFactory, when Grails CLI starts, into a Grails Command which ultimately calls the Gradle assemble task
 | `./grails generate-all org.bookstore.Author` | `./gradlew runCommand -Pargs="generate-all org.bookstore.Author"` | None. The Grails Script GenerateAll.groovy and the Grails Command GenerateAllCommand.groovy both come from the Scaffolding Plugin and have duplicate functionality
-| `./grails dbm-update` | `./gradlew dbmUpdate` | None.  Separate script and command in Database Migration Plugin
-| `./grails dbm-generate-changelog person-domain.groovy` | `./gradlew dbmGenerateChangelog -Pargs=" person-domain.groovy"` | None.  Separate script and command in Database Migration Plugin
+| `./grails dbm-update` | `./gradlew dbmUpdate` | Both are provided by DbmUpdateCommand.groovy in the database migration plugin
+| `./grails dbm-generate-changelog person-domain.groovy` | `./gradlew dbmGenerateChangelog -Pargs="person-domain.groovy"` | Both are provided by DbmGenerateChangelogCommand.groovy in the database migration plugin
 | `./grails s2-quickstart com.yourapp User Role` | `./gradlew runCommand -Pargs="s2-quickstart com.yourapp User Role"` | None. The Grails Script s2-quickstart.groovy and the Grails Command S2QuickstartCommand.groovy both come from the Grails Spring Security Core Plugin and have duplicate functionality
 
 |===
@@ -104,7 +104,7 @@ You can also specify a version
 [source,console,subs=attributes+]
 $ sdk install grails {version}
 
-You can find more information about SDKMAN usage on the https://sdkman.io/usage[SDKMAN Docs].
+You can find more information about SDKMAN usage on the https://sdkman.io/usage/[SDKMAN Docs].
 After installing, all three CLI commands: `grails`, `grails-shell-cli`, and `grails-forge-cli` will be available.
 
 === Manual installation

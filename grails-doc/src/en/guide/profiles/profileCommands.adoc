@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-A profile can define new commands that apply only to that profile using YAML or Groovy scripts. Below is an example of the link:../ref/Command%20Line/create-controller.html[create-controller] command defined in YAML:
+A profile can define new commands that apply only to that profile using YAML or Groovy scripts. Below is an example of the link:{commandLineRef}create-controller.html[create-controller] command defined in YAML:
 
 [source,yaml]
 ----
@@ -42,7 +42,7 @@ Commands defined in YAML must define one or many steps. Each step is a command i
 
 * `render` - To render a template to a given destination (as seen in the previous example)
 * `mkdir` - To make a directory specified by the `location` parameter
-* `execute` - To execute a command specified by the `class` parameter. Must be a class that implements the {apiDocs}org/grails/cli/profile/Command.html[Command] interface.
+* `execute` - To execute a command specified by the `class` parameter. Must be a class that implements the link:{api}org/grails/cli/profile/Command.html[Command] interface.
 * `gradle` - To execute one or many Gradle tasks specified by the `tasks` parameter.
 
 For example to invoke a Gradle task, you can define the following YAML:
@@ -59,9 +59,9 @@ steps:
      - war
 ----
 
-If you need more flexibility than what the declarative YAML approach provides you can create Groovy script commands. Each Command script is extends from the {apiDocs}org/grails/cli/profile/commands/script/GroovyScriptCommand.html[GroovyScriptCommand] class and hence has all of the methods of that class available to it.
+If you need more flexibility than what the declarative YAML approach provides you can create Groovy script commands. Each Command script is extends from the link:{api}org/grails/cli/profile/commands/script/GroovyScriptCommand.html[GroovyScriptCommand] class and hence has all of the methods of that class available to it.
 
-The following is an example of the link:../ref/Command%20Line/create-script.html[create-script] command written in Groovy:
+The following is an example of the link:{commandLineRef}create-script.html[create-script] command written in Groovy:
 
 [source,groovy]
 ----

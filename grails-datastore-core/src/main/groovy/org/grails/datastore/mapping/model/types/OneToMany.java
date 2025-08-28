@@ -42,7 +42,7 @@ public abstract class OneToMany<T extends Property> extends ToMany<T> {
 
     @Override
     public boolean isNullable() {
-        if(isCircular() && !isBidirectional()) {
+        if (isCircular() && !isBidirectional()) {
             return true;
         }
         else {

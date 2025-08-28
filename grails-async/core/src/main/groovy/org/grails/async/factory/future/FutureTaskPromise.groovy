@@ -19,18 +19,19 @@
 
 package org.grails.async.factory.future
 
-import grails.async.Promise
-import grails.async.PromiseFactory
-import groovy.transform.AutoFinal
-import groovy.transform.CompileStatic
-import org.grails.async.factory.BoundPromise
-
 import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+
+import groovy.transform.AutoFinal
+import groovy.transform.CompileStatic
+
+import grails.async.Promise
+import grails.async.PromiseFactory
+import org.grails.async.factory.BoundPromise
 
 /**
  * A Promise that is a {@link FutureTask}

@@ -23,14 +23,16 @@ import jakarta.persistence.FlushModeType;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.grails.datastore.mapping.core.Datastore;
-import org.grails.datastore.mapping.core.DatastoreUtils;
-import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.transactions.SessionHolder;
+
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.context.request.WebRequestInterceptor;
+
+import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.core.DatastoreUtils;
+import org.grails.datastore.mapping.core.Session;
+import org.grails.datastore.mapping.transactions.SessionHolder;
 
 /**
  * A {@link org.springframework.web.context.request.WebRequestInterceptor} instance that
@@ -78,7 +80,7 @@ public class OpenSessionInViewInterceptor implements WebRequestInterceptor {
         final Session session = sessionHolder.getSession();
 
         if (session.getFlushMode() == FlushModeType.AUTO) {
-            if(session.hasTransaction()) {
+            if (session.hasTransaction()) {
                 session.flush();
             }
         }

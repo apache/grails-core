@@ -28,7 +28,7 @@ import grails.web.mime.MimeType
  * @author Graeme Rocher
  * @since 2.3
  */
-class HalXmlCollectionRenderer extends HalXmlRenderer implements ContainerRenderer{
+class HalXmlCollectionRenderer extends HalXmlRenderer implements ContainerRenderer {
 
     final Class componentType
 

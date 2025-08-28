@@ -18,27 +18,34 @@
  */
 package org.grails.compiler.injection;
 
-import grails.util.GrailsNameUtils;
-import grails.util.Mixin;
-import grails.util.MixinTargetAware;
-import groovy.lang.GroovyObjectSupport;
-
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.grails.common.compiler.GroovyTransformOrder;
+import groovy.lang.GroovyObjectSupport;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.AnnotationNode;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.MethodNode;
-import org.codehaus.groovy.ast.expr.*;
+import org.codehaus.groovy.ast.expr.ClassExpression;
+import org.codehaus.groovy.ast.expr.ConstantExpression;
+import org.codehaus.groovy.ast.expr.ConstructorCallExpression;
+import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.ListExpression;
+import org.codehaus.groovy.ast.expr.MapEntryExpression;
+import org.codehaus.groovy.ast.expr.MapExpression;
+import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
 import org.codehaus.groovy.transform.TransformWithPriority;
+
+import grails.util.GrailsNameUtils;
+import grails.util.Mixin;
+import grails.util.MixinTargetAware;
+import org.apache.grails.common.compiler.GroovyTransformOrder;
 
 /**
  * The logic for the {@link grails.util.Mixin} location transform.
@@ -79,6 +86,7 @@ public class MixinTransformation implements ASTTransformation, TransformWithPrio
         weaveMixinsIntoClass(classNode, values);
 
     }
+
     public void weaveMixinsIntoClass(ClassNode classNode, ListExpression values) {
         if (values != null) {
             for (Expression current : values.getExpressions()) {
@@ -93,14 +101,14 @@ public class MixinTransformation implements ASTTransformation, TransformWithPrio
                         boolean isTargetAware = GrailsASTUtils.findInterface(mixinClassNode, new ClassNode(MixinTargetAware.class)) != null;
 
                         ConstructorCallExpression initialValue;
-                        if(isTargetAware) {
+                        if (isTargetAware) {
                             initialValue = new ConstructorCallExpression(mixinClassNode, new MapExpression(
                                     Arrays.asList(new MapEntryExpression(new ConstantExpression("target"), new VariableExpression("this")))
                             ));
-                        }  else {
+                        } else {
                             initialValue = new ConstructorCallExpression(mixinClassNode, GrailsASTUtils.ZERO_ARGUMENTS);
                         }
-                        classNode.addField(fieldName, Modifier.PRIVATE, mixinClassNode,initialValue);
+                        classNode.addField(fieldName, Modifier.PRIVATE, mixinClassNode, initialValue);
                     }
 
                     VariableExpression fieldReference = new VariableExpression(fieldName, mixinClassNode);
@@ -129,6 +137,7 @@ public class MixinTransformation implements ASTTransformation, TransformWithPrio
     protected boolean hasDeclaredMethod(ClassNode classNode, MethodNode mixinMethod) {
         return classNode.hasDeclaredMethod(mixinMethod.getName(), mixinMethod.getParameters());
     }
+
     protected ListExpression getListOfClasses(AnnotationNode node) {
         Expression value = node.getMember("value");
         ListExpression values = null;

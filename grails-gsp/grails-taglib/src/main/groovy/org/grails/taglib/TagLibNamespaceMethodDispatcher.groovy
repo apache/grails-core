@@ -19,6 +19,7 @@
 package org.grails.taglib
 
 import groovy.transform.CompileStatic
+
 import org.grails.taglib.encoder.OutputContext
 
 /**
@@ -26,6 +27,7 @@ import org.grails.taglib.encoder.OutputContext
  */
 @CompileStatic
 class TagLibNamespaceMethodDispatcher {
+
     private final String namespace
     private final TagLibraryLookup lookup
     private final OutputContext outputContext

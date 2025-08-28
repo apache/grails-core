@@ -46,5 +46,5 @@ class BookController {
 === Description
 
 
-The `responseFormats` property is used to define the response formats supported by a controller and in turn used by the `respond` method. The `respond` method uses link:{guidePath}/theWebLayer.html#contentNegotiation[Content Negotiation] to respond with the most appropriate content type. See the documentation on link:{guidePath}/webServices.html#REST[REST support] for more information.
+The `responseFormats` property is used to define the response formats supported by a controller and in turn used by the `respond` method. The `respond` method uses link:{guidePath}theWebLayer.html#contentNegotiation[Content Negotiation] to respond with the most appropriate content type. See the documentation on link:{guidePath}REST.html[REST support] for more information.
 

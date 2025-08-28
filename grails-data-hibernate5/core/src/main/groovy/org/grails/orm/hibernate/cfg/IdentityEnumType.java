@@ -18,6 +18,18 @@
  */
 package org.grails.orm.hibernate.cfg;
 
+import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+
 import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
@@ -27,14 +39,6 @@ import org.hibernate.usertype.ParameterizedType;
 import org.hibernate.usertype.UserType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.*;
 
 /**
  * Hibernate Usertype that enum values by their ID.
@@ -59,7 +63,7 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
     protected Class<? extends Enum<?>> enumClass;
     protected BidiEnumMap bidiMap;
     protected AbstractStandardBasicType<?> type;
-    protected  int[] sqlTypes;
+    protected int[] sqlTypes;
 
     public static BidiEnumMap getBidiEnumMap(Class<? extends Enum<?>> cls) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         BidiEnumMap m = ENUM_MAPPINGS.get(cls);
@@ -77,17 +81,16 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
         return m;
     }
 
-
     @SuppressWarnings("unchecked")
     public void setParameterValues(Properties properties) {
         try {
-            enumClass = (Class<? extends Enum<?>>)Thread.currentThread().getContextClassLoader().loadClass(
-                    (String)properties.get(PARAM_ENUM_CLASS));
+            enumClass = (Class<? extends Enum<?>>) Thread.currentThread().getContextClassLoader().loadClass(
+                    (String) properties.get(PARAM_ENUM_CLASS));
             if (LOG.isDebugEnabled()) {
                 LOG.debug(String.format("Building ID-mapping for Enum Class %s", enumClass.getName()));
             }
             bidiMap = getBidiEnumMap(enumClass);
-            type = (AbstractStandardBasicType<?>)typeConfiguration.getBasicTypeRegistry().getRegisteredType(bidiMap.keyType.getName());
+            type = (AbstractStandardBasicType<?>) typeConfiguration.getBasicTypeRegistry().getRegisteredType(bidiMap.keyType.getName());
             if (LOG.isDebugEnabled()) {
                 LOG.debug(String.format("Mapped Basic Type is %s", type));
             }

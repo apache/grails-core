@@ -20,7 +20,6 @@ package grails.dev.commands.io
 
 import org.grails.io.support.Resource
 
-
 /**
  * Utility methods exposed to scripts for interacting with resources (found on the file system or jars) and the file system
  *

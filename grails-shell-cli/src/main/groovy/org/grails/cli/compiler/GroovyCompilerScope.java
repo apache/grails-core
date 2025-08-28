@@ -26,15 +26,15 @@ package org.grails.cli.compiler;
  */
 public enum GroovyCompilerScope {
 
-	/**
-	 * Default scope, exposes groovy.jar (loaded from the parent) and the shared cli
-	 * package (loaded through groovy classloader).
-	 */
-	DEFAULT,
+    /**
+     * Default scope, exposes groovy.jar (loaded from the parent) and the shared cli
+     * package (loaded through groovy classloader).
+     */
+    DEFAULT,
 
-	/**
-	 * Extension scope, allows full access to internal CLI classes.
-	 */
-	EXTENSION
+    /**
+     * Extension scope, allows full access to internal CLI classes.
+     */
+    EXTENSION
 
 }

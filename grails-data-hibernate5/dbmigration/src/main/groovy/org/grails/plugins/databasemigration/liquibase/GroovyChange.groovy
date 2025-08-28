@@ -18,10 +18,11 @@
  */
 package org.grails.plugins.databasemigration.liquibase
 
-import grails.config.Config
-import grails.core.GrailsApplication
+import java.sql.Connection
+
 import groovy.sql.Sql
 import groovy.transform.CompileStatic
+
 import liquibase.Scope
 import liquibase.change.AbstractChange
 import liquibase.change.ChangeMetaData
@@ -40,10 +41,12 @@ import liquibase.parser.core.ParsedNode
 import liquibase.parser.core.ParsedNodeException
 import liquibase.resource.ResourceAccessor
 import liquibase.statement.SqlStatement
-import org.grails.plugins.databasemigration.DatabaseMigrationTransactionManager
+
 import org.springframework.context.ApplicationContext
 
-import java.sql.Connection
+import grails.config.Config
+import grails.core.GrailsApplication
+import org.grails.plugins.databasemigration.DatabaseMigrationTransactionManager
 
 import static org.grails.plugins.databasemigration.PluginConstants.DATA_SOURCE_NAME_KEY
 
@@ -54,7 +57,7 @@ import static org.grails.plugins.databasemigration.PluginConstants.DATA_SOURCE_N
  * @author Kazuki YAMAMOTO
  */
 @CompileStatic
-@DatabaseChange(name = "grailsChange", description = "Executes groovy code to apply a database change.", priority = ChangeMetaData.PRIORITY_DEFAULT)
+@DatabaseChange(name = 'grailsChange', description = 'Executes groovy code to apply a database change.', priority = ChangeMetaData.PRIORITY_DEFAULT)
 class GroovyChange extends AbstractChange {
 
     ApplicationContext ctx
@@ -93,8 +96,8 @@ class GroovyChange extends AbstractChange {
     void load(ParsedNode parsedNode, ResourceAccessor resourceAccessor) throws ParsedNodeException {
         ctx = parsedNode.getChildValue(null, 'applicationContext', ApplicationContext)
         dataSourceName = parsedNode.getChildValue(null, DATA_SOURCE_NAME_KEY, String)
-        if (dataSourceName?.startsWith("dataSource_")) {
-            dataSourceName = dataSourceName.substring("dataSource_".length())
+        if (dataSourceName?.startsWith('dataSource_')) {
+            dataSourceName = dataSourceName.substring('dataSource_'.length())
         }
 
         initClosure = parsedNode.getChildValue(null, 'init', Closure)
@@ -160,7 +163,7 @@ class GroovyChange extends AbstractChange {
         if (shouldRun() && changeClosure) {
             changeClosure.delegate = this
             try {
-                if(!changeClosureCalled) {
+                if (!changeClosureCalled) {
                     withNewTransaction(changeClosure)
                 }
             } finally {
@@ -190,7 +193,7 @@ class GroovyChange extends AbstractChange {
 
     @Override
     CheckSum generateCheckSum() {
-        CheckSum.compute checksumString ?: 'Grails Change'
+        CheckSum.compute(checksumString ?: 'Grails Change')
     }
 
     @Override
@@ -205,7 +208,7 @@ class GroovyChange extends AbstractChange {
      * @param message the error message
      */
     void error(String message) {
-        validationErrors.addError message
+        validationErrors.addError(message)
     }
 
     /**
@@ -214,7 +217,7 @@ class GroovyChange extends AbstractChange {
      * @param warning the warning message
      */
     void warn(String warning) {
-        warnings.addWarning warning
+        warnings.addWarning(warning)
     }
 
     /**
@@ -313,7 +316,7 @@ class GroovyChange extends AbstractChange {
      * @return Whether the database executor is instance of LoggingExecutor
      */
     protected boolean shouldRun() {
-        !(Scope.getCurrentScope().getSingleton(ExecutorService.class).getExecutor("jdbc", database) instanceof LoggingExecutor)
+        !(Scope.getCurrentScope().getSingleton(ExecutorService).getExecutor('jdbc', database) instanceof LoggingExecutor)
     }
 
     /**
@@ -324,6 +327,6 @@ class GroovyChange extends AbstractChange {
      */
     protected void withNewTransaction(Closure callable) {
         new DatabaseMigrationTransactionManager(ctx, dataSourceName)
-                .withNewTransaction callable
+                .withNewTransaction(callable)
     }
 }

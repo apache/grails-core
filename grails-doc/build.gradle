@@ -82,13 +82,34 @@ combinedGroovydoc.configure { Groovydoc gdoc ->
                 possibleSources
             }
             .flatten()
-    gdoc.source(sources.collect { SourceSet it -> [it.allSource.srcDirs, it.allSource.srcDirs] }.flatten().findAll { File srcDir ->
-        if (!(srcDir.name in ['java', 'groovy'])) {
-            return false
-        }
 
-        srcDir.exists()
-    }.unique())
+    List<File> baseSourceDirs = sources
+            .collect { SourceSet it -> it.allSource.srcDirs }
+            .flatten()
+            .findAll { File srcDir ->
+                if (!(srcDir.name in ['java', 'groovy'])) {
+                    return false
+                }
+                srcDir.exists()
+            }
+
+    // Collect source directories from included builds (composite builds)
+    // Gradle will not provide the included build projects or source sets, so we inspect the file system
+    List<File> includedBuildSourceDirs = gradle.includedBuilds
+            .collectMany { includedBuild ->
+                def sourceDirs = []
+                includedBuild.projectDir.eachDir { File dir ->
+                    ['src/main/java', 'src/main/groovy'].each { rel ->
+                        File sourceDir = new File(dir, rel)
+                        if (sourceDir.isDirectory()) {
+                            sourceDirs << sourceDir
+                        }
+                    }
+                }
+                sourceDirs
+            }
+
+    gdoc.source(project.files((baseSourceDirs + includedBuildSourceDirs).unique()))
 
     gdoc.classpath = files(sources.collect { SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten().unique())
     gdoc.destinationDir = project.layout.buildDirectory.dir('combined-api/api').get().asFile
@@ -157,42 +178,76 @@ publishGuideTask.configure { PublishGuideTask publish ->
     )
 
     publish.properties = project.provider {
+        def projectVersionForURL = projectVersion.endsWith('-SNAPSHOT') ? 'SNAPSHOT' : projectVersion
         def springVersion = getVersion('spring-core')
         def springBootVersion = getVersion('spring-boot')
+        def spockVersion = getVersion("spock-core")
+        def spockVersionForURL = getVersion("spock-core")?.split("-")[0]
+        def hibernate5Guide = '../grails-data/hibernate5/manual/'
+        def api = '../api/'
+        def gspTagsRef = '../ref/Tags%20-%20GSP/'
+        def controllersRef = '../ref/Controllers/'
+        def commandLineRef = '../ref/Command%20Line/'
+        def servletApiRef = '../ref/Servlet%20API/'
+        def domainClassesRef = '../ref/Domain%20Classes/'
+        def constraintsRef = '../ref/Constraints/'
         def groovyVersion = getVersion('groovy') as String
         [
-                'api'                      : '../api',
+                'api'                      : api,
+                'apiFromRef'               : '../' + api,
                 'safe'                     : 'UNSAFE', // Make sure any asciidoc security is disabled
                 'jakartaee'                : 'https://jakarta.ee/specifications/platform/10/apidocs/',
                 'javase'                   : "https://docs.oracle.com/en/java/javase/${javaVersion}/docs/api/",
                 'groovyapi'                : "https://docs.groovy-lang.org/${groovyVersion}/html/gapi/",
                 'groovyjdk'                : "https://docs.groovy-lang.org/${groovyVersion}/html/groovy-jdk/",
+                'groovydocumentation'      : "https://docs.groovy-lang.org/${groovyVersion}/html/documentation/",
                 'groovyVersion'            : groovyVersion,
-                'springapi'                : "https://docs.spring.io/spring/docs/${springVersion}/javadoc-api/",
-                'springdocs'               : "https://docs.spring.io/spring/docs/${springVersion}/",
+                'springapi'                : "https://docs.spring.io/spring-framework/docs/${springVersion}/javadoc-api/",
+                'springdocs'               : "https://docs.spring.io/spring-framework/docs/${springVersion}/",
+                'springreference'          : "https://docs.spring.io/spring-framework/reference/${springVersion}/",
                 'githubBranch'             : githubBranch,
-                'gormApiDocs'              : '../grails-data/api',
-                'gormWebsite'              : '../grails-data',
-                'hibernate5Guide'          : '../grails-data/hibernate5',
-                'mongodb5Guide'            : '../grails-data/mongodb',
+                'gormApiDocs'              : '../grails-data/api/',
+                'gormWebsite'              : '../grails-data/',
+                'hibernate5Guide'          : hibernate5Guide,
+                'hibernate5GuideFromRef'    : '../' + hibernate5Guide,
+                'mongodb5Guide'            : '../grails-data/mongodb/manual/',
+                'rxGORMGuide'              : 'https://gorm.grails.org/7.3.4/rx/manual/', // last version released
                 'hibernate5Reference'      : 'https://docs.jboss.org/hibernate/orm/5.6/userguide/html_single/Hibernate_User_Guide.html',
-                'springapi'                : "https://docs.spring.io/spring/docs/${springVersion}/javadoc-api/",
-                'springbootapi'            : "https://docs.spring.io/spring-boot/docs/${springBootVersion}/api",
-                'springBootReference'      : "https://docs.spring.io/spring-boot/docs/${springBootVersion}/reference",
+                'springbootapi'            : "https://docs.spring.io/spring-boot/${springBootVersion}/api/java/",
+                'springBootReference'      : "https://docs.spring.io/spring-boot/${springBootVersion}/reference/",
+                'springBootHowTo'          : "https://docs.spring.io/spring-boot/${springBootVersion}/how-to/",
                 'springBootVersion'        : springBootVersion,
                 'springVersion'            : springVersion,
                 'gradleVersion'            : gradle.gradleVersion,
                 'GrailsVersion'            : projectVersion,
+                'grailsVersionForURL'      : projectVersionForURL,
                 'version'                  : projectVersion,
                 'gormVersion'              : projectVersion,
                 'hibernate5Version'        : getVersion("hibernate-core-jakarta"),
-                'spockVersion'             : getVersion("spock-core"),
+                'spockVersion'             : spockVersion,
+                'spockDocs'                : "https://spockframework.org/spock/docs/${spockVersionForURL}/",
                 'testingSupportVersion'    : getVersion("grails-testing-support-core"),
                 'grailsGradlePluginVersion': getVersion("grails-gradle-plugins"),
                 'gparsdocs'                : "https://gpars.org/$gparsVersion/groovydoc",
                 'rxjavadocs'               : 'https://reactivex.io/RxJava/1.x/javadoc',
                 'rxjava2docs'              : 'https://reactivex.io/RxJava/2.x/javadoc',
-                'tags'                     : '../ref/Tags'
+                'gspTagsRef'               : gspTagsRef,
+                'gspTagsRefFromRef'        : '../' + gspTagsRef,
+                'cacheTagsRef'             : '../ref/Tags%20-%20Cache/',
+                'tagLibrariesRef'          : '../ref/Tag%20Libraries/',
+                'guidePath'                : '../../guide/',
+                'controllersRef'           : controllersRef,
+                'controllersRefFromRef'    : '../' + controllersRef,
+                'commandLineRef'           : commandLineRef,
+                'commandLineRefFromRef'    : '../' + commandLineRef,
+                'domainClassesRef'         : domainClassesRef,
+                'domainClassesRefFromRef'  : '../' + domainClassesRef,
+                'servletApiRef'            : servletApiRef,
+                'servletApiRefFromRef'     : '../' + servletApiRef,
+                'constraintsRef'           : constraintsRef,
+                'constraintsRefFromRef'    : '../' + constraintsRef,
+                'versionsRef'              : '../ref/Versions/',
+
         ] as Map<String, String>
     }
     publish.propertiesWithFilePaths = project.provider {

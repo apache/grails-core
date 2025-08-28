@@ -19,12 +19,13 @@
 
 package org.grails.plugins.databasemigration
 
-import grails.gorm.transactions.GrailsTransactionTemplate
 import org.springframework.context.ApplicationContext
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.DefaultTransactionDefinition
 import org.springframework.util.Assert
+
+import grails.gorm.transactions.GrailsTransactionTemplate
 
 /**
  * Created by Jim on 7/15/2016.
@@ -44,9 +45,9 @@ class DatabaseMigrationTransactionManager {
      * @return The transactionManager bean for the current dataSource
      */
     PlatformTransactionManager getTransactionManager() {
-        String dataSource = this.dataSource ?: "dataSource"
-        String beanName = "transactionManager"
-        if (dataSource != "dataSource") {
+        String dataSource = this.dataSource ?: 'dataSource'
+        String beanName = 'transactionManager'
+        if (dataSource != 'dataSource') {
             beanName += "_${dataSource}"
         }
         applicationContext.getBean(beanName, PlatformTransactionManager)
@@ -106,7 +107,7 @@ class DatabaseMigrationTransactionManager {
      */
     void withNewTransaction(Map transactionProperties, Closure callable) {
         def props = new HashMap(transactionProperties)
-        props.remove 'propagationName'
+        props.remove('propagationName')
         props.propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
         withTransaction(props, callable)
     }
@@ -114,7 +115,7 @@ class DatabaseMigrationTransactionManager {
     void  withTransaction(Map transactionProperties, Closure callable) {
         def transactionDefinition = new DefaultTransactionDefinition()
         transactionProperties.each { k, v ->
-            if(v instanceof CharSequence && !(v instanceof String)) {
+            if (v instanceof CharSequence && !(v instanceof String)) {
                 v = v.toString()
             }
             try {
@@ -133,7 +134,7 @@ class DatabaseMigrationTransactionManager {
      * @return The result of the closure execution
      */
     void withTransaction(TransactionDefinition definition, Closure callable) {
-        Assert.notNull transactionManager, "No transactionManager bean configured"
+        Assert.notNull(transactionManager, 'No transactionManager bean configured')
 
         if (!callable) {
             return

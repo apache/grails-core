@@ -18,6 +18,8 @@
  */
 package org.grails.plugins.services
 
+import java.lang.reflect.Modifier
+
 import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.core.GrailsServiceClass
@@ -26,9 +28,6 @@ import grails.plugins.Plugin
 import grails.util.GrailsUtil
 import org.grails.core.artefact.ServiceArtefactHandler
 import org.grails.core.exceptions.GrailsConfigurationException
-
-import java.lang.reflect.Modifier
-
 
 /**
  * Configures services in the Spring context.
@@ -41,42 +40,43 @@ class ServicesGrailsPlugin extends Plugin  {
     def version = GrailsUtil.getGrailsVersion()
     def loadAfter = ['hibernate']
 
+    def watchedResources = ['file:./grails-app/services/**/*Service.groovy',
+                            'file:./plugins/*/grails-app/services/**/*Service.groovy']
 
-    def watchedResources = ["file:./grails-app/services/**/*Service.groovy",
-                            "file:./plugins/*/grails-app/services/**/*Service.groovy"]
-
-    Closure doWithSpring() {{->
-        GrailsApplication application = grailsApplication
-        final boolean springTransactionManagement = config.getProperty(Settings.SPRING_TRANSACTION_MANAGEMENT, Boolean.class, false)
-        if(springTransactionManagement) {
-            throw new GrailsConfigurationException("Spring proxy-based transaction management no longer supported. Yes the @grails.gorm.transactions.Transactional annotation instead")
-        }
-
-        for (GrailsServiceClass serviceClass in application.getArtefacts(ServiceArtefactHandler.TYPE)) {
-            GrailsPlugin providingPlugin = manager?.getPluginForClass(serviceClass.clazz)
-
-            String beanName
-            if (providingPlugin && !serviceClass.shortName.toLowerCase().startsWith(providingPlugin.name.toLowerCase())) {
-                beanName = "${providingPlugin.name}${serviceClass.shortName}"
-            } else {
-                beanName = serviceClass.propertyName
+    Closure doWithSpring() {
+        { ->
+            GrailsApplication application = grailsApplication
+            final boolean springTransactionManagement = config.getProperty(Settings.SPRING_TRANSACTION_MANAGEMENT, Boolean, false)
+            if (springTransactionManagement) {
+                throw new GrailsConfigurationException('Spring proxy-based transaction management no longer supported. Yes the @grails.gorm.transactions.Transactional annotation instead')
             }
-            def scope = serviceClass.getPropertyValue("scope")
-            def lazyInit = serviceClass.hasProperty("lazyInit") ? serviceClass.getPropertyValue("lazyInit") : true
 
-            "${beanName}"(serviceClass.getClazz()) { bean ->
-                bean.autowire =  true
-                if(lazyInit instanceof Boolean) {
-                    bean.lazyInit = lazyInit
+            for (GrailsServiceClass serviceClass in application.getArtefacts(ServiceArtefactHandler.TYPE)) {
+                GrailsPlugin providingPlugin = manager?.getPluginForClass(serviceClass.clazz)
+
+                String beanName
+                if (providingPlugin && !serviceClass.shortName.toLowerCase().startsWith(providingPlugin.name.toLowerCase())) {
+                    beanName = "${providingPlugin.name}${serviceClass.shortName}"
+                } else {
+                    beanName = serviceClass.propertyName
                 }
-                if (scope) {
-                    bean.scope = scope
+                def scope = serviceClass.getPropertyValue('scope')
+                def lazyInit = serviceClass.hasProperty('lazyInit') ? serviceClass.getPropertyValue('lazyInit') : true
+
+                "${beanName}"(serviceClass.getClazz()) { bean ->
+                    bean.autowire =  true
+                    if (lazyInit instanceof Boolean) {
+                        bean.lazyInit = lazyInit
+                    }
+                    if (scope) {
+                        bean.scope = scope
+                    }
                 }
             }
-        }
 
-        serviceBeanAliasPostProcessor(ServiceBeanAliasPostProcessor)
-    }}
+            serviceBeanAliasPostProcessor(ServiceBeanAliasPostProcessor)
+        }
+    }
 
     void onChange(Map<String,Object> event) {
         if (!event.source || !applicationContext) {
@@ -90,7 +90,7 @@ class ServicesGrailsPlugin extends Plugin  {
             if (Modifier.isAbstract(javaClass.modifiers)) return
             def serviceClass = (GrailsServiceClass) application.addArtefact(ServiceArtefactHandler.TYPE, (Class) event.source)
             def serviceName = "${serviceClass.propertyName}"
-            def scope = serviceClass.getPropertyValue("scope")
+            def scope = serviceClass.getPropertyValue('scope')
 
             beans {
                 "$serviceName"(serviceClass.getClazz()) { bean ->

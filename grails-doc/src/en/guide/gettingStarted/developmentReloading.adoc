@@ -27,6 +27,9 @@ For larger applications, you may need to adjust the default settings for optimal
 
 Please see the Spring Boot documentation for more details: https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#using-boot-devtools[Spring Boot Developer Tools].
 
+NOTE: You can use Spring Developer Tools in combination with a browser extension to get automatic browser
+refresh when you change anything in your Grails application.
+
 *Reloading Mechanism:* Auto-restarts the application context on code changes using dual class loaders; supports live reload for static resources like views/templates.
 
 === JRebel

@@ -18,10 +18,10 @@
  */
 package grails.web.mapping;
 
-import grails.util.CollectionUtils;
-
 import java.util.Map;
 import java.util.Set;
+
+import grails.util.CollectionUtils;
 
 /**
  * Generates links for a Grails application based on URL mapping rules and/or base context settings.
@@ -51,49 +51,47 @@ public interface LinkGenerator {
     String ATTRIBUTE_ELEMENT_ID = "elementId";
     String ATTRIBUTE_PLUGIN = "plugin";
     String ATTRIBUTE_NAMESPACE = "namespace";
-    
 
     Set<String> LINK_ATTRIBUTES = CollectionUtils.newSet(
-       ATTRIBUTE_RESOURCE,
-       ATTRIBUTE_METHOD,
-       ATTRIBUTE_CONTROLLER,
-       ATTRIBUTE_ACTION,
-       ATTRIBUTE_URI,
-       ATTRIBUTE_RELATIVE_URI,
-       ATTRIBUTE_CONTEXT_PATH,
-       ATTRIBUTE_URL,
-       ATTRIBUTE_BASE,
-       ATTRIBUTE_ABSOLUTE,
-       ATTRIBUTE_ID,
-       ATTRIBUTE_FRAGMENT,
-       ATTRIBUTE_PARAMS,
-       ATTRIBUTE_MAPPING,
-       ATTRIBUTE_EVENT,
-       ATTRIBUTE_ELEMENT_ID,
-       ATTRIBUTE_PLUGIN,
-       ATTRIBUTE_NAMESPACE
-       );
+        ATTRIBUTE_RESOURCE,
+        ATTRIBUTE_METHOD,
+        ATTRIBUTE_CONTROLLER,
+        ATTRIBUTE_ACTION,
+        ATTRIBUTE_URI,
+        ATTRIBUTE_RELATIVE_URI,
+        ATTRIBUTE_CONTEXT_PATH,
+        ATTRIBUTE_URL,
+        ATTRIBUTE_BASE,
+        ATTRIBUTE_ABSOLUTE,
+        ATTRIBUTE_ID,
+        ATTRIBUTE_FRAGMENT,
+        ATTRIBUTE_PARAMS,
+        ATTRIBUTE_MAPPING,
+        ATTRIBUTE_EVENT,
+        ATTRIBUTE_ELEMENT_ID,
+        ATTRIBUTE_PLUGIN,
+        ATTRIBUTE_NAMESPACE
+    );
 
     Map<String, String> REST_RESOURCE_ACTION_TO_HTTP_METHOD_MAP = CollectionUtils.<String, String>newMap(
         "create", "GET",
-        "save",   "POST",
-        "show",   "GET",
-        "index",  "GET",
-        "edit",   "GET",
+        "save", "POST",
+        "show", "GET",
+        "index", "GET",
+        "edit", "GET",
         "update", "PUT",
-        "patch",  "PATCH",
+        "patch", "PATCH",
         "delete", "DELETE"
     );
 
     Map<String, String> REST_RESOURCE_HTTP_METHOD_TO_ACTION_MAP = CollectionUtils.<String, String>newMap(
         "GET_ID", "show",
-        "GET",    "index",
-        "POST",   "save",
+        "GET", "index",
+        "POST", "save",
         "DELETE", "delete",
-        "PUT",    "update",
-        "PATCH",  "patch"
+        "PUT", "update",
+        "PATCH", "patch"
     );
-
 
     /**
      * Generates a link to a static resource for the given named parameters.

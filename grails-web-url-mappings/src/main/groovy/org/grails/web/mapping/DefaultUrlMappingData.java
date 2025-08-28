@@ -22,9 +22,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.springframework.util.Assert;
+
 import grails.web.mapping.UrlMapping;
 import grails.web.mapping.UrlMappingData;
-import org.springframework.util.Assert;
 
 /**
  * Default implementating of the UrlMappingData interface.
@@ -43,7 +44,7 @@ public class DefaultUrlMappingData implements UrlMappingData {
     private final String[] logicalUrls;
     private final String[] tokens;
 
-    private List<Boolean> optionalTokens = new ArrayList<Boolean>();
+    private List<Boolean> optionalTokens = new ArrayList<>();
     private boolean hasOptionalExtension;
 
     public DefaultUrlMappingData(String urlPattern) {
@@ -53,7 +54,7 @@ public class DefaultUrlMappingData implements UrlMappingData {
         String configuredPattern = configureUrlPattern(urlPattern);
         this.urlPattern = configuredPattern;
         tokens = tokenizeUrlPattern(configuredPattern);
-        List<String> urls = new ArrayList<String>();
+        List<String> urls = new ArrayList<>();
         parseUrls(urls, tokens, optionalTokens);
 
         logicalUrls = urls.toArray(new String[urls.size()]);
@@ -70,7 +71,7 @@ public class DefaultUrlMappingData implements UrlMappingData {
     }
 
     private String configureUrlPattern(String urlPattern) {
-        return urlPattern.replace( "(*)**", CAPTURED_DOUBLE_WILDCARD);
+        return urlPattern.replace("(*)**", CAPTURED_DOUBLE_WILDCARD);
     }
 
     private DefaultUrlMappingData(String urlPattern, String[] logicalUrls, String[] tokens, List<Boolean> optionalTokens) {
@@ -83,17 +84,16 @@ public class DefaultUrlMappingData implements UrlMappingData {
     private void parseUrls(List<String> urls, String[] tokens, List<Boolean> optionalTokens) {
         StringBuilder buf = new StringBuilder();
 
-
         String optionalExtensionPattern = UrlMapping.OPTIONAL_EXTENSION_WILDCARD + '?';
         String optionalExtension = null;
 
-        if(tokens.length>0) {
-            String lastToken = tokens[tokens.length-1];
+        if (tokens.length > 0) {
+            String lastToken = tokens[tokens.length - 1];
             hasOptionalExtension = lastToken.endsWith(optionalExtensionPattern);
-            if(hasOptionalExtension) {
+            if (hasOptionalExtension) {
                 int i = lastToken.indexOf(optionalExtensionPattern);
                 optionalExtension = lastToken.substring(i, lastToken.length());
-                tokens[tokens.length-1] = lastToken.substring(0, i);
+                tokens[tokens.length - 1] = lastToken.substring(0, i);
             }
 
         }
@@ -104,10 +104,9 @@ public class DefaultUrlMappingData implements UrlMappingData {
                 continue;
             }
 
-
             boolean isOptional = false;
             if (token.endsWith(QUESTION_MARK)) {
-                if(optionalExtension != null) {
+                if (optionalExtension != null) {
                     urls.add(buf.toString() + optionalExtension);
                 }
                 else {
@@ -129,7 +128,7 @@ public class DefaultUrlMappingData implements UrlMappingData {
                 optionalTokens.add(Boolean.TRUE);
             }
         }
-        if(optionalExtension != null) {
+        if (optionalExtension != null) {
             urls.add(buf.toString() + optionalExtension);
         }
         else {
@@ -163,12 +162,11 @@ public class DefaultUrlMappingData implements UrlMappingData {
         String newPattern = this.urlPattern + configureUrlPattern(path);
 
         String[] tokens = tokenizeUrlPattern(newPattern);
-        List<String> urls = new ArrayList<String>();
-        List<Boolean> optionalTokens = new ArrayList<Boolean>();
+        List<String> urls = new ArrayList<>();
+        List<Boolean> optionalTokens = new ArrayList<>();
         parseUrls(urls, tokens, optionalTokens);
         String[] logicalUrls = urls.toArray(new String[urls.size()]);
 
-
-        return new DefaultUrlMappingData(newPattern,logicalUrls, tokens,optionalTokens);
+        return new DefaultUrlMappingData(newPattern, logicalUrls, tokens, optionalTokens);
     }
 }

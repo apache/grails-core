@@ -18,11 +18,12 @@
  */
 package org.grails.cli.gradle.commands
 
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
+
 import grails.util.Described
 import grails.util.GrailsNameUtils
 import grails.util.Named
-import groovy.transform.CompileDynamic
-import groovy.transform.CompileStatic
 import org.grails.cli.gradle.GradleInvoker
 import org.grails.cli.profile.CommandDescription
 import org.grails.cli.profile.ExecutionContext
@@ -49,11 +50,11 @@ class GradleTaskCommandAdapter implements ProfileCommand {
     @Override
     CommandDescription getDescription() {
         String description
-        if(adapted instanceof Described) {
-            description = ((Described)adapted).description
+        if (adapted instanceof Described) {
+            description = ((Described) adapted).description
         }
         else {
-            description = ""
+            description = ''
         }
         return new CommandDescription(adapted.name, description)
     }

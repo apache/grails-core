@@ -18,17 +18,20 @@
  */
 package org.grails.plugins.databasemigration.liquibase
 
-import grails.config.ConfigMap
-import grails.io.IOUtils
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import org.codehaus.groovy.control.CompilerConfiguration
+
 import liquibase.changelog.ChangeLogParameters
 import liquibase.exception.ChangeLogParseException
 import liquibase.parser.core.ParsedNode
 import liquibase.parser.core.xml.AbstractChangeLogParser
 import liquibase.resource.ResourceAccessor
-import org.codehaus.groovy.control.CompilerConfiguration
+
 import org.springframework.context.ApplicationContext
+
+import grails.config.ConfigMap
+import grails.io.IOUtils
 
 import static org.grails.plugins.databasemigration.PluginConstants.DATA_SOURCE_NAME_KEY
 

@@ -47,7 +47,7 @@ class DetachedCriteriaProjectionAliasSpec extends Specification {
     }
 
     @Rollback
-    @Issue('https://github.com/grails/gorm-hibernate5/issues/598')
+    @Issue('https://github.com/grails/grails-data-hibernate5/issues/598')
     def 'test projection in detached criteria subquery with aliased join and restriction referencing join'() {
         setup:
         final detachedCriteria = new DetachedCriteria(Entity1).build {
@@ -67,7 +67,7 @@ class DetachedCriteriaProjectionAliasSpec extends Specification {
 
 
     @Rollback
-    @Issue('https://github.com/grails/gorm-hibernate5/issues/598')
+    @Issue('https://github.com/grails/grails-data-hibernate5/issues/598')
     def 'test aliased projection in detached criteria subquery'() {
         setup:
         final detachedCriteria = new DetachedCriteria(Entity2).build {

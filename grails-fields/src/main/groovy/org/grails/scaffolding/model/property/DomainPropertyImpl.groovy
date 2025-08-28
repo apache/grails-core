@@ -19,16 +19,19 @@
 
 package org.grails.scaffolding.model.property
 
+import groovy.transform.CompileStatic
+
+import org.springframework.validation.Validator
+
 import grails.gorm.validation.PersistentEntityValidator
 import grails.util.GrailsNameUtils
-import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.Basic
-import org.springframework.validation.Validator
+
 import static grails.gorm.validation.ConstrainedProperty.BLANK_CONSTRAINT
 
 /**
@@ -52,7 +55,7 @@ class DomainPropertyImpl implements DomainProperty {
         this.domainClass = persistentProperty.owner
         Validator validator = mappingContext.getEntityValidator(domainClass)
         if (validator instanceof PersistentEntityValidator) {
-            this.constrained = new Constrained(((PersistentEntityValidator)validator).constrainedProperties.get(name))
+            this.constrained = new Constrained(((PersistentEntityValidator) validator).constrainedProperties.get(name))
         }
         if (this.constrained?.isNull()) {
             this.constrained = null
@@ -82,7 +85,7 @@ class DomainPropertyImpl implements DomainProperty {
     Class getAssociatedType() {
         if (persistentProperty instanceof Association) {
             if (persistentProperty instanceof Basic) {
-                ((Basic)persistentProperty).componentType
+                ((Basic) persistentProperty).componentType
             } else {
                 associatedEntity.javaClass
             }
@@ -92,7 +95,7 @@ class DomainPropertyImpl implements DomainProperty {
     }
 
     PersistentEntity getAssociatedEntity() {
-        ((Association)persistentProperty).associatedEntity
+        ((Association) persistentProperty).associatedEntity
     }
 
     boolean isRequired() {

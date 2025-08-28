@@ -18,12 +18,12 @@
  */
 package grails.plugin.geb
 
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 import static org.testcontainers.containers.BrowserWebDriverContainer.VncRecordingMode
 import static org.testcontainers.containers.VncRecordingContainer.VncRecordingFormat

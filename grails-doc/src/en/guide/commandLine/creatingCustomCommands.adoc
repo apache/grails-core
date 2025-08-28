@@ -31,14 +31,14 @@ Since Grails 3.2.0, commands have similar abilities as scripts in regards to ret
 
 If you created a command in a previous version of grails, you can update your command to have those abilities by changing which trait you are implementing.
 
-Commands created in Grails 3.1.x or lower implement the http://docs.grails.org/latest/api/grails/dev/commands/ApplicationCommand.html[ApplicationCommand] trait by default which requires your command to implement the following method:
+Commands created in Grails 3.1.x or lower implement the link:{api}grails/dev/commands/ApplicationCommand.html[ApplicationCommand] trait by default which requires your command to implement the following method:
 
 [source,groovy]
 ----
 boolean handle(ExecutionContext executionContext)
 ----
 
-Commands created in Grails 3.2.0 or higher implement the http://docs.grails.org/latest/api/grails/dev/commands/GrailsApplicationCommand.html[GrailsApplicationCommand] trait by default which requires your command to implement the following method:
+Commands created in Grails 3.2.0 or higher implement the link:{api}grails/dev/commands/GrailsApplicationCommand.html[GrailsApplicationCommand] trait by default which requires your command to implement the following method:
 
 [source,groovy]
 ----
@@ -82,7 +82,7 @@ There are several reasons why you might want to write a custom command for your 
 * Integration: Custom commands can be used to integrate your Grails application with other systems or services. For example, you can create a command to synchronize data with an external API.
 * Customized Workflows: If your application has unique workflows or processes, custom commands provide a way to execute these workflows from the command line.
 
-In Grails, you can create custom commands by implementing the https://docs.grails.org/latest/api/grails/dev/commands/GrailsApplicationCommand.html[GrailsApplicationCommand] trait. By default, this trait requires your command to implement the handle() method as following:
+In Grails, you can create custom commands by implementing the link:{api}grails/dev/commands/GrailsApplicationCommand.html[GrailsApplicationCommand] trait. By default, this trait requires your command to implement the handle() method as following:
 
 [source,shell]
 ----

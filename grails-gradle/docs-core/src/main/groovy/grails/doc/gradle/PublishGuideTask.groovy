@@ -18,8 +18,11 @@
  */
 package grails.doc.gradle
 
-import grails.doc.DocPublisher
-import grails.doc.macros.HiddenMacro
+import java.nio.file.Files
+
+import javax.inject.Inject
+
+import org.gradle.api.AntBuilder
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.file.ConfigurableFileCollection
@@ -28,11 +31,19 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.AntBuilder
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 
-import javax.inject.Inject
-import java.nio.file.Files
+import grails.doc.DocPublisher
+import grails.doc.macros.HiddenMacro
 
 /**
  * Gradle task for generating a gdoc-based HTML user guide.
@@ -97,10 +108,10 @@ class PublishGuideTask extends DefaultTask {
         propertiesWithFilePaths = objects.mapProperty(String, File).convention([:])
         asciidoc = objects.property(Boolean).convention(true)
         propertiesFiles = objects.fileCollection()
-        sourceDir = objects.directoryProperty().convention(project.layout.projectDirectory.dir("src"))
-        resourcesDir = objects.directoryProperty().convention(project.layout.projectDirectory.dir("resources"))
+        sourceDir = objects.directoryProperty().convention(project.layout.projectDirectory.dir('src'))
+        resourcesDir = objects.directoryProperty().convention(project.layout.projectDirectory.dir('resources'))
         macros = objects.listProperty(Object).convention([])
-        targetDir = objects.directoryProperty().convention(project.layout.buildDirectory.dir("docs"))
+        targetDir = objects.directoryProperty().convention(project.layout.buildDirectory.dir('docs'))
         group = 'documentation'
     }
 
@@ -120,7 +131,7 @@ class PublishGuideTask extends DefaultTask {
 
         File resources = resourcesDir.get().asFile
         File docProperties = new File(resources, 'doc.properties')
-        if(docProperties.exists()) {
+        if (docProperties.exists()) {
             docProperties.withInputStream { input ->
                 combinedProperties.load(input)
             }

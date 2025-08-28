@@ -52,4 +52,4 @@ This behaviour can be set for an individual controller by specifying a `scope` a
 * `prototype` - A new controller will be created for each request (recommended for actions as Closure properties)
 * `session` - One controller is created for the scope of a user session
 
-See link:{guidePath}/theWebLayer.html#controllersAndScopes[Controllers and Scopes] in the user guide for more information.
+See link:{guidePath}theWebLayer.html#controllersAndScopes[Controllers and Scopes] in the user guide for more information.

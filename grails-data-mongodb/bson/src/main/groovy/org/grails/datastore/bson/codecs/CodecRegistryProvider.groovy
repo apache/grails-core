@@ -28,5 +28,6 @@ import org.bson.codecs.configuration.CodecRegistry
  * @since 6.0
  */
 interface CodecRegistryProvider {
+
     CodecRegistry getCodecRegistry()
 }

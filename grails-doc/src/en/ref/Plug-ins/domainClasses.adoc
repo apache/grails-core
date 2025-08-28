@@ -46,11 +46,11 @@ class Book {
 === Description
 
 
-Refer to the section on  link:{hibernate5Guide}/manual/[GORM] in the Grails user guide which details how to create Grails domain classes.
+Refer to the section on  link:{hibernate5GuideFromRef}[GORM] in the Grails user guide which details how to create Grails domain classes.
 
 Configured Spring Beans given a domain class of `Book`:
 
-* `BookValidator` - A {apiDocs}org/grails/validation/GrailsDomainClassValidator.html[GrailsDomainClassValidator] that validates a domain class' defined link:validation.html#constraints[Constraints].
+* `BookValidator` - A link:{apiFromRef}grails/gorm/validation/PersistentEntityValidator.html[PersistentEntityValidator] that validates a domain class' defined link:{guidePath}validation.html#constraints[Constraints].
 * `BookPersistentClass` - The `Class` for the domain class `Book`
-* `BookDomainClass` - The {apiDocs}grails/core/GrailsDomainClass.html[GrailsDomainClass] instance which understands the conventions defined within a domain class and is used by link:../../guide/GORM.html[GORM] to perform ORM mapping.
+* `BookDomainClass` - The link:{apiFromRef}grails/core/GrailsDomainClass.html[GrailsDomainClass] instance which understands the conventions defined within a domain class and is used by link:{guidePath}GORM.html[GORM] to perform ORM mapping.
 * `Book` - A prototyped bean that will create a new instance of `Book` every time requested. This bean is used to perform auto-wiring of domain classes when constructed with the `new` operator.

@@ -19,14 +19,17 @@
 
 package org.grails.cli.profile.commands
 
+import java.awt.*
+import java.util.List
+
 import groovy.transform.CompileStatic
+
 import jline.console.completer.Completer
 import jline.console.completer.FileNameCompleter
+
 import org.grails.cli.profile.CommandDescription
 import org.grails.cli.profile.ExecutionContext
 import org.grails.cli.profile.ProjectCommand
-
-import java.awt.Desktop
 
 /**
  * @author graemerocher
@@ -34,23 +37,23 @@ import java.awt.Desktop
 @CompileStatic
 class OpenCommand implements ProjectCommand, Completer {
 
-    public static final String NAME = "open"
+    public static final String NAME = 'open'
 
     @Override
     String getName() {
         NAME
     }
 
-    CommandDescription description = new CommandDescription(NAME, "Opens a file in the project", "open [FILE PATH]")
+    CommandDescription description = new CommandDescription(NAME, 'Opens a file in the project', 'open [FILE PATH]')
 
     @Override
     boolean handle(ExecutionContext executionContext) {
         def filePath = executionContext.commandLine.remainingArgsString
-        if(filePath) {
-            if(filePath == 'test-report') {
+        if (filePath) {
+            if (filePath == 'test-report') {
                 filePath = 'build/reports/tests/index.html'
             }
-            if(Desktop.isDesktopSupported())  {
+            if (Desktop.isDesktopSupported())  {
                 try {
                     Desktop.desktop.open(new File(filePath))
                     return true
@@ -59,7 +62,7 @@ class OpenCommand implements ProjectCommand, Completer {
                 }
             }
             else {
-                executionContext.console.error("File opening not supported by JVM, use native OS command")
+                executionContext.console.error('File opening not supported by JVM, use native OS command')
             }
         }
         else {

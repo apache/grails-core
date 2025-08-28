@@ -18,17 +18,17 @@
  */
 package org.grails.plugins.web.rest.plugin
 
-import grails.config.Settings
-import grails.core.GrailsApplication
-import grails.core.GrailsClass
-import grails.core.support.GrailsApplicationAware
-import grails.plugins.Plugin
-import grails.rest.Resource
-import grails.util.GrailsUtil
 import groovy.transform.CompileStatic
 
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
+
+import grails.config.Settings
+import grails.core.GrailsApplication
+import grails.core.GrailsClass
+import grails.plugins.Plugin
+import grails.rest.Resource
+import grails.util.GrailsUtil
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.plugins.web.rest.render.DefaultRendererRegistry
@@ -38,6 +38,7 @@ import org.grails.plugins.web.rest.render.DefaultRendererRegistry
  * @author Graeme Rocher
  */
 class RestResponderGrailsPlugin extends Plugin {
+
     private static final Log LOG = LogFactory.getLog(RestResponderGrailsPlugin)
 
     def version = GrailsUtil.getGrailsVersion()
@@ -47,16 +48,18 @@ class RestResponderGrailsPlugin extends Plugin {
     GrailsApplication grailsApplication
 
     @Override
-    Closure doWithSpring() {{->
+    Closure doWithSpring() {
+        { ->
 
-        def application = grailsApplication
-        RestResponderGrailsPlugin.registryResourceControllers(application)
+            def application = grailsApplication
+            RestResponderGrailsPlugin.registryResourceControllers(application)
 
-        rendererRegistry(DefaultRendererRegistry) { bean ->
-            bean.lazyInit = true
-            modelSuffix = application.config.getProperty(Settings.SCAFFOLDING_DOMAIN_SUFFIX, '')
+            rendererRegistry(DefaultRendererRegistry) { bean ->
+                bean.lazyInit = true
+                modelSuffix = application.config.getProperty(Settings.SCAFFOLDING_DOMAIN_SUFFIX, '')
+            }
         }
-    }}
+    }
 
     @Override
     void onChange(Map<String, Object> event) {
@@ -65,11 +68,11 @@ class RestResponderGrailsPlugin extends Plugin {
 
     @CompileStatic
     static void registryResourceControllers(GrailsApplication app) {
-        for(GrailsClass grailsClass in app.getArtefacts(DomainClassArtefactHandler.TYPE)) {
+        for (GrailsClass grailsClass in app.getArtefacts(DomainClassArtefactHandler.TYPE)) {
             final clazz = grailsClass.clazz
             if (clazz.getAnnotation(Resource)) {
                 String controllerClassName = "${clazz.name}Controller"
-                if (!app.getArtefact(ControllerArtefactHandler.TYPE,controllerClassName)) {
+                if (!app.getArtefact(ControllerArtefactHandler.TYPE, controllerClassName)) {
                     try {
                         app.addArtefact(ControllerArtefactHandler.TYPE, app.classLoader.loadClass(controllerClassName))
                     } catch (ClassNotFoundException cnfe) {

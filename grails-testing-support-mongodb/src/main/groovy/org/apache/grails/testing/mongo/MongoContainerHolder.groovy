@@ -20,6 +20,7 @@
 package org.apache.grails.testing.mongo
 
 import groovy.transform.PackageScope
+
 import org.slf4j.LoggerFactory
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.MongoDBContainer
@@ -27,6 +28,7 @@ import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.utility.DockerImageName
 
 class MongoContainerHolder {
+
     private ThreadLocal<GenericContainer> containers = new ThreadLocal<GenericContainer>()
     final DockerImageName desiredImage
 
@@ -38,13 +40,13 @@ class MongoContainerHolder {
     static GenericContainer startMongoContainer(DockerImageName dockerImageName) {
         GenericContainer dbContainer = new MongoDBContainer(dockerImageName)
         dbContainer.start()
-        dbContainer.followOutput(new Slf4jLogConsumer(LoggerFactory.getLogger("testcontainers")))
+        dbContainer.followOutput(new Slf4jLogConsumer(LoggerFactory.getLogger('testcontainers')))
         dbContainer
     }
 
     GenericContainer getContainer() {
         GenericContainer foundContainer = containers.get()
-        if(foundContainer) {
+        if (foundContainer) {
             return foundContainer
         }
 

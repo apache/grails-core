@@ -21,9 +21,10 @@ package org.grails.orm.hibernate.query;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.grails.datastore.mapping.query.Query;
 import org.hibernate.criterion.Projection;
 import org.hibernate.criterion.Projections;
+
+import org.grails.datastore.mapping.query.Query;
 
 /**
  * Adapts Grails datastore API to Hibernate projections.
@@ -78,7 +79,7 @@ public class HibernateProjectionAdapter {
 
     public Projection toHibernateProjection() {
         ProjectionAdapter projectionAdapter = adapterMap.get(projection.getClass());
-        if(projectionAdapter == null) throw new UnsupportedOperationException("Unsupported projection used: " + projection.getClass().getName());
+        if (projectionAdapter == null) throw new UnsupportedOperationException("Unsupported projection used: " + projection.getClass().getName());
         return projectionAdapter.toHibernateProjection(projection);
     }
 

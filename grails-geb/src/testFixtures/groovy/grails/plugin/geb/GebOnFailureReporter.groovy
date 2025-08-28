@@ -19,6 +19,7 @@
 package grails.plugin.geb
 
 import groovy.transform.CompileStatic
+
 import org.opentest4j.IncompleteExecutionException
 import org.spockframework.runtime.extension.IMethodInterceptor
 import org.spockframework.runtime.extension.IMethodInvocation
@@ -29,6 +30,7 @@ import org.spockframework.runtime.extension.IMethodInvocation
  */
 @CompileStatic
 class GebOnFailureReporter implements IMethodInterceptor {
+
     void intercept(IMethodInvocation invocation) throws Throwable {
         try {
             invocation.proceed()

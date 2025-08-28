@@ -18,10 +18,11 @@
  */
 package org.grails.plugins.databasemigration.liquibase
 
-import grails.config.Config
-import grails.core.GrailsApplication
+import java.sql.Connection
+
 import groovy.sql.Sql
 import groovy.transform.CompileStatic
+
 import liquibase.CatalogAndSchema
 import liquibase.changelog.ChangeSet
 import liquibase.changelog.DatabaseChangeLog
@@ -41,9 +42,11 @@ import liquibase.resource.ResourceAccessor
 import liquibase.snapshot.DatabaseSnapshot
 import liquibase.snapshot.SnapshotControl
 import liquibase.snapshot.SnapshotGeneratorFactory
+
 import org.springframework.context.ApplicationContext
 
-import java.sql.Connection
+import grails.config.Config
+import grails.core.GrailsApplication
 
 /**
  * Custom Groovy-based precondition.

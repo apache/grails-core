@@ -27,7 +27,7 @@ limitations under the License.
 
 ## Introduction
 
-[Apache Grails](https://grails.org/) is a framework used to build web applications with
+[Apache Grails](https://grails.apache.org/) is a framework used to build web applications with
 the [Apache Groovy](https://groovy-lang.org/) programming language. Releases prior to 7.0.0 were outside of the Apache
 Software Foundation. The core framework is very extensible and there are numerous [plugins](https://plugins.grails.org/)
 available that provide easy integration of add-on features. To assist in getting started, various Application generators
@@ -46,7 +46,7 @@ Please see the [INSTALL](INSTALL) document for instructions on how to build, use
 
 Please note that the Apache Software Foundation does not offer commercial support for Apache Grails or related applications.
 
-[Commercial support](https://grails.org/support.html) options are available.  The products and services listed at this link are provided for information use only to our users. The Apache Grails Project does not endorse or recommend any of the products or services.
+[Commercial support](https://grails.apache.org/support.html) options are available.  The products and services listed at this link are provided for information use only to our users. The Apache Grails Project does not endorse or recommend any of the products or services.
 
 ## Application Generation
 

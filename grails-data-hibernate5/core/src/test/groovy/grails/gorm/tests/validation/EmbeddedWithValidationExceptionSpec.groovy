@@ -31,7 +31,7 @@ class EmbeddedWithValidationExceptionSpec extends Specification {
     @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(DomainWithEmbedded)
 
     @Rollback
-    @Issue("https://github.com/grails/gorm-hibernate5/issues/110")
+    @Issue("https://github.com/grails/grails-data-hibernate5/issues/110")
     void "test validation exception with embedded in domain"() {
         when:
         new DomainWithEmbedded(

@@ -18,11 +18,11 @@
  */
 package org.grails.gsp.compiler;
 
-import org.grails.taglib.GrailsTagException;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+
+import org.grails.taglib.GrailsTagException;
 
 /**
  * NOTE: Based on work done by on the GSP standalone project (https://gsp.dev.java.net/)
@@ -65,7 +65,7 @@ class GroovyPageScanner implements Tokens {
 
     // add line starting positions to array
     private void resolveLineNumberPositions() {
-        lineNumberPositions = new ArrayList<Integer>();
+        lineNumberPositions = new ArrayList<>();
         // first line starts at 0
         lineNumberPositions.add(0);
         for (int i = 0; i < len; i++) {
@@ -176,7 +176,7 @@ class GroovyPageScanner implements Tokens {
                     if (c == '@' && c1 == '{') {
                         return found(GDIRECT, 2);
                     }
-                    
+
                     if (tokenLength > maxHtmlLength) {
                         return found(HTML, 0);
                     }
@@ -233,15 +233,15 @@ class GroovyPageScanner implements Tokens {
         char terminationChar = '}';
         char nextTerminationChar = 0;
         boolean startInExpression = true;
-        GroovyPageExpressionParser expressionParser = new GroovyPageExpressionParser(text, end1-1, terminationChar, nextTerminationChar, startInExpression);
-        int endpos= expressionParser.parse();
+        GroovyPageExpressionParser expressionParser = new GroovyPageExpressionParser(text, end1 - 1, terminationChar, nextTerminationChar, startInExpression);
+        int endpos = expressionParser.parse();
         if (endpos != -1) {
             end1 = endpos + 1;
             int expressionEndState = HTML;
             if (state == GTAG_EXPR) {
                 expressionEndState = GSTART_TAG;
             }
-            return found(expressionEndState,nextTerminationChar==0?1:2);
+            return found(expressionEndState, nextTerminationChar == 0 ? 1 : 2);
         }
 
         throw new GrailsTagException("Unclosed GSP expression", pageName, getLineNumberForToken());

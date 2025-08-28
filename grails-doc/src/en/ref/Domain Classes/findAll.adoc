@@ -81,7 +81,7 @@ def results = Person.findAll(sort:"firstName") {
 === Description
 
 
-The `findAll` method allows querying with Hibernate's query language  link:{hibernate5Guide}/manual/index.html#hql[HQL] and querying by example, returning all matching instances. Pagination can be controlled using the `max` and `offset` parameters:
+The `findAll` method allows querying with Hibernate's query language  link:{hibernate5GuideFromRef}index.html#hql[HQL] and querying by example, returning all matching instances. Pagination can be controlled using the `max` and `offset` parameters:
 
 [source,groovy]
 ----

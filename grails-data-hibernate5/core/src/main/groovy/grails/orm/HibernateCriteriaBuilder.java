@@ -18,31 +18,36 @@
  */
 package grails.orm;
 
+import java.util.List;
+import java.util.Map;
+
 import groovy.lang.GroovySystem;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.orm.hibernate.GrailsHibernateTemplate;
-import org.grails.orm.hibernate.HibernateDatastore;
-import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
-import org.grails.orm.hibernate.query.*;
-import org.grails.datastore.mapping.query.api.QueryableCriteria;
+
+import jakarta.persistence.metamodel.Attribute;
+import jakarta.persistence.metamodel.PluralAttribute;
+
 import org.hibernate.Criteria;
-import org.hibernate.HibernateException;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Projection;
 import org.hibernate.criterion.ProjectionList;
 import org.hibernate.criterion.Projections;
-import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.sql.JoinType;
 import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
+
 import org.springframework.orm.hibernate5.SessionHolder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import jakarta.persistence.metamodel.Attribute;
-import jakarta.persistence.metamodel.PluralAttribute;
-import java.util.List;
-import java.util.Map;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.query.api.QueryableCriteria;
+import org.grails.orm.hibernate.GrailsHibernateTemplate;
+import org.grails.orm.hibernate.HibernateDatastore;
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
+import org.grails.orm.hibernate.query.AbstractHibernateCriteriaBuilder;
+import org.grails.orm.hibernate.query.AbstractHibernateQuery;
+import org.grails.orm.hibernate.query.HibernateProjectionAdapter;
+import org.grails.orm.hibernate.query.HibernateQuery;
 
 /**
  * <p>Wraps the Hibernate Criteria API in a builder. The builder can be retrieved through the "createCriteria()" dynamic static
@@ -136,7 +141,7 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
      * @param alias           The alias to assign to the joined association (for later reference).
      * @param joinType        The type of join to use.
      * @return this (for method chaining)
-     * @throws HibernateException Indicates a problem creating the sub criteria
+     * @throws org.hibernate.HibernateException Indicates a problem creating the sub criteria
      * @see #createAlias(String, String)
      */
     public Criteria createAlias(String associationPath, String alias, int joinType) {
@@ -155,7 +160,7 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
 
     protected Class getClassForAssociationType(Attribute<?, ?> type) {
         if (type instanceof PluralAttribute) {
-            return ((PluralAttribute)type).getElementType().getJavaType();
+            return ((PluralAttribute) type).getElementType().getJavaType();
         }
         return type.getJavaType();
     }
@@ -191,7 +196,7 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
         {
             if (TransactionSynchronizationManager.hasResource(sessionFactory)) {
                 participate = true;
-                hibernateSession = ((SessionHolder)TransactionSynchronizationManager.getResource(sessionFactory)).getSession();
+                hibernateSession = ((SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)).getSession();
             }
             else {
                 hibernateSession = sessionFactory.openSession();
@@ -218,13 +223,13 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
         Class targetClass = persistentEntity.getJavaClass();
         org.hibernate.criterion.DetachedCriteria detachedCriteria;
 
-        if(alias != null) {
+        if (alias != null) {
             detachedCriteria = org.hibernate.criterion.DetachedCriteria.forClass(targetClass, alias);
         }
         else {
             detachedCriteria = org.hibernate.criterion.DetachedCriteria.forClass(targetClass);
         }
-        populateHibernateDetachedCriteria(new HibernateQuery(detachedCriteria,persistentEntity), detachedCriteria, queryableCriteria);
+        populateHibernateDetachedCriteria(new HibernateQuery(detachedCriteria, persistentEntity), detachedCriteria, queryableCriteria);
         return detachedCriteria;
     }
 

@@ -20,6 +20,7 @@ package grails.web.mapping.cors
 
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
+
 import org.springframework.web.cors.CorsConfiguration
 
 /**
@@ -32,7 +33,7 @@ import org.springframework.web.cors.CorsConfiguration
 @InheritConstructors
 class GrailsDefaultCorsConfiguration extends CorsConfiguration {
 
-    public CorsConfiguration applyPermitDefaultValues() {
+    CorsConfiguration applyPermitDefaultValues() {
         if (this.allowedMethods == null) {
             this.setAllowedMethods(Arrays.asList(ALL))
         }

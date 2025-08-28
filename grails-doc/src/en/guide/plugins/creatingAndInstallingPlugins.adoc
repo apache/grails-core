@@ -131,7 +131,7 @@ These files will be included in the plugin package while the `application.*` fil
 
 ==== Reading configuration properties
 
-Instead of directly accessing Grails configuration as `grailsApplication.config.mail.hostName`, use a Spring Boot configuration bean (or a POJO) annotated with {springbootapi}/org/springframework/boot/context/properties/ConfigurationProperties.html[ConfigurationProperties] annotation. Here is an example plugin configuration:
+Instead of directly accessing Grails configuration as `grailsApplication.config.mail.hostName`, use a Spring Boot configuration bean (or a POJO) annotated with {springbootapi}org/springframework/boot/context/properties/ConfigurationProperties.html[ConfigurationProperties] annotation. Here is an example plugin configuration:
 
 ./src/main/groovy/example/MailPluginConfiguration.groovy
 [source,groovy]
@@ -167,7 +167,7 @@ class MailService {
 }
 ----
 
-Please read the {springBootReference}/html/features.html#features.external-config[Spring Boot Externalized Configuration] section for more information.
+Please read the {springBootReference}features/external-config.html[Spring Boot Externalized Configuration] section for more information.
 
 ==== Installing Local Plugins
 
@@ -312,7 +312,7 @@ Grails application running at http://localhost:8080 in environment: development
 ==== Notes on excluded Artefacts
 
 
-Although the link:../ref/Command%20Line/create-plugin.html[create-plugin] command creates certain files for you so that the plugin can be run as a Grails application, not all of these files are included when packaging a plugin. The following is a list of artefacts created, but not included by link:../ref/Command%20Line/package-plugin.html[package-plugin]:
+Although the link:{commandLineRef}create-plugin.html[create-plugin] command creates certain files for you so that the plugin can be run as a Grails application, not all of these files are included when packaging a plugin. The following is a list of artefacts created, but not included by link:{commandLineRef}package-plugin.html[package-plugin]:
 
 * `grails-app/build.gradle` (although it is used to generate `dependencies.groovy`)
 * `grails-app/conf/logback.xml`
@@ -471,7 +471,7 @@ Adds Quartz job scheduling features
 
 ==== Plugin Configuration
 
-Instead of directly accessing Grails configuration as `grailsApplication.config.getProperty('mail.hostName', String)`, use a Spring Boot configuration bean (or a POJO) annotated with {springbootapi}/org/springframework/boot/context/properties/ConfigurationProperties.html[ConfigurationProperties] annotation. Here is an example plugin configuration:
+Instead of directly accessing Grails configuration as `grailsApplication.config.getProperty('mail.hostName', String)`, use a Spring Boot configuration bean (or a POJO) annotated with {springbootapi}org/springframework/boot/context/properties/ConfigurationProperties.html[ConfigurationProperties] annotation. Here is an example plugin configuration:
 
 ./src/main/groovy/example/MailPluginConfiguration.groovy
 [source,groovy]
@@ -507,7 +507,7 @@ class MailService {
 }
 ----
 
-Please read the {springBootReference}/html/features.html#features.external-config[Spring Boot Externalized Configuration] section for more information.
+Please read the {springBootReference}features/external-config.html[Spring Boot Externalized Configuration] section for more information.
 
 ==== Installing Local Plugins
 
@@ -651,7 +651,7 @@ Grails application running at http://localhost:8080 in environment: development
 ==== Notes on excluded Artefacts
 
 
-Although the link:../ref/Command%20Line/create-plugin.html[create-plugin] command creates certain files for you so that the plugin can be run as a Grails application, not all of these files are included when packaging a plugin. The following is a list of artefacts created, but not included by link:../ref/Command%20Line/package-plugin.html[package-plugin]:
+Although the link:{commandLineRef}create-plugin.html[create-plugin] command creates certain files for you so that the plugin can be run as a Grails application, not all of these files are included when packaging a plugin. The following is a list of artefacts created, but not included by link:{commandLineRef}package-plugin.html[package-plugin]:
 
 * `grails-app/build.gradle` (although it is used to generate `dependencies.groovy`)
 * `grails-app/conf/logback.xml`

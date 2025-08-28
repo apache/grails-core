@@ -19,8 +19,10 @@
 package org.grails.gsp.jsp
 
 import groovy.transform.CompileStatic
-import org.grails.buffer.FastStringPrintWriter
+
 import org.springframework.util.Assert
+
+import org.grails.buffer.FastStringPrintWriter
 
 /**
  * @author Graeme Rocher
@@ -28,11 +30,12 @@ import org.springframework.util.Assert
  */
 @CompileStatic
 class JspTagLibImpl implements JspTagLib {
+
     private String uri
     private Map<String, JspTagImpl> tags = [:]
 
     JspTagLibImpl(String uri, Map<String, String> tagClasses, ClassLoader classLoader) {
-        Assert.notNull uri, "The URI of the tag library must be specified!"
+        Assert.notNull(uri, 'The URI of the tag library must be specified!')
         this.uri = uri
         tagClasses.each { String tagName, String className ->
             tags[tagName] = new JspTagImpl(className, classLoader)
@@ -54,14 +57,14 @@ class JspTagLibImpl implements JspTagLib {
         JspTag tag = getTag(name)
 
         if (tag) {
-            Object[] args = (Object[])argsParam 
-            if(args == null || args.length==0) {
-                 args = [[:]] as Object[]
+            Object[] args = (Object[]) argsParam
+            if (args == null || args.length == 0) {
+                args = [[:]] as Object[]
             }
 
-            Map<String, Object> attrs = args[0] instanceof Map ? (Map)args[0] : [:]
-            Closure body = args[0] instanceof Closure ? (Closure)args[0] : null
-            if (args.size() > 1) body = args[1] instanceof Closure ? (Closure)args[1] : null
+            Map<String, Object> attrs = args[0] instanceof Map ? (Map) args[0] : [:]
+            Closure body = args[0] instanceof Closure ? (Closure) args[0] : null
+            if (args.size() > 1) body = args[1] instanceof Closure ? (Closure) args[1] : null
             if (body == null && args.size() > 1) {
                 body = { args[1] }
             }

@@ -54,7 +54,7 @@ class BookController {
 
 The Servlet API's {jakartaee}jakarta/servlet/ServletContext.html[ServletContext] is useful for, amongst other things, storing global application attributes, reading local server resources and establishing information about the servlet container.
 
-Application attributes which are normally accessible from the {jakartaee}jakarta/servlet/ServletContext#getAttribute(java/lang/String).html[getAttribute] can also be indexed into using the array index operator or de-reference operator:
+Application attributes which are normally accessible from the {jakartaee}jakarta/servlet/ServletContext.html#getAttribute(java/lang/String)[getAttribute] can also be indexed into using the array index operator or de-reference operator:
 
 [source,groovy]
 ----

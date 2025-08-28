@@ -19,7 +19,7 @@ under the License.
 
 The `create-*` commands in Grails automatically create unit or integration tests for you within the `src/test/groovy` directory. It is of course up to you to populate these tests with valid test logic, information on which can be found in the section on link:testing.html[Unit and integration tests].
 
-To execute tests you run the link:../ref/Command%20Line/test-app.html[test-app] command as follows:
+To execute tests you run the link:{commandLineRef}test-app.html[test-app] command as follows:
 
 [source,groovy]
 ----

@@ -18,8 +18,6 @@
  */
 package org.grails.web.converters.marshaller.json;
 
-import grails.converters.JSON;
-
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
@@ -29,6 +27,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.TimeZone;
 
+import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 

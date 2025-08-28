@@ -18,29 +18,30 @@
  */
 package org.grails.plugins.web.taglib
 
-import grails.artefact.TagLibrary
-import grails.config.Settings
-import grails.gsp.TagLib
-import grails.util.GrailsUtil
-import grails.util.Metadata
 import groovy.transform.CompileStatic
-
-import grails.core.GrailsApplication
-import grails.util.GrailsStringUtils
-import grails.plugins.GrailsPluginManager
-import grails.core.support.GrailsApplicationAware
-import grails.web.mapping.LinkGenerator
-import grails.web.mapping.UrlMappingsHolder
-import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.codehaus.groovy.runtime.InvokerHelper
+
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.web.servlet.support.RequestDataValueProcessor
 
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
+import grails.artefact.TagLibrary
+import grails.config.Settings
+import grails.core.GrailsApplication
+import grails.core.support.GrailsApplicationAware
+import grails.gsp.TagLib
+import grails.plugins.GrailsPluginManager
+import grails.util.GrailsStringUtils
+import grails.util.GrailsUtil
+import grails.util.Metadata
+import grails.web.mapping.LinkGenerator
+import grails.web.mapping.UrlMappingsHolder
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * The base application tag library for Grails many of which take inspiration from Rails helpers (thanks guys! :)
@@ -50,6 +51,7 @@ import jakarta.servlet.http.HttpServletResponse
  */
 @TagLib
 class ApplicationTagLib implements ApplicationContextAware, InitializingBean, GrailsApplicationAware, TagLibrary {
+
     static returnObjectForTags = ['createLink', 'resource', 'createLinkTo', 'cookie', 'header', 'img', 'join', 'meta', 'set', 'applyCodec']
 
     ApplicationContext applicationContext
@@ -64,9 +66,9 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
 
     static final SCOPES = [page: 'pageScope',
                            application: 'servletContext',
-                           request:'request',
-                           session:'session',
-                           flash:'flash']
+                           request: 'request',
+                           session: 'session',
+                           flash: 'flash']
 
     boolean useJsessionId = false
     boolean hasResourceProcessor = false
@@ -115,10 +117,10 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      */
     Closure set = { attrs, body ->
         def var = attrs.var
-        if (!var) throw new IllegalArgumentException("[var] attribute must be specified to for <g:set>!")
+        if (!var) throw new IllegalArgumentException('[var] attribute must be specified to for <g:set>!')
 
         def scope = attrs.scope ? SCOPES[attrs.scope] : 'pageScope'
-        if (!scope) throw new IllegalArgumentException("Invalid [scope] attribute for tag <g:set>!")
+        if (!scope) throw new IllegalArgumentException('Invalid [scope] attribute for tag <g:set>!')
 
         def value
         if (attrs.bean) {
@@ -141,7 +143,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @emptyTag
      */
     Closure createLinkTo = { attrs ->
-        GrailsUtil.deprecated "Tag [createLinkTo] is deprecated please use [resource] instead"
+        GrailsUtil.deprecated('Tag [createLinkTo] is deprecated please use [resource] instead')
         return resource(attrs)
     }
 
@@ -179,7 +181,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      */
     Closure img = { attrs ->
         if (!attrs.uri && !attrs.dir) {
-            attrs.dir = "images"
+            attrs.dir = 'images'
         }
         if (hasResourceProcessor) {
             return r.img(attrs)
@@ -227,7 +229,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         else {
             linkAttrs = [:]
         }
-        writer <<  '<a href=\"'
+        writer <<  '<a href="'
         writer << createLink(attrs).encodeAsHTML()
         writer << '"'
         if (elementId) {
@@ -235,10 +237,10 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         }
         def remainingKeys = attrs.keySet() - LinkGenerator.LINK_ATTRIBUTES
         for (key in remainingKeys) {
-            writer << " " << key << "=\"" << attrs[key]?.encodeAsHTML() << "\""
+            writer << ' ' << key << '="' << attrs[key]?.encodeAsHTML() << '"'
         }
         for (entry in linkAttrs) {
-            writer << " " << entry.key << "=\"" << entry.value?.encodeAsHTML() << "\""
+            writer << ' ' << entry.key << '="' << entry.value?.encodeAsHTML() << '"'
         }
         writer << '>'
         writer << body()
@@ -248,15 +250,15 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     @CompileStatic
     static String attrsToString(Map attrs) {
         // Output any remaining user-specified attributes
-        StringBuilder sb=new StringBuilder()
+        StringBuilder sb = new StringBuilder()
         // For some strange reason Groovy creates ClassCastExceptions internally in PogoMetaMethodSite.checkCall without this hack
         for (Iterator i = InvokerHelper.asIterator(attrs); i.hasNext();) {
-            Map.Entry e = (Map.Entry)i.next()
+            Map.Entry e = (Map.Entry) i.next()
             if (e.value != null) {
                 sb.append(' ')
                 sb.append(e.key)
                 sb.append('="')
-                sb.append(InvokerHelper.invokeMethod(String.valueOf(e.value), "encodeAsHTML", null))
+                sb.append(InvokerHelper.invokeMethod(String.valueOf(e.value), 'encodeAsHTML', null))
                 sb.append('"')
             }
         }
@@ -285,14 +287,14 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     }
 
     static SUPPORTED_TYPES = [
-        css:[type:"text/css", rel:'stylesheet', media:'screen, projection'],
-        js:[type:'text/javascript', writer:'js'],
+        css: [type: 'text/css', rel: 'stylesheet', media: 'screen, projection'],
+        js: [type: 'text/javascript', writer: 'js'],
 
-        gif:[rel:'shortcut icon'],
-        jpg:[rel:'shortcut icon'],
-        png:[rel:'shortcut icon'],
-        ico:[rel:'shortcut icon'],
-        appleicon:[rel:'apple-touch-icon']
+        gif: [rel: 'shortcut icon'],
+        jpg: [rel: 'shortcut icon'],
+        png: [rel: 'shortcut icon'],
+        ico: [rel: 'shortcut icon'],
+        appleicon: [rel: 'apple-touch-icon']
 
         // @todo add feed link types here too
     ]
@@ -327,7 +329,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
 
         def typeInfo = SUPPORTED_TYPES[type]?.clone()
         if (!typeInfo) {
-            throwTagError "I can't work out the type of ${uri} with type [${type}]. Please check the URL, resource definition or specify [type] attribute"
+            throwTagError("I can't work out the type of ${uri} with type [${type}]. Please check the URL, resource definition or specify [type] attribute")
         }
 
         def writerName = typeInfo.remove('writer')
@@ -337,7 +339,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         attrs.each { typeInfo.remove(it.key) }
 
         out << writer(processedUrl(uri, request), typeInfo, attrs)
-        out << "\r\n"
+        out << '\r\n'
     }
 
     /**
@@ -362,18 +364,18 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr event Webflow _eventId parameter
      */
     Closure createLink = { attrs ->
-       return doCreateLink(attrs instanceof  Map ? (Map) attrs : Collections.emptyMap())
+        return doCreateLink(attrs instanceof  Map ? (Map) attrs : Collections.emptyMap())
     }
 
     @CompileStatic
     protected String doCreateLink(Map attrs) {
         Map urlAttrs = attrs
         if (attrs.url instanceof Map) {
-            urlAttrs = (Map)attrs.url
+            urlAttrs = (Map) attrs.url
         }
-        Map params = urlAttrs.params && urlAttrs.params instanceof Map ? (Map)urlAttrs.params : [:]
-        HttpServletRequest req = (HttpServletRequest)getProperty('request')
-        HttpServletResponse res = (HttpServletResponse)getProperty('response')
+        Map params = urlAttrs.params && urlAttrs.params instanceof Map ? (Map) urlAttrs.params : [:]
+        HttpServletRequest req = (HttpServletRequest) getProperty('request')
+        HttpServletResponse res = (HttpServletResponse) getProperty('response')
         def flowExecutionKey = req.getAttribute('flowExecutionKey')
         if (flowExecutionKey) {
             if (attrs.controller == null && attrs.action == null && attrs.url == null && attrs.uri == null) {
@@ -381,7 +383,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
             }
         }
         if (urlAttrs.event) {
-            params."_eventId" = urlAttrs.remove('event')
+            params.'_eventId' = urlAttrs.remove('event')
             urlAttrs.params = params
         }
 
@@ -404,7 +406,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     Closure withTag = { attrs, body ->
         def writer = out
         writer << "<${attrs.name}"
-        attrs.attrs?.each { k,v ->
+        attrs.attrs?.each { k, v ->
             if (!v) return
             if (v instanceof Closure) {
                 writer << " $k=\""

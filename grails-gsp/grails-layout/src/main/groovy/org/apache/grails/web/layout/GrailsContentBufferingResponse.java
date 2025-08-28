@@ -20,19 +20,19 @@ package org.apache.grails.web.layout;
 
 import java.io.IOException;
 
-import grails.web.mvc.GrailsResponseMutator;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpServletResponseWrapper;
-
-import org.grails.buffer.StreamCharBuffer;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.grails.web.util.WebUtils;
 
 import com.opensymphony.module.sitemesh.PageParser;
 import com.opensymphony.module.sitemesh.PageParserSelector;
 import com.opensymphony.sitemesh.Content;
 import com.opensymphony.sitemesh.ContentProcessor;
 import com.opensymphony.sitemesh.webapp.SiteMeshWebAppContext;
+
+import grails.web.mvc.GrailsResponseMutator;
+import org.grails.buffer.StreamCharBuffer;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.util.WebUtils;
 
 public class GrailsContentBufferingResponse extends HttpServletResponseWrapper implements GrailsResponseMutator, StreamCharBuffer.LazyInitializingWriter {
 

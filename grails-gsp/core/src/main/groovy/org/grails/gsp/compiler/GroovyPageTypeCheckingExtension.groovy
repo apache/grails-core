@@ -35,6 +35,7 @@ import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport
  *
  */
 class GroovyPageTypeCheckingExtension extends GroovyTypeCheckingExtensionSupport.TypeCheckingDSL {
+
     @Override
     Object run() {
         ClassNode configAnnotationClassNode = ClassHelper.make(GroovyPageTypeCheckingConfig)
@@ -44,7 +45,7 @@ class GroovyPageTypeCheckingExtension extends GroovyTypeCheckingExtensionSupport
                 allowedTagLibs = [] as Set
                 dynamicProperties = [] as Set
             }
-            AnnotationNode configAnnotation = classNode.getAnnotations(configAnnotationClassNode)?.find{it}
+            AnnotationNode configAnnotation = classNode.getAnnotations(configAnnotationClassNode)?.find { it }
             if (configAnnotation) {
                 Expression taglibsExpression = configAnnotation.getMember('taglibs')
                 if (taglibsExpression instanceof ListExpression) {

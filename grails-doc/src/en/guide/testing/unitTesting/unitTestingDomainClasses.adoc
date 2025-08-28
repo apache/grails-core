@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Use the link:../api/grails/testing/gorm/DomainUnitTest.html[`grails.testing.gorm.DomainUnitTest`]
+Use the link:{api}grails/testing/gorm/DomainUnitTest.html[`grails.testing.gorm.DomainUnitTest`]
 trait to unit test single domain class.
 
 [source,groovy]
@@ -32,10 +32,10 @@ include::{functionalSourceDir}/demo33/grails-app/domain/demo/Person.groovy[inden
 include::{functionalSourceDir}/demo33/src/test/groovy/demo/PersonSpec.groovy[indent=0]
 ----
 
-Alternatively, the link:../api/grails/testing/gorm/DataTest.html[`grails.testing.gorm.DataTest`]
+Alternatively, the link:{api}grails/testing/gorm/DataTest.html[`grails.testing.gorm.DataTest`]
 trait may be used.  When using `DataTest`, an explicit call to the
-link:../api/grails/testing/gorm/DataTest.html#mockDomain(Class<?>)[mockDomain] or
-link:../api/grails/testing/gorm/DataTest.html#mockDomains(Class<?>)[mockDomains]
+link:{api}grails/testing/gorm/DataTest.html#mockDomain(Class<?>)[mockDomain] or
+link:{api}grails/testing/gorm/DataTest.html#mockDomains(Class<?>)[mockDomains]
 method may be used to specify which domain class(es) should be mocked for this
 test. This is useful when mocking more than one Domain class at a time to test persistence.
 

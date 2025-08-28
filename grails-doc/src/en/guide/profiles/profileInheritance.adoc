@@ -28,7 +28,7 @@ dependencies {
 
 By inheriting from a parent profile you get the following benefits:
 
-* When the link:../ref/Command%20Line/create-app.html[create-app] command is executed the parent profile's skeleton is copied first
+* When the link:{commandLineRef}create-app.html[create-app] command is executed the parent profile's skeleton is copied first
 * Dependencies and `build.gradle` is merged from the parent(s)
 * The `application.yml` file is merged from the parent(s)
 * CLI commands from the parent profile are inherited

@@ -18,10 +18,11 @@
  */
 package grails.web.mapping;
 
-import groovy.lang.Closure;
-import org.springframework.core.io.Resource;
-
 import java.util.List;
+
+import groovy.lang.Closure;
+
+import org.springframework.core.io.Resource;
 
 /**
  * Evaluates URL mapping from the given Spring Resource or class.

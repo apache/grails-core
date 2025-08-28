@@ -18,6 +18,21 @@
  */
 package org.grails.datastore.gorm.events;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEvent;
+
 import grails.gorm.annotation.AutoTimestamp;
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
 import org.grails.datastore.gorm.timestamp.TimestampProvider;
@@ -25,18 +40,15 @@ import org.grails.datastore.mapping.config.Entity;
 import org.grails.datastore.mapping.config.Settings;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.engine.EntityAccess;
-import org.grails.datastore.mapping.engine.event.*;
+import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
+import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener;
+import org.grails.datastore.mapping.engine.event.EventType;
+import org.grails.datastore.mapping.engine.event.PreInsertEvent;
+import org.grails.datastore.mapping.engine.event.PreUpdateEvent;
 import org.grails.datastore.mapping.model.ClassMapping;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationEvent;
-
-import java.lang.reflect.Field;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * An event listener that adds support for GORM-style auto-timestamping
@@ -198,7 +210,7 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
     protected void storeTimestampAvailability(Map<String, Optional<Set<String>>> timestampAvailabilityMap, PersistentEntity persistentEntity, PersistentProperty<?> property) {
         if (property != null && timestampProvider.supportsCreating(property.getType())) {
             Optional<Set<String>> timestampProperties = timestampAvailabilityMap.computeIfAbsent(persistentEntity.getName(), k -> Optional.of(new HashSet<>()));
-            if(timestampProperties.isPresent()) {
+            if (timestampProperties.isPresent()) {
                 timestampProperties.get().add(property.getName());
             }
             else {
@@ -219,7 +231,7 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
         this.timestampProvider = timestampProvider;
     }
 
-    private void processAllEntries(final Set<Map.Entry<String, Optional<Set<String>>>> entries, final Runnable runnable)  {
+    private void processAllEntries(final Set<Map.Entry<String, Optional<Set<String>>>> entries, final Runnable runnable) {
         Map<String, Optional<Set<String>>> originalValues = new LinkedHashMap<>();
         for (Map.Entry<String, Optional<Set<String>>> entry: entries) {
             originalValues.put(entry.getKey(), entry.getValue());
@@ -247,10 +259,10 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
 
     /**
      * Temporarily disables the last updated processing during the execution of the runnable
-     * 
+     *
      * @param runnable The code to execute while the last updated listener is disabled
      */
-    public void withoutLastUpdated(final Runnable runnable)  {
+    public void withoutLastUpdated(final Runnable runnable) {
         processAllEntries(entitiesWithLastUpdated.entrySet(), runnable);
     }
 
@@ -260,7 +272,7 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
      * @param classes Which classes to disable the last updated processing for
      * @param runnable The code to execute while the last updated listener is disabled
      */
-    public void withoutLastUpdated(final List<Class> classes, final Runnable runnable)  {
+    public void withoutLastUpdated(final List<Class> classes, final Runnable runnable) {
         processEntries(classes, entitiesWithLastUpdated, runnable);
     }
 
@@ -270,7 +282,7 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
      * @param clazz Which class to disable the last updated processing for
      * @param runnable The code to execute while the last updated listener is disabled
      */
-    public void withoutLastUpdated(final Class clazz, final Runnable runnable)  {
+    public void withoutLastUpdated(final Class clazz, final Runnable runnable) {
         ArrayList<Class> list = new ArrayList<>(1);
         list.add(clazz);
         withoutLastUpdated(list, runnable);
@@ -281,7 +293,7 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
      *
      * @param runnable The code to execute while the date created listener is disabled
      */
-    public void withoutDateCreated(final Runnable runnable)  {
+    public void withoutDateCreated(final Runnable runnable) {
         processAllEntries(entitiesWithDateCreated.entrySet(), runnable);
     }
 
@@ -291,7 +303,7 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
      * @param classes Which classes to disable the date created processing for
      * @param runnable The code to execute while the date created listener is disabled
      */
-    public void withoutDateCreated(final List<Class> classes, final Runnable runnable)  {
+    public void withoutDateCreated(final List<Class> classes, final Runnable runnable) {
         processEntries(classes, entitiesWithDateCreated, runnable);
     }
 
@@ -301,7 +313,7 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
      * @param clazz Which class to disable the date created processing for
      * @param runnable The code to execute while the date created listener is disabled
      */
-    public void withoutDateCreated(final Class clazz, final Runnable runnable)  {
+    public void withoutDateCreated(final Class clazz, final Runnable runnable) {
         ArrayList<Class> list = new ArrayList<>(1);
         list.add(clazz);
         withoutDateCreated(list, runnable);
@@ -312,7 +324,7 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
      *
      * @param runnable The code to execute while the timestamp listeners are disabled
      */
-    public void withoutTimestamps(final Runnable runnable)  {
+    public void withoutTimestamps(final Runnable runnable) {
         withoutDateCreated(() -> withoutLastUpdated(runnable));
     }
 
@@ -322,7 +334,7 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
      * @param classes Which classes to disable the timestamp processing for
      * @param runnable The code to execute while the timestamp listeners are disabled
      */
-    public void withoutTimestamps(final List<Class> classes, final Runnable runnable)  {
+    public void withoutTimestamps(final List<Class> classes, final Runnable runnable) {
         withoutDateCreated(classes, () -> withoutLastUpdated(classes, runnable));
     }
 
@@ -332,7 +344,7 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
      * @param clazz Which class to disable the timestamp processing for
      * @param runnable The code to execute while the timestamp listeners are disabled
      */
-    public void withoutTimestamps(final Class clazz, final Runnable runnable)  {
+    public void withoutTimestamps(final Class clazz, final Runnable runnable) {
         withoutDateCreated(clazz, () -> withoutLastUpdated(clazz, runnable));
     }
 

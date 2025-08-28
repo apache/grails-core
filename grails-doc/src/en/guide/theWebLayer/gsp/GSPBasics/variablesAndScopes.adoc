@@ -35,11 +35,11 @@ Within the scope of a GSP there are a number of pre-defined variables, including
 
 * `application` - The {javaee}javax/servlet/ServletContext.html[javax.servlet.ServletContext] instance
 * `applicationContext` The Spring {springapi}org/springframework/context/ApplicationContext.html[ApplicationContext] instance
-* `flash` - The xref:../../../../ref/Controllers/flash.adoc[flash] object
-* `grailsApplication` - The {api}grails/core/GrailsApplication.html[GrailsApplication] instance
+* `flash` - The link:{controllersRef}flash.html[flash] object
+* `grailsApplication` - The link:{api}grails/core/GrailsApplication.html[GrailsApplication] instance
 * `out` - The response writer for writing to the output stream
-* `params` - The xref:../../../../ref/Controllers/params.adoc[params] object for retrieving request parameters
+* `params` - The link:{controllersRef}params.html[params] object for retrieving request parameters
 * `request` - The {javaee}javax/servlet/http/HttpServletRequest.html[HttpServletRequest] instance
 * `response` - The {javaee}javax/servlet/http/HttpServletResponse.html[HttpServletResponse] instance
 * `session` - The {javaee}javax/servlet/http/HttpSession.html[HttpSession] instance
-* `webRequest` - The {api}org/grails/web/servlet/mvc/GrailsWebRequest.html[GrailsWebRequest] instance
+* `webRequest` - The link:{api}org/grails/web/servlet/mvc/GrailsWebRequest.html[GrailsWebRequest] instance

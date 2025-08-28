@@ -27,7 +27,7 @@ To mark a profile project for publishing, you need to apply the `grails-profile-
 apply plugin: "org.apache.grails.gradle.grails-publish-profile"
 ----
 
-To publish a profile using this plugin to the Grails central repository first upload the source to https://github.com[Github] (closed source profiles will not be accepted). Then register for an account on http://bintray.com[Bintray] and configure your keys as follows in the profile's `build.gradle` file:
+To publish a profile using this plugin to the Grails central repository first upload the source to https://github.com[Github] (closed source profiles will not be accepted). Then register for an account on https://central.sonatype.com/[Maven Central] and configure your keys as follows in the profile's `build.gradle` file:
 
 [source,groovy]
 ----
@@ -36,13 +36,13 @@ grailsPublish {
         license {
             name = 'Apache-2.0'
         }
-        title = 'My plugin title'
-        desc = 'My plugin description'
+        title = 'My profile title'
+        desc = 'My profile description'
         developers = [johndoe: 'John Doe']
     }
 ----
 
-NOTE: The `githubSlug` argument should point to the path to your Github repository. For example if your repository is located at https://github.com/foo/bar then your `githubSlug` is `foo/bar`
+NOTE: The `githubSlug` argument should point to the path to your Github repository. For example if your repository is located at https://github.com/apache/grails-core then your `githubSlug` is `apache/grails-core`
 
 Environment variables control where the profile is published.  By default, this plugin will publish to the specified `MAVEN_PUBLISH` instance for snapshots, and `NEXUS_PUBLISH` for releases.  To change the snapshot publish behavior, set `snapshotRepoType` to `PublishType.NEXUS_PUBLISH`. To change the release publish behavior, set `releaseRepoType` to `PublishType.MAVEN_PUBLISH`.
 

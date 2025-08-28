@@ -19,6 +19,7 @@
 package org.grails.cli.profile.steps
 
 import groovy.transform.CompileStatic
+
 import org.grails.cli.profile.AbstractStep
 import org.grails.cli.profile.CommandException
 import org.grails.cli.profile.ExecutionContext
@@ -34,15 +35,15 @@ import org.grails.cli.profile.support.ArtefactVariableResolver
 @CompileStatic
 class MkdirStep extends AbstractStep {
 
-    public static final String NAME = "mkdir"
+    public static final String NAME = 'mkdir'
 
     String location
 
     MkdirStep(ProfileCommand command, Map<String, Object> parameters) {
         super(command, parameters)
         location = parameters.location
-        if(!location) {
-            throw new CommandException("Location not specified for mkdir step")
+        if (!location) {
+            throw new CommandException('Location not specified for mkdir step')
         }
     }
 
@@ -52,7 +53,7 @@ class MkdirStep extends AbstractStep {
     @Override
     boolean handle(ExecutionContext context) {
         def args = context.commandLine.remainingArgs
-        if(args) {
+        if (args) {
             def name = args[0]
             def variableResolver = new ArtefactVariableResolver(name)
             File destination = variableResolver.resolveFile(location, context)

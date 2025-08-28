@@ -18,13 +18,14 @@
  */
 package org.grails.datastore.mapping.keyvalue.mapping.config;
 
+import org.springframework.util.Assert;
+
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;
 import org.grails.datastore.mapping.model.AbstractMappingContext;
 import org.grails.datastore.mapping.model.MappingConfigurationStrategy;
 import org.grails.datastore.mapping.model.MappingFactory;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.config.JpaMappingConfigurationStrategy;
-import org.springframework.util.Assert;
 
 /**
  * A MappingContext used to map objects to a Key/Value store

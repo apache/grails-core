@@ -19,7 +19,6 @@
 
 package grails.util
 
-
 /**
  * Interface for classes that are described
  *

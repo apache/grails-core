@@ -18,15 +18,15 @@
  */
 package org.grails.plugins;
 
-import grails.config.Config;
-import grails.config.Settings;
-import grails.plugins.PluginFilter;
-
 import java.util.Collection;
 import java.util.HashSet;
 
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
+import grails.config.Config;
+import grails.config.Settings;
+import grails.plugins.PluginFilter;
 
 /**
  * Implements mechanism for figuring out what <code>PluginFilter</code>
@@ -36,7 +36,6 @@ import org.springframework.util.StringUtils;
  * @author Graeme Rocher
  */
 public class PluginFilterRetriever {
-
 
     @SuppressWarnings("rawtypes")
     public PluginFilter getPluginFilter(Config config) {
@@ -54,7 +53,7 @@ public class PluginFilterRetriever {
 
         if (includes != null) {
             if (includes instanceof Collection) {
-                pluginFilter = new IncludingPluginFilter(new HashSet((Collection)includes));
+                pluginFilter = new IncludingPluginFilter(new HashSet((Collection) includes));
             }
             else {
                 String[] includesArray = StringUtils.commaDelimitedListToStringArray(includes.toString());
@@ -63,7 +62,7 @@ public class PluginFilterRetriever {
         }
         else if (excludes != null) {
             if (excludes instanceof Collection) {
-                pluginFilter = new ExcludingPluginFilter(new HashSet((Collection)excludes));
+                pluginFilter = new ExcludingPluginFilter(new HashSet((Collection) excludes));
             }
             else {
                 String[] excludesArray = StringUtils.commaDelimitedListToStringArray(excludes.toString());

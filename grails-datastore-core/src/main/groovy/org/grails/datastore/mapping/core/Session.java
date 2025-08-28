@@ -24,13 +24,14 @@ import java.util.Map;
 
 import jakarta.persistence.FlushModeType;
 
+import org.springframework.transaction.TransactionDefinition;
+
 import org.grails.datastore.mapping.engine.Persister;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.QueryCreator;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.datastore.mapping.transactions.Transaction;
-import org.springframework.transaction.TransactionDefinition;
 
 /**
  * The Session represents the active interaction with a datastore.
@@ -106,7 +107,7 @@ public interface Session extends QueryCreator {
      */
     Transaction beginTransaction(TransactionDefinition definition);
 
-   /**
+    /**
      * Obtains the MappingContext instance
      *
      * @return The MappingContext
@@ -269,7 +270,7 @@ public interface Session extends QueryCreator {
      * @param keys The keys
      * @return A list of objects
      */
-    List retrieveAll(Class type, Serializable...keys);
+    List retrieveAll(Class type, Serializable... keys);
 
     /**
      * Creates a query instance for the give type
@@ -321,7 +322,6 @@ public interface Session extends QueryCreator {
      * @return The identifier or null if it cannot be established
      */
     Serializable getObjectIdentifier(Object instance);
-
 
     /**
      * Whether the session is synchronized with a transaction
