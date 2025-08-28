@@ -47,23 +47,26 @@ class GradleDependency {
         this.scope = scope
         def artifact = dependency.artifact
         def v = artifact.version.replace('BOM', '')
+        String groupArtifactVersion = artifact.groupId + ':' + artifact.artifactId + (v ? ':' + v : '')
+
+        String variantCall
+        String variant = artifact.properties?.'variant'
+        if (variant) {
+            variantCall = "${variant}(\"${groupArtifactVersion}\")"
+        }
+
         StringBuilder artifactString = new StringBuilder()
-        if (dependency.exclusions != null && !dependency.exclusions.empty) {
+        boolean hasExclusions = (dependency.exclusions != null && !dependency.exclusions.empty)
+        if (hasExclusions) {
             artifactString.append('(')
         } else {
             artifactString.append(' ')
         }
-        artifactString.append('"')
-        artifactString.append(artifact.groupId)
-        artifactString.append(':').append(artifact.artifactId)
-        if (v) {
-            artifactString.append(':').append(v)
-        }
-        artifactString.append('"')
+        artifactString.append(variantCall ?: '"' + groupArtifactVersion + '"')
 
         def ln = System.getProperty('line.separator')
 
-        if (dependency.exclusions != null && !dependency.exclusions.empty) {
+        if (hasExclusions) {
             artifactString.append(') {').append(ln)
             for (e in dependency.exclusions) {
                 artifactString.append('    ')

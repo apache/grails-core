@@ -24,6 +24,7 @@ import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.Project;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
+import org.grails.forge.feature.Category;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.FeatureContext;
@@ -63,6 +64,11 @@ public class GebWithTestcontainers implements DefaultFeature {
     @Override
     public String getDescription() {
         return "This plugins configure Geb for Grails framework to write automation tests that run with Testcontainers.";
+    }
+
+    @Override
+    public String getCategory() {
+        return Category.TESTING;
     }
 
     @Override

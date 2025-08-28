@@ -62,6 +62,11 @@ public class GebWithWebDriverBinaries implements Feature {
     }
 
     @Override
+    public String getCategory() {
+        return Category.TESTING;
+    }
+
+    @Override
     public int getOrder() {
         return FeaturePhase.TEST.getOrder();
     }
