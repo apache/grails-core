@@ -20,7 +20,10 @@
 package org.grails.core.util;
 
 import java.text.NumberFormat;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Deque;
+import java.util.LinkedList;
 
 /**
  * Based on the Spring StopWatch class, but supporting nested tasks
@@ -39,8 +42,8 @@ public class StopWatch {
      */
     private final String id;
 
-    private final Deque<TaskInfo> runningTasks = new LinkedList<TaskInfo>();
-    private final Deque<TaskInfo> taskList = new LinkedList<TaskInfo>();
+    private final Deque<TaskInfo> runningTasks = new LinkedList<>();
+    private final Deque<TaskInfo> taskList = new LinkedList<>();
 
     /** Is the stop watch currently running? */
     private boolean running;
@@ -54,7 +57,6 @@ public class StopWatch {
 
     /** Total running time */
     private long totalTimeMillis;
-
 
     /**
      * Construct a new stop watch. Does not start any task.
@@ -73,8 +75,6 @@ public class StopWatch {
     public StopWatch(String id) {
         this.id = id;
     }
-
-
 
     /**
      * Start an unnamed task. The results are undefined if {@link #stop()}
@@ -110,7 +110,7 @@ public class StopWatch {
             throw new IllegalStateException("Can't stop StopWatch: it's not running");
         }
 
-        if(!runningTasks.isEmpty()) {
+        if (!runningTasks.isEmpty()) {
 
             TaskInfo lastTask = runningTasks.pop();
             lastTask.stop();
@@ -130,7 +130,6 @@ public class StopWatch {
     public boolean isRunning() {
         return this.running;
     }
-
 
     /**
      * Return the time taken by the last task.
@@ -162,7 +161,6 @@ public class StopWatch {
         return this.lastTaskInfo;
     }
 
-
     /**
      * Return the total time in milliseconds for all tasks.
      */
@@ -191,7 +189,6 @@ public class StopWatch {
         return this.taskList.toArray(new TaskInfo[this.taskList.size()]);
     }
 
-
     /**
      * Return a short description of the total running time.
      */
@@ -216,7 +213,7 @@ public class StopWatch {
         pf.setMinimumIntegerDigits(3);
         pf.setGroupingUsed(false);
         final TaskInfo[] taskInfos = getTaskInfo();
-        Arrays.sort(taskInfos, new Comparator<TaskInfo>() {
+        Arrays.sort(taskInfos, new Comparator<>() {
             @Override
             public int compare(TaskInfo o1, TaskInfo o2) {
                 return Long.compare(o1.getTimeMillis(), o2.getTimeMillis());
@@ -245,7 +242,6 @@ public class StopWatch {
         return sb.toString();
     }
 
-
     /**
      * Inner class to hold data about one task executed within the stop watch.
      */
@@ -255,7 +251,6 @@ public class StopWatch {
 
         private final long startTime;
         private long endTime;
-
 
         TaskInfo(String taskName, long startTime) {
             this.taskName = taskName;

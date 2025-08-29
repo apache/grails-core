@@ -20,14 +20,14 @@ limitations under the License.
 
 ## Geb Functional Testing for the Grails® framework
 
-This plugin integrates [Geb](https://www.gebish.org) with [Grails](https://www.grails.org) to make it easy to write functional tests for your Grails applications.
+This plugin integrates [Geb](https://groovy.apache.org/geb/) with [Grails](https://www.grails.org) to make it easy to write functional tests for your Grails applications.
 
 ## Examples
 
 If you are looking for examples on how to write Geb tests, check:
 
-[Geb/Grails example project](https://github.com/grails-samples/geb-example-grails) or [Grails functional test suite](https://github.com/grails/grails-functional-tests) where Geb tests are used extensively.
-For further reference please see the [Geb documentation](https://www.gebish.org).
+[Geb/Grails example project](https://github.com/grails-samples/geb-example-grails) or [Grails functional test suite](https://github.com/apache/grails-core/tree/HEAD/grails-test-examples) where Geb tests are used extensively.
+For further reference please see the [Geb documentation](https://groovy.apache.org/geb/).
 
 ## Usage
 
@@ -140,7 +140,7 @@ An Example of this can be seen in [ContainerSupport#createFileInputSource utilit
   * purpose: amount of time the driver should wait when searching for an element if it is not immediately present.
   * defaults to `0` seconds, which means that if an element is not found, it will immediately return an error.
   * Warning: Do not mix implicit and explicit waits. Doing so can cause unpredictable wait times.
-    Consult the [Geb](https://www.gebish.org/manual/current/#implicit-assertions-waiting) 
+    Consult the [Geb](https://groovy.apache.org/geb/manual/current/#implicit-assertions-waiting) 
     and/or [Selenium](https://www.selenium.dev/documentation/webdriver/waits/) documentation for details.
 * `grails.geb.timeouts.pageLoad`
   * purpose: amount of time to wait for a page load to complete before throwing an error.
@@ -179,7 +179,7 @@ You also need to add a `GebConfig.groovy` file in the `src/integration-test/reso
 /*
     This is the Geb configuration file.
 
-    See: http://www.gebish.org/manual/current/#configuration
+    See: https://groovy.apache.org/geb/manual/current/#configuration
 */
 
 /* ... */

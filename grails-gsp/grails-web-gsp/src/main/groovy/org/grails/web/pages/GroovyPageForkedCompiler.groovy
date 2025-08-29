@@ -21,6 +21,7 @@ package org.grails.web.pages
 import groovy.io.FileType
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.control.CompilerConfiguration
+
 import org.grails.gsp.compiler.GroovyPageCompiler
 
 /**
@@ -37,7 +38,7 @@ class GroovyPageForkedCompiler {
     @Delegate
     CompilerConfiguration configuration = new CompilerConfiguration()
 
-    String packageName = ""
+    String packageName = ''
     File sourceDir
     File destDir
     File tmpdir
@@ -108,9 +109,9 @@ class GroovyPageForkedCompiler {
     static void run(String[] args) {
         if (args.length != 8) {
             System.err.println("Invalid arguments: [${args.join(',')}]")
-            System.err.println("""
+            System.err.println('''
 Usage: java -cp CLASSPATH GroovyPageForkedCompiler [srcDir] [destDir] [tmpDir] [targetCompatibility] [packageName] [serverPath] [configFile] [encoding]
-""")
+''')
             System.exit(1)
         }
         File srcDir = new File(args[0])

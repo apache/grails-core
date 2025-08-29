@@ -33,8 +33,8 @@ class MongoSyncSpec extends ApplicationContextSpec implements CommandOutputFixtu
 
         then:
         readme
-        readme.contains("https://docs.mongodb.com/drivers/java/sync/current/")
-        readme.contains("https://docs.mongodb.com")
+        readme.contains("https://www.mongodb.com/docs/drivers/java/sync/current/")
+        readme.contains("https://www.mongodb.com/docs/")
     }
 
     void "test mongo sync features"() {

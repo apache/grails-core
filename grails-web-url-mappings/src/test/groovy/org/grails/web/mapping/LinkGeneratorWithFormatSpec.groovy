@@ -35,7 +35,7 @@ import spock.lang.Specification
  */
 class LinkGeneratorWithFormatSpec extends Specification {
 
-    def baseUrl = "http://myserver.com/foo"
+    def baseUrl = "https://myserver.com/foo"
     def context = null
     def path = "welcome"
 
@@ -58,7 +58,7 @@ class LinkGeneratorWithFormatSpec extends Specification {
             def theLink =
                     generator.link(controller:"one", action:"two", params:[format:'json'])
         then:
-            theLink  == 'http://myserver.com/foo/one/two.json'
+            theLink  == 'https://myserver.com/foo/one/two.json'
     }
 
 

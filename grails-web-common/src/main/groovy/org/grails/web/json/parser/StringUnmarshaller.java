@@ -64,16 +64,16 @@ final class StringUnmarshaller {
 
     private static char getEscapedChar(String str, char c) {
         switch (c) {
-            case 'n':  return '\n';
-            case 'b':  return '\b';
-            case 'f':  return '\f';
-            case 't':  return '\t';
-            case 'r':  return '\r';
+            case 'n': return '\n';
+            case 'b': return '\b';
+            case 'f': return '\f';
+            case 't': return '\t';
+            case 'r': return '\r';
             case '\"': return '\"';
             case '\'': return '\'';
             case '\\': return '\\';
-            case '/':  return '/';
-            default:  throw new IllegalStateException("Unexpected character: " + c + " in " + str);
+            case '/': return '/';
+            default: throw new IllegalStateException("Unexpected character: " + c + " in " + str);
         }
     }
 }

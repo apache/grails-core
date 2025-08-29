@@ -19,6 +19,8 @@
 
 package grails.plugin.json.view
 
+import groovy.transform.CompileStatic
+
 import grails.plugin.json.builder.JsonOutput
 import grails.plugin.json.builder.StreamingJsonBuilder
 import grails.plugin.json.view.api.JsonView
@@ -28,14 +30,13 @@ import grails.util.GrailsNameUtils
 import grails.views.AbstractWritableScript
 import grails.views.GrailsViewTemplate
 import grails.views.api.GrailsView
-import groovy.transform.CompileStatic
 import org.grails.buffer.FastStringWriter
 
 @CompileStatic
 abstract class JsonViewWritableScript extends AbstractWritableScript implements JsonView {
 
-    public static final String EXTENSION = "gson"
-    public static final String TYPE = "view.gson"
+    public static final String EXTENSION = 'gson'
+    public static final String TYPE = 'view.gson'
 
     Object root
     boolean inline = false
@@ -43,7 +44,7 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
     @Override
     Writer doWrite(Writer out) throws IOException {
 
-        if(!prettyPrint) {
+        if (!prettyPrint) {
             this.json = new StreamingJsonBuilder(out, this.generator)
             run()
             return out
@@ -59,7 +60,6 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
         }
     }
 
-
     /**
      * TODO: When Groovy 2.4.5 go back to JsonBuilder from groovy-json
      *
@@ -67,17 +67,17 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
      * @return
      */
     StreamingJsonBuilder json(@DelegatesTo(value = StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure callable) {
-        if(parentData.size() > 0) {
+        if (parentData.size() > 0) {
             if (!inline) {
                 out.write(JsonOutput.OPEN_BRACE)
             }
             Iterator parentInfoIt = parentData.iterator()
-            while ( parentInfoIt.hasNext() ) {
+            while (parentInfoIt.hasNext()) {
                 ParentInfo parentInfo = parentInfoIt.next()
                 def parentWritable = prepareParentWritable(parentInfo.parentTemplate, parentInfo.parentModel)
                 parentWritable.writeTo(out)
                 resetProcessedObjects()
-                if ( parentInfoIt.hasNext() ) {
+                if (parentInfoIt.hasNext()) {
                     out.write(JsonOutput.COMMA)
                 }
             }
@@ -91,13 +91,13 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
         else {
 
             this.root = callable
-            if(inline) {
+            if (inline) {
                 def jsonDelegate = new StreamingJsonBuilder.StreamingJsonDelegate(out, true, generator)
                 callable.setDelegate(jsonDelegate)
                 callable.call()
             }
             else {
-                json.call callable
+                json.call(callable)
             }
         }
         return json
@@ -105,13 +105,13 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
 
     StreamingJsonBuilder json(Iterable iterable) {
         this.root = iterable
-        json.call iterable.asList()
+        json.call(iterable.asList())
         return json
     }
 
     StreamingJsonBuilder json(Map map) {
         this.root = map
-        json.call map
+        json.call(map)
         return json
     }
 
@@ -135,17 +135,17 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
      * @return The json builder
      */
     StreamingJsonBuilder json(JsonOutput.JsonWritable writable) {
-        if(parentData.size() > 0) {
+        if (parentData.size() > 0) {
             if (!inline) {
                 out.write(JsonOutput.OPEN_BRACE)
             }
             Iterator parentInfoIt = parentData.iterator()
-            while ( parentInfoIt.hasNext() ) {
+            while (parentInfoIt.hasNext()) {
                 ParentInfo parentInfo = parentInfoIt.next()
                 def parentWritable = prepareParentWritable(parentInfo.parentTemplate, parentInfo.parentModel)
                 parentWritable.writeTo(out)
                 resetProcessedObjects()
-                if ( parentInfoIt.hasNext() ) {
+                if (parentInfoIt.hasNext()) {
                     out.write(JsonOutput.COMMA)
                 }
             }
@@ -175,27 +175,27 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
     }
 
     StreamingJsonBuilder json(Object...args) {
-        if(args.length == 1) {
+        if (args.length == 1) {
             def val = args[0]
-            if(val instanceof JsonOutput.JsonUnescaped) {
-                this.json((JsonOutput.JsonUnescaped)val)
+            if (val instanceof JsonOutput.JsonUnescaped) {
+                this.json((JsonOutput.JsonUnescaped) val)
             }
-            else if(val instanceof JsonOutput.JsonWritable) {
-                this.json((JsonOutput.JsonWritable)val)
+            else if (val instanceof JsonOutput.JsonWritable) {
+                this.json((JsonOutput.JsonWritable) val)
             }
             else {
-                json.call val
+                json.call(val)
             }
         }
         else {
-            json.call args
+            json.call(args)
         }
         return json
     }
 
     private GrailsView prepareParentWritable(GrailsViewTemplate parentTemplate, Map parentModel) {
         parentModel.putAll(binding.variables)
-        for(o in binding.variables.values()) {
+        for (o in binding.variables.values()) {
             if (o != null) {
                 parentModel.put(GrailsNameUtils.getPropertyName(o.getClass().getSuperclass().getName()), o)
             }
@@ -212,7 +212,6 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
         writable.generator = generator
         return writable
     }
-
 
     private void resetProcessedObjects() {
         if (binding.hasVariable(DefaultGrailsJsonViewHelper.PROCESSED_OBJECT_VARIABLE)) {

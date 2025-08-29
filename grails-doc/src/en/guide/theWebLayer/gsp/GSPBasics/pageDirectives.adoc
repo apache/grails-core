@@ -19,7 +19,7 @@ under the License.
 
 GSP also supports a few JSP-style page directives.
 
-The import directive lets you import classes into the page. However, it is rarely needed due to Groovy's default imports and xref:tags.adoc[GSP Tags]:
+The import directive lets you import classes into the page. However, it is rarely needed due to Groovy's default imports and link:#tags[GSP Tags]:
 
 [,xml]
 ----

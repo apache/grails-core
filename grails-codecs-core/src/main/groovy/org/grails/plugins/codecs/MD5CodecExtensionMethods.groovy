@@ -19,6 +19,7 @@
 package org.grails.plugins.codecs
 
 class MD5CodecExtensionMethods {
+
     // Returns the byte[] of the digest, taken from UTF-8 of the string representation
     // or the raw data coerced to bytes
     static encodeAsMD5(theTarget) {
@@ -26,6 +27,6 @@ class MD5CodecExtensionMethods {
     }
 
     static decodeMD5(theTarget) {
-        throw new UnsupportedOperationException("Cannot decode MD5 hashes")
+        throw new UnsupportedOperationException('Cannot decode MD5 hashes')
     }
 }

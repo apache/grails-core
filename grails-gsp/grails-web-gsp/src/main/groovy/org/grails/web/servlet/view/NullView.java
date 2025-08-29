@@ -18,11 +18,12 @@
  */
 package org.grails.web.servlet.view;
 
+import java.util.Map;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.web.servlet.View;
 
-import java.util.Map;
+import org.springframework.web.servlet.View;
 
 /**
  * A view that does nothing.

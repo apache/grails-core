@@ -18,16 +18,17 @@
  */
 package org.grails.gsp.compiler.transform;
 
-import grails.compiler.ast.ClassInjector;
-import grails.compiler.ast.GroovyPageInjector;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.classgen.GeneratorContext;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.SourceUnit;
-import org.grails.compiler.injection.GrailsAwareInjectionOperation;
 
-import java.util.ArrayList;
-import java.util.List;
+import grails.compiler.ast.ClassInjector;
+import grails.compiler.ast.GroovyPageInjector;
+import org.grails.compiler.injection.GrailsAwareInjectionOperation;
 
 /**
  * A GroovyPage compiler injection operation that uses a specified array of ClassInjector instances to
@@ -54,14 +55,14 @@ public class GroovyPageInjectionOperation extends GrailsAwareInjectionOperation 
     }
 
     private GroovyPageInjector[] getGroovyPageInjectors() {
-         if (groovyPageInjectors == null) {
-             List<GroovyPageInjector> injectors = new ArrayList<GroovyPageInjector>();
-             for (ClassInjector ci : getClassInjectors()) {
-                 if (ci instanceof GroovyPageInjector) {
-                     injectors.add((GroovyPageInjector)ci);
-                 }
-             }
-             groovyPageInjectors = injectors.toArray(new GroovyPageInjector[injectors.size()]);
+        if (groovyPageInjectors == null) {
+            List<GroovyPageInjector> injectors = new ArrayList<>();
+            for (ClassInjector ci : getClassInjectors()) {
+                if (ci instanceof GroovyPageInjector) {
+                    injectors.add((GroovyPageInjector) ci);
+                }
+            }
+            groovyPageInjectors = injectors.toArray(new GroovyPageInjector[injectors.size()]);
         }
         return groovyPageInjectors;
     }

@@ -22,11 +22,13 @@ import jakarta.persistence.FlushModeType;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.DatastoreUtils;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.transactions.SessionHolder;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Abstract implementation of the persistence context interceptor
@@ -34,7 +36,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * @since 1.0
  * @author Graeme Rocher
  */
-public abstract class AbstractDatastorePersistenceContextInterceptor  {
+public abstract class AbstractDatastorePersistenceContextInterceptor {
 
     private static final Log LOG = LogFactory.getLog(AbstractDatastorePersistenceContextInterceptor.class);
     protected Datastore datastore;
@@ -66,7 +68,7 @@ public abstract class AbstractDatastorePersistenceContextInterceptor  {
         // single session mode
         final SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore);
         if (sessionHolder != null && this == sessionHolder.getCreator()) {
-            SessionHolder holder = (SessionHolder)TransactionSynchronizationManager.unbindResource(datastore);
+            SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.unbindResource(datastore);
             LOG.debug("Closing single Datastore session in DatastorePersistenceContextInterceptor");
             try {
                 Session session = holder.getSession();
@@ -88,7 +90,7 @@ public abstract class AbstractDatastorePersistenceContextInterceptor  {
 
     public void flush() {
         Session session = getSession();
-        if(session.hasTransaction()) {
+        if (session.hasTransaction()) {
             session.flush();
         }
     }

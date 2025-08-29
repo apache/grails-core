@@ -153,6 +153,7 @@ public interface UrlMappingsHolder {
      */
     @SuppressWarnings("rawtypes")
     UrlCreator getReverseMappingNoDefault(String controller, String action, String namespace, String pluginName, String httpMethod, String version, Map params);
+
     /**
      * Match and return the first UrlMappingInfo instance possible
      *
@@ -188,7 +189,6 @@ public interface UrlMappingsHolder {
      *
      */
     UrlMappingInfo[] matchAll(String uri, String httpMethod, String version);
-
 
     /**
      * Match all possible UrlMappingInfo instances to the given URI and HTTP method

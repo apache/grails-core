@@ -18,9 +18,12 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import org.springframework.context.ApplicationEvent
+import org.springframework.context.ConfigurableApplicationContext
+
 import grails.gorm.DetachedCriteria
-import org.apache.grails.data.testing.tck.domains.Simples
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Simples
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
@@ -29,13 +32,12 @@ import org.grails.datastore.mapping.engine.event.EventType
 import org.grails.datastore.mapping.engine.event.PostDeleteEvent
 import org.grails.datastore.mapping.engine.event.PreDeleteEvent
 import org.grails.datastore.mapping.engine.event.ValidationEvent
-import org.springframework.context.ApplicationEvent
-import org.springframework.context.ConfigurableApplicationContext
 
 /**
  * @author Tom Widmer
  */
 class PersistenceEventListenerSpec extends GrailsDataTckSpec {
+
     SpecPersistenceListener listener
 
     void setupSpec() {
@@ -53,10 +55,10 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         }
     }
 
-    void "Test delete events"() {
+    void 'Test delete events'() {
         given:
         def p = new Simples()
-        p.name = "Fred"
+        p.name = 'Fred'
         p.save(flush: true)
         manager.session.clear()
 
@@ -81,7 +83,7 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         listener.events[-2] instanceof PreDeleteEvent
     }
 
-    void "Test multi-delete events"() {
+    void 'Test multi-delete events'() {
         given:
         def freds = (1..3).collect {
             new Simples(name: "Fred$it").save(flush: true)
@@ -113,11 +115,11 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         }
     }
 
-    void "Test update events"() {
+    void 'Test update events'() {
         given:
         def p = new Simples()
 
-        p.name = "Fred"
+        p.name = 'Fred'
         p.save(flush: true)
         manager.session.clear()
 
@@ -125,27 +127,27 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         p = Simples.get(p.id)
 
         then:
-        "Fred" == p.name
+        'Fred' == p.name
         0 == listener.PreUpdateCount
         0 == listener.PostUpdateCount
 
         when:
-        p.name = "Bob"
+        p.name = 'Bob'
         p.save(flush: true)
         manager.session.clear()
         p = Simples.get(p.id)
 
         then:
-        "Bob" == p.name
+        'Bob' == p.name
         1 == listener.PreUpdateCount
         1 == listener.PostUpdateCount
     }
 
-    void "Test insert events"() {
+    void 'Test insert events'() {
         given:
         def p = new Simples()
 
-        p.name = "Fred"
+        p.name = 'Fred'
         p.save(flush: true)
         manager.session.clear()
 
@@ -153,31 +155,31 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         p = Simples.get(p.id)
 
         then:
-        "Fred" == p.name
+        'Fred' == p.name
         0 == listener.PreUpdateCount
         1 == listener.PreInsertCount
         0 == listener.PostUpdateCount
         1 == listener.PostInsertCount
 
         when:
-        p.name = "Bob"
+        p.name = 'Bob'
         p.save(flush: true)
         manager.session.clear()
         p = Simples.get(p.id)
 
         then:
-        "Bob" == p.name
+        'Bob' == p.name
         1 == listener.PreUpdateCount
         1 == listener.PreInsertCount
         1 == listener.PostUpdateCount
         1 == listener.PostInsertCount
     }
 
-    void "Test load events"() {
+    void 'Test load events'() {
         given:
         def p = new Simples()
 
-        p.name = "Fred"
+        p.name = 'Fred'
         p.save(flush: true)
         manager.session.clear()
 
@@ -185,7 +187,7 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         p = Simples.get(p.id)
 
         then:
-        "Fred" == p.name
+        'Fred' == p.name
         if (!'JpaSession'.equals(manager.session.getClass().simpleName)) {
             // JPA doesn't seem to support a pre-load event
             1 == listener.PreLoadCount
@@ -193,7 +195,7 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         1 == listener.PostLoadCount
     }
 
-    void "Test multi-load events"() {
+    void 'Test multi-load events'() {
         given:
         def freds = (1..3).collect {
             new Simples(name: "Fred$it").save(flush: true)
@@ -214,11 +216,11 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         3 == listener.PostLoadCount
     }
 
-    void "Test validation events"() {
+    void 'Test validation events'() {
         given:
         def p = new Simples()
 
-        p.name = "Fred"
+        p.name = 'Fred'
 
         when:
         p.validate()
@@ -252,15 +254,15 @@ class SpecPersistenceListener extends AbstractPersistenceEventListener {
     List<AbstractPersistenceEvent> events = []
 
     int PreDeleteCount,
-        PreInsertCount,
-        PreUpdateCount,
-        PostUpdateCount,
-        PostDeleteCount,
-        PostInsertCount,
-        PreLoadCount,
-        PostLoadCount,
-        SaveOrUpdateCount,
-        ValidationCount
+    PreInsertCount,
+    PreUpdateCount,
+    PostUpdateCount,
+    PostDeleteCount,
+    PostInsertCount,
+    PreLoadCount,
+    PostLoadCount,
+    SaveOrUpdateCount,
+    ValidationCount
 
     @Override
     protected void onPersistenceEvent(AbstractPersistenceEvent event) {

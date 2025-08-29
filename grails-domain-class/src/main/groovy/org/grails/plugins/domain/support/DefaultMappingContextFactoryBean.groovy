@@ -19,9 +19,17 @@
 
 package org.grails.plugins.domain.support
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.FactoryBean
+import org.springframework.beans.factory.InitializingBean
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.ApplicationContext
+import org.springframework.context.MessageSource
+import org.springframework.core.env.PropertyResolver
+
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
-import groovy.transform.CompileStatic
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.gorm.validation.constraints.factory.ConstraintFactory
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry
@@ -29,13 +37,6 @@ import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettingsBuilder
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
-import org.springframework.beans.factory.FactoryBean
-import org.springframework.beans.factory.InitializingBean
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.ApplicationContext
-import org.springframework.context.ConfigurableApplicationContext
-import org.springframework.context.MessageSource
-import org.springframework.core.env.PropertyResolver
 
 /**
  * A factory bean for creating the default mapping context where an implementation of GORM is not present
@@ -56,14 +57,13 @@ class DefaultMappingContextFactoryBean implements FactoryBean<MappingContext>, I
         this.configuration = grailsApplication.config
         this.messageSource = messageSource
         this.grailsApplication = grailsApplication
-        if(messageSource instanceof ApplicationContext) {
-            this.applicationContext = (ApplicationContext)messageSource
+        if (messageSource instanceof ApplicationContext) {
+            this.applicationContext = (ApplicationContext) messageSource
         }
         else {
             applicationContext = null
         }
     }
-
 
     @Override
     MappingContext getObject() throws Exception {
@@ -72,7 +72,7 @@ class DefaultMappingContextFactoryBean implements FactoryBean<MappingContext>, I
 
     @Override
     Class<?> getObjectType() {
-        return MappingContext.class
+        return MappingContext
     }
 
     @Override
@@ -88,9 +88,9 @@ class DefaultMappingContextFactoryBean implements FactoryBean<MappingContext>, I
         ConnectionSourceSettingsBuilder builder = new ConnectionSourceSettingsBuilder(configuration)
         ConnectionSourceSettings settings = builder.build()
 
-        this.mappingContext = new KeyValueMappingContext("default", settings)
+        this.mappingContext = new KeyValueMappingContext('default', settings)
         DefaultValidatorRegistry validatorRegistry = new DefaultValidatorRegistry(mappingContext, settings, messageSource)
-        for(factory in constraintFactories) {
+        for (factory in constraintFactories) {
             validatorRegistry.addConstraintFactory(factory)
         }
         mappingContext.setValidatorRegistry(
@@ -98,6 +98,6 @@ class DefaultMappingContextFactoryBean implements FactoryBean<MappingContext>, I
         )
 
         GrailsClass[] persistentClasses = grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE)
-        mappingContext.addPersistentEntities(persistentClasses.collect() { GrailsClass cls -> cls.clazz} as Class[])
+        mappingContext.addPersistentEntities(persistentClasses.collect() { GrailsClass cls -> cls.clazz } as Class[])
     }
 }

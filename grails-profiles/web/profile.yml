@@ -57,3 +57,5 @@ dependencies:
       coords: "org.webjars.npm:bootstrap-icons"
     - scope: testAndDevelopmentOnly
       coords: "org.webjars.npm:jquery"
+    - scope: integrationTestImplementation
+      coords: 'testFixtures("org.apache.grails:grails-geb")'

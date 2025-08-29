@@ -18,6 +18,7 @@
  */
 package grails.plugin.geb
 
+import java.lang.reflect.Field
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.function.Supplier
@@ -40,6 +41,7 @@ import org.spockframework.runtime.model.SpecInfo
 import org.testcontainers.Testcontainers
 import org.testcontainers.containers.BrowserWebDriverContainer
 import org.testcontainers.containers.PortForwardingContainer
+import org.testcontainers.containers.VncRecordingContainer
 import org.testcontainers.images.PullPolicy
 
 import grails.plugin.geb.serviceloader.ServiceRegistry
@@ -214,12 +216,14 @@ class WebDriverContainerHolder {
     private GebTestManager createTestManager() {
         new SpockGebTestManagerBuilder()
                 .withReportingEnabled(currentConfiguration.reporting)
-                .withBrowserCreator(new Supplier<Browser>() {
-                    @Override
-                    Browser get() {
-                        currentBrowser
-                    }
-                })
+                .withBrowserCreator(
+                        new Supplier<Browser>() {
+                            @Override
+                            Browser get() {
+                                currentBrowser
+                            }
+                        }
+                )
                 .build()
     }
 
@@ -284,5 +288,40 @@ class WebDriverContainerHolder {
             fileDetector = configuration?.fileDetector() ?: ContainerGebConfiguration.DEFAULT_FILE_DETECTOR
         }
     }
-}
 
+    /**
+     * Workaround for https://github.com/testcontainers/testcontainers-java/issues/3998
+     * Restarts the VNC recording container to enable separate recording files for each test method.
+     * This method uses reflection to access the VNC recording container field in BrowserWebDriverContainer.
+     * Should be called BEFORE each test starts.
+     */
+    void restartVncRecordingContainer() {
+        if (!grailsGebSettings.recordingEnabled || !grailsGebSettings.restartRecordingContainerPerTest || !currentContainer) {
+            return
+        }
+        try {
+            // Use reflection to access the VNC recording container field
+            Field vncRecordingContainerField = BrowserWebDriverContainer.getDeclaredField('vncRecordingContainer')
+            vncRecordingContainerField.setAccessible(true)
+
+            VncRecordingContainer vncContainer = vncRecordingContainerField.get(currentContainer) as VncRecordingContainer
+
+            if (vncContainer) {
+                // Stop the current VNC recording container
+                vncContainer.stop()
+                // Create and start a new VNC recording container for the next test
+                VncRecordingContainer newVncContainer = new VncRecordingContainer(currentContainer)
+                        .withVncPassword('secret')
+                        .withVncPort(5900)
+                        .withVideoFormat(grailsGebSettings.recordingFormat)
+                vncRecordingContainerField.set(currentContainer, newVncContainer)
+                newVncContainer.start()
+
+                log.debug('Successfully restarted VNC recording container')
+            }
+        } catch (Exception e) {
+            log.warn("Failed to restart VNC recording container: ${e.message}", e)
+            // Don't throw the exception to avoid breaking the test execution
+        }
+    }
+}

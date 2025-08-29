@@ -18,20 +18,36 @@
  */
 package org.grails.io.support;
 
-import groovy.xml.XmlSlurper;
-import groovy.xml.FactorySupport;
-import org.xml.sax.SAXException;
-import javax.xml.XMLConstants;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Reader;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.lang.reflect.Array;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.xml.XMLConstants;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+
+import groovy.xml.FactorySupport;
+import groovy.xml.XmlSlurper;
+
+import org.xml.sax.SAXException;
 
 /**
  * Simple utility methods for file and stream copying.
@@ -51,10 +67,12 @@ public class SpringIOUtils {
 
     @SuppressWarnings("rawtypes")
     private static Map algorithms = new HashMap();
+
     static {
         algorithms.put("md5", "MD5");
         algorithms.put("sha1", "SHA-1");
     }
+
     // byte to hex string converter
     private static final char[] CHARS = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
         'a', 'b', 'c', 'd', 'e', 'f'};
@@ -141,7 +159,7 @@ public class SpringIOUtils {
             final Class<?> type1 = array1.getClass().getComponentType();
             final Class<?> type2 = array2.getClass().getComponentType();
             if (!type1.isAssignableFrom(type2)) {
-                throw new IllegalArgumentException("Cannot store "+type2.getName()+" in an array of "+type1.getName());
+                throw new IllegalArgumentException("Cannot store " + type2.getName() + " in an array of " + type1.getName());
             }
             throw ase; // No, so rethrow original
         }
@@ -369,7 +387,7 @@ public class SpringIOUtils {
      */
     public static void closeQuietly(Closeable closeable) {
         try {
-            if(closeable != null)
+            if (closeable != null)
                 closeable.close();
         } catch (IOException e) {
             // ignore
@@ -399,8 +417,9 @@ public class SpringIOUtils {
     }
 
     private static SAXParserFactory saxParserFactory = null;
+
     private static SAXParserFactory createParserFactory() throws ParserConfigurationException {
-        if(saxParserFactory == null) {
+        if (saxParserFactory == null) {
             saxParserFactory = FactorySupport.createSaxParserFactory();
             saxParserFactory.setNamespaceAware(true);
             saxParserFactory.setValidating(false);

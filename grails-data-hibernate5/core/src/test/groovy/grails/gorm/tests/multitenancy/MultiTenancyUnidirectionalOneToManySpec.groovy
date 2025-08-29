@@ -33,7 +33,7 @@ import spock.lang.Specification
  */
 class MultiTenancyUnidirectionalOneToManySpec extends Specification {
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/954')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/954')
     void "test multi-tenancy with unidirectional one-to-many"() {
         given: "A configuration for schema based multi-tenancy"
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")

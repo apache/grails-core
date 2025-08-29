@@ -18,10 +18,11 @@
  */
 package grails.web.mapping;
 
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import grails.gorm.validation.Constrained;
-
-import java.util.*;
 
 /**
  * <p>Defines a URL mapping. A URL mapping is a mapping between a URI such as /book/list and
@@ -93,7 +94,6 @@ public interface UrlMapping extends Comparable, UrlCreator {
      */
     String NAMESPACE = "namespace";
 
-
     String VIEW = "view";
 
     String RESOURCES = "resources";
@@ -106,21 +106,23 @@ public interface UrlMapping extends Comparable, UrlCreator {
 
     String EXCEPTION = "exception";
 
-    Set<String> KEYWORDS = new HashSet<String>() {{
-        add(CONTROLLER);
-        add(ACTION);
-        add(HTTP_METHOD);
-        add(REDIRECT_INFO);
-        add(VERSION);
-        add(URI);
-        add(PLUGIN);
-        add(NAMESPACE);
-        add(VIEW);
-        add(RESOURCES);
-        add(INCLUDES);
-        add(PERMANENT);
-        add(EXCEPTION);
-    }};
+    Set<String> KEYWORDS = new HashSet<>() {
+        {
+            add(CONTROLLER);
+            add(ACTION);
+            add(HTTP_METHOD);
+            add(REDIRECT_INFO);
+            add(VERSION);
+            add(URI);
+            add(PLUGIN);
+            add(NAMESPACE);
+            add(VIEW);
+            add(RESOURCES);
+            add(INCLUDES);
+            add(PERMANENT);
+            add(EXCEPTION);
+        }
+    };
 
     /**
      * Matches the given URI and returns an instance of the UrlMappingInfo interface or null
@@ -202,7 +204,7 @@ public interface UrlMapping extends Comparable, UrlCreator {
      * Sets any parameter values that should be populated into the request
      * @param parameterValues The parameter values to set
      */
-    void setParameterValues(Map<String,Object> parameterValues);
+    void setParameterValues(Map<String, Object> parameterValues);
 
     /**
      * Sets whether this UrlMapping should parse the request

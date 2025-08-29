@@ -58,7 +58,7 @@ dataSource {
 === Description
 
 
-Refer to the section on link:{guidePath}/conf.html#dataSource[Data Sources] in the Grails user guide.
+Refer to the section on link:{guidePath}conf.html#dataSource[Data Sources] in the Grails user guide.
 
 Configured Spring Beans:
 

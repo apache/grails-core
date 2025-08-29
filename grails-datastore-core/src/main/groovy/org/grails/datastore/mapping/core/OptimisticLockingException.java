@@ -19,6 +19,7 @@
 package org.grails.datastore.mapping.core;
 
 import org.springframework.dao.OptimisticLockingFailureException;
+
 import org.grails.datastore.mapping.model.PersistentEntity;
 
 /**

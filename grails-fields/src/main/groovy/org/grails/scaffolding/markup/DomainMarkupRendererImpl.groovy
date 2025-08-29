@@ -19,14 +19,15 @@
 
 package org.grails.scaffolding.markup
 
-import org.grails.scaffolding.model.DomainModelService
-import org.grails.scaffolding.model.property.DomainProperty
-import groovy.transform.CompileStatic
 import groovy.xml.MarkupBuilder
+
+import org.springframework.beans.factory.annotation.Autowired
+
 import org.grails.buffer.FastStringWriter
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Embedded
-import org.springframework.beans.factory.annotation.Autowired
+import org.grails.scaffolding.model.DomainModelService
+import org.grails.scaffolding.model.property.DomainProperty
 
 /**
  * @see {@link DomainMarkupRenderer}
@@ -82,7 +83,7 @@ class DomainMarkupRendererImpl implements DomainMarkupRenderer {
         List<DomainProperty> domainProperties = domainModelService.getListOutputProperties(domainClass)
         domainProperties.each { DomainProperty property ->
             if (property.persistentProperty instanceof Embedded) {
-                domainModelService.getOutputProperties(((Embedded)property.persistentProperty).associatedEntity).each { DomainProperty embedded ->
+                domainModelService.getOutputProperties(((Embedded) property.persistentProperty).associatedEntity).each { DomainProperty embedded ->
                     embedded.rootProperty = property
                     tableProperties.add(embedded)
                 }
@@ -91,9 +92,9 @@ class DomainMarkupRendererImpl implements DomainMarkupRenderer {
             }
         }
         if (tableProperties.size() > maxListOutputSize) {
-            tableProperties = tableProperties[0..(maxListOutputSize-1)]
+            tableProperties = tableProperties[0..(maxListOutputSize - 1)]
         }
-        outputMarkupContent (
+        outputMarkupContent(
             contextMarkupRenderer.listOutputContext(domainClass, tableProperties) { DomainProperty domainProperty ->
                 propertyMarkupRenderer.renderListOutput(domainProperty)
             }
@@ -107,7 +108,7 @@ class DomainMarkupRendererImpl implements DomainMarkupRenderer {
                 domainModelService.getInputProperties(domainClass).each { DomainProperty property ->
                     if (property.persistentProperty instanceof Embedded) {
                         callWithDelegate(contextDelegate, contextMarkupRenderer.embeddedInputContext(property) {
-                            domainModelService.getInputProperties(((Embedded)property.persistentProperty).associatedEntity).each { DomainProperty embedded ->
+                            domainModelService.getInputProperties(((Embedded) property.persistentProperty).associatedEntity).each { DomainProperty embedded ->
                                 embedded.rootProperty = property
                                 callWithDelegate(contextDelegate, renderInput(embedded))
                             }
@@ -127,7 +128,7 @@ class DomainMarkupRendererImpl implements DomainMarkupRenderer {
                 domainModelService.getOutputProperties(domainClass).each { DomainProperty property ->
                     if (property.persistentProperty instanceof Embedded) {
                         callWithDelegate(contextDelegate, contextMarkupRenderer.embeddedOutputContext(property) { ->
-                            domainModelService.getOutputProperties(((Embedded)property.persistentProperty).associatedEntity).each { DomainProperty embedded ->
+                            domainModelService.getOutputProperties(((Embedded) property.persistentProperty).associatedEntity).each { DomainProperty embedded ->
                                 embedded.rootProperty = property
                                 callWithDelegate(contextDelegate, renderOutput(embedded))
                             }

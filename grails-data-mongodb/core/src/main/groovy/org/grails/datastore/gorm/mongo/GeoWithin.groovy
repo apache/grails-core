@@ -14,14 +14,16 @@
 */
 package org.grails.datastore.gorm.mongo
 
+import groovy.transform.CompileStatic
+
+import org.springframework.util.Assert
+
 import grails.mongodb.geo.LineString
 import grails.mongodb.geo.Point
 import grails.mongodb.geo.Shape
-import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.finders.MethodExpression
 import org.grails.datastore.mapping.mongo.query.MongoQuery
 import org.grails.datastore.mapping.query.Query
-import org.springframework.util.Assert
 
 /**
  * Dynamic finder extension for GeoWithin style queries
@@ -31,24 +33,24 @@ import org.springframework.util.Assert
  */
 @CompileStatic
 class GeoWithin extends MethodExpression {
+
     GeoWithin(Class<?> targetClass, String propertyName) {
         super(targetClass, propertyName)
     }
 
     @Override
     Query.Criterion createCriterion() {
-        return new MongoQuery.GeoWithin(propertyName, arguments[0]);
+        return new MongoQuery.GeoWithin(propertyName, arguments[0])
     }
 
     @Override
     void setArguments(Object[] arguments) {
-        Assert.isTrue arguments.length == 1, "Exactly 1 argument required to GeoWithin query"
-
+        Assert.isTrue(arguments.length == 1, 'Exactly 1 argument required to GeoWithin query')
 
         def value = arguments[0]
 
-        Assert.isTrue( (value instanceof Map) || (( value instanceof Shape) && !((value instanceof LineString) || (value instanceof Point))),
-                        "Argument must be either a Box, Circle, Polygon or Sphere")
+        Assert.isTrue((value instanceof Map) || ((value instanceof Shape) && !((value instanceof LineString) || (value instanceof Point))),
+                        'Argument must be either a Box, Circle, Polygon or Sphere')
 
         super.setArguments(arguments)
     }

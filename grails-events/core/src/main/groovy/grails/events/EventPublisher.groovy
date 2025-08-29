@@ -19,11 +19,13 @@
 
 package grails.events
 
-import grails.events.bus.EventBusAware
-import grails.events.emitter.EventEmitter
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
+
 import org.springframework.transaction.event.TransactionPhase
+
+import grails.events.bus.EventBusAware
+import grails.events.emitter.EventEmitter
 
 /**
  * A trait that can be implemented to make a class an event publisher

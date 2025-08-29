@@ -19,11 +19,12 @@
 
 package org.grails.datastore.mapping.validation;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.StaticMessageSource;
 import org.springframework.validation.Validator;
+
+import org.grails.datastore.mapping.model.PersistentEntity;
 
 /**
  * Looks up validators from Spring

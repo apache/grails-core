@@ -68,7 +68,7 @@ public class GrailsWrapperRepo {
 
     }
 
-    private String join(String ... elements) {
+    private String join(String... elements) {
         return String.join(isFile ? File.separator : "/", elements);
     }
 
@@ -89,7 +89,7 @@ public class GrailsWrapperRepo {
         }
         repo.isFile = !repo.baseUrl.startsWith("http");
 
-        if((repo.isFile && repo.baseUrl.endsWith(File.separator)) || (!repo.isFile && repo.baseUrl.endsWith("/"))) {
+        if ((repo.isFile && repo.baseUrl.endsWith(File.separator)) || (!repo.isFile && repo.baseUrl.endsWith("/"))) {
             // remove trailing slash
             repo.baseUrl = repo.baseUrl.substring(0, repo.baseUrl.length() - 1);
         }

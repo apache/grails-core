@@ -31,6 +31,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class TypeConvertingMap extends AbstractTypeConvertingMap {
+
     TypeConvertingMap() {
         super()
     }

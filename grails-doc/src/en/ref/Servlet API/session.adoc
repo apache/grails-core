@@ -51,7 +51,7 @@ class UserController {
 
 The {jakartaee}jakarta/servlet/http/HttpSession.html[HttpSession] class is useful for associated session data with a client.
 
-Session attributes which are normally accessible from the {jakartaee}jakarta/servlet/http/HttpSession#getAttribute(java/lang/String).html[getAttribute] can also be indexed into using the array index operator or de-reference operator:
+Session attributes which are normally accessible from the {jakartaee}jakarta/servlet/http/HttpSession.html#getAttribute(java/lang/String)[getAttribute] can also be indexed into using the array index operator or de-reference operator:
 
 [source,groovy]
 ----

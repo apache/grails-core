@@ -23,7 +23,7 @@ The `grails test-app` command is one way to run Grails tests.  This section docu
 ==== Running All Tests
 
 
-Tests are run with the link:../ref/Command%20Line/test-app.html[test-app] command:
+Tests are run with the link:{commandLineRef}test-app.html[test-app] command:
 
 [source,groovy]
 ----

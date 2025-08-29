@@ -19,35 +19,36 @@
 
 package org.grails.plugins.sitemesh3
 
-import grails.plugins.Plugin
-import org.grails.config.PropertySourcesConfig
-import org.grails.plugins.web.taglib.RenderSitemeshTagLib
-import org.grails.plugins.web.taglib.SitemeshTagLib
-import org.grails.web.config.http.GrailsFilters
-import org.grails.web.util.WebUtils
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.PropertySource
+
+import grails.core.DefaultGrailsApplication
+import grails.plugins.Plugin
+import org.grails.config.PropertySourcesConfig
+import org.grails.gsp.compiler.GroovyPageParser
+import org.grails.plugins.web.taglib.RenderSitemeshTagLib
+import org.grails.web.config.http.GrailsFilters
+import org.grails.web.util.WebUtils
 
 class Sitemesh3GrailsPlugin extends Plugin {
 
     def grailsVersion = '7.0.0-SNAPSHOT > *'
 
-    def title = "SiteMesh 3"
-    def author = "Scott Murphy"
-    def authorEmail = ""
-    def description = "Configures Grails to use SiteMesh 3 instead of SiteMesh 2"
+    def title = 'SiteMesh 3'
+    def author = 'Scott Murphy'
+    def authorEmail = ''
+    def description = 'Configures Grails to use SiteMesh 3 instead of SiteMesh 2'
     def profiles = ['web']
 
-    def license = "APACHE"
+    def license = 'APACHE'
 
-    def developers = [[name: "Scott Murphy"]]
+    def developers = [[name: 'Scott Murphy']]
 
     def loadBefore = ['groovyPages']
 
     def providedArtefacts = [
         RenderSitemeshTagLib,
-        SitemeshTagLib,
     ]
 
     static PropertySource getDefaultPropertySource(ConfigurableEnvironment configurableEnvironment, String defaultLayout) {
@@ -69,19 +70,22 @@ class Sitemesh3GrailsPlugin extends Plugin {
                 props.remove(it.key)
             }
         }
-        return new MapPropertySource("sitemesh3Properties", props)
+        return new MapPropertySource('defaultSitemesh3Properties', props)
     }
-
 
     Closure doWithSpring() {
         { ->
-            ConfigurableEnvironment configurableEnvironment = application.mainContext.environment
+            ConfigurableEnvironment configurableEnvironment = grailsApplication.mainContext.environment as ConfigurableEnvironment
             def propertySources = configurableEnvironment.getPropertySources()
-            // https://gsp.grails.org/latest/guide/layouts.html
+            // https://docs.grails.org/latest/guide/single.html#layouts
             // Default view should be application, but it is inefficient to add a rule for a page that may not exist.
-            String defaultLayout = grailsApplication.getConfig().getProperty("grails.sitemesh.default.layout")
+            String defaultLayout = grailsApplication.getConfig().getProperty('grails.sitemesh.default.layout')
             propertySources.addFirst(getDefaultPropertySource(configurableEnvironment, defaultLayout))
-            application.config = new PropertySourcesConfig(propertySources)
+            propertySources.addFirst(new MapPropertySource('requiredSitemesh3Properties', [
+                    (GroovyPageParser.CONFIG_PROPERTY_GSP_GRAILS_LAYOUT_PREPROCESS): 'false'
+            ]))
+            (grailsApplication as DefaultGrailsApplication).config = new PropertySourcesConfig(propertySources)
+
             grailsLayoutHandlerMapping(GrailsLayoutHandlerMapping)
         }
     }

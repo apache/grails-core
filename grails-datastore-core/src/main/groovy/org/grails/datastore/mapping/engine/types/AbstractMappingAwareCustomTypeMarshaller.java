@@ -18,12 +18,13 @@
  */
 package org.grails.datastore.mapping.engine.types;
 
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
+
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.engine.internal.MappingUtils;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.query.Query;
-import org.springframework.dao.InvalidDataAccessResourceUsageException;
 
 /**
  * Abstract implementation of CustomTypeMarshaller interface that handles the details of getting the correct mapped key for a property
@@ -32,7 +33,7 @@ import org.springframework.dao.InvalidDataAccessResourceUsageException;
  * @since 1.0
  */
 @SuppressWarnings("rawtypes")
-public abstract class AbstractMappingAwareCustomTypeMarshaller<T, N, Q> implements CustomTypeMarshaller<T, N, Q>{
+public abstract class AbstractMappingAwareCustomTypeMarshaller<T, N, Q> implements CustomTypeMarshaller<T, N, Q> {
 
     private Class<T> targetType;
 
@@ -55,7 +56,7 @@ public abstract class AbstractMappingAwareCustomTypeMarshaller<T, N, Q> implemen
 
     public Object write(PersistentProperty property, T value, N nativeTarget) {
         String targetName = MappingUtils.getTargetKey(property);
-        return writeInternal(property, targetName,value,nativeTarget);
+        return writeInternal(property, targetName, value, nativeTarget);
     }
 
     protected abstract Object writeInternal(PersistentProperty property, String key, T value, N nativeTarget);

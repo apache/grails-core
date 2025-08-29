@@ -45,7 +45,7 @@ class CosineSimilarity {
     }
 
     private static double stringSimilarity(String s1, String s2, int degree = 2) {
-        similarity s1.toLowerCase().toCharArray(), s2.toLowerCase().toCharArray(), degree
+        similarity(s1.toLowerCase().toCharArray(), s2.toLowerCase().toCharArray(), degree)
     }
 
     private static double similarity(sequence1, sequence2, int degree = 2) {

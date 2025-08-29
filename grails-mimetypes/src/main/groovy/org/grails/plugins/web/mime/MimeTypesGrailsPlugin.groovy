@@ -30,6 +30,6 @@ import grails.util.GrailsUtil
 class MimeTypesGrailsPlugin {
     
     def version = GrailsUtil.getGrailsVersion()
-    def dependsOn = [core:version, controllers:version]
+    def dependsOn = [core: version, controllers: version]
     def observe = ['controllers']
 }

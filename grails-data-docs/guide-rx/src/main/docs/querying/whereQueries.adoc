@@ -56,4 +56,4 @@ Book.where { title == 'The Stand' }
     }
 ----
 
-For more information on the syntax of where queries see the https://gorm.grails.org/latest/hibernate5/manual/index.html#whereQueries[relevant section in the GORM documentation].
+For more information on the syntax of where queries see the https://docs.grails.org/latest/grails-data/hibernate5/manual/index.html#whereQueries[relevant section in the GORM documentation].

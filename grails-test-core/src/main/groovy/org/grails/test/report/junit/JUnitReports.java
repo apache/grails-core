@@ -22,7 +22,6 @@ import java.io.OutputStream;
 
 import junit.framework.AssertionFailedError;
 import junit.framework.Test;
-
 import org.apache.tools.ant.taskdefs.optional.junit.JUnitResultFormatter;
 import org.apache.tools.ant.taskdefs.optional.junit.JUnitTest;
 

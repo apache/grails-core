@@ -20,7 +20,7 @@ under the License.
 ==== Redirects
 
 
-Actions can be redirected using the link:../ref/Controllers/redirect.html[redirect] controller method:
+Actions can be redirected using the link:{controllersRef}redirect.html[redirect] controller method:
 
 [source,groovy]
 ----
@@ -38,7 +38,7 @@ class OverviewController {
 }
 ----
 
-Internally the link:../ref/Controllers/redirect.html[redirect] method uses the {jakartaee}jakarta/servlet/http/HttpServletResponse.html[HttpServletResponse] object's `sendRedirect` method.
+Internally the link:{controllersRef}redirect.html[redirect] method uses the {jakartaee}jakarta/servlet/http/HttpServletResponse.html[HttpServletResponse] object's `sendRedirect` method.
 
 The `redirect` method expects one of:
 
@@ -63,7 +63,7 @@ redirect(uri: "/login.html")
 [source,groovy]
 ----
 // Redirect to a URL
-redirect(url: "http://grails.org")
+redirect(url: "https://grails.apache.org")
 ----
 
 * A link:GORM.html[domain class] instance:
@@ -84,7 +84,7 @@ Parameters can optionally be passed from one action to the next using the `param
 redirect(action: 'myaction', params: [myparam: "myvalue"])
 ----
 
-These parameters are made available through the link:../ref/Controllers/params.html[params] dynamic property that accesses request parameters. If a parameter is specified with the same name as a request parameter, the request parameter is overridden and the controller parameter is used.
+These parameters are made available through the link:{controllersRef}params.html[params] dynamic property that accesses request parameters. If a parameter is specified with the same name as a request parameter, the request parameter is overridden and the controller parameter is used.
 
 Since the `params` object is a Map, you can use it to pass the current request parameters from one action to the next:
 

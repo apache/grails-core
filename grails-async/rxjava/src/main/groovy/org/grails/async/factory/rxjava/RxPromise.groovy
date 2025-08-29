@@ -19,11 +19,14 @@
 
 package org.grails.async.factory.rxjava
 
-import grails.async.Promise
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import org.grails.async.factory.BoundPromise
+
 import rx.Observable
 import rx.Scheduler
 import rx.Single
@@ -34,9 +37,8 @@ import rx.functions.Func1
 import rx.subjects.ReplaySubject
 import rx.subjects.Subject
 
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
+import grails.async.Promise
+import org.grails.async.factory.BoundPromise
 
 /**
  * Promise based on RxJava 1.x
@@ -54,9 +56,9 @@ class RxPromise<T>  implements Promise<T> {
     protected Subscription subscription
 
     RxPromise(RxPromiseFactory promiseFactory, Closure callable, Scheduler scheduler) {
-        this(promiseFactory, Single.create( { SingleSubscriber<? super T> singleSubscriber ->
+        this(promiseFactory, Single.create({ SingleSubscriber<? super T> singleSubscriber ->
             try {
-                singleSubscriber.onSuccess((T)callable.call())
+                singleSubscriber.onSuccess((T) callable.call())
             } catch (Throwable t) {
                 singleSubscriber.onError(t)
             }
@@ -78,7 +80,7 @@ class RxPromise<T>  implements Promise<T> {
         this.subject = subject
     }
 
-    RxPromise(RxPromiseFactory promiseFactory,Observable observable, Subject subject) {
+    RxPromise(RxPromiseFactory promiseFactory, Observable observable, Subject subject) {
         this.promiseFactory = promiseFactory
         this.subscription = observable.subscribe(subject)
         this.subject = subject
@@ -92,13 +94,13 @@ class RxPromise<T>  implements Promise<T> {
     @Override
     Promise<T> onComplete(Closure callable) {
         def decoratedCallable = promiseFactory.applyDecorators(callable, null)
-        return new RxPromise<T>(promiseFactory,subject.map(decoratedCallable as Func1<T, T>))
+        return new RxPromise<T>(promiseFactory, subject.map(decoratedCallable as Func1<T, T>))
     }
 
     @Override
     Promise<T> onError(Closure callable) {
         def decoratedCallable = promiseFactory.applyDecorators(callable, null)
-        return new RxPromise<T>(promiseFactory,subject.doOnError(decoratedCallable as Action1<Throwable>))
+        return new RxPromise<T>(promiseFactory, subject.doOnError(decoratedCallable as Action1<Throwable>))
     }
 
     @Override
@@ -108,7 +110,7 @@ class RxPromise<T>  implements Promise<T> {
 
     @Override
     boolean cancel(boolean mayInterruptIfRunning) {
-        if(subscription != null) {
+        if (subscription != null) {
             subscription.unsubscribe()
             return subscription.isUnsubscribed()
         }
@@ -117,7 +119,7 @@ class RxPromise<T>  implements Promise<T> {
 
     @Override
     boolean isCancelled() {
-        if(subscription == null) {
+        if (subscription == null) {
             return false
         }
         else {
@@ -140,7 +142,7 @@ class RxPromise<T>  implements Promise<T> {
         try {
             return subject.timeout(timeout, unit).toBlocking().first()
         } catch (Throwable e) {
-            if(e.cause instanceof TimeoutException) {
+            if (e.cause instanceof TimeoutException) {
                 throw e.cause
             }
             else {

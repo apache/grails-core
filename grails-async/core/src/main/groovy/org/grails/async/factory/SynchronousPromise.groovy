@@ -18,10 +18,11 @@
  */
 package org.grails.async.factory
 
-import grails.async.Promise
+import java.util.concurrent.TimeUnit
+
 import groovy.transform.CompileStatic
 
-import java.util.concurrent.TimeUnit
+import grails.async.Promise
 
 /**
  * A promise that executes synchronously, in the same thread as the creator

@@ -21,7 +21,6 @@ package org.grails.web.converters.configuration;
 import java.util.List;
 
 import grails.core.support.proxy.ProxyHandler;
-
 import org.grails.web.converters.Converter;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 

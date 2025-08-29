@@ -78,4 +78,4 @@ If you only wish to re-run failed tests use the -rerun flag
 grails test-app -rerun
 ----
 
-See the link:{guidePath}/testing.html[Testing] section for examples on how to combine the different options to target tests.
+See the link:{guidePath}testing.html[Testing] section for examples on how to combine the different options to target tests.

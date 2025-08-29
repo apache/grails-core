@@ -21,8 +21,8 @@ package org.grails.datastore.mapping.keyvalue.mapping.config
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
 import org.grails.datastore.mapping.config.Entity
-import org.grails.datastore.mapping.config.Property
 
 /**
  * <p>A Family is a grouping of KeyValue pairs and is typically composed

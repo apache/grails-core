@@ -25,13 +25,13 @@ under the License.
 === Purpose
 
 
-Validates a domain class against the applied constraints (see link:{guidePath}/validation.html[validation])
+Validates a domain class against the applied constraints (see link:{guidePath}validation.html[validation])
 
 
 === Description
 
 
-The `validate` method validates a domain class based on its defined link:{guidePath}/validation.html#constraints[Constraints]. The errors are stored in the link:errors.html[errors] property of the domain class instance.
+The `validate` method validates a domain class based on its defined link:{guidePath}validation.html#constraints[Constraints]. The errors are stored in the link:errors.html[errors] property of the domain class instance.
 
 The `validate` method accepts an optional `List` argument which contains the names of the properties to be validated. When a `List` of names is specified, only those properties will be validated.
 

@@ -19,6 +19,7 @@
 package org.grails.gradle.plugin.views.gsp
 
 import groovy.transform.CompileStatic
+
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.CopySpec
@@ -31,6 +32,7 @@ import org.gradle.api.tasks.SourceSetOutput
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.bundling.War
+
 import org.grails.gradle.plugin.util.SourceSets
 
 /**
@@ -88,14 +90,14 @@ class GroovyPagePlugin implements Plugin<Project> {
         }
 
         tasks.withType(War).configureEach { War war ->
-            war.dependsOn compileGroovyPages
+            war.dependsOn(compileGroovyPages)
             war.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             if (war.name == 'bootWar') {
                 war.from(destDir) { CopySpec it ->
                     it.into('WEB-INF/classes')
                 }
             } else if (war.name == 'war') {
-                war.from destDir
+                war.from(destDir)
             }
 
             if (war.classpath) {
@@ -106,7 +108,7 @@ class GroovyPagePlugin implements Plugin<Project> {
         }
 
         tasks.withType(Jar).configureEach { Jar jar ->
-            jar.dependsOn compileGroovyPages
+            jar.dependsOn(compileGroovyPages)
             jar.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             if (!(jar instanceof War)) {
                 if (jar.name == 'bootJar') {
@@ -114,7 +116,7 @@ class GroovyPagePlugin implements Plugin<Project> {
                         it.into('BOOT-INF/classes')
                     }
                 } else if (jar.name == 'jar') {
-                    jar.from destDir
+                    jar.from(destDir)
                 }
             }
         }

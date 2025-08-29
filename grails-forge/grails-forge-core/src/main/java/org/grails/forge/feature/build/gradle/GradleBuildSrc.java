@@ -52,7 +52,7 @@ public class GradleBuildSrc implements GradleBuildSrcFeature {
 
     @Override
     public String getDescription() {
-        return "Use Gradle buildSrc/build.gradle instead of buildscript{} in main build.gradle";
+        return "Add a Gradle buildSrc/build.gradle file instead of the buildscript block in the main build.gradle.";
     }
 
     @Override

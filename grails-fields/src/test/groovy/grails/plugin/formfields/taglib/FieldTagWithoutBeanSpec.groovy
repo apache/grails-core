@@ -22,7 +22,7 @@ import grails.testing.web.taglib.TagLibUnitTest
 import spock.lang.Issue
 import grails.plugin.formfields.*
 
-@Issue('https://github.com/grails-fields-plugin/grails-fields/pull/16')
+@Issue('https://github.com/grails/fields/pull/16')
 class FieldTagWithoutBeanSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<FormFieldsTagLib> {
 
 	def mockFormFieldsTemplateService = Mock(FormFieldsTemplateService)

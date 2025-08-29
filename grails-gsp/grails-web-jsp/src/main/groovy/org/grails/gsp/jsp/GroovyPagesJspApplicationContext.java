@@ -18,16 +18,31 @@
  */
 package org.grails.gsp.jsp;
 
-import jakarta.el.*;
+import java.util.Iterator;
+import java.util.LinkedList;
+
+import jakarta.el.ArrayELResolver;
+import jakarta.el.BeanELResolver;
+import jakarta.el.CompositeELResolver;
+import jakarta.el.ELContext;
+import jakarta.el.ELContextEvent;
+import jakarta.el.ELContextListener;
+import jakarta.el.ELResolver;
+import jakarta.el.ExpressionFactory;
+import jakarta.el.FunctionMapper;
+import jakarta.el.ListELResolver;
+import jakarta.el.MapELResolver;
+import jakarta.el.ResourceBundleELResolver;
+import jakarta.el.ValueExpression;
+import jakarta.el.VariableMapper;
 import jakarta.servlet.jsp.JspApplicationContext;
 import jakarta.servlet.jsp.el.ImplicitObjectELResolver;
 import jakarta.servlet.jsp.el.ScopedAttributeELResolver;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.springframework.util.ClassUtils;
 
-import java.util.Iterator;
-import java.util.LinkedList;
+import org.springframework.util.ClassUtils;
 
 /**
  * @author Graeme Rocher
@@ -39,7 +54,7 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
 
     private static final ExpressionFactory expressionFactoryImpl = findExpressionFactoryImplementation();
 
-    private final LinkedList<ELContextListener> listeners = new LinkedList<ELContextListener>();
+    private final LinkedList<ELContextListener> listeners = new LinkedList<>();
     private final CompositeELResolver elResolver = new CompositeELResolver();
     private final CompositeELResolver additionalResolvers = new CompositeELResolver();
 
@@ -73,15 +88,15 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
             if (ExpressionFactory.class.isAssignableFrom(cl)) {
                 LOG.info("Using " + className + " as implementation of " +
                         ExpressionFactory.class.getName());
-                return (ExpressionFactory)cl.newInstance();
+                return (ExpressionFactory) cl.newInstance();
             }
             LOG.warn("Class " + className + " does not implement " +
                     ExpressionFactory.class.getName());
         }
-        catch(ClassNotFoundException e) {
+        catch (ClassNotFoundException e) {
             // ignored
         }
-        catch(Exception e) {
+        catch (Exception e) {
             LOG.error("Failed to instantiate " + className, e);
         }
         return null;
@@ -96,7 +111,7 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
     }
 
     public void addELContextListener(ELContextListener elContextListener) {
-        synchronized(listeners) {
+        synchronized (listeners) {
             listeners.addLast(elContextListener);
         }
     }
@@ -104,7 +119,7 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
     ELContext createELContext(GroovyPagesPageContext pageCtx) {
         ELContext ctx = new GroovyPagesELContext(pageCtx);
         ELContextEvent event = new ELContextEvent(ctx);
-        synchronized(listeners) {
+        synchronized (listeners) {
             for (Iterator<ELContextListener> iter = listeners.iterator(); iter.hasNext();) {
                 iter.next().contextCreated(event);
             }

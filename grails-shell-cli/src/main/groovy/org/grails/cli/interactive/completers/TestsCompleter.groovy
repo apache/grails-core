@@ -18,11 +18,10 @@
  */
 package org.grails.cli.interactive.completers
 
-import grails.util.BuildSettings
 import groovy.transform.CompileStatic
+
+import grails.util.BuildSettings
 import org.grails.io.support.Resource
-
-
 
 /**
  * A completer that completes the names of the tests in the project
@@ -32,8 +31,9 @@ import org.grails.io.support.Resource
  */
 @CompileStatic
 class TestsCompleter  extends ClassNameCompleter {
+
     TestsCompleter() {
-        super(new File(BuildSettings.BASE_DIR, "src/test/groovy"), new File(BuildSettings.BASE_DIR, "src/integration-test/groovy"))
+        super(new File(BuildSettings.BASE_DIR, 'src/test/groovy'), new File(BuildSettings.BASE_DIR, 'src/integration-test/groovy'))
     }
 
     @Override

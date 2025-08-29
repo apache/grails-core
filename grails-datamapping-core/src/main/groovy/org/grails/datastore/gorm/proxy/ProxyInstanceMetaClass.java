@@ -18,13 +18,14 @@
  */
 package org.grails.datastore.gorm.proxy;
 
+import java.io.Serializable;
+
 import groovy.lang.DelegatingMetaClass;
 import groovy.lang.MetaClass;
 
-import java.io.Serializable;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import org.grails.datastore.mapping.core.Session;
-import org.springframework.dao.DataIntegrityViolationException;
 
 /**
  * Per-instance metaclass to use for proxied GORM domain objects. It auto-retrieves the associated entity when
@@ -101,7 +102,7 @@ public class ProxyInstanceMetaClass extends DelegatingMetaClass {
         } else if (methodName.equals("getClass") || methodName.equals("getDomainClass")) {
             // return correct class only if loaded, otherwise hope for the best
             resolveTarget = isProxyInitiated();
-        } else if (methodName.equals("setMetaClass") && arguments.length == 1 && (arguments[0]==null || arguments[0] instanceof MetaClass)) {
+        } else if (methodName.equals("setMetaClass") && arguments.length == 1 && (arguments[0] == null || arguments[0] instanceof MetaClass)) {
             resolveTarget = false;
         }
         return delegate.invokeMethod(resolveTarget ? getProxyTarget() : o, methodName, arguments);
@@ -138,9 +139,9 @@ public class ProxyInstanceMetaClass extends DelegatingMetaClass {
     @Override
     public void setProperty(Object object, String property, Object newValue) {
         boolean resolveTarget = true;
-        if(property.equals("metaClass") && (newValue == null || newValue instanceof MetaClass)) {
+        if (property.equals("metaClass") && (newValue == null || newValue instanceof MetaClass)) {
             resolveTarget = false;
-        }        
+        }
         delegate.setProperty(resolveTarget ? getProxyTarget() : object, property, newValue);
     }
 

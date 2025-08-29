@@ -24,7 +24,7 @@ For the remaining commands in this document: `gradle` is used if tooling is inst
 
 Requirements for Testing
 ------------------------------
-Grails has a comprehensive test suite that includes unit, integration, and functional tests. The functional tests use Testcontainers (https://www.testcontainers.org), which requires a container runtime.  In the event that a container runtime is not available, the tests can be skipped by using the argument the argument `-PskipTests`.  Some container runtimes require more configuration than others.  Please see the Testcontainers documentation at https://java.testcontainers.org/features/configuration for how to customize the container runtime used by Testcontainers.
+Grails has a comprehensive test suite that includes unit, integration, and functional tests. The functional tests use Testcontainers (https://java.testcontainers.org/), which requires a container runtime.  In the event that a container runtime is not available, the tests can be skipped by using the argument the argument `-PskipTests`.  Some container runtimes require more configuration than others.  Please see the Testcontainers documentation at https://java.testcontainers.org/features/configuration for how to customize the container runtime used by Testcontainers.
 
 Project Structure
 ------------------------------

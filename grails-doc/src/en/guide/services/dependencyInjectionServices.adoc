@@ -20,7 +20,7 @@ under the License.
 
 ==== Dependency Injection Basics
 
-A key aspect of Grails services is the ability to use http://www.springframework.org/[Spring Framework]'s dependency injection features. Grails supports "dependency injection by convention". In other words, you can use the property name representation of the class name of a service to automatically inject them into controllers, tag libraries, and so on.
+A key aspect of Grails services is the ability to use https://www.springframework.org/[Spring Framework]'s dependency injection features. Grails supports "dependency injection by convention". In other words, you can use the property name representation of the class name of a service to automatically inject them into controllers, tag libraries, and so on.
 
 As an example, given a service called `BookService`, you can define a property called `bookService` in a controller as follows:
 
@@ -112,7 +112,7 @@ class Book {
 }
 ----
 
-WARNING: Since Grails 3.2.8 this is not enabled by default. If you want to enable it again, take a look at http://docs.grails.org/latest/ref/Domain%20Classes/Usage.html#_spring_autowiring_of_domain_instances[Spring Autowiring of Domain Instance]
+WARNING: Since Grails 3.2.8 this is not enabled by default. If you want to enable it again, take a look at https://docs.grails.org/latest/ref/Domain%20Classes/Usage.html#_spring_autowiring_of_domain_instances[Spring Autowiring of Domain Instance]
 
 ==== Service Bean Names
 

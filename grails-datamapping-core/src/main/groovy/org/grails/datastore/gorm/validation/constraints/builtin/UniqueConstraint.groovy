@@ -19,8 +19,12 @@
 
 package org.grails.datastore.gorm.validation.constraints.builtin
 
-import grails.gorm.DetachedCriteria
 import groovy.transform.CompileStatic
+
+import org.springframework.context.MessageSource
+import org.springframework.validation.Errors
+
+import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.validation.constraints.AbstractConstraint
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
@@ -31,8 +35,6 @@ import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.reflect.EntityReflector
-import org.springframework.context.MessageSource
-import org.springframework.validation.Errors
 
 /**
  * A constraint that validates for the presence of an existing object (uniqueness)
@@ -44,18 +46,18 @@ import org.springframework.validation.Errors
 @CompileStatic
 class UniqueConstraint extends AbstractConstraint {
 
-    public static final String NAME = "unique"
+    public static final String NAME = 'unique'
 
     protected List group = []
 
     UniqueConstraint(Class<?> constraintOwningClass, String constraintPropertyName, Object constraintParameter, MessageSource messageSource) {
         super(constraintOwningClass, constraintPropertyName, constraintParameter, messageSource)
-        if(constraintParameter instanceof Iterable) {
-            for(property in ((Iterable)constraintParameter)) {
+        if (constraintParameter instanceof Iterable) {
+            for (property in ((Iterable) constraintParameter)) {
                 group.add(property.toString())
             }
         }
-        else if(constraintParameter instanceof CharSequence) {
+        else if (constraintParameter instanceof CharSequence) {
             group.add(constraintParameter.toString())
         }
     }
@@ -88,37 +90,37 @@ class UniqueConstraint extends AbstractConstraint {
                     property = targetEntity.getPropertyByName(constraintPropertyName)
                 }
             }
-            constraintClass = targetEntity != null? targetEntity.javaClass: constraintClass
+            constraintClass = targetEntity != null ? targetEntity.javaClass : constraintClass
         }
 
         // Re-create the detached criteria based on the new constraint class
         detachedCriteria = new DetachedCriteria(constraintClass)
 
-        if(targetEntity == null) {
+        if (targetEntity == null) {
             throw new IllegalStateException("Cannot validate object [$target]. It is not a persistent entity")
         }
 
         EntityReflector reflector = targetEntity.reflector
         String constraintPropertyName = this.constraintPropertyName
         List group = this.group
-        
-        if(target instanceof DirtyCheckable) {
+
+        if (target instanceof DirtyCheckable) {
             Boolean anyChanges = target.hasChanged(constraintPropertyName)
-            for(prop in group) {
+            for (prop in group) {
                 anyChanges |= target.hasChanged(prop.toString())
             }
-            if(!anyChanges) {
+            if (!anyChanges) {
                 return
             }
         }
 
         PersistentProperty persistentProperty = targetEntity.getPropertyByName(constraintPropertyName)
         boolean isToOne = persistentProperty instanceof ToOne
-        if(isToOne) {
+        if (isToOne) {
             PersistentEntity association = ((Association) persistentProperty).getAssociatedEntity()
             if (!association.mappingContext.proxyHandler.isProxy(propertyValue)) {
                 def associationId = association.reflector.getIdentifier(propertyValue)
-                if(associationId == null) {
+                if (associationId == null) {
                     // unsaved entity
                     return
                 }
@@ -154,7 +156,7 @@ class UniqueConstraint extends AbstractConstraint {
                                     continue
                                 }
                             }
-                            eq propName, value
+                            eq(propName, value)
                         }
                     }
                 }
@@ -176,13 +178,12 @@ class UniqueConstraint extends AbstractConstraint {
                     }
                     if (targetId != existingId) {
                         def args = [constraintPropertyName, constraintOwningClass, propertyValue] as Object[]
-                        rejectValue(target, errors, "unique", args, getDefaultMessage("default.not.unique.message"))
+                        rejectValue(target, errors, 'unique', args, getDefaultMessage('default.not.unique.message'))
                     }
                 }
             }
         }
     }
-
 
     @Override
     boolean supports(Class type) {

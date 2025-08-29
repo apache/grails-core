@@ -24,5 +24,4 @@ package org.grails.cli.profile
  * @author Graeme Rocher
  * @since 3.0
  */
-interface ProjectCommand extends Command {
-}
+interface ProjectCommand extends Command {}

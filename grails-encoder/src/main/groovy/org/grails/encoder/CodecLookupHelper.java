@@ -18,11 +18,13 @@
  */
 package org.grails.encoder;
 
-import grails.core.GrailsApplication;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
+
+import grails.core.GrailsApplication;
 
 public class CodecLookupHelper {
     private static final Logger log = LoggerFactory.getLogger(CodecLookupHelper.class);
@@ -39,7 +41,7 @@ public class CodecLookupHelper {
      */
     public static Encoder lookupEncoder(GrailsApplication grailsApplication, String codecName) {
         ApplicationContext ctx = grailsApplication != null ? grailsApplication.getMainContext() : null;
-        if(ctx != null) {
+        if (ctx != null) {
             try {
                 CodecLookup codecLookup = ctx.getBean("codecLookup", CodecLookup.class);
                 return codecLookup.lookupEncoder(codecName);

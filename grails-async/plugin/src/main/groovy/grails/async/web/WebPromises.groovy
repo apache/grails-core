@@ -19,14 +19,15 @@
 
 package grails.async.web
 
+import java.util.concurrent.TimeUnit
+
+import groovy.transform.CompileStatic
+
 import grails.async.Promise
 import grails.async.PromiseFactory
 import grails.async.decorator.PromiseDecorator
-import groovy.transform.CompileStatic
 import org.grails.async.factory.PromiseFactoryBuilder
 import org.grails.plugins.web.async.AsyncWebRequestPromiseDecoratorLookupStrategy
-
-import java.util.concurrent.TimeUnit
 
 /**
  * A specific promises factory class designed for use in controllers and other web contexts

@@ -6,7 +6,7 @@ import grails.testing.mixin.integration.Integration
 import geb.spock.*
 
 /**
- * See http://www.gebish.org/manual/current/ for more instructions
+ * See https://groovy.apache.org/geb/manual/current/ for more instructions
  */
 @Integration
 @Rollback

@@ -18,21 +18,21 @@
  */
 package org.grails.test.support
 
-import grails.util.GrailsClassUtils
-import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.springframework.context.ApplicationContext
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.DefaultTransactionDefinition
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
+import grails.util.GrailsClassUtils
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+
 /**
  * Establishes a rollback only transaction for running a test in.
  */
 class GrailsTestTransactionInterceptor {
 
-
-    static final String TRANSACTIONAL = "transactional"
+    static final String TRANSACTIONAL = 'transactional'
 
     ApplicationContext applicationContext
     protected Map<String,TransactionStatus> transactionStatuses
@@ -70,8 +70,8 @@ class GrailsTestTransactionInterceptor {
      */
     void init() {
         TransactionSynchronizationManager.initSynchronization()
-        transactionManagers.each{ datasourceName, PlatformTransactionManager transactionManager ->
-            if ( transactionStatuses[datasourceName] == null ) {
+        transactionManagers.each { datasourceName, PlatformTransactionManager transactionManager ->
+            if (transactionStatuses[datasourceName] == null) {
                 transactionStatuses[datasourceName] = transactionManager.getTransaction(new DefaultTransactionDefinition())
             } else {
                 throw new RuntimeException("init() called on test transaction interceptor during transaction for datasource $datasourceName")
@@ -83,7 +83,7 @@ class GrailsTestTransactionInterceptor {
      * Rolls back the current transaction.
      */
     void destroy() {
-        transactionManagers.each{ datasourceName, PlatformTransactionManager transactionManager ->
+        transactionManagers.each { datasourceName, PlatformTransactionManager transactionManager ->
             if (transactionStatuses[datasourceName]) {
                 transactionManager.rollback(transactionStatuses[datasourceName])
                 transactionStatuses[datasourceName] = null

@@ -18,9 +18,9 @@
  */
 package org.grails.databinding.converters
 
-import groovy.transform.CompileStatic
-
 import java.sql.Date
+
+import groovy.transform.CompileStatic
 
 /**
  * @author Jeff Brown

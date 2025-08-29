@@ -18,14 +18,23 @@
  */
 package org.grails.config;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+
+import groovy.transform.CompileStatic;
+
 import grails.config.Config;
 import grails.util.GrailsStringUtils;
-import groovy.transform.CompileStatic;
 import org.grails.core.exceptions.GrailsConfigurationException;
-import org.springframework.util.ClassUtils;
-
-import java.util.*;
-
 
 /**
  * A {@link Config} composed of other Configs
@@ -36,7 +45,7 @@ import java.util.*;
 @CompileStatic
 public class CompositeConfig implements Config {
 
-    protected Deque<Config> configs = new ArrayDeque<Config>();
+    protected Deque<Config> configs = new ArrayDeque<>();
 
     /**
      * Adds a config at the highest level of precedence
@@ -59,8 +68,8 @@ public class CompositeConfig implements Config {
     @Override
     @Deprecated
     public Map<String, Object> flatten() {
-        Map<String, Object> flattened = new LinkedHashMap<String, Object>();
-        for(Config c : configs) {
+        Map<String, Object> flattened = new LinkedHashMap<>();
+        for (Config c : configs) {
             flattened.putAll(c.flatten());
         }
         return flattened;
@@ -69,7 +78,7 @@ public class CompositeConfig implements Config {
     @Override
     public Properties toProperties() {
         Properties properties = new Properties();
-        for(Config c : configs) {
+        for (Config c : configs) {
             properties.putAll(c.toProperties());
         }
         return properties;
@@ -83,7 +92,7 @@ public class CompositeConfig implements Config {
     @Override
     public <T> T getProperty(String key, Class<T> targetType, T defaultValue, List<T> allowedValues) {
         T v = getProperty(key, targetType, defaultValue);
-        if(!allowedValues.contains(v)) {
+        if (!allowedValues.contains(v)) {
             throw new GrailsConfigurationException("Invalid configuration value [$value] for key [${key}]. Possible values $allowedValues");
         }
         return v;
@@ -91,9 +100,9 @@ public class CompositeConfig implements Config {
 
     @Override
     public Object getAt(Object key) {
-        for(Config c : configs) {
+        for (Config c : configs) {
             Object v = c.getAt(key);
-            if(v != null) return v;
+            if (v != null) return v;
         }
         return null;
     }
@@ -105,13 +114,12 @@ public class CompositeConfig implements Config {
 
     @Override
     public Object navigate(String... path) {
-        for(Config c : configs) {
+        for (Config c : configs) {
             Object v = c.navigate(path);
-            if(v != null) return v;
+            if (v != null) return v;
         }
         return null;
     }
-
 
     @Override
     public int size() {
@@ -125,7 +133,7 @@ public class CompositeConfig implements Config {
     @Override
     public boolean isEmpty() {
         for (Config config : configs) {
-            if(!config.isEmpty()) {
+            if (!config.isEmpty()) {
                 return false;
             }
         }
@@ -135,7 +143,7 @@ public class CompositeConfig implements Config {
     @Override
     public boolean containsKey(Object key) {
         for (Config config : configs) {
-            if(config.containsKey(key)) return true;
+            if (config.containsKey(key)) return true;
         }
         return false;
     }
@@ -143,7 +151,7 @@ public class CompositeConfig implements Config {
     @Override
     public boolean containsValue(Object value) {
         for (Config config : configs) {
-            if(config.containsValue(value)) return true;
+            if (config.containsValue(value)) return true;
         }
         return false;
     }
@@ -152,7 +160,7 @@ public class CompositeConfig implements Config {
     public Object get(Object key) {
         for (Config config : configs) {
             Object v = config.get(key);
-            if(v != null) return v;
+            if (v != null) return v;
         }
         return null;
     }
@@ -184,7 +192,7 @@ public class CompositeConfig implements Config {
 
     @Override
     public Set<String> keySet() {
-        Set<String> entries = new HashSet<String>();
+        Set<String> entries = new HashSet<>();
         for (Config config : configs) {
             entries.addAll(config.keySet());
         }
@@ -193,7 +201,7 @@ public class CompositeConfig implements Config {
 
     @Override
     public Collection<Object> values() {
-        Collection<Object> values = new ArrayList<Object>();
+        Collection<Object> values = new ArrayList<>();
         for (Config config : configs) {
             values.addAll(config.values());
         }
@@ -202,7 +210,7 @@ public class CompositeConfig implements Config {
 
     @Override
     public Set<Map.Entry<String, Object>> entrySet() {
-        Set<Map.Entry<String,Object>> entries = new HashSet<Map.Entry<String,Object>>();
+        Set<Map.Entry<String, Object>> entries = new HashSet<>();
         for (Config config : configs) {
             entries.addAll(config.entrySet());
         }
@@ -224,7 +232,7 @@ public class CompositeConfig implements Config {
     public <T> T getProperty(String key, Class<T> targetType) {
         for (Config config : configs) {
             T v = config.getProperty(key, targetType);
-            if(v != null) return v;
+            if (v != null) return v;
         }
         return null;
     }
@@ -238,7 +246,7 @@ public class CompositeConfig implements Config {
     @Override
     public String getRequiredProperty(String key) throws IllegalStateException {
         String value = getProperty(key);
-        if(GrailsStringUtils.isBlank(value)) {
+        if (GrailsStringUtils.isBlank(value)) {
             throw new IllegalStateException("Value for key [$key] cannot be resolved");
         }
         return value;
@@ -247,7 +255,7 @@ public class CompositeConfig implements Config {
     @Override
     public <T> T getRequiredProperty(String key, Class<T> targetType) throws IllegalStateException {
         T value = getProperty(key, targetType);
-        if(value == null) {
+        if (value == null) {
             throw new IllegalStateException("Value for key [$key] cannot be resolved");
         }
         return value;
@@ -264,8 +272,7 @@ public class CompositeConfig implements Config {
     }
 
     @Override
-    public String
-    getProperty(String key) {
+    public String getProperty(String key) {
         return getProperty(key, String.class);
     }
 }

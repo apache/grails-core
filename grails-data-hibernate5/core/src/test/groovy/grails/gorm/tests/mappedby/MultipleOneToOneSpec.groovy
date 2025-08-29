@@ -31,7 +31,7 @@ class MultipleOneToOneSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMana
         manager.domainClasses.addAll([Org, OrgMember])
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/950')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/950')
     void "test mappedBy with multiple many-to-one and a single one-to-one"() {
         given:
         Org branch = new Org(id: 1, name: "branch a").save()

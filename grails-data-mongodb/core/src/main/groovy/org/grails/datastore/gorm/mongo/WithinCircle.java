@@ -22,11 +22,12 @@ package org.grails.datastore.gorm.mongo;
 import java.util.Collection;
 import java.util.List;
 
+import org.springframework.util.Assert;
+
 import grails.mongodb.geo.Circle;
 import org.grails.datastore.gorm.finders.MethodExpression;
 import org.grails.datastore.mapping.mongo.query.MongoQuery;
 import org.grails.datastore.mapping.query.Query.Criterion;
-import org.springframework.util.Assert;
 
 /**
  * A dynamic finder method expression that adds the ability to query within a circle
@@ -43,8 +44,8 @@ public class WithinCircle extends MethodExpression {
     @Override
     public Criterion createCriterion() {
         Object argument = arguments[0];
-        if(argument instanceof Circle) {
-            return new MongoQuery.WithinCircle(propertyName, ((Circle)argument).asList());
+        if (argument instanceof Circle) {
+            return new MongoQuery.WithinCircle(propertyName, ((Circle) argument).asList());
         }
         else {
             return new MongoQuery.WithinCircle(propertyName, (List<?>) argument);
@@ -62,7 +63,7 @@ public class WithinCircle extends MethodExpression {
         Assert.isTrue((isList || (arg instanceof Circle)),
                 "Only a list of elements is supported in a 'withinBox' query");
 
-        if(isList) {
+        if (isList) {
             Collection<?> argument = (Collection<?>) arguments[0];
             Assert.isTrue(argument.size() == 2,
                     "A 'WithinCircle' query requires a two dimensional list of values");

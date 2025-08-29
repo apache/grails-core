@@ -19,8 +19,13 @@
 package grails.spring
 
 import groovy.xml.StreamingMarkupBuilder
+
 import org.apache.commons.logging.LogFactory
-import org.grails.spring.BeanConfiguration
+import org.w3c.dom.Element
+import org.xml.sax.EntityResolver
+import org.xml.sax.ErrorHandler
+import org.xml.sax.InputSource
+
 import org.springframework.beans.factory.config.BeanDefinitionHolder
 import org.springframework.beans.factory.parsing.BeanDefinitionParsingException
 import org.springframework.beans.factory.parsing.Location
@@ -32,10 +37,8 @@ import org.springframework.beans.factory.xml.ParserContext
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.util.xml.SimpleSaxErrorHandler
 import org.springframework.util.xml.XmlValidationModeDetector
-import org.w3c.dom.Element
-import org.xml.sax.EntityResolver
-import org.xml.sax.ErrorHandler
-import org.xml.sax.InputSource
+
+import org.grails.spring.BeanConfiguration
 
 /**
  * Used by BeanBuilder to read a Spring namespace expression in the Groovy DSL.
@@ -53,14 +56,14 @@ class DynamicElementReader extends GroovyObjectSupport {
     private String rootNamespace
     ErrorHandler errorHandler = new SimpleSaxErrorHandler(LOG)
     int validationMode = XmlValidationModeDetector.VALIDATION_NONE
-    EntityResolver entityResolver = new DelegatingEntityResolver(DynamicElementReader.class.getClassLoader())
+    EntityResolver entityResolver = new DelegatingEntityResolver(DynamicElementReader.getClassLoader())
     ParserContext parserContext
     NamespaceHandler namespaceHandler
     BeanConfiguration beanConfiguration
     boolean beanDecorator = false
     boolean firstCall = true
 
-    DynamicElementReader(String namespace, Map namespaceMap=Collections.EMPTY_MAP, NamespaceHandler namespaceHandler = null, ParserContext parserContext = null) {
+    DynamicElementReader(String namespace, Map namespaceMap = Collections.EMPTY_MAP, NamespaceHandler namespaceHandler = null, ParserContext parserContext = null) {
         this.xmlNamespaces = namespaceMap
         this.rootNamespace = namespace
         this.namespaceHandler = namespaceHandler
@@ -86,7 +89,7 @@ class DynamicElementReader extends GroovyObjectSupport {
             invokeAfterInterceptor = true
             firstCall = false
         }
-        if (name.equals("doCall")) {
+        if (name.equals('doCall')) {
             def callable = args[0]
             callable.resolveStrategy = Closure.DELEGATE_FIRST
             callable.delegate = this
@@ -103,7 +106,7 @@ class DynamicElementReader extends GroovyObjectSupport {
 
         def callable = {
             for (namespace in myNamespaces) {
-                mkp.declareNamespace([(namespace.key):namespace.value])
+                mkp.declareNamespace([(namespace.key): namespace.value])
             }
             if (args && (args[-1] instanceof Closure)) {
                 args[-1].resolveStrategy = Closure.DELEGATE_FIRST
@@ -123,11 +126,11 @@ class DynamicElementReader extends GroovyObjectSupport {
         InputSource is = new InputSource(new StringReader(sw.toString()))
         Element element = documentLoader.loadDocument(is, entityResolver, errorHandler, validationMode, true).getDocumentElement()
 
-        parserContext?.delegate?.initDefaults element
+        parserContext?.delegate?.initDefaults(element)
         if (namespaceHandler && parserContext) {
             if (beanDecorator && beanConfiguration) {
                 BeanDefinitionHolder holder = new BeanDefinitionHolder(beanConfiguration.getBeanDefinition(), beanConfiguration.getName())
-                holder = namespaceHandler.decorate(element,holder, parserContext)
+                holder = namespaceHandler.decorate(element, holder, parserContext)
                 beanConfiguration.setBeanDefinition(holder.getBeanDefinition())
             }
             else {

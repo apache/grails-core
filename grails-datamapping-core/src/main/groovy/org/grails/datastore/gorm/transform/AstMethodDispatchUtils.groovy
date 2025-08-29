@@ -51,7 +51,7 @@ class AstMethodDispatchUtils extends GeneralUtils {
      */
     static MapExpression namedArgs(Map<String, ? extends Expression> args) {
         def expression = new MapExpression()
-        for(entry in args) {
+        for (entry in args) {
             expression.addMapEntryExpression(
                 new MapEntryExpression(
                     constX(entry.key),
@@ -68,7 +68,7 @@ class AstMethodDispatchUtils extends GeneralUtils {
      */
     static MethodCallExpression callD(Class targetType, String var, String methodName, Expression arguments = ZERO_ARGUMENTS) {
         ClassNode targetNode = make(targetType)
-        callD( targetNode, var, methodName, arguments)
+        callD(targetNode, var, methodName, arguments)
     }
 
     /**
@@ -111,29 +111,29 @@ class AstMethodDispatchUtils extends GeneralUtils {
      * @return The expression
      */
     static MethodCallExpression callThisD(ClassNode thisType, String methodName, Expression arguments) {
-        MethodCallExpression methodCall = callX(varX("this", thisType), methodName, arguments)
+        MethodCallExpression methodCall = callX(varX('this', thisType), methodName, arguments)
         Parameter[] params = paramsForArgs(arguments)
         MethodNode mn = thisType.getDeclaredMethod(methodName, params)
-        if(mn != null) {
+        if (mn != null) {
             methodCall.setMethodTarget(mn)
         }
         return methodCall
     }
 
     static Parameter[] paramsForArgs(Expression expression) {
-        if(expression instanceof TupleExpression) {
-            TupleExpression te = (TupleExpression)expression
+        if (expression instanceof TupleExpression) {
+            TupleExpression te = (TupleExpression) expression
             List<Parameter> params = []
             int i = 0
-            for(exp in te.expressions) {
+            for (exp in te.expressions) {
                 def type = exp instanceof ClassExpression ? ClassHelper.CLASS_Type : exp.type
-                params.add( param(type, "p${i++}"))
+                params.add(param(type, "p${i++}"))
             }
             return params as Parameter[]
         }
         else {
             def type = expression instanceof ClassExpression ? ClassHelper.CLASS_Type : expression.type
-            return params( param(type, "p"))
+            return params(param(type, 'p'))
         }
     }
 }

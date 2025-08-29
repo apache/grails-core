@@ -19,8 +19,18 @@
 
 package org.grails.web.pages;
 
+import java.io.IOException;
+import java.io.Writer;
+
+import jakarta.servlet.ServletResponse;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import org.springframework.objenesis.ObjenesisStd;
+import org.springframework.objenesis.instantiator.ObjectInstantiator;
+
+import org.grails.buffer.GrailsRoutablePrintWriter;
 import org.grails.buffer.StreamCharBuffer;
 import org.grails.buffer.StreamCharBuffer.LazyInitializingWriter;
 import org.grails.buffer.StreamCharBuffer.StreamCharBufferWriter;
@@ -29,15 +39,8 @@ import org.grails.encoder.EncodedAppenderFactory;
 import org.grails.encoder.Encoder;
 import org.grails.encoder.EncoderAware;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.grails.buffer.GrailsRoutablePrintWriter;
 import org.grails.web.util.BoundedCharsAsEncodedBytesCounter;
 import org.grails.web.util.WebUtils;
-import org.springframework.objenesis.ObjenesisStd;
-import org.springframework.objenesis.instantiator.ObjectInstantiator;
-
-import jakarta.servlet.ServletResponse;
-import java.io.IOException;
-import java.io.Writer;
 
 /**
  * NOTE: Based on work done by on the GSP standalone project (https://gsp.dev.java.net/)

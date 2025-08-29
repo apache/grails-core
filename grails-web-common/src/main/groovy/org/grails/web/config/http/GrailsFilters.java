@@ -41,6 +41,7 @@ public enum GrailsFilters {
     GrailsFilters() {
         this.order = SecurityProperties.DEFAULT_FILTER_ORDER - 100 + ordinal() * INTERVAL;
     }
+
     GrailsFilters(int order) {
         this.order = order;
     }

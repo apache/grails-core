@@ -233,7 +233,7 @@ class CommandPropertyAccessorSpec extends BuildsAccessorFactory {
 		propertyAccessor.propertyType == String
 	}
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/37')
+	@Issue('https://github.com/grails/fields/issues/37')
 	void "resolves constraints of the '#property' property even when the intervening object is null"() {
 		given:
 		TestCommand command = new TestCommand()
@@ -279,7 +279,7 @@ class CommandPropertyAccessorSpec extends BuildsAccessorFactory {
 		propertyAccessor.constraints.blank
 	}
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/218')
+	@Issue('https://github.com/grails/fields/issues/218')
 	void 'respect defaultNullable() when evaluating constraints of a Validateable'() {
 		given:
         ValidateableCommand command = new ValidateableCommand()

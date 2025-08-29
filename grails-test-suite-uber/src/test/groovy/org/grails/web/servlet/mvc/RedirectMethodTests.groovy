@@ -166,7 +166,7 @@ class RedirectMethodTests extends Specification implements UrlMappingsUnitTest<U
         webRequest.controllerName = 'redirect'
         c.toAbsolute()
         then:
-        "http://google.com" == response.redirectedUrl
+        "https://www.google.com/" == response.redirectedUrl
 
     }
 

@@ -18,9 +18,9 @@
  */
 package grails.web.mapping;
 
-import groovy.lang.Closure;
-
 import java.util.Collection;
+
+import groovy.lang.Closure;
 
 /**
  * Interface that allows access to all defined URL mappings and registration of new mappings at runtime

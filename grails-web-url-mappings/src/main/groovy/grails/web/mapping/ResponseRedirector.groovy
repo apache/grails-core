@@ -18,19 +18,22 @@
  */
 package grails.web.mapping
 
-import grails.web.http.HttpHeaders
-import grails.web.mapping.mvc.RedirectEventListener
-import grails.web.mapping.mvc.exceptions.CannotRedirectException
 import groovy.transform.CompileStatic
-import groovy.util.logging.Commons
-import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.grails.web.util.GrailsApplicationAttributes
+import groovy.util.logging.Slf4j
+
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+
 import org.springframework.http.HttpStatus
 import org.springframework.util.Assert
 import org.springframework.web.servlet.support.RequestDataValueProcessor
 
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
+import grails.web.http.HttpHeaders
+import grails.web.mapping.mvc.RedirectEventListener
+import grails.web.mapping.mvc.exceptions.CannotRedirectException
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.GrailsApplicationAttributes
+
 /**
  * Encapsulates the logic for issuing a redirect based on a Map of arguments
  *
@@ -38,14 +41,14 @@ import jakarta.servlet.http.HttpServletResponse
  * @author Graeme Rocher
  */
 @CompileStatic
-@Commons
+@Slf4j
 class ResponseRedirector {
 
-    public static final String ARGUMENT_PERMANENT = "permanent"
-    public static final String ARGUMENT_ABSOLUTE = "absolute"
-    public static final String ARGUMENT_MOVED = "moved"
+    public static final String ARGUMENT_PERMANENT = 'permanent'
+    public static final String ARGUMENT_ABSOLUTE = 'absolute'
+    public static final String ARGUMENT_MOVED = 'moved'
     public static final String GRAILS_REDIRECT_ISSUED = GrailsApplicationAttributes.REDIRECT_ISSUED
-    private static final String BLANK = ""
+    private static final String BLANK = ''
     private static final String KEEP_PARAMS_WHEN_REDIRECT = 'keepParamsWhenRedirect'
 
     LinkGenerator linkGenerator
@@ -54,7 +57,7 @@ class ResponseRedirector {
     boolean useJessionId = false
 
     ResponseRedirector(LinkGenerator linkGenerator) {
-        Assert.notNull linkGenerator, "Argument [linkGenerator] cannot be null"
+        Assert.notNull(linkGenerator, 'Argument [linkGenerator] cannot be null')
         this.linkGenerator = linkGenerator
     }
 
@@ -71,7 +74,7 @@ class ResponseRedirector {
         if (argument instanceof String) {
             return Boolean.valueOf(argument)
         }
-        else if(argument == null && defaultValue != null) {
+        else if (argument == null && defaultValue != null) {
             return defaultValue
         }
         else {
@@ -81,11 +84,11 @@ class ResponseRedirector {
 
     void redirect(HttpServletRequest request, HttpServletResponse response, Map arguments) {
         if (request.getAttribute(GRAILS_REDIRECT_ISSUED)) {
-            throw new CannotRedirectException("Cannot issue a redirect(..) here. A previous call to redirect(..) has already redirected the response.")
+            throw new CannotRedirectException('Cannot issue a redirect(..) here. A previous call to redirect(..) has already redirected the response.')
         }
 
         if (response.committed) {
-            throw new CannotRedirectException("Cannot issue a redirect(..) here. The response has already been committed either by another redirect or by directly writing to the response.")
+            throw new CannotRedirectException('Cannot issue a redirect(..) here. The response has already been committed either by another redirect or by directly writing to the response.')
         }
 
         boolean permanent = getBooleanArgument(ARGUMENT_PERMANENT, arguments)
@@ -94,7 +97,7 @@ class ResponseRedirector {
         final Map namedParameters = new LinkedHashMap<>(arguments)
         // we generate a relative link with no context path so that the absolute can be calculated by combining the serverBaseURL
         // which includes the contextPath
-        namedParameters.put LinkGenerator.ATTRIBUTE_CONTEXT_PATH, BLANK
+        namedParameters.put(LinkGenerator.ATTRIBUTE_CONTEXT_PATH, BLANK)
 
         boolean absolute = getBooleanArgument(ARGUMENT_ABSOLUTE, arguments, true)
 
@@ -117,16 +120,14 @@ class ResponseRedirector {
      * Redirects the response the the given URI
      */
     private void redirectResponse(String serverBaseURL, String actualUri, HttpServletRequest request, HttpServletResponse response, boolean permanent, boolean moved, boolean absolute) {
-        if(log.isDebugEnabled()) {
-            log.debug "Method [redirect] forwarding request to [$actualUri]"
-            log.debug "Executing redirect with response [$response]"
-        }
+        log.debug('Method [redirect] forwarding request to [{}]', actualUri)
+        log.debug('Executing redirect with response [{}]', response)
 
         String processedActualUri = processedUrl(actualUri, request)
 
         String redirectURI
         if (absolute) {
-            redirectURI = processedActualUri.contains("://") ? processedActualUri : serverBaseURL + processedActualUri
+            redirectURI = processedActualUri.contains('://') ? processedActualUri : serverBaseURL + processedActualUri
         } else {
             redirectURI = linkGenerator.contextPath + processedActualUri
         }
@@ -134,7 +135,7 @@ class ResponseRedirector {
         String redirectUrl = useJessionId ? response.encodeRedirectURL(redirectURI) : redirectURI
 
         int status
-        if(permanent) {
+        if (permanent) {
             status = moved ? HttpStatus.MOVED_PERMANENTLY.value() : HttpStatus.PERMANENT_REDIRECT.value()
         }
         else {
@@ -142,15 +143,15 @@ class ResponseRedirector {
         }
 
         response.status = status
-        response.setHeader HttpHeaders.LOCATION, redirectUrl
+        response.setHeader(HttpHeaders.LOCATION, redirectUrl)
 
         if (redirectListeners) {
             for (redirectEventListener in redirectListeners) {
-                redirectEventListener.responseRedirected redirectUrl
+                redirectEventListener.responseRedirected(redirectUrl)
             }
         }
 
-        request.setAttribute GRAILS_REDIRECT_ISSUED, processedActualUri
+        request.setAttribute(GRAILS_REDIRECT_ISSUED, processedActualUri)
     }
 
     private String processedUrl(String link, HttpServletRequest request) {

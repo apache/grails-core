@@ -60,8 +60,8 @@ Arguments:
 * `includesExcludes` - (Optional) A map with 'include' and/or 'exclude' lists containing the names of properties to either include or exclude.
 * `prefix` - (Optional) A string representing a prefix to use to filter parameters. The method will automatically append a '.' when matching the prefix to parameters, so you can use 'author' to filter for parameters such as 'author.name'.
 
-NOTE: Note that if an empty List or no List is provided as a value for the `include` parameter then all statically typed instance properties will be subject to binding if they are not explicitly excluded. See the link:../Constraints/bindable.html[bindable] constraint documentation for more information on how to control what is bindable and what is not.
+NOTE: Note that if an empty List or no List is provided as a value for the `include` parameter then all statically typed instance properties will be subject to binding if they are not explicitly excluded. See the link:{constraintsRefFromRef}bindable.html[bindable] constraint documentation for more information on how to control what is bindable and what is not.
 
 The underlying implementation uses Spring's Data Binding framework. If the target is a domain class, type conversion errors are stored in the `errors` property of the domain class.
 
-Refer to the section on link:{guidePath}/theWebLayer.html#dataBinding[data binding] in the user guide for more information.
+Refer to the section on link:{guidePath}theWebLayer.html#dataBinding[data binding] in the user guide for more information.

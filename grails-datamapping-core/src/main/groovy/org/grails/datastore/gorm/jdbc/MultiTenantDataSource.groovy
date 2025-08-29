@@ -19,10 +19,10 @@
 
 package org.grails.datastore.gorm.jdbc
 
+import javax.sql.DataSource
+
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
-
-import javax.sql.DataSource
 
 /**
  * A data source that wraps a target datasource for multi-tenancy

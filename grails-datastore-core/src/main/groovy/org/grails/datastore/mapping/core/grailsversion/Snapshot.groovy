@@ -31,9 +31,9 @@ import groovy.transform.EqualsAndHashCode
 @EqualsAndHashCode(includes = ['text'])
 class Snapshot implements Comparable<Snapshot> {
 
-    private static final String SNAPSHOT = "SNAPSHOT"
-    private static final String RC = "RC"
-    private static final String MILESTONE = "M"
+    private static final String SNAPSHOT = 'SNAPSHOT'
+    private static final String RC = 'RC'
+    private static final String MILESTONE = 'M'
 
     final String text
 
@@ -43,11 +43,11 @@ class Snapshot implements Comparable<Snapshot> {
     }
 
     int getMilestoneVersion() {
-        text.replace(MILESTONE, "").toInteger()
+        text.replace(MILESTONE, '').toInteger()
     }
 
     int getReleaseCandidateVersion() {
-        text.replace(RC, "").toInteger()
+        text.replace(RC, '').toInteger()
     }
 
     boolean isBuildSnapshot() {
@@ -65,7 +65,7 @@ class Snapshot implements Comparable<Snapshot> {
     Snapshot(String text) {
         this.text = text
         if (!text.matches(/^(M|RC|Final)\d*$/) && !isBuildSnapshot()) {
-            throw new IllegalArgumentException("GrailsVersion snapshot is not in the expected format")
+            throw new IllegalArgumentException('GrailsVersion snapshot is not in the expected format')
         }
     }
 

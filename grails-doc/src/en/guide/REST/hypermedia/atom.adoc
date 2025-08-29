@@ -17,15 +17,15 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-http://tools.ietf.org/html/rfc4287[Atom] is another standard interchange format used to implement REST APIs. An example of Atom output can be seen below:
+https://tools.ietf.org/html/rfc4287[Atom] is another standard interchange format used to implement REST APIs. An example of Atom output can be seen below:
 
 [source,xml]
 ----
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
+<feed xmlns="https://www.w3.org/2005/Atom">
 
  <title>Example Feed</title>
- <link href="http://example.org/"/>
+ <link href="https://example.org/"/>
  <updated>2003-12-13T18:30:02Z</updated>
  <author>
    <name>John Doe</name>
@@ -34,7 +34,7 @@ http://tools.ietf.org/html/rfc4287[Atom] is another standard interchange format 
 
  <entry>
    <title>Atom-Powered Robots Run Amok</title>
-   <link href="http://example.org/2003/12/13/atom03"/>
+   <link href="https://example.org/2003/12/13/atom03"/>
    <id>urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a</id>
    <updated>2003-12-13T18:30:02Z</updated>
    <summary>Some text.</summary>

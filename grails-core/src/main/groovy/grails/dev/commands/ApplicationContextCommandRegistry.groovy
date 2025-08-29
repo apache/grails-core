@@ -17,6 +17,7 @@
 package grails.dev.commands
 
 import groovy.transform.CompileStatic
+
 import org.grails.core.io.support.GrailsFactoriesLoader
 
 /**
@@ -33,14 +34,14 @@ class ApplicationContextCommandRegistry {
 
     ApplicationContextCommandRegistry() {
         for (ApplicationCommand cmd  : GrailsFactoriesLoader.loadFactories(ApplicationCommand)) {
-            if(!commands.containsKey(cmd.name)) {
+            if (!commands.containsKey(cmd.name)) {
                 commands[cmd.name] = cmd
             }
         }
 
         // If this is reflectively loaded from the delegating cli, we need to make sure the context class loader is also used to pull any commands that are loaded from the gradle classpath
         for (ApplicationCommand cmd : GrailsFactoriesLoader.loadFactories(ApplicationCommand, Thread.currentThread().contextClassLoader)) {
-            if(!commands.containsKey(cmd.name)) {
+            if (!commands.containsKey(cmd.name)) {
                 commands[cmd.name] = cmd
             }
         }

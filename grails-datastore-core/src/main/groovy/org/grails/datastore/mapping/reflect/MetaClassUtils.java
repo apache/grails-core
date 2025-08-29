@@ -45,7 +45,7 @@ public class MetaClassUtils {
         registry.removeMetaClass(aClass);
         mc = registry.getMetaClass(aClass);
         if (mc instanceof ExpandoMetaClass) {
-            return (ExpandoMetaClass)mc;
+            return (ExpandoMetaClass) mc;
         }
 
         ExpandoMetaClass emc = new ExpandoMetaClass(aClass, true, true);

@@ -18,16 +18,17 @@
  */
 package org.grails.orm.hibernate.event.listener;
 
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import org.springframework.context.ApplicationEvent;
+
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.support.SoftKey;
-import org.springframework.context.ApplicationEvent;
-
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * <p>Invokes closure events on domain entities such as beforeInsert, beforeUpdate and beforeDelete.
@@ -40,7 +41,7 @@ import java.util.concurrent.ConcurrentMap;
 public abstract class AbstractHibernateEventListener extends AbstractPersistenceEventListener {
 
     protected final transient ConcurrentMap<SoftKey<Class<?>>, Boolean> cachedShouldTrigger =
-            new ConcurrentHashMap<SoftKey<Class<?>>, Boolean>();
+            new ConcurrentHashMap<>();
     protected final boolean failOnError;
     protected final List<?> failOnErrorPackages;
 

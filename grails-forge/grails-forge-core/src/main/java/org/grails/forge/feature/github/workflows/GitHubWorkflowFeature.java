@@ -34,11 +34,6 @@ import java.util.List;
 public abstract class GitHubWorkflowFeature implements Feature {
 
     @Override
-    public boolean isPreview() {
-        return true;
-    }
-
-    @Override
     public boolean supports(ApplicationType applicationType) {
         return true;
     }

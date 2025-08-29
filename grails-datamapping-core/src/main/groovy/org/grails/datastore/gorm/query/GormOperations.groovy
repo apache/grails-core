@@ -27,7 +27,6 @@ interface GormOperations<T> extends GormQueryOperations<T> {
      */
     T getPersistentClass()
 
-
     /**
      * Deletes all entities matching this criteria
      *

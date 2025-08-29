@@ -37,12 +37,12 @@ public class GrailsQuartz implements Feature {
 
     @Override
     public String getTitle() {
-        return "Grails Quartz Plugin";
+        return "Quartz Job Scheduling";
     }
 
     @Override
     public String getDescription() {
-        return "Provides integration of the Quartz scheduling framework into the Grails Framework.";
+        return "Add Quartz framework integration to provide job scheduling capabilities.";
     }
 
     @Override

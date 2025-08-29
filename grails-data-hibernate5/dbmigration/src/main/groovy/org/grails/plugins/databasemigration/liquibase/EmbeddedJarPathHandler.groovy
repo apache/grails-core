@@ -19,23 +19,25 @@
 
 package org.grails.plugins.databasemigration.liquibase
 
+import java.nio.file.FileSystem
+import java.nio.file.FileSystems
+import java.nio.file.Path
+import java.nio.file.Paths
+
 import groovy.transform.CompileStatic
+
 import liquibase.resource.AbstractPathResourceAccessor
 import liquibase.resource.PathResource
 import liquibase.resource.Resource
 import liquibase.resource.ResourceAccessor
 import liquibase.resource.ZipPathHandler
 
-import java.nio.file.FileSystem
-import java.nio.file.FileSystems
-import java.nio.file.Path
-import java.nio.file.Paths
-
 @CompileStatic
 class EmbeddedJarPathHandler extends ZipPathHandler {
+
     @Override
     int getPriority(String root) {
-        if (root.startsWith("jar:file:") && root.endsWith("!/")) { //only can handle `jar:` urls for the entire jar
+        if (root.startsWith('jar:file:') && root.endsWith('!/')) { //only can handle `jar:` urls for the entire jar
             if (parseJarPath(root).contains('!')) {
                 return PRIORITY_SPECIALIZED
             }
@@ -44,7 +46,7 @@ class EmbeddedJarPathHandler extends ZipPathHandler {
     }
 
     private String parseJarPath(String root) {
-        root.substring(9, root.lastIndexOf("!"))
+        root.substring(9, root.lastIndexOf('!'))
     }
 
     @Override
@@ -56,6 +58,7 @@ class EmbeddedJarPathHandler extends ZipPathHandler {
 
 @CompileStatic
 class EmbeddedJarResourceAccessor extends AbstractPathResourceAccessor {
+
     private FileSystem fileSystem
 
     EmbeddedJarResourceAccessor(List<String> jarPaths) {
@@ -63,7 +66,7 @@ class EmbeddedJarResourceAccessor extends AbstractPathResourceAccessor {
             Path firstPath = Paths.get(jarPaths.pop())
             fileSystem = FileSystems.newFileSystem(firstPath, null as ClassLoader)
 
-            while(jarPaths) {
+            while (jarPaths) {
                 Path innerPath = fileSystem.getPath(jarPaths.pop())
                 fileSystem = FileSystems.newFileSystem(innerPath, null as ClassLoader)
             }
@@ -79,7 +82,7 @@ class EmbeddedJarResourceAccessor extends AbstractPathResourceAccessor {
 
     @Override
     protected Path getRootPath() {
-        return this.fileSystem.getPath("/")
+        return this.fileSystem.getPath('/')
     }
 
     @Override

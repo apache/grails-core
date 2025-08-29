@@ -30,9 +30,9 @@ import java.util.List;
  */
 public class CompositeEditor extends PropertyEditorSupport {
 
-    List<PropertyEditor> propertyEditors = new ArrayList<PropertyEditor>();
+    List<PropertyEditor> propertyEditors = new ArrayList<>();
 
-    public CompositeEditor(PropertyEditor...editors) {
+    public CompositeEditor(PropertyEditor... editors) {
         propertyEditors.addAll(Arrays.asList(editors));
     }
 

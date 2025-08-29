@@ -18,10 +18,11 @@
  */
 package org.grails.testing
 
-import groovy.transform.CompileStatic
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory
-
 import java.lang.reflect.ParameterizedType
+
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory
 
 @CompileStatic
 trait ParameterizedGrailsUnitTest<T> extends GrailsUnitTest {
@@ -29,7 +30,7 @@ trait ParameterizedGrailsUnitTest<T> extends GrailsUnitTest {
     private T _artefactInstance
 
     Class<T> getTypeUnderTest() {
-        ParameterizedType parameterizedType = (ParameterizedType)getClass().genericInterfaces.find { genericInterface ->
+        ParameterizedType parameterizedType = (ParameterizedType) getClass().genericInterfaces.find { genericInterface ->
             genericInterface instanceof ParameterizedType &&
               ParameterizedGrailsUnitTest.isAssignableFrom((Class)((ParameterizedType)genericInterface).rawType)
         }
@@ -51,7 +52,7 @@ trait ParameterizedGrailsUnitTest<T> extends GrailsUnitTest {
                     _artefactInstance = applicationContext.getBean(beanName, T)
                 } else {
                     _artefactInstance = cutType.newInstance()
-                    applicationContext.autowireCapableBeanFactory.autowireBeanProperties _artefactInstance, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME, false
+                    applicationContext.autowireCapableBeanFactory.autowireBeanProperties(_artefactInstance, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME, false)
                 }
             }
         }

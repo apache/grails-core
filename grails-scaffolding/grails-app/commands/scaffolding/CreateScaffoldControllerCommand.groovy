@@ -18,13 +18,14 @@
  */
 package scaffolding
 
+import groovy.transform.CompileStatic
+
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import grails.dev.commands.GrailsApplicationCommand
 import grails.plugin.scaffolding.CommandLineHelper
 import grails.plugin.scaffolding.SkipBootstrap
-import groovy.transform.CompileStatic
 import org.grails.io.support.Resource
 
 /**
@@ -45,18 +46,18 @@ class CreateScaffoldControllerCommand implements GrailsApplicationCommand, Comma
     boolean handle() {
         final String domainClassName = args[0]
         if (!domainClassName) {
-            error 'No domain-class specified'
+            error('No domain-class specified')
             return FAILURE
         }
         final Resource sourceClass = source(domainClassName)
         if (!sourceClass) {
-            error "No domain-class found for name: ${domainClassName}"
+            error("No domain-class found for name: ${domainClassName}")
             return FAILURE
         }
         boolean overwrite = isFlagPresent('force')
         final Model model = model(sourceClass)
         render(template: template('scaffolding/ScaffoldedController.groovy'),
-                destination: file("grails-app/controllers/${model.packagePath}/${model.convention("Controller")}.groovy"),
+                destination: file("grails-app/controllers/${model.packagePath}/${model.convention('Controller')}.groovy"),
                 model: model,
                 overwrite: overwrite)
         verbose('Scaffold controller created for class domain-class')

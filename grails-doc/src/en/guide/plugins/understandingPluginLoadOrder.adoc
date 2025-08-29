@@ -81,7 +81,7 @@ if (manager?.hasGrailsPlugin("controllers")) {
 }
 ----
 
-Here the Hibernate plugin will only register an `OpenSessionInViewInterceptor` if the `controllers` plugin has been loaded. The `manager` variable is an instance of the {apiDocs}grails/plugins/GrailsPluginManager.html[GrailsPluginManager] interface and it provides methods to interact with other plugins.
+Here the Hibernate plugin will only register an `OpenSessionInViewInterceptor` if the `controllers` plugin has been loaded. The `manager` variable is an instance of the link:{api}grails/plugins/GrailsPluginManager.html[GrailsPluginManager] interface and it provides methods to interact with other plugins.
 
 You can also use the `loadBefore` property to specify one or more plugins that your plugin should load before:
 
@@ -99,23 +99,14 @@ It's not only plugin load order that you can control. You can also specify which
 [source,groovy]
 ----
 def environments = ['development', 'test', 'myCustomEnv']
-def scopes = [excludes:'war']
 ----
 
-In this example, the plugin will only load in the 'development' and 'test' environments. Nor will it be packaged into the WAR file, because it's excluded from the 'war' phase. This allows `development-only` plugins to not be packaged for production use.
+In this example, the plugin will only load in the 'development', 'test' and 'myCustomEnv' environments.
 
-The full list of available scopes are defined by the enum {apiDocs}grails/util/BuildScope.html[BuildScope], but here's a summary:
-
-* `test` - when running tests
-* `functional-test` - when running functional tests
-* `run` - for run-app and run-war
-* `war` - when packaging the application as a WAR file
-* `all` - plugin applies to all scopes (default)
-
-Both properties can be one of:
+The properties can be one of:
 
 * a string - a sole inclusion
-* a list - a list of environments or scopes to include
+* a list - a list of environments to include
 * a map - for full control, with 'includes' and/or 'excludes' keys that can have string or list values
 
 For example,

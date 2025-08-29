@@ -18,7 +18,7 @@ under the License.
 ////
 
 
-You can create your own Command scripts by running the link:../ref/Command%20Line/create-script.html[create-script] command from the root of your project. For example the following command will create a script called `src/main/scripts/hello-world.groovy`:
+You can create your own Command scripts by running the link:{commandLineRef}create-script.html[create-script] command from the root of your project. For example the following command will create a script called `src/main/scripts/hello-world.groovy`:
 
 [source,groovy]
 ----
@@ -60,9 +60,9 @@ grails generate-all MyClass --force
 
 Plugins and applications that need to define template generation tasks can do so using scripts. A example of this is the Scaffolding plugin which defines the `generate-all` and `generate-controllers` commands.
 
-Every Grails script implements the {apiDocs}org/grails/cli/profile/commands/templates/TemplateRenderer.html[TemplateRenderer] interface which makes it trivial to render templates to the users project workspace.
+Every Grails script implements the link:{api}org/grails/cli/profile/commands/templates/TemplateRenderer.html[TemplateRenderer] interface which makes it trivial to render templates to the users project workspace.
 
-The following is an example of the link:../ref/Command%20Line/create-script.html[create-script] command written in Groovy:
+The following is an example of the link:{commandLineRef}create-script.html[create-script] command written in Groovy:
 
 [source,groovy]
 ----
@@ -104,7 +104,7 @@ templates("angular/**/*").each { Resource r ->
 ==== The "model"
 
 
-Executing the `model` method with a `Class`/`String`/`File`/`Resource` will return an instance of {apiDocs}grails/codegen/model/Model.html[Model]. The model contains several properties that can help you generate code.
+Executing the `model` method with a `Class`/`String`/`File`/`Resource` will return an instance of link:{api}grails/codegen/model/Model.html[Model]. The model contains several properties that can help you generate code.
 
 Example:
 
@@ -126,5 +126,5 @@ In addition, an `asMap` method is available to turn all of the properties into a
 ==== Working with files
 
 
-All scripts have access to methods on the {apiDocs}org/grails/cli/profile/commands/io/FileSystemInteraction.html[FileSystemInteraction] class. It contains helpful methods to copy, delete, and create files.
+All scripts have access to methods on the link:{api}org/grails/cli/profile/commands/io/FileSystemInteraction.html[FileSystemInteraction] class. It contains helpful methods to copy, delete, and create files.
 

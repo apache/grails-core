@@ -18,11 +18,6 @@
  */
 package org.grails.io.support;
 
-import grails.util.BuildSettings;
-import groovy.lang.Closure;
-import groovy.util.ConfigObject;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -31,10 +26,21 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import groovy.lang.Closure;
+import groovy.util.ConfigObject;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
+import grails.util.BuildSettings;
 
 /**
  * Utility methods for resource handling / figuring out class names.
@@ -119,9 +125,9 @@ public class GrailsResourceUtils {
     /*
      This pattern will match any resource within a given directory inside grails-app
      */
-    public static Pattern RESOURCE_PATH_PATTERN = Pattern.compile(".+?" + REGEX_FILE_SEPARATOR + GRAILS_APP_DIR + REGEX_FILE_SEPARATOR + "(.+?)"+ REGEX_FILE_SEPARATOR +"(.+?\\.(groovy|java))");
+    public static Pattern RESOURCE_PATH_PATTERN = Pattern.compile(".+?" + REGEX_FILE_SEPARATOR + GRAILS_APP_DIR + REGEX_FILE_SEPARATOR + "(.+?)" + REGEX_FILE_SEPARATOR + "(.+?\\.(groovy|java))");
 
-    public static Pattern SPRING_SCRIPTS_PATH_PATTERN = Pattern.compile(".+?" + REGEX_FILE_SEPARATOR + GRAILS_APP_DIR + REGEX_FILE_SEPARATOR + "conf"+ REGEX_FILE_SEPARATOR +"spring"+ REGEX_FILE_SEPARATOR +"(.+?\\.groovy)");
+    public static Pattern SPRING_SCRIPTS_PATH_PATTERN = Pattern.compile(".+?" + REGEX_FILE_SEPARATOR + GRAILS_APP_DIR + REGEX_FILE_SEPARATOR + "conf" + REGEX_FILE_SEPARATOR + "spring" + REGEX_FILE_SEPARATOR + "(.+?\\.groovy)");
 
     public static Pattern[] COMPILER_ROOT_PATTERNS = {
         SPRING_SCRIPTS_PATH_PATTERN,
@@ -147,8 +153,8 @@ public class GrailsResourceUtils {
     static {
         String fs = REGEX_FILE_SEPARATOR;
 
-        GRAILS_RESOURCE_PATTERN_FIRST_MATCH = Pattern.compile(createGrailsResourcePattern(fs, GRAILS_APP_DIR +fs+ "conf" +fs + "spring"));
-        GRAILS_RESOURCE_PATTERN_THIRD_MATCH = Pattern.compile(createGrailsResourcePattern(fs, GRAILS_APP_DIR +fs +"[\\w-]+"));
+        GRAILS_RESOURCE_PATTERN_FIRST_MATCH = Pattern.compile(createGrailsResourcePattern(fs, GRAILS_APP_DIR + fs + "conf" + fs + "spring"));
+        GRAILS_RESOURCE_PATTERN_THIRD_MATCH = Pattern.compile(createGrailsResourcePattern(fs, GRAILS_APP_DIR + fs + "[\\w-]+"));
         GRAILS_RESOURCE_PATTERN_SEVENTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, "src" + fs + "main" + fs + "java"));
         GRAILS_RESOURCE_PATTERN_EIGHTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, "src" + fs + "main" + fs + "groovy"));
 
@@ -158,8 +164,8 @@ public class GrailsResourceUtils {
 
         GRAILS_RESOURCE_PATTERN_FIFTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, "grails-tests"));
         fs = "/";
-        GRAILS_RESOURCE_PATTERN_SECOND_MATCH = Pattern.compile(createGrailsResourcePattern(fs, GRAILS_APP_DIR +fs+ "conf" +fs + "spring"));
-        GRAILS_RESOURCE_PATTERN_FOURTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, GRAILS_APP_DIR +fs +"[\\w-]+"));
+        GRAILS_RESOURCE_PATTERN_SECOND_MATCH = Pattern.compile(createGrailsResourcePattern(fs, GRAILS_APP_DIR + fs + "conf" + fs + "spring"));
+        GRAILS_RESOURCE_PATTERN_FOURTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, GRAILS_APP_DIR + fs + "[\\w-]+"));
         GRAILS_RESOURCE_PATTERN_SIXTH_MATCH = Pattern.compile(createGrailsResourcePattern(fs, "grails-tests"));
     }
 
@@ -177,22 +183,22 @@ public class GrailsResourceUtils {
     };
 
     public static final Pattern[] grailsAppResourcePatterns = new Pattern[]{
-            GRAILS_RESOURCE_PATTERN_FIRST_MATCH,
-            GRAILS_RESOURCE_PATTERN_THIRD_MATCH,
-            GRAILS_RESOURCE_PATTERN_FOURTH_MATCH,
-            GRAILS_RESOURCE_PATTERN_FIFTH_MATCH,
-            GRAILS_RESOURCE_PATTERN_SIXTH_MATCH,
-            GRAILS_RESOURCE_PATTERN_ELEVENTH_MATCH
+        GRAILS_RESOURCE_PATTERN_FIRST_MATCH,
+        GRAILS_RESOURCE_PATTERN_THIRD_MATCH,
+        GRAILS_RESOURCE_PATTERN_FOURTH_MATCH,
+        GRAILS_RESOURCE_PATTERN_FIFTH_MATCH,
+        GRAILS_RESOURCE_PATTERN_SIXTH_MATCH,
+        GRAILS_RESOURCE_PATTERN_ELEVENTH_MATCH
     };
 
-    private static Map<String, Boolean> KNOWN_PATHS = new LinkedHashMap<String, Boolean>() {
+    private static Map<String, Boolean> KNOWN_PATHS = new LinkedHashMap<>() {
         @Override
         protected boolean removeEldestEntry(Map.Entry eldest) {
             return this.size() > 100;
         }
     };
 
-    private static Map<String, Boolean> KNOWN_DOMAIN_CLASSES = DefaultGroovyMethods.withDefault(new LinkedHashMap<String, Boolean>(){
+    private static Map<String, Boolean> KNOWN_DOMAIN_CLASSES = DefaultGroovyMethods.withDefault(new LinkedHashMap<String, Boolean>() {
         @Override
         protected boolean removeEldestEntry(Map.Entry<String, Boolean> eldest) {
             return this.size() > 100;
@@ -278,7 +284,7 @@ public class GrailsResourceUtils {
             return getClassName(resource.getFile().getAbsolutePath());
         }
         catch (IOException e) {
-             return null;
+            return null;
         }
     }
 
@@ -297,7 +303,6 @@ public class GrailsResourceUtils {
         }
         return null;
     }
-
 
     /**
      * Returns the class name for a compiled class file
@@ -356,6 +361,7 @@ public class GrailsResourceUtils {
                 URL_PROTOCOL_WSJAR.equals(protocol) ||
                 (URL_PROTOCOL_CODE_SOURCE.equals(protocol) && url.getPath().contains(JAR_URL_SEPARATOR)));
     }
+
     /**
      * Resolve the given resource URI to a <code>java.io.File</code>,
      * i.e. to a file in the file system.
@@ -374,6 +380,7 @@ public class GrailsResourceUtils {
         }
         return new File(resourceUri.getSchemeSpecificPart());
     }
+
     /**
      * Resolve the given resource URI to a <code>java.io.File</code>,
      * i.e. to a file in the file system.
@@ -430,6 +437,7 @@ public class GrailsResourceUtils {
         }
         return relativePath;
     }
+
     /**
      * Normalize the path by suppressing sequences like "path/.." and
      * inner simple dots.
@@ -460,7 +468,7 @@ public class GrailsResourceUtils {
         }
 
         String[] pathArray = delimitedListToStringArray(pathToUse, FOLDER_SEPARATOR);
-        List<String> pathElements = new LinkedList<String>();
+        List<String> pathElements = new LinkedList<>();
         int tops = 0;
 
         for (int i = pathArray.length - 1; i >= 0; i--) {
@@ -495,6 +503,7 @@ public class GrailsResourceUtils {
     private static String collectionToDelimitedString(Collection<?> coll, String delim) {
         return collectionToDelimitedString(coll, delim, "", "");
     }
+
     private static String collectionToDelimitedString(Collection<?> coll, String delim, String prefix, String suffix) {
         if (coll == null || coll.isEmpty()) {
             return "";
@@ -543,7 +552,7 @@ public class GrailsResourceUtils {
         if (delimiter == null) {
             return new String[] {str};
         }
-        List<String> result = new ArrayList<String>();
+        List<String> result = new ArrayList<>();
         if ("".equals(delimiter)) {
             for (int i = 0; i < str.length(); i++) {
                 result.add(deleteAny(str.substring(i, i + 1), charsToDelete));
@@ -663,7 +672,7 @@ public class GrailsResourceUtils {
      */
 
     public static boolean isGrailsPath(String path) {
-        if(KNOWN_PATHS.containsKey(path)) {
+        if (KNOWN_PATHS.containsKey(path)) {
             return KNOWN_PATHS.get(path);
         }
         for (Pattern grailsAppResourcePattern : grailsAppResourcePatterns) {
@@ -708,6 +717,7 @@ public class GrailsResourceUtils {
             return false;
         }
     }
+
     /**
      * Checks whether the specific resources is a Grails resource. A Grails resource is a Groovy or Java class under the grails-app directory
      *
@@ -728,7 +738,7 @@ public class GrailsResourceUtils {
         if (resource == null) return null;
 
         Resource appDir = getAppDir(resource);
-        if(appDir == null) return null;
+        if (appDir == null) return null;
         return appDir.createRelative("views");
     }
 
@@ -737,7 +747,7 @@ public class GrailsResourceUtils {
 
         try {
             File file = resource.getFile();
-            while(file != null && !file.getName().equals(GRAILS_APP_DIR)) {
+            while (file != null && !file.getName().equals(GRAILS_APP_DIR)) {
                 file = file.getParentFile();
             }
             if (file != null) {
@@ -751,7 +761,7 @@ public class GrailsResourceUtils {
 
             int i = url.lastIndexOf(GRAILS_APP_DIR);
             if (i > -1) {
-                url = url.substring(0, i+10);
+                url = url.substring(0, i + 10);
                 return new UrlResource(url + '/');
             }
 
@@ -765,7 +775,7 @@ public class GrailsResourceUtils {
         }
     }
 
-    private static final Pattern PLUGIN_PATTERN = Pattern.compile(".+?(/plugins/.+?/"+GRAILS_APP_DIR+"/.+)");
+    private static final Pattern PLUGIN_PATTERN = Pattern.compile(".+?(/plugins/.+?/" + GRAILS_APP_DIR + "/.+)");
 
     /**
      * Takes a Grails resource (one located inside the grails-app dir) and gets its relative path inside the WEB-INF directory
@@ -800,7 +810,7 @@ public class GrailsResourceUtils {
         return null;
     }
 
-    private static final Pattern PLUGIN_RESOURCE_PATTERN = Pattern.compile(".+?/(plugins/.+?)/"+GRAILS_APP_DIR+"/.+");
+    private static final Pattern PLUGIN_RESOURCE_PATTERN = Pattern.compile(".+?/(plugins/.+?)/" + GRAILS_APP_DIR + "/.+");
 
     /**
      * Retrieves the static resource path for the given Grails resource artifact (controller/taglib etc.)
@@ -846,7 +856,7 @@ public class GrailsResourceUtils {
         for (Pattern COMPILER_ROOT_PATTERN : COMPILER_ROOT_PATTERNS) {
             Matcher m = COMPILER_ROOT_PATTERN.matcher(path);
             if (m.find()) {
-                return m.group(m.groupCount()-1);
+                return m.group(m.groupCount() - 1);
             }
         }
         return null;
@@ -863,16 +873,16 @@ public class GrailsResourceUtils {
      */
     public static String getPathFromBaseDir(String path) {
         int i = path.indexOf("grails-app/");
-        if(i > -1 ) {
+        if (i > -1) {
             return path.substring(i + 11);
         }
         else {
             try {
                 File baseDir = BuildSettings.BASE_DIR;
                 String basePath = baseDir != null ? baseDir.getCanonicalPath() : null;
-                if(basePath != null) {
+                if (basePath != null) {
                     String canonicalPath = new File(path).getCanonicalPath();
-                    return canonicalPath.contains(basePath) ? canonicalPath.substring(basePath.length()+1) : canonicalPath;
+                    return canonicalPath.contains(basePath) ? canonicalPath.substring(basePath.length() + 1) : canonicalPath;
                 }
             } catch (IOException e) {
                 // ignore
@@ -927,24 +937,24 @@ public class GrailsResourceUtils {
      * @return a uri
      */
     public static String appendPiecesForUri(String... pieces) {
-        if (pieces==null || pieces.length==0) return "";
+        if (pieces == null || pieces.length == 0) return "";
 
         // join parts && strip double slashes
         StringBuilder builder = new StringBuilder(16 * pieces.length);
         char previous = 0;
-        for (int i=0; i < pieces.length;i++) {
+        for (int i = 0; i < pieces.length; i++) {
             String piece = pieces[i];
             if (piece != null && piece.length() > 0) {
-                for (int j=0, maxlen=piece.length();j < maxlen;j++) {
-                    char current=piece.charAt(j);
-                    if (!(previous=='/' && current=='/')) {
+                for (int j = 0, maxlen = piece.length(); j < maxlen; j++) {
+                    char current = piece.charAt(j);
+                    if (!(previous == '/' && current == '/')) {
                         builder.append(current);
                         previous = current;
                     }
                 }
                 if (i + 1 < pieces.length && previous != '/') {
                     builder.append('/');
-                    previous='/';
+                    previous = '/';
                 }
             }
         }

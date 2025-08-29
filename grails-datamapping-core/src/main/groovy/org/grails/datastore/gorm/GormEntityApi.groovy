@@ -28,6 +28,7 @@ package org.grails.datastore.gorm
  * @param <D> The entity type
  */
 trait GormEntityApi<D> {
+
     /**
      * Proxy aware instanceOf implementation.
      */

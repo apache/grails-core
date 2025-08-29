@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-Uses named arguments that match the property names of the domain class to produce a query that returns the first result.  This method behaves just like link:../Domain%20Classes/findWhere.html[findWhere] except that it will never return `null`.  If a matching instance cannot be found then a new instance will be created, populated with values from the query parameters and returned.  The difference between this method and link:../Domain%20Classes/findOrSaveWhere.html[findOrSaveWhere] is that this method will not save a newly created instance where link:../Domain%20Classes/findOrSaveWhere.html[findOrSaveWhere] does.
+Uses named arguments that match the property names of the domain class to produce a query that returns the first result.  This method behaves just like link:{domainClassesRefFromRef}findWhere.html[findWhere] except that it will never return `null`.  If a matching instance cannot be found then a new instance will be created, populated with values from the query parameters and returned.  The difference between this method and link:{domainClassesRefFromRef}findOrSaveWhere.html[findOrSaveWhere] is that this method will not save a newly created instance where link:{domainClassesRefFromRef}findOrSaveWhere.html[findOrSaveWhere] does.
 
 
 === Examples

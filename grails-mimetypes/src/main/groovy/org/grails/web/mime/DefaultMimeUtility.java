@@ -18,13 +18,13 @@
  */
 package org.grails.web.mime;
 
-import grails.web.mime.MimeType;
-import grails.web.mime.MimeUtility;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import grails.web.mime.MimeType;
+import grails.web.mime.MimeUtility;
 
 /**
  * @author Graeme Rocher
@@ -33,7 +33,7 @@ import java.util.Map;
 public class DefaultMimeUtility implements MimeUtility {
 
     private List<MimeType> mimeTypes;
-    private Map<String, MimeType> extensionToMimeMap = new HashMap<String, MimeType>();
+    private Map<String, MimeType> extensionToMimeMap = new HashMap<>();
 
     public DefaultMimeUtility(MimeType[] mimeTypes) {
         this(Arrays.asList(mimeTypes));
@@ -44,7 +44,7 @@ public class DefaultMimeUtility implements MimeUtility {
         for (MimeType mimeType : mimeTypes) {
             final String ext = mimeType.getExtension();
             if (!extensionToMimeMap.containsKey(ext)) {
-                extensionToMimeMap.put(ext,mimeType);
+                extensionToMimeMap.put(ext, mimeType);
             }
         }
     }

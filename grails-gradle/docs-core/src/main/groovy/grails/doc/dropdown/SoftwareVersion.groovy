@@ -20,7 +20,8 @@
 package grails.doc.dropdown
 
 class SoftwareVersion implements Comparable<SoftwareVersion>, Serializable {
-    private static final long serialVersionUID = 1L;
+
+    private static final long serialVersionUID = 1L
 
     int major
     int minor
@@ -31,7 +32,7 @@ class SoftwareVersion implements Comparable<SoftwareVersion>, Serializable {
     String versionText
 
     static SoftwareVersion build(String version) {
-        String[] parts = version.split("\\.")
+        String[] parts = version.split('\\.')
         SoftwareVersion softVersion
         if (parts.length >= 3) {
             softVersion = new SoftwareVersion()
@@ -41,9 +42,9 @@ class SoftwareVersion implements Comparable<SoftwareVersion>, Serializable {
             if (parts.length > 3) {
                 softVersion.snapshot = new Snapshot(parts[3])
             } else if (parts[2].contains('-')) {
-                String[] subparts = parts[2].split("-")
+                String[] subparts = parts[2].split('-')
                 softVersion.patch = subparts.first() as int
-                softVersion.snapshot = new Snapshot(subparts[1..-1].join("-"))
+                softVersion.snapshot = new Snapshot(subparts[1..-1].join('-'))
                 return softVersion
             }
 
@@ -88,13 +89,13 @@ class SoftwareVersion implements Comparable<SoftwareVersion>, Serializable {
     }
 
     @Override
-    public String toString() {
-        return "SoftwareVersion{" +
-                "major=" + major +
-                ", minor=" + minor +
-                ", patch=" + patch +
-                ", snapshot=" + snapshot +
-                ", versionText='" + versionText + '\'' +
-                '}';
+    String toString() {
+        return 'SoftwareVersion{' +
+                'major=' + major +
+                ', minor=' + minor +
+                ', patch=' + patch +
+                ', snapshot=' + snapshot +
+                /, versionText='/ + versionText + /'/ +
+                '}'
     }
 }

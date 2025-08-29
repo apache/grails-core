@@ -19,7 +19,6 @@
 
 package grails.views.compiler
 
-import grails.views.Views
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassCodeExpressionTransformer
@@ -36,6 +35,8 @@ import org.codehaus.groovy.ast.expr.TupleExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport
+
+import grails.views.Views
 
 import static org.codehaus.groovy.ast.ClassHelper.OBJECT_TYPE
 
@@ -57,17 +58,15 @@ abstract class BuilderTypeCheckingExtension extends GroovyTypeCheckingExtensionS
 
         def modelTypesClassNodes = null
 
-
-
         beforeVisitClass { classNode ->
             modelTypesClassNodes = classNode.getNodeMetaData(Views.MODEL_TYPES)
-            if (modelTypesClassNodes==null) {
+            if (modelTypesClassNodes == null) {
                 // push a new error collector, we want type checking errors to be silent
                 context.pushErrorCollector()
             }
         }
         beforeMethodCall { mec ->
-            if(mec instanceof MethodCallExpression) {
+            if (mec instanceof MethodCallExpression) {
                 beforeMethodCallExpression(mec)
             }
         }
@@ -79,7 +78,7 @@ abstract class BuilderTypeCheckingExtension extends GroovyTypeCheckingExtensionS
         }
 
         unresolvedProperty { PropertyExpression pe ->
-            if(isPropertyDynamic(pe)) {
+            if (isPropertyDynamic(pe)) {
                 return makeDynamic(pe)
             }
         }
@@ -88,11 +87,11 @@ abstract class BuilderTypeCheckingExtension extends GroovyTypeCheckingExtensionS
                 currentScope.builderCalls << call
                 return makeDynamic(call, OBJECT_TYPE)
             }
-            else if(receiver.name == self.getBuilderClassNode().name) {
+            else if (receiver.name == self.getBuilderClassNode().name) {
                 currentScope.builderCalls << call
                 return makeDynamic(call, OBJECT_TYPE)
             }
-            else if(isMethodDynamic(receiver, name, argList, argTypes, call)) {
+            else if (isMethodDynamic(receiver, name, argList, argTypes, call)) {
                 currentScope.dynamicMethods << call
                 return makeDynamic(call, OBJECT_TYPE)
             }
@@ -100,7 +99,7 @@ abstract class BuilderTypeCheckingExtension extends GroovyTypeCheckingExtensionS
 
         afterVisitMethod { mn ->
             scopeExit {
-                if(mn.name == 'run') {
+                if (mn.name == 'run') {
 
                     new BuilderMethodReplacer(
                             self.getBuilderInvokeMethod(),
@@ -131,7 +130,6 @@ abstract class BuilderTypeCheckingExtension extends GroovyTypeCheckingExtensionS
     boolean isPropertyDynamic(PropertyExpression propertyExpression) {
         return false
     }
-
 
     /**
      * @return The method node to invoke for an unresolved dynamic method on the main builder variable
@@ -175,24 +173,19 @@ abstract class BuilderTypeCheckingExtension extends GroovyTypeCheckingExtensionS
         }
 
         @Override
-        void visitClosureExpression(final ClosureExpression expression) {
-            super.visitClosureExpression(expression)
-        }
-
-        @Override
         @CompileDynamic
         Expression transform(final Expression exp) {
             if (callsToBeReplaced.contains(exp)) {
                 def args = exp.arguments instanceof TupleExpression ? exp.arguments.expressions : [exp.arguments]
-                if(exp.objectExpression.name == builderVariableName) {
+                if (exp.objectExpression.name == builderVariableName) {
                     this.builderExpression = exp.objectExpression
                 }
                 args*.visit(this)
                 // replace with direct call to methodMissing
                 def isImplicitThis = exp.implicitThis
                 def call = new MethodCallExpression(
-                        isImplicitThis ? new VariableExpression("delegate") : exp.objectExpression,
-                        "invokeMethod",
+                        isImplicitThis ? new VariableExpression('delegate') : exp.objectExpression,
+                        'invokeMethod',
                         new ArgumentListExpression(
                                 new ConstantExpression(exp.getMethodAsString()),
                                 new ArrayExpression(
@@ -205,7 +198,7 @@ abstract class BuilderTypeCheckingExtension extends GroovyTypeCheckingExtensionS
                 call.safe = exp.safe
                 call.spreadSafe = exp.spreadSafe
 
-                if(isImplicitThis) {
+                if (isImplicitThis) {
                     call.methodTarget = delegateInvokeMethod
                 }
                 else {

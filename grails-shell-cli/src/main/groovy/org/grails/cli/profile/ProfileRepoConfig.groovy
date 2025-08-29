@@ -16,13 +16,14 @@
  */
 package org.grails.cli.profile
 
+import java.nio.file.Paths
+
 import grails.util.BuildSettings
 import grails.util.Environment
 import org.grails.cli.GrailsCli
 
-import java.nio.file.Paths
-
 class ProfileRepoConfig {
+
     String name
     String url
     boolean snapshots
@@ -34,7 +35,7 @@ class ProfileRepoConfig {
         List<ProfileRepoConfig> repos = []
 
         // If there is manual configuration, honor it
-        Map profileRepos = GrailsCli.getSetting(BuildSettings.PROFILE_REPOSITORIES, Map.class, Collections.emptyMap())
+        Map profileRepos = GrailsCli.getSetting(BuildSettings.PROFILE_REPOSITORIES, Map, Collections.emptyMap())
         if (profileRepos) {
             for (repoName in profileRepos.keySet()) {
                 def data = profileRepos.get(repoName)

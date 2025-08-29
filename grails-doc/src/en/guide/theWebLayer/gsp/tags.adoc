@@ -19,7 +19,7 @@ under the License.
 
 Now that the less attractive JSP heritage has been set aside, the following sections cover GSP's built-in tags, which are the preferred way to define GSP pages.
 
-NOTE: The section on xref:taglibs.adoc[Tag Libraries] covers how to add your own custom tag libraries.
+NOTE: The section on link:#taglibs[Tag Libraries] covers how to add your own custom tag libraries.
 
 All built-in GSP tags start with the prefix `g:`. Unlike JSP, you don't specify any tag library imports. If a tag starts with `g:` it is automatically assumed to be a GSP tag. An example GSP tag would look like:
 

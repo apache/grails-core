@@ -19,10 +19,12 @@
 
 package grails.ui.console.support
 
-import grails.core.GrailsApplication
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
+
 import org.springframework.context.support.GenericApplicationContext
+
+import grails.core.GrailsApplication
 
 /**
  * An {@link org.springframework.context.ApplicationContext} that loads the GroovyConsole and makes the ApplicationContext and Grails environment available to the console
@@ -42,8 +44,8 @@ class GroovyConsoleApplicationContext extends GenericApplicationContext {
 
     protected void startConsole() {
         Binding binding = new Binding()
-        binding.setVariable("ctx", this)
-        binding.setVariable(GrailsApplication.APPLICATION_ID, getBean(GrailsApplication.class))
+        binding.setVariable('ctx', this)
+        binding.setVariable(GrailsApplication.APPLICATION_ID, getBean(GrailsApplication))
 
         final GroovyConsoleApplicationContext self = this
         groovy.console.ui.Console groovyConsole = new groovy.console.ui.Console(binding) {

@@ -18,9 +18,9 @@
  */
 package org.grails.datastore.mapping.engine;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
-
 import java.util.List;
+
+import org.grails.datastore.mapping.model.PersistentEntity;
 
 /**
  * An interface for classes that know how to query an association

@@ -305,7 +305,7 @@ Since Spring 2.0, users of Spring have had easier access to key features via XML
 
 [source,groovy]
 ----
-xmlns context:"http://www.springframework.org/schema/context"
+xmlns context:"https://www.springframework.org/schema/context"
 ----
 
 and then invoking a method that matches the names of the Spring namespace tag and its associated attributes:
@@ -319,7 +319,7 @@ You can do some useful things with Spring namespaces, such as looking up a JNDI 
 
 [source,groovy]
 ----
-xmlns jee:"http://www.springframework.org/schema/jee"
+xmlns jee:"https://www.springframework.org/schema/jee"
 
 jee.'jndi-lookup'(id: "dataSource", 'jndi-name': "java:comp/env/myDataSource")
 ----
@@ -355,7 +355,7 @@ You can define an aspect that uses a pointcut to detect whenever the `birthday()
 
 [source,groovy]
 ----
-xmlns aop:"http://www.springframework.org/schema/aop"
+xmlns aop:"https://www.springframework.org/schema/aop"
 
 fred(Person) {
     name = "Fred"

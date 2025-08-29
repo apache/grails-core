@@ -59,4 +59,4 @@ class Owner {
 
 In this case a bidirectional relationship will be created  in the graph such as `(from)<-[r:PETZ]->(to)`.
 
-TIP: For more information on defining relationships with GORM, see the https://grails.github.io/grails-doc/latest/guide/GORM.html#gormAssociation[corresponding guide in the GORM documentation].
+TIP: For more information on defining relationships with GORM, see the https://docs.grails.org/latest/guide/GORM.html#gormAssociation[corresponding guide in the GORM documentation].

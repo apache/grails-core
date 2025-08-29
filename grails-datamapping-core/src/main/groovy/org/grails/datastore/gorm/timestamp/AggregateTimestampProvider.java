@@ -28,12 +28,12 @@ import org.springframework.beans.factory.annotation.Autowired;
  *
  */
 public class AggregateTimestampProvider implements TimestampProvider {
-    private List<TimestampProvider> timestampProviders=Collections.emptyList();
+    private List<TimestampProvider> timestampProviders = Collections.emptyList();
     
     @Override
     public boolean supportsCreating(Class<?> dateTimeClass) {
-        for(TimestampProvider provider : timestampProviders) {
-            if(provider.supportsCreating(dateTimeClass)) {
+        for (TimestampProvider provider : timestampProviders) {
+            if (provider.supportsCreating(dateTimeClass)) {
                 return true;
             }
         }
@@ -42,9 +42,9 @@ public class AggregateTimestampProvider implements TimestampProvider {
 
     @Override
     public <T> T createTimestamp(Class<T> dateTimeClass) {
-        if(timestampProviders.size() > 1) {
-            for(TimestampProvider provider : timestampProviders) {
-                if(provider.supportsCreating(dateTimeClass)) {
+        if (timestampProviders.size() > 1) {
+            for (TimestampProvider provider : timestampProviders) {
+                if (provider.supportsCreating(dateTimeClass)) {
                     return createTimestamp(provider, dateTimeClass);
                 }
             }

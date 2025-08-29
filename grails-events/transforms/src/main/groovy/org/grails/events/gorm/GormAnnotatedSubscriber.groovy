@@ -19,8 +19,9 @@
 
 package org.grails.events.gorm
 
-import grails.events.annotation.Events
 import groovy.transform.CompileStatic
+
+import grails.events.annotation.Events
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.events.transform.AnnotatedSubscriber
 
@@ -31,7 +32,7 @@ import org.grails.events.transform.AnnotatedSubscriber
  * @since 3.3
  */
 @CompileStatic
-@Events(namespace = "gorm")
+@Events(namespace = 'gorm')
 trait GormAnnotatedSubscriber extends AnnotatedSubscriber {
 
     Set<Class<? extends AbstractPersistenceEvent>> getSubscribedEvents() {

@@ -50,8 +50,13 @@ public class TestContainers implements Feature {
     }
 
     @Override
+    public String getCategory() {
+        return Category.TESTING;
+    }
+
+    @Override
     public String getDescription() {
-        return "Use Testcontainers to run a database or other software in a Docker container for tests";
+        return "Leverage Testcontainers to run databases and other services in Docker containers during testing.";
     }
 
     @Override
@@ -130,14 +135,9 @@ public class TestContainers implements Feature {
         return true;
     }
 
-    @Override
-    public String getCategory() {
-        return Category.DATABASE;
-    }
-
     @Nullable
     @Override
     public String getThirdPartyDocumentation() {
-        return "https://www.testcontainers.org/";
+        return "https://java.testcontainers.org/";
     }
 }

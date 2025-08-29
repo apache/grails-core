@@ -25,7 +25,7 @@ You define a `beans` block with the names of beans and their values:
 ----
 beans {
     bookService {
-        webServiceURL = "http://www.amazon.com"
+        webServiceURL = "https://www.amazon.com"
     }
 }
 ----
@@ -41,5 +41,5 @@ The same configuration in a Java properties file would be:
 
 [source,groovy]
 ----
-beans.bookService.webServiceURL=http://www.amazon.com
+beans.bookService.webServiceURL=https://www.amazon.com
 ----

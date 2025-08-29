@@ -23,7 +23,7 @@ public class SystemPropertiesAuthenticator extends Authenticator {
 
     @Override
     protected PasswordAuthentication getPasswordAuthentication() {
-        if(getRequestorType() == RequestorType.PROXY) {
+        if (getRequestorType() == RequestorType.PROXY) {
             return new PasswordAuthentication(
                     System.getProperty("http.proxyUser", ""),
                     System.getProperty("http.proxyPassword", "").toCharArray());

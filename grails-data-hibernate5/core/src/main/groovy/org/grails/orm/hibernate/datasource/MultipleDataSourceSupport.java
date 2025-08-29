@@ -18,10 +18,10 @@
  */
 package org.grails.orm.hibernate.datasource;
 
+import java.util.List;
+
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
 import org.grails.datastore.mapping.model.PersistentEntity;
-
-import java.util.List;
 
 /**
  * Support methods for Multiple data source handling

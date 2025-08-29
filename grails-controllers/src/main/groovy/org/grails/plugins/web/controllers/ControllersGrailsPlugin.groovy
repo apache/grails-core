@@ -18,20 +18,22 @@
  */
 package org.grails.plugins.web.controllers
 
+import groovy.util.logging.Slf4j
+
+import org.springframework.beans.factory.support.AbstractBeanDefinition
+import org.springframework.context.ApplicationContext
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
+
 import grails.config.Settings
 import grails.core.GrailsControllerClass
 import grails.plugins.Plugin
 import grails.util.GrailsUtil
-import groovy.util.logging.Slf4j
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.plugins.web.servlet.context.BootStrapClassRunner
 import org.grails.web.errors.GrailsExceptionResolver
 import org.grails.web.servlet.mvc.TokenResponseActionResultTransformer
 import org.grails.web.servlet.view.CompositeViewResolver
-import org.springframework.beans.factory.support.AbstractBeanDefinition
-import org.springframework.context.ApplicationContext
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
 
 /**
  * Handles the configuration of controllers for Grails.
@@ -43,85 +45,85 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 class ControllersGrailsPlugin extends Plugin {
 
     def watchedResources = [
-            "file:./grails-app/controllers/**/*Controller.groovy",
-            "file:./plugins/*/grails-app/controllers/**/*Controller.groovy"]
+            'file:./grails-app/controllers/**/*Controller.groovy',
+            'file:./plugins/*/grails-app/controllers/**/*Controller.groovy']
 
     def version = GrailsUtil.getGrailsVersion()
     def observe = ['domainClass']
     def dependsOn = [core: version, i18n: version, urlMappings: version]
 
     @Override
-    Closure doWithSpring(){ { ->
-        def application = grailsApplication
-        def config = application.config
+    Closure doWithSpring() {
+        { ->
+            def application = grailsApplication
+            def config = application.config
 
-        boolean useJsessionId = config.getProperty(Settings.GRAILS_VIEWS_ENABLE_JSESSIONID, Boolean, false)
+            boolean useJsessionId = config.getProperty(Settings.GRAILS_VIEWS_ENABLE_JSESSIONID, Boolean, false)
 
-        if (!Boolean.parseBoolean(System.getProperty(Settings.SETTING_SKIP_BOOTSTRAP))) {
-            bootStrapClassRunner(BootStrapClassRunner)
-        }
+            if (!Boolean.parseBoolean(System.getProperty(Settings.SETTING_SKIP_BOOTSTRAP))) {
+                bootStrapClassRunner(BootStrapClassRunner)
+            }
 
-        tokenResponseActionResultTransformer(TokenResponseActionResultTransformer)
+            tokenResponseActionResultTransformer(TokenResponseActionResultTransformer)
 
-        exceptionHandler(GrailsExceptionResolver) {
-            exceptionMappings = ['java.lang.Exception': '/error']
-        }
+            exceptionHandler(GrailsExceptionResolver) {
+                exceptionMappings = ['java.lang.Exception': '/error']
+            }
 
-        "${CompositeViewResolver.BEAN_NAME}"(CompositeViewResolver)
+            "${CompositeViewResolver.BEAN_NAME}"(CompositeViewResolver)
 
-        def handlerInterceptors = springConfig.containsBean("localeChangeInterceptor") ? [ref("localeChangeInterceptor")] : []
-        def interceptorsClosure = {
-            interceptors = handlerInterceptors
-        }
-        // allow @Controller annotated beans
-        annotationHandlerMapping(RequestMappingHandlerMapping, interceptorsClosure)
-        annotationHandlerAdapter(RequestMappingHandlerAdapter)
+            def handlerInterceptors = springConfig.containsBean('localeChangeInterceptor') ? [ref('localeChangeInterceptor')] : []
+            def interceptorsClosure = {
+                interceptors = handlerInterceptors
+            }
+            // allow @Controller annotated beans
+            annotationHandlerMapping(RequestMappingHandlerMapping, interceptorsClosure)
+            annotationHandlerAdapter(RequestMappingHandlerAdapter)
 
-        for (controller in application.getArtefacts(ControllerArtefactHandler.TYPE)) {
-            log.debug "Configuring controller $controller.fullName"
-            if (controller.available) {
-                def lazyInit = controller.hasProperty("lazyInit") ? controller.getPropertyValue("lazyInit") : true
-                "${controller.fullName}"(controller.clazz) { bean ->
-                    bean.lazyInit = lazyInit
-                    def beanScope = controller.getScope()
-                    bean.scope = beanScope
-                    bean.autowire =  "byName"
-                    if (beanScope == 'prototype') {
-                        bean.beanDefinition.dependencyCheck = AbstractBeanDefinition.DEPENDENCY_CHECK_NONE
-                    }
-                    if (useJsessionId) {
-                        useJessionId = useJsessionId
+            for (controller in application.getArtefacts(ControllerArtefactHandler.TYPE)) {
+                log.debug('Configuring controller {}', controller.fullName)
+                if (controller.available) {
+                    def lazyInit = controller.hasProperty('lazyInit') ? controller.getPropertyValue('lazyInit') : true
+                    "${controller.fullName}"(controller.clazz) { bean ->
+                        bean.lazyInit = lazyInit
+                        def beanScope = controller.getScope()
+                        bean.scope = beanScope
+                        bean.autowire = 'byName'
+                        if (beanScope == 'prototype') {
+                            bean.beanDefinition.dependencyCheck = AbstractBeanDefinition.DEPENDENCY_CHECK_NONE
+                        }
+                        if (useJsessionId) {
+                            useJessionId = useJsessionId
+                        }
                     }
                 }
             }
-        }
 
-        if (config.getProperty(Settings.SETTING_LEGACY_JSON_BUILDER, Boolean.class, false)) {
-            log.warn("'grails.json.legacy.builder' is set to TRUE but is NOT supported in this version of Grails.")
+            if (config.getProperty(Settings.SETTING_LEGACY_JSON_BUILDER, Boolean, false)) {
+                log.warn("'grails.json.legacy.builder' is set to TRUE but is NOT supported in this version of Grails.")
+            }
         }
-    } }
+    }
 
     @Override
-    void onChange( Map<String, Object> event) {
+    void onChange(Map<String, Object> event) {
         if (!(event.source instanceof Class)) {
             return
         }
         def application = grailsApplication
-        if (application.isArtefactOfType(ControllerArtefactHandler.TYPE, (Class)event.source)) {
+        if (application.isArtefactOfType(ControllerArtefactHandler.TYPE, (Class) event.source)) {
             ApplicationContext context = applicationContext
             if (!context) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Application context not found. Can't reload")
-                }
+                log.debug("Application context not found. Can't reload")
                 return
             }
 
-            GrailsControllerClass controllerClass = (GrailsControllerClass)application.addArtefact(ControllerArtefactHandler.TYPE, (Class)event.source)
+            GrailsControllerClass controllerClass = (GrailsControllerClass) application.addArtefact(ControllerArtefactHandler.TYPE, (Class)event.source)
             beans {
                 "${controllerClass.fullName}"(controllerClass.clazz) { bean ->
                     def beanScope = controllerClass.getScope()
                     bean.scope = beanScope
-                    bean.autowire = "byName"
+                    bean.autowire = 'byName'
                     if (beanScope == 'prototype') {
                         bean.beanDefinition.dependencyCheck = AbstractBeanDefinition.DEPENDENCY_CHECK_NONE
                     }

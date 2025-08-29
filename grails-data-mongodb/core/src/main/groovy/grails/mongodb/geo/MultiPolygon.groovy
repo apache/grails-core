@@ -28,6 +28,7 @@ import groovy.transform.EqualsAndHashCode
 @CompileStatic
 @EqualsAndHashCode
 class MultiPolygon extends Shape implements GeoJSON {
+
     final List<Polygon> polygons
 
     MultiPolygon(Polygon...polygons) {
@@ -44,10 +45,10 @@ class MultiPolygon extends Shape implements GeoJSON {
 
     static MultiPolygon valueOf(List coords) {
         List<Polygon> polygons = (List<Polygon>) coords.collect() {
-            if(it instanceof Polygon) {
+            if (it instanceof Polygon) {
                 return it
             }
-            else if(it instanceof List) {
+            else if (it instanceof List) {
                 return Polygon.valueOf((List)it)
             }
             throw new IllegalArgumentException("Invalid coordinates: $coords")

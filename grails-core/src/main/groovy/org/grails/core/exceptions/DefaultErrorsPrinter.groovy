@@ -20,12 +20,14 @@ package org.grails.core.exceptions
 
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
+
+import org.springframework.core.io.FileSystemResource
+import org.springframework.core.io.Resource
+
 import org.grails.core.io.ResourceLocator
 import org.grails.exceptions.reporting.CodeSnippetPrinter
 import org.grails.exceptions.reporting.DefaultStackTracePrinter
 import org.grails.exceptions.reporting.SourceCodeAware
-import org.springframework.core.io.FileSystemResource
-import org.springframework.core.io.Resource
 
 /**
  * Default implementation of the {@link StackTracePrinter} interface.
@@ -94,7 +96,7 @@ class DefaultErrorsPrinter extends DefaultStackTracePrinter implements CodeSnipp
                     if (lineNumbersShown[res.filename].contains(lineNumber)) continue // don't repeat the same lines twice
 
                     lineNumbersShown[res.filename] << lineNumber
-                    pw.print formatCodeSnippetStart(res, lineNumber, attrs)
+                    pw.print(formatCodeSnippetStart(res, lineNumber, attrs))
                     def input = null
                     try {
                         input = res.inputStream
@@ -109,10 +111,10 @@ class DefaultErrorsPrinter extends DefaultStackTracePrinter implements CodeSnipp
                                 if (currentLineNumber in range) {
                                     boolean isErrorLine = currentLineNumber == lineNumber
                                     if (isErrorLine) {
-                                        pw.print formatCodeSnippetErrorLine(currentLineNumber, currentLine, attrs)
+                                        pw.print(formatCodeSnippetErrorLine(currentLineNumber, currentLine, attrs))
                                     }
                                     else {
-                                        pw.print formatCodeSnippetLine(currentLineNumber, currentLine, attrs)
+                                        pw.print(formatCodeSnippetLine(currentLineNumber, currentLine, attrs))
                                     }
                                 }
                                 else if (currentLineNumber > last) {
@@ -132,7 +134,7 @@ class DefaultErrorsPrinter extends DefaultStackTracePrinter implements CodeSnipp
                         } catch (e) {
                             // ignore
                         }
-                        pw.print formatCodeSnippetEnd(res, lineNumber)
+                        pw.print(formatCodeSnippetEnd(res, lineNumber))
                     }
                 }
                 else {
@@ -170,7 +172,7 @@ class DefaultErrorsPrinter extends DefaultStackTracePrinter implements CodeSnipp
                 MultipleCompilationErrorsException mcee = start
                 Object message = mcee.getErrorCollector().getErrors().iterator().next()
                 if (message instanceof SyntaxErrorMessage) {
-                    SyntaxErrorMessage sem = (SyntaxErrorMessage)message
+                    SyntaxErrorMessage sem = (SyntaxErrorMessage) message
                     final tmp = new FileSystemResource(sem.getCause().getSourceLocator())
                     if (tmp.exists()) {
                         res = tmp
@@ -195,7 +197,7 @@ class DefaultErrorsPrinter extends DefaultStackTracePrinter implements CodeSnipp
             MultipleCompilationErrorsException mcee = cause
             Object message = mcee.getErrorCollector().getErrors().iterator().next()
             if (message instanceof SyntaxErrorMessage) {
-                SyntaxErrorMessage sem = (SyntaxErrorMessage)message
+                SyntaxErrorMessage sem = (SyntaxErrorMessage) message
                 lineNumber = sem.getCause().getLine()
             }
         }
@@ -203,7 +205,7 @@ class DefaultErrorsPrinter extends DefaultStackTracePrinter implements CodeSnipp
     }
 
     String formatCodeSnippetEnd(Resource resource, int lineNumber) {
-        ""
+        ''
     }
 
     @Deprecated

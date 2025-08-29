@@ -34,7 +34,7 @@ public class EncodedAppenderWriter extends Writer implements EncodedAppenderWrit
     protected EncodedAppender encodedAppender;
     protected Encoder encoder;
     protected EncodingStateRegistry encodingStateRegistry;
-    private char[] singleCharBuffer=new char[1];
+    private char[] singleCharBuffer = new char[1];
 
     /**
      * Default constructor
@@ -87,7 +87,7 @@ public class EncodedAppenderWriter extends Writer implements EncodedAppenderWrit
      */
     @Override
     public void write(int c) throws IOException {
-        append((char)c);
+        append((char) c);
     }
 
     /*
@@ -130,7 +130,7 @@ public class EncodedAppenderWriter extends Writer implements EncodedAppenderWrit
      */
     @Override
     public Writer append(char c) throws IOException {
-        singleCharBuffer[0]=(char)c;
+        singleCharBuffer[0] = (char) c;
         encodedAppender.append(encoder, null, singleCharBuffer, 0, 1);
         return this;
     }

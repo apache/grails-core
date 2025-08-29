@@ -25,7 +25,7 @@ Services in Grails are the place to put the majority of the logic in your applic
 ==== Creating a Service
 
 
-You can create a Grails service by running the link:../ref/Command%20Line/create-service.html[create-service] command from the root of your project in a terminal window:
+You can create a Grails service by running the link:{commandLineRef}create-service.html[create-service] command from the root of your project in a terminal window:
 
 [source,groovy]
 ----

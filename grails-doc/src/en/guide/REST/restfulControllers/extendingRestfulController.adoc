@@ -99,7 +99,7 @@ class RestfulController<T> {
 }
 ----
 
-By default the `getObjectToBind()` method returns the link:../ref/Controllers/request.html[request] object.  When the `request` object is used as the binding source, if the request has a body then the body will be parsed and its contents will be used to do the data binding, otherwise the request parameters will be used to do the data binding.  Subclasses of RestfulController may override the `getObjectToBind()` method and return anything that is a valid binding source, including a {javase}java.base/java/util/Map.html[Map] or a {apiDocs}grails/databinding/DataBindingSource.html[DataBindingSource].  For most use cases binding the request is appropriate but the `getObjectToBind()` method allows for changing that behavior where desired.
+By default the `getObjectToBind()` method returns the link:{controllersRef}request.html[request] object.  When the `request` object is used as the binding source, if the request has a body then the body will be parsed and its contents will be used to do the data binding, otherwise the request parameters will be used to do the data binding.  Subclasses of RestfulController may override the `getObjectToBind()` method and return anything that is a valid binding source, including a {javase}java.base/java/util/Map.html[Map] or a link:{api}grails/databinding/DataBindingSource.html[DataBindingSource].  For most use cases binding the request is appropriate but the `getObjectToBind()` method allows for changing that behavior where desired.
 
 
 ==== Using custom subclass of RestfulController with Resource annotation

@@ -18,8 +18,8 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.Dog
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Dog
 
 /**
  * Tests for criteria queries that compare two properties
@@ -30,118 +30,118 @@ class PropertyComparisonQuerySpec extends GrailsDataTckSpec {
         manager.domainClasses.addAll([Dog])
     }
 
-    void "Test geProperty query"() {
-        given: "Some dead and alive dogs"
-        new Dog(name: "Barney", age: 7, deathAge: 14).save()
-        new Dog(name: "Fred", age: 13, deathAge: 13).save()
-        new Dog(name: "Jack", age: 14, deathAge: 13).save()
-        new Dog(name: "Joe", age: 4, deathAge: 14).save(flush: true)
+    void 'Test geProperty query'() {
+        given: 'Some dead and alive dogs'
+        new Dog(name: 'Barney', age: 7, deathAge: 14).save()
+        new Dog(name: 'Fred', age: 13, deathAge: 13).save()
+        new Dog(name: 'Jack', age: 14, deathAge: 13).save()
+        new Dog(name: 'Joe', age: 4, deathAge: 14).save(flush: true)
 
-        when: "We query for dogs that are alive"
+        when: 'We query for dogs that are alive'
         def results = Dog.withCriteria {
-            geProperty 'age', 'deathAge'
-            order 'name'
+            geProperty('age', 'deathAge')
+            order('name')
         }
 
-        then: "3 dogs are found"
+        then: '3 dogs are found'
         Dog.count() == 4
         results.size() == 2
-        results[0].name == "Fred"
-        results[1].name == "Jack"
+        results[0].name == 'Fred'
+        results[1].name == 'Jack'
     }
 
-    void "Test leProperty query"() {
-        given: "Some dead and alive dogs"
-        new Dog(name: "Barney", age: 7, deathAge: 14).save()
-        new Dog(name: "Fred", age: 13, deathAge: 13).save()
-        new Dog(name: "Jack", age: 14, deathAge: 13).save()
-        new Dog(name: "Joe", age: 4, deathAge: 14).save(flush: true)
+    void 'Test leProperty query'() {
+        given: 'Some dead and alive dogs'
+        new Dog(name: 'Barney', age: 7, deathAge: 14).save()
+        new Dog(name: 'Fred', age: 13, deathAge: 13).save()
+        new Dog(name: 'Jack', age: 14, deathAge: 13).save()
+        new Dog(name: 'Joe', age: 4, deathAge: 14).save(flush: true)
 
-        when: "We query for dogs that are alive"
+        when: 'We query for dogs that are alive'
         def results = Dog.withCriteria {
-            leProperty 'age', 'deathAge'
-            order 'name'
+            leProperty('age', 'deathAge')
+            order('name')
         }
 
-        then: "3 dogs are found"
+        then: '3 dogs are found'
         Dog.count() == 4
         results.size() == 3
-        results[0].name == "Barney"
-        results[1].name == "Fred"
-        results[2].name == "Joe"
+        results[0].name == 'Barney'
+        results[1].name == 'Fred'
+        results[2].name == 'Joe'
     }
 
-    void "Test ltProperty query"() {
-        given: "Some dead and alive dogs"
-        new Dog(name: "Barney", age: 7, deathAge: 14).save()
-        new Dog(name: "Fred", age: 13, deathAge: 13).save()
-        new Dog(name: "Joe", age: 4, deathAge: 14).save(flush: true)
+    void 'Test ltProperty query'() {
+        given: 'Some dead and alive dogs'
+        new Dog(name: 'Barney', age: 7, deathAge: 14).save()
+        new Dog(name: 'Fred', age: 13, deathAge: 13).save()
+        new Dog(name: 'Joe', age: 4, deathAge: 14).save(flush: true)
 
-        when: "We query for dogs that are alive"
+        when: 'We query for dogs that are alive'
         def results = Dog.withCriteria {
-            ltProperty 'age', 'deathAge'
-            order 'name'
+            ltProperty('age', 'deathAge')
+            order('name')
         }
 
-        then: "2 dogs are found"
+        then: '2 dogs are found'
         Dog.count() == 3
         results.size() == 2
-        results[0].name == "Barney"
-        results[1].name == "Joe"
+        results[0].name == 'Barney'
+        results[1].name == 'Joe'
     }
 
-    void "Test gtProperty query"() {
-        given: "Some dead and alive dogs"
-        new Dog(name: "Barney", age: 7, deathAge: 14).save()
-        new Dog(name: "Fred", age: 13, deathAge: 13).save()
-        new Dog(name: "Joe", age: 4, deathAge: 14).save(flush: true)
+    void 'Test gtProperty query'() {
+        given: 'Some dead and alive dogs'
+        new Dog(name: 'Barney', age: 7, deathAge: 14).save()
+        new Dog(name: 'Fred', age: 13, deathAge: 13).save()
+        new Dog(name: 'Joe', age: 4, deathAge: 14).save(flush: true)
 
-        when: "We query for dogs that are alive"
+        when: 'We query for dogs that are alive'
         def results = Dog.withCriteria {
-            gtProperty 'deathAge', 'age'
-            order 'name'
+            gtProperty('deathAge', 'age')
+            order('name')
         }
 
-        then: "2 dogs are found"
+        then: '2 dogs are found'
         Dog.count() == 3
         results.size() == 2
-        results[0].name == "Barney"
-        results[1].name == "Joe"
+        results[0].name == 'Barney'
+        results[1].name == 'Joe'
     }
 
-    void "Test neProperty query"() {
-        given: "Some dead and alive dogs"
-        new Dog(name: "Barney", age: 7, deathAge: 14).save()
-        new Dog(name: "Fred", age: 13, deathAge: 13).save()
-        new Dog(name: "Joe", age: 4, deathAge: 14).save(flush: true)
+    void 'Test neProperty query'() {
+        given: 'Some dead and alive dogs'
+        new Dog(name: 'Barney', age: 7, deathAge: 14).save()
+        new Dog(name: 'Fred', age: 13, deathAge: 13).save()
+        new Dog(name: 'Joe', age: 4, deathAge: 14).save(flush: true)
 
-        when: "We query for dogs that are alive"
+        when: 'We query for dogs that are alive'
         def results = Dog.withCriteria {
-            neProperty 'age', 'deathAge'
-            order 'name'
+            neProperty('age', 'deathAge')
+            order('name')
         }
 
-        then: "2 dogs are found"
+        then: '2 dogs are found'
         Dog.count() == 3
         results.size() == 2
-        results[0].name == "Barney"
-        results[1].name == "Joe"
+        results[0].name == 'Barney'
+        results[1].name == 'Joe'
     }
 
-    void "Test eqProperty query"() {
-        given: "Some dead and alive dogs"
-        new Dog(name: "Barney", age: 7, deathAge: 14).save()
-        new Dog(name: "Fred", age: 13, deathAge: 13).save()
-        new Dog(name: "Joe", age: 4, deathAge: 14).save(flush: true)
+    void 'Test eqProperty query'() {
+        given: 'Some dead and alive dogs'
+        new Dog(name: 'Barney', age: 7, deathAge: 14).save()
+        new Dog(name: 'Fred', age: 13, deathAge: 13).save()
+        new Dog(name: 'Joe', age: 4, deathAge: 14).save(flush: true)
 
-        when: "We query for dogs that died"
+        when: 'We query for dogs that died'
         def results = Dog.withCriteria {
-            eqProperty 'age', 'deathAge'
+            eqProperty('age', 'deathAge')
         }
 
-        then: "1 dog is found"
+        then: '1 dog is found'
         Dog.count() == 3
         results.size() == 1
-        results[0].name == "Fred"
+        results[0].name == 'Fred'
     }
 }

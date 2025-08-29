@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-Dynamic method that uses the properties of the domain class to create query method expressions that return the first result of the query. This method behaves like link:../Domain%20Classes/findBy.html[findBy] except that it will never return `null`.  If a matching instance cannot be found then a new instance will be created, populated with values represented in the query parameters, saved and returned. The difference between this method and link:../Domain%20Classes/findOrCreateBy.html[findOrCreateBy] is that this method will save any newly created instance where link:../Domain%20Classes/findOrCreateBy.html[findOrCreateBy] does not.
+Dynamic method that uses the properties of the domain class to create query method expressions that return the first result of the query. This method behaves like link:{domainClassesRefFromRef}findBy.html[findBy] except that it will never return `null`.  If a matching instance cannot be found then a new instance will be created, populated with values represented in the query parameters, saved and returned. The difference between this method and link:{domainClassesRefFromRef}findOrCreateBy.html[findOrCreateBy] is that this method will save any newly created instance where link:{domainClassesRefFromRef}findOrCreateBy.html[findOrCreateBy] does not.
 
 
 === Examples
@@ -68,6 +68,6 @@ if (!b) {
 === Description
 
 
-GORM supports the notion of  link:{hibernate5Guide}/manual/index.html#finders[Dynamic Finders]. The `findOrSaveBy*` method finds the first result for the given method expression.
+GORM supports the notion of  link:{hibernate5GuideFromRef}index.html#finders[Dynamic Finders]. The `findOrSaveBy*` method finds the first result for the given method expression.
 
 NOTE: Because this method potentially creates a new instance and populates properties on that instance, only exact match criteria are allowed.  For example, `Book.findOrSaveByTitle(authorValue)` is valid but `Book.findOrSaveByAuthorInList(listOfNames)` is not.

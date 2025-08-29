@@ -59,19 +59,19 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
         String candidateString = matcher.group(4);
 
         Matcher m;
-        if(candidateString.isEmpty()) {
+        if (candidateString.isEmpty()) {
             releaseType = GrailsReleaseType.RELEASE;
             candidate = null;
         }
-        else if((m = RC.matcher(candidateString)).matches()) {
+        else if ((m = RC.matcher(candidateString)).matches()) {
             releaseType = GrailsReleaseType.RC;
             candidate = Integer.parseInt(m.group(1));
         }
-        else if((m = MILESTONE.matcher(candidateString)).matches()) {
+        else if ((m = MILESTONE.matcher(candidateString)).matches()) {
             releaseType = GrailsReleaseType.MILESTONE;
             candidate = Integer.parseInt(m.group(1));
         }
-        else if((m = SNAPSHOT.matcher(candidateString)).matches()) {
+        else if ((m = SNAPSHOT.matcher(candidateString)).matches()) {
             releaseType = GrailsReleaseType.SNAPSHOT;
             candidate = null;
         }
@@ -88,8 +88,7 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
                 Objects.equals(major, that.major) &&
                 Objects.equals(minor, that.minor) &&
                 Objects.equals(patch, that.patch) &&
-                Objects.equals(candidate, that.candidate)
-                ;
+                Objects.equals(candidate, that.candidate);
     }
 
     @Override

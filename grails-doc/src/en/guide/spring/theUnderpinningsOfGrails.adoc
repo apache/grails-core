@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Grails is actually a http://projects.spring.io/spring-boot/[Spring Boot] application in disguise. Spring Boot is the Spring framework's built-in MVC web application framework. Although Spring Boot suffers from some difficulties in terms of its ease of use, it is superbly designed and architected. For Grails, it was the perfect framework to build another framework on top of.
+Grails is actually a https://spring.io/projects/spring-boot[Spring Boot] application in disguise. Spring Boot is the Spring framework's built-in MVC web application framework. Although Spring Boot suffers from some difficulties in terms of its ease of use, it is superbly designed and architected. For Grails, it was the perfect framework to build another framework on top of.
 
 Grails leverages Spring Boot in the following areas:
 
@@ -34,7 +34,7 @@ In other words Grails has Spring embedded running all the way through it.
 
 Spring developers are often keen to understand how the Grails `ApplicationContext` instance is constructed. The basics of it are as follows.
 
-* GrailsAutoConfiguration registers GrailsApplicationPostProcessor bean. This bean configures the {apiDocs}grails/core/GrailsApplication.html[GrailsApplication] instance and the {apiDocs}grails/plugins/GrailsPluginManager.html[GrailsPluginManager].
+* GrailsAutoConfiguration registers GrailsApplicationPostProcessor bean. This bean configures the link:{api}grails/core/GrailsApplication.html[GrailsApplication] instance and the link:{api}grails/plugins/GrailsPluginManager.html[GrailsPluginManager].
 
 * GrailsApplicationPostProcessor also implements `BeanDefinitionRegistryPostProcessor`, during `postProcessBeanDefinitionRegistry` it  executes `grails-app/conf/spring/resources.groovy` from the current application and then invokes the `doWithSpring` method for each plugin to ensure all the bean definitions are registered with application context.
 

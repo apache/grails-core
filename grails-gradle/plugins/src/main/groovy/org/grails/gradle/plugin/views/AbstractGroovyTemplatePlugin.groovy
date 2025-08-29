@@ -19,9 +19,9 @@
 
 package org.grails.gradle.plugin.views
 
-import grails.util.GrailsNameUtils
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -31,6 +31,8 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSetOutput
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.bundling.Jar
+
+import grails.util.GrailsNameUtils
 import org.grails.gradle.plugin.core.IntegrationTestGradlePlugin
 import org.grails.gradle.plugin.util.SourceSets
 
@@ -86,19 +88,19 @@ class AbstractGroovyTemplatePlugin implements Plugin<Project> {
         tasks.named('resolveMainClassName').configure { Task task ->
             task.dependsOn(templateCompileTask)
         }
-        if(tasks.names.contains('compileTestGroovy')) {
+        if (tasks.names.contains('compileTestGroovy')) {
             tasks.named('compileTestGroovy').configure { Task task ->
                 task.dependsOn(templateCompileTask)
             }
         }
-        if(project.plugins.hasPlugin(IntegrationTestGradlePlugin)) {
+        if (project.plugins.hasPlugin(IntegrationTestGradlePlugin)) {
             project.plugins.withType(IntegrationTestGradlePlugin).configureEach { plugin ->
-                if(tasks.names.contains('compileIntegrationTestGroovy')) {
+                if (tasks.names.contains('compileIntegrationTestGroovy')) {
                     tasks.named('compileIntegrationTestGroovy').configure { Task task ->
                         task.dependsOn(templateCompileTask)
                     }
                 }
-                if(tasks.names.contains('integrationTest')) {
+                if (tasks.names.contains('integrationTest')) {
                     tasks.named('integrationTest').configure { Task task ->
                         task.dependsOn(templateCompileTask)
                     }

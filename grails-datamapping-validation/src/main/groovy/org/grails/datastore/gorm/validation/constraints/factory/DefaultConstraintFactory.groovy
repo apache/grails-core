@@ -19,16 +19,17 @@
 
 package org.grails.datastore.gorm.validation.constraints.factory
 
-import grails.gorm.validation.Constraint
-import grails.gorm.validation.exceptions.ValidationConfigurationException
-import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.validation.constraints.AbstractConstraint
-import org.grails.datastore.gorm.validation.constraints.NullableConstraint
-import org.grails.datastore.mapping.reflect.ClassUtils
-import org.springframework.context.MessageSource
-
 import java.beans.Introspector
 import java.lang.reflect.Constructor
+
+import groovy.transform.CompileStatic
+
+import org.springframework.context.MessageSource
+
+import grails.gorm.validation.Constraint
+import grails.gorm.validation.exceptions.ValidationConfigurationException
+import org.grails.datastore.gorm.validation.constraints.NullableConstraint
+import org.grails.datastore.mapping.reflect.ClassUtils
 
 /**
  * A default factory for creating constraints
@@ -48,7 +49,7 @@ class DefaultConstraintFactory implements ConstraintFactory {
 
     DefaultConstraintFactory(Class<? extends Constraint> constraintClass, MessageSource messageSource, List<Class> targetTypes = [Object]) {
         this.type = constraintClass
-        this.name = Introspector.decapitalize(constraintClass.simpleName) - "Constraint"
+        this.name = Introspector.decapitalize(constraintClass.simpleName) - 'Constraint'
         this.messageSource = messageSource
         this.targetTypes = targetTypes
 
@@ -61,7 +62,7 @@ class DefaultConstraintFactory implements ConstraintFactory {
 
     @Override
     boolean supports(Class targetType) {
-        if(NullableConstraint.isAssignableFrom(type)) {
+        if (NullableConstraint.isAssignableFrom(type)) {
             return !targetType.isPrimitive()
         }
         else {

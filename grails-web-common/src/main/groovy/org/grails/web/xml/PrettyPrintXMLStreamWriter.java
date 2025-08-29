@@ -18,10 +18,10 @@
  */
 package org.grails.web.xml;
 
-import groovy.xml.streamingmarkupsupport.StreamingMarkupWriter;
-
 import java.io.IOException;
 import java.io.Writer;
+
+import groovy.xml.streamingmarkupsupport.StreamingMarkupWriter;
 
 /**
  * A XMLStreamWriter dedicated to create indented/pretty printed output.
@@ -29,11 +29,12 @@ import java.io.Writer;
  * @author Siegfried Puchbauer
  * @since 1.1
  */
-public class PrettyPrintXMLStreamWriter extends XMLStreamWriter{
+public class PrettyPrintXMLStreamWriter extends XMLStreamWriter {
 
     public static final String DEFAULT_INDENT_STR = "  ";
 
     public static final String NEWLINE;
+
     static {
         String nl = System.getProperty("line.separator");
         NEWLINE = nl != null ? nl : "\n";
@@ -60,7 +61,7 @@ public class PrettyPrintXMLStreamWriter extends XMLStreamWriter{
 
     private void indent() throws IOException {
         Writer ue = writer.unescaped();
-        for (int i=0; i<level; i++) {
+        for (int i = 0; i < level; i++) {
             ue.write(indent);
         }
     }
@@ -95,7 +96,7 @@ public class PrettyPrintXMLStreamWriter extends XMLStreamWriter{
         }
         super.end();
         newline();
-//        indent();
+        // indent();
         return this;
     }
 

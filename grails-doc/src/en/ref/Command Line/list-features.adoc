@@ -65,7 +65,6 @@ Available Features
 
   Database
   database-migration                  Adds support for Liquibase database migrations. The Database Migration plugin helps you manage database changes while developing Grails applications.
-  embedded-mongodb                    Executes an embedded mongo database for integration or functional testing
   gorm-hibernate5 (+)                 Adds support for Hibernate5 using GORM
   gorm-mongodb                        Configures GORM for MongoDB for Groovy applications
   gorm-neo4j                          Configures GORM for Neo4j for Groovy applications
@@ -80,7 +79,6 @@ Available Features
   assertj                             AssertJ fluent assertions framework
   hamcrest                            Hamcrest matchers for JUnit
   jrebel                              Adds support for class reloading with JRebel (requires separate JRebel installation)
-  springloaded                        Adds support for class reloading with Spring Loaded
 
   Documentation
   asciidoctor                         Adds support for creating Asciidoctor documentation

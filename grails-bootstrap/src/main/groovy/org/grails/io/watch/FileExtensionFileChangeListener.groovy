@@ -38,7 +38,7 @@ abstract class FileExtensionFileChangeListener implements DirectoryWatcher.FileC
 
     @Override
     final void onChange(File file) {
-        if(file && extensions.any() { String ext -> file.name.endsWith( ext ) } ) {
+        if (file && extensions.any() { String ext -> file.name.endsWith(ext) }) {
             onChange(file, extensions)
         }
     }
@@ -47,7 +47,7 @@ abstract class FileExtensionFileChangeListener implements DirectoryWatcher.FileC
 
     @Override
     final void onNew(File file) {
-        if(file && extensions.any() { String ext -> file.name.endsWith( ext ) }  ) {
+        if (file && extensions.any() { String ext -> file.name.endsWith(ext) }) {
             onNew(file, extensions)
         }
     }

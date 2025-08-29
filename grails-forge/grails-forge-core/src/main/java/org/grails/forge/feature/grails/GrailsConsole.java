@@ -42,8 +42,13 @@ public class GrailsConsole implements DefaultFeature {
     }
 
     @Override
+    public String getTitle() {
+        return "Console";
+    }
+
+    @Override
     public String getDescription() {
-        return "Starts the Grails console, which is an extended version of the regular Groovy console.";
+        return "A Groovy console for interactive runtime application management and debugging.";
     }
 
     @Override

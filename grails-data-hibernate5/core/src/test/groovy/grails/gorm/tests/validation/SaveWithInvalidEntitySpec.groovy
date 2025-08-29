@@ -35,11 +35,11 @@ class SaveWithInvalidEntitySpec extends Specification {
     @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(A, B)
 
     /**
-     * This currently fails with a NPE. See explanation https://github.com/grails/grails-core/issues/10604#issuecomment-298943022
+     * This currently fails with a NPE. See explanation https://github.com/apache/grails-core/issues/14616#issuecomment-298943022
      */
     @Rollback
     @Ignore
-    @Issue('https://github.com/grails/grails-core/issues/10604')
+    @Issue('https://github.com/apache/grails-core/issues/10604')
     void "test save with an invalid entity"() {
         when:
         hibernateDatastore.currentSession.persist(new A(b:new B(field2: "test")))

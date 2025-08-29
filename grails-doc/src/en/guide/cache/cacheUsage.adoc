@@ -23,9 +23,9 @@ in `grails-app/conf/application.yml`, and
 annotate methods (either in Spring beans (typically Grails services)) to be cached.
 You can also wrap GSP sections in cache tags and render cached templates.
 
-There are three annotations; link:{api}/grails/plugin/cache/Cacheable.html[Cacheable],
-link:{api}/grails/plugin/cache/CachePut.html[CachePut],
-and link:{api}/grails/plugin/cache/CacheEvict.html[CacheEvict]. You use
+There are three annotations; link:{api}grails/plugin/cache/Cacheable.html[Cacheable],
+link:{api}grails/plugin/cache/CachePut.html[CachePut],
+and link:{api}grails/plugin/cache/CacheEvict.html[CacheEvict]. You use
 `Cacheable` to mark a method as one that should check the cache for a
 pre-existing result, or generate a new result and cache it. Use `CachePut` to
 mark a method as one that should always be evaluated and store its result in the
@@ -47,4 +47,4 @@ cache manager are backed by a thread-safe `java.util.concurrent.ConcurrentMap`.
 This is fine for testing and possibly for low-traffic sites, but you should
 consider using one of the extension plugins if you need clustering, disk
 storage, persistence between restarts, and more configurability of features like
-time-to-live, maximum cache size, etc. Currently, the only extension plugin available for Grails 3 is https://github.com/grails-plugins/grails-cache-ehcache[cache-ehcache].
+time-to-live, maximum cache size, etc. Currently, the only extension plugin available for Grails is https://github.com/grails-plugins/grails-cache-ehcache[cache-ehcache].

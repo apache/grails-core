@@ -18,8 +18,6 @@
  */
 package org.grails.web.mapping;
 
-import grails.util.GrailsWebUtil;
-
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.Collection;
@@ -28,15 +26,17 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import grails.web.mapping.UrlCreator;
+import org.springframework.web.context.request.RequestContextHolder;
+
 import grails.core.GrailsControllerClass;
 import grails.util.GrailsStringUtils;
+import grails.util.GrailsWebUtil;
+import grails.web.mapping.UrlCreator;
 import org.grails.buffer.FastStringWriter;
 import org.grails.web.servlet.mvc.DefaultRequestStateLookupStrategy;
 import org.grails.web.servlet.mvc.GrailsRequestStateLookupStrategy;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException;
-import org.springframework.web.context.request.RequestContextHolder;
 
 /**
  * The default implementation of the UrlCreator interface that constructs URLs in Grails
@@ -126,7 +126,7 @@ public class DefaultUrlCreator implements UrlCreator {
     private String createURLInternal(String controller, String action, Map<String, String> parameterValues, boolean includeContextPath) {
         GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.getRequestAttributes();
 
-        if (parameterValues == null) parameterValues = new HashMap<String, String>();
+        if (parameterValues == null) parameterValues = new HashMap<>();
         boolean blankController = GrailsStringUtils.isBlank(controller);
         boolean blankAction = GrailsStringUtils.isBlank(action);
 
@@ -170,7 +170,7 @@ public class DefaultUrlCreator implements UrlCreator {
     @SuppressWarnings("unchecked")
     public String createRelativeURL(String controller, String action, String namespace, String pluginName, Map parameterValues, String encoding, String fragment) {
         final String url = createURLInternal(controller, action, parameterValues, false);
-        return  createUrlWithFragment(encoding, fragment, url);
+        return createUrlWithFragment(encoding, fragment, url);
     }
 
     public String createURL(String controller, String action, Map parameterValues, String encoding, String fragment) {
@@ -189,7 +189,7 @@ public class DefaultUrlCreator implements UrlCreator {
             }
             catch (UnsupportedEncodingException ex) {
                 throw new ControllerExecutionException("Error creating URL  [" + url +
-                     "], problem encoding URL fragment [" + fragment + "]: " + ex.getMessage(),ex);
+                     "], problem encoding URL fragment [" + fragment + "]: " + ex.getMessage(), ex);
             }
         }
 
@@ -233,7 +233,7 @@ public class DefaultUrlCreator implements UrlCreator {
                 for (int j = 0; j < array.length; j++) {
                     Object currentValue = array[j];
                     appendRequestParam(actualUriBuf, name, currentValue, encoding);
-                    if (j < (array.length-1)) {
+                    if (j < (array.length - 1)) {
                         actualUriBuf.append(ENTITY_AMPERSAND);
                     }
                 }

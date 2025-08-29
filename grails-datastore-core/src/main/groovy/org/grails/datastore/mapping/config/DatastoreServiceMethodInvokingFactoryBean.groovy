@@ -21,13 +21,15 @@ package org.grails.datastore.mapping.config
 
 import groovy.transform.CompileStatic
 import groovy.transform.Internal
-import org.grails.datastore.mapping.core.Datastore
-import org.grails.datastore.mapping.services.Service
+
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.beans.factory.config.MethodInvokingFactoryBean
 import org.springframework.lang.Nullable
+
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.services.Service
 
 /**
  * Variant of {#link MethodInvokingFactoryBean} which returns the correct data service type instead of {@code java.lang.Object} so the Autowire with type works correctly.

@@ -42,7 +42,7 @@ import javax.persistence.FlushModeType
  */
 class UniqueConstraintSpec extends GormDatastoreSpec {
 
-    @Issue('https://github.com/grails/grails-core/issues/9596')
+    @Issue('https://github.com/apache/grails-core/issues/9596')
     void "Test update secondary property when using unique constraint"() {
         when:"An object with a unique constraint is saved"
         UniqueGroup o = new UniqueGroup(name: "foo", desc: "foo description").save(flush: true)

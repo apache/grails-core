@@ -27,6 +27,7 @@ import jakarta.servlet.http.HttpServletResponse
  * 
  */
 class HttpServletResponseExtension {
+
     static leftShift(HttpServletResponse response, arg) {
         response.writer << arg
     }

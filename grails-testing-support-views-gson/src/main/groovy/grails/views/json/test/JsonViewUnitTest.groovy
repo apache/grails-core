@@ -19,18 +19,20 @@
 
 package grails.views.json.test
 
+import groovy.json.JsonSlurper
+import groovy.text.Template
+import groovy.transform.CompileStatic
+
+import org.springframework.http.HttpStatus
+
 import grails.plugin.json.view.JsonViewTemplateEngine
 import grails.plugin.json.view.api.JsonView
 import grails.plugin.json.view.test.JsonRenderResult
 import grails.plugin.json.view.test.TestRequestConfigurer
 import grails.views.api.HttpView
 import grails.views.api.http.Response
-import groovy.json.JsonSlurper
-import groovy.text.Template
-import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.testing.GrailsUnitTest
-import org.springframework.http.HttpStatus
 
 @CompileStatic
 trait JsonViewUnitTest extends GrailsUnitTest {
@@ -111,7 +113,7 @@ trait JsonViewUnitTest extends GrailsUnitTest {
      * @return The render result
      */
     JsonRenderResult render(Map arguments) {
-        render arguments, null
+        render(arguments, null)
     }
 
     /**
@@ -125,13 +127,13 @@ trait JsonViewUnitTest extends GrailsUnitTest {
     JsonRenderResult render(Map arguments, @DelegatesTo(TestRequestConfigurer) Closure configurer) {
 
         String viewUri
-        if( arguments.template ) {
+        if (arguments.template) {
             viewUri = templateEngine
                     .viewUriResolver
                     .resolveTemplateUri(null, arguments.template.toString())
 
         }
-        else if( arguments.view ) {
+        else if (arguments.view) {
             viewUri = arguments.view.toString()
         }
         else {
@@ -140,11 +142,11 @@ trait JsonViewUnitTest extends GrailsUnitTest {
         }
         def template = templateEngine.resolveTemplate(viewUri)
 
-        if(template == null) {
+        if (template == null) {
             throw new IllegalArgumentException("No view or template found for URI $viewUri")
         }
 
-        def model = arguments.model instanceof Map ? (Map)arguments.model : [:]
+        def model = arguments.model instanceof Map ? (Map) arguments.model : [:]
         return produceResult(template, model, configurer)
     }
 
@@ -171,6 +173,7 @@ trait JsonViewUnitTest extends GrailsUnitTest {
     }
 
     static class TestHttpResponse implements Response {
+
         final JsonRenderResult result
 
         TestHttpResponse(JsonRenderResult result) {

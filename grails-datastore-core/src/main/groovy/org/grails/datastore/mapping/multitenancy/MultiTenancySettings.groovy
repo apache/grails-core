@@ -21,9 +21,11 @@ package org.grails.datastore.mapping.multitenancy
 
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
+import org.springframework.beans.BeanUtils
+
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.multitenancy.resolvers.NoTenantResolver
-import org.springframework.beans.BeanUtils
 
 /**
  * Represents the multi tenancy settings
@@ -48,10 +50,10 @@ class MultiTenancySettings {
      * @return The tenant resolver
      */
     TenantResolver getTenantResolver() {
-        if(tenantResolver != null) {
+        if (tenantResolver != null) {
             return tenantResolver
         }
-        else if(tenantResolverClass != null) {
+        else if (tenantResolverClass != null) {
             return BeanUtils.instantiateClass(tenantResolverClass)
         }
         return new NoTenantResolver()
@@ -104,7 +106,7 @@ class MultiTenancySettings {
      * @return
      */
     static String resolveConnectionForTenantId(MultiTenancyMode mode, Serializable tenantId) {
-        if(mode.isSharedConnection()) {
+        if (mode.isSharedConnection()) {
             return ConnectionSource.DEFAULT
         }
         else {

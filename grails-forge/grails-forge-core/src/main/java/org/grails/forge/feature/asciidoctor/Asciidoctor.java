@@ -46,12 +46,12 @@ public class Asciidoctor implements Feature {
 
     @Override
     public String getTitle() {
-        return "Asciidoctor Documentation";
+        return "AsciiDoc";
     }
 
     @Override
     public String getDescription() {
-        return "Adds support for creating Asciidoctor documentation";
+        return "Add support for creating AsciiDoc documentation.";
     }
 
     @Override

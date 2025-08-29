@@ -19,12 +19,17 @@
 
 package org.grails.events.transform
 
-import grails.events.annotation.Subscriber
-import grails.events.annotation.gorm.Listener
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
-import org.apache.grails.common.compiler.GroovyTransformOrder
-import org.codehaus.groovy.ast.*
+import org.codehaus.groovy.ast.AnnotatedNode
+import org.codehaus.groovy.ast.AnnotationNode
+import org.codehaus.groovy.ast.ClassHelper
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.ListExpression
@@ -34,16 +39,21 @@ import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.trait.Traits
+
+import grails.events.annotation.Subscriber
+import grails.events.annotation.gorm.Listener
+import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.grails.datastore.gorm.transform.AbstractTraitApplyingGormASTTransformation
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.datastore.mapping.reflect.AstUtils
 import org.grails.events.gorm.GormAnnotatedListener
 import org.grails.events.gorm.GormAnnotatedSubscriber
 
-import java.lang.reflect.Method
-import java.lang.reflect.Modifier
-
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+import static org.codehaus.groovy.ast.tools.GeneralUtils.args
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callThisX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
 import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 
 /**
@@ -55,7 +65,6 @@ import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 class SubscriberTransform extends AbstractTraitApplyingGormASTTransformation {
 
     public static final Object APPLIED_MARKER = new Object()
-
 
     @Override
     protected Class getTraitClass() {
@@ -74,37 +83,37 @@ class SubscriberTransform extends AbstractTraitApplyingGormASTTransformation {
 
     @Override
     void visit(SourceUnit source, AnnotationNode annotationNode, AnnotatedNode annotatedNode) {
-        if(annotatedNode instanceof MethodNode && !Modifier.isAbstract(((MethodNode)annotatedNode).getModifiers())) {
-            MethodNode methodNode = (MethodNode)annotatedNode
+        if (annotatedNode instanceof MethodNode && !Modifier.isAbstract(((MethodNode) annotatedNode).getModifiers())) {
+            MethodNode methodNode = (MethodNode) annotatedNode
             ClassNode declaringClass = methodNode.getDeclaringClass()
-            if ( shouldWeave(annotationNode, declaringClass) ) {
-                if(declaringClass.getField("lazyInit") == null) {
-                    declaringClass.addField("lazyInit", Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL, ClassHelper.Boolean_TYPE, ConstantExpression.FALSE)
+            if (shouldWeave(annotationNode, declaringClass)) {
+                if (declaringClass.getField('lazyInit') == null) {
+                    declaringClass.addField('lazyInit', Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL, ClassHelper.Boolean_TYPE, ConstantExpression.FALSE)
                 }
                 Parameter[] parameters = methodNode.parameters
                 boolean isGormEvent = parameters.length == 1 && AstUtils.isSubclassOf(parameters[0].type, AbstractPersistenceEvent.name)
                 boolean isGormListener = annotationNode.classNode.name == Listener.name
-                if(!isGormEvent && isGormListener) {
-                    addError("A GORM @Listener must accept a GORM event as an argument", annotationNode)
+                if (!isGormEvent && isGormListener) {
+                    addError('A GORM @Listener must accept a GORM event as an argument', annotationNode)
                     return
                 }
-                if(isGormEvent) {
+                if (isGormEvent) {
                     ClassNode eventType = parameters[0].type
-                    if(isGormListener) {
+                    if (isGormListener) {
                         weaveTrait(declaringClass, source, GormAnnotatedListener)
                     }
                     else {
                         weaveTrait(declaringClass, source, GormAnnotatedSubscriber)
                     }
-                    MethodNode getSubscribersMethod = declaringClass.getDeclaredMethod("getSubscribedEvents")
+                    MethodNode getSubscribersMethod = declaringClass.getDeclaredMethod('getSubscribedEvents')
                     ListExpression listExpression
-                    if(getSubscribersMethod.getAnnotations(ClassHelper.make(Traits.TraitBridge))) {
+                    if (getSubscribersMethod.getAnnotations(ClassHelper.make(Traits.TraitBridge))) {
                         def currentCode = getSubscribersMethod.code
-                        if(currentCode instanceof ExpressionStatement) {
+                        if (currentCode instanceof ExpressionStatement) {
                             ExpressionStatement body = (ExpressionStatement) currentCode
 
                             def expression = body.getExpression()
-                            if(expression instanceof ListExpression) {
+                            if (expression instanceof ListExpression) {
                                 listExpression  = (ListExpression) expression
                             }
                             else {
@@ -130,21 +139,21 @@ class SubscriberTransform extends AbstractTraitApplyingGormASTTransformation {
                 }
             }
 
-            MethodNode getSubscribersMethod = declaringClass.getDeclaredMethod("getSubscribedMethods")
+            MethodNode getSubscribersMethod = declaringClass.getDeclaredMethod('getSubscribedMethods')
             ListExpression listExpression
-            if(getSubscribersMethod == null) {
+            if (getSubscribersMethod == null) {
                 def listOfMethodType = GenericsUtils.makeClassSafeWithGenerics(List, ClassHelper.make(Method))
                 listExpression = new ListExpression()
                 ExpressionStatement body = new ExpressionStatement(listExpression)
-                declaringClass.addMethod("getSubscribedMethods", Modifier.PUBLIC, listOfMethodType, ZERO_PARAMETERS, null, body)
+                declaringClass.addMethod('getSubscribedMethods', Modifier.PUBLIC, listOfMethodType, ZERO_PARAMETERS, null, body)
             }
-            else if(getSubscribersMethod.getAnnotations(ClassHelper.make(Traits.TraitBridge))) {
+            else if (getSubscribersMethod.getAnnotations(ClassHelper.make(Traits.TraitBridge))) {
                 def currentCode = getSubscribersMethod.code
-                if(currentCode instanceof ExpressionStatement) {
+                if (currentCode instanceof ExpressionStatement) {
                     ExpressionStatement body = (ExpressionStatement) currentCode
 
                     def expression = body.getExpression()
-                    if(expression instanceof ListExpression) {
+                    if (expression instanceof ListExpression) {
                         listExpression  = (ListExpression) expression
                     }
                     else {
@@ -165,11 +174,11 @@ class SubscriberTransform extends AbstractTraitApplyingGormASTTransformation {
             ArgumentListExpression methodArgs = args(
                     constX(methodNode.getName())
             )
-            for(param in methodNode.parameters) {
-                methodArgs.addExpression( classX(param.type) )
+            for (param in methodNode.parameters) {
+                methodArgs.addExpression(classX(param.type))
             }
             listExpression.addExpression(callX(
-                    callThisX("getClass"), "getMethod", methodArgs)
+                    callThisX('getClass'), 'getMethod', methodArgs)
             )
         }
     }

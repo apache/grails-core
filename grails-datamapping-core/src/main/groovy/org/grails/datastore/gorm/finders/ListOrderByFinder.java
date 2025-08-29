@@ -18,12 +18,12 @@
  */
 package org.grails.datastore.gorm.finders;
 
-import groovy.lang.Closure;
-
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import groovy.lang.Closure;
 
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
@@ -66,22 +66,22 @@ public class ListOrderByFinder extends AbstractFinder {
         String nameInSignature = match.group(2);
         final String propertyName = NameUtils.decapitalizeFirstChar(nameInSignature);
 
-        return execute(new SessionCallback<Object>() {
+        return execute(new SessionCallback<>() {
             public Object doInSession(final Session session) {
                 Query q = session.createQuery(clazz);
                 applyAdditionalCriteria(q, additionalCriteria);
 
                 boolean ascending = true;
                 if (arguments.length > 0 && (arguments[0] instanceof Map)) {
-                    final Map args = new LinkedHashMap( (Map) arguments[0] );
+                    final Map args = new LinkedHashMap((Map) arguments[0]);
                     final Object order = args.remove(DynamicFinder.ARGUMENT_ORDER);
-                    if(order != null && "desc".equalsIgnoreCase(order.toString())) {
+                    if (order != null && "desc".equalsIgnoreCase(order.toString())) {
                         ascending = false;
                     }
                     DynamicFinder.populateArgumentsForCriteria(clazz, q, args);
                 }
 
-                q.order( ascending ? Query.Order.asc(propertyName) : Query.Order.desc(propertyName));
+                q.order(ascending ? Query.Order.asc(propertyName) : Query.Order.desc(propertyName));
                 q.projections().distinct();
                 return invokeQuery(q);
             }

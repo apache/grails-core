@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-There are methods in link:{api}/grails/plugin/cache/GrailsCacheAdminService.html[GrailsCacheAdminService] for clearing the caches used by the link:{tags}/block.html[block] and link:{tags}/render.html[render] tags.
+There are methods in link:{api}grails/plugin/cache/GrailsCacheAdminService.html[GrailsCacheAdminService] for clearing the caches used by the link:{cacheTagsRef}block.html[block] and link:{cacheTagsRef}render.html[render] tags.
 
 [source,java]
 ----

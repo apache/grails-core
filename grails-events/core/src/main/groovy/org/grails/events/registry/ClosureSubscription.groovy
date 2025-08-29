@@ -19,11 +19,12 @@
 
 package org.grails.events.registry
 
-import grails.events.Event
-import grails.events.trigger.EventTrigger
-import grails.events.subscriber.Subscription
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
+
+import grails.events.Event
+import grails.events.subscriber.Subscription
+import grails.events.trigger.EventTrigger
 import org.grails.events.ClosureEventTrigger
 
 /**

@@ -40,56 +40,56 @@ import org.grails.cli.compiler.GroovyCompilerConfiguration;
  */
 public class SpringBootCompilerAutoConfiguration extends CompilerAutoConfiguration {
 
-	@Override
-	public void applyDependencies(DependencyCustomizer dependencies) {
-		dependencies.ifAnyMissingClasses("org.springframework.boot.SpringApplication").add("spring-boot-starter");
-	}
+    @Override
+    public void applyDependencies(DependencyCustomizer dependencies) {
+        dependencies.ifAnyMissingClasses("org.springframework.boot.SpringApplication").add("spring-boot-starter");
+    }
 
-	@Override
-	public void applyImports(ImportCustomizer imports) {
-		imports.addImports("jakarta.annotation.PostConstruct", "jakarta.annotation.PreDestroy", "groovy.util.logging.Log",
-				"org.springframework.stereotype.Controller", "org.springframework.stereotype.Service",
-				"org.springframework.stereotype.Component", "org.springframework.beans.factory.annotation.Autowired",
-				"org.springframework.beans.factory.annotation.Value", "org.springframework.context.annotation.Import",
-				"org.springframework.context.annotation.ImportResource",
-				"org.springframework.context.annotation.Profile", "org.springframework.context.annotation.Scope",
-				"org.springframework.context.annotation.Configuration",
-				"org.springframework.context.annotation.ComponentScan", "org.springframework.context.annotation.Bean",
-				"org.springframework.context.ApplicationContext", "org.springframework.context.MessageSource",
-				"org.springframework.core.annotation.Order", "org.springframework.core.io.ResourceLoader",
-				"org.springframework.boot.ApplicationRunner", "org.springframework.boot.ApplicationArguments",
-				"org.springframework.boot.CommandLineRunner",
-				"org.springframework.boot.context.properties.ConfigurationProperties",
-				"org.springframework.boot.context.properties.EnableConfigurationProperties",
-				"org.springframework.boot.autoconfigure.EnableAutoConfiguration",
-				"org.springframework.boot.autoconfigure.SpringBootApplication",
-				"org.springframework.boot.context.properties.ConfigurationProperties",
-				"org.springframework.boot.context.properties.EnableConfigurationProperties");
-		imports.addStarImports("org.springframework.stereotype", "org.springframework.scheduling.annotation");
-	}
+    @Override
+    public void applyImports(ImportCustomizer imports) {
+        imports.addImports("jakarta.annotation.PostConstruct", "jakarta.annotation.PreDestroy", "groovy.util.logging.Log",
+                "org.springframework.stereotype.Controller", "org.springframework.stereotype.Service",
+                "org.springframework.stereotype.Component", "org.springframework.beans.factory.annotation.Autowired",
+                "org.springframework.beans.factory.annotation.Value", "org.springframework.context.annotation.Import",
+                "org.springframework.context.annotation.ImportResource",
+                "org.springframework.context.annotation.Profile", "org.springframework.context.annotation.Scope",
+                "org.springframework.context.annotation.Configuration",
+                "org.springframework.context.annotation.ComponentScan", "org.springframework.context.annotation.Bean",
+                "org.springframework.context.ApplicationContext", "org.springframework.context.MessageSource",
+                "org.springframework.core.annotation.Order", "org.springframework.core.io.ResourceLoader",
+                "org.springframework.boot.ApplicationRunner", "org.springframework.boot.ApplicationArguments",
+                "org.springframework.boot.CommandLineRunner",
+                "org.springframework.boot.context.properties.ConfigurationProperties",
+                "org.springframework.boot.context.properties.EnableConfigurationProperties",
+                "org.springframework.boot.autoconfigure.EnableAutoConfiguration",
+                "org.springframework.boot.autoconfigure.SpringBootApplication",
+                "org.springframework.boot.context.properties.ConfigurationProperties",
+                "org.springframework.boot.context.properties.EnableConfigurationProperties");
+        imports.addStarImports("org.springframework.stereotype", "org.springframework.scheduling.annotation");
+    }
 
-	@Override
-	public void applyToMainClass(GroovyClassLoader loader, GroovyCompilerConfiguration configuration,
-			GeneratorContext generatorContext, SourceUnit source, ClassNode classNode)
-			throws CompilationFailedException {
-		addEnableAutoConfigurationAnnotation(classNode);
-	}
+    @Override
+    public void applyToMainClass(GroovyClassLoader loader, GroovyCompilerConfiguration configuration,
+            GeneratorContext generatorContext, SourceUnit source, ClassNode classNode)
+            throws CompilationFailedException {
+        addEnableAutoConfigurationAnnotation(classNode);
+    }
 
-	private void addEnableAutoConfigurationAnnotation(ClassNode classNode) {
-		if (!hasEnableAutoConfigureAnnotation(classNode)) {
-			AnnotationNode annotationNode = new AnnotationNode(ClassHelper.make("EnableAutoConfiguration"));
-			classNode.addAnnotation(annotationNode);
-		}
-	}
+    private void addEnableAutoConfigurationAnnotation(ClassNode classNode) {
+        if (!hasEnableAutoConfigureAnnotation(classNode)) {
+            AnnotationNode annotationNode = new AnnotationNode(ClassHelper.make("EnableAutoConfiguration"));
+            classNode.addAnnotation(annotationNode);
+        }
+    }
 
-	private boolean hasEnableAutoConfigureAnnotation(ClassNode classNode) {
-		for (AnnotationNode node : classNode.getAnnotations()) {
-			String name = node.getClassNode().getNameWithoutPackage();
-			if ("EnableAutoConfiguration".equals(name) || "SpringBootApplication".equals(name)) {
-				return true;
-			}
-		}
-		return false;
-	}
+    private boolean hasEnableAutoConfigureAnnotation(ClassNode classNode) {
+        for (AnnotationNode node : classNode.getAnnotations()) {
+            String name = node.getClassNode().getNameWithoutPackage();
+            if ("EnableAutoConfiguration".equals(name) || "SpringBootApplication".equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
 }

@@ -19,9 +19,12 @@
 
 package org.grails.testing.spock
 
-import grails.testing.spring.AutowiredTest
+import java.lang.annotation.Annotation
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompileStatic
-import org.grails.testing.GrailsUnitTest
+
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
@@ -31,9 +34,8 @@ import org.spockframework.runtime.model.MethodInfo
 import org.spockframework.runtime.model.MethodKind
 import org.spockframework.runtime.model.SpecInfo
 
-import java.lang.annotation.Annotation
-import java.lang.reflect.Method
-import java.lang.reflect.Modifier
+import grails.testing.spring.AutowiredTest
+import org.grails.testing.GrailsUnitTest
 
 @CompileStatic
 class TestingSupportExtension implements IGlobalExtension {
@@ -50,17 +52,17 @@ class TestingSupportExtension implements IGlobalExtension {
             spec.addCleanupSpecInterceptor(cleanupContextInterceptor)
         }
         for (Method method : (spec.getReflection().declaredMethods)) {
-            if (method.isAnnotationPresent(BeforeEach.class)) {
-                spec.setupMethods.add(0, createJUnitFixtureMethod(spec, method, MethodKind.SETUP, BeforeEach.class))
+            if (method.isAnnotationPresent(BeforeEach)) {
+                spec.setupMethods.add(0, createJUnitFixtureMethod(spec, method, MethodKind.SETUP, BeforeEach))
             }
-            if (method.isAnnotationPresent(AfterEach.class)) {
-                spec.addCleanupMethod(createJUnitFixtureMethod(spec, method, MethodKind.CLEANUP, AfterEach.class))
+            if (method.isAnnotationPresent(AfterEach)) {
+                spec.addCleanupMethod(createJUnitFixtureMethod(spec, method, MethodKind.CLEANUP, AfterEach))
             }
-            if (method.isAnnotationPresent(BeforeAll.class)) {
-                spec.setupSpecMethods.add(0, createJUnitFixtureMethod(spec, method, MethodKind.SETUP_SPEC, BeforeAll.class))
+            if (method.isAnnotationPresent(BeforeAll)) {
+                spec.setupSpecMethods.add(0, createJUnitFixtureMethod(spec, method, MethodKind.SETUP_SPEC, BeforeAll))
             }
-            if (method.isAnnotationPresent(AfterAll.class)) {
-                spec.addCleanupSpecMethod(createJUnitFixtureMethod(spec, method, MethodKind.CLEANUP_SPEC, AfterAll.class))
+            if (method.isAnnotationPresent(AfterAll)) {
+                spec.addCleanupSpecMethod(createJUnitFixtureMethod(spec, method, MethodKind.CLEANUP_SPEC, AfterAll))
             }
         }
     }

@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-{apiDocs}grails/web/api/WebAttributes.html[WebAttributes] is one of the traits provided by the framework.  Any Groovy class may implement this trait to inherit all of the properties and behaviors provided by the trait.
+link:{api}grails/web/api/WebAttributes.html[WebAttributes] is one of the traits provided by the framework.  Any Groovy class may implement this trait to inherit all of the properties and behaviors provided by the trait.
 
 [source,groovy]
 .src/main/groovy/demo/Helper.groovy

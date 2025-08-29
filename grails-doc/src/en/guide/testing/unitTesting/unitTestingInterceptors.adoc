@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Use the link:../api/grails/testing/web/interceptor/InterceptorUnitTest.html[`InterceptorUnitTest`] trait to unit test interceptors.
+Use the link:{api}grails/testing/web/interceptor/InterceptorUnitTest.html[`InterceptorUnitTest`] trait to unit test interceptors.
 
 The interceptor unit test trait provides methods to make testing interceptors easy.
 

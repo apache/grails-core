@@ -81,7 +81,7 @@ assert 42.0 == employee.salary
 
 Statically typed instance properties are bindable by default.  Properties which are not bindable by default are those related to transient fields, dynamically typed properties and static properties.
 
-See the link:{guidePath}/theWebLayer.html#dataBinding[data binding] section for more details on data binding.
+See the link:{guidePath}theWebLayer.html#dataBinding[data binding] section for more details on data binding.
 
 NOTE: The bindable constraint must be assigned a literal boolean value.  Dynamic expressions are not valid values for the bindable constraint.  The value must be the literal `true` or `false`.
 

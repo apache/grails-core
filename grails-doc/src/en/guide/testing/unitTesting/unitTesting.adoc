@@ -86,7 +86,7 @@ void testSomething() {
 
 ==== Autowiring The Test
 
-It is possible to set up the test class itself for autowiring. Simply implement the link:../api/grails/testing/spring/AutowiredTest.html[`AutowiredTest`] trait, and beans will be injected into the test class.
+It is possible to set up the test class itself for autowiring. Simply implement the link:{api}grails/testing/spring/AutowiredTest.html[`AutowiredTest`] trait, and beans will be injected into the test class.
 
 For Example:
 
@@ -106,4 +106,4 @@ Closure doWithConfig() {{ config ->
 }}
 ----
 
-NOTE: A test only needs to implement the link:../api/org/grails/testing/GrailsUnitTest.html[`GrailsUnitTest`] trait to get the above functionality. All of the other testing traits extend `GrailsUnitTest`, so implementing it directly is uncommon.
+NOTE: A test only needs to implement the link:{api}org/grails/testing/GrailsUnitTest.html[`GrailsUnitTest`] trait to get the above functionality. All of the other testing traits extend `GrailsUnitTest`, so implementing it directly is uncommon.

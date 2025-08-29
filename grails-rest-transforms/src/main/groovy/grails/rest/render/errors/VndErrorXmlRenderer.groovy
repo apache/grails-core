@@ -18,17 +18,19 @@
  */
 package grails.rest.render.errors
 
+import groovy.transform.CompileStatic
+
+import org.springframework.http.HttpStatus
+import org.springframework.validation.BeanPropertyBindingResult
+import org.springframework.validation.Errors
+import org.springframework.validation.ObjectError
+
 import grails.rest.render.RenderContext
 import grails.util.GrailsWebUtil
-import groovy.transform.CompileStatic
 import grails.web.mime.MimeType
 import org.grails.web.xml.PrettyPrintXMLStreamWriter
 import org.grails.web.xml.StreamingMarkupWriter
 import org.grails.web.xml.XMLStreamWriter
-import org.springframework.validation.BeanPropertyBindingResult
-import org.springframework.validation.Errors
-import org.springframework.validation.ObjectError
-import org.springframework.http.HttpStatus
 
 /**
  * A renderer that renders errors in in the Vnd.Error format (see https://github.com/blongden/vnd.error)
@@ -39,10 +41,11 @@ import org.springframework.http.HttpStatus
  */
 @CompileStatic
 class VndErrorXmlRenderer extends AbstractVndErrorRenderer {
-    public static final MimeType MIME_TYPE = new MimeType("application/vnd.error+xml", "xml")
-    public static final String ERRORS_TAG = "errors"
-    public static final String ERROR_TAG = "error"
-    public static final String LINK_TAG = "link"
+
+    public static final MimeType MIME_TYPE = new MimeType('application/vnd.error+xml', 'xml')
+    public static final String ERRORS_TAG = 'errors'
+    public static final String ERROR_TAG = 'error'
+    public static final String LINK_TAG = 'link'
 
     MimeType[] mimeTypes = [MIME_TYPE, MimeType.HAL_XML, MimeType.XML, MimeType.TEXT_XML] as MimeType[]
 
@@ -58,7 +61,7 @@ class VndErrorXmlRenderer extends AbstractVndErrorRenderer {
 
             final streamingWriter = new StreamingMarkupWriter(context.writer, encoding)
             XMLStreamWriter w = prettyPrint ? new PrettyPrintXMLStreamWriter(streamingWriter) : new XMLStreamWriter(streamingWriter)
-            w.startDocument(encoding, "1.0")
+            w.startDocument(encoding, '1.0')
             w.startNode(ERRORS_TAG)
                 .attribute('xml:lang', language)
             for (ObjectError oe in errors.allErrors) {
@@ -69,8 +72,8 @@ class VndErrorXmlRenderer extends AbstractVndErrorRenderer {
                         .characters(messageSource.getMessage(oe, locale))
                     .end()
                     .startNode(LINK_TAG)
-                        .attribute("rel", "resource")
-                        .attribute("href", linkGenerator.link(resource: target, method: "GET", absolute: true))
+                        .attribute('rel', 'resource')
+                        .attribute('href', linkGenerator.link(resource: target, method: 'GET', absolute: true))
                     .end()
                 .end()
             }
