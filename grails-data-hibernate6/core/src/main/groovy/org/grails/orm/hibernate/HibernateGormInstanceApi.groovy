@@ -15,13 +15,40 @@
  */
 package org.grails.orm.hibernate
 
+import grails.gorm.validation.CascadingValidator
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import jakarta.persistence.FlushModeType
+import org.grails.datastore.gorm.GormInstanceApi
+import org.grails.datastore.gorm.GormValidateable
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.model.types.Embedded
+import org.grails.datastore.mapping.proxy.ProxyHandler
+import org.grails.datastore.mapping.reflect.ClassUtils
+import org.grails.datastore.mapping.reflect.EntityReflector
+import org.grails.datastore.mapping.engine.event.ValidationEvent
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
+import org.grails.orm.hibernate.support.HibernateRuntimeUtils
+import org.hibernate.FlushMode
+import org.hibernate.HibernateException
+import org.hibernate.LockMode
+import org.hibernate.Session
+import org.hibernate.SessionFactory
 import org.hibernate.engine.spi.EntityEntry
 import org.hibernate.engine.spi.SessionImplementor
 import org.hibernate.persister.entity.EntityPersister
 import org.hibernate.tuple.NonIdentifierAttribute
+import org.springframework.beans.BeanWrapperImpl
+import org.springframework.beans.InvalidPropertyException
+import org.springframework.dao.DataAccessException
+import org.springframework.validation.Errors
+import org.springframework.validation.Validator
 
 /**
  * The implementation of the GORM instance API contract for Hibernate.
@@ -30,14 +57,348 @@ import org.hibernate.tuple.NonIdentifierAttribute
  * @since 1.0
  */
 @CompileStatic
-class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
+class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
+
+    private static final String ARGUMENT_VALIDATE = "validate"
+    private static final String ARGUMENT_DEEP_VALIDATE = "deepValidate"
+    private static final String ARGUMENT_FLUSH = "flush"
+    private static final String ARGUMENT_INSERT = "insert"
+    private static final String ARGUMENT_MERGE = "merge"
+    private static final String ARGUMENT_FAIL_ON_ERROR = "failOnError"
+    private static final Class DEFERRED_BINDING
+
+    static {
+        try {
+            DEFERRED_BINDING = Class.forName('grails.validation.DeferredBindingActions')
+        } catch (Throwable e) {
+            DEFERRED_BINDING = null
+        }
+    }
+
+    protected static final Object[] EMPTY_ARRAY = []
+    static final ThreadLocal<Boolean> insertActiveThreadLocal = new ThreadLocal<Boolean>()
+
+    protected SessionFactory sessionFactory
+    protected ClassLoader classLoader
+    protected IHibernateTemplate hibernateTemplate
+
+    boolean autoFlush
 
     protected InstanceApiHelper instanceApiHelper
 
     HibernateGormInstanceApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader) {
-        super(persistentClass, datastore, classLoader, null)
-        hibernateTemplate = new GrailsHibernateTemplate(sessionFactory, datastore)
-        instanceApiHelper = new InstanceApiHelper((GrailsHibernateTemplate)hibernateTemplate)
+        super(persistentClass, datastore as Datastore)
+        this.classLoader = classLoader
+        this.sessionFactory = datastore.getSessionFactory()
+        this.hibernateTemplate = new GrailsHibernateTemplate(sessionFactory, datastore)
+        this.autoFlush = datastore.autoFlush
+        this.failOnError = datastore.failOnError
+        this.markDirty = datastore.markDirty
+        this.instanceApiHelper = new InstanceApiHelper((GrailsHibernateTemplate) this.hibernateTemplate)
+    }
+
+    @Override
+    D save(D target, Map arguments) {
+        PersistentEntity domainClass = persistentEntity
+        runDeferredBinding()
+        boolean shouldFlush = shouldFlush(arguments)
+        boolean shouldValidate = shouldValidate(arguments, persistentEntity)
+
+        HibernateRuntimeUtils.autoAssociateBidirectionalOneToOnes(domainClass, target)
+
+        boolean deepValidate = true
+        if (arguments?.containsKey(ARGUMENT_DEEP_VALIDATE)) {
+            deepValidate = ClassUtils.getBooleanFromMap(ARGUMENT_DEEP_VALIDATE, arguments)
+        }
+
+        if (shouldValidate) {
+            Validator validator = datastore.mappingContext.getEntityValidator(domainClass)
+
+            Errors errors = HibernateRuntimeUtils.setupErrorsProperty(target)
+
+            if (validator) {
+                datastore.applicationEventPublisher?.publishEvent new ValidationEvent(datastore, target)
+
+                if (validator instanceof CascadingValidator) {
+                    ((CascadingValidator)validator).validate target, errors, deepValidate
+                } else if (validator instanceof org.grails.datastore.gorm.validation.CascadingValidator) {
+                    ((org.grails.datastore.gorm.validation.CascadingValidator) validator).validate target, errors, deepValidate
+                } else {
+                    validator.validate target, errors
+                }
+
+                if (errors.hasErrors()) {
+                    handleValidationError(domainClass,target,errors)
+                    if (shouldFail(arguments)) {
+                        throw validationException.newInstance("Validation Error(s) occurred during save()", errors)
+                    }
+                    return null
+                }
+
+                setObjectToReadWrite(target)
+            }
+        }
+
+        autoRetrieveAssociations datastore, domainClass, target
+
+        GormValidateable validateable = (GormValidateable) target
+        validateable.skipValidation(true)
+
+        try {
+            if (shouldInsert(arguments)) {
+                return performInsert(target, shouldFlush)
+            }
+            else if(shouldMerge(arguments)) {
+                return performMerge(target, shouldFlush)
+            }
+            else {
+                if (target instanceof DirtyCheckable && markDirty) {
+                    target.markDirty()
+                }
+                return performSave(target, shouldFlush)
+            }
+        } finally {
+            validateable.skipValidation(false)
+        }
+    }
+
+    @CompileDynamic
+    private void runDeferredBinding() {
+        DEFERRED_BINDING?.runActions()
+    }
+
+    @Override
+    D merge(D instance, Map params) {
+        Map args = new HashMap(params)
+        args[ARGUMENT_MERGE] = true
+        return save(instance, args)
+    }
+
+    @Override
+    D insert(D instance, Map params) {
+        Map args = new HashMap(params)
+        args[ARGUMENT_INSERT] = true
+        return save(instance, args)
+    }
+
+    @Override
+    void discard(D instance) {
+        hibernateTemplate.evict instance
+    }
+
+    @Override
+    void delete(D instance, Map params = Collections.emptyMap()) {
+        boolean flush = shouldFlush(params)
+        try {
+            hibernateTemplate.execute { Session session ->
+                session.delete instance
+                if(flush) {
+                    session.flush()
+                }
+            }
+        }
+        catch (DataAccessException e) {
+            try {
+                hibernateTemplate.execute { Session session ->
+                    session.flushMode = FlushModeType.COMMIT
+                }
+            }
+            finally {
+                throw e
+            }
+        }
+    }
+
+    @Override
+    boolean isAttached(D instance) {
+        hibernateTemplate.contains instance
+    }
+
+    @Override
+    D lock(D instance) {
+        hibernateTemplate.lock(instance, LockMode.PESSIMISTIC_WRITE)
+        instance
+    }
+
+    @Override
+    D attach(D instance) {
+        hibernateTemplate.lock(instance, LockMode.NONE)
+        return instance
+    }
+
+    @Override
+    D refresh(D instance) {
+        hibernateTemplate.refresh(instance)
+        return instance
+    }
+
+    protected D performSave(final D target, final boolean flush) {
+        hibernateTemplate.execute { Session session ->
+            session.saveOrUpdate target
+            if (flush) {
+                flushSession session
+            }
+            return target
+        }
+    }
+
+    protected D performMerge(final D target, final boolean flush) {
+        hibernateTemplate.execute { Session session ->
+            Object merged = session.merge(target)
+            session.lock(merged, LockMode.NONE)
+            if (flush) {
+                flushSession session
+            }
+            return (D)merged
+        }
+    }
+
+    protected D performInsert(final D target, final boolean shouldFlush) {
+        hibernateTemplate.execute { Session session ->
+            try {
+                markInsertActive()
+                session.save target
+                if (shouldFlush) {
+                    flushSession session
+                }
+                return target
+            } finally {
+                resetInsertActive()
+            }
+
+        }
+    }
+
+    protected void flushSession(Session session) throws HibernateException {
+        try {
+            session.flush()
+        } catch (HibernateException e) {
+            session.setFlushMode FlushModeType.COMMIT
+            throw e
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void autoRetrieveAssociations(Datastore datastore, PersistentEntity entity, Object target) {
+        EntityReflector reflector = datastore.mappingContext.getEntityReflector(entity)
+        IHibernateTemplate t = this.hibernateTemplate
+        for (PersistentProperty prop in entity.associations) {
+            if(prop instanceof ToOne && !(prop instanceof Embedded)) {
+                ToOne toOne = (ToOne)prop
+
+                def propertyName = prop.name
+                def propValue = reflector.getProperty(target, propertyName)
+                if (propValue == null || t.contains(propValue)) {
+                    continue
+                }
+
+                PersistentEntity otherSide = toOne.associatedEntity
+                if (otherSide == null) {
+                    continue
+                }
+
+                def identity = otherSide.identity
+                if(identity == null) {
+                    continue
+                }
+
+                def otherSideReflector = datastore.mappingContext.getEntityReflector(otherSide)
+                try {
+                    def id = (Serializable)otherSideReflector.getProperty(propValue, identity.name);
+                    if (id) {
+                        final Object associatedInstance = t.get(prop.type, id)
+                        if (associatedInstance) {
+                            reflector.setProperty(target, propertyName, associatedInstance)
+                        }
+                    }
+                }
+                catch (InvalidPropertyException ipe) {
+                    // property is not accessable
+                }
+            }
+
+        }
+    }
+
+    private boolean shouldValidate(Map arguments, PersistentEntity entity) {
+        if (!entity) {
+            return false
+        }
+        if (arguments?.containsKey(ARGUMENT_VALIDATE)) {
+            return ClassUtils.getBooleanFromMap(ARGUMENT_VALIDATE, arguments)
+        }
+        return true
+    }
+
+    private boolean shouldInsert(Map arguments) {
+        ClassUtils.getBooleanFromMap(ARGUMENT_INSERT, arguments)
+    }
+
+    private boolean shouldMerge(Map arguments) {
+        ClassUtils.getBooleanFromMap(ARGUMENT_MERGE, arguments)
+    }
+
+    protected boolean shouldFlush(Map map) {
+        if (map?.containsKey(ARGUMENT_FLUSH)) {
+            return ClassUtils.getBooleanFromMap(ARGUMENT_FLUSH, map)
+        }
+        return autoFlush
+    }
+
+    protected boolean shouldFail(Map map) {
+        if (map?.containsKey(ARGUMENT_FAIL_ON_ERROR)) {
+            return ClassUtils.getBooleanFromMap(ARGUMENT_FAIL_ON_ERROR, map)
+        }
+        return failOnError
+    }
+
+    protected Object handleValidationError(PersistentEntity entity, final Object target, Errors errors) {
+        setObjectToReadOnly target
+        if (entity) {
+            for (Association association in entity.associations) {
+                if (association instanceof ToOne && !association instanceof Embedded) {
+                        def bean = new BeanWrapperImpl(target)
+                        def propertyValue = bean.getPropertyValue(association.name)
+                        if (propertyValue != null) {
+                            setObjectToReadOnly propertyValue
+                        }
+                }
+            }
+        }
+        setErrorsOnInstance target, errors
+        return null
+    }
+
+    @CompileDynamic
+    protected void setErrorsOnInstance(Object target, Errors errors) {
+        if(target instanceof GormValidateable) {
+            ((GormValidateable)target).setErrors(errors)
+        }
+        else {
+            target."$GormProperties.ERRORS" = errors
+        }
+    }
+
+    static void markInsertActive() {
+        insertActiveThreadLocal.set(Boolean.TRUE);
+    }
+
+    static void resetInsertActive() {
+        insertActiveThreadLocal.remove();
+    }
+
+    @CompileDynamic
+    protected void incrementVersion(Object target) {
+        if (target.hasProperty(GormProperties.VERSION)) {
+            Object version = target."${GormProperties.VERSION}"
+            if (version instanceof Long) {
+                target."${GormProperties.VERSION}" = ++((Long)version)
+            }
+        }
+    }
+
+    SessionFactory getSessionFactory() {
+        return this.sessionFactory
     }
 
     /**
@@ -153,12 +514,10 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
         return entry
     }
 
-    @Override
     void setObjectToReadWrite(Object target) {
         GrailsHibernateUtil.setObjectToReadWrite(target, sessionFactory)
     }
 
-    @Override
     void setObjectToReadOnly(Object target) {
         GrailsHibernateUtil.setObjectToReadyOnly(target, sessionFactory)
     }

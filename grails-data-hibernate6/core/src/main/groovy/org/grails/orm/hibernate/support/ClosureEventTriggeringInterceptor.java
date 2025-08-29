@@ -27,7 +27,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
-import org.grails.orm.hibernate.AbstractHibernateGormInstanceApi;
+import org.grails.orm.hibernate.HibernateGormInstanceApi;
 import org.hibernate.Hibernate;
 import org.hibernate.HibernateException;
 import org.hibernate.event.spi.AbstractEvent;

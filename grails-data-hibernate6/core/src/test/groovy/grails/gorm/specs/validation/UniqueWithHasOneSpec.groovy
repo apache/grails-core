@@ -52,26 +52,23 @@ class UniqueWithHasOneSpec extends HibernateGormDatastoreSpec {
 @Entity
 class Foo {
 
-    static hasOne = [bar: Bar]
-
     String name
+    Bar bar
+
+    static hasOne = [bar: Bar]
 
     static constraints = {
         bar nullable: true
-        name unique: "bar"
+        name unique: ["bar"]
     }
-
 }
 
 @Entity
 class Bar {
 
-    static belongsTo = [foo: Foo]
-
     String name
+    static belongsTo = [ foo: Foo]
 
     static constraints = {
-        foo nullable: true
     }
-
 }

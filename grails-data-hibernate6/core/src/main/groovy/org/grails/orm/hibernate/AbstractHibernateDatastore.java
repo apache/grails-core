@@ -312,7 +312,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
     public void destroy() {
         if (!this.destroyed) {
             super.destroy();
-            AbstractHibernateGormInstanceApi.resetInsertActive();
+            HibernateGormInstanceApi.resetInsertActive();
             try {
                 connectionSources.close();
             } catch (IOException e) {

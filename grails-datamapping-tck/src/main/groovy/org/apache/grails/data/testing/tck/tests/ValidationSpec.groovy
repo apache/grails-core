@@ -37,8 +37,8 @@ import spock.lang.Unroll
  */
 class ValidationSpec extends GrailsDataTckSpec {
     void setupSpec() {
-        manager.domainClasses = [ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
-                                 ClassWithOverloadedBeforeValidate, TestEntity, ChildEntity, Task]
+        manager.addAllDomainClasses([ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
+                                 ClassWithOverloadedBeforeValidate, TestEntity, ChildEntity, Task])
     }
 
     // Hibernate did not originally have this test and it fails for it
