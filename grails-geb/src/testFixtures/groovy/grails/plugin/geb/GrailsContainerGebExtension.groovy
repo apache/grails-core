@@ -106,6 +106,7 @@ class GrailsContainerGebExtension implements IGlobalExtension {
             }
 
             spec.allFeatures*.addIterationInterceptor { invocation ->
+                holder.restartVncRecordingContainer()
                 holder.testManager.beforeTest(invocation.instance.getClass(), invocation.iteration.displayName)
                 try {
                     invocation.proceed()
