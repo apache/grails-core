@@ -19,6 +19,7 @@
 package grails.async.services
 
 import groovy.transform.CompileStatic
+
 import grails.persistence.support.PersistenceContextInterceptorExecutor
 import grails.async.decorator.PromiseDecorator
 
@@ -29,7 +30,8 @@ import grails.async.decorator.PromiseDecorator
  * @since 2.3
  */
 @CompileStatic
-class PersistenceContextPromiseDecorator implements PromiseDecorator{
+class PersistenceContextPromiseDecorator implements PromiseDecorator {
+
     PersistenceContextInterceptorExecutor persistenceContextInterceptorExecutor
 
     PersistenceContextPromiseDecorator(PersistenceContextInterceptorExecutor persistenceContextInterceptorExecutor) {

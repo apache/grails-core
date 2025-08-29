@@ -19,12 +19,6 @@
 
 package org.grails.plugins.i18n;
 
-import grails.config.Settings;
-import grails.core.GrailsApplication;
-import grails.plugins.GrailsPluginManager;
-import grails.util.Environment;
-import org.grails.spring.context.support.PluginAwareResourceBundleMessageSource;
-import org.grails.web.i18n.ParamsAwareLocaleChangeInterceptor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -37,6 +31,13 @@ import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 import org.springframework.web.servlet.i18n.SessionLocaleResolver;
+
+import grails.config.Settings;
+import grails.core.GrailsApplication;
+import grails.plugins.GrailsPluginManager;
+import grails.util.Environment;
+import org.grails.spring.context.support.PluginAwareResourceBundleMessageSource;
+import org.grails.web.i18n.ParamsAwareLocaleChangeInterceptor;
 
 @AutoConfiguration(before = { MessageSourceAutoConfiguration.class, WebMvcAutoConfiguration.class })
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)

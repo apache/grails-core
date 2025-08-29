@@ -19,8 +19,8 @@
 
 package org.grails.scaffolding.model
 
-import org.grails.scaffolding.model.property.DomainProperty
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.scaffolding.model.property.DomainProperty
 
 /**
  * An API to retrieve properties from a {@link PersistentEntity}

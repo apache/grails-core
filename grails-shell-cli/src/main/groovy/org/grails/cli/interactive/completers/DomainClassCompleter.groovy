@@ -18,8 +18,9 @@
  */
 package org.grails.cli.interactive.completers
 
-import grails.util.BuildSettings
 import groovy.transform.CompileStatic
+
+import grails.util.BuildSettings
 import org.grails.io.support.GrailsResourceUtils
 import org.grails.io.support.Resource
 
@@ -31,8 +32,9 @@ import org.grails.io.support.Resource
  */
 @CompileStatic
 class DomainClassCompleter extends ClassNameCompleter {
+
     DomainClassCompleter() {
-        super(new File(BuildSettings.BASE_DIR, "grails-app/domain"))
+        super(new File(BuildSettings.BASE_DIR, 'grails-app/domain'))
     }
 
     @Override

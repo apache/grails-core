@@ -21,8 +21,8 @@ package org.grails.datastore.mapping.core.grailsversion
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
-import org.grails.datastore.mapping.reflect.ClassUtils
 
+import org.grails.datastore.mapping.reflect.ClassUtils
 
 /**
  * A class to represent a version of Grails for comparison
@@ -66,7 +66,7 @@ class GrailsVersion implements Comparable<GrailsVersion> {
     }
 
     GrailsVersion(String version) {
-        String[] parts = version.split("\\.")
+        String[] parts = version.split('\\.')
         if (parts.length >= 3) {
             this.versionText = version
             this.major = parts[0].toInteger()
@@ -74,14 +74,14 @@ class GrailsVersion implements Comparable<GrailsVersion> {
             if (parts.length > 3) {
                 this.snapshot = new Snapshot(parts[3])
             } else if (parts[2].contains('-')) {
-                String[] subParts = parts[2].split("-")
+                String[] subParts = parts[2].split('-')
                 this.patch = subParts.first() as int
-                this.snapshot = new Snapshot(subParts[1..-1].join("-"))
+                this.snapshot = new Snapshot(subParts[1..-1].join('-'))
             } else {
                 this.patch = parts[2].toInteger()
             }
         } else {
-            throw new IllegalArgumentException("GrailsVersion only supports comparison of versions with 3 or 4 parts")
+            throw new IllegalArgumentException('GrailsVersion only supports comparison of versions with 3 or 4 parts')
         }
     }
 
@@ -159,11 +159,11 @@ class GrailsVersion implements Comparable<GrailsVersion> {
      * @return Obtains the current Grails version
      */
     static GrailsVersion getCurrent() {
-        if(currentVersion != null) {
+        if (currentVersion != null) {
             return currentVersion
         }
-        else if (ClassUtils.isPresent("grails.util.BuildSettings")) {
-            currentVersion = new GrailsVersion(Class.forName("grails.util.BuildSettings").package.implementationVersion)
+        else if (ClassUtils.isPresent('grails.util.BuildSettings')) {
+            currentVersion = new GrailsVersion(Class.forName('grails.util.BuildSettings').package.implementationVersion)
             return currentVersion
         } else {
             null

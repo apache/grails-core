@@ -14,12 +14,13 @@
  */
 package org.grails.datastore.gorm.async
 
+import groovy.transform.CompileStatic
+
 import grails.async.Promise
 import grails.async.Promises
 import grails.async.decorator.PromiseDecorator
 import grails.async.decorator.PromiseDecoratorProvider
 import grails.gorm.api.GormStaticOperations
-import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.async.transform.DelegateAsync
 
@@ -29,7 +30,7 @@ import org.grails.datastore.gorm.async.transform.DelegateAsync
  * @author Graeme Rocher
  * @since 2.3
  */
-class GormAsyncStaticApi<D> implements PromiseDecoratorProvider{
+class GormAsyncStaticApi<D> implements PromiseDecoratorProvider {
 
     @DelegateAsync GormStaticOperations<D> staticApi
 
@@ -37,7 +38,7 @@ class GormAsyncStaticApi<D> implements PromiseDecoratorProvider{
      * Wraps each promise in a new persistence session
      */
     private List<PromiseDecorator> decorators = [ { Closure callable ->
-        return { args -> staticApi.withNewSession{ callable.call(*args) } }
+        return { args -> staticApi.withNewSession { callable.call(*args) } }
     } as PromiseDecorator ]
 
     GormAsyncStaticApi(GormStaticApi<D> staticApi) {
@@ -56,8 +57,8 @@ class GormAsyncStaticApi<D> implements PromiseDecoratorProvider{
      * @return The promise
      */
     @CompileStatic
-    public <T> Promise<T> task(Closure<T> callable) {
+    <T> Promise<T> task(Closure<T> callable) {
         callable.delegate = staticApi.gormPersistentEntity.javaClass
-        (Promise<T>)Promises.createPromise(callable, decorators)
+        (Promise<T>) Promises.createPromise(callable, decorators)
     }
 }

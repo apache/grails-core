@@ -19,6 +19,7 @@
 package grails.web.mapping.cors
 
 import groovy.transform.CompileStatic
+
 import org.springframework.core.Ordered
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
@@ -33,11 +34,11 @@ import org.springframework.web.filter.CorsFilter
 @CompileStatic
 class GrailsCorsFilter extends CorsFilter implements Ordered {
 
-    public GrailsCorsFilter() {
+    GrailsCorsFilter() {
         super(new UrlBasedCorsConfigurationSource())
     }
 
-    public GrailsCorsFilter(GrailsCorsConfiguration corsConfiguration) {
+    GrailsCorsFilter(GrailsCorsConfiguration corsConfiguration) {
         super(configurationSource(corsConfiguration.corsConfigurations))
     }
 

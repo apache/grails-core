@@ -18,22 +18,23 @@
  */
 package grails.rest.render.xml
 
+import groovy.transform.CompileStatic
+
 import grails.converters.XML
 import grails.rest.render.ContainerRenderer
 import grails.rest.render.RenderContext
-import groovy.transform.CompileStatic
-
 import grails.web.mime.MimeType
 
 /**
- * 
+ *
  * A XML renderer for a collection of objects
- * 
+ *
  * @since 2.3.1
  *
  */
 @CompileStatic
 class XmlCollectionRenderer extends XmlRenderer implements ContainerRenderer {
+
     final Class componentType
 
     XmlCollectionRenderer(Class componentType) {
@@ -41,8 +42,8 @@ class XmlCollectionRenderer extends XmlRenderer implements ContainerRenderer {
         this.componentType = componentType
     }
 
-    public XmlCollectionRenderer(Class targetType, MimeType... mimeTypes) {
-        super(targetType, mimeTypes);
+    XmlCollectionRenderer(Class targetType, MimeType... mimeTypes) {
+        super(targetType, mimeTypes)
     }
 
     @Override

@@ -18,8 +18,6 @@
  */
 package org.grails.io.support;
 
-import grails.util.Environment;
-
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
@@ -28,6 +26,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import grails.util.Environment;
 
 /**
  * Used to locate resources at build / development time
@@ -44,11 +44,11 @@ public class ResourceLocator {
     protected static final Resource NULL_RESOURCE = new ByteArrayResource("null".getBytes());
 
     protected PathMatchingResourcePatternResolver patchMatchingResolver;
-    protected List<String> classSearchDirectories = new ArrayList<String>();
-    protected List<String> resourceSearchDirectories = new ArrayList<String>();
-    protected Map<String, Resource> classNameToResourceCache = new ConcurrentHashMap<String, Resource>();
-    protected Map<String, Resource> uriToResourceCache = new ConcurrentHashMap<String, Resource>();
-    protected ResourceLoader defaultResourceLoader =  new FileSystemResourceLoader();
+    protected List<String> classSearchDirectories = new ArrayList<>();
+    protected List<String> resourceSearchDirectories = new ArrayList<>();
+    protected Map<String, Resource> classNameToResourceCache = new ConcurrentHashMap<>();
+    protected Map<String, Resource> uriToResourceCache = new ConcurrentHashMap<>();
+    protected ResourceLoader defaultResourceLoader = new FileSystemResourceLoader();
     protected boolean warDeployed = Environment.isWarDeployed();
 
     public void setSearchLocation(String searchLocation) {
@@ -124,7 +124,6 @@ public class ResourceLocator {
                 }
             }
 
-
             if (resource == null || !resource.exists()) {
                 Resource tmp = defaultResourceLoader != null ? defaultResourceLoader.getResource(uri) : null;
                 if (tmp != null && tmp.exists()) {
@@ -141,7 +140,6 @@ public class ResourceLocator {
         }
         return resource == NULL_RESOURCE ? null : resource;
     }
-
 
     private PluginResourceInfo inferPluginNameFromURI(String uri) {
         if (uri.startsWith("/plugins/")) {
@@ -173,7 +171,7 @@ public class ResourceLocator {
                 }
             }
             if (resource == null || !resource.exists()) {
-                for(String ext : new String[]{".groovy", ".java"}) {
+                for (String ext : new String[]{".groovy", ".java"}) {
                     resource = resolveExceptionSafe(GrailsResourceUtils.DOMAIN_DIR_PATH + "**/" + className + ext);
                     if (resource != null && resource.exists()) {
                         classNameToResourceCache.put(className, resource);
@@ -187,7 +185,7 @@ public class ResourceLocator {
 
     private List<String> getSearchPatternForExtension(String classNameWithPathSeparator, String... extensions) {
 
-        List<String> searchPatterns = new ArrayList<String>();
+        List<String> searchPatterns = new ArrayList<>();
         for (String extension : extensions) {
             String filename = classNameWithPathSeparator + extension;
             for (String classSearchDirectory : classSearchDirectories) {
@@ -213,7 +211,6 @@ public class ResourceLocator {
     public void setResourceLoader(ResourceLoader resourceLoader) {
         defaultResourceLoader = resourceLoader;
     }
-
 
     class PluginResourceInfo {
         String pluginName;

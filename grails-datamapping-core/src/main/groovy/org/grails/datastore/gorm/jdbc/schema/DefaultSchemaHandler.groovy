@@ -19,12 +19,13 @@
 
 package org.grails.datastore.gorm.jdbc.schema
 
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-
-import javax.sql.DataSource
 import java.sql.Connection
 import java.sql.ResultSet
+
+import javax.sql.DataSource
+
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 /**
  * Resolves the schema names
@@ -41,9 +42,9 @@ class DefaultSchemaHandler implements SchemaHandler {
     final String defaultSchemaName
 
     DefaultSchemaHandler() {
-        useSchemaStatement = "SET SCHEMA %s"
-        createSchemaStatement = "CREATE SCHEMA %s"
-        defaultSchemaName = "PUBLIC"
+        useSchemaStatement = 'SET SCHEMA %s'
+        createSchemaStatement = 'CREATE SCHEMA %s'
+        defaultSchemaName = 'PUBLIC'
     }
 
     DefaultSchemaHandler(String useSchemaStatement, String createSchemaStatement, String defaultSchemaName) {
@@ -55,7 +56,7 @@ class DefaultSchemaHandler implements SchemaHandler {
     @Override
     void useSchema(Connection connection, String name) {
         String useStatement = String.format(useSchemaStatement, name)
-        log.debug("Executing SQL Set Schema Statement: ${useStatement}")
+        log.debug('Executing SQL Set Schema Statement: {}', useStatement)
         connection
                 .createStatement()
                 .execute(useStatement)
@@ -69,7 +70,7 @@ class DefaultSchemaHandler implements SchemaHandler {
     @Override
     void createSchema(Connection connection, String name) {
         String schemaCreateStatement = String.format(createSchemaStatement, name)
-        log.debug("Executing SQL Create Schema Statement: ${schemaCreateStatement}")
+        log.debug('Executing SQL Create Schema Statement: {}', schemaCreateStatement)
         connection
                 .createStatement()
                 .execute(schemaCreateStatement)
@@ -82,8 +83,8 @@ class DefaultSchemaHandler implements SchemaHandler {
         try {
             connection = dataSource.getConnection()
             ResultSet schemas = connection.getMetaData().getSchemas()
-            while(schemas.next()) {
-                schemaNames.add(schemas.getString("TABLE_SCHEM"))
+            while (schemas.next()) {
+                schemaNames.add(schemas.getString('TABLE_SCHEM'))
             }
         } finally {
             try {

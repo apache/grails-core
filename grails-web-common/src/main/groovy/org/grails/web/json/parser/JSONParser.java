@@ -5,7 +5,6 @@ import org.grails.web.json.JSONArray;
 import org.grails.web.json.JSONElement;
 import org.grails.web.json.JSONObject;
 
-
 @SuppressWarnings("all")
 public final class JSONParser implements JsonParserConstants {
 
@@ -138,7 +137,7 @@ public final class JSONParser implements JsonParserConstants {
     }
 
     final private void Elements(JSONArray array) throws ParseException {
-        while(addElementAndGetNextToken(array) == 23) {
+        while (addElementAndGetNextToken(array) == 23) {
             jj_consume_token(23);
         }
         jj_la1[5] = jj_gen;
@@ -471,7 +470,6 @@ public final class JSONParser implements JsonParserConstants {
         jj_kind = kind;
         throw generateParseException();
     }
-
 
     /**
      * Get the next Token.

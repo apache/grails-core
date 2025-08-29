@@ -20,7 +20,6 @@
 package org.grails.datastore.gorm.query.criteria
 
 import grails.gorm.DetachedCriteria
-
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.query.Query.Criterion
 import org.grails.datastore.mapping.query.api.AssociationCriteria

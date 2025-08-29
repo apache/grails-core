@@ -18,15 +18,17 @@
  */
 package org.grails.plugins.databasemigration
 
-import grails.plugins.Plugin
+import javax.sql.DataSource
+
 import liquibase.parser.ChangeLogParser
 import liquibase.parser.ChangeLogParserFactory
+
+import org.springframework.context.ApplicationContext
+
+import grails.plugins.Plugin
 import org.grails.plugins.databasemigration.liquibase.GrailsLiquibase
 import org.grails.plugins.databasemigration.liquibase.GrailsLiquibaseFactory
 import org.grails.plugins.databasemigration.liquibase.GroovyChangeLogParser
-import org.springframework.context.ApplicationContext
-
-import javax.sql.DataSource
 
 class DatabaseMigrationGrailsPlugin extends Plugin {
 
@@ -34,17 +36,17 @@ class DatabaseMigrationGrailsPlugin extends Plugin {
 
     def grailsVersion = '7.0.0-SNAPSHOT > *'
     def pluginExcludes = [
-            "**/testapp/**",
-            "grails-app/views/error.gsp"
+            '**/testapp/**',
+            'grails-app/views/error.gsp'
     ]
 
-    def title = "Grails Database Migration Plugin" // Headline display name of the plugin
-    def author = "Kazuki YAMAMOTO"
-    def authorEmail = ""
+    def title = 'Grails Database Migration Plugin' // Headline display name of the plugin
+    def author = 'Kazuki YAMAMOTO'
+    def authorEmail = ''
     def description = 'Grails Database Migration Plugin'
-    def documentation = "https://docs.grails.org/latest/grails-data/hibernate5/manual/index.html#databaseMigration"
-    def license = "APACHE"
-    def scm = [url: "https://github.com/apache/grails-core"]
+    def documentation = 'https://docs.grails.org/latest/grails-data/hibernate5/manual/index.html#databaseMigration'
+    def license = 'APACHE'
+    def scm = [url: 'https://github.com/apache/grails-core']
 
     @Override
     Closure doWithSpring() {
@@ -67,7 +69,7 @@ class DatabaseMigrationGrailsPlugin extends Plugin {
                 return
             }
 
-            if(!updateAllOnStart) {
+            if (!updateAllOnStart) {
                 def updateOnStart = config.getProperty("${configPrefix}.updateOnStart", Boolean, false)
                 if (!updateOnStart) {
                     return

@@ -22,7 +22,6 @@ import groovy.transform.CompileStatic
 
 import jakarta.servlet.http.HttpSession
 
-
 /**
  *
  * Methods added to the {@link HttpSession} interface
@@ -42,14 +41,14 @@ class HttpSessionExtension {
     }
     
     static propertyMissing(HttpSession session, String name, value) {
-        session.setAttribute name, value    
+        session.setAttribute(name, value)
     }
         
     static getAt(HttpSession session, String name) {
-        getProperty session, name
+        getProperty(session, name)
     }
     
     static propertyMissing(HttpSession session, String name) {
-        getProperty session, name
+        getProperty(session, name)
     }
 }

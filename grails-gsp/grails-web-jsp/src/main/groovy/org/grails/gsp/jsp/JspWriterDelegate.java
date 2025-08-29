@@ -18,10 +18,10 @@
  */
 package org.grails.gsp.jsp;
 
-import jakarta.servlet.jsp.JspWriter;
-
 import java.io.IOException;
 import java.io.Writer;
+
+import jakarta.servlet.jsp.JspWriter;
 
 /**
  * Delegates to another java.io.Writer.

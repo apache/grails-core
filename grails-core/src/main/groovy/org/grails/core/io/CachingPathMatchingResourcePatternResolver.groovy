@@ -21,6 +21,7 @@ package org.grails.core.io
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+
 import org.springframework.core.io.Resource
 import org.springframework.core.io.ResourceLoader
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
@@ -31,9 +32,10 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver
  */
 @CompileStatic
 class CachingPathMatchingResourcePatternResolver extends PathMatchingResourcePatternResolver {
-    public static final CachingPathMatchingResourcePatternResolver INSTANCE = new CachingPathMatchingResourcePatternResolver();
 
-    private CachingPathMatchingResourcePatternResolver(){}
+    public static final CachingPathMatchingResourcePatternResolver INSTANCE = new CachingPathMatchingResourcePatternResolver()
+
+    private CachingPathMatchingResourcePatternResolver() {}
 
     CachingPathMatchingResourcePatternResolver(ResourceLoader parent) {
         super(parent)

@@ -18,13 +18,6 @@
  */
 package org.grails.web.mapping;
 
-import grails.util.GrailsStringUtils;
-import grails.web.mapping.UrlMappingInfo;
-import groovy.lang.Closure;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.util.UriUtils;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -32,6 +25,15 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import groovy.lang.Closure;
+
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.util.UriUtils;
+
+import grails.util.GrailsStringUtils;
+import grails.web.mapping.UrlMappingInfo;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
 
 /**
  * Abstract super class providing pass functionality for configuring a UrlMappingInfo.
@@ -63,8 +65,8 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
                 return 0;
             }
         });
-        Map<String,Object> sortedParams = new LinkedHashMap<String,Object>();
-        for(Object key : keys) {
+        Map<String, Object> sortedParams = new LinkedHashMap<>();
+        for (Object key : keys) {
             sortedParams.put(String.valueOf(key), newParams.get(key));
         }
         this.params = Collections.unmodifiableMap(sortedParams);
@@ -115,7 +117,7 @@ public abstract class AbstractUrlMappingInfo implements UrlMappingInfo {
     }
 
     protected String evaluateNameForValue(Object value) {
-        if(value instanceof CharSequence) {
+        if (value instanceof CharSequence) {
             return value.toString().trim();
         }
         else {

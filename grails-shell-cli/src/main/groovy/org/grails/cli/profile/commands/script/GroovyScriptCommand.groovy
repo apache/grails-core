@@ -18,18 +18,18 @@
  */
 package org.grails.cli.profile.commands.script
 
+import groovy.ant.AntBuilder
+import groovy.transform.CompileStatic
+
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.ModelBuilder
 import grails.util.Environment
 import grails.util.GrailsNameUtils
-import groovy.ant.AntBuilder
-import groovy.transform.CompileStatic
 import org.grails.build.logging.GrailsConsoleAntBuilder
 import org.grails.cli.GrailsCli
 import org.grails.cli.boot.SpringInvoker
 import org.grails.cli.gradle.GradleInvoker
-import org.grails.cli.profile.CommandArgument
 import org.grails.cli.profile.CommandDescription
 import org.grails.cli.profile.ExecutionContext
 import org.grails.cli.profile.Profile
@@ -110,7 +110,7 @@ abstract class GroovyScriptCommand extends Script implements ProfileCommand, Pro
      * @return The flag information, or null if it isn't set by the user
      */
     def flag(String name) {
-        if(commandLine.hasOption(name)) {
+        if (commandLine.hasOption(name)) {
             return commandLine.optionValue(name)
         }
         else {
@@ -155,8 +155,8 @@ abstract class GroovyScriptCommand extends Script implements ProfileCommand, Pro
         notify("${name}Start", executionContext)
         def result = run()
         notify("${name}End", executionContext)
-        if(result instanceof Boolean) {
-            return ((Boolean)result)
+        if (result instanceof Boolean) {
+            return ((Boolean) result)
         }
         return true
     }
@@ -168,13 +168,13 @@ abstract class GroovyScriptCommand extends Script implements ProfileCommand, Pro
      * @param args The arguments to the command
      */
     def methodMissing(String name, args) {
-        Object[] argsArray = (Object[])args
+        Object[] argsArray = (Object[]) args
         def commandName = GrailsNameUtils.getScriptName(name)
         def context = executionContext
-        if(profile?.hasCommand(context, commandName )) {
+        if (profile?.hasCommand(context, commandName)) {
             def commandLine = context.commandLine
             def newArgs = [commandName]
-            newArgs.addAll argsArray.collect() { it.toString() }
+            newArgs.addAll(argsArray.collect() { it.toString() })
             def newContext = new GrailsCli.ExecutionContextImpl(commandLine.parseNew(newArgs as String[]), context)
             return profile.handleCommand(newContext)
         }
@@ -183,13 +183,13 @@ abstract class GroovyScriptCommand extends Script implements ProfileCommand, Pro
         }
     }
 
-    public void setExecutionContext(ExecutionContext executionContext) {
+    void setExecutionContext(ExecutionContext executionContext) {
         this.executionContext = executionContext
         this.consoleLogger = executionContext.console
         this.templateRenderer = new TemplateRendererImpl(executionContext, profile, profileRepository)
         this.fileSystemInteraction = new FileSystemInteractionImpl(executionContext)
         this.gradle = new GradleInvoker(executionContext)
-        setDefaultPackage( executionContext.navigateConfig('grails', 'codegen', 'defaultPackage') )
+        setDefaultPackage(executionContext.navigateConfig('grails', 'codegen', 'defaultPackage'))
     }
 
     ExecutionContext getExecutionContext() {

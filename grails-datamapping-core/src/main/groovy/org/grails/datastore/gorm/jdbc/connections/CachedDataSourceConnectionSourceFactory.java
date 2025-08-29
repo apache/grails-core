@@ -19,12 +19,14 @@
 
 package org.grails.datastore.gorm.jdbc.connections;
 
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.springframework.core.env.PropertyResolver;
-
-import javax.sql.DataSource;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import javax.sql.DataSource;
+
+import org.springframework.core.env.PropertyResolver;
+
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
 
 /**
  * Extends {@link DataSourceConnectionSourceFactory} and caches the created {@link DataSourceConnectionSource} instances ensuring they are singletons
@@ -37,7 +39,7 @@ public class CachedDataSourceConnectionSourceFactory extends DataSourceConnectio
 
     @Override
     public ConnectionSource<DataSource, DataSourceSettings> create(String name, PropertyResolver configuration) {
-        if(dataSources.containsKey(name)) {
+        if (dataSources.containsKey(name)) {
             return dataSources.get(name);
         }
         else {
@@ -49,7 +51,7 @@ public class CachedDataSourceConnectionSourceFactory extends DataSourceConnectio
 
     @Override
     public ConnectionSource<DataSource, DataSourceSettings> create(String name, DataSourceSettings settings) {
-        if(dataSources.containsKey(name)) {
+        if (dataSources.containsKey(name)) {
             return dataSources.get(name);
         }
         else {

@@ -18,12 +18,12 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Child
 import org.apache.grails.data.testing.tck.domains.Parent
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.Pet
 import org.apache.grails.data.testing.tck.domains.PetType
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * @author graemerocher
@@ -34,36 +34,36 @@ class UpdateWithProxyPresentSpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([Pet, Person, PetType, Parent, Child])
     }
 
-    void "Test update entity with association proxies"() {
+    void 'Test update entity with association proxies'() {
         given:
-        def person = new Person(firstName: "Bob", lastName: "Builder")
-        def petType = new PetType(name: "snake")
-        def pet = new Pet(name: "Fred", type: petType, owner: person)
+        def person = new Person(firstName: 'Bob', lastName: 'Builder')
+        def petType = new PetType(name: 'snake')
+        def pet = new Pet(name: 'Fred', type: petType, owner: person)
         person.addToPets(pet)
         person.save(flush: true)
         manager.session.clear()
 
         when:
         person = Person.get(person.id)
-        person.firstName = "changed"
+        person.firstName = 'changed'
         person.save(flush: true)
         manager.session.clear()
         person = Person.get(person.id)
         def personPet = person.pets.iterator().next()
 
         then:
-        person.firstName == "changed"
-        personPet.name == "Fred"
+        person.firstName == 'changed'
+        personPet.name == 'Fred'
         personPet.id == pet.id
         personPet.owner.id == person.id
         personPet.type.name == 'snake'
         personPet.type.id == petType.id
     }
 
-    void "Test update unidirectional oneToMany with proxy"() {
+    void 'Test update unidirectional oneToMany with proxy'() {
         given:
-        def parent = new Parent(name: "Bob").save(flush: true)
-        def child = new Child(name: "Bill").save(flush: true)
+        def parent = new Parent(name: 'Bob').save(flush: true)
+        def child = new Child(name: 'Bill').save(flush: true)
         manager.session.clear()
 
         when:
@@ -86,6 +86,6 @@ class UpdateWithProxyPresentSpec extends GrailsDataTckSpec {
         child = parent.children.first()
 
         then:
-        child.name == "Bill"
+        child.name == 'Bill'
     }
 }

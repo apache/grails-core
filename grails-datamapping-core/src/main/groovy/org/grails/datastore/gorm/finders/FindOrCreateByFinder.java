@@ -18,18 +18,19 @@
  */
 package org.grails.datastore.gorm.finders;
 
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaClass;
-import groovy.lang.MissingMethodException;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaClass;
+import groovy.lang.MissingMethodException;
+
+import org.springframework.core.convert.ConversionException;
+
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.model.MappingContext;
-import org.springframework.core.convert.ConversionException;
 
 /**
  * Finder used to return a single result
@@ -46,7 +47,6 @@ public class FindOrCreateByFinder extends AbstractFindByFinder {
         this(METHOD_PATTERN, datastore);
     }
 
-
     public FindOrCreateByFinder(MappingContext mappingContext) {
         super(Pattern.compile(METHOD_PATTERN), mappingContext);
     }
@@ -54,7 +54,6 @@ public class FindOrCreateByFinder extends AbstractFindByFinder {
     public FindOrCreateByFinder(final String methodPattern, MappingContext mappingContext) {
         super(Pattern.compile(methodPattern), mappingContext);
     }
-
 
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})

@@ -21,6 +21,7 @@ package org.grails.scaffolding.registry.input
 
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
+
 import org.grails.scaffolding.model.property.Constrained
 import org.grails.scaffolding.model.property.DomainProperty
 import org.grails.scaffolding.registry.DomainInputRenderer
@@ -43,13 +44,13 @@ class StringInputRenderer implements DomainInputRenderer {
     Closure renderInput(Map standardAttributes, DomainProperty domainProperty) {
         Constrained constraints = domainProperty.constrained
         if (constraints?.password) {
-            standardAttributes.type = "password"
+            standardAttributes.type = 'password'
         } else if (constraints?.email)  {
-            standardAttributes.type = "email"
+            standardAttributes.type = 'email'
         } else if (constraints?.url) {
-            standardAttributes.type = "url"
+            standardAttributes.type = 'url'
         } else {
-            standardAttributes.type = "text"
+            standardAttributes.type = 'text'
         }
 
         if (constraints?.matches) {

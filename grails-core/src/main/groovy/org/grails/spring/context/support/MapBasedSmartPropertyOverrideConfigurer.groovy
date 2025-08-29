@@ -18,20 +18,18 @@
  */
 package org.grails.spring.context.support
 
-import grails.config.Config
-import grails.core.support.GrailsApplicationAware
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
-import grails.core.GrailsApplication
+
+import org.springframework.beans.factory.FactoryBean
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
-import org.springframework.beans.factory.config.BeanDefinition
-
 import org.springframework.transaction.interceptor.TransactionProxyFactoryBean
-import org.springframework.beans.factory.FactoryBean
 
-import org.springframework.beans.factory.BeanCreationException
+import grails.core.GrailsApplication
+import grails.core.support.GrailsApplicationAware
 
 /**
  * Applies property configuration from a Map with bean names as keys and bean properties as name/value Maps
@@ -52,14 +50,14 @@ class MapBasedSmartPropertyOverrideConfigurer implements BeanFactoryPostProcesso
         if (!beans) {
             return
         }
-        for(beanName in beans.keySet()) {
+        for (beanName in beans.keySet()) {
             def beanProperties = beans.get(beanName)
             if (!(beanProperties instanceof Map)) {
                 throw new IllegalArgumentException("Entry in bean config for bean '" + beanName + "' must be a Map")
             }
             else {
                 final beanPropertiesMap = (Map) beanProperties
-                for(beanPropertyName in beanPropertiesMap.keySet()) {
+                for (beanPropertyName in beanPropertiesMap.keySet()) {
                     final beanPropertyValue = beanPropertiesMap.get(beanPropertyName)
                     applyPropertyValue(factory, beanName.toString(), beanPropertyName.toString(), beanPropertyValue)
                 }
@@ -76,7 +74,7 @@ class MapBasedSmartPropertyOverrideConfigurer implements BeanFactoryPostProcesso
 
     @CompileStatic(TypeCheckingMode.SKIP)
     protected Map<String, Object> getBeansConfig() {
-        grailsApplication?.config?.getProperty("beans", Map)
+        grailsApplication?.config?.getProperty('beans', Map)
     }
 
     protected ClassLoader getClassLoader() {
@@ -120,7 +118,7 @@ class MapBasedSmartPropertyOverrideConfigurer implements BeanFactoryPostProcesso
 
         if (TransactionProxyFactoryBean.isAssignableFrom(beanClass)) {
             getTargetBeanDefinition(factory, beanName,
-                    (BeanDefinition)beanDefinition.propertyValues.getPropertyValue("target").value)
+                    (BeanDefinition) beanDefinition.propertyValues.getPropertyValue('target').value)
         }
         else {
             beanDefinition

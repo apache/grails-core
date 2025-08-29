@@ -25,7 +25,7 @@ import grails.rest.RestfulController
 import grails.util.Holders
 import org.grails.datastore.gorm.GormEntityApi
 
-@Artefact("Controller")
+@Artefact('Controller')
 @ReadOnly
 class RestfulServiceController<T> extends RestfulController<T> {
 

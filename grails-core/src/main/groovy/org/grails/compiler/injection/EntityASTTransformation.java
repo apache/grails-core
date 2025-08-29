@@ -18,14 +18,9 @@
  */
 package org.grails.compiler.injection;
 
-import grails.compiler.ast.ClassInjector;
-import grails.compiler.ast.GrailsDomainClassInjector;
-import grails.persistence.Entity;
-import groovy.transform.CompilationUnitAware;
-
 import java.util.List;
 
-import org.apache.grails.common.compiler.GroovyTransformOrder;
+import groovy.transform.CompilationUnitAware;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.AnnotationNode;
@@ -36,8 +31,12 @@ import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.ASTTransformation;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
 import org.codehaus.groovy.transform.TransformWithPriority;
-import org.grails.core.artefact.DomainClassArtefactHandler;
 
+import grails.compiler.ast.ClassInjector;
+import grails.compiler.ast.GrailsDomainClassInjector;
+import grails.persistence.Entity;
+import org.apache.grails.common.compiler.GroovyTransformOrder;
+import org.grails.core.artefact.DomainClassArtefactHandler;
 
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 public class EntityASTTransformation implements ASTTransformation, CompilationUnitAware, TransformWithPriority {
@@ -70,11 +69,11 @@ public class EntityASTTransformation implements ASTTransformation, CompilationUn
     }
 
     public void applyTransformation(SourceUnit sourceUnit, ClassNode classNode) {
-        if(GrailsASTUtils.isApplied(classNode, EntityASTTransformation.class)) {
+        if (GrailsASTUtils.isApplied(classNode, EntityASTTransformation.class)) {
             return;
         }
         GrailsASTUtils.markApplied(classNode, EntityASTTransformation.class);
-        
+
         GrailsDomainClassInjector domainInjector = new DefaultGrailsDomainClassInjector();
         domainInjector.performInjectionOnAnnotatedEntity(classNode);
 
@@ -87,15 +86,15 @@ public class EntityASTTransformation implements ASTTransformation, CompilationUn
                 injector.performInjection(sourceUnit, classNode);
             } catch (RuntimeException e) {
                 try {
-                    System.err.println("Error occurred calling AST injector ["+injector.getClass().getName()+"]: " + e.getMessage());
+                    System.err.println("Error occurred calling AST injector [" + injector.getClass().getName() + "]: " + e.getMessage());
                 } catch (Throwable t) {
                     // ignore
                 }
                 throw e;
             }
         }
-        
-        if(compilationUnit != null) {
+
+        if (compilationUnit != null) {
             TraitInjectionUtils.processTraitsForNode(sourceUnit, classNode, DomainClassArtefactHandler.TYPE, compilationUnit);
         }
     }

@@ -19,6 +19,12 @@
 
 package grails.views.mvc.renderer
 
+import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
+
+import org.springframework.web.servlet.ModelAndView
+import org.springframework.web.servlet.view.AbstractUrlBasedView
+
 import grails.core.support.proxy.ProxyHandler
 import grails.rest.render.RenderContext
 import grails.rest.render.Renderer
@@ -26,13 +32,9 @@ import grails.rest.render.RendererRegistry
 import grails.views.mvc.SmartViewResolver
 import grails.views.resolve.TemplateResolverUtils
 import grails.web.mime.MimeType
-import groovy.transform.CompileStatic
-import groovy.transform.InheritConstructors
 import org.grails.plugins.web.rest.render.ServletRenderContext
 import org.grails.plugins.web.rest.render.html.DefaultHtmlRenderer
 import org.grails.web.util.GrailsApplicationAttributes
-import org.springframework.web.servlet.ModelAndView
-import org.springframework.web.servlet.view.AbstractUrlBasedView
 
 /**
  * A renderer implementation that looks up a view from the ViewResolver
@@ -43,6 +45,7 @@ import org.springframework.web.servlet.view.AbstractUrlBasedView
 @InheritConstructors
 @CompileStatic
 abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
+
     public static final String MODEL_OBJECT = 'object'
     final SmartViewResolver viewResolver
 
@@ -52,22 +55,20 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
 
     final Renderer defaultRenderer
 
-
     DefaultViewRenderer(Class<T> targetType, MimeType mimeType, SmartViewResolver viewResolver, ProxyHandler proxyHandler, RendererRegistry rendererRegistry, Renderer defaultRenderer) {
-        super(targetType,mimeType)
+        super(targetType, mimeType)
         this.viewResolver = viewResolver
         this.proxyHandler = proxyHandler
         this.rendererRegistry = rendererRegistry
         this.defaultRenderer = defaultRenderer
     }
 
-
     @Override
     void render(T object, RenderContext context) {
         def arguments = context.arguments
         def ct = arguments?.contentType
 
-        if(ct) {
+        if (ct) {
             context.setContentType(ct.toString())
         }
         else {
@@ -89,7 +90,7 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
         if (viewName?.startsWith('/')) {
             viewUri = viewName
         } else {
-           viewUri = "/${context.controllerName}/${viewName}"
+            viewUri = "/${context.controllerName}/${viewName}"
         }
 
         def webRequest = ((ServletRenderContext) context).getWebRequest()
@@ -99,35 +100,35 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
         AbstractUrlBasedView view
         String namespace = webRequest.controllerNamespace
         if (namespace) {
-            view = (AbstractUrlBasedView)viewResolver.resolveView("/${namespace}${viewUri}", request, response)
-        }
-        
-        if (view == null) {
-            view = (AbstractUrlBasedView)viewResolver.resolveView(viewUri, request, response)
+            view = (AbstractUrlBasedView) viewResolver.resolveView("/${namespace}${viewUri}", request, response)
         }
 
-        if(view == null) {
-            if(proxyHandler != null) {
-                object = (T)proxyHandler.unwrapIfProxy(object)
+        if (view == null) {
+            view = (AbstractUrlBasedView) viewResolver.resolveView(viewUri, request, response)
+        }
+
+        if (view == null) {
+            if (proxyHandler != null) {
+                object = (T) proxyHandler.unwrapIfProxy(object)
             }
 
             def cls = object.getClass()
             // Try resolve template. Example /book/_book
-            view = (AbstractUrlBasedView)viewResolver.resolveView(cls, request, response)
+            view = (AbstractUrlBasedView) viewResolver.resolveView(cls, request, response)
         }
 
-        if(view != null) {
+        if (view != null) {
             Map<String, ?> model
-            if(object instanceof Map) {
+            if (object instanceof Map) {
                 def map = (Map) object
                 model = map
-                if(view == viewResolver.objectView) {
+                if (view == viewResolver.objectView) {
                     // avoid stack overflow by making a copy of the map
                     model.put(MODEL_OBJECT, new LinkedHashMap(map))
                 }
             } else {
                 model = [(resolveModelVariableName(object)): object]
-                if(view == viewResolver.objectView) {
+                if (view == viewResolver.objectView) {
                     model.put(MODEL_OBJECT, object)
                 }
             }

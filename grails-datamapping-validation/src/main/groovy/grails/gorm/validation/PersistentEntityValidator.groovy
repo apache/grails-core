@@ -21,6 +21,11 @@ package grails.gorm.validation
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
+import org.springframework.context.MessageSource
+import org.springframework.validation.Errors
+import org.springframework.validation.FieldError
+
 import org.grails.datastore.gorm.support.BeforeValidateHelper
 import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator
 import org.grails.datastore.mapping.model.MappingContext
@@ -32,10 +37,6 @@ import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.reflect.EntityReflector
-import org.grails.datastore.mapping.reflect.ReflectionUtils
-import org.springframework.context.MessageSource
-import org.springframework.validation.Errors
-import org.springframework.validation.FieldError
 
 /**
  * A Validator that validates a {@link org.grails.datastore.mapping.model.PersistentEntity} against known constraints
@@ -69,7 +70,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
 
         def evaluated = constraintsEvaluator.evaluate(targetClass)
         this.constrainedProperties = Collections.unmodifiableMap(evaluated)
-        if(constrainedProperties == null) {
+        if (constrainedProperties == null) {
             throw new IllegalStateException("Constraint evaluator returned null for class: $targetClass")
         }
     }
@@ -86,18 +87,18 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         def validatedObjects = new HashSet()
         validatedObjects.add(obj)
 
-        for(PersistentProperty pp in entity.persistentProperties) {
+        for (PersistentProperty pp in entity.persistentProperties) {
             def propertyName = pp.name
 
             ConstrainedProperty constrainedProperty = constrainedProperties.get(propertyName)
 
-            if(constrainedProperty != null) {
+            if (constrainedProperty != null) {
                 validatePropertyWithConstraint(obj, propertyName, entityReflector, errors, constrainedProperty, pp)
             }
 
-            if(pp instanceof Association) {
-                Association association = (Association)pp
-                if(cascade) {
+            if (pp instanceof Association) {
+                Association association = (Association) pp
+                if (cascade) {
                     cascadeToAssociativeProperty(obj, errors, entityReflector, association, validatedObjects)
                 }
             }
@@ -105,9 +106,9 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             constrainedPropertyNames.remove(propertyName)
         }
 
-        for(String remainingProperty in constrainedPropertyNames) {
+        for (String remainingProperty in constrainedPropertyNames) {
             ConstrainedProperty constrainedProperty = constrainedProperties.get(remainingProperty)
-            if(remainingProperty != null) {
+            if (remainingProperty != null) {
                 validatePropertyWithConstraint(obj, remainingProperty, entityReflector, errors, constrainedProperty, null)
             }
         }
@@ -121,7 +122,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * @param bean The original bean
      * @param association The associative property
      */
-    protected void cascadeToAssociativeProperty(Object parent, Errors errors, EntityReflector reflector, Association association, Set validatedObjects ) {
+    protected void cascadeToAssociativeProperty(Object parent, Errors errors, EntityReflector reflector, Association association, Set validatedObjects) {
         String propertyName = association.getName()
         if (errors.hasFieldErrors(propertyName)) {
             return
@@ -130,15 +131,15 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         if (association instanceof ToOne) {
             Object associatedObject = reflector.getProperty(parent, propertyName)
 
-            if(associatedObject != null && proxyHandler?.isInitialized(associatedObject)) {
-                if(association.doesCascadeValidate(associatedObject)) {
-                    cascadeValidationToOne(parent, propertyName, (ToOne)association, errors, reflector, associatedObject, null, validatedObjects)
+            if (associatedObject != null && proxyHandler?.isInitialized(associatedObject)) {
+                if (association.doesCascadeValidate(associatedObject)) {
+                    cascadeValidationToOne(parent, propertyName, (ToOne) association, errors, reflector, associatedObject, null, validatedObjects)
                 }
                 else {
                     Errors existingErrors = retrieveErrors(associatedObject)
-                    if(existingErrors != null && existingErrors.hasErrors()) {
-                        for(error in existingErrors.fieldErrors) {
-                            String path = "${propertyName}." +error.field
+                    if (existingErrors != null && existingErrors.hasErrors()) {
+                        for (error in existingErrors.fieldErrors) {
+                            String path = "${propertyName}." + error.field
                             errors.rejectValue(path, error.code, error.arguments, error.defaultMessage)
                         }
                     }
@@ -146,7 +147,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
             }
         }
         else if (association instanceof ToMany) {
-            if(association.doesCascadeValidate(null)) {
+            if (association.doesCascadeValidate(null)) {
                 cascadeValidationToMany(parent, propertyName, association, errors, reflector, validatedObjects)
             }
         }
@@ -167,24 +168,24 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * @param association An association whose isOneToMeny() method returns true
      * @param propertyName The name of the property
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     protected void cascadeValidationToMany(Object parentObject, String propertyName, Association association, Errors errors, EntityReflector entityReflector, Set validatedObjects) {
 
         Object collection = entityReflector.getProperty(parentObject, propertyName)
-        if(collection == null || !proxyHandler?.isInitialized(collection)) {
+        if (collection == null || !proxyHandler?.isInitialized(collection)) {
             return
         }
 
         if (collection instanceof List || collection instanceof SortedSet) {
             int idx = 0
-            for (Object associatedObject : ((Collection)collection)) {
-                cascadeValidationToOne(parentObject, propertyName, association, errors, entityReflector,associatedObject, idx++, validatedObjects)
+            for (Object associatedObject : ((Collection) collection)) {
+                cascadeValidationToOne(parentObject, propertyName, association, errors, entityReflector, associatedObject, idx++, validatedObjects)
             }
         }
         else if (collection instanceof Collection) {
             Integer index = 0
-            for (Object associatedObject : ((Collection)collection)) {
-                cascadeValidationToOne(parentObject, propertyName, association, errors, entityReflector,associatedObject, index++, validatedObjects)
+            for (Object associatedObject : ((Collection) collection)) {
+                cascadeValidationToOne(parentObject, propertyName, association, errors, entityReflector, associatedObject, index++, validatedObjects)
             }
         }
         else if (collection instanceof Map) {
@@ -206,13 +207,13 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
      * @param propertyName The name of the property
      * @param indexOrKey
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     protected void cascadeValidationToOne(Object parentObject, String propertyName, Association association, Errors errors, EntityReflector reflector, Object associatedObject, Object indexOrKey, Set validatedObjects) {
         if (associatedObject == null) {
             return
         }
 
-        if(validatedObjects.contains(associatedObject)) {
+        if (validatedObjects.contains(associatedObject)) {
             return
         }
 
@@ -239,8 +240,8 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         Map associatedConstrainedProperties
 
         def validator = mappingContext.getEntityValidator(associatedEntity)
-        if(validator instanceof PersistentEntityValidator) {
-            associatedConstrainedProperties = ((PersistentEntityValidator)validator).getConstrainedProperties()
+        if (validator instanceof PersistentEntityValidator) {
+            associatedConstrainedProperties = ((PersistentEntityValidator) validator).getConstrainedProperties()
         }
         else {
             associatedConstrainedProperties = Collections.<String, ConstrainedProperty>emptyMap()
@@ -271,7 +272,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
                 }
 
                 if (associatedPersistentProperty instanceof Association) {
-                    if(association.isBidirectional() && associatedPersistentProperty == association.inverseSide) {
+                    if (association.isBidirectional() && associatedPersistentProperty == association.inverseSide) {
                         // If this property is the inverse side of the currently processed association then
                         // we don't want to process it
                         continue
@@ -281,7 +282,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
                         associatedObject,
                         errors,
                         associatedReflector,
-                        (Association)associatedPersistentProperty,
+                        (Association) associatedPersistentProperty,
                         validatedObjects)
                 }
             }
@@ -300,7 +301,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         if (indexOrKey instanceof Integer) {
             // Component is part of a Collection. Collection access string
             // e.g. path.object[1] will be appended to the nested path.
-            return nestedPath + componentName + "[" + indexOrKey + "]"
+            return nestedPath + componentName + '[' + indexOrKey + ']'
         }
 
         // Component is part of a Map. Nested path should have a key surrounded
@@ -310,7 +311,7 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
 
     private void validatePropertyWithConstraint(Object obj, String propertyName, EntityReflector reflector, Errors errors, ConstrainedProperty constrainedProperty, PersistentProperty persistentProperty) {
 
-        int i = propertyName.lastIndexOf(".")
+        int i = propertyName.lastIndexOf('.')
         String constrainedPropertyName
         if (i > -1) {
             constrainedPropertyName = propertyName.substring(i + 1, propertyName.length())
@@ -320,12 +321,12 @@ class PersistentEntityValidator implements CascadingValidator, ConstrainedEntity
         }
         FieldError fieldError = errors.getFieldError(constrainedPropertyName)
         if (fieldError == null) {
-            if(persistentProperty != null) {
+            if (persistentProperty != null) {
                 constrainedProperty.validate(obj, reflector.getProperty(obj, constrainedPropertyName), errors)
             }
             else {
-                if(obj instanceof GroovyObject) {
-                    constrainedProperty.validate(obj, ((GroovyObject)obj).getProperty(constrainedPropertyName), errors)
+                if (obj instanceof GroovyObject) {
+                    constrainedProperty.validate(obj, ((GroovyObject) obj).getProperty(constrainedPropertyName), errors)
                 }
             }
         }

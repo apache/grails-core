@@ -18,17 +18,18 @@
  */
 package grails.views
 
+import groovy.text.TemplateEngine
+import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
+
+import org.springframework.context.MessageSource
+
 import grails.core.support.proxy.DefaultProxyHandler
 import grails.core.support.proxy.ProxyHandler
 import grails.web.mapping.LinkGenerator
 import grails.web.mime.MimeUtility
-import groovy.text.TemplateEngine
-import groovy.transform.CompileStatic
-import groovy.transform.InheritConstructors
 import org.grails.datastore.gorm.proxy.ProxyHandlerAdapter
 import org.grails.datastore.mapping.model.MappingContext
-import org.springframework.context.MessageSource
-
 
 /**
  * @author Graeme Rocher
@@ -37,6 +38,7 @@ import org.springframework.context.MessageSource
 @InheritConstructors
 @CompileStatic
 class GrailsViewTemplate extends WritableScriptTemplate {
+
     /**
      * The GORM mapping context
      */
@@ -45,18 +47,18 @@ class GrailsViewTemplate extends WritableScriptTemplate {
     /**
      * Handlers for proxies
      */
-    @Lazy ProxyHandler proxyHandler =  {
-        if(mappingContext != null ) {
+    @Lazy ProxyHandler proxyHandler = {
+        if (mappingContext != null) {
             def proxyHandler = mappingContext.getProxyHandler()
-            if(proxyHandler != null) {
-                return (ProxyHandler)new ProxyHandlerAdapter(proxyHandler)
+            if (proxyHandler != null) {
+                return (ProxyHandler) new ProxyHandlerAdapter(proxyHandler)
             }
             else {
-                return (ProxyHandler)new DefaultProxyHandler()
+                return (ProxyHandler) new DefaultProxyHandler()
             }
         }
         else {
-            return (ProxyHandler)new DefaultProxyHandler()
+            return (ProxyHandler) new DefaultProxyHandler()
         }
     }()
 

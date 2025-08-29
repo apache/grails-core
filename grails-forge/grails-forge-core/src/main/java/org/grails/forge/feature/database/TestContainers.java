@@ -50,6 +50,11 @@ public class TestContainers implements Feature {
     }
 
     @Override
+    public String getCategory() {
+        return Category.TESTING;
+    }
+
+    @Override
     public String getDescription() {
         return "Leverage Testcontainers to run databases and other services in Docker containers during testing.";
     }
@@ -128,11 +133,6 @@ public class TestContainers implements Feature {
     @Override
     public boolean supports(ApplicationType applicationType) {
         return true;
-    }
-
-    @Override
-    public String getCategory() {
-        return Category.DATABASE;
     }
 
     @Nullable

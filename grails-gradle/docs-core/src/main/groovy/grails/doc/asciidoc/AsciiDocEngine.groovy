@@ -19,15 +19,18 @@
 
 package grails.doc.asciidoc
 
-import grails.doc.DocEngine
 import groovy.transform.InheritConstructors
+
+import org.asciidoctor.Asciidoctor
 import org.asciidoctor.Attributes
 import org.asciidoctor.Options
 import org.asciidoctor.SafeMode
 import org.radeox.api.engine.context.RenderContext
 
-import static org.asciidoctor.Asciidoctor.Factory.create;
-import org.asciidoctor.Asciidoctor;
+import grails.doc.DocEngine
+
+import static org.asciidoctor.Asciidoctor.Factory.create
+
 /**
  * A DocEngine implementation that uses Asciidoctor to render pages
  *
@@ -36,11 +39,12 @@ import org.asciidoctor.Asciidoctor;
  */
 @InheritConstructors
 class AsciiDocEngine extends DocEngine {
-    Asciidoctor asciidoctor = create();
+
+    Asciidoctor asciidoctor = create()
     Map attributes = [
         'imagesdir': '../img',
-        'source-highlighter':'coderay',
-        'icons':'font'
+        'source-highlighter': 'coderay',
+        'icons': 'font'
     ]
     @Override
     String render(String content, RenderContext context) {

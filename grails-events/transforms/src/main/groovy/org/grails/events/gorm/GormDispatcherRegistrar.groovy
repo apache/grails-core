@@ -19,17 +19,18 @@
 
 package org.grails.events.gorm
 
-import grails.events.annotation.Subscriber
-import grails.events.bus.EventBus
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
-import org.grails.datastore.mapping.core.Datastore
-import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
+
 import org.springframework.beans.factory.FactoryBean
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationEventPublisher
+
+import grails.events.bus.EventBus
+import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 
 /**
  * Handles registering of GORM event listeners for {@link GormAnnotatedSubscriber} instances
@@ -67,23 +68,23 @@ class GormDispatcherRegistrar implements FactoryBean<GormDispatcherRegistrar>, I
 
     @Override
     void afterPropertiesSet() throws Exception {
-        if(datastores && subscribers && eventBus != null) {
+        if (datastores && subscribers && eventBus != null) {
             Set<Class<? extends AbstractPersistenceEvent>> subscribedEvents = []
             List<GormAnnotatedListener> listeners = []
-            for(sub in subscribers) {
-                if(sub instanceof GormAnnotatedListener) {
-                    listeners.add((GormAnnotatedListener)sub)
+            for (sub in subscribers) {
+                if (sub instanceof GormAnnotatedListener) {
+                    listeners.add((GormAnnotatedListener) sub)
                 }
                 else {
                     subscribedEvents.addAll(sub.getSubscribedEvents())
                 }
             }
-            for(Datastore datastore in datastores) {
+            for (Datastore datastore in datastores) {
                 ApplicationEventPublisher applicationEventPublisher = datastore.getApplicationEventPublisher()
-                if(applicationEventPublisher instanceof ConfigurableApplicationEventPublisher) {
+                if (applicationEventPublisher instanceof ConfigurableApplicationEventPublisher) {
 
-                    GormEventDispatcher eventDispatcher = new GormEventDispatcher(eventBus, datastore, subscribedEvents, listeners )
-                    ((ConfigurableApplicationEventPublisher)applicationEventPublisher).addApplicationListener(
+                    GormEventDispatcher eventDispatcher = new GormEventDispatcher(eventBus, datastore, subscribedEvents, listeners)
+                    ((ConfigurableApplicationEventPublisher) applicationEventPublisher).addApplicationListener(
                             eventDispatcher
                     )
                 }

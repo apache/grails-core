@@ -15,13 +15,14 @@
 
 package org.grails.datastore.gorm.mongodb.boot.autoconfigure
 
+import java.beans.Introspector
+
+import groovy.transform.CompileStatic
+
 import com.mongodb.MongoClientSettings
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
-import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher
-import org.grails.datastore.mapping.mongo.MongoDatastore
-import org.grails.datastore.mapping.services.Service
+
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
@@ -38,7 +39,9 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.transaction.PlatformTransactionManager
 
-import java.beans.Introspector
+import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher
+import org.grails.datastore.mapping.mongo.MongoDatastore
+import org.grails.datastore.mapping.services.Service
 
 /**
  *
@@ -51,7 +54,7 @@ import java.beans.Introspector
 @Configuration
 @ConditionalOnMissingBean(MongoDatastore)
 @AutoConfigureAfter(MongoAutoConfiguration)
-class MongoDbGormAutoConfiguration implements ApplicationContextAware{
+class MongoDbGormAutoConfiguration implements ApplicationContextAware {
 
     @Autowired(required = false)
     private MongoProperties mongoProperties
@@ -67,15 +70,15 @@ class MongoDbGormAutoConfiguration implements ApplicationContextAware{
     @Bean
     MongoDatastore mongoDatastore() {
         ConfigurableApplicationContext context = applicationContext
-        if(!(context instanceof ConfigurableApplicationContext)) {
-            throw new IllegalArgumentException("MongoDbGormAutoConfiguration requires an instance of ConfigurableApplicationContext")
+        if (!(context instanceof ConfigurableApplicationContext)) {
+            throw new IllegalArgumentException('MongoDbGormAutoConfiguration requires an instance of ConfigurableApplicationContext')
         }
         ConfigurableListableBeanFactory beanFactory = context.beanFactory
         List<String> packageNames = AutoConfigurationPackages.get(beanFactory)
         List<Package> packages = []
-        for(name in packageNames) {
+        for (name in packageNames) {
             Package pkg = Package.getPackage(name)
-            if(pkg != null) {
+            if (pkg != null) {
                 packages.add(pkg)
             }
         }
@@ -83,25 +86,25 @@ class MongoDbGormAutoConfiguration implements ApplicationContextAware{
         MongoDatastore datastore
         ConfigurableEnvironment environment = context.environment
         ConfigurableApplicationContextEventPublisher eventPublisher = new ConfigurableApplicationContextEventPublisher(context)
-        if(mongo != null) {
-            datastore = new MongoDatastore(mongo, environment,eventPublisher, packages as Package[])
+        if (mongo != null) {
+            datastore = new MongoDatastore(mongo, environment, eventPublisher, packages as Package[])
         }
-        else if(mongoProperties != null) {
+        else if (mongoProperties != null) {
             this.mongo = MongoClients.create(mongoOptions)
-            datastore = new MongoDatastore(mongo, environment,eventPublisher, packages as Package[])
+            datastore = new MongoDatastore(mongo, environment, eventPublisher, packages as Package[])
         }
         else {
             datastore = new MongoDatastore(environment, eventPublisher, packages as Package[])
         }
 
-        for(Service service in datastore.getServices()) {
+        for (Service service in datastore.getServices()) {
             Class serviceClass = service.getClass()
             grails.gorm.services.Service ann = serviceClass.getAnnotation(grails.gorm.services.Service)
             String serviceName = ann?.name()
-            if(serviceName == null) {
+            if (serviceName == null) {
                 serviceName = Introspector.decapitalize(serviceClass.simpleName)
             }
-            if(!context.containsBean(serviceName)) {
+            if (!context.containsBean(serviceName)) {
                 context.beanFactory.registerSingleton(
                         serviceName,
                         service
@@ -118,10 +121,10 @@ class MongoDbGormAutoConfiguration implements ApplicationContextAware{
 
     @Override
     void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        if(!(applicationContext instanceof ConfigurableApplicationContext)) {
-            throw new IllegalArgumentException("MongoDbGormAutoConfiguration requires an instance of ConfigurableApplicationContext")
+        if (!(applicationContext instanceof ConfigurableApplicationContext)) {
+            throw new IllegalArgumentException('MongoDbGormAutoConfiguration requires an instance of ConfigurableApplicationContext')
         }
-        this.applicationContext = (ConfigurableApplicationContext)applicationContext
+        this.applicationContext = (ConfigurableApplicationContext) applicationContext
     }
 
 }

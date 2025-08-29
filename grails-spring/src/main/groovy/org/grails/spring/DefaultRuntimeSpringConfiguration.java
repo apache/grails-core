@@ -18,9 +18,6 @@
  */
 package org.grails.spring;
 
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaClass;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -30,8 +27,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaClass;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.beans.PropertyValue;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -57,12 +58,12 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
 
     private static final Log LOG = LogFactory.getLog(DefaultRuntimeSpringConfiguration.class);
     protected GenericApplicationContext context;
-    private Map<String, BeanConfiguration> beanConfigs = new HashMap<String, BeanConfiguration>();
-    private Map<String, BeanDefinition> beanDefinitions = new HashMap<String, BeanDefinition>();
-    private Set<String> beanNames = new LinkedHashSet<String>();
+    private Map<String, BeanConfiguration> beanConfigs = new HashMap<>();
+    private Map<String, BeanDefinition> beanDefinitions = new HashMap<>();
+    private Set<String> beanNames = new LinkedHashSet<>();
     protected ApplicationContext parent;
     protected ClassLoader classLoader;
-    protected Map<String, List<String>> aliases = new HashMap<String, List<String>>();
+    protected Map<String, List<String>> aliases = new HashMap<>();
     protected ListableBeanFactory beanFactory;
 
     /**
@@ -77,7 +78,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
             Assert.isInstanceOf(DefaultListableBeanFactory.class, beanFactory,
                     "ListableBeanFactory set must be a subclass of DefaultListableBeanFactory");
 
-            return new GrailsApplicationContext((DefaultListableBeanFactory) beanFactory,parentCtx);
+            return new GrailsApplicationContext((DefaultListableBeanFactory) beanFactory, parentCtx);
         }
 
         if (beanFactory != null) {
@@ -111,7 +112,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
         if (parentCtx.containsBean("classLoader")) {
             Object cl = parentCtx.getBean("classLoader");
             if (cl instanceof ClassLoader) {
-                setClassLoaderOnContext((ClassLoader)cl);
+                setClassLoaderOnContext((ClassLoader) cl);
             }
         }
     }
@@ -142,13 +143,13 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     }
 
     public BeanConfiguration addSingletonBean(String name, @SuppressWarnings("rawtypes") Class clazz) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name,clazz);
+        BeanConfiguration bc = new DefaultBeanConfiguration(name, clazz);
         registerBeanConfiguration(name, bc);
         return bc;
     }
 
     public BeanConfiguration addPrototypeBean(String name, @SuppressWarnings("rawtypes") Class clazz) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name,clazz,true);
+        BeanConfiguration bc = new DefaultBeanConfiguration(name, clazz, true);
         registerBeanConfiguration(name, bc);
         return bc;
     }
@@ -181,19 +182,19 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
 
     @SuppressWarnings("rawtypes")
     public BeanConfiguration addSingletonBean(String name, Class clazz, Collection args) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name,clazz,args);
+        BeanConfiguration bc = new DefaultBeanConfiguration(name, clazz, args);
         registerBeanConfiguration(name, bc);
         return bc;
     }
 
     public BeanConfiguration addPrototypeBean(String name) {
-        BeanConfiguration bc = new DefaultBeanConfiguration(name,true);
+        BeanConfiguration bc = new DefaultBeanConfiguration(name, true);
         registerBeanConfiguration(name, bc);
         return bc;
     }
 
     private void registerBeanConfiguration(String name, BeanConfiguration bc) {
-        beanConfigs.put(name,bc);
+        beanConfigs.put(name, bc);
         beanNames.add(name);
     }
 
@@ -203,7 +204,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     }
 
     public BeanConfiguration createPrototypeBean(String name) {
-        return new DefaultBeanConfiguration(name,true);
+        return new DefaultBeanConfiguration(name, true);
     }
 
     public BeanConfiguration createSingletonBean(String name) {
@@ -216,7 +217,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     }
 
     public void addBeanDefinition(String name, BeanDefinition bd) {
-        beanDefinitions.put(name,bd);
+        beanDefinitions.put(name, bd);
         beanConfigs.remove(name);
         beanNames.add(name);
     }
@@ -232,7 +233,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     public AbstractBeanDefinition createBeanDefinition(String name) {
         if (containsBean(name)) {
             if (beanDefinitions.containsKey(name)) {
-                return (AbstractBeanDefinition)beanDefinitions.get(name);
+                return (AbstractBeanDefinition) beanDefinitions.get(name);
             }
             if (beanConfigs.containsKey(name)) {
                 return beanConfigs.get(name).getBeanDefinition();
@@ -247,7 +248,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     }
 
     public List<String> getBeanNames() {
-        return Collections.unmodifiableList(new ArrayList<String>(beanNames));
+        return Collections.unmodifiableList(new ArrayList<>(beanNames));
     }
 
     public void registerBeansWithContext(GenericApplicationContext applicationContext) {
@@ -350,7 +351,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     public void addAlias(String alias, String beanName) {
         List<String> beanAliases = aliases.get(beanName);
         if (beanAliases == null) {
-            beanAliases = new ArrayList<String>();
+            beanAliases = new ArrayList<>();
             aliases.put(beanName, beanAliases);
         }
         beanAliases.add(alias);

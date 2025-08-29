@@ -39,5 +39,5 @@ interface TenantResolver {
      * @return The tenant identifier
      *
      */
-    public Serializable resolveTenantIdentifier() throws TenantNotFoundException
+    Serializable resolveTenantIdentifier() throws TenantNotFoundException
 }

@@ -18,23 +18,25 @@
  */
 package grails.rest.render.json
 
-import grails.converters.JSON
-import grails.rest.render.RenderContext
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
-import org.grails.core.artefact.DomainClassArtefactHandler
+
+import jakarta.annotation.PostConstruct
+
+import org.springframework.beans.factory.annotation.Autowired
+
+import grails.converters.JSON
 import grails.core.GrailsApplication
 import grails.core.support.proxy.DefaultProxyHandler
 import grails.core.support.proxy.ProxyHandler
+import grails.rest.render.RenderContext
+import grails.web.mime.MimeType
+import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.plugins.web.rest.render.json.DefaultJsonRenderer
 import org.grails.web.converters.marshaller.ObjectMarshaller
 import org.grails.web.converters.marshaller.json.DeepDomainClassMarshaller
 import org.grails.web.converters.marshaller.json.GroovyBeanMarshaller
-import grails.web.mime.MimeType
-import org.grails.plugins.web.rest.render.json.DefaultJsonRenderer
-import org.springframework.beans.factory.annotation.Autowired
-
-import jakarta.annotation.PostConstruct
 
 /**
  *
@@ -88,16 +90,16 @@ class JsonRenderer <T> extends DefaultJsonRenderer<T> {
                     return excludes.contains(property)
                 }
             }
-            if(includes?.contains(GormProperties.VERSION)) {
+            if (includes?.contains(GormProperties.VERSION)) {
                 domainClassMarshaller.includeVersion = true
             }
-            if(includes?.contains('class')) {
+            if (includes?.contains('class')) {
                 domainClassMarshaller.includeClass = true
             }
 
             marshaller = domainClassMarshaller
-        } else if(!Collection.isAssignableFrom(targetType) && !Map.isAssignableFrom(targetType)) {
-            marshaller = (ObjectMarshaller<JSON>)new GroovyBeanMarshaller() {
+        } else if (!Collection.isAssignableFrom(targetType) && !Map.isAssignableFrom(targetType)) {
+            marshaller = (ObjectMarshaller<JSON>) new GroovyBeanMarshaller() {
                 @Override
                 protected boolean includesProperty(Object o, String property) {
                     return includes == null || includes.contains(property)
@@ -109,7 +111,7 @@ class JsonRenderer <T> extends DefaultJsonRenderer<T> {
                 }
             }
         }
-        if(marshaller) {
+        if (marshaller) {
 
             registerCustomMarshaller(marshaller)
         }

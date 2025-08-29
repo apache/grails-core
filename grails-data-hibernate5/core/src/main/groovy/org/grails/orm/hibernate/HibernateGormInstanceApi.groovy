@@ -20,11 +20,13 @@ package org.grails.orm.hibernate
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
+
 import org.hibernate.engine.spi.EntityEntry
 import org.hibernate.engine.spi.SessionImplementor
 import org.hibernate.persister.entity.EntityPersister
 import org.hibernate.tuple.NonIdentifierAttribute
+
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
 
 /**
  * The implementation of the GORM instance API contract for Hibernate.
@@ -40,7 +42,7 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
     HibernateGormInstanceApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader) {
         super(persistentClass, datastore, classLoader, null)
         hibernateTemplate = new GrailsHibernateTemplate(sessionFactory, datastore)
-        instanceApiHelper = new InstanceApiHelper((GrailsHibernateTemplate)hibernateTemplate)
+        instanceApiHelper = new InstanceApiHelper((GrailsHibernateTemplate) hibernateTemplate)
     }
 
     /**
@@ -54,7 +56,7 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
 
     @CompileDynamic
     boolean isDirty(D instance, String fieldName) {
-        SessionImplementor session = (SessionImplementor)sessionFactory.currentSession
+        SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
         def entry = findEntityEntry(instance, session)
         if (!entry || !entry.loadedState) {
             return false
@@ -63,7 +65,7 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
         EntityPersister persister = entry.persister
         Object[] values = persister.getPropertyValues(instance)
         def dirtyProperties = findDirty(persister, values, entry, instance, session)
-        if(dirtyProperties == null) {
+        if (dirtyProperties == null) {
             return false
         }
         else {
@@ -85,7 +87,7 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
      */
     @CompileDynamic
     boolean isDirty(D instance) {
-        SessionImplementor session = (SessionImplementor)sessionFactory.currentSession
+        SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
         def entry = findEntityEntry(instance, session)
         if (!entry || !entry.loadedState) {
             return false
@@ -105,7 +107,7 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
 
     @CompileDynamic
     List getDirtyPropertyNames(D instance) {
-        SessionImplementor session = (SessionImplementor)sessionFactory.currentSession
+        SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
         def entry = findEntityEntry(instance, session)
         if (!entry || !entry.loadedState) {
             return []
@@ -117,7 +119,7 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
         List<String> names = []
         def entityProperties = persister.getEntityMetamodel().getProperties()
         for (index in dirtyPropertyIndexes) {
-            names.add entityProperties[index].name
+            names.add(entityProperties[index].name)
         }
         return names
     }
@@ -129,7 +131,7 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
      * @return The original persisted value
      */
     Object getPersistentValue(D instance, String fieldName) {
-        SessionImplementor session = (SessionImplementor)sessionFactory.currentSession
+        SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
         def entry = findEntityEntry(instance, session, false)
         if (!entry || !entry.loadedState) {
             return null
@@ -141,7 +143,6 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
         }
         return fieldIndex == -1 ? null : entry.loadedState[fieldIndex]
     }
-
 
     protected EntityEntry findEntityEntry(D instance, SessionImplementor session, boolean forDirtyCheck = true) {
         def entry = session.persistenceContext.getEntry(instance)

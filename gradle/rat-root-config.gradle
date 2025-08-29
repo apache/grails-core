@@ -27,6 +27,7 @@ tasks.named('rat') {
             'CHECKSUMS', // build artifact for storing checksums for easy verification
             'PUBLISHED_ARTIFACTS', // build artifact for storing published artifacts coordinates & paths
             'licenses/**', // licenses directory excluded
+            '.git-blame-ignore-revs', // git configuration isn't code
             'grails-web-common/src/main/groovy/org/grails/web/json/JSONObject.java',
             'grails-web-common/src/main/groovy/org/grails/web/json/JSONArray.java',
             'grails-web-common/src/main/groovy/org/grails/web/json/JSONTokener.java',

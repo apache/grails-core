@@ -19,10 +19,13 @@
 package org.grails.plugins.databasemigration.liquibase
 
 import groovy.transform.CompileStatic
-import liquibase.parser.core.ParsedNode
 import org.codehaus.groovy.runtime.InvokerHelper
-import org.grails.plugins.databasemigration.DatabaseMigrationException
+
+import liquibase.parser.core.ParsedNode
+
 import org.springframework.context.ApplicationContext
+
+import org.grails.plugins.databasemigration.DatabaseMigrationException
 
 import static org.grails.plugins.databasemigration.PluginConstants.DATA_SOURCE_NAME_KEY
 

@@ -20,6 +20,7 @@
 package org.grails.cli.profile.repository
 
 import groovy.transform.CompileStatic
+
 import org.apache.maven.repository.internal.MavenRepositorySystemUtils
 import org.eclipse.aether.DefaultRepositorySystemSession
 import org.eclipse.aether.RepositorySystem
@@ -34,6 +35,7 @@ import org.eclipse.aether.spi.locator.ServiceLocator
 import org.eclipse.aether.transport.file.FileTransporterFactory
 import org.eclipse.aether.transport.http.HttpTransporterFactory
 import org.eclipse.aether.util.repository.AuthenticationBuilder
+
 import org.grails.cli.compiler.grape.DefaultRepositorySystemSessionAutoConfiguration
 import org.grails.cli.compiler.grape.DependencyResolutionContext
 import org.grails.cli.compiler.grape.MavenResolverGrapeEngine
@@ -54,13 +56,13 @@ class GrailsMavenResolverGrapeEngineFactory {
                                            DependencyResolutionContext dependencyResolutionContext) {
 
         RepositorySystem repositorySystem = createServiceLocator()
-                .getService(RepositorySystem.class)
+                .getService(RepositorySystem)
 
         DefaultRepositorySystemSession repositorySystemSession = MavenRepositorySystemUtils
                 .newSession()
 
         ServiceLoader<RepositorySystemSessionAutoConfiguration> autoConfigurations = ServiceLoader
-                .load(RepositorySystemSessionAutoConfiguration.class)
+                .load(RepositorySystemSessionAutoConfiguration)
 
         for (RepositorySystemSessionAutoConfiguration autoConfiguration : autoConfigurations) {
             autoConfiguration.apply(repositorySystemSession, repositorySystem)
@@ -76,11 +78,11 @@ class GrailsMavenResolverGrapeEngineFactory {
 
     private static ServiceLocator createServiceLocator() {
         DefaultServiceLocator locator = MavenRepositorySystemUtils.newServiceLocator()
-        locator.addService(RepositorySystem.class, DefaultRepositorySystem.class)
-        locator.addService(RepositoryConnectorFactory.class,
-                BasicRepositoryConnectorFactory.class)
-        locator.addService(TransporterFactory.class, HttpTransporterFactory.class)
-        locator.addService(TransporterFactory.class, FileTransporterFactory.class)
+        locator.addService(RepositorySystem, DefaultRepositorySystem)
+        locator.addService(RepositoryConnectorFactory,
+                BasicRepositoryConnectorFactory)
+        locator.addService(TransporterFactory, HttpTransporterFactory)
+        locator.addService(TransporterFactory, FileTransporterFactory)
         return locator
     }
 
@@ -90,7 +92,7 @@ class GrailsMavenResolverGrapeEngineFactory {
                 repositoryConfigurations.size())
         for (GrailsRepositoryConfiguration repositoryConfiguration : repositoryConfigurations) {
             RemoteRepository.Builder builder = new RemoteRepository.Builder(
-                    repositoryConfiguration.getName(), "default",
+                    repositoryConfiguration.getName(), 'default',
                     repositoryConfiguration.getUri().toASCIIString())
             if (repositoryConfiguration.hasCredentials()) {
                 builder.authentication = new AuthenticationBuilder()

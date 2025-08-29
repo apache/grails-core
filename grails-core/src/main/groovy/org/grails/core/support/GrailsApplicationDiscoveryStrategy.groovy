@@ -18,15 +18,16 @@
  */
 package org.grails.core.support
 
-import grails.core.GrailsApplication
 import org.springframework.context.ApplicationContext
+
+import grails.core.GrailsApplication
 
 /**
  * Interface used for classes that discover the GrailsApplication and ApplicationContext instances
  *
  * @since 2.4
  */
-public interface GrailsApplicationDiscoveryStrategy {
+interface GrailsApplicationDiscoveryStrategy {
 
     /**
      * @return Find the GrailsApplication instance

@@ -19,24 +19,41 @@
 
 package org.grails.datastore.mapping.mongo.engine;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
 import com.mongodb.DBRef;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.convert.ConversionService;
+
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.SessionImplementor;
-import org.grails.datastore.mapping.engine.*;
-import org.grails.datastore.mapping.model.*;
+import org.grails.datastore.mapping.engine.AssociationIndexer;
+import org.grails.datastore.mapping.engine.EntityAccess;
+import org.grails.datastore.mapping.engine.NativeEntryEntityPersister;
+import org.grails.datastore.mapping.engine.Persister;
+import org.grails.datastore.mapping.engine.PropertyValueIndexer;
+import org.grails.datastore.mapping.model.EmbeddedPersistentEntity;
+import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.PropertyMapping;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Identity;
 import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.datastore.mapping.mongo.MongoSession;
 import org.grails.datastore.mapping.mongo.config.MongoAttribute;
 import org.grails.datastore.mapping.query.Query;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.core.convert.ConversionService;
-
-import java.io.Serializable;
-import java.util.*;
 
 /**
  * Abstract implementation of MongoDB mongo object mapping entity persister.
@@ -76,7 +93,6 @@ public abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEn
         return getMongoSession().getCollectionName(getPersistentEntity());
     }
 
-
     public MongoSession getMongoSession() {
         return (MongoSession) getSession();
     }
@@ -90,7 +106,6 @@ public abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEn
         return new MongoAssociationIndexer(nativeEntry, association, (MongoSession) session);
     }
 
-
     @Override
     public PropertyValueIndexer getPropertyIndexer(PersistentProperty property) {
         // We don't need to implement this for Mongo since Mongo automatically creates indexes for us
@@ -103,13 +118,13 @@ public abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEn
             return true;
         }
 
-        T dbo = (T)entry;
+        T dbo = (T) entry;
         PersistentEntity entity = getPersistentEntity();
 
         EntityAccess entityAccess = createEntityAccess(entity, instance, dbo);
 
-        T cached = (T)((SessionImplementor<?>)getSession()).getCachedEntry(
-                entity, (Serializable)entityAccess.getIdentifier(), true);
+        T cached = (T) ((SessionImplementor<?>) getSession()).getCachedEntry(
+                entity, (Serializable) entityAccess.getIdentifier(), true);
 
         return !dbo.equals(cached);
     }
@@ -133,7 +148,6 @@ public abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEn
         getValueRetrievalStrategy().setValue(nativeEntry, key, embeddedEntry);
     }
 
-
     @Override
     protected void cascadeDeleteCollection(EntityAccess entityAccess, Association association) {
         Object propValue = entityAccess.getProperty(association.getName());
@@ -149,7 +163,7 @@ public abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEn
                         association.getReferencedPropertyName(), entityAccess.getEntity().getClass().getName(), entityAccess.getIdentifier());
                 continue;
             }
-            if(persister == null) {
+            if (persister == null) {
                 persister = session.getPersister(child);
             }
             persister.delete(child);
@@ -192,6 +206,7 @@ public abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEn
         }
         getValueRetrievalStrategy().setValue(embeddedEntry, association.getName(), dbRefs);
     }
+
     /**
      * Implementors who want to support one-to-many associations embedded should implement this method
      *
@@ -246,16 +261,16 @@ public abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEn
             query.in(identity.getName(), actualKeys);
         }
         else {
-            List<Serializable> keyList = new ArrayList<Serializable>();
+            List<Serializable> keyList = new ArrayList<>();
             for (Serializable key : keys) {
                 keyList.add(key);
             }
             query.in(identity.getName(), keyList);
         }
 
-        List<Object> entityResults = new ArrayList<Object>();
+        List<Object> entityResults = new ArrayList<>();
         Iterator<Serializable> keyIterator = keys.iterator();
-        Map<Serializable, Object> resultMap = new HashMap<Serializable, Object>();
+        Map<Serializable, Object> resultMap = new HashMap<>();
         for (Object o : query.list()) {
             if (isEmbeddedEntry(o)) {
                 final ValueRetrievalStrategy<T> valueRetrievalStrategy = getValueRetrievalStrategy();
@@ -300,8 +315,6 @@ public abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEn
         }
     }
 
-
-
     @Override
     protected Object getEntryValue(T nativeEntry, String property) {
         Object value = getValueRetrievalStrategy().getValue(nativeEntry, property);
@@ -341,7 +354,6 @@ public abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEn
         return super.discriminatePersistentEntity(persistentEntity, nativeEntry);
     }
 
-
     protected abstract String getCollectionName(PersistentEntity persistentEntity, T nativeEntry);
 
     protected boolean isReference(Association association) {
@@ -358,7 +370,7 @@ public abstract class AbstractMongoObectEntityPersister<T> extends NativeEntryEn
     @Override
     protected Collection getManyToManyKeys(PersistentEntity persistentEntity, Object object,
                                            Serializable nativeKey, T nativeEntry, ManyToMany manyToMany) {
-        return (Collection)getValueRetrievalStrategy().getValue(nativeEntry, manyToMany.getName() + "_$$manyToManyIds");
+        return (Collection) getValueRetrievalStrategy().getValue(nativeEntry, manyToMany.getName() + "_$$manyToManyIds");
     }
 
     @Override

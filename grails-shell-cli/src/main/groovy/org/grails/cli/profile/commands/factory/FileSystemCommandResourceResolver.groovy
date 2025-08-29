@@ -20,11 +20,11 @@
 package org.grails.cli.profile.commands.factory
 
 import groovy.transform.CompileStatic
+
 import org.grails.cli.profile.Profile
 import org.grails.io.support.PathMatchingResourcePatternResolver
 import org.grails.io.support.Resource
 import org.grails.io.support.StaticResourceLoader
-
 
 /**
  * A {@link CommandResourceResolver} that resolves from the file system
@@ -44,11 +44,11 @@ class FileSystemCommandResourceResolver implements CommandResourceResolver {
     @Override
     Collection<Resource> findCommandResources(Profile profile) {
         Resource commandsDir = getCommandsDirectory(profile)
-            PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(new StaticResourceLoader(commandsDir))
-        if(commandsDir.exists()) {
+        PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(new StaticResourceLoader(commandsDir))
+        if (commandsDir.exists()) {
             Collection<Resource> commandFiles = []
-            for(ext in matchingFileExtensions) {
-                commandFiles.addAll resolver.getResources("*.$ext")
+            for (ext in matchingFileExtensions) {
+                commandFiles.addAll(resolver.getResources("*.$ext"))
             }
             commandFiles = commandFiles.sort(false) { Resource file -> file.filename }
             return commandFiles
@@ -57,6 +57,6 @@ class FileSystemCommandResourceResolver implements CommandResourceResolver {
     }
 
     protected Resource getCommandsDirectory(Profile profile) {
-        profile.profileDir.createRelative("commands/")
+        profile.profileDir.createRelative('commands/')
     }
 }

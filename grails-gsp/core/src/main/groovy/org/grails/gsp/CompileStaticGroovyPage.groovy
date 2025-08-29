@@ -20,6 +20,7 @@
 package org.grails.gsp
 
 import groovy.transform.CompileStatic
+
 import org.grails.taglib.TagLibNamespaceMethodDispatcher
 import org.grails.taglib.encoder.OutputContext
 
@@ -31,6 +32,7 @@ import org.grails.taglib.encoder.OutputContext
  */
 @CompileStatic
 abstract class CompileStaticGroovyPage extends GroovyPage {
+
     TagLibNamespaceMethodDispatcher defaultTagDispatcher
 
     @Override
@@ -45,7 +47,7 @@ abstract class CompileStaticGroovyPage extends GroovyPage {
     }
 
     @Override
-    public Object getProperty(String property) {
+    Object getProperty(String property) {
         return resolveProperty(property)
     }
 

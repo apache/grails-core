@@ -19,15 +19,17 @@
 
 package grails.plugin.markup.view
 
-import grails.views.GenericViewConfiguration
-import grails.views.ViewsEnvironment
-import grails.web.mime.MimeType
+import java.beans.PropertyDescriptor
+
 import groovy.text.markup.TemplateConfiguration
 import groovy.transform.CompileStatic
+
 import org.springframework.beans.BeanUtils
 import org.springframework.boot.context.properties.ConfigurationProperties
 
-import java.beans.PropertyDescriptor
+import grails.views.GenericViewConfiguration
+import grails.views.ViewsEnvironment
+import grails.web.mime.MimeType
 
 /**
  * @author Graeme Rocher
@@ -37,16 +39,16 @@ import java.beans.PropertyDescriptor
 @ConfigurationProperties('grails.views.markup')
 class MarkupViewConfiguration extends TemplateConfiguration implements GenericViewConfiguration {
 
-    public static final String MODULE_NAME = "markup"
+    public static final String MODULE_NAME = 'markup'
 
     List<String> mimeTypes = [MimeType.XML.name, MimeType.HAL_XML.name]
 
     MarkupViewConfiguration() {
         setExtension(MarkupViewTemplate.EXTENSION)
         setBaseTemplateClass(MarkupViewTemplate)
-        setCacheTemplates( !ViewsEnvironment.isDevelopmentMode() )
+        setCacheTemplates(!ViewsEnvironment.isDevelopmentMode())
         setAutoEscape(true)
-        setPrettyPrint( ViewsEnvironment.isDevelopmentMode() )
+        setPrettyPrint(ViewsEnvironment.isDevelopmentMode())
     }
 
     @Override

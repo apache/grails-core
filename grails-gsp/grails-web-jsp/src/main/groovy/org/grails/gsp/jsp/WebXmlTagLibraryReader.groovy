@@ -20,6 +20,7 @@ package org.grails.gsp.jsp
 
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
+
 import org.grails.io.support.SpringIOUtils
 
 /**
@@ -29,12 +30,13 @@ import org.grails.io.support.SpringIOUtils
  */
 @CompileStatic
 class WebXmlTagLibraryReader {
+
     /**
      * Contains a map of URI to tag library locations once the handler has read the web.xml file
      */
     Map<String, String> tagLocations = [:]
 
-    public WebXmlTagLibraryReader(InputStream inputStream) {
+    WebXmlTagLibraryReader(InputStream inputStream) {
         inputStream.withStream {
             init(new BufferedInputStream(inputStream))
         }

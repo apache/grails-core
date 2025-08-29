@@ -18,10 +18,10 @@
  */
 package grails.async
 
+import java.util.concurrent.TimeUnit
+
 import grails.async.decorator.PromiseDecorator
 import grails.async.decorator.PromiseDecoratorLookupStrategy
-
-import java.util.concurrent.TimeUnit
 
 /**
  * An interface capable of creating {@link Promise} instances. The {@link Promises} static methods use this

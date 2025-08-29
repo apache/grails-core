@@ -18,15 +18,22 @@
  */
 package grails.gorm.transactions;
 
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 import org.codehaus.groovy.transform.GroovyASTTransformationClass;
-import org.grails.datastore.gorm.transform.GormASTTransformationClass;
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider;
+
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 
-import java.lang.annotation.*;
+import org.grails.datastore.gorm.transform.GormASTTransformationClass;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider;
 
 /**
  * Define a read-only transaction
@@ -117,7 +124,6 @@ public @interface ReadOnly {
      * <p>Similar to {@link org.springframework.transaction.interceptor.NoRollbackRuleAttribute#NoRollbackRuleAttribute(String exceptionName)}
      */
     String[] noRollbackForClassName() default {};
-
 
     /**
      * In Spring, when there are nested transaction calls, the execution of the outermost callback will throw UnexpectedRollbackException if TransactionStatus.setRollbackOnly() was called in a nested transaction callback.

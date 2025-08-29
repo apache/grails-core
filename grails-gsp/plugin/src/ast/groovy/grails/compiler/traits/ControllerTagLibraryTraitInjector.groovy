@@ -18,8 +18,9 @@
  */
 package grails.compiler.traits
 
-import grails.artefact.gsp.TagLibraryInvoker
 import groovy.transform.CompileStatic
+
+import grails.artefact.gsp.TagLibraryInvoker
 
 /**
  * A {@link TraitInjector} that adds the ability to invoke tag libraries from a controller

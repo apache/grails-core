@@ -19,7 +19,6 @@
 
 package grails.gorm.api
 
-
 /**
  * Instance methods of the GORM API.
  *
@@ -27,6 +26,7 @@ package grails.gorm.api
  * @param <D> the entity/domain class
  */
 interface GormInstanceOperations<D> {
+
     /**
      * Allow access to datasource by name
      *
@@ -53,14 +53,13 @@ interface GormInstanceOperations<D> {
      * @param callable The closure
      * @return The result of the closure
      */
-    public <T> T mutex(D instance, Closure<T> callable)
+    <T> T mutex(D instance, Closure<T> callable)
 
     /**
      * Refreshes the state of the current instance
      * @return The instance
      */
     D refresh(D instance)
-
 
     /**
      * Saves an object the datastore

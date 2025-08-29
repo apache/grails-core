@@ -54,7 +54,7 @@ public class Mockito implements DefaultFeature {
 
     @Override
     public String getCategory() {
-        return Category.VALIDATION;
+        return Category.TESTING;
     }
 
     @Override

@@ -20,6 +20,7 @@ package org.grails.datastore.mapping.config
 
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
+
 import org.springframework.core.env.StandardEnvironment
 
 /**
@@ -30,5 +31,4 @@ import org.springframework.core.env.StandardEnvironment
  */
 @CompileStatic
 @InheritConstructors
-class DatastoreEnvironment extends StandardEnvironment {
-}
+class DatastoreEnvironment extends StandardEnvironment {}

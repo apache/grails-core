@@ -26,68 +26,69 @@ package grails.config
  * @since 3.0
  */
 interface Settings {
+
     /**
      *  The active Grails profile
      */
-    String PROFILE = "grails.profile"
+    String PROFILE = 'grails.profile'
     /**
      *  Packages to scan for Spring beans
      */
-    String SPRING_BEAN_PACKAGES = "grails.spring.bean.packages"
+    String SPRING_BEAN_PACKAGES = 'grails.spring.bean.packages'
     /**
      * Whether to disable AspectJ explicitly
      */
-    String SPRING_DISABLE_ASPECTJ = "grails.spring.disable.aspectj.autoweaving"
+    String SPRING_DISABLE_ASPECTJ = 'grails.spring.disable.aspectj.autoweaving'
     /**
      * The prefix to use for property placeholders
      */
-    String SPRING_PLACEHOLDER_PREFIX = "grails.spring.placeholder.prefix"
+    String SPRING_PLACEHOLDER_PREFIX = 'grails.spring.placeholder.prefix'
 
     /**
      * Whether to enable Spring proxy based transaction management. Since {@code @Transactional} uses an AST transform, this makes Spring proxy based transaction management redundant.
      * However, if Spring proxies are prefer
      */
-    String SPRING_TRANSACTION_MANAGEMENT = "grails.spring.transactionManagement.proxies"
+    String SPRING_TRANSACTION_MANAGEMENT = 'grails.spring.transactionManagement.proxies'
 
     /**
      * Which plugins to include in the plugin manager
      */
-    String PLUGIN_INCLUDES = "grails.plugin.includes"
+    String PLUGIN_INCLUDES = 'grails.plugin.includes'
     /**
      * Which plugins to exclude from the plugin manager
      */
-    String PLUGIN_EXCLUDES = "grails.plugin.excludes"
+    String PLUGIN_EXCLUDES = 'grails.plugin.excludes'
 
     /**
      * Whether to include the jsessionid in the rendered links
      **/
-    String GRAILS_VIEWS_ENABLE_JSESSIONID = "grails.views.enable.jsessionid"
+    String GRAILS_VIEWS_ENABLE_JSESSIONID = 'grails.views.enable.jsessionid'
 
-    String VIEWS_FILTERING_CODEC_FOR_CONTENT_TYPE = "grails.views.filteringCodecForContentType"
+    String VIEWS_FILTERING_CODEC_FOR_CONTENT_TYPE = 'grails.views.filteringCodecForContentType'
 
     /**
      * Whether to disable caching of resources in GSP
      */
-    String GSP_DISABLE_CACHING_RESOURCES = "grails.gsp.disable.caching.resources"
+    String GSP_DISABLE_CACHING_RESOURCES = 'grails.gsp.disable.caching.resources'
     /**
      * Whether to enable GSP reload in production
      */
-    String GSP_ENABLE_RELOAD = "grails.gsp.enable.reload"
+    String GSP_ENABLE_RELOAD = 'grails.gsp.enable.reload'
 
     /**
      * Thew views directory for GSP
      */
-    String GSP_VIEWS_DIR = "grails.gsp.view.dir"
+    String GSP_VIEWS_DIR = 'grails.gsp.view.dir'
 
     /**
      * The encoding to use for GSP views, defaults to UTF-8
      */
-    String GSP_VIEW_ENCODING = "grails.views.gsp.encoding"
+    String GSP_VIEW_ENCODING = 'grails.views.gsp.encoding'
 
     /**
      * Pattern to use for class scanning
      */
-    String CLASS_RESOURCE_PATTERN = "/**/*.class"
+    String CLASS_RESOURCE_PATTERN = '/**/*.class'
 
     /**
      * The default configured constraints for the application
@@ -97,12 +98,12 @@ interface Settings {
     /**
      * Whether to autowire instances
      */
-    String GORM_AUTOWIRE_INSTANCES = "grails.gorm.autowire"
+    String GORM_AUTOWIRE_INSTANCES = 'grails.gorm.autowire'
 
     /**
      * Whether to translate GORM events into reactor events
      */
-    String GORM_REACTOR_EVENTS = "grails.gorm.reactor.events"
+    String GORM_REACTOR_EVENTS = 'grails.gorm.reactor.events'
     /**
      * The configured mime types
      */
@@ -125,27 +126,27 @@ interface Settings {
     /**
      * The default scope for controllers
      */
-    String CONTROLLERS_DEFAULT_SCOPE = "grails.controllers.defaultScope"
+    String CONTROLLERS_DEFAULT_SCOPE = 'grails.controllers.defaultScope'
 
     /**
      * The upload directory for controllers, defaults to java.tmp.dir
      */
-    String CONTROLLERS_UPLOAD_LOCATION = "grails.controllers.upload.location"
+    String CONTROLLERS_UPLOAD_LOCATION = 'grails.controllers.upload.location'
 
     /**
      * The maximum file size
      */
-    String CONTROLLERS_UPLOAD_MAX_FILE_SIZE = "grails.controllers.upload.maxFileSize"
+    String CONTROLLERS_UPLOAD_MAX_FILE_SIZE = 'grails.controllers.upload.maxFileSize'
 
     /**
      * The maximum request size
      */
-    String CONTROLLERS_UPLOAD_MAX_REQUEST_SIZE = "grails.controllers.upload.maxRequestSize"
+    String CONTROLLERS_UPLOAD_MAX_REQUEST_SIZE = 'grails.controllers.upload.maxRequestSize'
 
     /**
      * The file size threshold
      */
-    String CONTROLLERS_UPLOAD_FILE_SIZE_THRESHOLD = "grails.controllers.upload.fileSizeThreshold"
+    String CONTROLLERS_UPLOAD_FILE_SIZE_THRESHOLD = 'grails.controllers.upload.fileSizeThreshold'
 
     /**
      * The encoding to use for filters, default to UTF-8
@@ -160,17 +161,17 @@ interface Settings {
     /**
      * The converter to use for creating URL tokens in URL mapping. Defaults to camel case.
      */
-    String WEB_URL_CONVERTER = "grails.web.url.converter"
+    String WEB_URL_CONVERTER = 'grails.web.url.converter'
 
     /**
      * Whether to cache links generated by the link generator
      */
-    String WEB_LINK_GENERATOR_USE_CACHE = "grails.web.linkGenerator.useCache"
+    String WEB_LINK_GENERATOR_USE_CACHE = 'grails.web.linkGenerator.useCache'
 
     /**
      * The path to the Grails servlet. Defaults to '/'
      */
-    String WEB_SERVLET_PATH = "grails.web.servlet.path"
+    String WEB_SERVLET_PATH = 'grails.web.servlet.path'
 
     /**
      * The URL of the server
@@ -215,32 +216,32 @@ interface Settings {
     /**
      * The default encoding
      */
-    String DEFAULT_ENCODING = System.getProperty('file.encoding',"UTF-8")
+    String DEFAULT_ENCODING = System.getProperty('file.encoding', 'UTF-8')
 
     /**
      * Whether to log request parameters in the console
      */
-    String SETTING_LOG_REQUEST_PARAMETERS = "grails.exceptionresolver.logRequestParameters"
+    String SETTING_LOG_REQUEST_PARAMETERS = 'grails.exceptionresolver.logRequestParameters'
     /**
      * The parameters to exclude from logging
      */
-    String SETTING_EXCEPTION_RESOLVER_PARAM_EXCLUDES = "grails.exceptionresolver.params.exclude"
+    String SETTING_EXCEPTION_RESOLVER_PARAM_EXCLUDES = 'grails.exceptionresolver.params.exclude'
     /**
      * The class to use for stacktrace filtering. Should be an instanceof {@link org.grails.exceptions.reporting.StackTraceFilterer}
      */
-    String SETTING_LOGGING_STACKTRACE_FILTER_CLASS = "grails.logging.stackTraceFiltererClass"
+    String SETTING_LOGGING_STACKTRACE_FILTER_CLASS = 'grails.logging.stackTraceFiltererClass'
     /**
      * Whether to use the legacy JSON builder
      */
-    String SETTING_LEGACY_JSON_BUILDER = "grails.json.legacy.builder"
+    String SETTING_LEGACY_JSON_BUILDER = 'grails.json.legacy.builder'
     /**
      * Whether to execute Bootstrap classes
      */
-    String SETTING_SKIP_BOOTSTRAP = "grails.bootstrap.skip"
+    String SETTING_SKIP_BOOTSTRAP = 'grails.bootstrap.skip'
     /**
      * Whether to load cors configuration via a filter (true) or interceptor(false)
      */
-    String SETTING_CORS_FILTER = "grails.cors.filter"
+    String SETTING_CORS_FILTER = 'grails.cors.filter'
 
     String TRIM_STRINGS = 'grails.databinding.trimStrings'
 

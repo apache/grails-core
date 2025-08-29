@@ -14,10 +14,12 @@
  */
 package org.grails.datastore.gorm.mongo.geo
 
+import groovy.transform.CompileStatic
+
+import org.bson.Document
+
 import grails.mongodb.geo.Box
 import grails.mongodb.geo.Shape
-import groovy.transform.CompileStatic
-import org.bson.Document
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
 import org.grails.datastore.mapping.model.MappingContext
@@ -30,36 +32,36 @@ import org.grails.datastore.mapping.query.Query
  * Abstract implementation for custom types that persist shapes using their coordinate values
  */
 @CompileStatic
-abstract class AbstractShapeCoordsType<T extends Shape> extends AbstractMappingAwareCustomTypeMarshaller<T, Document, Document>{
+abstract class AbstractShapeCoordsType<T extends Shape> extends AbstractMappingAwareCustomTypeMarshaller<T, Document, Document> {
+
     AbstractShapeCoordsType(Class<T> targetType) {
         super(targetType)
     }
 
     @Override
     boolean supports(MappingContext context) {
-        return context instanceof MongoMappingContext;
+        return context instanceof MongoMappingContext
     }
 
     @Override
     boolean supports(Datastore datastore) {
-        return datastore instanceof MongoDatastore;
+        return datastore instanceof MongoDatastore
     }
 
     @Override
     protected Object writeInternal(PersistentProperty property, String key, T value, Document nativeTarget) {
-        if(value) {
+        if (value) {
             def coords = value.asList()
             nativeTarget.put(key, coords)
             return coords
         }
     }
 
-
     @Override
     protected void queryInternal(PersistentProperty property, String key, Query.PropertyCriterion criterion, Document nativeQuery) {
-        if(criterion instanceof Query.Equals) {
+        if (criterion instanceof Query.Equals) {
             def value = criterion.value
-            if(value instanceof Box) {
+            if (value instanceof Box) {
                 nativeQuery.put(key, value.asList())
             }
         }

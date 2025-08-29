@@ -20,6 +20,7 @@
 package org.grails.datastore.mapping.multitenancy.resolvers
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.mapping.multitenancy.TenantResolver
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 
@@ -29,12 +30,12 @@ import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundExcept
 @CompileStatic
 class SystemPropertyTenantResolver implements TenantResolver {
 
-    public static final String PROPERTY_NAME = "gorm.tenantId"
+    public static final String PROPERTY_NAME = 'gorm.tenantId'
 
     @Override
     Serializable resolveTenantIdentifier() throws TenantNotFoundException {
         def value = System.getProperty(PROPERTY_NAME)
-        if(value) {
+        if (value) {
             return value
         }
         else {

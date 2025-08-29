@@ -19,16 +19,16 @@
 
 package grails.gorm.transactions
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass
-import org.grails.datastore.gorm.transactions.transform.RollbackTransform
-import org.grails.datastore.gorm.transform.GormASTTransformationClass
-
 import java.lang.annotation.Documented
 import java.lang.annotation.ElementType
 import java.lang.annotation.Inherited
 import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
+
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
+
+import org.grails.datastore.gorm.transform.GormASTTransformationClass
 
 /**
  * A transforms that applies a transaction that always rolls back. Useful for testing. See {@link Transactional}
@@ -40,11 +40,12 @@ import java.lang.annotation.Target
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-@GroovyASTTransformationClass("org.grails.datastore.gorm.transform.OrderedGormTransformation")
-@GormASTTransformationClass("org.grails.datastore.gorm.transactions.transform.RollbackTransform")
+@GroovyASTTransformationClass('org.grails.datastore.gorm.transform.OrderedGormTransformation')
+@GormASTTransformationClass('org.grails.datastore.gorm.transactions.transform.RollbackTransform')
 @interface Rollback {
+
     /**
      * The connection to rollback for
      */
-    String value() default ""
+    String value() default ''
 }

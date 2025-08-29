@@ -68,7 +68,7 @@ class SystemOutAndErrSwapper {
      * @throws IllegalStateException if a swap is already on
      */
     List<OutputStream> swapIn(OutputStream outStream, OutputStream errStream) {
-        if (swapped) throw new IllegalStateException("swapIn() called during a swap")
+        if (swapped) throw new IllegalStateException('swapIn() called during a swap')
 
         swappedOutOut = System.out
         swappedOutErr = System.err
@@ -94,7 +94,7 @@ class SystemOutAndErrSwapper {
      * @throws IllegalStateException if not in a swap
      */
     List<OutputStream> swapOut() {
-        if (!swapped) throw new IllegalStateException("swapOut() called while not during a swap")
+        if (!swapped) throw new IllegalStateException('swapOut() called while not during a swap')
 
         System.out = swappedOutOut
         System.err = swappedOutErr
@@ -123,14 +123,13 @@ class SystemOutAndErrSwapper {
 
         TestOutputCapturingPrintStream(PrintStream out) {
             super(out)
-            textOut = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"))
+            textOut = new BufferedWriter(new OutputStreamWriter(out, 'UTF-8'))
         }
-
 
         @Override
         void print(Object o) {
             try {
-                textOut.write String.valueOf(o)
+                textOut.write(String.valueOf(o))
             } catch (IOException e) {
                 setError()
             }
@@ -139,7 +138,7 @@ class SystemOutAndErrSwapper {
         @Override
         void print(String s) {
             try {
-                textOut.write s
+                textOut.write(s)
                 textOut.flush()
             } catch (IOException e) {
                 setError()
@@ -149,7 +148,7 @@ class SystemOutAndErrSwapper {
         @Override
         void println(String s) {
             try {
-                print s
+                print(s)
                 textOut.newLine()
                 textOut.flush()
             } catch (IOException e) {
@@ -161,7 +160,7 @@ class SystemOutAndErrSwapper {
         @Override
         void println(Object o) {
             try {
-                print o
+                print(o)
                 textOut.newLine()
                 textOut.flush()
             } catch (IOException e) {

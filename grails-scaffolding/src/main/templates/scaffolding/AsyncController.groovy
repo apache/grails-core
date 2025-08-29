@@ -34,7 +34,7 @@ class ${className}Controller {
                 return
             }
 
-            if(${propertyName}.hasErrors()) {
+            if (${propertyName}.hasErrors()) {
                 status.setRollbackOnly()
                 respond ${propertyName}.errors, view:'create' // STATUS CODE 422
                 return
@@ -67,7 +67,7 @@ class ${className}Controller {
             }
 
             ${propertyName}.properties = params
-            if( !${propertyName}.save(flush:true) ) {
+            if (!${propertyName}.save(flush:true)) {
                 status.setRollbackOnly()
                 respond ${propertyName}.errors, view:'edit' // STATUS CODE 422
                 return

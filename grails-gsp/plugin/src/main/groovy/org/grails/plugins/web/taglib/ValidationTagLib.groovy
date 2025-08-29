@@ -18,15 +18,15 @@
  */
 package org.grails.plugins.web.taglib
 
-import grails.artefact.TagLibrary
-import grails.gsp.TagLib
+import java.beans.PropertyEditor
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
+
 import groovy.transform.CompileStatic
 import groovy.xml.MarkupBuilder
+
 import org.apache.commons.text.StringEscapeUtils
-import org.grails.encoder.CodecLookup
-import org.grails.encoder.Encoder
-import org.grails.taglib.GroovyPageAttributes
-import org.grails.web.servlet.mvc.GrailsWebRequest
+
 import org.springframework.beans.PropertyEditorRegistry
 import org.springframework.context.MessageSource
 import org.springframework.context.MessageSourceResolvable
@@ -34,9 +34,12 @@ import org.springframework.context.NoSuchMessageException
 import org.springframework.context.support.DefaultMessageSourceResolvable
 import org.springframework.validation.Errors
 
-import java.beans.PropertyEditor
-import java.text.DecimalFormat
-import java.text.DecimalFormatSymbols
+import grails.artefact.TagLibrary
+import grails.gsp.TagLib
+import org.grails.encoder.CodecLookup
+import org.grails.encoder.Encoder
+import org.grails.taglib.GroovyPageAttributes
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * Tags to handle validation and errors.
@@ -69,7 +72,7 @@ class ValidationTagLib implements TagLibrary {
 
         if (bean && field) {
             if (bean.metaClass.hasProperty(bean, 'errors')) {
-                return messageImpl(error: bean.errors?.getFieldError(field), encodeAs: encodeAs ?: "HTML")
+                return messageImpl(error: bean.errors?.getFieldError(field), encodeAs: encodeAs ?: 'HTML')
             }
         }
 
@@ -121,7 +124,7 @@ class ValidationTagLib implements TagLibrary {
 
     private Object parseForRejectedValue(bean, field) {
         def rejectedValue = bean
-        for (String fieldPart in field.split("\\.")) {
+        for (String fieldPart in field.split('\\.')) {
             rejectedValue = rejectedValue?."$fieldPart"
         }
         return rejectedValue
@@ -204,7 +207,7 @@ class ValidationTagLib implements TagLibrary {
 
     def eachErrorInternal(attrs, body, boolean outputResult = false) {
         def errorsList = extractErrors(attrs)
-        eachErrorInternalForList attrs, errorsList, body, outputResult
+        eachErrorInternalForList(attrs, errorsList, body, outputResult)
     }
 
     def eachErrorInternalForList(attrs, errorsList, body, boolean outputResult = false) {
@@ -255,13 +258,13 @@ class ValidationTagLib implements TagLibrary {
 
             def errorsList = extractErrors(attrs)
             if (errorsList) {
-                out << "<ul>"
+                out << '<ul>'
                 out << eachErrorInternalForList(attrs, errorsList, {
                     out << "<li>${message(error: it, encodeAs: codec)}</li>"
                 })
-                out << "</ul>"
+                out << '</ul>'
             }
-        } else if (renderAs.equalsIgnoreCase("xml")) {
+        } else if (renderAs.equalsIgnoreCase('xml')) {
             def mkp = new MarkupBuilder(out)
             mkp.errors() {
                 eachErrorInternal(attrs, {
@@ -360,16 +363,16 @@ class ValidationTagLib implements TagLibrary {
     }
 
     // Maps out how Grails contraints map to Apache commons validators
-    static CONSTRAINT_TYPE_MAP = [email     : 'email',
+    static CONSTRAINT_TYPE_MAP = [email: 'email',
                                   creditCard: 'creditCard',
-                                  matches   : 'mask',
-                                  blank     : 'required',
-                                  nullable  : 'required',
-                                  maxSize   : 'maxLength',
-                                  minSize   : 'minLength',
-                                  range     : 'intRange',
-                                  size      : 'intRange',
-                                  length    : 'maxLength,minLength']
+                                  matches: 'mask',
+                                  blank: 'required',
+                                  nullable: 'required',
+                                  maxSize: 'maxLength',
+                                  minSize: 'minLength',
+                                  range: 'intRange',
+                                  size: 'intRange',
+                                  length: 'maxLength,minLength']
 
     /**
      * Validates a form using Apache commons validator javascript against constraints defined in a Grails
@@ -383,7 +386,7 @@ class ValidationTagLib implements TagLibrary {
     Closure validate = { attrs, body ->
         def form = attrs.form
         if (!form) {
-            throwTagError("Tag [validate] is missing required attribute [form]")
+            throwTagError('Tag [validate] is missing required attribute [form]')
         }
 
         def againstClass = attrs.against ?: form.substring(0, 1).toUpperCase() + form.substring(1)
@@ -415,13 +418,13 @@ class ValidationTagLib implements TagLibrary {
             def validateType = k
             if (validateType) {
                 def validateTypes = [validateType]
-                if (validateType.contains(",")) {
-                    validateTypes = validateType.split(",")
+                if (validateType.contains(',')) {
+                    validateTypes = validateType.split(',')
                 }
 
                 for (vt in validateTypes) {
                     // import required script
-                    def scriptName = "org/apache/commons/validator/javascript/validate" + vt.substring(0, 1).toUpperCase() + vt.substring(1) + ".js"
+                    def scriptName = 'org/apache/commons/validator/javascript/validate' + vt.substring(0, 1).toUpperCase() + vt.substring(1) + '.js'
                     def inStream = getClass().classLoader.getResourceAsStream(scriptName)
                     if (inStream) {
                         out << inStream.getText('UTF-8')
@@ -441,7 +444,7 @@ class ValidationTagLib implements TagLibrary {
                         }
                         out << ');\n'
                     }
-                    out << "}\n"
+                    out << '}\n'
                 }
             }
         }
@@ -472,9 +475,9 @@ class ValidationTagLib implements TagLibrary {
         }
 
         if (value instanceof Number) {
-            def pattern = "0"
+            def pattern = '0'
             if (value instanceof Double || value instanceof Float || value instanceof BigDecimal) {
-                pattern = "0.00#####"
+                pattern = '0.00#####'
             }
 
             def locale = webRequest.getLocale()

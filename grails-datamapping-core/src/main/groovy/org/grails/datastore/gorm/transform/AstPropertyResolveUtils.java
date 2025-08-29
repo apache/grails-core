@@ -19,20 +19,26 @@
 
 package org.grails.datastore.gorm.transform;
 
-import org.codehaus.groovy.ast.*;
-import org.codehaus.groovy.ast.expr.ClassExpression;
-import org.codehaus.groovy.ast.expr.Expression;
-import org.codehaus.groovy.ast.expr.MapEntryExpression;
-import org.codehaus.groovy.ast.expr.MapExpression;
-import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.datastore.mapping.reflect.AstUtils;
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
-import org.grails.datastore.mapping.reflect.NameUtils;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
+import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.PropertyNode;
+import org.codehaus.groovy.ast.expr.ClassExpression;
+import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.MapEntryExpression;
+import org.codehaus.groovy.ast.expr.MapExpression;
+
+import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.reflect.AstUtils;
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
+import org.grails.datastore.mapping.reflect.NameUtils;
 
 /**
  * Utilities for resolving property names from domain classes etc.
@@ -51,7 +57,7 @@ public class AstPropertyResolveUtils {
      * @return The type
      */
     public static ClassNode getPropertyType(ClassNode classNode, String propertyName) {
-        if(propertyName == null || propertyName.length() == 0) {
+        if (propertyName == null || propertyName.length() == 0) {
             return null;
         }
         Map<String, ClassNode> cachedProperties = getPropertiesFromCache(classNode);
@@ -93,7 +99,7 @@ public class AstPropertyResolveUtils {
         if (cachedProperties == null) {
             cachedProperties = new HashMap<>();
             boolean isDomainClass = AstUtils.isDomainClass(classNode);
-            if(isDomainClass) {
+            if (isDomainClass) {
                 cachedProperties.put(GormProperties.IDENTITY, new ClassNode(Long.class));
                 cachedProperties.put(GormProperties.VERSION, new ClassNode(Long.class));
             }
@@ -111,9 +117,9 @@ public class AstPropertyResolveUtils {
         for (MethodNode method : methods) {
             String methodName = method.getName();
             if (AstUtils.isGetter(method)) {
-                if(!allowAbstract && method.isAbstract()) continue;
+                if (!allowAbstract && method.isAbstract()) continue;
                 String propertyName = NameUtils.getPropertyNameForGetterOrSetter(methodName);
-                if(GormProperties.META_CLASS.equals(propertyName)) continue;
+                if (GormProperties.META_CLASS.equals(propertyName)) continue;
                 if (isDomainClass && (GormProperties.HAS_MANY.equals(propertyName) || GormProperties.BELONGS_TO.equals(propertyName) || GormProperties.HAS_ONE.equals(propertyName))) {
                     FieldNode field = classNode.getField(propertyName);
                     if (field != null) {
@@ -128,7 +134,7 @@ public class AstPropertyResolveUtils {
         for (PropertyNode property : properties) {
 
             String propertyName = property.getName();
-            if(propertyName.equals(GormProperties.META_CLASS)) continue;
+            if (propertyName.equals(GormProperties.META_CLASS)) continue;
             if (isDomainClass && (GormProperties.HAS_MANY.equals(propertyName) || GormProperties.BELONGS_TO.equals(propertyName) || GormProperties.HAS_ONE.equals(propertyName))) {
                 Expression initialExpression = property.getInitialExpression();
                 populatePropertiesForInitialExpression(cachedProperties, initialExpression);

@@ -18,22 +18,33 @@
  */
 package org.grails.web.mapping;
 
-import grails.core.GrailsApplication;
-import grails.core.support.ClassLoaderAware;
-import grails.gorm.validation.ConstrainedProperty;
-import grails.gorm.validation.DefaultConstrainedProperty;
-import grails.util.GrailsUtil;
-import grails.web.mapping.*;
-import grails.web.mapping.exceptions.UrlMappingException;
-import groovy.lang.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Serial;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import groovy.lang.Binding;
+import groovy.lang.Closure;
+import groovy.lang.GroovyClassLoader;
+import groovy.lang.GroovyObject;
+import groovy.lang.GroovyObjectSupport;
+import groovy.lang.Script;
 import org.codehaus.groovy.runtime.IOGroovyMethods;
-import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator;
-import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator;
-import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry;
-import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry;
-import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext;
+
+import jakarta.servlet.ServletContext;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -43,15 +54,28 @@ import org.springframework.http.HttpMethod;
 import org.springframework.util.Assert;
 import org.springframework.web.context.WebApplicationContext;
 
-import jakarta.servlet.ServletContext;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Serial;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.*;
+import grails.core.GrailsApplication;
+import grails.core.support.ClassLoaderAware;
+import grails.gorm.validation.ConstrainedProperty;
+import grails.gorm.validation.DefaultConstrainedProperty;
+import grails.util.GrailsUtil;
+import grails.web.mapping.UrlMapping;
+import grails.web.mapping.UrlMappingData;
+import grails.web.mapping.UrlMappingEvaluator;
+import grails.web.mapping.UrlMappingParser;
+import grails.web.mapping.exceptions.UrlMappingException;
+import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator;
+import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator;
+import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry;
+import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry;
+import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext;
 
-import static grails.web.mapping.UrlMapping.*;
+import static grails.web.mapping.UrlMapping.ACTION;
+import static grails.web.mapping.UrlMapping.CONTROLLER;
+import static grails.web.mapping.UrlMapping.HTTP_METHOD;
+import static grails.web.mapping.UrlMapping.NAMESPACE;
+import static grails.web.mapping.UrlMapping.PLUGIN;
+import static grails.web.mapping.UrlMapping.VIEW;
 
 /**
  * <p>A UrlMapping evaluator that evaluates Groovy scripts that are in the form:</p>
@@ -236,7 +260,7 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
         // private boolean inGroupConstraints = false; // this variable seems to always be false
         private List<ConstrainedProperty> previousConstraints = new ArrayList<>();
         private List<UrlMapping> urlMappings = new ArrayList<>();
-        private Map<String,Object> parameterValues = new HashMap<>();
+        private Map<String, Object> parameterValues = new HashMap<>();
         private Object exception;
         private Object parseRequest;
         private Deque<ParentResource> parentResources = new ArrayDeque<>();
@@ -426,13 +450,15 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
          * @param callable the customizer
          * @return the UrlMapping
          */
-        public UrlMapping get(Map<String,String> arguments, String uri, Closure<UrlMapping> callable) {
+        public UrlMapping get(Map<String, String> arguments, String uri, Closure<UrlMapping> callable) {
             arguments.put(HTTP_METHOD, HttpMethod.GET.toString());
             return (UrlMapping) _invoke(uri, new Object[] { arguments, callable }, this);
         }
-        public UrlMapping get(Map<String,String> arguments, String uri) {
+
+        public UrlMapping get(Map<String, String> arguments, String uri) {
             return get(arguments, uri, null);
         }
+
         public UrlMapping get(RegexUrlMapping regexUrlMapping) {
             regexUrlMapping.httpMethod = HttpMethod.GET.toString();
             return regexUrlMapping;
@@ -445,13 +471,15 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
          * @param uri The URI
          * @return the UrlMapping
          */
-        public UrlMapping post(Map<String,Object> arguments, String uri, Closure<?> callable) {
+        public UrlMapping post(Map<String, Object> arguments, String uri, Closure<?> callable) {
             arguments.put(HTTP_METHOD, HttpMethod.POST);
             return (UrlMapping) _invoke(uri, new Object[] { arguments, callable }, this);
         }
-        public UrlMapping post(Map<String,Object> arguments, String uri) {
+
+        public UrlMapping post(Map<String, Object> arguments, String uri) {
             return post(arguments, uri, null);
         }
+
         public UrlMapping post(RegexUrlMapping regexUrlMapping) {
             regexUrlMapping.httpMethod = HttpMethod.POST.toString();
             return regexUrlMapping;
@@ -464,13 +492,15 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
          * @param uri The URI
          * @return the UrlMapping
          */
-        public UrlMapping put(Map<String,Object> arguments, String uri, Closure<?> callable) {
+        public UrlMapping put(Map<String, Object> arguments, String uri, Closure<?> callable) {
             arguments.put(HTTP_METHOD, HttpMethod.PUT);
             return (UrlMapping) _invoke(uri, new Object[]{ arguments, callable }, this);
         }
-        public UrlMapping put(Map<String,Object> arguments, String uri) {
+
+        public UrlMapping put(Map<String, Object> arguments, String uri) {
             return put(arguments, uri, null);
         }
+
         public UrlMapping put(RegexUrlMapping regexUrlMapping) {
             regexUrlMapping.httpMethod = HttpMethod.PUT.toString();
             return regexUrlMapping;
@@ -483,13 +513,15 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
          * @param uri The URI
          * @return the UrlMapping
          */
-        public UrlMapping patch(Map<String,Object> arguments, String uri, Closure<?> callable) {
+        public UrlMapping patch(Map<String, Object> arguments, String uri, Closure<?> callable) {
             arguments.put(HTTP_METHOD, HttpMethod.PATCH);
             return (UrlMapping) _invoke(uri, new Object[]{ arguments, callable }, this);
         }
-        public UrlMapping patch(Map<String,Object> arguments, String uri) {
+
+        public UrlMapping patch(Map<String, Object> arguments, String uri) {
             return patch(arguments, uri, null);
         }
+
         public UrlMapping patch(RegexUrlMapping regexUrlMapping) {
             regexUrlMapping.httpMethod = HttpMethod.PATCH.toString();
             return regexUrlMapping;
@@ -502,17 +534,20 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
          * @param uri The URI
          * @return the UrlMapping
          */
-        public UrlMapping delete(Map<String,Object> arguments, String uri, Closure<?> callable) {
+        public UrlMapping delete(Map<String, Object> arguments, String uri, Closure<?> callable) {
             arguments.put(HTTP_METHOD, HttpMethod.DELETE);
             return (UrlMapping) _invoke(uri, new Object[]{ arguments, callable }, this);
         }
-        public UrlMapping delete(Map<String,Object> arguments, String uri) {
+
+        public UrlMapping delete(Map<String, Object> arguments, String uri) {
             return delete(arguments, uri, null);
         }
+
         public UrlMapping delete(RegexUrlMapping regexUrlMapping) {
             regexUrlMapping.httpMethod = HttpMethod.DELETE.toString();
             return regexUrlMapping;
         }
+
         /**
          * Matches the HEAD method
          *
@@ -520,13 +555,15 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
          * @param uri The URI
          * @return the UrlMapping
          */
-        public UrlMapping head(Map<String,Object> arguments, String uri, Closure<?> callable) {
+        public UrlMapping head(Map<String, Object> arguments, String uri, Closure<?> callable) {
             arguments.put(HTTP_METHOD, HttpMethod.HEAD);
             return (UrlMapping) _invoke(uri, new Object[]{ arguments, callable }, this);
         }
-        public UrlMapping head(Map<String,Object> arguments, String uri) {
+
+        public UrlMapping head(Map<String, Object> arguments, String uri) {
             return head(arguments, uri, null);
         }
+
         public UrlMapping head(RegexUrlMapping regexUrlMapping) {
             regexUrlMapping.httpMethod = HttpMethod.HEAD.toString();
             return regexUrlMapping;
@@ -539,13 +576,15 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
          * @param uri The URI
          * @return the UrlMapping
          */
-        public UrlMapping options(Map<String,Object> arguments, String uri, Closure<?> callable) {
+        public UrlMapping options(Map<String, Object> arguments, String uri, Closure<?> callable) {
             arguments.put(HTTP_METHOD, HttpMethod.OPTIONS);
             return (UrlMapping) _invoke(uri, new Object[]{ arguments, callable }, this);
         }
-        public UrlMapping options(Map<String,Object> arguments, String uri) {
+
+        public UrlMapping options(Map<String, Object> arguments, String uri) {
             return options(arguments, uri, null);
         }
+
         public UrlMapping options(RegexUrlMapping regexUrlMapping) {
             regexUrlMapping.httpMethod = HttpMethod.OPTIONS.toString();
             return regexUrlMapping;
@@ -593,7 +632,7 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                 if (mappedURI.startsWith(SLASH) || isResponseCode) {
                     // Create a new parameter map for this mapping.
                     parameterValues = new HashMap<>();
-                    Map<?,?> variables = binding != null ? binding.getVariables() : null;
+                    Map<?, ?> variables = binding != null ? binding.getVariables() : null;
                     boolean hasParent = !parentResources.isEmpty();
                     try {
                         if (!hasParent) {
@@ -645,7 +684,7 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                         }
 
                         if (args[0] instanceof Map) {
-                            Map<?,?> namedArguments = (Map<?,?>) args[0];
+                            Map<?, ?> namedArguments = (Map<?, ?>) args[0];
                             String version = null;
 
                             if (namedArguments.containsKey(UrlMapping.VERSION)) {
@@ -732,7 +771,7 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
             }
         }
 
-        private List<String> calculateIncludes(Map<?,?> namedArguments, List<String> defaultResourcesIncludes) {
+        private List<String> calculateIncludes(Map<?, ?> namedArguments, List<String> defaultResourcesIncludes) {
             List<String> includes = new ArrayList<>(defaultResourcesIncludes);
 
             Object excludesObject = namedArguments.get("excludes");
@@ -1054,8 +1093,8 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
             return true;
         }
 
-        private UrlMapping getURLMappingForNamedArgs(Map<?,?> namedArguments, UrlMappingData urlData, String mapping, boolean isResponseCode, List<ConstrainedProperty> constrainedList) {
-            Map<?,?> bindingVariables = binding != null ? binding.getVariables() : null;
+        private UrlMapping getURLMappingForNamedArgs(Map<?, ?> namedArguments, UrlMappingData urlData, String mapping, boolean isResponseCode, List<ConstrainedProperty> constrainedList) {
+            Map<?, ?> bindingVariables = binding != null ? binding.getVariables() : null;
             var controllerName = getControllerName(namedArguments, bindingVariables);
             var actionName = getActionName(namedArguments, bindingVariables);
             var pluginName = getPluginName(namedArguments, bindingVariables);
@@ -1109,7 +1148,7 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
             return urlMapping;
         }
 
-        private Object getVariableFromNamedArgsOrBinding(Map<?,?> namedArguments, Map<?,?> bindingVariables, String variableName, Object defaultValue) {
+        private Object getVariableFromNamedArgsOrBinding(Map<?, ?> namedArguments, Map<?, ?> bindingVariables, String variableName, Object defaultValue) {
             var returnValue = namedArguments.get(variableName);
             if (returnValue == null) {
                 returnValue = binding != null ? bindingVariables.get(variableName) : defaultValue;
@@ -1117,17 +1156,17 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
             return returnValue;
         }
 
-        private Object getActionName(Map<?,?> namedArguments, Map<?,?> bindingVariables) {
+        private Object getActionName(Map<?, ?> namedArguments, Map<?, ?> bindingVariables) {
             return getVariableFromNamedArgsOrBinding(namedArguments, bindingVariables, ACTION, getMetaMappingInfo().getAction());
         }
 
-        private Object getParseRequest(Map<?,?> namedArguments, Map<?,?> bindingVariables) {
+        private Object getParseRequest(Map<?, ?> namedArguments, Map<?, ?> bindingVariables) {
             return getVariableFromNamedArgsOrBinding(namedArguments, bindingVariables, PARSE_REQUEST, parseRequest);
         }
 
-        private Object getControllerName(Map<?,?> namedArguments, Map<?,?> bindingVariables) {
+        private Object getControllerName(Map<?, ?> namedArguments, Map<?, ?> bindingVariables) {
             Object fromBinding = getVariableFromNamedArgsOrBinding(namedArguments, bindingVariables, CONTROLLER, getMetaMappingInfo().getController());
-            if(fromBinding == null && !parentResources.isEmpty()) {
+            if (fromBinding == null && !parentResources.isEmpty()) {
                 return parentResources.peekLast().controllerName;
             }
             else {
@@ -1135,35 +1174,35 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
             }
         }
 
-        private Object getPluginName(Map<?,?> namedArguments, Map<?,?> bindingVariables) {
+        private Object getPluginName(Map<?, ?> namedArguments, Map<?, ?> bindingVariables) {
             return getVariableFromNamedArgsOrBinding(namedArguments, bindingVariables, PLUGIN, getMetaMappingInfo().getPlugin());
         }
 
-        private Object getHttpMethod(Map<?,?> namedArguments, Map<?,?> bindingVariables) {
+        private Object getHttpMethod(Map<?, ?> namedArguments, Map<?, ?> bindingVariables) {
             return getVariableFromNamedArgsOrBinding(namedArguments, bindingVariables, HTTP_METHOD, getMetaMappingInfo().getHttpMethod());
         }
 
-        private Object getRedirectInfo(Map<?,?> namedArguments, Map<?,?> bindingVariables) {
+        private Object getRedirectInfo(Map<?, ?> namedArguments, Map<?, ?> bindingVariables) {
             return getVariableFromNamedArgsOrBinding(namedArguments, bindingVariables, UrlMapping.REDIRECT_INFO, getMetaMappingInfo().getRedirectInfo());
         }
 
-        private Object getVersion(Map<?,?> namedArguments, Map<?,?> bindingVariables) {
+        private Object getVersion(Map<?, ?> namedArguments, Map<?, ?> bindingVariables) {
             return getVariableFromNamedArgsOrBinding(namedArguments, bindingVariables, UrlMapping.VERSION, getMetaMappingInfo().getView());
         }
 
-        private Object getNamespace(Map<?,?> namedArguments, Map<?,?> bindingVariables) {
+        private Object getNamespace(Map<?, ?> namedArguments, Map<?, ?> bindingVariables) {
             return getVariableFromNamedArgsOrBinding(namedArguments, bindingVariables, NAMESPACE, getMetaMappingInfo().getNamespace());
         }
 
-        private Object getViewName(Map<?,?> namedArguments, Map<?,?> bindingVariables) {
+        private Object getViewName(Map<?, ?> namedArguments, Map<?, ?> bindingVariables) {
             return getVariableFromNamedArgsOrBinding(namedArguments, bindingVariables, VIEW, getMetaMappingInfo().getView());
         }
 
-        private Object getURI(Map<?,?> namedArguments, Map<?,?> bindingVariables) {
+        private Object getURI(Map<?, ?> namedArguments, Map<?, ?> bindingVariables) {
             return getVariableFromNamedArgsOrBinding(namedArguments, bindingVariables, UrlMapping.URI, getMetaMappingInfo().getUri());
         }
 
-        private Object getException(Map<?,?> namedArguments, Map<?,?> bindingVariables) {
+        private Object getException(Map<?, ?> namedArguments, Map<?, ?> bindingVariables) {
             return getVariableFromNamedArgsOrBinding(namedArguments, bindingVariables, EXCEPTION, exception);
         }
 
@@ -1187,8 +1226,8 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                     mappingInfo.getConstraints().addAll(parentMappingConstraints);
                 }
                 ParentResource parentResource = parentResources.peek();
-                if(parentResource != null && !parentResource.isSingle) {
-                    if(!isInCollection) {
+                if (parentResource != null && !parentResource.isSingle) {
+                    if (!isInCollection) {
                         mappingInfo.getConstraints().add(new DefaultConstrainedProperty(UrlMapping.class, parentResource.controllerName + "Id", String.class, constraintRegistry));
                     }
                 }

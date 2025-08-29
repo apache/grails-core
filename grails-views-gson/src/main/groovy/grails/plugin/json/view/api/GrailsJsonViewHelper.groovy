@@ -19,10 +19,11 @@
 
 package grails.plugin.json.view.api
 
+import groovy.transform.CompileStatic
+
 import grails.plugin.json.builder.JsonOutput
 import grails.plugin.json.builder.StreamingJsonBuilder
 import grails.views.api.GrailsViewHelper
-import groovy.transform.CompileStatic
 
 /**
  * Additional methods specific to JSON views
@@ -36,7 +37,7 @@ interface GrailsJsonViewHelper extends GrailsViewHelper {
     /**
      * The deep parameter
      */
-    String DEEP = "deep"
+    String DEEP = 'deep'
 
     /**
      * Renders a template and returns the output
@@ -113,7 +114,7 @@ interface GrailsJsonViewHelper extends GrailsViewHelper {
      * @param object The object to render
      * @param customizer The customizer
      */
-    void inline(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer )
+    void inline(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer)
 
     /**
      * Renders the given object inline within the current JSON object instead of creating a new JSON object

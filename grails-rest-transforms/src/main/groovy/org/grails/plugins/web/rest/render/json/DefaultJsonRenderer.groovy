@@ -18,18 +18,20 @@
  */
 package org.grails.plugins.web.rest.render.json
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpStatus
+import org.springframework.validation.Errors
+
 import grails.converters.JSON
 import grails.rest.render.RenderContext
 import grails.rest.render.Renderer
 import grails.rest.render.RendererRegistry
 import grails.util.GrailsWebUtil
 import grails.web.mime.MimeType
-import groovy.transform.CompileStatic
 import org.grails.plugins.web.rest.render.html.DefaultHtmlRenderer
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.http.HttpStatus
-import org.springframework.validation.Errors
 
 /**
  * Default renderer for JSON
@@ -76,7 +78,7 @@ class DefaultJsonRenderer<T> implements Renderer<T> {
     @Override
     void render(T object, RenderContext context) {
         final mimeType = context.acceptMimeType ?: MimeType.JSON
-        context.setContentType( GrailsWebUtil.getContentType(mimeType.name, encoding) )
+        context.setContentType(GrailsWebUtil.getContentType(mimeType.name, encoding))
         def viewName = context.viewName ?: context.actionName
         final view = groovyPageLocator?.findViewForFormat(context.controllerName, viewName, mimeType.extension)
         if (view && !(object instanceof Errors)) {
@@ -85,7 +87,7 @@ class DefaultJsonRenderer<T> implements Renderer<T> {
             if (htmlRenderer == null) {
                 htmlRenderer = new DefaultHtmlRenderer(targetType)
             }
-            htmlRenderer.render((Object)object, context)
+            htmlRenderer.render((Object) object, context)
         } else {
             if (object instanceof Errors) {
 

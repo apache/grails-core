@@ -18,9 +18,9 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ContactDetails
 import org.apache.grails.data.testing.tck.domains.Patient
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.proxy.ProxyHandler
 
 class ProxyInitializationSpec extends GrailsDataTckSpec {
@@ -29,11 +29,11 @@ class ProxyInitializationSpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([Patient, ContactDetails])
     }
 
-    void "test if proxy is initialized"() {
+    void 'test if proxy is initialized'() {
 
         setup:
         final ProxyHandler proxyHandler = manager.session.mappingContext.getProxyHandler()
-        ContactDetails contactDetails = new ContactDetails(phoneNumber: "+1-202-555-0178").save(failOnError: true)
+        ContactDetails contactDetails = new ContactDetails(phoneNumber: '+1-202-555-0178').save(failOnError: true)
         Long patientId = new Patient(contactDetails: contactDetails).save(failOnError: true).id
         manager.session.flush()
         manager.session.clear()
@@ -45,7 +45,7 @@ class ProxyInitializationSpec extends GrailsDataTckSpec {
         proxyHandler.isProxy(patient.contactDetails)
 
         when:
-        patient.contactDetails.phoneNumber = "+1-202-555-0178"
+        patient.contactDetails.phoneNumber = '+1-202-555-0178'
 
         then:
         proxyHandler.isInitialized(patient.contactDetails)

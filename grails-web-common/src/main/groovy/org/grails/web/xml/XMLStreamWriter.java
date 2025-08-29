@@ -18,12 +18,15 @@
  */
 package org.grails.web.xml;
 
-import groovy.xml.streamingmarkupsupport.StreamingMarkupWriter;
-import static org.grails.web.xml.XMLStreamWriter.Mode.*;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Stack;
+
+import groovy.xml.streamingmarkupsupport.StreamingMarkupWriter;
+
+import static org.grails.web.xml.XMLStreamWriter.Mode.CONTENT;
+import static org.grails.web.xml.XMLStreamWriter.Mode.INIT;
+import static org.grails.web.xml.XMLStreamWriter.Mode.TAG;
 
 /**
  * A simple XML Stream Writer that leverages the StreamingMarkupWriter of Groovy
@@ -37,7 +40,7 @@ public class XMLStreamWriter {
 
     protected Mode mode = INIT;
 
-    protected Stack<String> tagStack = new Stack<String>();
+    protected Stack<String> tagStack = new Stack<>();
 
     private char quoteChar = '"';
 

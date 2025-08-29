@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.mapping.simple.engine
 
+import org.springframework.context.ApplicationEventPublisher
+
 import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.core.IdentityGenerationException
 import org.grails.datastore.mapping.core.OptimisticLockingException
@@ -35,7 +37,6 @@ import org.grails.datastore.mapping.model.types.ManyToMany
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.grails.datastore.mapping.simple.query.SimpleMapQuery
-import org.springframework.context.ApplicationEventPublisher
 
 /**
  * A simple implementation of the {@link org.grails.datastore.mapping.engine.EntityPersister} abstract class that backs onto an in-memory map.
@@ -146,7 +147,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
     }
 
     AssociationIndexer getAssociationIndexer(Map nativeEntry, Association association) {
-        if(association?.associatedEntity == null) {
+        if (association?.associatedEntity == null) {
             return null
         }
 
@@ -249,7 +250,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
         nativeEntry[key] = values
     }
 
-    protected Map getEmbedded( Map nativeEntry, String key) {
+    protected Map getEmbedded(Map nativeEntry, String key) {
         nativeEntry[key]
     }
 
@@ -278,7 +279,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
             return type == String ? key.toString() : key
         }
         else if (UUID.isAssignableFrom(type)) {
-          return UUID.randomUUID()
+            return UUID.randomUUID()
         }
         else {
             try {
@@ -325,7 +326,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
 
         if (isVersioned(entityAccess)) {
             if (existing == null) {
-                setVersion entityAccess
+                setVersion(entityAccess)
             }
             else {
                 def oldVersion = existing.version
@@ -335,8 +336,8 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
                     currentVersion = entityAccess.getProperty('version')?.toLong()
                     if (currentVersion == null && oldVersion == null) {
                         currentVersion = 0L
-                        entityAccess.setProperty("version", currentVersion)
-                        entry["version"] = currentVersion
+                        entityAccess.setProperty('version', currentVersion)
+                        entry['version'] = currentVersion
                     }
                 }
                 if (oldVersion != null && currentVersion != null && !oldVersion.equals(currentVersion)) {

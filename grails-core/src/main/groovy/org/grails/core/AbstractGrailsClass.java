@@ -18,28 +18,30 @@
  */
 package org.grails.core;
 
-import grails.core.GrailsApplication;
-import grails.core.GrailsClass;
-import grails.plugins.GrailsVersionUtils;
-import grails.util.GrailsMetaClassUtils;
-import grails.util.GrailsNameUtils;
-import grails.web.Action;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.List;
+
 import groovy.lang.GroovyObject;
 import groovy.lang.MetaClass;
 import groovy.lang.MetaProperty;
-import org.grails.core.exceptions.NewInstanceCreationException;
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
+
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.List;
+import grails.core.GrailsApplication;
+import grails.core.GrailsClass;
+import grails.plugins.GrailsVersionUtils;
+import grails.util.GrailsMetaClassUtils;
+import grails.util.GrailsNameUtils;
+import grails.web.Action;
+import org.grails.core.exceptions.NewInstanceCreationException;
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 
 /**
  * Abstract base class for Grails types that provides common functionality for
@@ -122,7 +124,7 @@ public abstract class AbstractGrailsClass implements GrailsClass {
         catch (Exception e) {
             Throwable targetException;
             if (e instanceof InvocationTargetException) {
-                targetException = ((InvocationTargetException)e).getTargetException();
+                targetException = ((InvocationTargetException) e).getTargetException();
             }
             else {
                 targetException = e;
@@ -159,14 +161,13 @@ public abstract class AbstractGrailsClass implements GrailsClass {
     public Object getReferenceInstance() {
         Object obj = BeanUtils.instantiateClass(clazz);
         if (obj instanceof GroovyObject) {
-            ((GroovyObject)obj).setMetaClass(getMetaClass());
+            ((GroovyObject) obj).setMetaClass(getMetaClass());
         }
         return obj;
     }
 
-
     private ClassPropertyFetcher resolvePropertyFetcher() {
-        if(classPropertyFetcher == null) {
+        if (classPropertyFetcher == null) {
             classPropertyFetcher = ClassPropertyFetcher.forClass(clazz);
         }
         return classPropertyFetcher;
@@ -185,7 +186,7 @@ public abstract class AbstractGrailsClass implements GrailsClass {
     }
 
     public boolean isActionMethod(String methodName) {
-        Method m =  ReflectionUtils.findMethod(getClazz(), methodName, new Class[0]);
+        Method m = ReflectionUtils.findMethod(getClazz(), methodName, new Class[0]);
         if (m != null) {
             ReflectionUtils.makeAccessible(m);
         }
@@ -203,7 +204,6 @@ public abstract class AbstractGrailsClass implements GrailsClass {
     public boolean hasMetaProperty(String propName) {
         return (getMetaClass().getMetaProperty(propName) != null);
     }
-
 
     /**
      * <p>Looks for a property of the reference instance with a given name and type.</p>
@@ -244,11 +244,9 @@ public abstract class AbstractGrailsClass implements GrailsClass {
         return ClassPropertyFetcher.getStaticPropertyValue(getClazz(), propName, type);
     }
 
-
     public Object getPropertyValueObject(String propertyNAme) {
         return getPropertyValue(propertyNAme, Object.class);
     }
-
 
     /* (non-Javadoc)
      * @see grails.core.GrailsClass#getPropertyValue(java.lang.String)

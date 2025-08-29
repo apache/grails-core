@@ -20,15 +20,17 @@ package org.grails.plugins.web.rest.render
 
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
-import grails.web.mime.MimeType
-import org.grails.web.util.GrailsApplicationAttributes
-import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.grails.web.util.WebUtils
+
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.web.servlet.ModelAndView
-import org.grails.core.util.IncludeExcludeSupport
+
 import grails.rest.render.AbstractRenderContext
+import grails.web.mime.MimeType
+import org.grails.core.util.IncludeExcludeSupport
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.GrailsApplicationAttributes
+import org.grails.web.util.WebUtils
 
 /**
  * RenderContext for the servlet environment
@@ -50,7 +52,7 @@ class ServletRenderContext extends AbstractRenderContext {
 
     ServletRenderContext(GrailsWebRequest webRequest, Map<String, Object> arguments) {
         this.webRequest = webRequest
-        if(arguments != null) {
+        if (arguments != null) {
             this.arguments = Collections.unmodifiableMap(arguments)
             final argsMap = arguments
             final incObject = argsMap != null ?  argsMap.get(IncludeExcludeSupport.INCLUDES_PROPERTY) : null
@@ -68,7 +70,6 @@ class ServletRenderContext extends AbstractRenderContext {
             this.arguments = Collections.<String, Object> emptyMap()
         }
     }
-
 
     @Override
     String getResourcePath() {
@@ -148,7 +149,7 @@ class ServletRenderContext extends AbstractRenderContext {
         ModelAndView modelAndView = getModelAndView()
         final viewModel = modelAndView.model
         if (arguments?.model instanceof Map) {
-            viewModel.putAll((Map)arguments.model)
+            viewModel.putAll((Map) arguments.model)
         }
         viewModel.putAll(model)
     }

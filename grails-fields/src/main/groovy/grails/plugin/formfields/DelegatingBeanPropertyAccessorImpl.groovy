@@ -19,18 +19,20 @@
 
 package grails.plugin.formfields
 
-import grails.core.GrailsDomainClass
-import grails.util.GrailsNameUtils
-import grails.validation.Validateable
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
+
+import org.springframework.validation.FieldError
+
+import grails.core.GrailsDomainClass
+import grails.util.GrailsNameUtils
+import grails.validation.Validateable
 import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.scaffolding.model.property.Constrained
 import org.grails.scaffolding.model.property.DomainProperty
-import org.springframework.validation.FieldError
 
 @CompileStatic
 @Canonical

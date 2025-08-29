@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class CommonTypes implements Serializable {
+
     Long id
     Long version
     Long l

@@ -36,7 +36,7 @@ class BooleanInputRenderer implements DomainInputRenderer {
 
     @Override
     Closure renderInput(Map standardAttributes, DomainProperty domainProperty) {
-        standardAttributes.type = "checkbox"
+        standardAttributes.type = 'checkbox'
         return { ->
             input(standardAttributes)
         }

@@ -36,21 +36,21 @@ import org.springframework.util.StringUtils;
  */
 public class GrapeRootRepositorySystemSessionAutoConfiguration implements RepositorySystemSessionAutoConfiguration {
 
-	@Override
-	public void apply(DefaultRepositorySystemSession session, RepositorySystem repositorySystem) {
-		String grapeRoot = System.getProperty("grape.root");
-		if (StringUtils.hasLength(grapeRoot)) {
-			configureLocalRepository(session, repositorySystem, grapeRoot);
-		}
-	}
+    @Override
+    public void apply(DefaultRepositorySystemSession session, RepositorySystem repositorySystem) {
+        String grapeRoot = System.getProperty("grape.root");
+        if (StringUtils.hasLength(grapeRoot)) {
+            configureLocalRepository(session, repositorySystem, grapeRoot);
+        }
+    }
 
-	private void configureLocalRepository(DefaultRepositorySystemSession session, RepositorySystem repositorySystem,
-			String grapeRoot) {
-		File repositoryDir = new File(grapeRoot, "repository");
-		LocalRepository localRepository = new LocalRepository(repositoryDir);
-		LocalRepositoryManager localRepositoryManager = repositorySystem.newLocalRepositoryManager(session,
-				localRepository);
-		session.setLocalRepositoryManager(localRepositoryManager);
-	}
+    private void configureLocalRepository(DefaultRepositorySystemSession session, RepositorySystem repositorySystem,
+            String grapeRoot) {
+        File repositoryDir = new File(grapeRoot, "repository");
+        LocalRepository localRepository = new LocalRepository(repositoryDir);
+        LocalRepositoryManager localRepositoryManager = repositorySystem.newLocalRepositoryManager(session,
+                localRepository);
+        session.setLocalRepositoryManager(localRepositoryManager);
+    }
 
 }

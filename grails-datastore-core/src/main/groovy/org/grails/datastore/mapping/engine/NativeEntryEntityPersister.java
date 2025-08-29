@@ -36,6 +36,10 @@ import jakarta.persistence.CascadeType;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.FlushModeType;
 
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.convert.ConversionService;
+import org.springframework.dao.CannotAcquireLockException;
+
 import org.grails.datastore.mapping.cache.TPCacheAdapterRepository;
 import org.grails.datastore.mapping.collection.AbstractPersistentCollection;
 import org.grails.datastore.mapping.collection.PersistentCollection;
@@ -61,12 +65,17 @@ import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.PropertyMapping;
-import org.grails.datastore.mapping.model.types.*;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Custom;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.EmbeddedCollection;
+import org.grails.datastore.mapping.model.types.ManyToMany;
+import org.grails.datastore.mapping.model.types.OneToMany;
+import org.grails.datastore.mapping.model.types.Simple;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.proxy.ProxyFactory;
 import org.grails.datastore.mapping.query.Query;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.core.convert.ConversionService;
-import org.springframework.dao.CannotAcquireLockException;
 
 /**
  * Provides an implementation of the {@link org.grails.datastore.mapping.engine.EntityPersister} class that
@@ -112,7 +121,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
         }
 
         EntityAccess entityAccess = createEntityAccess(persistentEntity, obj);
-        if(cancelDelete(persistentEntity, entityAccess)) {
+        if (cancelDelete(persistentEntity, entityAccess)) {
             return;
         }
 
@@ -175,7 +184,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
             String propertyKey = getPropertyKey(prop);
 
             if (prop instanceof OneToMany) {
-                OneToMany oneToMany = (OneToMany)prop;
+                OneToMany oneToMany = (OneToMany) prop;
                 if (oneToMany.isOwningSide() && oneToMany.doesCascade(CascadeType.REMOVE)) {
                     if (Collection.class.isAssignableFrom(oneToMany.getType())) {
                         cascadeDeleteCollection(entityAccess, oneToMany);
@@ -183,7 +192,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
                 }
             }
             else if (prop instanceof ManyToMany) {
-                ManyToMany manyToMany = (ManyToMany)prop;
+                ManyToMany manyToMany = (ManyToMany) prop;
                 if (manyToMany.isOwningSide() && manyToMany.doesCascade(CascadeType.REMOVE)) {
                     Object propValue = entityAccess.getProperty(manyToMany.getName());
                     if (Collection.class.isAssignableFrom(manyToMany.getType())) {
@@ -207,7 +216,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
                 Object propValue = entityAccess.getProperty(prop.getName());
             }
             else if (prop instanceof OneToMany) {
-                OneToMany oneToMany = (OneToMany)prop;
+                OneToMany oneToMany = (OneToMany) prop;
                 if (oneToMany.isOwningSide() && oneToMany.doesCascade(CascadeType.REMOVE)) {
                     if (Collection.class.isAssignableFrom(oneToMany.getType())) {
                         cascadeDeleteCollection(entityAccess, oneToMany);
@@ -235,7 +244,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
     @Override
     protected final void deleteEntities(PersistentEntity persistentEntity, Iterable objects) {
         if (objects != null) {
-            final Set<K> keys = new LinkedHashSet<K>();
+            final Set<K> keys = new LinkedHashSet<>();
             final List deleteList = new ArrayList();
             for (Object object : objects) {
                 K key = readIdentifierFromObject(object);
@@ -251,7 +260,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
             }
 
             if (!keys.isEmpty()) {
-                deleteEntries(getEntityFamily(), new ArrayList<K>(keys));
+                deleteEntries(getEntityFamily(), new ArrayList<>(keys));
                 for (Object object : deleteList) {
                     firePostDeleteEvent(persistentEntity, createEntityAccess(persistentEntity, object));
                 }
@@ -378,7 +387,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
     protected void cacheNativeEntry(PersistentEntity persistentEntity,
                                          Serializable nativeKey, T nativeEntry) {
         SessionImplementor<Object> si = (SessionImplementor<Object>) session;
-        Serializable key = convertIdIfNecessary(persistentEntity, nativeKey) ;
+        Serializable key = convertIdIfNecessary(persistentEntity, nativeKey);
         si.cacheEntry(persistentEntity, key, nativeEntry);
     }
 
@@ -391,13 +400,14 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
     protected void cacheEmbeddedEntry(PersistentEntity persistentEntity,
                                     Serializable nativeKey, T nativeEntry) {
         SessionImplementor<Object> si = (SessionImplementor<Object>) session;
-        si.cacheEntry(persistentEntity, "embedded:"+nativeEntry, nativeEntry);
+        si.cacheEntry(persistentEntity, "embedded:" + nativeEntry, nativeEntry);
     }
 
     protected void refreshObjectStateFromNativeEntry(PersistentEntity persistentEntity, Object obj,
                                                      Serializable nativeKey, T nativeEntry) {
         refreshObjectStateFromNativeEntry(persistentEntity, obj, nativeKey, nativeEntry, false);
     }
+
     protected void refreshObjectStateFromNativeEntry(PersistentEntity persistentEntity, Object obj,
                                                      Serializable nativeKey, T nativeEntry, boolean isEmbedded) {
         EntityAccess ea = createEntityAccess(persistentEntity, obj, nativeEntry);
@@ -417,7 +427,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
             else if (prop instanceof Basic) {
                 Basic basic = (Basic) prop;
                 CustomTypeMarshaller customTypeMarshaller = basic.getCustomTypeMarshaller();
-                if(customTypeMarshaller != null) {
+                if (customTypeMarshaller != null) {
                     if (!customTypeMarshaller.supports(getMappingContext())) {
                         return;
                     }
@@ -427,7 +437,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
                 }
                 else {
                     Object entryValue = getEntryValue(nativeEntry, propKey);
-                    entryValue = convertBasicEntryValue(persistentEntity, (Basic)prop, entryValue);
+                    entryValue = convertBasicEntryValue(persistentEntity, (Basic) prop, entryValue);
                     ea.setProperty(prop.getName(), entryValue);
                 }
             }
@@ -437,10 +447,9 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
             else if (prop instanceof ToOne) {
                 if (prop instanceof Embedded) {
                     Embedded embedded = (Embedded) prop;
-                    if(embedded.getAssociatedEntity() != null) {
+                    if (embedded.getAssociatedEntity() != null) {
 
                         T embeddedEntry = getEmbedded(nativeEntry, propKey);
-
 
                         if (embeddedEntry != null) {
                             Object embeddedInstance =
@@ -483,12 +492,12 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
                         PersistentEntity associatedEntity = ((ToOne) prop).getAssociatedEntity();
                         associatedEntity = discriminatePersistentEntity(associatedEntity, (T) tmp);
                         Object instance = newEntityInstance(associatedEntity);
-                        refreshObjectStateFromNativeEntry(associatedEntity,instance, null, (T) tmp, false);
+                        refreshObjectStateFromNativeEntry(associatedEntity, instance, null, (T) tmp, false);
                         ea.setProperty(prop.getName(), instance);
                     }
                     else if (tmp != null && !prop.getType().isInstance(tmp)) {
                         PersistentEntity associatedEntity = association.getAssociatedEntity();
-                        if(associatedEntity != null) {
+                        if (associatedEntity != null) {
                             final Serializable associationKey = convertIdIfNecessary(associatedEntity, tmp);
                             if (associationKey != null) {
 
@@ -543,8 +552,8 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
                 else {
                     boolean isLazy = isLazyAssociation(associationPropertyMapping);
                     AssociationIndexer indexer = getAssociationIndexer(nativeEntry, association);
-                    if(indexer != null) {
-                        nativeKey = convertIdIfNecessary(getPersistentEntity(), nativeKey );
+                    if (indexer != null) {
+                        nativeKey = convertIdIfNecessary(getPersistentEntity(), nativeKey);
                         if (isLazy) {
                             if (List.class.isAssignableFrom(association.getType())) {
                                 ea.setPropertyNoConversion(association.getName(),
@@ -576,10 +585,10 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
                 boolean isLazy = isLazyAssociation(associationPropertyMapping);
                 nativeKey = convertIdIfNecessary(getPersistentEntity(), nativeKey);
                 PersistentEntity associatedEntity = manyToMany.getAssociatedEntity();
-                if(associatedEntity != null) {
+                if (associatedEntity != null) {
 
                     Class childType = associatedEntity.getJavaClass();
-                    Collection cached = ((SessionImplementor)session).getCachedCollection(
+                    Collection cached = ((SessionImplementor) session).getCachedCollection(
                             persistentEntity, nativeKey, manyToMany.getName());
                     if (cached == null) {
                         Collection collection;
@@ -617,7 +626,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
                                 ea.setProperty(manyToMany.getName(), collection);
                             }
                         }
-                        ((SessionImplementor)session).cacheCollection(
+                        ((SessionImplementor) session).cacheCollection(
                                 persistentEntity, nativeKey, collection, manyToMany.getName());
                     }
                     else {
@@ -765,7 +774,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
     protected String getNativePropertyKey(PersistentProperty prop) {
         PropertyMapping<Property> pm = prop.getMapping();
         String propKey = null;
-        if (pm.getMappedForm()!=null) {
+        if (pm.getMappedForm() != null) {
             propKey = pm.getMappedForm().getTargetName();
         }
         if (propKey == null) {
@@ -812,7 +821,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
 
         SessionImplementor<Object> si = (SessionImplementor<Object>) session;
 
-        if(si.isPendingAlready(obj)) {
+        if (si.isPendingAlready(obj)) {
             return (Serializable) k;
         }
         else {
@@ -834,10 +843,10 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
 
             cacheNativeEntry(persistentEntity, (Serializable) k, tmp);
 
-            pendingOperation = new PendingInsertAdapter<T, K>(persistentEntity, k, tmp, entityAccess) {
+            pendingOperation = new PendingInsertAdapter<>(persistentEntity, k, tmp, entityAccess) {
                 public void run() {
                     K insertResult = executeInsert(persistentEntity, entityAccess, getNativeKey(), getNativeEntry());
-                    if(insertResult == null) {
+                    if (insertResult == null) {
                         setVetoed(true);
                     }
                 }
@@ -859,7 +868,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
 
             final T finalTmp = tmp;
             final K finalK = k;
-            pendingOperation = new PendingUpdateAdapter<T, K>(persistentEntity, finalK, finalTmp, entityAccess) {
+            pendingOperation = new PendingUpdateAdapter<>(persistentEntity, finalK, finalTmp, entityAccess) {
                 public void run() {
                     if (cancelUpdate(persistentEntity, entityAccess)) {
                         setVetoed(true);
@@ -876,10 +885,10 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
         entityAccess.setNativeEntry(e);
 
         final List<PersistentProperty> props = persistentEntity.getPersistentProperties();
-        final Map<Association, List<Serializable>> toManyKeys = new HashMap<Association, List<Serializable>>();
-        final Map<OneToMany, Serializable> inverseCollectionUpdates = new HashMap<OneToMany, Serializable>();
-        final Map<PersistentProperty, Object> toIndex = new HashMap<PersistentProperty, Object>();
-        final Map<PersistentProperty, Object> toUnindex = new HashMap<PersistentProperty, Object>();
+        final Map<Association, List<Serializable>> toManyKeys = new HashMap<>();
+        final Map<OneToMany, Serializable> inverseCollectionUpdates = new HashMap<>();
+        final Map<PersistentProperty, Object> toIndex = new HashMap<>();
+        final Map<PersistentProperty, Object> toUnindex = new HashMap<>();
         entityAccess.setToIndex(toIndex);
         for (PersistentProperty prop : props) {
             PropertyMapping<Property> pm = prop.getMapping();
@@ -890,10 +899,10 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
             }
             if (key == null) key = prop.getName();
             final boolean indexed = isPropertyIndexed(mappedProperty);
-            if ((prop instanceof Simple) ) {
+            if ((prop instanceof Simple)) {
 
                 Object propValue = entityAccess.getProperty(prop.getName());
-                if(propValue == null && !isUpdate) {
+                if (propValue == null && !isUpdate) {
                     continue;
                 }
 
@@ -901,7 +910,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
 
                 setEntryValue(e, key, propValue);
             }
-            else if((prop instanceof Basic)) {
+            else if ((prop instanceof Basic)) {
                 Basic basic = (Basic) prop;
                 CustomTypeMarshaller customTypeMarshaller = basic.getCustomTypeMarshaller();
                 if (customTypeMarshaller != null && customTypeMarshaller.supports(getMappingContext())) {
@@ -911,10 +920,9 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
                 }
                 else {
                     Object propValue = entityAccess.getProperty(prop.getName());
-                    if(propValue == null && !isUpdate) {
+                    if (propValue == null && !isUpdate) {
                         continue;
                     }
-
 
                     handleIndexing(isUpdate, e, toIndex, toUnindex, prop, key, indexed, propValue);
                     setEntryValue(e, key, propValue);
@@ -924,13 +932,13 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
                 CustomTypeMarshaller customTypeMarshaller = ((Custom) prop).getCustomTypeMarshaller();
                 if (customTypeMarshaller.supports(getMappingContext())) {
                     Object propValue = entityAccess.getProperty(prop.getName());
-                    if(propValue == null && !isUpdate) {
+                    if (propValue == null && !isUpdate) {
                         continue;
                     }
 
                     Object customValue = customTypeMarshaller.write(prop, propValue, e);
                     handleIndexing(isUpdate, e, toIndex, toUnindex, prop, key, indexed, customValue);
-                    if(customValue == null) {
+                    if (customValue == null) {
                         setEntryValue(e, key, null);
                     }
                 }
@@ -943,7 +951,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
                     Collection associatedObjects = (Collection) propValue;
                     if (isInitializedCollection(associatedObjects)) {
                         PersistentEntity associatedEntity = oneToMany.getAssociatedEntity();
-                        if(associatedEntity != null) {
+                        if (associatedEntity != null) {
                             EntityPersister associationPersister = (EntityPersister) session.getPersister(associatedEntity);
                             if (associationPersister != null) {
                                 PersistentCollection persistentCollection;
@@ -962,7 +970,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
                                     persistentCollection.resetDirty();
                                     List<Serializable> keys = associationPersister.persist(associatedObjects);
                                     toManyKeys.put(oneToMany, keys);
-                                    if (newCollection ) {
+                                    if (newCollection) {
                                         entityAccess.setProperty(oneToMany.getName(), associatedObjects);
                                     }
                                 }
@@ -990,12 +998,12 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
                     handleEmbeddedToOne(association, key, entityAccess, e);
                 }
 
-                else if (association.getAssociatedEntity() !=  null) {
+                else if (association.getAssociatedEntity() != null) {
                     final Object associatedObject = entityAccess.getProperty(prop.getName());
                     if (associatedObject != null) {
                         Serializable associationId;
                         NativeEntryEntityPersister associationPersister = (NativeEntryEntityPersister) session.getPersister(associatedObject);
-                        if (proxyFactory.isInitialized(associatedObject) && !session.contains(associatedObject) ) {
+                        if (proxyFactory.isInitialized(associatedObject) && !session.contains(associatedObject)) {
                             Serializable tempId = associationPersister.getObjectIdentifier(associatedObject);
                             if (tempId == null) {
                                 if (association.doesCascade(CascadeType.PERSIST)) {
@@ -1021,16 +1029,16 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
                                 }
                             }
 
-                                if (association.isBidirectional()) {
-                                    Association inverseSide = association.getInverseSide();
-                                    if (inverseSide != null) {
-                                        EntityAccess inverseAccess = createEntityAccess(inverseSide.getOwner(), associatedObject);
-                                        inverseAccess.setProperty(inverseSide.getName(), obj);
-                                    }
+                            if (association.isBidirectional()) {
+                                Association inverseSide = association.getInverseSide();
+                                if (inverseSide != null) {
+                                    EntityAccess inverseAccess = createEntityAccess(inverseSide.getOwner(), associatedObject);
+                                    inverseAccess.setProperty(inverseSide.getName(), obj);
                                 }
-                                if( association.doesCascade(CascadeType.PERSIST) ) {
-                                    associationPersister.persist(associatedObject);
-                                }
+                            }
+                            if (association.doesCascade(CascadeType.PERSIST)) {
+                                associationPersister.persist(associatedObject);
+                            }
                         }
                         // handle of standard many-to-one
                         else {
@@ -1091,7 +1099,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
             // and the identifer is generated only upon insert of the entity
 
             final K updateId = k;
-            PendingOperation postOperation = new PendingOperationAdapter<T, K>(persistentEntity, k, e) {
+            PendingOperation postOperation = new PendingOperationAdapter<>(persistentEntity, k, e) {
                 public void run() {
                     updateToManyIndices(e, updateId, toManyKeys, false);
 
@@ -1120,7 +1128,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
         else {
             final K updateId = k;
 
-            PendingOperation postOperation = new PendingOperationAdapter<T, K>(persistentEntity, k, e) {
+            PendingOperation postOperation = new PendingOperationAdapter<>(persistentEntity, k, e) {
                 public void run() {
                     updateToManyIndices(e, updateId, toManyKeys, false);
                     if (doesRequirePropertyIndexing()) {
@@ -1135,7 +1143,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
     }
 
     private boolean isNotUpdateForAssignedId(PersistentEntity persistentEntity, Object obj, boolean update, boolean assignedId, SessionImplementor<Object> si) {
-        return assignedId && update && !si.isStateless(persistentEntity) &&  !session.contains(obj);
+        return assignedId && update && !si.isStateless(persistentEntity) && !session.contains(obj);
     }
 
     @Override
@@ -1145,9 +1153,9 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
 
     private AbstractPersistentCollection getPersistentCollection(Collection associatedObjects, Class associationType) {
         if (associatedObjects instanceof Set) {
-            return associatedObjects instanceof SortedSet ? new PersistentSortedSet(associationType,getSession(), (SortedSet) associatedObjects) : new PersistentSet(associationType, getSession(), associatedObjects);
+            return associatedObjects instanceof SortedSet ? new PersistentSortedSet(associationType, getSession(), (SortedSet) associatedObjects) : new PersistentSet(associationType, getSession(), associatedObjects);
         }
-        return new PersistentList(associationType,getSession(), (List) associatedObjects);
+        return new PersistentList(associationType, getSession(), (List) associatedObjects);
     }
 
     private boolean isInitializedCollection(Collection associatedObjects) {
@@ -1170,36 +1178,34 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
         // For embedded properties simply set the entry value, the underlying implementation
         // will have to store the embedded entity in an appropriate way (as a sub-document in a document store for example)
         Object embeddedInstances = entityAccess.getProperty(prop.getName());
-        if(embeddedInstances instanceof Map) {
-            Map instances = (Map)embeddedInstances;
-            Map<Object, T> embeddedEntries = new HashMap<Object, T>();
+        if (embeddedInstances instanceof Map) {
+            Map instances = (Map) embeddedInstances;
+            Map<Object, T> embeddedEntries = new HashMap<>();
             for (Object k : instances.keySet()) {
                 embeddedEntries.put(k, handleEmbeddedInstance((Association) prop, instances.get(k)));
             }
             setEmbeddedMap(e, key, instances, embeddedEntries);
 
         }
-        else if (!(embeddedInstances instanceof Collection) || ((Collection)embeddedInstances).isEmpty()) {
+        else if (!(embeddedInstances instanceof Collection) || ((Collection) embeddedInstances).isEmpty()) {
             if (embeddedInstances == null)
                 setEmbeddedCollection(e, key, null, null);
             else {
-                setEmbeddedCollection(e, key, MappingUtils.createConcreteCollection(prop.getType()), new ArrayList<T>());
+                setEmbeddedCollection(e, key, MappingUtils.createConcreteCollection(prop.getType()), new ArrayList<>());
             }
         }
         else {
-            Collection instances = (Collection)embeddedInstances;
-            List<T> embeddedEntries = new ArrayList<T>();
+            Collection instances = (Collection) embeddedInstances;
+            List<T> embeddedEntries = new ArrayList<>();
             for (Object instance : instances) {
-                T entry = handleEmbeddedInstance((Association)prop, instance);
+                T entry = handleEmbeddedInstance((Association) prop, instance);
                 embeddedEntries.add(entry);
             }
 
             setEmbeddedCollection(e, key, instances, embeddedEntries);
         }
 
-
     }
-
 
     protected void handleEmbeddedToOne(Association association, String key, EntityAccess entityAccess, T nativeEntry) {
         Object embeddedInstance = entityAccess.getProperty(association.getName());
@@ -1219,8 +1225,9 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
     protected T handleEmbeddedInstance(Association association, Object embeddedInstance) {
         return handleEmbeddedInstance(association, embeddedInstance, false);
     }
+
     protected T handleEmbeddedInstance(Association association, Object embeddedInstance, boolean includeNulls) {
-        NativeEntryEntityPersister<T,K> embeddedPersister = (NativeEntryEntityPersister<T,K>) session.getPersister(embeddedInstance);
+        NativeEntryEntityPersister<T, K> embeddedPersister = (NativeEntryEntityPersister<T, K>) session.getPersister(embeddedInstance);
 
         // embeddedPersister would be null if the associated entity is a EmbeddedPersistentEntity
         T embeddedEntry;
@@ -1245,7 +1252,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
             for (PersistentProperty persistentProperty : embeddedProperties) {
                 if (persistentProperty instanceof Simple) {
                     Object value = embeddedEntityAccess.getProperty(persistentProperty.getName());
-                    if(value == null && !includeNulls) continue;
+                    if (value == null && !includeNulls) continue;
 
                     setEntryValue(embeddedEntry, getPropertyKey(persistentProperty), value);
                 }
@@ -1325,9 +1332,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
         if (update) {
             final Object oldValue = getEntryValue(e, key);
 
-            boolean unindex = oldValue == null
-                    ? propValue != null
-                    : !oldValue.equals(propValue);
+            boolean unindex = oldValue == null ? propValue != null : !oldValue.equals(propValue);
 
             if (unindex) {
                 toUnindex.put(prop, oldValue);
@@ -1381,7 +1386,6 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
     protected void setEmbeddedMap(T nativeEntry, String key, Map instances, Map<Object, T> embeddedEntries) {
         // do nothing. The default is no support for embedded maps
     }
-
 
     /**
      * Subclasses should override to provide id generation. If an identifier is only generated via an insert operation then this
@@ -1477,7 +1481,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
      */
     @Override
     protected List<Serializable> persistEntities(PersistentEntity persistentEntity, Iterable objs) {
-        List<Serializable> keys = new ArrayList<Serializable>();
+        List<Serializable> keys = new ArrayList<>();
         Iterable newIter = objs;
         if (objs instanceof Collection) {
             newIter = new ArrayList((Collection) objs);
@@ -1507,7 +1511,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
      */
     @Override
     protected List<Object> retrieveAllEntities(PersistentEntity persistentEntity, Iterable<Serializable> keys) {
-        List<Object> results = new ArrayList<Object>();
+        List<Object> results = new ArrayList<>();
         for (Serializable key : keys) {
             results.add(retrieveEntity(persistentEntity, key));
         }
@@ -1524,7 +1528,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
      */
     @Override
     protected List<Object> retrieveAllEntities(PersistentEntity persistentEntity, Serializable[] keys) {
-        List<Object> results = new ArrayList<Object>();
+        List<Object> results = new ArrayList<>();
         for (Serializable key : keys) {
             results.add(retrieveEntity(persistentEntity, key));
         }
@@ -1665,7 +1669,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
                             ToOne association = (ToOne) property;
                             if (!association.isForeignKeyInChild()) {
                                 NativeEntryEntityPersister associationPersister = (NativeEntryEntityPersister) session.getPersister(value);
-                                if(associationPersister != null) {
+                                if (associationPersister != null) {
                                     if (value == null) {
                                         toIndex.put(property, null);
                                     }
@@ -1700,8 +1704,8 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
             return true;
         }
 
-        if(instance instanceof DirtyCheckable) {
-            return ((DirtyCheckable)instance).hasChanged();
+        if (instance instanceof DirtyCheckable) {
+            return ((DirtyCheckable) instance).hasChanged();
         }
         else {
             return doManualDirtyCheck(instance, entry);
@@ -1711,7 +1715,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
     protected boolean doManualDirtyCheck(Object instance, Object entry) {
         T nativeEntry;
         try {
-            nativeEntry = (T)entry;
+            nativeEntry = (T) entry;
         }
         catch (ClassCastException ignored) {
             return false;
@@ -1751,7 +1755,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
                 }
             }
             else if (prop instanceof Custom) {
-                CustomTypeMarshaller marshaller = ((Custom)prop).getCustomTypeMarshaller();
+                CustomTypeMarshaller marshaller = ((Custom) prop).getCustomTypeMarshaller();
                 if (!areEqual(marshaller.read(prop, entry), currentValue, key)) {
                     return true;
                 }
@@ -1782,7 +1786,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
         }
 
         if (currentValue instanceof PersistentCollection) {
-            return !((PersistentCollection)currentValue).isDirty();
+            return !((PersistentCollection) currentValue).isDirty();
         }
 
         return replaceNullOrUninitialized(oldValue, currentValue).equals(
@@ -1797,7 +1801,7 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
             return Collections.emptyList();
         }
 
-        if (c instanceof PersistentCollection && !((PersistentCollection)c).isInitialized()) {
+        if (c instanceof PersistentCollection && !((PersistentCollection) c).isInitialized()) {
             if (c instanceof Set) {
                 return Collections.emptySet();
             }
@@ -1819,8 +1823,8 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
         if ("version".equals(propName)) {
             // special case where comparing int and long would fail artifically
             if (oldValue instanceof Number && currentValue instanceof Number) {
-                oldValue = ((Number)oldValue).longValue();
-                currentValue = ((Number)currentValue).longValue();
+                oldValue = ((Number) oldValue).longValue();
+                currentValue = ((Number) currentValue).longValue();
             }
             else {
                 oldValue = oldValue.toString();
@@ -1831,10 +1835,10 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
         Class oldValueClass = oldValue.getClass();
         if (!oldValueClass.isArray()) {
             if (oldValue instanceof Float) {
-                return Float.floatToIntBits((Float)oldValue) == Float.floatToIntBits((Float)currentValue);
+                return Float.floatToIntBits((Float) oldValue) == Float.floatToIntBits((Float) currentValue);
             }
             if (oldValue instanceof Double) {
-                return Double.doubleToLongBits((Double)oldValue) == Double.doubleToLongBits((Double)currentValue);
+                return Double.doubleToLongBits((Double) oldValue) == Double.doubleToLongBits((Double) currentValue);
             }
             return oldValue.equals(currentValue);
         }
@@ -1847,37 +1851,37 @@ public abstract class NativeEntryEntityPersister<T, K> extends ThirdPartyCacheEn
         }
 
         if (oldValue instanceof long[]) {
-            return Arrays.equals((long[])oldValue, (long[])currentValue);
+            return Arrays.equals((long[]) oldValue, (long[]) currentValue);
         }
 
         if (oldValue instanceof int[]) {
-            return Arrays.equals((int[])oldValue, (int[])currentValue);
+            return Arrays.equals((int[]) oldValue, (int[]) currentValue);
         }
 
         if (oldValue instanceof short[]) {
-            return Arrays.equals((short[])oldValue, (short[])currentValue);
+            return Arrays.equals((short[]) oldValue, (short[]) currentValue);
         }
 
         if (oldValue instanceof char[]) {
-            return Arrays.equals((char[])oldValue, (char[])currentValue);
+            return Arrays.equals((char[]) oldValue, (char[]) currentValue);
         }
 
         if (oldValue instanceof byte[]) {
-            return Arrays.equals((byte[])oldValue, (byte[])currentValue);
+            return Arrays.equals((byte[]) oldValue, (byte[]) currentValue);
         }
 
         if (oldValue instanceof double[]) {
-            return Arrays.equals((double[])oldValue, (double[])currentValue);
+            return Arrays.equals((double[]) oldValue, (double[]) currentValue);
         }
 
         if (oldValue instanceof float[]) {
-            return Arrays.equals((float[])oldValue, (float[])currentValue);
+            return Arrays.equals((float[]) oldValue, (float[]) currentValue);
         }
 
         if (oldValue instanceof boolean[]) {
-            return Arrays.equals((boolean[])oldValue, (boolean[])currentValue);
+            return Arrays.equals((boolean[]) oldValue, (boolean[]) currentValue);
         }
 
-        return Arrays.equals((Object[])oldValue, (Object[])currentValue);
+        return Arrays.equals((Object[]) oldValue, (Object[]) currentValue);
     }
 }

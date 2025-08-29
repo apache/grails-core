@@ -18,10 +18,10 @@
  */
 package org.grails.gsp.compiler.tags;
 
-import org.grails.taglib.GrailsTagException;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.grails.taglib.GrailsTagException;
 
 /**
  * A registry for holding all Grails tag implementations.
@@ -32,19 +32,19 @@ public class GrailsTagRegistry {
 
     private static GrailsTagRegistry instance = new GrailsTagRegistry();
 
-    private static Map<String, Class<?>> tagRegistry = new ConcurrentHashMap<String, Class<?>>();
+    private static Map<String, Class<?>> tagRegistry = new ConcurrentHashMap<>();
 
     static {
-        instance.registerTag(GroovyEachTag.TAG_NAME,    GroovyEachTag.class);
-        instance.registerTag(GroovyIfTag.TAG_NAME,      GroovyIfTag.class);
-        instance.registerTag(GroovyUnlessTag.TAG_NAME,  GroovyUnlessTag.class);
-        instance.registerTag(GroovyElseTag.TAG_NAME,    GroovyElseTag.class);
-        instance.registerTag(GroovyElseIfTag.TAG_NAME,  GroovyElseIfTag.class);
+        instance.registerTag(GroovyEachTag.TAG_NAME, GroovyEachTag.class);
+        instance.registerTag(GroovyIfTag.TAG_NAME, GroovyIfTag.class);
+        instance.registerTag(GroovyUnlessTag.TAG_NAME, GroovyUnlessTag.class);
+        instance.registerTag(GroovyElseTag.TAG_NAME, GroovyElseTag.class);
+        instance.registerTag(GroovyElseIfTag.TAG_NAME, GroovyElseIfTag.class);
         instance.registerTag(GroovyFindAllTag.TAG_NAME, GroovyFindAllTag.class);
         instance.registerTag(GroovyCollectTag.TAG_NAME, GroovyCollectTag.class);
-        instance.registerTag(GroovyGrepTag.TAG_NAME,    GroovyGrepTag.class);
-        instance.registerTag(GroovyWhileTag.TAG_NAME,   GroovyWhileTag.class);
-        instance.registerTag(GroovyDefTag.TAG_NAME,     GroovyDefTag.class);
+        instance.registerTag(GroovyGrepTag.TAG_NAME, GroovyGrepTag.class);
+        instance.registerTag(GroovyWhileTag.TAG_NAME, GroovyWhileTag.class);
+        instance.registerTag(GroovyDefTag.TAG_NAME, GroovyDefTag.class);
     }
 
     private GrailsTagRegistry() {
@@ -78,13 +78,13 @@ public class GrailsTagRegistry {
         Class<?> tagClass = tagRegistry.get(tagName);
 
         try {
-            return (GrailsTag)tagClass.newInstance();
+            return (GrailsTag) tagClass.newInstance();
         }
         catch (InstantiationException e) {
-            throw new GrailsTagException("Instantiation error loading tag ["+tagName+"]: " + e.getMessage(), e);
+            throw new GrailsTagException("Instantiation error loading tag [" + tagName + "]: " + e.getMessage(), e);
         }
         catch (IllegalAccessException e) {
-            throw new GrailsTagException("Illegal access error loading tag ["+tagName+"]: " + e.getMessage(), e);
+            throw new GrailsTagException("Illegal access error loading tag [" + tagName + "]: " + e.getMessage(), e);
         }
     }
 }

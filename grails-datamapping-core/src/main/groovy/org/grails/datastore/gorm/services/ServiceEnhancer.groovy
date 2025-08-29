@@ -32,6 +32,7 @@ import org.codehaus.groovy.ast.MethodNode
  *
  */
 interface ServiceEnhancer extends ServiceImplementer {
+
     /**
      * Does this service enhancer enhance the method
      *

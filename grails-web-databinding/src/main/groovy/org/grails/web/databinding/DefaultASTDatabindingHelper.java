@@ -18,20 +18,6 @@
  */
 package org.grails.web.databinding;
 
-import grails.util.CollectionUtils;
-import grails.util.GrailsNameUtils;
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.ast.FieldNode;
-import org.codehaus.groovy.ast.MethodNode;
-import org.codehaus.groovy.ast.Parameter;
-import org.codehaus.groovy.ast.expr.ClosureExpression;
-import org.codehaus.groovy.ast.expr.ConstantExpression;
-import org.codehaus.groovy.ast.expr.Expression;
-import org.codehaus.groovy.ast.expr.ListExpression;
-import org.codehaus.groovy.classgen.GeneratorContext;
-import org.codehaus.groovy.control.SourceUnit;
-import org.grails.compiler.injection.GrailsASTUtils;
-
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -44,6 +30,21 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
+import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.expr.ClosureExpression;
+import org.codehaus.groovy.ast.expr.ConstantExpression;
+import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.ListExpression;
+import org.codehaus.groovy.classgen.GeneratorContext;
+import org.codehaus.groovy.control.SourceUnit;
+
+import grails.util.CollectionUtils;
+import grails.util.GrailsNameUtils;
+import org.grails.compiler.injection.GrailsASTUtils;
+
 public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
     public static final String CONSTRAINTS_FIELD_NAME = "constraints";
     public static final String BINDABLE_CONSTRAINT_NAME = "bindable";
@@ -51,34 +52,36 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
     public static final String DEFAULT_DATABINDING_WHITELIST = "$defaultDatabindingWhiteList";
     public static final String NO_BINDABLE_PROPERTIES = "$_NO_BINDABLE_PROPERTIES_$";
 
-    private static Map<ClassNode, Set<String>> CLASS_NODE_TO_WHITE_LIST_PROPERTY_NAMES = new HashMap<ClassNode, Set<String>>();
+    private static Map<ClassNode, Set<String>> CLASS_NODE_TO_WHITE_LIST_PROPERTY_NAMES = new HashMap<>();
 
     @SuppressWarnings("serial")
-    private static final List<ClassNode> SIMPLE_TYPES = new ArrayList<ClassNode>() {{
-       add(new ClassNode(Boolean.class));
-       add(new ClassNode(Boolean.TYPE));
-       add(new ClassNode(Byte.class));
-       add(new ClassNode(Byte.TYPE));
-       add(new ClassNode(Character.class));
-       add(new ClassNode(Character.TYPE));
-       add(new ClassNode(Short.class));
-       add(new ClassNode(Short.TYPE));
-       add(new ClassNode(Integer.class));
-       add(new ClassNode(Integer.TYPE));
-       add(new ClassNode(Long.class));
-       add(new ClassNode(Long.TYPE));
-       add(new ClassNode(Float.class));
-       add(new ClassNode(Float.TYPE));
-       add(new ClassNode(Double.class));
-       add(new ClassNode(Double.TYPE));
-       add(new ClassNode(BigInteger.class));
-       add(new ClassNode(BigDecimal.class));
-       add(new ClassNode(String.class));
-       add(new ClassNode(URL.class));
-    }};
-    
+    private static final List<ClassNode> SIMPLE_TYPES = new ArrayList<>() {
+        {
+            add(new ClassNode(Boolean.class));
+            add(new ClassNode(Boolean.TYPE));
+            add(new ClassNode(Byte.class));
+            add(new ClassNode(Byte.TYPE));
+            add(new ClassNode(Character.class));
+            add(new ClassNode(Character.TYPE));
+            add(new ClassNode(Short.class));
+            add(new ClassNode(Short.TYPE));
+            add(new ClassNode(Integer.class));
+            add(new ClassNode(Integer.TYPE));
+            add(new ClassNode(Long.class));
+            add(new ClassNode(Long.TYPE));
+            add(new ClassNode(Float.class));
+            add(new ClassNode(Float.TYPE));
+            add(new ClassNode(Double.class));
+            add(new ClassNode(Double.TYPE));
+            add(new ClassNode(BigInteger.class));
+            add(new ClassNode(BigDecimal.class));
+            add(new ClassNode(String.class));
+            add(new ClassNode(URL.class));
+        }
+    };
+
     private static final Set<String> DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT = CollectionUtils.newSet("id", "version", "dateCreated", "lastUpdated");
-    
+
     public void injectDatabindingCode(final SourceUnit source, final GeneratorContext context, final ClassNode classNode) {
         addDefaultDatabindingWhitelistField(source, classNode);
     }
@@ -139,9 +142,9 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
     }
 
     private Set<String> getPropertyNamesToIncludeInWhiteList(final SourceUnit sourceUnit, final ClassNode classNode) {
-        final Set<String> propertyNamesToIncludeInWhiteList = new HashSet<String>();
-        final Set<String> unbindablePropertyNames = new HashSet<String>();
-        final Set<String> bindablePropertyNames = new HashSet<String>();
+        final Set<String> propertyNamesToIncludeInWhiteList = new HashSet<>();
+        final Set<String> unbindablePropertyNames = new HashSet<>();
+        final Set<String> bindablePropertyNames = new HashSet<>();
         if (!classNode.getSuperClass().equals(new ClassNode(Object.class))) {
             final Set<String> parentClassPropertyNames = getPropertyNamesToIncludeInWhiteListForParentClass(sourceUnit, classNode.getSuperClass());
             bindablePropertyNames.addAll(parentClassPropertyNames);
@@ -152,7 +155,7 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
             final Expression constraintsInitialExpression = constraintsFieldNode.getInitialExpression();
             if (constraintsInitialExpression instanceof ClosureExpression) {
 
-                final Map<String, Map<String, Expression>> constraintsInfo = GrailsASTUtils.getConstraintMetadata((ClosureExpression)constraintsInitialExpression);
+                final Map<String, Map<String, Expression>> constraintsInfo = GrailsASTUtils.getConstraintMetadata((ClosureExpression) constraintsInitialExpression);
 
                 for (Entry<String, Map<String, Expression>> constraintConfig : constraintsInfo.entrySet()) {
                     final String propertyName = constraintConfig.getKey();
@@ -250,7 +253,7 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
     }
 
     private Set<String> getPropertyNamesExpressedInTransientsList(final ClassNode classNode) {
-        final Set<String> transientFields = new HashSet<String>();
+        final Set<String> transientFields = new HashSet<>();
         final FieldNode transientsField = classNode.getField("transients");
         if (transientsField != null && transientsField.isStatic()) {
             final Expression initialValueExpression = transientsField.getInitialValueExpression();

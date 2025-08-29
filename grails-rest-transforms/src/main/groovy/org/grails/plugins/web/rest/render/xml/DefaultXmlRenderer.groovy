@@ -18,18 +18,20 @@
  */
 package org.grails.plugins.web.rest.render.xml
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpStatus
+import org.springframework.validation.Errors
+
 import grails.converters.XML
 import grails.rest.render.RenderContext
 import grails.rest.render.Renderer
 import grails.rest.render.RendererRegistry
 import grails.util.GrailsWebUtil
-import groovy.transform.CompileStatic
 import grails.web.mime.MimeType
-import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
 import org.grails.plugins.web.rest.render.html.DefaultHtmlRenderer
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.http.HttpStatus
-import org.springframework.validation.Errors
+import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
 
 /**
  * Default renderer for XML responses
@@ -39,8 +41,9 @@ import org.springframework.validation.Errors
  */
 @CompileStatic
 class DefaultXmlRenderer<T> implements Renderer<T> {
+
     final Class<T> targetType
-    MimeType[] mimeTypes = [MimeType.XML,MimeType.TEXT_XML] as MimeType[]
+    MimeType[] mimeTypes = [MimeType.XML, MimeType.TEXT_XML] as MimeType[]
     String encoding = GrailsWebUtil.DEFAULT_ENCODING
 
     @Autowired(required = false)
@@ -74,7 +77,7 @@ class DefaultXmlRenderer<T> implements Renderer<T> {
     @Override
     void render(Object object, RenderContext context) {
         final mimeType = context.acceptMimeType ?: MimeType.XML
-        context.setContentType( GrailsWebUtil.getContentType(mimeType.name, encoding) )
+        context.setContentType(GrailsWebUtil.getContentType(mimeType.name, encoding))
 
         def viewName = context.viewName ?: context.actionName
         final view = groovyPageLocator?.findViewForFormat(context.controllerName, viewName, mimeType.extension)
@@ -84,7 +87,7 @@ class DefaultXmlRenderer<T> implements Renderer<T> {
             if (htmlRenderer == null) {
                 htmlRenderer = new DefaultHtmlRenderer(targetType)
             }
-            htmlRenderer.render((Object)object, context)
+            htmlRenderer.render((Object) object, context)
         } else {
             if (object instanceof Errors) {
                 context.setStatus(HttpStatus.UNPROCESSABLE_ENTITY)
@@ -103,7 +106,7 @@ class DefaultXmlRenderer<T> implements Renderer<T> {
     protected void renderXml(Object object, RenderContext context) {
         XML converter
 
-        if(namedConfiguration) {
+        if (namedConfiguration) {
             XML.use(namedConfiguration) {
                 converter = object as XML
             }

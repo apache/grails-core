@@ -19,11 +19,12 @@
 
 package grails.plugin.json.converters
 
-import grails.plugin.json.builder.JsonGenerator
-import groovy.transform.CompileStatic
-
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
+
+import groovy.transform.CompileStatic
+
+import grails.plugin.json.builder.JsonGenerator
 
 /**
  * A class to render a {@link OffsetDateTime} as json
@@ -40,6 +41,6 @@ class OffsetDateTimeJsonConverter implements JsonGenerator.Converter {
 
     @Override
     Object convert(Object value, String key) {
-        DateTimeFormatter.ISO_OFFSET_DATE_TIME.format((OffsetDateTime)value)
+        DateTimeFormatter.ISO_OFFSET_DATE_TIME.format((OffsetDateTime) value)
     }
 }

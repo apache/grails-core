@@ -22,7 +22,15 @@ import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -46,7 +54,7 @@ public class MappingUtils {
      */
     public static String getSetterName(String propertyName) {
         final String suffix = getSuffixForGetterOrSetter(propertyName);
-        return PROPERTY_SET_PREFIX+suffix;
+        return PROPERTY_SET_PREFIX + suffix;
     }
 
     /**
@@ -130,19 +138,19 @@ public class MappingUtils {
         Class genericClass = null;
 
         Field declaredField = getDeclaredField(javaClass, propertyName);
-        if(declaredField != null) {
+        if (declaredField != null) {
             Class<?> type = declaredField.getType();
             Type genericType = declaredField.getGenericType();
             if (genericType instanceof ParameterizedType) {
                 Type[] typeArguments = ((ParameterizedType) genericType).getActualTypeArguments();
                 int len = typeArguments.length;
-                if (len >0) {
+                if (len > 0) {
                     int i = 0;
-                    if(Map.class.isAssignableFrom(type) && len == 2) {
+                    if (Map.class.isAssignableFrom(type) && len == 2) {
                         i++;
                     }
                     Type typeArg = typeArguments[i];
-                    if(typeArg instanceof Class) {
+                    if (typeArg instanceof Class) {
                         genericClass = (Class) typeArg;
                     }
                 }
@@ -158,9 +166,9 @@ public class MappingUtils {
         Type genericType = declaredField != null ? declaredField.getGenericType() : null;
         if (genericType instanceof ParameterizedType) {
             Type[] typeArguments = ((ParameterizedType) genericType).getActualTypeArguments();
-            if (typeArguments.length>0) {
+            if (typeArguments.length > 0) {
                 Type typeArg = typeArguments[isKeyType ? 0 : 1];
-                if(typeArg instanceof Class) {
+                if (typeArg instanceof Class) {
                     genericClass = (Class) typeArg;
                 }
             }
@@ -171,9 +179,9 @@ public class MappingUtils {
     public static Class getGenericType(Class propertyType) {
         Class genericType = null;
         TypeVariable[] typeParameters = propertyType.getTypeParameters();
-        if (typeParameters != null && typeParameters.length>0) {
+        if (typeParameters != null && typeParameters.length > 0) {
             Type[] bounds = typeParameters[0].getBounds();
-            if (bounds != null && bounds.length>0 && (bounds[0] instanceof Class)) {
+            if (bounds != null && bounds.length > 0 && (bounds[0] instanceof Class)) {
                 genericType = (Class) bounds[0];
             }
         }

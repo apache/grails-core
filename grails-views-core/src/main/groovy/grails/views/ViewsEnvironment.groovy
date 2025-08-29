@@ -19,9 +19,10 @@
 
 package grails.views
 
+import groovy.transform.CompileStatic
+
 import grails.util.BuildSettings
 import grails.util.Environment
-import groovy.transform.CompileStatic
 
 /**
  * Environment helper methods
@@ -30,6 +31,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class ViewsEnvironment {
+
     private static final boolean DEVELOPMENT_MODE = Environment.getCurrent() == Environment.DEVELOPMENT && BuildSettings.GRAILS_APP_DIR_PRESENT
 
     /**

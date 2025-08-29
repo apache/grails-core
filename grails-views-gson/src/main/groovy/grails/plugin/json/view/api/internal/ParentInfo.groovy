@@ -19,11 +19,13 @@
 
 package grails.plugin.json.view.api.internal
 
-import grails.views.GrailsViewTemplate
 import groovy.transform.CompileStatic
+
+import grails.views.GrailsViewTemplate
 
 @CompileStatic
 class ParentInfo {
+
     /**
      * The parent template if any
      */

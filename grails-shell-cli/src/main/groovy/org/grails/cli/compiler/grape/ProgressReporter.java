@@ -26,9 +26,9 @@ package org.grails.cli.compiler.grape;
 @FunctionalInterface
 interface ProgressReporter {
 
-	/**
-	 * Notification that the operation has completed.
-	 */
-	void finished();
+    /**
+     * Notification that the operation has completed.
+     */
+    void finished();
 
 }

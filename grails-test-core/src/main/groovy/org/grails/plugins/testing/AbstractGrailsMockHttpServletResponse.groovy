@@ -18,24 +18,24 @@
  */
 package org.grails.plugins.testing
 
-import grails.converters.JSON
 import groovy.xml.slurpersupport.GPathResult
 
 import jakarta.servlet.http.HttpServletRequest
 
-import org.grails.web.json.JSONElement
-import org.grails.web.util.GrailsApplicationAttributes
-import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.util.ReflectionUtils
+
+import grails.converters.JSON
 import org.grails.io.support.SpringIOUtils
+import org.grails.web.json.JSONElement
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.GrailsApplicationAttributes
 
 /**
  * Simple sub-class of Spring's MockHttpServletResponse that adds the
  * left-shift operator, "<<".
  */
 abstract class AbstractGrailsMockHttpServletResponse extends MockHttpServletResponse {
-
 
     /**
      * Sets the response format
@@ -44,7 +44,6 @@ abstract class AbstractGrailsMockHttpServletResponse extends MockHttpServletResp
      */
     void setFormat(String format) {
         HttpServletRequest request = GrailsWebRequest.lookup().getCurrentRequest()
-
 
         request.setAttribute(GrailsApplicationAttributes.RESPONSE_FORMAT, format)
         // remove so that is can be repopulated
@@ -110,7 +109,7 @@ abstract class AbstractGrailsMockHttpServletResponse extends MockHttpServletResp
         final webRequest = GrailsWebRequest.lookup()
         webRequest?.currentRequest?.removeAttribute(GrailsApplicationAttributes.REDIRECT_ISSUED)
         setCommitted(false)
-        def field = ReflectionUtils.findField(MockHttpServletResponse, "writer")
+        def field = ReflectionUtils.findField(MockHttpServletResponse, 'writer')
         ReflectionUtils.makeAccessible(field)
         field.set(this, null)
         webRequest.setOut(getWriter())
@@ -131,7 +130,7 @@ abstract class AbstractGrailsMockHttpServletResponse extends MockHttpServletResp
         }
 
         if (getStatus() in [301, 302]) {
-            return super.getHeader("Location")
+            return super.getHeader('Location')
         }
 
         return super.getRedirectedUrl()

@@ -18,11 +18,17 @@
  */
 package grails.testing.gorm
 
-import grails.core.GrailsClass
-import grails.gorm.validation.PersistentEntityValidator
+import java.beans.Introspector
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
+
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.validation.Validator
+
+import grails.core.GrailsClass
+import grails.gorm.validation.PersistentEntityValidator
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.config.Settings
@@ -35,10 +41,6 @@ import org.grails.testing.GrailsUnitTest
 import org.grails.testing.gorm.MockCascadingDomainClassValidator
 import org.grails.testing.gorm.spock.DataTestSetupSpecInterceptor
 import org.grails.validation.ConstraintEvalUtils
-import org.springframework.transaction.PlatformTransactionManager
-import org.springframework.validation.Validator
-
-import java.beans.Introspector
 
 @CompileStatic
 trait DataTest extends GrailsUnitTest {

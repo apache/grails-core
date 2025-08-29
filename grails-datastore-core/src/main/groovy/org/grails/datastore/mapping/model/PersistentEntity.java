@@ -105,7 +105,7 @@ public interface PersistentEntity extends Initializable {
      *
      * @return A list of associations
      */
-    List <Association> getAssociations();
+    List<Association> getAssociations();
 
     /**
      * A list of embedded associations for this entity. This is typically
@@ -113,7 +113,7 @@ public interface PersistentEntity extends Initializable {
      *
      * @return A list of associations
      */
-    List <Embedded> getEmbedded();
+    List<Embedded> getEmbedded();
 
     /**
      * Obtains a PersistentProperty instance by name

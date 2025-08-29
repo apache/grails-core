@@ -18,17 +18,22 @@
  */
 package org.grails.compiler.injection;
 
-import grails.compiler.ast.AstTransformer;
-import grails.compiler.ast.ClassInjector;
-import grails.compiler.ast.GlobalClassInjector;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.classgen.GeneratorContext;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.SourceUnit;
-import org.grails.io.support.FileSystemResource;
-import org.grails.io.support.PathMatchingResourcePatternResolver;
-import org.grails.io.support.Resource;
+
 import org.springframework.asm.AnnotationVisitor;
 import org.springframework.asm.ClassReader;
 import org.springframework.asm.ClassVisitor;
@@ -36,10 +41,12 @@ import org.springframework.asm.Opcodes;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.util.ClassUtils;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.util.*;
+import grails.compiler.ast.AstTransformer;
+import grails.compiler.ast.ClassInjector;
+import grails.compiler.ast.GlobalClassInjector;
+import org.grails.io.support.FileSystemResource;
+import org.grails.io.support.PathMatchingResourcePatternResolver;
+import org.grails.io.support.Resource;
 
 /**
  * A Groovy compiler injection operation that uses a specified array of
@@ -65,7 +72,6 @@ public class GrailsAwareInjectionOperation extends CompilationUnit.PrimaryClassN
         this();
         localClassInjectors = classInjectors;
     }
-
 
     public static ClassInjector[] getClassInjectors() {
         if (classInjectors == null) {
@@ -104,17 +110,17 @@ public class GrailsAwareInjectionOperation extends CompilationUnit.PrimaryClassN
         Resource[] resources;
         try {
             resources = scanForPatterns(resolver, pattern2, pattern);
-            if(resources.length == 0) {
+            if (resources.length == 0) {
                 classLoader = Thread.currentThread().getContextClassLoader();
                 resolver = new PathMatchingResourcePatternResolver(classLoader);
                 resources = scanForPatterns(resolver, pattern2, pattern);
             }
-            final List<ClassInjector> injectors = new ArrayList<ClassInjector>();
-            final List<ClassInjector> globalInjectors = new ArrayList<ClassInjector>();
-            final Set<Class> injectorClasses = new LinkedHashSet<Class>();
+            final List<ClassInjector> injectors = new ArrayList<>();
+            final List<ClassInjector> globalInjectors = new ArrayList<>();
+            final Set<Class> injectorClasses = new LinkedHashSet<>();
             for (Resource resource : resources) {
                 // ignore not readable classes and closures
-                if(!resource.isReadable() || resource.getFilename().contains("$_")) continue;
+                if (!resource.isReadable() || resource.getFilename().contains("$_")) continue;
                 try (InputStream inputStream = resource.getInputStream()) {
                     final ClassReader classReader = new ClassReader(inputStream);
                     final String astTransformerClassName = AstTransformer.class.getSimpleName();
@@ -164,10 +170,10 @@ public class GrailsAwareInjectionOperation extends CompilationUnit.PrimaryClassN
         }
     }
 
-    private static Resource[] scanForPatterns(PathMatchingResourcePatternResolver resolver, String...patterns) throws IOException {
-        List<Resource> results = new ArrayList<Resource>();
-        for(String pattern : patterns) {
-            results.addAll( Arrays.asList(resolver.getResources(pattern)) );
+    private static Resource[] scanForPatterns(PathMatchingResourcePatternResolver resolver, String... patterns) throws IOException {
+        List<Resource> results = new ArrayList<>();
+        for (String pattern : patterns) {
+            results.addAll(Arrays.asList(resolver.getResources(pattern)));
         }
         return results.toArray(new Resource[0]);
     }

@@ -18,9 +18,6 @@
  */
 package org.grails.web.servlet.mvc;
 
-import grails.util.Holders;
-import grails.validation.DeferredBindingActions;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.lang.reflect.Constructor;
@@ -32,23 +29,6 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import grails.web.servlet.mvc.GrailsHttpSession;
-import grails.web.servlet.mvc.GrailsParameterMap;
-import grails.core.GrailsApplication;
-import grails.core.GrailsControllerClass;
-import org.grails.core.artefact.ControllerArtefactHandler;
-import org.grails.core.io.support.GrailsFactoriesLoader;
-import org.grails.encoder.CodecLookupHelper;
-import org.grails.encoder.DefaultEncodingStateRegistry;
-import org.grails.encoder.Encoder;
-import org.grails.encoder.EncodingStateRegistry;
-import org.grails.encoder.EncodingStateRegistryLookup;
-import org.grails.encoder.EncodingStateRegistryLookupHolder;
-import org.grails.web.beans.PropertyEditorRegistryUtils;
-import org.grails.web.pages.FilteringCodecsByContentTypeSettings;
-import grails.web.mvc.FlashScope;
-import org.grails.web.util.GrailsApplicationAttributes;
-import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException;
 import org.springframework.beans.PropertyEditorRegistry;
 import org.springframework.beans.PropertyEditorRegistrySupport;
 import org.springframework.context.ApplicationContext;
@@ -61,6 +41,25 @@ import org.springframework.web.servlet.handler.DispatcherServletWebRequest;
 import org.springframework.web.servlet.support.RequestContextUtils;
 import org.springframework.web.util.UrlPathHelper;
 
+import grails.core.GrailsApplication;
+import grails.core.GrailsControllerClass;
+import grails.validation.DeferredBindingActions;
+import grails.web.mvc.FlashScope;
+import grails.web.servlet.mvc.GrailsHttpSession;
+import grails.web.servlet.mvc.GrailsParameterMap;
+import org.grails.core.artefact.ControllerArtefactHandler;
+import org.grails.core.io.support.GrailsFactoriesLoader;
+import org.grails.encoder.CodecLookupHelper;
+import org.grails.encoder.DefaultEncodingStateRegistry;
+import org.grails.encoder.Encoder;
+import org.grails.encoder.EncodingStateRegistry;
+import org.grails.encoder.EncodingStateRegistryLookup;
+import org.grails.encoder.EncodingStateRegistryLookupHolder;
+import org.grails.web.beans.PropertyEditorRegistryUtils;
+import org.grails.web.pages.FilteringCodecsByContentTypeSettings;
+import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException;
+import org.grails.web.util.GrailsApplicationAttributes;
+
 /**
  * Encapsulates a Grails request. An instance of this class is bound to the current thread using
  * Spring's RequestContextHolder which can later be retrieved using:
@@ -70,7 +69,7 @@ import org.springframework.web.util.UrlPathHelper;
  * @author Graeme Rocher
  * @since 3.0
  */
-public class GrailsWebRequest extends DispatcherServletWebRequest  {
+public class GrailsWebRequest extends DispatcherServletWebRequest {
 
     private static final String REDIRECT_CALLED = GrailsApplicationAttributes.REDIRECT_ISSUED;
 
@@ -84,7 +83,7 @@ public class GrailsWebRequest extends DispatcherServletWebRequest  {
     private boolean skipFilteringCodec = false;
     private Encoder filteringEncoder;
     public static final String ID_PARAMETER = "id";
-    private final List<ParameterCreationListener> parameterCreationListeners = new ArrayList<ParameterCreationListener>();
+    private final List<ParameterCreationListener> parameterCreationListeners = new ArrayList<>();
     private final UrlPathHelper urlHelper = new UrlPathHelper();
     private ApplicationContext applicationContext;
     private String baseUrl;
@@ -117,7 +116,6 @@ public class GrailsWebRequest extends DispatcherServletWebRequest  {
         this.applicationContext = applicationContext;
     }
 
-
     /**
      * Holds a reference to the {@link org.springframework.web.multipart.MultipartRequest}
      *
@@ -130,7 +128,7 @@ public class GrailsWebRequest extends DispatcherServletWebRequest  {
 
     private void inheritEncodingStateRegistry() {
         GrailsWebRequest parentRequest = GrailsWebRequest.lookup(getRequest());
-        if(parentRequest != null) {
+        if (parentRequest != null) {
             this.encodingStateRegistry = parentRequest.getEncodingStateRegistry();
         }
     }
@@ -217,7 +215,7 @@ public class GrailsWebRequest extends DispatcherServletWebRequest  {
      * @return The currently executing request
      */
     public HttpServletRequest getCurrentRequest() {
-        if(multipartRequest != null) {
+        if (multipartRequest != null) {
             return multipartRequest;
         }
         else {
@@ -226,7 +224,7 @@ public class GrailsWebRequest extends DispatcherServletWebRequest  {
     }
 
     public HttpServletResponse getCurrentResponse() {
-        if(wrappedResponse != null) {
+        if (wrappedResponse != null) {
             return wrappedResponse;
         } else {
             return getResponse();
@@ -265,13 +263,13 @@ public class GrailsWebRequest extends DispatcherServletWebRequest  {
      * Reset params by re-reading and initializing parameters from request
      */
     public void resetParams() {
-        params = (GrailsParameterMap)getOriginalParams().clone();
+        params = (GrailsParameterMap) getOriginalParams().clone();
     }
 
     @SuppressWarnings("rawtypes")
     public void addParametersFrom(Map previousParams) {
         if (previousParams instanceof GrailsParameterMap) {
-            getParams().addParametersFrom((GrailsParameterMap)previousParams);
+            getParams().addParametersFrom((GrailsParameterMap) previousParams);
         } else {
             for (Object key : previousParams.keySet()) {
                 String name = String.valueOf(key);
@@ -323,14 +321,14 @@ public class GrailsWebRequest extends DispatcherServletWebRequest  {
      * @return the actionName
      */
     public String getActionName() {
-        return (String)getCurrentRequest().getAttribute(GrailsApplicationAttributes.ACTION_NAME_ATTRIBUTE);
+        return (String) getCurrentRequest().getAttribute(GrailsApplicationAttributes.ACTION_NAME_ATTRIBUTE);
     }
 
     /**
      * @return the controllerName
      */
     public String getControllerName() {
-        return (String)getCurrentRequest().getAttribute(GrailsApplicationAttributes.CONTROLLER_NAME_ATTRIBUTE);
+        return (String) getCurrentRequest().getAttribute(GrailsApplicationAttributes.CONTROLLER_NAME_ATTRIBUTE);
     }
 
     /**
@@ -339,13 +337,13 @@ public class GrailsWebRequest extends DispatcherServletWebRequest  {
     public GrailsControllerClass getControllerClass() {
         HttpServletRequest currentRequest = getCurrentRequest();
         GrailsControllerClass controllerClass = (GrailsControllerClass) currentRequest.getAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS);
-        if(controllerClass == null) {
+        if (controllerClass == null) {
             Object controllerNameObject = currentRequest.getAttribute(GrailsApplicationAttributes.CONTROLLER_NAME_ATTRIBUTE);
-            if(controllerNameObject != null) {
-                controllerClass = (GrailsControllerClass)getAttributes()
+            if (controllerNameObject != null) {
+                controllerClass = (GrailsControllerClass) getAttributes()
                                                             .getGrailsApplication()
                                                             .getArtefactByLogicalPropertyName(ControllerArtefactHandler.TYPE, controllerNameObject.toString());
-                if(controllerClass != null) {
+                if (controllerClass != null) {
                     currentRequest.setAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS, controllerClass);
                 }
             }
@@ -357,7 +355,7 @@ public class GrailsWebRequest extends DispatcherServletWebRequest  {
     * @return the controllerNamespace
     */
     public String getControllerNamespace() {
-        return (String)getCurrentRequest().getAttribute(GrailsApplicationAttributes.CONTROLLER_NAMESPACE_ATTRIBUTE);
+        return (String) getCurrentRequest().getAttribute(GrailsApplicationAttributes.CONTROLLER_NAMESPACE_ATTRIBUTE);
     }
 
     public void setRenderView(boolean renderView) {
@@ -390,7 +388,7 @@ public class GrailsWebRequest extends DispatcherServletWebRequest  {
         GrailsApplication application = getAttributes().getGrailsApplication();
         Object controllerClassObject = getControllerClass();
         GrailsControllerClass controllerClass = null;
-        if(controllerClassObject instanceof GrailsControllerClass) {
+        if (controllerClassObject instanceof GrailsControllerClass) {
             controllerClass = (GrailsControllerClass) controllerClassObject;
         }
 
@@ -464,10 +462,10 @@ public class GrailsWebRequest extends DispatcherServletWebRequest  {
 
     public String getBaseUrl() {
         if (baseUrl == null) {
-            HttpServletRequest request=getCurrentRequest();
-            String scheme =request.getScheme();
+            HttpServletRequest request = getCurrentRequest();
+            String scheme = request.getScheme();
             String forwardedScheme = request.getHeader("X-Forwarded-Proto");
-            StringBuilder sb=new StringBuilder();
+            StringBuilder sb = new StringBuilder();
             sb.append(scheme).append("://").append(request.getServerName());
 
             int port = request.getServerPort();
@@ -521,8 +519,9 @@ public class GrailsWebRequest extends DispatcherServletWebRequest  {
     public String getFilteringCodec() {
         return filteringEncoder != null ? filteringEncoder.getCodecIdentifier().getCodecName() : null;
     }
+
     public void setFilteringCodec(String codecName) {
-        filteringEncoder=codecName != null ? CodecLookupHelper.lookupEncoder(attributes.getGrailsApplication(), codecName) : null;
+        filteringEncoder = codecName != null ? CodecLookupHelper.lookupEncoder(attributes.getGrailsApplication(), codecName) : null;
     }
 
     public Encoder lookupFilteringEncoder() {

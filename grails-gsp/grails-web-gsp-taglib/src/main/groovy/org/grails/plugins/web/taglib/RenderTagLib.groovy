@@ -18,18 +18,20 @@
  */
 package org.grails.plugins.web.taglib
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpStatus
+import org.springframework.util.StringUtils
+
 import grails.artefact.TagLibrary
 import grails.gsp.TagLib
-import groovy.transform.CompileStatic
 import org.grails.encoder.CodecLookup
 import org.grails.encoder.Encoder
 import org.grails.exceptions.ExceptionUtils
 import org.grails.web.errors.ErrorsViewStackTracePrinter
 import org.grails.web.gsp.GroovyPagesTemplateRenderer
 import org.grails.web.util.WebUtils
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.http.HttpStatus
-import org.springframework.util.StringUtils
 
 /**
  * Tags to help rendering of views.
@@ -83,7 +85,7 @@ class RenderTagLib implements TagLibrary {
         if (!(attrs?.exception instanceof Throwable)) {
             return
         }
-        Throwable exception = (Throwable)attrs.exception
+        Throwable exception = (Throwable) attrs.exception
 
         Encoder htmlEncoder = codecLookup.lookupEncoder('HTML')
 
@@ -100,13 +102,13 @@ class RenderTagLib implements TagLibrary {
         if (root != null && root != exception && root.message != exception.message) {
             currentOut << "<dt>Caused by</dt><dd>${htmlEncoder.encode(root.message)}</dd>"
         }
-        currentOut << "</dl>"
+        currentOut << '</dl>'
 
         currentOut << errorsViewStackTracePrinter.prettyPrintCodeSnippet(exception, attrs)
 
         def trace = errorsViewStackTracePrinter.prettyPrint(exception.cause ?: exception, attrs)
         if (StringUtils.hasText(trace.trim())) {
-            currentOut << "<h2>Trace</h2>"
+            currentOut << '<h2>Trace</h2>'
             currentOut << """<pre class="${attrs['stackClass'] ?: 'stack'}">"""
             currentOut << htmlEncoder.encode(trace)
             currentOut << '</pre>'

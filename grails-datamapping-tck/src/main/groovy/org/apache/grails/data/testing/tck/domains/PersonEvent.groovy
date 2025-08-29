@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class PersonEvent implements Serializable {
+
     Long id
     Long version
     String name
@@ -44,7 +45,7 @@ class PersonEvent implements Serializable {
     }
 
     def beforeDelete() {
-        if (name == "DontDelete") {
+        if (name == 'DontDelete') {
             return false
         }
         STORE.beforeDelete++
@@ -55,7 +56,7 @@ class PersonEvent implements Serializable {
     }
 
     def beforeUpdate() {
-        if (name == "Bad") {
+        if (name == 'Bad') {
             return false
         }
         STORE.beforeUpdate++
@@ -66,7 +67,7 @@ class PersonEvent implements Serializable {
     }
 
     def beforeInsert() {
-        if (name == "Bad") {
+        if (name == 'Bad') {
             return false
         }
         STORE.beforeInsert++

@@ -18,12 +18,6 @@
  */
 package grails.validation;
 
-import static grails.compiler.ast.GrailsArtefactClassInjector.EMPTY_CLASS_ARRAY;
-import static grails.compiler.ast.GrailsArtefactClassInjector.ZERO_PARAMETERS;
-
-import grails.gorm.validation.ConstrainedProperty;
-import grails.util.GrailsNameUtils;
-
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -58,11 +52,17 @@ import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.syntax.Token;
 import org.codehaus.groovy.syntax.Types;
+
+import grails.gorm.validation.ConstrainedProperty;
+import grails.util.GrailsNameUtils;
 import org.grails.compiler.injection.ASTErrorsHelper;
 import org.grails.compiler.injection.ASTValidationErrorsHelper;
 import org.grails.web.plugins.support.ValidationSupport;
 
-public class DefaultASTValidateableHelper implements ASTValidateableHelper{
+import static grails.compiler.ast.GrailsArtefactClassInjector.EMPTY_CLASS_ARRAY;
+import static grails.compiler.ast.GrailsArtefactClassInjector.ZERO_PARAMETERS;
+
+public class DefaultASTValidateableHelper implements ASTValidateableHelper {
 
     private static final String CONSTRAINED_PROPERTIES_PROPERTY_NAME = "$constraints";
     private static final String VALIDATE_METHOD_NAME = "validate";
@@ -89,7 +89,7 @@ public class DefaultASTValidateableHelper implements ASTValidateableHelper{
         final Expression nullOutConstrainedPropertiesExpression = new BinaryExpression(
                 new VariableExpression(CONSTRAINED_PROPERTIES_PROPERTY_NAME),
                 Token.newSymbol(Types.EQUALS, 0, 0), new ConstantExpression(null));
-        List<Statement> statements = new ArrayList<Statement>();
+        List<Statement> statements = new ArrayList<>();
         statements.add(new ExpressionStatement(nullOutConstrainedPropertiesExpression));
         classNode.addStaticInitializerStatements(statements, true);
     }
@@ -110,7 +110,7 @@ public class DefaultASTValidateableHelper implements ASTValidateableHelper{
             final Statement ifConstraintsPropertyIsNullStatement = new IfStatement(isConstraintsPropertyNull, ifConstraintsPropertyIsNullBlockStatement, new ExpressionStatement(new EmptyExpression()));
 
             ifConstraintsPropertyIsNullBlockStatement.addStatement(new ExpressionStatement(initializeConstraintsFieldExpression));
-            if(!defaultNullable) {
+            if (!defaultNullable) {
                 final Map<String, ClassNode> propertiesToConstrain = getPropertiesToEnsureConstraintsFor(classNode);
                 for (final Map.Entry<String, ClassNode> entry : propertiesToConstrain.entrySet()) {
                     final String propertyName = entry.getKey();
@@ -176,19 +176,19 @@ public class DefaultASTValidateableHelper implements ASTValidateableHelper{
      * Retrieves a Map describing all of the properties which need to be constrained for the class
      * represented by classNode.  The keys in the Map will be property names and the values are the
      * type of the corresponding property.
-     * 
+     *
      * @param classNode the class to inspect
      * @return a Map describing all of the properties which need to be constrained
      */
     protected Map<String, ClassNode> getPropertiesToEnsureConstraintsFor(final ClassNode classNode) {
-        final Map<String, ClassNode> fieldsToConstrain = new HashMap<String, ClassNode>();
+        final Map<String, ClassNode> fieldsToConstrain = new HashMap<>();
         final List<FieldNode> allFields = classNode.getFields();
         for (final FieldNode field : allFields) {
             if (!field.isStatic()) {
-                    final PropertyNode property = classNode.getProperty(field.getName());
-                    if(property != null) {
-                        fieldsToConstrain.put(field.getName(), field.getType());
-                    }
+                final PropertyNode property = classNode.getProperty(field.getName());
+                if (property != null) {
+                    fieldsToConstrain.put(field.getName(), field.getType());
+                }
             }
         }
         final Map<String, MethodNode> declaredMethodsMap = classNode.getDeclaredMethodsMap();
@@ -234,7 +234,7 @@ public class DefaultASTValidateableHelper implements ASTValidateableHelper{
             classNode.addMethod(methodNode);
             AnnotatedNodeUtils.markAsGenerated(classNode, methodNode);
         }
-        final MethodNode noArgValidateMethod = classNode.getMethod(VALIDATE_METHOD_NAME,ZERO_PARAMETERS);
+        final MethodNode noArgValidateMethod = classNode.getMethod(VALIDATE_METHOD_NAME, ZERO_PARAMETERS);
         if (noArgValidateMethod == null) {
             final BlockStatement validateMethodCode = new BlockStatement();
 

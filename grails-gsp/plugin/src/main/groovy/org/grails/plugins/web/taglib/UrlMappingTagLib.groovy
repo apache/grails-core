@@ -19,12 +19,16 @@
 
 package org.grails.plugins.web.taglib
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.web.servlet.support.RequestContextUtils
+
 import grails.artefact.TagLibrary
 import grails.gsp.TagLib
 import grails.util.TypeConvertingMap
 import grails.web.mapping.LinkGenerator
 import grails.web.mapping.UrlMapping
-import groovy.transform.CompileStatic
 import org.grails.encoder.CodecLookup
 import org.grails.encoder.Encoder
 import org.grails.taglib.TagOutput
@@ -32,8 +36,6 @@ import org.grails.taglib.encoder.OutputContextLookupHelper
 import org.grails.web.mapping.ForwardUrlMappingInfo
 import org.grails.web.mapping.UrlMappingUtils
 import org.grails.web.util.GrailsApplicationAttributes
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.web.servlet.support.RequestContextUtils
 
 /**
  * Tag library with tags that integration with the URL mappings API (paginate, include etc.)
@@ -43,7 +45,7 @@ import org.springframework.web.servlet.support.RequestContextUtils
  */
 @CompileStatic
 @TagLib
-class UrlMappingTagLib implements TagLibrary{
+class UrlMappingTagLib implements TagLibrary {
 
     CodecLookup codecLookup
 
@@ -67,7 +69,7 @@ class UrlMappingTagLib implements TagLibrary{
     Closure include = { Map attrs, body ->
         if (attrs.action && !attrs.controller) {
             def controller = request?.getAttribute(GrailsApplicationAttributes.CONTROLLER)
-            def controllerName = ((GroovyObject)controller)?.getProperty("controllerName")
+            def controllerName = ((GroovyObject) controller)?.getProperty('controllerName')
             attrs.controller = controllerName
         }
 
@@ -84,7 +86,7 @@ class UrlMappingTagLib implements TagLibrary{
             if (attrs.plugin != null) {
                 mapping.pluginName = attrs.plugin as String
             }
-            out << UrlMappingUtils.includeForUrlMappingInfo(request, response, mapping, (Map)(attrs.model ?: [:]), linkGenerator)?.content
+            out << UrlMappingUtils.includeForUrlMappingInfo(request, response, mapping, (Map) (attrs.model ?: [:]), linkGenerator)?.content
         }
     }
 
@@ -118,10 +120,10 @@ class UrlMappingTagLib implements TagLibrary{
      * @attr fragment The link fragment (often called anchor tag) to use
      */
     Closure paginate = { Map attrsMap ->
-        TypeConvertingMap attrs = (TypeConvertingMap)attrsMap
+        TypeConvertingMap attrs = (TypeConvertingMap) attrsMap
         def writer = out
         if (attrs.total == null) {
-            throwTagError("Tag [paginate] is missing required attribute [total]")
+            throwTagError('Tag [paginate] is missing required attribute [total]')
         }
 
         def messageSource = grailsAttributes.messageSource
@@ -134,7 +136,7 @@ class UrlMappingTagLib implements TagLibrary{
         if (!max) max = (attrs.int('max') ?: 10)
 
         Map linkParams = [:]
-        if (attrs.params instanceof Map) linkParams.putAll((Map)attrs.params)
+        if (attrs.params instanceof Map) linkParams.putAll((Map) attrs.params)
         linkParams.offset = offset - max
         linkParams.max = max
         if (params.sort) linkParams.sort = params.sort
@@ -166,7 +168,7 @@ class UrlMappingTagLib implements TagLibrary{
         if (attrs.containsKey('class')) {
             linkTagAttrs.put('class', attrs.get('class'))
         }
-        String activeClass = attrs.activeClass?:'currentStep'
+        String activeClass = attrs.activeClass ?: 'currentStep'
 
         if (attrs.fragment != null) {
             linkTagAttrs.fragment = attrs.fragment
@@ -210,32 +212,32 @@ class UrlMappingTagLib implements TagLibrary{
             // display firststep link when beginstep is not firststep
             if (beginstep > firststep && !attrs.boolean('omitFirst')) {
                 linkParams.offset = 0
-                writer << callLink((Map)stepAttrs.clone()) {firststep.toString()}
+                writer << callLink((Map) stepAttrs.clone()) { firststep.toString() }
             }
             //show a gap if beginstep isn't immediately after firststep, and if were not omitting first or rev
-            if (beginstep > firststep+1 && (!attrs.boolean('omitFirst') || !attrs.boolean('omitPrev')) ) {
+            if (beginstep > firststep + 1 && (!attrs.boolean('omitFirst') || !attrs.boolean('omitPrev'))) {
                 writer << '<span class="step gap">..</span>'
             }
 
             // display paginate steps
             (beginstep..endstep).each { int i ->
                 if (currentstep == i) {
-                    writer << "<span class=\"${[attrs.get('class')?:'',activeClass].join(' ').trim()}\">${i}</span>"
+                    writer << "<span class=\"${[attrs.get('class') ?: '', activeClass].join(' ').trim()}\">${i}</span>"
                 }
                 else {
                     linkParams.offset = (i - 1) * max
-                    writer << callLink((Map)stepAttrs.clone()) {i.toString()}
+                    writer << callLink((Map) stepAttrs.clone()) { i.toString() }
                 }
             }
 
             //show a gap if beginstep isn't immediately before firststep, and if were not omitting first or rev
-            if (endstep+1 < laststep && (!attrs.boolean('omitLast') || !attrs.boolean('omitNext'))) {
+            if (endstep + 1 < laststep && (!attrs.boolean('omitLast') || !attrs.boolean('omitNext'))) {
                 writer << '<span class="step gap">..</span>'
             }
             // display laststep link when endstep is not laststep
             if (endstep < laststep && !attrs.boolean('omitLast')) {
                 linkParams.offset = (laststep - 1) * max
-                writer << callLink((Map)stepAttrs.clone()) { laststep.toString() }
+                writer << callLink((Map) stepAttrs.clone()) { laststep.toString() }
             }
         }
 
@@ -278,19 +280,19 @@ class UrlMappingTagLib implements TagLibrary{
     Closure sortableColumn = { Map attrs ->
         def writer = out
         if (!attrs.property) {
-            throwTagError("Tag [sortableColumn] is missing required attribute [property]")
+            throwTagError('Tag [sortableColumn] is missing required attribute [property]')
         }
 
         if (!attrs.title && !attrs.titleKey) {
-            throwTagError("Tag [sortableColumn] is missing required attribute [title] or [titleKey]")
+            throwTagError('Tag [sortableColumn] is missing required attribute [title] or [titleKey]')
         }
 
-        def property = attrs.remove("property")
-        def action = attrs.action ? attrs.remove("action") : (actionName ?: "list")
-        def namespace = attrs.remove("namespace")
+        def property = attrs.remove('property')
+        def action = attrs.action ? attrs.remove('action') : (actionName ?: 'list')
+        def namespace = attrs.remove('namespace')
 
-        def defaultOrder = attrs.remove("defaultOrder")
-        if (defaultOrder != "desc") defaultOrder = "asc"
+        def defaultOrder = attrs.remove('defaultOrder')
+        if (defaultOrder != 'desc') defaultOrder = 'asc'
 
         // current sorting property and order
         def sort = params.sort
@@ -298,8 +300,8 @@ class UrlMappingTagLib implements TagLibrary{
 
         // add sorting property and params to link params
         Map linkParams = [:]
-        if (params.id) linkParams.put("id", params.id)
-        def paramsAttr = attrs.remove("params")
+        if (params.id) linkParams.put('id', params.id)
+        def paramsAttr = attrs.remove('params')
         if (paramsAttr instanceof Map) linkParams.putAll(paramsAttr)
         linkParams.sort = property
 
@@ -308,14 +310,14 @@ class UrlMappingTagLib implements TagLibrary{
         if (params.offset) linkParams.offset = params.offset
 
         // determine and add sorting order for this column to link params
-        attrs['class'] = (attrs['class'] ? "${attrs['class']} sortable" : "sortable")
+        attrs['class'] = (attrs['class'] ? "${attrs['class']} sortable" : 'sortable')
         if (property == sort) {
-            attrs['class'] = (attrs['class'] as String) + " sorted " + order
-            if (order == "asc") {
-                linkParams.order = "desc"
+            attrs['class'] = (attrs['class'] as String) + ' sorted ' + order
+            if (order == 'asc') {
+                linkParams.order = 'desc'
             }
             else {
-                linkParams.order = "asc"
+                linkParams.order = 'asc'
             }
         }
         else {
@@ -323,8 +325,8 @@ class UrlMappingTagLib implements TagLibrary{
         }
 
         // determine column title
-        String title = attrs.remove("title") as String
-        String titleKey = attrs.remove("titleKey") as String
+        String title = attrs.remove('title') as String
+        String titleKey = attrs.remove('titleKey') as String
         Object mapping = attrs.remove('mapping')
         if (titleKey) {
             if (!title) title = titleKey
@@ -333,14 +335,14 @@ class UrlMappingTagLib implements TagLibrary{
             title = messageSource.getMessage(titleKey, null, title, locale)
         }
 
-        writer << "<th "
+        writer << '<th '
         // process remaining attributes
         Encoder htmlEncoder = codecLookup.lookupEncoder('HTML')
         attrs.each { k, v ->
             writer << k
-            writer << "=\""
+            writer << '="'
             writer << htmlEncoder.encode(v)
-            writer << "\" "
+            writer << '" '
         }
         writer << '>'
         Map linkAttrs = [:]
@@ -352,7 +354,7 @@ class UrlMappingTagLib implements TagLibrary{
         linkAttrs.action = action
         linkAttrs.namespace = namespace
 
-        writer << callLink((Map)linkAttrs) {
+        writer << callLink((Map) linkAttrs) {
             title
         }
         writer << '</th>'

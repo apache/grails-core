@@ -37,7 +37,7 @@ import org.grails.web.util.WebUtils
 class HttpServletRequestExtension {
 
     static String getForwardURI(HttpServletRequest request) {
-        WebUtils.getForwardURI request
+        WebUtils.getForwardURI(request)
     }
 
     static getProperty(HttpServletRequest request, String name) {
@@ -47,7 +47,7 @@ class HttpServletRequestExtension {
 
     static void setProperty(HttpServletRequest request, String name, val) {
         def mp = request.getClass().metaClass.getMetaProperty(name)
-        if(mp != null) {
+        if (mp != null) {
             mp.setProperty(request, val)
         }
         else {
@@ -56,37 +56,37 @@ class HttpServletRequestExtension {
     }
 
     static propertyMissing(HttpServletRequest request, String name) {
-        getProperty request, name
+        getProperty(request, name)
     }
 
     static propertyMissing(HttpServletRequest request, String name, value) {
         def mp = request.getClass().metaClass.getMetaProperty(name)
         if (mp) {
-            mp.setProperty request, value
+            mp.setProperty(request, value)
         }
         else {
-            request.setAttribute name, value
+            request.setAttribute(name, value)
         }
     }
 
     static getAt(HttpServletRequest request, String name) {
-        getProperty request, name
+        getProperty(request, name)
     }
 
     static putAt(HttpServletRequest request, String name, val) {
-        setProperty request, name, val
+        setProperty(request, name, val)
     }
 
     static each(HttpServletRequest request, Closure c) {
         def attributeNames = request.getAttributeNames()
-        while(attributeNames.hasMoreElements()) {
+        while (attributeNames.hasMoreElements()) {
             String name = attributeNames.nextElement()
             switch (c.parameterTypes.length) {
                 case 0:
                     c.call()
                     break
                 case 1:
-                    c.call([key:name, value:request.getAttribute(name)])
+                    c.call([key: name, value: request.getAttribute(name)])
                     break
                 default:
                     c.call(name, request.getAttribute(name))
@@ -98,7 +98,7 @@ class HttpServletRequestExtension {
         def result = [:]
 
         def attributeNames = request.getAttributeNames()
-        while(attributeNames.hasMoreElements()) {
+        while (attributeNames.hasMoreElements()) {
             String name = attributeNames.nextElement()
             boolean match = false
             switch (c.parameterTypes.length) {
@@ -106,7 +106,7 @@ class HttpServletRequestExtension {
                     match = c.call()
                     break
                 case 1:
-                    match = c.call([key:name, value:request.getAttribute(name)])
+                    match = c.call([key: name, value: request.getAttribute(name)])
                     break
                 default:
                     match =  c.call(name, request.getAttribute(name))
@@ -122,7 +122,7 @@ class HttpServletRequestExtension {
     static findAll(HttpServletRequest request, Closure c) {
         def results = [:]
         def attributeNames = request.getAttributeNames()
-        while(attributeNames.hasMoreElements()) {
+        while (attributeNames.hasMoreElements()) {
             String name = attributeNames.nextElement()
 
             boolean match = false
@@ -131,7 +131,7 @@ class HttpServletRequestExtension {
                     match = c.call()
                     break
                 case 1:
-                    match = c.call([key:name, value:request.getAttribute(name)])
+                    match = c.call([key: name, value: request.getAttribute(name)])
                     break
                 default:
                     match =  c.call(name, request.getAttribute(name))
@@ -145,7 +145,7 @@ class HttpServletRequestExtension {
 
     static boolean isXhr(HttpServletRequest instance) {
         // TODO grails.web.xhr.identifier support
-        instance.getHeader('X-Requested-With') == "XMLHttpRequest"
+        instance.getHeader('X-Requested-With') == 'XMLHttpRequest'
     }
 
     static boolean isGet(HttpServletRequest request) {

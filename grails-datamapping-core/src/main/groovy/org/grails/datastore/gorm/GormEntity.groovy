@@ -18,9 +18,14 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.DetachedCriteria
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
+import jakarta.persistence.Transient
+
+import org.springframework.transaction.TransactionDefinition
+
+import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.query.GormQueryOperations
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
@@ -34,9 +39,6 @@ import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.api.Criteria
 import org.grails.datastore.mapping.reflect.EntityReflector
-import org.springframework.transaction.TransactionDefinition
-
-import jakarta.persistence.Transient
 
 /**
  *
@@ -48,7 +50,6 @@ import jakarta.persistence.Transient
  */
 @CompileStatic
 trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D> {
-
 
     /**
      * Allow access to datasource by name
@@ -66,7 +67,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * Proxy aware instanceOf implementation.
      */
     boolean instanceOf(Class cls) {
-        currentGormInstanceApi().instanceOf this, cls
+        currentGormInstanceApi().instanceOf(this, cls)
     }
 
     /**
@@ -74,7 +75,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The instance
      */
     D lock() {
-        currentGormInstanceApi().lock this
+        currentGormInstanceApi().lock(this)
     }
 
     /**
@@ -84,7 +85,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The result of the closure
      */
     def mutex(Closure callable) {
-        currentGormInstanceApi().mutex this, callable
+        currentGormInstanceApi().mutex(this, callable)
     }
 
     /**
@@ -92,7 +93,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The instance
      */
     D refresh() {
-        currentGormInstanceApi().refresh this
+        currentGormInstanceApi().refresh(this)
     }
 
     /**
@@ -100,7 +101,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return Returns the instance
      */
     D save() {
-        currentGormInstanceApi().save this
+        currentGormInstanceApi().save(this)
     }
 
     /**
@@ -108,7 +109,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return Returns the instance
      */
     D insert() {
-        currentGormInstanceApi().insert this
+        currentGormInstanceApi().insert(this)
     }
 
     /**
@@ -116,7 +117,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return Returns the instance
      */
     D insert(Map params) {
-        currentGormInstanceApi().insert this, params
+        currentGormInstanceApi().insert(this, params)
     }
 
     /**
@@ -124,7 +125,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return Returns the instance
      */
     D merge() {
-        currentGormInstanceApi().merge this
+        currentGormInstanceApi().merge(this)
     }
 
     /**
@@ -132,7 +133,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return Returns the instance
      */
     D merge(Map params) {
-        currentGormInstanceApi().merge this, params
+        currentGormInstanceApi().merge(this, params)
     }
 
     /**
@@ -143,7 +144,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The instance or null if validation fails
      */
     D save(boolean validate) {
-        currentGormInstanceApi().save this, validate
+        currentGormInstanceApi().save(this, validate)
     }
 
     /**
@@ -153,14 +154,14 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The instance
      */
     D save(Map params) {
-        currentGormInstanceApi().save this, params
+        currentGormInstanceApi().save(this, params)
     }
 
     /**
      * Returns the objects identifier
      */
     Serializable ident() {
-        currentGormInstanceApi().ident this
+        currentGormInstanceApi().ident(this)
     }
 
     /**
@@ -168,7 +169,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return
      */
     D attach() {
-        currentGormInstanceApi().attach this
+        currentGormInstanceApi().attach(this)
     }
 
     /**
@@ -176,28 +177,28 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      */
     @Transient
     boolean isAttached() {
-        currentGormInstanceApi().isAttached this
+        currentGormInstanceApi().isAttached(this)
     }
 
     /**
      * Discards any pending changes. Requires a session-based model.
      */
     void discard() {
-        currentGormInstanceApi().discard this
+        currentGormInstanceApi().discard(this)
     }
 
     /**
      * Deletes an instance from the datastore
      */
     void delete() {
-        currentGormInstanceApi().delete this
+        currentGormInstanceApi().delete(this)
     }
 
     /**
      * Deletes an instance from the datastore
      */
     void delete(Map params) {
-        currentGormInstanceApi().delete this, params
+        currentGormInstanceApi().delete(this, params)
     }
 
     /**
@@ -211,7 +212,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return true if the field is dirty
      */
     boolean isDirty(String fieldName) {
-        currentGormInstanceApi().isDirty this, fieldName
+        currentGormInstanceApi().isDirty(this, fieldName)
     }
 
     /**
@@ -224,7 +225,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      */
     @Transient
     boolean isDirty() {
-        currentGormInstanceApi().isDirty this
+        currentGormInstanceApi().isDirty(this)
     }
 
     /**
@@ -237,7 +238,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      */
     @Transient
     List getDirtyPropertyNames() {
-        currentGormInstanceApi().getDirtyPropertyNames this
+        currentGormInstanceApi().getDirtyPropertyNames(this)
     }
 
     /**
@@ -249,7 +250,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The original persisted value
      */
     Object getPersistentValue(String fieldName) {
-        currentGormInstanceApi().getPersistentValue this, fieldName
+        currentGormInstanceApi().getPersistentValue(this, fieldName)
     }
 
     /**
@@ -263,15 +264,15 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
         MappingContext mappingContext = entity.mappingContext
         EntityReflector entityReflector = mappingContext.getEntityReflector(entity)
         def association = entity.getPropertyByName(associationName)
-        if(association instanceof ToOne) {
+        if (association instanceof ToOne) {
             def proxyHandler = mappingContext.getProxyHandler()
             def value = entityReflector.getProperty(this, associationName)
-            if(proxyHandler.isProxy(value)) {
+            if (proxyHandler.isProxy(value)) {
                 return proxyHandler.getIdentifier(value)
             }
             else {
-                PersistentEntity associatedEntity = ((ToOne)association).getAssociatedEntity()
-                if(associatedEntity != null) {
+                PersistentEntity associatedEntity = ((ToOne) association).getAssociatedEntity()
+                if (associatedEntity != null) {
                     return associatedEntity.getReflector().getIdentifier(value)
                 }
             }
@@ -292,18 +293,18 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
         final MappingContext mappingContext = entity.mappingContext
         final EntityReflector entityReflector = mappingContext.getEntityReflector(entity)
 
-        if(prop instanceof Association) {
-            Association association = (Association)prop
+        if (prop instanceof Association) {
+            Association association = (Association) prop
             Class javaClass = association.associatedEntity?.javaClass
             final boolean isBasic = association instanceof Basic
-            if(isBasic) {
-                javaClass = ((Basic)association).componentType
+            if (isBasic) {
+                javaClass = ((Basic) association).componentType
             }
 
             if (javaClass.isInstance(arg)) {
                 final propertyName = prop.name
 
-                Collection currentValue = (Collection)entityReflector.getProperty(this, propertyName)
+                Collection currentValue = (Collection) entityReflector.getProperty(this, propertyName)
                 currentValue?.remove(arg)
                 markDirty(propertyName)
 
@@ -324,11 +325,11 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
                 }
             }
             else {
-                throw new IllegalArgumentException("")
+                throw new IllegalArgumentException('')
             }
 
         }
-        return (D)this
+        return (D) this
     }
 
     /**
@@ -341,13 +342,13 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     D addTo(String associationName, Object arg) {
         final PersistentEntity entity = getGormPersistentEntity()
         final def prop = entity.getPropertyByName(associationName)
-        final D targetObject = (D)this
+        final D targetObject = (D) this
 
         final MappingContext mappingContext = entity.mappingContext
         final EntityReflector reflector = mappingContext.getEntityReflector(entity)
-        if(reflector != null && (prop instanceof Association)) {
+        if (reflector != null && (prop instanceof Association)) {
 
-            final Association association = (Association)prop
+            final Association association = (Association) prop
             final propertyName = association.name
 
             def obj
@@ -359,8 +360,8 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
 
             Class javaClass = association.associatedEntity?.javaClass
             final boolean isBasic = association instanceof Basic
-            if(isBasic) {
-                javaClass = ((Basic)association).componentType
+            if (isBasic) {
+                javaClass = ((Basic) association).componentType
             }
 
             if (arg instanceof Map) {
@@ -371,7 +372,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
             }
             else {
                 def conversionService = mappingContext.conversionService
-                if(conversionService.canConvert(arg.getClass(), javaClass)) {
+                if (conversionService.canConvert(arg.getClass(), javaClass)) {
                     obj = conversionService.convert(arg, javaClass)
                 }
                 else {
@@ -379,7 +380,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
                 }
             }
 
-            def coll = (Collection)currentValue
+            def coll = (Collection) currentValue
             coll.add(obj)
             markDirty(propertyName)
 
@@ -393,21 +394,21 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
                 def associationReflector = mappingContext.getEntityReflector(association.associatedEntity)
                 if (otherSide instanceof OneToMany || otherSide instanceof ManyToMany) {
 
-                    Collection otherSideValue = (Collection)associationReflector.getProperty(obj, name)
+                    Collection otherSideValue = (Collection) associationReflector.getProperty(obj, name)
                     if (otherSideValue == null) {
-                        otherSideValue =  (Collection)( [].asType(otherSide.type) )
+                        otherSideValue =  (Collection) ([].asType(otherSide.type))
                         associationReflector.setProperty(obj, name, otherSideValue)
                     }
                     otherSideValue.add(targetObject)
-                    if(obj instanceof DirtyCheckable) {
-                        ((DirtyCheckable)obj).markDirty(name)
+                    if (obj instanceof DirtyCheckable) {
+                        ((DirtyCheckable) obj).markDirty(name)
                     }
                 }
 
                 else {
                     associationReflector?.setProperty(obj, name, targetObject)
-                    if(obj instanceof DirtyCheckable) {
-                        ((DirtyCheckable)obj).markDirty(name)
+                    if (obj instanceof DirtyCheckable) {
+                        ((DirtyCheckable) obj).markDirty(name)
                     }
                 }
             }
@@ -420,7 +421,6 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     private MappingContext lookupMappingContext() {
         currentGormStaticApi().datastore.mappingContext
     }
-
 
     /**
      * @return The PersistentEntity for this class
@@ -438,7 +438,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The DetachedCriteria instance
      */
     static DetachedCriteria<D> where(Closure callable) {
-        currentGormStaticApi().where callable
+        currentGormStaticApi().where(callable)
     }
 
     /**
@@ -447,7 +447,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The DetachedCriteria instance that is lazily initialized
      */
     static DetachedCriteria<D> whereLazy(Closure callable) {
-        currentGormStaticApi().whereLazy callable
+        currentGormStaticApi().whereLazy(callable)
     }
 
     /**
@@ -456,7 +456,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The DetachedCriteria instance
      */
     static DetachedCriteria<D> whereAny(Closure callable) {
-        currentGormStaticApi().whereAny callable
+        currentGormStaticApi().whereAny(callable)
     }
 
     /**
@@ -466,7 +466,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A List of entities
      */
     static List<D> findAll(Closure callable) {
-        currentGormStaticApi().findAll callable
+        currentGormStaticApi().findAll(callable)
     }
 
     /**
@@ -477,7 +477,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A List of entities
      */
     static List<D> findAll(Map args, Closure callable) {
-        currentGormStaticApi().findAll args, callable
+        currentGormStaticApi().findAll(args, callable)
     }
 
     /**
@@ -487,9 +487,8 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A single entity
      */
     static D find(Closure callable) {
-        currentGormStaticApi().find callable
+        currentGormStaticApi().find(callable)
     }
-
 
     /**
      * Saves a list of objects in one go
@@ -497,7 +496,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A list of object identifiers
      */
     static List<Serializable> saveAll(Object... objectsToSave) {
-        currentGormStaticApi().saveAll objectsToSave
+        currentGormStaticApi().saveAll(objectsToSave)
     }
 
     /**
@@ -506,7 +505,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A list of object identifiers
      */
     static List<Serializable> saveAll(Iterable<?> objectsToSave) {
-        currentGormStaticApi().saveAll objectsToSave
+        currentGormStaticApi().saveAll(objectsToSave)
     }
 
     /**
@@ -514,7 +513,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @param objectsToDelete The objects to delete
      */
     static void deleteAll(Object... objectsToDelete) {
-        currentGormStaticApi().deleteAll objectsToDelete
+        currentGormStaticApi().deleteAll(objectsToDelete)
     }
 
     /**
@@ -522,7 +521,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @param objectsToDelete The objects to delete
      */
     static void deleteAll(Map params, Object... objectsToDelete) {
-        currentGormStaticApi().deleteAll params, objectsToDelete
+        currentGormStaticApi().deleteAll(params, objectsToDelete)
     }
 
     /**
@@ -530,7 +529,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @param objectsToDelete Collection of objects to delete
      */
     static void deleteAll(Iterable objectToDelete) {
-        currentGormStaticApi().deleteAll objectToDelete
+        currentGormStaticApi().deleteAll(objectToDelete)
     }
 
     /**
@@ -538,7 +537,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @param objectsToDelete Collection of objects to delete
      */
     static void deleteAll(Map params, Iterable objectToDelete) {
-        currentGormStaticApi().deleteAll params, objectToDelete
+        currentGormStaticApi().deleteAll(params, objectToDelete)
     }
 
     /**
@@ -553,7 +552,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * Retrieves an object from the datastore. eg. Book.get(1)
      */
     static D get(Serializable id) {
-        currentGormStaticApi().get id
+        currentGormStaticApi().get(id)
     }
 
     /**
@@ -563,21 +562,21 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * just delegates to {@link #get(Serializable)}
      */
     static D read(Serializable id) {
-        currentGormStaticApi().read id
+        currentGormStaticApi().read(id)
     }
 
     /**
      * Retrieves an object from the datastore as a proxy. eg. Book.load(1)
      */
     static D load(Serializable id) {
-        currentGormStaticApi().load id
+        currentGormStaticApi().load(id)
     }
 
     /**
      * Retrieves an object from the datastore as a proxy. eg. Book.proxy(1)
      */
     static D proxy(Serializable id) {
-        currentGormStaticApi().proxy id
+        currentGormStaticApi().proxy(id)
     }
 
     /**
@@ -586,7 +585,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A list of identifiers
      */
     static List<D> getAll(Iterable<Serializable> ids) {
-        currentGormStaticApi().getAll ids
+        currentGormStaticApi().getAll(ids)
     }
 
     /**
@@ -595,7 +594,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A list of identifiers
      */
     static List<D> getAll(Serializable... ids) {
-        currentGormStaticApi().getAll ids
+        currentGormStaticApi().getAll(ids)
     }
 
     /**
@@ -616,14 +615,14 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * Creates a criteria builder instance
      */
     static withCriteria(@DelegatesTo(Criteria) Closure callable) {
-        currentGormStaticApi().withCriteria callable
+        currentGormStaticApi().withCriteria(callable)
     }
 
     /**
      * Creates a criteria builder instance
      */
     static withCriteria(Map builderArgs, @DelegatesTo(Criteria) Closure callable) {
-        currentGormStaticApi().withCriteria builderArgs, callable
+        currentGormStaticApi().withCriteria(builderArgs, callable)
     }
 
     /**
@@ -632,7 +631,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The instance
      */
     static D lock(Serializable id) {
-        currentGormStaticApi().lock id
+        currentGormStaticApi().lock(id)
     }
 
     /**
@@ -641,7 +640,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The instance
      */
     static D merge(D d) {
-        currentGormStaticApi().merge d
+        currentGormStaticApi().merge(d)
     }
 
     /**
@@ -663,7 +662,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * Checks whether an entity exists
      */
     static boolean exists(Serializable id) {
-        currentGormStaticApi().exists id
+        currentGormStaticApi().exists(id)
     }
 
     /**
@@ -673,7 +672,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A list of results
      */
     static List<D> list(Map params) {
-        currentGormStaticApi().list params
+        currentGormStaticApi().list(params)
     }
 
     /**
@@ -691,7 +690,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The list of all entities
      */
     static List<D> findAll(Map params = Collections.emptyMap()) {
-        currentGormStaticApi().findAll params
+        currentGormStaticApi().findAll(params)
     }
 
     /**
@@ -701,7 +700,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A list of matching results
      */
     static List<D> findAll(D example) {
-        currentGormStaticApi().findAll example
+        currentGormStaticApi().findAll(example)
     }
 
     /**
@@ -713,7 +712,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A list of matching results
      */
     static List<D> findAll(D example, Map args) {
-        currentGormStaticApi().findAll example, args
+        currentGormStaticApi().findAll(example, args)
     }
 
     /**
@@ -733,7 +732,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return the first object in the datastore sorted by propertyName, null if none exist
      */
     static D first(String propertyName) {
-        currentGormStaticApi().first propertyName
+        currentGormStaticApi().first(propertyName)
     }
 
     /**
@@ -746,7 +745,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return the first object in the datastore, null if none exist
      */
     static D first(Map queryParams) {
-        currentGormStaticApi().first queryParams
+        currentGormStaticApi().first(queryParams)
     }
 
     /**
@@ -766,7 +765,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return the last object in the datastore sorted by propertyName, null if none exist
      */
     static D last(String propertyName) {
-        currentGormStaticApi().last propertyName
+        currentGormStaticApi().last(propertyName)
     }
 
     /**
@@ -819,7 +818,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return the last object in the datastore, null if none exist
      */
     static D last(Map queryParams) {
-        currentGormStaticApi().last queryParams
+        currentGormStaticApi().last(queryParams)
     }
 
     /**
@@ -829,7 +828,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A list of results
      */
     static List<D> findAllWhere(Map queryMap) {
-        currentGormStaticApi().findAllWhere queryMap
+        currentGormStaticApi().findAllWhere(queryMap)
     }
 
     /**
@@ -841,7 +840,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A list of results
      */
     static List<D> findAllWhere(Map queryMap, Map args) {
-        currentGormStaticApi().findAllWhere queryMap, args
+        currentGormStaticApi().findAllWhere(queryMap, args)
     }
 
     /**
@@ -851,7 +850,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A list of matching results
      */
     static D find(D example) {
-        currentGormStaticApi().find example
+        currentGormStaticApi().find(example)
     }
 
     /**
@@ -863,7 +862,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A list of matching results
      */
     static D find(D example, Map args) {
-        currentGormStaticApi().find example, args
+        currentGormStaticApi().find(example, args)
     }
 
     /**
@@ -873,7 +872,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A single result
      */
     static D findWhere(Map queryMap) {
-        currentGormStaticApi().findWhere queryMap
+        currentGormStaticApi().findWhere(queryMap)
     }
 
     /**
@@ -885,7 +884,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A single result
      */
     static D findWhere(Map queryMap, Map args) {
-        currentGormStaticApi().findWhere queryMap, args
+        currentGormStaticApi().findWhere(queryMap, args)
     }
 
     /**
@@ -896,7 +895,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A single result
      */
     static D findOrCreateWhere(Map queryMap) {
-        currentGormStaticApi().findOrCreateWhere queryMap
+        currentGormStaticApi().findOrCreateWhere(queryMap)
     }
 
     /**
@@ -907,7 +906,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A single result
      */
     static D findOrSaveWhere(Map queryMap) {
-        currentGormStaticApi().findOrSaveWhere queryMap
+        currentGormStaticApi().findOrSaveWhere(queryMap)
     }
 
     /**
@@ -917,7 +916,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The result of the closure
      */
     static <T> T withSession(Closure<T> callable) {
-        currentGormStaticApi().withSession callable
+        currentGormStaticApi().withSession(callable)
     }
 
     /**
@@ -927,7 +926,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The result of the closure
      */
     static <T> T withDatastoreSession(Closure<T> callable) {
-        currentGormStaticApi().withDatastoreSession callable
+        currentGormStaticApi().withDatastoreSession(callable)
     }
 
     /**
@@ -941,7 +940,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @see #withNewTransaction(Map, Closure)
      */
     static <T> T withTransaction(Closure<T> callable) {
-        currentGormStaticApi().withTransaction callable
+        currentGormStaticApi().withTransaction(callable)
     }
 
     /**
@@ -954,7 +953,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @see #withNewTransaction(Map, Closure)
      */
     static <T> T withNewTransaction(Closure<T> callable) {
-        currentGormStaticApi().withNewTransaction callable
+        currentGormStaticApi().withNewTransaction(callable)
     }
 
     /**
@@ -981,7 +980,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @see #withTransaction(Closure)
      */
     static <T> T withTransaction(Map transactionProperties, Closure<T> callable) {
-        currentGormStaticApi().withTransaction transactionProperties, callable
+        currentGormStaticApi().withTransaction(transactionProperties, callable)
     }
 
     /**
@@ -1010,7 +1009,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @see #withTransaction(Map, Closure)
      */
     static <T> T withNewTransaction(Map transactionProperties, Closure<T> callable) {
-        currentGormStaticApi().withNewTransaction transactionProperties, callable
+        currentGormStaticApi().withNewTransaction(transactionProperties, callable)
     }
 
     /**
@@ -1020,23 +1019,22 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The result of the closure execution
      */
     static <T> T withTransaction(TransactionDefinition definition, Closure<T> callable) {
-        currentGormStaticApi().withTransaction definition, callable
+        currentGormStaticApi().withTransaction(definition, callable)
     }
 
     /**
      * Creates and binds a new session for the scope of the given closure
      */
     static <T> T withNewSession(Closure<T> callable) {
-        currentGormStaticApi().withNewSession callable
+        currentGormStaticApi().withNewSession(callable)
     }
 
     /**
      * Creates and binds a new session for the scope of the given closure
      */
     static <T> T withStatelessSession(Closure<T> callable) {
-        currentGormStaticApi().withStatelessSession callable
+        currentGormStaticApi().withStatelessSession(callable)
     }
-
 
     /**
      * Executes a query for the given String
@@ -1045,7 +1043,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return A list of results
      */
     static List executeQuery(CharSequence query) {
-        currentGormStaticApi().executeQuery query
+        currentGormStaticApi().executeQuery(query)
     }
 
     /**
@@ -1058,7 +1056,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      *
      */
     static List executeQuery(CharSequence query, Map args) {
-        currentGormStaticApi().executeQuery query, args
+        currentGormStaticApi().executeQuery(query, args)
     }
 
     /**
@@ -1072,7 +1070,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      *
      */
     static List executeQuery(CharSequence query, Map params, Map args) {
-        currentGormStaticApi().executeQuery query, params, args
+        currentGormStaticApi().executeQuery(query, params, args)
     }
 
     /**
@@ -1085,7 +1083,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      *
      */
     static List executeQuery(CharSequence query, Collection params) {
-        currentGormStaticApi().executeQuery query, params
+        currentGormStaticApi().executeQuery(query, params)
     }
 
     /**
@@ -1098,7 +1096,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      *
      */
     static List executeQuery(CharSequence query, Object...params) {
-        currentGormStaticApi().executeQuery query, params
+        currentGormStaticApi().executeQuery(query, params)
     }
 
     /**
@@ -1112,7 +1110,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      *
      */
     static List executeQuery(CharSequence query, Collection params, Map args) {
-        currentGormStaticApi().executeQuery query, params, args
+        currentGormStaticApi().executeQuery(query, params, args)
     }
 
     /**
@@ -1124,7 +1122,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      *
      */
     static Integer executeUpdate(CharSequence query) {
-        currentGormStaticApi().executeUpdate query
+        currentGormStaticApi().executeUpdate(query)
     }
 
     /**
@@ -1137,7 +1135,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      *
      */
     static Integer executeUpdate(CharSequence query, Map args) {
-        currentGormStaticApi().executeUpdate query, args
+        currentGormStaticApi().executeUpdate(query, args)
     }
 
     /**
@@ -1151,7 +1149,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      *
      */
     static Integer executeUpdate(CharSequence query, Map params, Map args) {
-        currentGormStaticApi().executeUpdate query, params, args
+        currentGormStaticApi().executeUpdate(query, params, args)
     }
 
     /**
@@ -1164,7 +1162,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      *
      */
     static Integer executeUpdate(CharSequence query, Collection params) {
-        currentGormStaticApi().executeUpdate query, params
+        currentGormStaticApi().executeUpdate(query, params)
     }
 
     /**
@@ -1177,7 +1175,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      *
      */
     static Integer executeUpdate(CharSequence query, Object...params) {
-        currentGormStaticApi().executeUpdate query, params
+        currentGormStaticApi().executeUpdate(query, params)
     }
 
     /**
@@ -1191,7 +1189,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      *
      */
     static Integer executeUpdate(CharSequence query, Collection params, Map args) {
-        currentGormStaticApi().executeUpdate query, params, args
+        currentGormStaticApi().executeUpdate(query, params, args)
     }
 
     /**
@@ -1201,7 +1199,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The object
      */
     static D find(CharSequence query) {
-        currentGormStaticApi().find query
+        currentGormStaticApi().find(query)
     }
 
     /**
@@ -1213,7 +1211,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The object
      */
     static D find(CharSequence query, Map params) {
-        currentGormStaticApi().find query, params
+        currentGormStaticApi().find(query, params)
     }
 
     /**
@@ -1226,7 +1224,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The object
      */
     static D find(CharSequence query, Map params, Map args) {
-        currentGormStaticApi().find query, params, args
+        currentGormStaticApi().find(query, params, args)
     }
 
     /**
@@ -1238,7 +1236,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The object
      */
     static D find(CharSequence query, Collection params) {
-        currentGormStaticApi().find query, params
+        currentGormStaticApi().find(query, params)
     }
 
     /**
@@ -1251,7 +1249,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The object
      */
     static D find(CharSequence query, Object[] params) {
-        currentGormStaticApi().find query, params
+        currentGormStaticApi().find(query, params)
     }
 
     /**
@@ -1264,7 +1262,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The object
      */
     static D find(CharSequence query, Collection params, Map args) {
-        currentGormStaticApi().find query, params, args
+        currentGormStaticApi().find(query, params, args)
     }
 
     /**
@@ -1275,7 +1273,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The object
      */
     static List<D> findAll(CharSequence query) {
-        currentGormStaticApi().findAll query
+        currentGormStaticApi().findAll(query)
     }
 
     /**
@@ -1287,7 +1285,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The objects
      */
     static List<D> findAll(CharSequence query, Map params) {
-        currentGormStaticApi().findAll query, params
+        currentGormStaticApi().findAll(query, params)
     }
 
     /**
@@ -1300,7 +1298,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The objects
      */
     static List<D> findAll(CharSequence query, Map params, Map args) {
-        currentGormStaticApi().findAll query, params, args
+        currentGormStaticApi().findAll(query, params, args)
     }
 
     /**
@@ -1312,7 +1310,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The objects
      */
     static List<D> findAll(CharSequence query, Collection params) {
-        currentGormStaticApi().findAll query, params
+        currentGormStaticApi().findAll(query, params)
     }
 
     /**
@@ -1324,7 +1322,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The objects
      */
     static List<D> findAll(CharSequence query, Object[] params) {
-        currentGormStaticApi().findAll query, params
+        currentGormStaticApi().findAll(query, params)
     }
 
     /**
@@ -1337,16 +1335,16 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @return The objects
      */
     static List<D> findAll(CharSequence query, Collection params, Map args) {
-        currentGormStaticApi().findAll query, params, args
+        currentGormStaticApi().findAll(query, params, args)
     }
 
 
 
     private GormInstanceApi<D> currentGormInstanceApi() {
-        (GormInstanceApi<D>)GormEnhancer.findInstanceApi(getClass())
+        (GormInstanceApi<D>) GormEnhancer.findInstanceApi(getClass())
     }
 
     private static GormStaticApi<D> currentGormStaticApi() {
-        (GormStaticApi<D>)GormEnhancer.findStaticApi(this)
+        (GormStaticApi<D>) GormEnhancer.findStaticApi(this)
     }
 }

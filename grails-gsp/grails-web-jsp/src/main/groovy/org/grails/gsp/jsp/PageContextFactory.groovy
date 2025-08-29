@@ -18,14 +18,15 @@
  */
 package org.grails.gsp.jsp
 
+import jakarta.servlet.ServletContext
+import jakarta.servlet.jsp.PageContext as PC
+
+import org.springframework.web.context.request.RequestContextHolder
+
 import org.grails.gsp.GroovyPageBinding
 import org.grails.web.pages.GroovyPagesServlet
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes as GAA
-import org.springframework.web.context.request.RequestContextHolder
-
-import jakarta.servlet.ServletContext
-import jakarta.servlet.jsp.PageContext as PC
 
 /**
  * Obtains a reference to the GroovyPagesPageContext class.
@@ -47,7 +48,7 @@ class PageContextFactory {
         def gspServlet = servletContext.getAttribute(GroovyPagesServlet.SERVLET_INSTANCE)
         if (!gspServlet) {
             gspServlet = new GroovyPagesServlet()
-            servletContext.setAttribute GroovyPagesServlet.SERVLET_INSTANCE, gspServlet
+            servletContext.setAttribute(GroovyPagesServlet.SERVLET_INSTANCE, gspServlet)
         }
         def pageScope = request.getAttribute(GAA.PAGE_SCOPE)
         if (!pageScope) {

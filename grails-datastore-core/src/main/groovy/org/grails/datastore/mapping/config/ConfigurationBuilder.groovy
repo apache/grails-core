@@ -18,19 +18,21 @@
  */
 package org.grails.datastore.mapping.config
 
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
 import groovy.util.logging.Slf4j
-import org.grails.datastore.mapping.core.exceptions.ConfigurationException
-import org.grails.datastore.mapping.reflect.NameUtils
+
 import org.springframework.core.convert.ConversionFailedException
 import org.springframework.core.env.PropertyResolver
 import org.springframework.util.ReflectionUtils
 
-import java.lang.reflect.Method
-import java.lang.reflect.Modifier
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
+import org.grails.datastore.mapping.reflect.NameUtils
 
 /**
  * A generic configuration builder that implementers can implement to construct the configuration from the source {@link PropertyResolver}
@@ -43,6 +45,7 @@ import java.lang.reflect.Modifier
 @CompileStatic
 @Slf4j
 abstract class ConfigurationBuilder<B, C> {
+
     private static final Set<String> IGNORE_METHODS = ['seProperty', 'propertyMissing'] as Set
     final PropertyResolver propertyResolver
     final String configurationPrefix
@@ -75,7 +78,7 @@ abstract class ConfigurationBuilder<B, C> {
         this.propertyResolver = propertyResolver
         this.configurationPrefix = configurationPrefix
         this.builderMethodPrefix = builderMethodPrefix
-        if(fallBackConfiguration != null) {
+        if (fallBackConfiguration != null) {
             def cloned
             try {
                 cloned = fallBackConfiguration.clone()
@@ -88,8 +91,6 @@ abstract class ConfigurationBuilder<B, C> {
             this.fallBackConfiguration = null
         }
     }
-
-
 
     C build() {
         rootBuilder = createBuilder()
@@ -119,9 +120,9 @@ abstract class ConfigurationBuilder<B, C> {
 
     private List<Class> toHierarchy(Class cls) {
         List<Class> classes = [cls]
-        while(cls != Object) {
+        while (cls != Object) {
             def superClass = cls.getSuperclass()
-            if(superClass == Object || superClass == LinkedHashMap) break
+            if (superClass == Object || superClass == LinkedHashMap) break
 
             classes.add(superClass)
             cls = superClass
@@ -133,7 +134,7 @@ abstract class ConfigurationBuilder<B, C> {
      * @deprecated use {@link ConfigurationBuilder#buildRecurse(Object, List, Object, String)} instead
      */
     protected void buildRecurse(Object builder, Object fallBackConfig, String startingPrefix) {
-       buildRecurse(builder, new ArrayList<Class>(), fallBackConfig, startingPrefix)
+        buildRecurse(builder, new ArrayList<Class>(), fallBackConfig, startingPrefix)
     }
 
     protected void buildRecurse(Object builder, List<Class> builderQueue, Object fallBackConfig, String startingPrefix) {
@@ -142,7 +143,7 @@ abstract class ConfigurationBuilder<B, C> {
 
         startBuild(builder, startingPrefix)
 
-        for(Class builderClass in hierarchy) {
+        for (Class builderClass in hierarchy) {
 
             def methods = builderClass.declaredMethods
             for (method in methods) {
@@ -206,7 +207,7 @@ abstract class ConfigurationBuilder<B, C> {
                                     try {
                                         method.invoke(builder, buildMethod.invoke(newBuilder))
                                     } catch (Throwable e) {
-                                        log.error("build method threw exception", e)
+                                        log.error('build method threw exception', e)
                                     }
                                 } else {
                                     method.invoke(builder, newBuilder)
@@ -291,7 +292,6 @@ abstract class ConfigurationBuilder<B, C> {
                                     newBuilder = (ConfigurationBuilder) argType.newInstance(this.propertyResolver, propertyPath)
                                 }
 
-
                             }
                             newChildBuilder(newBuilder, propertyPath)
                             method.invoke(builder, newBuilder)
@@ -300,7 +300,7 @@ abstract class ConfigurationBuilder<B, C> {
                         }
                         continue
                     }
-                } else if (methodName.startsWith("get") && parameterTypes.length == 0) {
+                } else if (methodName.startsWith('get') && parameterTypes.length == 0) {
                     if (method.returnType.getAnnotation(Builder)) {
                         def childBuilder = method.invoke(builder)
                         if (childBuilder != null) {
@@ -347,7 +347,7 @@ abstract class ConfigurationBuilder<B, C> {
                     def valueOfMethod = ReflectionUtils.findMethod(argType, 'valueOf')
                     if (valueOfMethod != null && Modifier.isStatic(valueOfMethod.modifiers)) {
                         try {
-                            def value = propertyResolver.getProperty(propertyPathForArg, "")
+                            def value = propertyResolver.getProperty(propertyPathForArg, '')
                             if (value) {
                                 def converted = valueOfMethod.invoke(argType, value)
                                 args.add(converted)
@@ -363,11 +363,11 @@ abstract class ConfigurationBuilder<B, C> {
                         try {
                             value = propertyResolver.getProperty(propertyPathForArg, argType, fallBackValue)
                         } catch (ConversionFailedException e) {
-                            if(argType.isEnum()) {
+                            if (argType.isEnum()) {
                                 value = propertyResolver.getProperty(propertyPathForArg, String)
                                 if (value != null) {
                                     try {
-                                        value = Enum.valueOf((Class)argType, value.toUpperCase())
+                                        value = Enum.valueOf((Class) argType, value.toUpperCase())
                                     } catch (Throwable e2) {
                                         // ignore e2 and throw original
                                         throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
@@ -382,7 +382,7 @@ abstract class ConfigurationBuilder<B, C> {
                             }
                         }
                         if (value != null) {
-                            log.debug("Resolved value [{}] for setting [{}]", value, propertyPathForArg)
+                            log.debug('Resolved value [{}] for setting [{}]', value, propertyPathForArg)
                             args.add(value)
                         }
 

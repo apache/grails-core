@@ -18,12 +18,14 @@
  */
 package org.grails.web.pages
 
+import org.codehaus.groovy.control.CompilerConfiguration
+
 import org.apache.tools.ant.BuildException
 import org.apache.tools.ant.DirectoryScanner
 import org.apache.tools.ant.taskdefs.MatchingTask
 import org.apache.tools.ant.types.Path
 import org.apache.tools.ant.types.Reference
-import org.codehaus.groovy.control.CompilerConfiguration
+
 import org.grails.gsp.compiler.GroovyPageCompiler
 
 /**
@@ -78,7 +80,6 @@ class GroovyPageCompilerTask extends MatchingTask {
         return configs.createPath()
     }
 
-
     /**
      * Adds a reference to a classpath defined elsewhere.
      *
@@ -96,7 +97,7 @@ class GroovyPageCompilerTask extends MatchingTask {
             compiler.compilerConfig = config
         }
 
-        if(configs) {
+        if (configs) {
             compiler.configs = configs.list()
         }
         if (!destdir || !destdir.exists()) {
@@ -119,7 +120,7 @@ class GroovyPageCompilerTask extends MatchingTask {
 
         int gspCount = gspFiles?.size()
         if (gspCount) {
-            log("Compiling ${gspCount} GSP file${gspCount>1?'s':''} for package [${packagename}]")
+            log("Compiling ${gspCount} GSP file${gspCount > 1 ? 's' : ''} for package [${packagename}]")
         }
 
         if (tmpdir) {
@@ -130,7 +131,7 @@ class GroovyPageCompilerTask extends MatchingTask {
             compiler.packagePrefix = packagename
         }
         if (serverpath) {
-            compiler.viewPrefix=serverpath
+            compiler.viewPrefix = serverpath
         }
         if (encoding) {
             compiler.encoding = encoding

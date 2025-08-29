@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class Nose implements Serializable {
+
     Long id
     Long version
     boolean hasFreckles
@@ -30,6 +31,6 @@ class Nose implements Serializable {
     static belongsTo = [face: Face]
 
     static mapping = {
-        face index: true
+        face(index: true)
     }
 }

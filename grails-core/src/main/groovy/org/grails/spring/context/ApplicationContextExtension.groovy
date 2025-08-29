@@ -19,6 +19,7 @@
 package org.grails.spring.context
 
 import groovy.transform.CompileStatic
+
 import org.springframework.context.ApplicationContext
 
 /**
@@ -37,12 +38,12 @@ class ApplicationContextExtension {
      * @param name The bean name
      * @return
      */
-    public static Object propertyMissing(ApplicationContext applicationContext, String name ) {
-        if(applicationContext.containsBean(name)) {
-            return applicationContext.getBean(name);
+    static Object propertyMissing(ApplicationContext applicationContext, String name) {
+        if (applicationContext.containsBean(name)) {
+            return applicationContext.getBean(name)
         }
         else {
-            return null;
+            return null
         }
     }
 
@@ -53,7 +54,7 @@ class ApplicationContextExtension {
      * @param name The bean name
      * @return A bean or null
      */
-    public static Object getAt(ApplicationContext applicationContext, String name) {
-        return propertyMissing(applicationContext, name);
+    static Object getAt(ApplicationContext applicationContext, String name) {
+        return propertyMissing(applicationContext, name)
     }
 }

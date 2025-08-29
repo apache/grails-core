@@ -27,6 +27,7 @@ import org.grails.build.parsing.CommandLine
  * @author Graeme Rocher
  */
 abstract class AbstractStep implements Step {
+
     ProfileCommand command
     Map<String, Object> parameters
 

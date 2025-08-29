@@ -18,24 +18,27 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import spock.lang.IgnoreIf
+import spock.lang.PendingFeatureIf
+import spock.lang.Unroll
+
+import org.springframework.validation.Validator
+
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.ClassWithListArgBeforeValidate
 import org.apache.grails.data.testing.tck.domains.ClassWithNoArgBeforeValidate
 import org.apache.grails.data.testing.tck.domains.ClassWithOverloadedBeforeValidate
 import org.apache.grails.data.testing.tck.domains.Task
 import org.apache.grails.data.testing.tck.domains.TestEntity
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.validation.CascadingValidator
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.springframework.validation.Validator
-import spock.lang.IgnoreIf
-import spock.lang.PendingFeatureIf
-import spock.lang.Unroll
 
 /**
  * Tests validation semantics.
  */
 class ValidationSpec extends GrailsDataTckSpec {
+
     void setupSpec() {
         manager.addAllDomainClasses([ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
                                  ClassWithOverloadedBeforeValidate, TestEntity, ChildEntity, Task])
@@ -48,7 +51,7 @@ class ValidationSpec extends GrailsDataTckSpec {
         def t = new TestEntity(name: 'someName')
 
         when:
-        t.errors.reject 'foo'
+        t.errors.reject('foo')
         boolean isValid = t.validate()
         int errorCount = t.errors.errorCount
 
@@ -59,13 +62,13 @@ class ValidationSpec extends GrailsDataTckSpec {
 
     // Hibernate did not originally have this test and it fails for it
     @PendingFeatureIf({ System.getProperty('hibernate5.gorm.suite') })
-    void "Test disable validation"() {
+    void 'Test disable validation'() {
         // test assumes name cannot be blank
         given:
         def t
 
         when:
-        t = new TestEntity(name: "", child: new ChildEntity(name: "child"))
+        t = new TestEntity(name: '', child: new ChildEntity(name: 'child'))
         boolean validationResult = t.validate()
         def errors = t.errors
 
@@ -83,13 +86,13 @@ class ValidationSpec extends GrailsDataTckSpec {
         !t.hasErrors()
     }
 
-    void "Test validate() method"() {
+    void 'Test validate() method'() {
         // test assumes name cannot be blank
         given:
         def t
 
         when:
-        t = new TestEntity(name: "")
+        t = new TestEntity(name: '')
         boolean validationResult = t.validate()
         def errors = t.errors
 
@@ -106,13 +109,13 @@ class ValidationSpec extends GrailsDataTckSpec {
         !t.hasErrors()
     }
 
-    void "Test that validate is called on save()"() {
+    void 'Test that validate is called on save()'() {
 
         given:
         def t
 
         when:
-        t = new TestEntity(name: "")
+        t = new TestEntity(name: '')
 
         then:
         t.save() == null
@@ -121,9 +124,9 @@ class ValidationSpec extends GrailsDataTckSpec {
 
         when:
         t.clearErrors()
-        t.name = "Bob"
+        t.name = 'Bob'
         t.age = 45
-        t.child = new ChildEntity(name: "Fred")
+        t.child = new ChildEntity(name: 'Fred')
         t = t.save()
 
         then:
@@ -131,7 +134,7 @@ class ValidationSpec extends GrailsDataTckSpec {
         1 == TestEntity.count()
     }
 
-    void "Test beforeValidate gets called on save()"() {
+    void 'Test beforeValidate gets called on save()'() {
         given:
         def entityWithNoArgBeforeValidateMethod
         def entityWithListArgBeforeValidateMethod
@@ -152,7 +155,7 @@ class ValidationSpec extends GrailsDataTckSpec {
         0 == entityWithOverloadedBeforeValidateMethod.listArgCounter
     }
 
-    void "Test beforeValidate gets called on validate()"() {
+    void 'Test beforeValidate gets called on validate()'() {
         given:
         def entityWithNoArgBeforeValidateMethod
         def entityWithListArgBeforeValidateMethod
@@ -173,7 +176,7 @@ class ValidationSpec extends GrailsDataTckSpec {
         0 == entityWithOverloadedBeforeValidateMethod.listArgCounter
     }
 
-    void "Test beforeValidate gets called on validate() and passing a list of field names to validate"() {
+    void 'Test beforeValidate gets called on validate() and passing a list of field names to validate'() {
         given:
         def entityWithNoArgBeforeValidateMethod
         def entityWithListArgBeforeValidateMethod
@@ -196,16 +199,16 @@ class ValidationSpec extends GrailsDataTckSpec {
     }
 
     @IgnoreIf({
-        Boolean.getBoolean("neo4j.gorm.suite") || // neo4j requires a transaction present for inserts
+        Boolean.getBoolean('neo4j.gorm.suite') || // neo4j requires a transaction present for inserts
                 System.getProperty('hibernate5.gorm.suite') // Hibernate has a custom version of this test
     })
-    void "Test that validate works without a bound Session"() {
+    void 'Test that validate works without a bound Session'() {
         given:
         def t
 
         when:
         manager.session.disconnect()
-        t = new TestEntity(name: "")
+        t = new TestEntity(name: '')
 
         then:
         !manager.session.datastore.hasCurrentSession()
@@ -216,9 +219,9 @@ class ValidationSpec extends GrailsDataTckSpec {
 
         when:
         t.clearErrors()
-        t.name = "Bob"
+        t.name = 'Bob'
         t.age = 45
-        t.child = new ChildEntity(name: "Fred")
+        t.child = new ChildEntity(name: 'Fred')
         t = t.save(flush: true)
 
         then:
@@ -227,7 +230,7 @@ class ValidationSpec extends GrailsDataTckSpec {
         1 == TestEntity.count()
     }
 
-    void "Two parameter validate is called on entity validator if it implements Validator interface"() {
+    void 'Two parameter validate is called on entity validator if it implements Validator interface'() {
         given:
         def mockValidator = Mock(Validator)
         manager.session.mappingContext.addEntityValidator(persistentEntityFor(Task), mockValidator)
@@ -241,7 +244,7 @@ class ValidationSpec extends GrailsDataTckSpec {
     }
 
     @Unroll
-    void "deepValidate parameter is honoured if entity validator implements CascadingValidator"() {
+    void 'deepValidate parameter is honoured if entity validator implements CascadingValidator'() {
         given:
         def mockValidator = Mock(CascadingValidator)
         manager.session.mappingContext.addEntityValidator(persistentEntityFor(Task), mockValidator)

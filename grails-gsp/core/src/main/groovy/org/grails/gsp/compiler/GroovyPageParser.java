@@ -18,13 +18,39 @@
  */
 package org.grails.gsp.compiler;
 
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import grails.config.ConfigMap;
 import grails.io.IOUtils;
 import grails.util.Environment;
 import grails.util.GrailsStringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.grails.buffer.FastStringWriter;
 import org.grails.buffer.StreamByteBuffer;
 import org.grails.buffer.StreamCharBuffer;
@@ -36,11 +62,6 @@ import org.grails.gsp.compiler.tags.GroovySyntaxTag;
 import org.grails.io.support.SpringIOUtils;
 import org.grails.taglib.GrailsTagException;
 import org.grails.taglib.encoder.OutputEncodingSettings;
-
-import java.io.*;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * NOTE: Based on work done by the GSP standalone project (https://gsp.dev.java.net/).
@@ -98,14 +119,14 @@ public class GroovyPageParser implements Tokens {
     private boolean finalPass = false;
     private int tagIndex;
     private Map<Object, Object> tagContext;
-    private Stack<TagMeta> tagMetaStack = new Stack<TagMeta>();
+    private Stack<TagMeta> tagMetaStack = new Stack<>();
     private GrailsTagRegistry tagRegistry = GrailsTagRegistry.getInstance();
     private Environment environment;
-    private List<String> htmlParts = new ArrayList<String>();
+    private List<String> htmlParts = new ArrayList<>();
     private static GrailsLayoutPreprocessor grailsLayoutPreprocessor = new GrailsLayoutPreprocessor();
 
-    Set<Integer> bodyVarsDefined = new HashSet<Integer>();
-    Map<Integer, String> attrsVarsMapDefinition = new HashMap<Integer, String>();
+    Set<Integer> bodyVarsDefined = new HashSet<>();
+    Map<Integer, String> attrsVarsMapDefinition = new HashMap<>();
 
     int closureLevel = 0;
 
@@ -128,17 +149,17 @@ public class GroovyPageParser implements Tokens {
     private int state;
     private static final String DEFAULT_CONTENT_TYPE = "text/html;charset=UTF-8";
     private int constantCount = 0;
-    private Map<String, Integer> constantsToNumbers = new HashMap<String, Integer>();
+    private Map<String, Integer> constantsToNumbers = new HashMap<>();
 
     private final String pageName;
     public static final String[] DEFAULT_IMPORTS = {
-            "grails.plugins.metadata.GrailsPlugin",
-            "org.grails.gsp.compiler.transform.LineNumber",
-            "org.grails.gsp.GroovyPage",
-            "org.grails.web.taglib.*",
-            "org.grails.taglib.GrailsTagException",
-            "org.springframework.web.util.*",
-            "grails.util.GrailsUtil"
+        "grails.plugins.metadata.GrailsPlugin",
+        "org.grails.gsp.compiler.transform.LineNumber",
+        "org.grails.gsp.GroovyPage",
+        "org.grails.web.taglib.*",
+        "org.grails.taglib.GrailsTagException",
+        "org.springframework.web.util.*",
+        "grails.util.GrailsUtil"
     };
     public static final String CONFIG_PROPERTY_DEFAULT_CODEC = "grails.views.default.codec";
     public static final String CONFIG_PROPERTY_GSP_ENCODING = "grails.views.gsp.encoding";
@@ -160,7 +181,7 @@ public class GroovyPageParser implements Tokens {
 
     private String pluginAnnotation;
     public static final String GROOVY_SOURCE_CHAR_ENCODING = "UTF-8";
-    private Map<String, String> jspTags = new HashMap<String, String>();
+    private Map<String, String> jspTags = new HashMap<>();
     private long lastModified;
     private boolean precompileMode;
     private Boolean compileStaticMode;
@@ -297,7 +318,7 @@ public class GroovyPageParser implements Tokens {
     }
 
     private Map<String, String> parseDirectives(String gspSource) {
-        Map<String, String> result = new HashMap<String, String>();
+        Map<String, String> result = new HashMap<>();
         // strip gsp comments
         String input = PRESCAN_COMMENT_PATTERN.matcher(gspSource).replaceAll("");
         // find page directives
@@ -516,7 +537,7 @@ public class GroovyPageParser implements Tokens {
     private void directJspTagLib(String text) {
 
         text = text.substring(TAGLIB_DIRECTIVE.length() + 1, text.length());
-        Map<String, String> attrs = new LinkedHashMap<String, String>();
+        Map<String, String> attrs = new LinkedHashMap<>();
         populateMapWithAttributes(attrs, text);
 
         String prefix = attrs.get("\"prefix\"");
@@ -640,7 +661,6 @@ public class GroovyPageParser implements Tokens {
             }
         }
     }
-
 
     private void html() {
         if (!finalPass) return;
@@ -1131,7 +1151,7 @@ public class GroovyPageParser implements Tokens {
 
         if (GroovyPage.DEFAULT_NAMESPACE.equals(ns) && tagRegistry.isSyntaxTag(tagName)) {
             if (tagContext == null) {
-                tagContext = new HashMap<Object, Object>();
+                tagContext = new HashMap<>();
                 tagContext.put(GroovyPage.OUT, out);
                 tagContext.put(GroovyPageParser.class, this);
             }

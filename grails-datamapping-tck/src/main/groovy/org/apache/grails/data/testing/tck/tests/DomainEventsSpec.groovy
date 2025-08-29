@@ -18,12 +18,13 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import grails.gorm.DetachedCriteria
-import org.apache.grails.data.testing.tck.domains.ModifyPerson
-import org.apache.grails.data.testing.tck.domains.PersonEvent
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 import spock.lang.PendingFeature
+
+import grails.gorm.DetachedCriteria
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.ModifyPerson
+import org.apache.grails.data.testing.tck.domains.PersonEvent
 
 /**
  * @author graemerocher
@@ -39,28 +40,28 @@ class DomainEventsSpec extends GrailsDataTckSpec {
     }
 
     @Issue('GPMONGODB-262')
-    void "Test that returning false from beforeUpdate evicts the event"() {
-        when: "An entity is saved"
-        def p = new PersonEvent(name: "Fred")
+    void 'Test that returning false from beforeUpdate evicts the event'() {
+        when: 'An entity is saved'
+        def p = new PersonEvent(name: 'Fred')
         p.save(flush: true)
         manager.session.clear()
         p = PersonEvent.get(p.id)
-        then: "The person is saved"
+        then: 'The person is saved'
         p != null
 
-        when: "The beforeUpdate event returns false"
-        p.name = "Bad"
+        when: 'The beforeUpdate event returns false'
+        p.name = 'Bad'
         p.save(flush: true)
         manager.session.clear()
 
-        then: "The person is never updated"
-        PersonEvent.get(p.id).name == "Fred"
+        then: 'The person is never updated'
+        PersonEvent.get(p.id).name == 'Fred'
     }
 
     @Issue('GPMONGODB-262')
-    void "Test that returning false from beforeInsert evicts the event"() {
-        when: "false is returned from a beforeInsert event"
-        def p = new PersonEvent(name: "Bad")
+    void 'Test that returning false from beforeInsert evicts the event'() {
+        when: 'false is returned from a beforeInsert event'
+        def p = new PersonEvent(name: 'Bad')
         try {
             p.save()
             manager.session.flush()
@@ -69,55 +70,54 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         }
         manager.session.clear()
 
-        then: "The person is never saved"
+        then: 'The person is never saved'
         !PersonEvent.get(p.id)
     }
 
     @Issue('GPMONGODB-262')
-    void "Test that returning false from beforeDelete evicts the event"() {
-        when: "a new person is saved"
-        def p = new PersonEvent(name: "DontDelete")
+    void 'Test that returning false from beforeDelete evicts the event'() {
+        when: 'a new person is saved'
+        def p = new PersonEvent(name: 'DontDelete')
         p.save(flush: true)
         manager.session.clear()
         p = PersonEvent.get(p.id)
 
-
-        then: "The person exists"
+        then: 'The person exists'
         p != null
 
-        when: "The beforeDelete event returns false"
+        when: 'The beforeDelete event returns false'
         p.delete(flush: true)
         manager.session.clear()
 
-        then: "The event was cancelled"
+        then: 'The event was cancelled'
         PersonEvent.get(p.id)
     }
 
-    void "Test modify property before save"() {
+    void 'Test modify property before save'() {
         given:
         manager.session.datastore.mappingContext.addPersistentEntity(ModifyPerson)
-        def p = new ModifyPerson(name: "Bob").save(flush: true)
+        def p = new ModifyPerson(name: 'Bob').save(flush: true)
         manager.session.clear()
 
-        when: "An object is queried by id"
+        when: 'An object is queried by id'
         p = ModifyPerson.get(p.id)
 
-        then: "the correct object is returned"
-        p.name == "Fred"
+        then: 'the correct object is returned'
+        p.name == 'Fred'
 
-        when: "An object is queried by the updated value"
-        p = ModifyPerson.findByName("Fred")
+        when: 'An object is queried by the updated value'
+        p = ModifyPerson.findByName('Fred')
 
-        then: "The correct person is returned"
-        p.name == "Fred"
+        then: 'The correct person is returned'
+        p.name == 'Fred'
     }
 
-    void "Test auto time stamping working"() {
+    void 'Test auto time stamping working'() {
 
         given:
         def p = new PersonEvent()
 
-        p.name = "Fred"
+        p.name = 'Fred'
         p.save(flush: true)
         manager.session.clear()
 
@@ -130,17 +130,17 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         p.dateCreated == p.lastUpdated
 
         when:
-        p.name = "Wilma"
+        p.name = 'Wilma'
         p.save(flush: true)
 
         then:
         p.dateCreated.before(p.lastUpdated)
     }
 
-    void "Test delete events"() {
+    void 'Test delete events'() {
         given:
         def p = new PersonEvent()
-        p.name = "Fred"
+        p.name = 'Fred'
         p.save(flush: true)
         manager.session.clear()
 
@@ -159,7 +159,7 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         1 == PersonEvent.STORE.afterDelete
     }
 
-    void "Test multi-delete events"() {
+    void 'Test multi-delete events'() {
         given:
         def freds = (1..3).collect {
             new PersonEvent(name: "Fred$it").save(flush: true)
@@ -189,11 +189,11 @@ class DomainEventsSpec extends GrailsDataTckSpec {
 //            3 == PersonEvent.STORE.afterDelete
     }
 
-    void "Test before update event"() {
+    void 'Test before update event'() {
         given:
         def p = new PersonEvent()
 
-        p.name = "Fred"
+        p.name = 'Fred'
         p.save(flush: true)
         manager.session.clear()
 
@@ -201,27 +201,27 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         p = PersonEvent.get(p.id)
 
         then:
-        "Fred" == p.name
+        'Fred' == p.name
         0 == PersonEvent.STORE.beforeUpdate
         0 == PersonEvent.STORE.afterUpdate
 
         when:
-        p.name = "Bob"
+        p.name = 'Bob'
         p.save(flush: true)
         manager.session.clear()
         p = PersonEvent.get(p.id)
 
         then:
-        "Bob" == p.name
+        'Bob' == p.name
         1 == PersonEvent.STORE.beforeUpdate
         1 == PersonEvent.STORE.afterUpdate
     }
 
-    void "Test insert events"() {
+    void 'Test insert events'() {
         given:
         def p = new PersonEvent()
 
-        p.name = "Fred"
+        p.name = 'Fred'
         p.save(flush: true)
         manager.session.clear()
 
@@ -229,31 +229,31 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         p = PersonEvent.get(p.id)
 
         then:
-        "Fred" == p.name
+        'Fred' == p.name
         0 == PersonEvent.STORE.beforeUpdate
         1 == PersonEvent.STORE.beforeInsert
         0 == PersonEvent.STORE.afterUpdate
         1 == PersonEvent.STORE.afterInsert
 
         when:
-        p.name = "Bob"
+        p.name = 'Bob'
         p.save(flush: true)
         manager.session.clear()
         p = PersonEvent.get(p.id)
 
         then:
-        "Bob" == p.name
+        'Bob' == p.name
         1 == PersonEvent.STORE.beforeUpdate
         1 == PersonEvent.STORE.beforeInsert
         1 == PersonEvent.STORE.afterUpdate
         1 == PersonEvent.STORE.afterInsert
     }
 
-    void "Test load events"() {
+    void 'Test load events'() {
         given:
         def p = new PersonEvent()
 
-        p.name = "Fred"
+        p.name = 'Fred'
         p.save(flush: true)
         manager.session.clear()
 
@@ -261,7 +261,7 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         p = PersonEvent.get(p.id)
 
         then:
-        "Fred" == p.name
+        'Fred' == p.name
         if (!'JpaSession'.equals(manager.session.getClass().simpleName)) {
             // JPA doesn't seem to support a pre-load event
             1 == PersonEvent.STORE.beforeLoad
@@ -269,7 +269,7 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         1 == PersonEvent.STORE.afterLoad
     }
 
-    void "Test multi-load events"() {
+    void 'Test multi-load events'() {
         given:
         def freds = (1..3).collect {
             new PersonEvent(name: "Fred$it").save(flush: true)
@@ -291,14 +291,14 @@ class DomainEventsSpec extends GrailsDataTckSpec {
     }
 
     @PendingFeature(reason = 'Was previously @Ignore')
-    void "Test bean autowiring"() {
+    void 'Test bean autowiring'() {
         given:
         def personService = new Object()
-        manager.session.datastore.applicationContext.beanFactory.registerSingleton 'personService', personService
+        manager.session.datastore.applicationContext.beanFactory.registerSingleton('personService', personService)
 
         def p = new PersonEvent()
         def saved = p
-        p.name = "Fred"
+        p.name = 'Fred'
         p.save(flush: true)
         manager.session.clear()
 
@@ -306,15 +306,15 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         p = PersonEvent.get(p.id)
 
         then:
-        "Fred" == p.name
-        personService.is saved.personService // test Groovy constructor
+        'Fred' == p.name
+        personService.is(saved.personService) // test Groovy constructor
         if (!manager.session.datastore.getClass().name.contains('Hibernate')) {
             // autowiring is added to the real constructor by an AST, so can't test this for Hibernate
-            personService.is p.personService // test constructor called by the datastore
+            personService.is(p.personService) // test constructor called by the datastore
         }
     }
 
     def cleanup() {
-        manager.session.datastore.applicationContext?.beanFactory?.destroySingleton 'personService'
+        manager.session.datastore.applicationContext?.beanFactory?.destroySingleton('personService')
     }
 }

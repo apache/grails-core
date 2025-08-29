@@ -20,6 +20,7 @@
 package grails.plugin.json.view.api.internal
 
 import groovy.transform.CompileStatic
+
 import org.grails.core.util.IncludeExcludeSupport
 
 @CompileStatic
@@ -40,7 +41,7 @@ class DefaultJsonViewIncludeExcludeSupport extends IncludeExcludeSupport<String>
     boolean includes(List<String> includes, String object) {
         includes == null ||
                 includes.contains(object) ||
-                includes.any { object.startsWith(it + ".") } ||
-                includes.any { it.startsWith(object + ".") }
+                includes.any { object.startsWith(it + '.') } ||
+                includes.any { it.startsWith(object + '.') }
     }
 }

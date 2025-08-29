@@ -18,12 +18,13 @@
  */
 package grails.async
 
-import grails.async.decorator.PromiseDecorator
+import java.util.concurrent.TimeUnit
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
-import org.grails.async.factory.PromiseFactoryBuilder
 
-import java.util.concurrent.TimeUnit
+import grails.async.decorator.PromiseDecorator
+import org.grails.async.factory.PromiseFactoryBuilder
 
 /**
  * Factory class for working with {@link Promise} instances
@@ -164,6 +165,6 @@ class Promises {
      * @see PromiseFactory#createBoundPromise(java.lang.Object)
      */
     static<T> Promise<T> createBoundPromise(T value) {
-       return getPromiseFactory().createBoundPromise(value)
+        return getPromiseFactory().createBoundPromise(value)
     }
 }

@@ -38,11 +38,11 @@ class AstGenericsUtils extends GenericsUtils {
      * @return The generic type
      */
     static ClassNode resolveSingleGenericType(ClassNode classNode) {
-        if(classNode.isArray()) {
+        if (classNode.isArray()) {
             return classNode.componentType.plainNodeReference
         }
         GenericsType[] genericsTypes = classNode.genericsTypes
-        if(genericsTypes) {
+        if (genericsTypes) {
             return genericsTypes[0].type.plainNodeReference
         }
         else {

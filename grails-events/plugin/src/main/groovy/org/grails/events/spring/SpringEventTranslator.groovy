@@ -18,9 +18,10 @@
  */
 package org.grails.events.spring
 
-import grails.events.bus.EventBus
-import grails.util.GrailsNameUtils
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.CompileStatic
+
 import org.springframework.beans.BeansException
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
@@ -28,8 +29,9 @@ import org.springframework.context.ApplicationEvent
 import org.springframework.context.ApplicationListener
 import org.springframework.context.event.ContextClosedEvent
 import org.springframework.context.support.GenericApplicationContext
-import java.util.concurrent.ConcurrentHashMap
 
+import grails.events.bus.EventBus
+import grails.util.GrailsNameUtils
 
 /**
  * Translates Spring Events into Reactor events
@@ -41,23 +43,22 @@ import java.util.concurrent.ConcurrentHashMap
 class SpringEventTranslator implements ApplicationListener,  ApplicationContextAware {
 
     public static final String GDM_EVENT_PACKAGE = 'org.grails.datastore'
-    public static final String EVENT_SUFFIX = "Event"
-    public static final String SPRING_PACKAGE = "org.springframework"
+    public static final String EVENT_SUFFIX = 'Event'
+    public static final String SPRING_PACKAGE = 'org.springframework'
 
     private Map<Class, String> eventClassToName = new ConcurrentHashMap<Class, String>().withDefault { Class eventClass ->
         def clsName = eventClass.name
         def logicalName = GrailsNameUtils.getLogicalPropertyName(clsName, EVENT_SUFFIX)
-        if(clsName.startsWith(GDM_EVENT_PACKAGE)) {
+        if (clsName.startsWith(GDM_EVENT_PACKAGE)) {
             return "gorm:${logicalName}".toString()
         }
-        else if(clsName.startsWith(SPRING_PACKAGE)) {
+        else if (clsName.startsWith(SPRING_PACKAGE)) {
             return "spring:${logicalName}".toString()
         }
         else {
             return "grails:${logicalName}".toString()
         }
     }
-
 
     private final EventBus eventBus
 
@@ -68,9 +69,9 @@ class SpringEventTranslator implements ApplicationListener,  ApplicationContextA
     void onApplicationEvent(ApplicationEvent event) {
         def eventName = eventClassToName[event.getClass()]
 
-        if(eventBus.isActive()) {
+        if (eventBus.isActive()) {
             // don't relay context closed events because Reactor would have been shutdown
-            if(!(event instanceof ContextClosedEvent)) {
+            if (!(event instanceof ContextClosedEvent)) {
                 eventBus.notify(eventName, event)
             }
         }
@@ -78,6 +79,6 @@ class SpringEventTranslator implements ApplicationListener,  ApplicationContextA
 
     @Override
     void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        ((GenericApplicationContext)applicationContext).addApplicationListener(this)
+        ((GenericApplicationContext) applicationContext).addApplicationListener(this)
     }
 }

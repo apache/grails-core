@@ -19,9 +19,23 @@
 
 package org.grails.datastore.gorm.query.criteria;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+
+import groovy.lang.Closure;
+import groovy.lang.GroovyObjectSupport;
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaMethod;
+import groovy.lang.MetaObjectProtocol;
+import groovy.lang.MissingMethodException;
+
+import org.springframework.util.Assert;
+
 import grails.gorm.CriteriaBuilder;
 import grails.gorm.DetachedCriteria;
-import groovy.lang.*;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -33,9 +47,6 @@ import org.grails.datastore.mapping.query.Restrictions;
 import org.grails.datastore.mapping.query.api.Criteria;
 import org.grails.datastore.mapping.query.api.ProjectionList;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
-import org.springframework.util.Assert;
-
-import java.util.*;
 
 /**
  * Abstract criteria builder implementation
@@ -56,13 +67,12 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     protected Query query;
     protected boolean uniqueResult = false;
     protected boolean paginationEnabledList;
-    protected  List<Query.Order> orderEntries = new ArrayList<Query.Order>();
-    protected  MetaObjectProtocol queryMetaClass;
-    protected  Query.ProjectionList projectionList;
+    protected List<Query.Order> orderEntries = new ArrayList<>();
+    protected MetaObjectProtocol queryMetaClass;
+    protected Query.ProjectionList projectionList;
     protected PersistentEntity persistentEntity;
     protected boolean readOnly;
-    private List<Query.Junction> logicalExpressionStack = new ArrayList<Query.Junction>();
-
+    private List<Query.Junction> logicalExpressionStack = new ArrayList<>();
 
     public AbstractCriteriaBuilder(final Class targetClass, QueryCreator queryCreator, final MappingContext mappingContext) {
         Assert.notNull(targetClass, "Argument [targetClass] cannot be null");
@@ -79,43 +89,41 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
         this.queryCreator = queryCreator;
     }
 
-
-
     public Class getTargetClass() {
         return this.targetClass;
     }
 
     public void setUniqueResult(boolean uniqueResult) {
         this.uniqueResult = uniqueResult;
-   }
+    }
 
     @Override
-   public Criteria cache(boolean cache) {
-       query.cache(cache);
-       return this;
-   }
+    public Criteria cache(boolean cache) {
+        query.cache(cache);
+        return this;
+    }
 
     @Override
-   public Criteria readOnly(boolean readOnly) {
-       this.readOnly = readOnly;
-       return this;
-   }
+    public Criteria readOnly(boolean readOnly) {
+        this.readOnly = readOnly;
+        return this;
+    }
 
     public Criteria join(String property) {
-      query.join(property);
-      return this;
-  }
+        query.join(property);
+        return this;
+    }
 
     public Criteria select(String property) {
-      query.select(property);
-      return this;
-  }
+        query.select(property);
+        return this;
+    }
 
     public Query.ProjectionList id() {
-       if (projectionList != null) {
-           projectionList.id();
-       }
-       return projectionList;
+        if (projectionList != null) {
+            projectionList.id();
+        }
+        return projectionList;
     }
 
     /**
@@ -249,19 +257,18 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * @return The PropertyProjection instance
      */
     public ProjectionList avg(String name) {
-       if (projectionList != null) {
-           projectionList.avg(name);
-       }
-       return projectionList;
+        if (projectionList != null) {
+            projectionList.avg(name);
+        }
+        return projectionList;
     }
 
     @Override
     public Object invokeMethod(String name, Object obj) {
-        Object[] args = obj.getClass().isArray() ? (Object[])obj : new Object[]{obj};
+        Object[] args = obj.getClass().isArray() ? (Object[]) obj : new Object[]{obj};
 
         ensureQueryIsInitialized();
         if (isCriteriaConstructionMethod(name, args)) {
-
 
             uniqueResult = false;
 
@@ -305,7 +312,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
                     }
                     query = associationQuery;
                     persistentEntity = association.getAssociatedEntity();
-                    logicalExpressionStack = new ArrayList<Query.Junction>();
+                    logicalExpressionStack = new ArrayList<>();
                     invokeClosureNode(args[0]);
                     return query;
                 }
@@ -422,7 +429,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     public Criteria allEq(Map<String, Object> propertyValues) {
         Query.Conjunction conjunction = new Query.Conjunction();
         for (String property : propertyValues.keySet()) {
-            conjunction.add( Restrictions.eq(property, propertyValues.get(property)));
+            conjunction.add(Restrictions.eq(property, propertyValues.get(property)));
         }
         addToCriteria(conjunction);
         return this;
@@ -1053,12 +1060,12 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     }
 
     protected void ensureQueryIsInitialized() {
-    	if(query == null) {
-    		query = queryCreator.createQuery(targetClass);
-    	}
-    	if(queryMetaClass == null) {
-    		queryMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(query.getClass());
-    	}
+        if (query == null) {
+            query = queryCreator.createQuery(targetClass);
+        }
+        if (queryMetaClass == null) {
+            queryMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(query.getClass());
+        }
     }
 
     private boolean isCriteriaConstructionMethod(String name, Object[] args) {
@@ -1069,7 +1076,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
 
     protected void invokeClosureNode(Object args) {
         if (args instanceof Closure) {
-            Closure callable = (Closure)args;
+            Closure callable = (Closure) args;
             callable.setDelegate(this);
             callable.setResolveStrategy(Closure.DELEGATE_FIRST);
             callable.call();
@@ -1083,7 +1090,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
                 invokeClosureNode(callable);
             }
         } finally {
-            Query.Junction logicalExpression = logicalExpressionStack.remove(logicalExpressionStack.size()-1);
+            Query.Junction logicalExpression = logicalExpressionStack.remove(logicalExpressionStack.size() - 1);
             addToCriteria(logicalExpression);
         }
     }

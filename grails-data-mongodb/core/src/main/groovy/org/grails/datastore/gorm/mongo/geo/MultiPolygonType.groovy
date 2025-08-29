@@ -22,7 +22,8 @@ import grails.mongodb.geo.MultiPolygon
  * @author Graeme Rocher
  * @since 3.0
  */
-class MultiPolygonType extends GeoJSONType<MultiPolygon>{
+class MultiPolygonType extends GeoJSONType<MultiPolygon> {
+
     MultiPolygonType() {
         super(MultiPolygon)
     }

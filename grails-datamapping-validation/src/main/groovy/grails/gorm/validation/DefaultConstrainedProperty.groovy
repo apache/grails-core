@@ -19,10 +19,13 @@
 
 package grails.gorm.validation
 
-import grails.gorm.validation.exceptions.ValidationConfigurationException
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+
+import org.springframework.validation.Errors
+
+import grails.gorm.validation.exceptions.ValidationConfigurationException
 import org.grails.datastore.gorm.validation.constraints.BlankConstraint
 import org.grails.datastore.gorm.validation.constraints.InListConstraint
 import org.grails.datastore.gorm.validation.constraints.MatchesConstraint
@@ -38,7 +41,6 @@ import org.grails.datastore.gorm.validation.constraints.SizeConstraint
 import org.grails.datastore.gorm.validation.constraints.factory.ConstraintFactory
 import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
-import org.springframework.validation.Errors
 
 /**
  * Default implementation of the {@link ConstrainedProperty} interface
@@ -111,8 +113,6 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
 
     }
 
-
-
     /**
      * @return Returns the appliedConstraints.
      */
@@ -147,8 +147,8 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     Comparable getMax() {
         Comparable maxValue = null
 
-        MaxConstraint maxConstraint = (MaxConstraint)appliedConstraints.get(MAX_CONSTRAINT)
-        RangeConstraint rangeConstraint = (RangeConstraint)appliedConstraints.get(RANGE_CONSTRAINT)
+        MaxConstraint maxConstraint = (MaxConstraint) appliedConstraints.get(MAX_CONSTRAINT)
+        RangeConstraint rangeConstraint = (RangeConstraint) appliedConstraints.get(RANGE_CONSTRAINT)
 
         if (maxConstraint != null || rangeConstraint != null) {
             Comparable maxConstraintValue = maxConstraint == null ? null : maxConstraint.getMaxValue()
@@ -171,7 +171,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     /**
      * @param max The max to set.
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     void setMax(Comparable max) {
         String constraintName = MAX_CONSTRAINT
         if (max == null) {
@@ -180,12 +180,12 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
         }
 
         if (!propertyType.equals(max.getClass())) {
-            throw new MissingPropertyException(constraintName,propertyType)
+            throw new MissingPropertyException(constraintName, propertyType)
         }
 
         Range r = getRange()
         if (r != null) {
-            log.warn("Range constraint already set ignoring constraint [" + constraintName + "] for value [" + max + "]")
+            log.warn('Range constraint already set ignoring constraint [' + constraintName + '] for value [' + max + ']')
             return
         }
 
@@ -199,8 +199,8 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     Comparable getMin() {
         Comparable minValue = null
 
-        MinConstraint minConstraint = (MinConstraint)appliedConstraints.get(MIN_CONSTRAINT)
-        RangeConstraint rangeConstraint = (RangeConstraint)appliedConstraints.get(RANGE_CONSTRAINT)
+        MinConstraint minConstraint = (MinConstraint) appliedConstraints.get(MIN_CONSTRAINT)
+        RangeConstraint rangeConstraint = (RangeConstraint) appliedConstraints.get(RANGE_CONSTRAINT)
 
         if (minConstraint != null || rangeConstraint != null) {
             Comparable minConstraintValue = minConstraint != null ? minConstraint.getMinValue() : null
@@ -223,7 +223,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     /**
      * @param min The min to set.
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     void setMin(Comparable min) {
         if (min == null) {
             appliedConstraints.remove(MIN_CONSTRAINT)
@@ -231,12 +231,12 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
         }
 
         if (!propertyType.equals(min.getClass())) {
-            throw new MissingPropertyException(MIN_CONSTRAINT,propertyType)
+            throw new MissingPropertyException(MIN_CONSTRAINT, propertyType)
         }
 
         Range r = getRange()
         if (r != null) {
-            log.warn("Range constraint already set ignoring constraint ["+MIN_CONSTRAINT+"] for value ["+min+"]")
+            log.warn('Range constraint already set ignoring constraint [' + MIN_CONSTRAINT + '] for value [' + min + ']')
             return
         }
 
@@ -247,16 +247,16 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      * @return Returns the inList.
      */
     @Override
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     List getInList() {
-        InListConstraint c = (InListConstraint)appliedConstraints.get(IN_LIST_CONSTRAINT)
+        InListConstraint c = (InListConstraint) appliedConstraints.get(IN_LIST_CONSTRAINT)
         return c == null ? null : c.getList()
     }
 
     /**
      * @param inList The inList to set.
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     void setInList(List inList) {
         Constraint c = appliedConstraints.get(IN_LIST_CONSTRAINT)
         if (inList == null) {
@@ -271,23 +271,23 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      * @return Returns the range.
      */
     @Override
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     Range getRange() {
-        RangeConstraint c = (RangeConstraint)appliedConstraints.get(RANGE_CONSTRAINT)
+        RangeConstraint c = (RangeConstraint) appliedConstraints.get(RANGE_CONSTRAINT)
         return c == null ? null : c.getRange()
     }
 
     /**
      * @param range The range to set.
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     void setRange(Range range) {
         if (appliedConstraints.containsKey(MAX_CONSTRAINT)) {
-            log.warn("Setting range constraint on property ["+propertyName+"] of class ["+ this.owningClass +"] forced removal of max constraint")
+            log.warn('Setting range constraint on property [' + propertyName + '] of class [' + this.owningClass + '] forced removal of max constraint')
             appliedConstraints.remove(MAX_CONSTRAINT)
         }
         if (appliedConstraints.containsKey(MIN_CONSTRAINT)) {
-            log.warn("Setting range constraint on property ["+propertyName+"] of class ["+ this.owningClass +"] forced removal of min constraint")
+            log.warn('Setting range constraint on property [' + propertyName + '] of class [' + this.owningClass + '] forced removal of min constraint')
             appliedConstraints.remove(MIN_CONSTRAINT)
         }
         if (range == null) {
@@ -303,7 +303,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      */
     @Override
     Integer getScale() {
-        ScaleConstraint scaleConstraint = (ScaleConstraint)appliedConstraints.get(SCALE_CONSTRAINT)
+        ScaleConstraint scaleConstraint = (ScaleConstraint) appliedConstraints.get(SCALE_CONSTRAINT)
         return scaleConstraint == null ? null : scaleConstraint.getScale()
     }
 
@@ -311,16 +311,16 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      * @return Returns the size.
      */
     @Override
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     Range getSize() {
-        SizeConstraint c = (SizeConstraint)appliedConstraints.get(SIZE_CONSTRAINT)
+        SizeConstraint c = (SizeConstraint) appliedConstraints.get(SIZE_CONSTRAINT)
         return c == null ? null : c.getRange()
     }
 
     /**
      * @param size The size to set.
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     void setSize(Range size) {
         Constraint c = appliedConstraints.get(SIZE_CONSTRAINT)
         if (size == null) {
@@ -337,7 +337,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     @Override
     boolean isBlank() {
         Object cons = appliedConstraints.get(BLANK_CONSTRAINT)
-        return cons == null || (Boolean)((BlankConstraint)cons).getParameter()
+        return cons == null || (Boolean) ((BlankConstraint)cons).getParameter()
     }
 
     /**
@@ -345,7 +345,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      */
     void setBlank(boolean blank) {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("Blank constraint can only be applied to a String property",
+            throw new MissingPropertyException('Blank constraint can only be applied to a String property',
                     BLANK_CONSTRAINT, this.owningClass)
         }
 
@@ -363,7 +363,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     @Override
     boolean isEmail() {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("Email constraint only applies to a String property",
+            throw new MissingPropertyException('Email constraint only applies to a String property',
                     EMAIL_CONSTRAINT, this.owningClass)
         }
 
@@ -375,7 +375,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      */
     void setEmail(boolean email) {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("Email constraint can only be applied to a String property",
+            throw new MissingPropertyException('Email constraint can only be applied to a String property',
                     EMAIL_CONSTRAINT, this.owningClass)
         }
 
@@ -391,7 +391,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     }
 
     private boolean isNotValidStringType() {
-        return !CharSequence.class.isAssignableFrom(propertyType)
+        return !CharSequence.isAssignableFrom(propertyType)
     }
 
     /**
@@ -400,7 +400,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     @Override
     boolean isCreditCard() {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("CreditCard constraint only applies to a String property",
+            throw new MissingPropertyException('CreditCard constraint only applies to a String property',
                     CREDIT_CARD_CONSTRAINT, this.owningClass)
         }
 
@@ -412,7 +412,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      */
     void setCreditCard(boolean creditCard) {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("CreditCard constraint only applies to a String property",
+            throw new MissingPropertyException('CreditCard constraint only applies to a String property',
                     CREDIT_CARD_CONSTRAINT, this.owningClass)
         }
 
@@ -433,10 +433,10 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     @Override
     String getMatches() {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("Matches constraint only applies to a String property",
+            throw new MissingPropertyException('Matches constraint only applies to a String property',
                     MATCHES_CONSTRAINT, this.owningClass)
         }
-        MatchesConstraint c = (MatchesConstraint)appliedConstraints.get(MATCHES_CONSTRAINT)
+        MatchesConstraint c = (MatchesConstraint) appliedConstraints.get(MATCHES_CONSTRAINT)
         return c == null ? null : c.regex
     }
 
@@ -445,7 +445,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      */
     void setMatches(String regex) {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("Matches constraint can only be applied to a String property",
+            throw new MissingPropertyException('Matches constraint can only be applied to a String property',
                     MATCHES_CONSTRAINT, this.owningClass)
         }
 
@@ -462,7 +462,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      */
     @Override
     Object getNotEqual() {
-        NotEqualConstraint c = (NotEqualConstraint)appliedConstraints.get(NOT_EQUAL_CONSTRAINT)
+        NotEqualConstraint c = (NotEqualConstraint) appliedConstraints.get(NOT_EQUAL_CONSTRAINT)
         return c == null ? null : c.getNotEqualTo()
     }
 
@@ -473,8 +473,8 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     Integer getMaxSize() {
         Integer maxSize = null
 
-        MaxSizeConstraint maxSizeConstraint = (MaxSizeConstraint)appliedConstraints.get(MAX_SIZE_CONSTRAINT)
-        SizeConstraint sizeConstraint = (SizeConstraint)appliedConstraints.get(SIZE_CONSTRAINT)
+        MaxSizeConstraint maxSizeConstraint = (MaxSizeConstraint) appliedConstraints.get(MAX_SIZE_CONSTRAINT)
+        SizeConstraint sizeConstraint = (SizeConstraint) appliedConstraints.get(SIZE_CONSTRAINT)
 
         if (maxSizeConstraint != null || sizeConstraint != null) {
             int maxSizeConstraintValue = maxSizeConstraint == null ? Integer.MAX_VALUE : maxSizeConstraint.getMaxSize()
@@ -499,8 +499,8 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     Integer getMinSize() {
         Integer minSize = null
 
-        MinSizeConstraint minSizeConstraint = (MinSizeConstraint)appliedConstraints.get(MIN_SIZE_CONSTRAINT)
-        SizeConstraint sizeConstraint = (SizeConstraint)appliedConstraints.get(SIZE_CONSTRAINT)
+        MinSizeConstraint minSizeConstraint = (MinSizeConstraint) appliedConstraints.get(MIN_SIZE_CONSTRAINT)
+        SizeConstraint sizeConstraint = (SizeConstraint) appliedConstraints.get(SIZE_CONSTRAINT)
 
         if (minSizeConstraint != null || sizeConstraint != null) {
             int minSizeConstraintValue = minSizeConstraint == null ? Integer.MIN_VALUE : minSizeConstraint.getMinSize()
@@ -537,7 +537,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     @Override
     boolean isNullable() {
         if (appliedConstraints.containsKey(NULLABLE_CONSTRAINT)) {
-            NullableConstraint nc = (NullableConstraint)appliedConstraints.get(NULLABLE_CONSTRAINT)
+            NullableConstraint nc = (NullableConstraint) appliedConstraints.get(NULLABLE_CONSTRAINT)
             return nc.isNullable()
         }
         return false
@@ -556,19 +556,18 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     @Override
     boolean isUrl() {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("URL constraint can only be applied to a String property",
+            throw new MissingPropertyException('URL constraint can only be applied to a String property',
                     URL_CONSTRAINT, this.owningClass)
         }
         return appliedConstraints.containsKey(URL_CONSTRAINT)
     }
-
 
     /**
      * @param url The url to set.
      */
     void setUrl(boolean url) {
         if (isNotValidStringType()) {
-            throw new MissingPropertyException("URL constraint can only be applied to a String property",URL_CONSTRAINT, this.owningClass)
+            throw new MissingPropertyException('URL constraint can only be applied to a String property', URL_CONSTRAINT, this.owningClass)
         }
 
         Constraint c = appliedConstraints.get(URL_CONSTRAINT)
@@ -582,13 +581,12 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
         }
     }
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     Map getAttributes() {
         return attributes
     }
 
-
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     void setAttributes(Map attributes) {
         this.attributes = attributes
     }
@@ -606,7 +604,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
         for (Constraint c in appliedConstraints.values()) {
             if (c instanceof VetoingConstraint) {
                 // stop validation process when constraint vetoes
-                if (((VetoingConstraint)c).validateWithVetoing(target, propertyValue, errors)) {
+                if (((VetoingConstraint) c).validateWithVetoing(target, propertyValue, errors)) {
                     return
                 }
             }
@@ -637,8 +635,8 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
 
         try {
 
-            for(ConstraintFactory cf in constraintFactories) {
-                if(cf.supports(propertyType)) {
+            for (ConstraintFactory cf in constraintFactories) {
+                if (cf.supports(propertyType)) {
                     return true
                 }
             }
@@ -678,7 +676,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
             }
         }
         else if (hasProperty(constraintName)) {
-            ((GroovyObject)this).setProperty(constraintName, constrainingValue)
+            ((GroovyObject) this).setProperty(constraintName, constrainingValue)
         }
         else {
             throw new ValidationConfigurationException("Constraint [$constraintName] is not supported for property [$propertyName] of class [$owningClass] with type [$propertyType]")

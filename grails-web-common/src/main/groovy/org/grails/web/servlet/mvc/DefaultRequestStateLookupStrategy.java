@@ -18,10 +18,11 @@
  */
 package org.grails.web.servlet.mvc;
 
+import org.springframework.beans.factory.annotation.Autowired;
+
 import grails.core.GrailsApplication;
 import grails.core.GrailsControllerClass;
 import org.grails.core.artefact.ControllerArtefactHandler;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Default implementation that uses the web request to obtain information about the currently
@@ -104,7 +105,7 @@ public class DefaultRequestStateLookupStrategy implements GrailsRequestStateLook
                 }
                 if (grailsApplication != null) {
                     final String controllerName = getControllerNameInternal(req);
-                    return getActionName(grailsApplication,controllerName);
+                    return getActionName(grailsApplication, controllerName);
                 }
             }
         }
@@ -125,7 +126,7 @@ public class DefaultRequestStateLookupStrategy implements GrailsRequestStateLook
         if (controllerName != null) {
             if (grailsApplication == null) {
                 final GrailsWebRequest grailsWebRequest = getWebRequest();
-                if (grailsWebRequest!= null)
+                if (grailsWebRequest != null)
                     grailsApplication = grailsWebRequest.getAttributes().getGrailsApplication();
 
             }

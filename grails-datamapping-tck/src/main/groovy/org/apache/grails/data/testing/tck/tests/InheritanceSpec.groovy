@@ -18,11 +18,11 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.City
 import org.apache.grails.data.testing.tck.domains.Country
 import org.apache.grails.data.testing.tck.domains.Location
 import org.apache.grails.data.testing.tck.domains.Practice
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * @author graemerocher
@@ -33,35 +33,35 @@ class InheritanceSpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([Practice,City,Country,Location])
     }
 
-    void "Test inheritance with dynamic finder"() {
+    void 'Test inheritance with dynamic finder'() {
 
         given:
-        def city = new City([code: "UK", name: "London", longitude: 49.1, latitude: 53.1])
-        def country = new Country([code: "UK", name: "United Kingdom", population: 10000000])
+        def city = new City([code: 'UK', name: 'London', longitude: 49.1, latitude: 53.1])
+        def country = new Country([code: 'UK', name: 'United Kingdom', population: 10000000])
 
         city.save()
-        country.save(flush:true)
+        country.save(flush: true)
         manager.session.clear()
 
         when:
-        def locations = Location.findAllByCode("UK")
-        def cities = City.findAllByCode("UK")
-        def countries = Country.findAllByCode("UK")
+        def locations = Location.findAllByCode('UK')
+        def cities = City.findAllByCode('UK')
+        def countries = Country.findAllByCode('UK')
 
         then:
         2 == locations.size()
         1 == cities.size()
         1 == countries.size()
-        "London" == cities[0].name
-        "United Kingdom" == countries[0].name
+        'London' == cities[0].name
+        'United Kingdom' == countries[0].name
     }
 
-    void "Test querying with inheritance"() {
+    void 'Test querying with inheritance'() {
 
         given:
-        def city = new City([code: "LON", name: "London", longitude: 49.1, latitude: 53.1])
-        def location = new Location([code: "XX", name: "The World"])
-        def country = new Country([code: "UK", name: "United Kingdom", population: 10000000])
+        def city = new City([code: 'LON', name: 'London', longitude: 49.1, latitude: 53.1])
+        def location = new Location([code: 'XX', name: 'The World'])
+        def country = new Country([code: 'UK', name: 'United Kingdom', population: 10000000])
 
         country.save()
         city.save()
@@ -72,8 +72,8 @@ class InheritanceSpec extends GrailsDataTckSpec {
         when:
         city = City.get(city.id)
         def london = Location.get(city.id)
-        country = Location.findByName("United Kingdom")
-        def london2 = Location.findByName("London")
+        country = Location.findByName('United Kingdom')
+        def london2 = Location.findByName('London')
 
         then:
         1 == City.count()
@@ -84,25 +84,25 @@ class InheritanceSpec extends GrailsDataTckSpec {
         city instanceof City
         london instanceof City
         london2 instanceof City
-        "London" == london2.name
+        'London' == london2.name
         49.1 == london2.longitude
-        "LON" == london2.code
+        'LON' == london2.code
 
         country instanceof Country
-        "UK" == country.code
+        'UK' == country.code
         10000000 == country.population
     }
 
-    void "Test hasMany with inheritance should return appropriate class"() {
-        given: "a practice with two locations"
-        Practice practice = new Practice(name: "Test practice")
-        practice.addToLocations(new City(name: "Austin", latitude: 30.2672, longitude: 97.7431))
-        practice.addToLocations(new Country(name: "United States"))
+    void 'Test hasMany with inheritance should return appropriate class'() {
+        given: 'a practice with two locations'
+        Practice practice = new Practice(name: 'Test practice')
+        practice.addToLocations(new City(name: 'Austin', latitude: 30.2672, longitude: 97.7431))
+        practice.addToLocations(new Country(name: 'United States'))
         practice.save()
         manager.session.flush()
 
         expect:
-        Location.findByName("Austin").class == City
+        Location.findByName('Austin').class == City
     }
 
     def clearSession() {

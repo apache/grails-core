@@ -270,6 +270,41 @@ include::commandLine/creatingCustomCommands.adoc[]
 
 include::profiles.adoc[]
 
+[[standardProfiles]]
+=== Standard Grails Profiles
+
+include::profiles/standardProfiles.adoc[]
+
+[[webProfile]]
+==== Web Profile
+
+include::profiles/webProfile.adoc[]
+
+[[restAPIProfile]]
+==== REST API Profile
+
+include::profiles/restAPIProfile.adoc[]
+
+[[pluginProfile]]
+==== Plugin Profile
+
+include::profiles/pluginProfile.adoc[]
+
+[[webPluginProfile]]
+==== Web Plugin Profile
+
+include::profiles/webPluginProfile.adoc[]
+
+[[restAPIPluginProfile]]
+==== REST API Plugin Profile
+
+include::profiles/restAPIPluginProfile.adoc[]
+
+[[profileProfile]]
+==== Profile Profile
+
+include::profiles/profileProfile.adoc[]
+
 [[creatingProfiles]]
 === Creating Profiles
 

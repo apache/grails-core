@@ -83,6 +83,14 @@ commandLine:
     gradlePlugins: Grails plugins for Gradle
 profiles:
   title: Application Profiles
+  standardProfiles:
+    title: Standard Profiles
+    webProfile: Web Profile
+    restAPIProfile: REST API Profile
+    pluginProfile: Plugin Profile
+    webPluginProfile: Web Plugin Profile
+    restAPIPluginProfile: REST API Plugin Profile
+    profileProfile: Profile Profile
   creatingProfiles: Creating Profiles
   profileInheritance: Profile Inheritance
   publishingProfiles: Publishing Profiles

@@ -26,7 +26,7 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class VersionComparator implements Comparator<String> {
 
-    static private final List<String> SNAPSHOT_SUFFIXES = ["-SNAPSHOT", ".BUILD-SNAPSHOT"].asImmutable()
+    static private final List<String> SNAPSHOT_SUFFIXES = ['-SNAPSHOT', '.BUILD-SNAPSHOT'].asImmutable()
 
     int compare(String o1, String o2) {
         int result = 0
@@ -63,14 +63,16 @@ class VersionComparator implements Comparator<String> {
                     if (result != 0) {
                         break
                     }
-                    if (i == (nums1.size()-1) && bigRight) {
-                        if (nums2[i+1] != 0)
-                            result = -1; break
+                    if (i == (nums1.size() - 1) && bigRight) {
+                        if (nums2[i + 1] != 0)
+                            result = -1
+                        break
                     }
                 }
                 else if (bigLeft) {
                     if (nums1[i] != 0)
-                        result = 1; break
+                        result = 1
+                    break
                 }
             }
         }

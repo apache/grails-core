@@ -18,13 +18,13 @@
  */
 package scaffolding
 
+import groovy.transform.CompileStatic
+
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.dev.commands.GrailsApplicationCommand
-import grails.dev.commands.io.FileSystemInteraction
 import grails.plugin.scaffolding.CommandLineHelper
 import grails.plugin.scaffolding.SkipBootstrap
-import groovy.transform.CompileStatic
 import org.grails.io.support.Resource
 import org.grails.io.support.SpringIOUtils
 
@@ -40,16 +40,16 @@ class InstallTemplatesCommand implements GrailsApplicationCommand, SkipBootstrap
 
     @Delegate ConsoleLogger consoleLogger = GrailsConsole.getInstance()
 
-    final String description = 'Installs scaffolding templates that use f:all to render properties';
+    final String description = 'Installs scaffolding templates that use f:all to render properties'
 
     @Override
     boolean handle() {
 
         try {
-            mkdir("src/main/templates/scaffolding")
-            templates("scaffolding/*").each { Resource r ->
+            mkdir('src/main/templates/scaffolding')
+            templates('scaffolding/*').each { Resource r ->
                 consoleLogger.verbose("Copying template $r.URL")
-                final String path = r.URL.toString().replaceAll(/^.*?META-INF/, "src/main")
+                final String path = r.URL.toString().replaceAll(/^.*?META-INF/, 'src/main')
                 if (path.endsWith('/')) {
                     mkdir(path)
                 } else {
@@ -58,10 +58,10 @@ class InstallTemplatesCommand implements GrailsApplicationCommand, SkipBootstrap
                     consoleLogger.verbose("Copied ${r.filename} to location ${to.canonicalPath}")
                 }
             }
-            consoleLogger.verbose("Templates installation complete")
+            consoleLogger.verbose('Templates installation complete')
             return SUCCESS
         } catch (e) {
-            consoleLogger.error e.message, e
+            consoleLogger.error(e.message, e)
         }
     }
 

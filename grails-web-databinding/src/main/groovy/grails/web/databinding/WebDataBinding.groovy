@@ -20,8 +20,10 @@ package grails.web.databinding
 
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
-import org.grails.web.databinding.DataBindingLazyMetaPropertyMap
+
 import org.springframework.validation.BindingResult
+
+import org.grails.web.databinding.DataBindingLazyMetaPropertyMap
 
 /**
  *
@@ -31,6 +33,7 @@ import org.springframework.validation.BindingResult
  */
 @CompileStatic
 trait WebDataBinding {
+
     /**
      * Binds the source object to the properties of the target instance converting any types as necessary
      *

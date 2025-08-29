@@ -22,6 +22,7 @@ import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
+import org.grails.forge.feature.Category;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.options.Options;
@@ -38,6 +39,11 @@ public class GrailsWebTestingSupport implements DefaultFeature {
     @Override
     public String getName() {
         return "grails-web-testing-support";
+    }
+
+    @Override
+    public String getCategory() {
+        return Category.TESTING;
     }
 
     @Override

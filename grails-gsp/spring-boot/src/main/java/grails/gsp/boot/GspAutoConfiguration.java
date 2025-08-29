@@ -25,24 +25,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
-import grails.core.ApplicationAttributes;
-import grails.core.GrailsApplication;
-import org.grails.encoder.impl.StandaloneCodecLookup;
-import org.grails.encoder.CodecLookup;
-import org.grails.gsp.GroovyPagesTemplateEngine;
-import org.grails.gsp.io.GroovyPageScriptSource;
-import org.grails.gsp.jsp.TagLibraryResolver;
-import org.grails.plugins.web.taglib.RenderSitemeshTagLib;
-import org.grails.taglib.TagLibraryLookup;
-import org.grails.web.gsp.GroovyPagesTemplateRenderer;
-import org.grails.web.pages.StandaloneTagLibraryLookup;
-import org.grails.web.gsp.io.CachingGrailsConventionGroovyPageLocator;
-import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
-import org.grails.gsp.jsp.TagLibraryResolverImpl;
-import org.grails.web.servlet.view.GroovyPageViewResolver;
+import jakarta.servlet.ServletContext;
+
 import org.sitemesh.autoconfigure.SiteMeshAutoConfiguration;
-import org.grails.plugins.sitemesh3.GrailsLayoutHandlerMapping;
-import org.grails.plugins.sitemesh3.Sitemesh3GrailsPlugin;
+
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -58,7 +44,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration;
 import org.springframework.context.EnvironmentAware;
-import org.springframework.context.annotation.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.PropertiesPropertySource;
@@ -68,9 +57,24 @@ import org.springframework.web.context.ServletContextAware;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.ViewResolver;
 
+import grails.core.ApplicationAttributes;
+import grails.core.GrailsApplication;
+import org.grails.encoder.CodecLookup;
+import org.grails.encoder.impl.StandaloneCodecLookup;
+import org.grails.gsp.GroovyPagesTemplateEngine;
+import org.grails.gsp.io.GroovyPageScriptSource;
+import org.grails.gsp.jsp.TagLibraryResolver;
+import org.grails.gsp.jsp.TagLibraryResolverImpl;
+import org.grails.plugins.sitemesh3.GrailsLayoutHandlerMapping;
+import org.grails.plugins.sitemesh3.Sitemesh3GrailsPlugin;
+import org.grails.plugins.web.taglib.RenderSitemeshTagLib;
 import org.grails.plugins.web.taglib.RenderTagLib;
-
-import jakarta.servlet.ServletContext;
+import org.grails.taglib.TagLibraryLookup;
+import org.grails.web.gsp.GroovyPagesTemplateRenderer;
+import org.grails.web.gsp.io.CachingGrailsConventionGroovyPageLocator;
+import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
+import org.grails.web.pages.StandaloneTagLibraryLookup;
+import org.grails.web.servlet.view.GroovyPageViewResolver;
 
 @Configuration
 @AutoConfigureAfter(WebMvcAutoConfiguration.class)
@@ -97,8 +101,8 @@ public class GspAutoConfiguration {
     @Configuration
     @Import({TagLibraryLookupRegistrar.class, RemoveDefaultViewResolverRegistrar.class})
     protected static class GspTemplateEngineAutoConfiguration extends AbstractGspConfig {
-        private static final String LOCAL_DIRECTORY_TEMPLATE_ROOT="./src/main/resources/templates";
-        private static final String CLASSPATH_TEMPLATE_ROOT="classpath:/templates";
+        private static final String LOCAL_DIRECTORY_TEMPLATE_ROOT = "./src/main/resources/templates";
+        private static final String CLASSPATH_TEMPLATE_ROOT = "classpath:/templates";
 
         @Value("${spring.gsp.templateRoots:}")
         String[] templateRoots;
@@ -113,7 +117,7 @@ public class GspAutoConfiguration {
         String defaultLayoutName;
 
         @Bean
-        @ConditionalOnMissingBean(name="groovyPagesTemplateEngine")
+        @ConditionalOnMissingBean(name = "groovyPagesTemplateEngine")
         GroovyPagesTemplateEngine groovyPagesTemplateEngine(TagLibraryResolver tagLibraryResolver, TagLibraryLookup tagLibraryLookup, GroovyPagesTemplateRenderer groovyPagesTemplateRenderer) {
             GroovyPagesTemplateEngine templateEngine = new GroovyPagesTemplateEngine();
             templateEngine.setReloadEnabled(gspReloadingEnabled);
@@ -124,12 +128,12 @@ public class GspAutoConfiguration {
         }
 
         @Bean
-        @ConditionalOnMissingBean(name="groovyPageLocator")
+        @ConditionalOnMissingBean(name = "groovyPageLocator")
         GrailsConventionGroovyPageLocator groovyPageLocator() {
-            final List<String> templateRootsCleaned=resolveTemplateRoots();
+            final List<String> templateRootsCleaned = resolveTemplateRoots();
             CachingGrailsConventionGroovyPageLocator pageLocator = new CachingGrailsConventionGroovyPageLocator() {
                 protected List<String> resolveSearchPaths(String uri) {
-                    List<String> paths=new ArrayList<String>(templateRootsCleaned.size());
+                    List<String> paths = new ArrayList<>(templateRootsCleaned.size());
                     for (String rootPath : templateRootsCleaned) {
                         paths.add(rootPath + cleanUri(uri));
                     }
@@ -155,12 +159,12 @@ public class GspAutoConfiguration {
 
         protected List<String> resolveTemplateRoots() {
             if (templateRoots.length > 0) {
-                List<String> rootPaths = new ArrayList<String>(templateRoots.length);
+                List<String> rootPaths = new ArrayList<>(templateRoots.length);
                 for (String rootPath : templateRoots) {
                     rootPath = rootPath.trim();
                     // remove trailing slash since uri will always be prefixed with a slash
                     if (rootPath.endsWith("/")) {
-                        rootPath = rootPath.substring(0, rootPath.length()-1);
+                        rootPath = rootPath.substring(0, rootPath.length() - 1);
                     }
                     if (!StringUtils.isEmpty(rootPath)) {
                         rootPaths.add(rootPath);
@@ -240,14 +244,14 @@ public class GspAutoConfiguration {
 
     protected static class TagLibraryLookupRegistrar implements ImportBeanDefinitionRegistrar {
 
-        public static final Class<?>[] DEFAULT_TAGLIB_CLASSES=new Class<?>[] { RenderTagLib.class, RenderSitemeshTagLib.class };
+        public static final Class<?>[] DEFAULT_TAGLIB_CLASSES = new Class<?>[] { RenderTagLib.class, RenderSitemeshTagLib.class };
 
         @Override
         public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
             if (!registry.containsBeanDefinition("gspTagLibraryLookup")) {
                 GenericBeanDefinition beanDefinition = createBeanDefinition(StandaloneTagLibraryLookup.class);
 
-                ManagedList<BeanDefinition> list = new ManagedList<BeanDefinition>();
+                ManagedList<BeanDefinition> list = new ManagedList<>();
                 registerTagLibs(list);
 
                 beanDefinition.getPropertyValues().addPropertyValue("tagLibInstances", list);
@@ -274,7 +278,7 @@ public class GspAutoConfiguration {
     /**
      * {@link WebMvcAutoConfiguration} adds defaultViewResolver and viewResolver beans.
      *
-     *  This ImportBeanDefinitionRegistrar removes the defaultViewResolver and replaces 
+     *  This ImportBeanDefinitionRegistrar removes the defaultViewResolver and replaces
      *  the viewResolver bean with GSP view resolver by default.
      *
      *  The behavior of this class can be controlled with spring.gsp.removeDefaultViewResolver and
@@ -326,8 +330,8 @@ public class GspAutoConfiguration {
 
         protected Properties createDefaultProperties() {
             Properties defaultProperties = new Properties();
-            // scan for spring JSP taglib tld files by default, also scan for 
-            defaultProperties.put("grails.gsp.tldScanPattern","classpath*:/META-INF/spring*.tld,classpath*:/META-INF/fmt.tld,classpath*:/META-INF/c.tld,classpath*:/META-INF/c-1_0-rt.tld");
+            // scan for spring JSP taglib tld files by default, also scan for
+            defaultProperties.put("grails.gsp.tldScanPattern", "classpath*:/META-INF/spring*.tld,classpath*:/META-INF/fmt.tld,classpath*:/META-INF/c.tld,classpath*:/META-INF/c-1_0-rt.tld");
             return defaultProperties;
         }
     }

@@ -18,16 +18,20 @@
  */
 package grails.mongodb
 
+import java.util.function.Function
+
+import groovy.transform.CompileStatic
+
 import com.mongodb.ReadPreference
 import com.mongodb.client.AggregateIterable
 import com.mongodb.client.FindIterable
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.FindOneAndDeleteOptions
-import grails.mongodb.api.MongoAllOperations
-import groovy.transform.CompileStatic
 import org.bson.Document
 import org.bson.conversions.Bson
+
+import grails.mongodb.api.MongoAllOperations
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.mongo.MongoCriteriaBuilder
@@ -40,8 +44,6 @@ import org.grails.datastore.mapping.mongo.AbstractMongoSession
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.engine.MongoEntityPersister
 
-import java.util.function.Function
-
 /**
  * Enhances the default {@link GormEntity} class with MongoDB specific methods
  *
@@ -50,7 +52,6 @@ import java.util.function.Function
  */
 @CompileStatic
 trait MongoEntity<D> implements GormEntity<D>, DynamicAttributes {
-
 
     /**
      * Allows accessing to dynamic properties with the dot operator
@@ -74,7 +75,6 @@ trait MongoEntity<D> implements GormEntity<D>, DynamicAttributes {
         DynamicAttributes.super.putAt(name, val)
     }
 
-
     /**
      * Return the DBObject instance for the entity
      *
@@ -84,12 +84,12 @@ trait MongoEntity<D> implements GormEntity<D>, DynamicAttributes {
      */
     @Deprecated
     Document getDbo() {
-        AbstractMongoSession session = (AbstractMongoSession)AbstractDatastore.retrieveSession(MongoDatastore)
+        AbstractMongoSession session = (AbstractMongoSession) AbstractDatastore.retrieveSession(MongoDatastore)
         // check first for embedded cached entries
-        SessionImplementor<Document> si = (SessionImplementor<Document>) session;
+        SessionImplementor<Document> si = (SessionImplementor<Document>) session
         def persistentEntity = session.mappingContext.getPersistentEntity(getClass().name)
-        Document dbo = (Document)si.getCachedEntry(persistentEntity, MongoEntityPersister.createEmbeddedCacheEntryKey(this))
-        if(dbo != null) return dbo
+        Document dbo = (Document) si.getCachedEntry(persistentEntity, MongoEntityPersister.createEmbeddedCacheEntryKey(this))
+        if (dbo != null) return dbo
         // otherwise check if instance is contained within session
         if (!session.contains(this)) {
             dbo = new Document()
@@ -97,12 +97,12 @@ trait MongoEntity<D> implements GormEntity<D>, DynamicAttributes {
             return dbo
         }
 
-        EntityPersister persister = (EntityPersister)session.getPersister(this)
+        EntityPersister persister = (EntityPersister) session.getPersister(this)
         def id = persister.getObjectIdentifier(this)
-        dbo = (Document)((SessionImplementor)session).getCachedEntry(persister.getPersistentEntity(), id)
+        dbo = (Document) ((SessionImplementor)session).getCachedEntry(persister.getPersistentEntity(), id)
         if (dbo == null) {
             MongoCollection<Document> coll = session.getCollection(persistentEntity)
-            dbo = coll.find((Bson)new Document(MongoEntityPersister.MONGO_ID_FIELD, id))
+            dbo = coll.find((Bson) new Document(MongoEntityPersister.MONGO_ID_FIELD, id))
                     .limit(1)
                     .first()
 
@@ -280,14 +280,14 @@ trait MongoEntity<D> implements GormEntity<D>, DynamicAttributes {
      */
     static <T> T withConnection(String connectionName, @DelegatesTo(MongoAllOperations)Closure callable) {
         def staticApi = GormEnhancer.findStaticApi(this, connectionName)
-        return (T)staticApi.withNewSession {
+        return (T) staticApi.withNewSession {
             callable.setDelegate(staticApi)
             return callable.call()
         }
     }
 
     private static MongoStaticApi currentMongoStaticApi() {
-        (MongoStaticApi)GormEnhancer.findStaticApi(this)
+        (MongoStaticApi) GormEnhancer.findStaticApi(this)
     }
 
 }

@@ -32,7 +32,7 @@ import grails.converters.JSON
 @Deprecated
 class JSONBuilder {
 
-    static NODE_ELEMENT = "element"
+    static NODE_ELEMENT = 'element'
 
     def root
 

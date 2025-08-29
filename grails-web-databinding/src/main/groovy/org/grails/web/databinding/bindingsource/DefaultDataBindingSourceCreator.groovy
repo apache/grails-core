@@ -18,19 +18,19 @@
  */
 package org.grails.web.databinding.bindingsource
 
-import grails.beans.util.LazyMetaPropertyMap
-import grails.databinding.CollectionDataBindingSource
-import grails.databinding.SimpleMapDataBindingSource;
 import groovy.transform.CompileStatic
-import grails.databinding.DataBindingSource
-import grails.web.databinding.DataBindingUtils
 
 import jakarta.servlet.http.HttpServletRequest
 
+import grails.beans.util.LazyMetaPropertyMap
+import grails.databinding.CollectionDataBindingSource
+import grails.databinding.DataBindingSource
+import grails.databinding.SimpleMapDataBindingSource
+import grails.web.databinding.DataBindingUtils
 import grails.web.mime.MimeType
 import grails.web.servlet.mvc.GrailsParameterMap
-import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.databinding.bindingsource.DataBindingSourceCreator
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 @CompileStatic
 class DefaultDataBindingSourceCreator implements DataBindingSourceCreator {
@@ -48,13 +48,13 @@ class DefaultDataBindingSourceCreator implements DataBindingSourceCreator {
     @Override
     DataBindingSource createDataBindingSource(MimeType mimeType, Class bindingTargetType, Object bindingSource) {
         final DataBindingSource dataBindingSource
-        if(bindingSource instanceof DataBindingSource) {
+        if (bindingSource instanceof DataBindingSource) {
             dataBindingSource = (DataBindingSource) bindingSource
-        } else if(bindingSource instanceof HttpServletRequest) {
-            dataBindingSource = createDataBindingSource(bindingTargetType, (HttpServletRequest)bindingSource)
-        } else if(bindingSource instanceof Map) {
+        } else if (bindingSource instanceof HttpServletRequest) {
+            dataBindingSource = createDataBindingSource(bindingTargetType, (HttpServletRequest) bindingSource)
+        } else if (bindingSource instanceof Map) {
             dataBindingSource = new SimpleMapDataBindingSource(DataBindingUtils.convertPotentialGStrings((Map) bindingSource))
-        } else if (bindingSource){
+        } else if (bindingSource) {
             dataBindingSource = new SimpleMapDataBindingSource(new LazyMetaPropertyMap(bindingSource))
         } else {
             dataBindingSource = new SimpleMapDataBindingSource(Collections.emptyMap()) // LazyMetaPropertyMap dislike null source

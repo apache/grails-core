@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-
 /**
  * Backend for {@link DirectoryWatcher}
  * @author Craig Andrews
@@ -34,7 +33,7 @@ import java.util.List;
  * @see DirectoryWatcher
  */
 abstract class AbstractDirectoryWatcher implements Runnable {
-    private List<DirectoryWatcher.FileChangeListener> listeners = new ArrayList<DirectoryWatcher.FileChangeListener>();
+    private List<DirectoryWatcher.FileChangeListener> listeners = new ArrayList<>();
     volatile protected boolean active = true; //must be volatile as it's read by multiple threads and the value should be reflected in all of them
     protected long sleepTime = 1000;
 
@@ -44,7 +43,7 @@ abstract class AbstractDirectoryWatcher implements Runnable {
      * @param active False if you want to stop watching
      */
     public void setActive(boolean active) {
-    	this.active = active;
+        this.active = active;
     }
 
     /**
@@ -102,8 +101,8 @@ abstract class AbstractDirectoryWatcher implements Runnable {
         }
     }
 
-    protected boolean isValidDirectoryToMonitor(File file){
-    	return file.isDirectory() && ! file.isHidden() && !file.getName().startsWith(".");
+    protected boolean isValidDirectoryToMonitor(File file) {
+        return file.isDirectory() && !file.isHidden() && !file.getName().startsWith(".");
     }
 
     protected boolean isValidFileToMonitor(File file, Collection<String> fileExtensions) {
@@ -111,7 +110,7 @@ abstract class AbstractDirectoryWatcher implements Runnable {
         String path = file.getAbsolutePath();
         boolean isSvnFile = path.indexOf(File.separator + DirectoryWatcher.SVN_DIR_NAME + File.separator) > 0;
         return !isSvnFile &&
-        		!file.isDirectory() &&
+                !file.isDirectory() &&
                 !file.isHidden() &&
                 !file.getName().startsWith(".") &&
                 (fileExtensions.contains("*") || fileExtensions.contains(getFilenameExtension(name)));

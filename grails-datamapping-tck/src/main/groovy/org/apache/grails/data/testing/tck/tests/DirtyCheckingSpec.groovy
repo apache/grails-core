@@ -18,14 +18,15 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import spock.lang.IgnoreIf
+
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Card
 import org.apache.grails.data.testing.tck.domains.CardProfile
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.TestAuthor
 import org.apache.grails.data.testing.tck.domains.TestBook
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.proxy.ProxyHandler
-import spock.lang.IgnoreIf
 
 /**
  * @author Graeme Rocher
@@ -42,43 +43,43 @@ class DirtyCheckingSpec extends GrailsDataTckSpec {
         proxyHandler = manager.session.getMappingContext().proxyHandler
     }
 
-    void "Test that dirty checking methods work when changing entities"() {
+    void 'Test that dirty checking methods work when changing entities'() {
 
-        when: "A new instance is created"
-        def p = new Person(firstName: "Homer", lastName: "Simpson")
+        when: 'A new instance is created'
+        def p = new Person(firstName: 'Homer', lastName: 'Simpson')
         p.save(flush: true)
 
-        then: "The instance is not dirty"
+        then: 'The instance is not dirty'
         !p.isDirty()
-        !p.isDirty("firstName")
+        !p.isDirty('firstName')
 
-        when: "The instance is changed"
-        p.firstName = "Bart"
+        when: 'The instance is changed'
+        p.firstName = 'Bart'
 
-        then: "The instance is now dirty"
+        then: 'The instance is now dirty'
         p.isDirty()
-        p.isDirty("firstName")
+        p.isDirty('firstName')
         p.dirtyPropertyNames == ['firstName']
-        p.getPersistentValue('firstName') == "Homer"
+        p.getPersistentValue('firstName') == 'Homer'
 
-        when: "The instance is loaded from the db"
+        when: 'The instance is loaded from the db'
         p.save(flush: true)
         manager.session.clear()
         p = Person.get(p.id)
 
-        then: "The instance is not dirty"
+        then: 'The instance is not dirty'
         !p.isDirty()
         !p.isDirty('firstName')
 
-        when: "The instance is changed"
-        p.firstName = "Lisa"
+        when: 'The instance is changed'
+        p.firstName = 'Lisa'
 
-        then: "The instance is dirty"
+        then: 'The instance is dirty'
         p.isDirty()
-        p.isDirty("firstName")
+        p.isDirty('firstName')
     }
 
-    void "test relationships not marked dirty when proxies are used"() {
+    void 'test relationships not marked dirty when proxies are used'() {
 
         given:
         Long bookId = new TestBook(title: 'Martin Fierro', author: new TestAuthor(name: 'Jose Hernandez'))
@@ -101,7 +102,7 @@ class DirtyCheckingSpec extends GrailsDataTckSpec {
         TestAuthor.deleteAll()
     }
 
-    void "test relationships not marked dirty when domain objects are used"() {
+    void 'test relationships not marked dirty when domain objects are used'() {
 
         given:
         Long bookId = new TestBook(title: 'Martin Fierro', author: new TestAuthor(name: 'Jose Hernandez'))
@@ -124,12 +125,12 @@ class DirtyCheckingSpec extends GrailsDataTckSpec {
         TestAuthor.deleteAll()
     }
 
-    void "test relationships are marked dirty when proxies are used but different"() {
+    void 'test relationships are marked dirty when proxies are used but different'() {
         given:
         Long bookId = new TestBook(title: 'Martin Fierro', author: new TestAuthor(name: 'Jose Hernandez'))
                 .save(flush: true, failOnError: true)
                 .id
-        Long otherAuthorId = new TestAuthor(name: "JD").save(flush: true, failOnError: true).id
+        Long otherAuthorId = new TestAuthor(name: 'JD').save(flush: true, failOnError: true).id
         manager.session.flush()
         manager.session.clear()
 
@@ -147,13 +148,13 @@ class DirtyCheckingSpec extends GrailsDataTckSpec {
         TestAuthor.deleteAll()
     }
 
-    void "test relationships marked dirty when domain objects are used and changed"() {
+    void 'test relationships marked dirty when domain objects are used and changed'() {
 
         given:
         Long bookId = new TestBook(title: 'Martin Fierro', author: new TestAuthor(name: 'Jose Hernandez'))
                 .save(flush: true, failOnError: true)
                 .id
-        Long otherAuthorId = new TestAuthor(name: "JD").save(flush: true, failOnError: true).id
+        Long otherAuthorId = new TestAuthor(name: 'JD').save(flush: true, failOnError: true).id
         manager.session.flush()
         manager.session.clear()
 
@@ -171,12 +172,12 @@ class DirtyCheckingSpec extends GrailsDataTckSpec {
         TestAuthor.deleteAll()
     }
 
-    @IgnoreIf({ !Boolean.getBoolean('mongodb.gorm.suite')})
-    void "test initialized proxy is not marked as dirty"() {
+    @IgnoreIf({ !Boolean.getBoolean('mongodb.gorm.suite') })
+    void 'test initialized proxy is not marked as dirty'() {
 
         given:
-        Card card = new Card(cardNumber: "1111-2222-3333-4444")
-        card.cardProfile = new CardProfile(fullName: "JD")
+        Card card = new Card(cardNumber: '1111-2222-3333-4444')
+        card.cardProfile = new CardProfile(fullName: 'JD')
         card.save(flush: true, failOnError: true)
         manager.session.flush()
         manager.session.clear()

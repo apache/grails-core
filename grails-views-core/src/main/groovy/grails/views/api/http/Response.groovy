@@ -20,6 +20,7 @@
 package grails.views.api.http
 
 import groovy.transform.CompileStatic
+
 import org.springframework.http.HttpStatus
 
 /**

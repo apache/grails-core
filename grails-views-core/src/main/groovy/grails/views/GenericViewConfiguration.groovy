@@ -19,6 +19,12 @@
 
 package grails.views
 
+import java.beans.PropertyDescriptor
+
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.BeanUtils
+
 import grails.config.ConfigMap
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
@@ -26,13 +32,9 @@ import grails.core.support.GrailsApplicationAware
 import grails.util.BuildSettings
 import grails.util.Environment
 import grails.util.Metadata
-import groovy.transform.CompileStatic
 import org.grails.config.CodeGenConfig
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.io.support.GrailsResourceUtils
-import org.springframework.beans.BeanUtils
-
-import java.beans.PropertyDescriptor
 
 /**
  * Default configuration
@@ -46,7 +48,7 @@ trait GenericViewConfiguration implements ViewConfiguration, GrailsApplicationAw
     /**
      * The encoding to use
      */
-    String encoding = "UTF-8"
+    String encoding = 'UTF-8'
     /**
      * Whether to pretty print
      */
@@ -62,7 +64,7 @@ trait GenericViewConfiguration implements ViewConfiguration, GrailsApplicationAw
     /**
      * The package name to use
      */
-    String packageName = Metadata.getCurrent().getApplicationName() ?: ""
+    String packageName = Metadata.getCurrent().getApplicationName() ?: ''
     /**
      * Whether to compile templates statically
      */
@@ -89,7 +91,7 @@ trait GenericViewConfiguration implements ViewConfiguration, GrailsApplicationAw
     String templatePath = {
         def current = Environment.current
         def pathToTemplates = current.hasReloadLocation() ? current.reloadLocation : BuildSettings.BASE_DIR?.path
-        pathToTemplates ? new File(pathToTemplates, GrailsResourceUtils.VIEWS_DIR_PATH).path : "./grails-app/views"
+        pathToTemplates ? new File(pathToTemplates, GrailsResourceUtils.VIEWS_DIR_PATH).path : './grails-app/views'
     }()
     /**
      * The default package imports
@@ -98,11 +100,11 @@ trait GenericViewConfiguration implements ViewConfiguration, GrailsApplicationAw
     /**
      * The default static imports
      */
-    String[] staticImports = ["org.springframework.http.HttpStatus", "org.springframework.http.HttpMethod", "grails.web.http.HttpHeaders"] as String[]
+    String[] staticImports = ['org.springframework.http.HttpStatus', 'org.springframework.http.HttpMethod', 'grails.web.http.HttpHeaders'] as String[]
 
     @Override
     void setGrailsApplication(GrailsApplication grailsApplication) {
-        if(grailsApplication != null) {
+        if (grailsApplication != null) {
             def domainArtefacts = grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE)
             setPackageImports(
                     findUniquePackages(domainArtefacts)
@@ -111,7 +113,7 @@ trait GenericViewConfiguration implements ViewConfiguration, GrailsApplicationAw
     }
 
     void readConfiguration(File configFile) {
-        if(configFile?.exists()) {
+        if (configFile?.exists()) {
             def config = new CodeGenConfig()
             config.loadYml(configFile)
             readConfiguration(config)
@@ -120,7 +122,7 @@ trait GenericViewConfiguration implements ViewConfiguration, GrailsApplicationAw
 
     void readConfiguration(ConfigMap config) {
         String moduleName = viewModuleName
-        GroovyObject configObject = (GroovyObject)this
+        GroovyObject configObject = (GroovyObject) this
         if (config != null) {
             PropertyDescriptor[] descriptors =  BeanUtils.getPropertyDescriptors(GenericViewConfiguration)
             for (PropertyDescriptor desc in descriptors) {
@@ -135,7 +137,7 @@ trait GenericViewConfiguration implements ViewConfiguration, GrailsApplicationAw
                     } else {
                         value = config.getProperty("grails.views.${moduleName}.$propertyName", (Class) desc.propertyType)
                     }
-                    if(value != null) {
+                    if (value != null) {
                         configObject.setProperty(propertyName, value)
                     }
                 }

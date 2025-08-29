@@ -35,6 +35,7 @@ import groovy.transform.ToString
 @EqualsAndHashCode
 @ToString
 class Event<T> extends EventObject {
+
     /**
      * The id of the event
      */

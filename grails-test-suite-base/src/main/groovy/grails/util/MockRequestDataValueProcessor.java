@@ -29,7 +29,7 @@ import org.springframework.web.servlet.support.RequestDataValueProcessor;
 public class MockRequestDataValueProcessor implements RequestDataValueProcessor {
 
     public Map<String, String> getExtraHiddenFields(HttpServletRequest request) {
-        Map<String, String> extraHiddenFields = new HashMap<String, String>();
+        Map<String, String> extraHiddenFields = new HashMap<>();
         extraHiddenFields.put("requestDataValueProcessorHiddenName", "hiddenValue");
         return extraHiddenFields;
     }

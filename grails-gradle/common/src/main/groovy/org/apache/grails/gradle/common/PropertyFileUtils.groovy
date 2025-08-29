@@ -16,13 +16,13 @@
  */
 package org.apache.grails.gradle.common
 
-import groovy.transform.CompileStatic
-import org.codehaus.groovy.runtime.IOGroovyMethods
-
 import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.regex.Pattern
+
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.IOGroovyMethods
 
 @CompileStatic
 final class PropertyFileUtils {

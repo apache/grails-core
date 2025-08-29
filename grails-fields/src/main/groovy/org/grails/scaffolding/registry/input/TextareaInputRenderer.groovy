@@ -21,6 +21,7 @@ package org.grails.scaffolding.registry.input
 
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
+
 import org.grails.scaffolding.model.property.DomainProperty
 import org.grails.scaffolding.registry.DomainInputRenderer
 
@@ -34,7 +35,7 @@ class TextareaInputRenderer implements DomainInputRenderer {
 
     @Override
     boolean supports(DomainProperty domainProperty) {
-        domainProperty.constrained?.widget == "textarea"
+        domainProperty.constrained?.widget == 'textarea'
     }
 
     @Override

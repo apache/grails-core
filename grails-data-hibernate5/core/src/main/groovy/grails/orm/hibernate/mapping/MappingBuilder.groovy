@@ -20,6 +20,7 @@
 package grails.gorm.hibernate.mapping
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.mapping.config.MappingDefinition
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -69,7 +70,7 @@ class MappingBuilder {
 
         @Override
         Mapping build() {
-            if(mapping == null) {
+            if (mapping == null) {
                 mapping = Mapping.configureNew(definition)
             }
             return mapping

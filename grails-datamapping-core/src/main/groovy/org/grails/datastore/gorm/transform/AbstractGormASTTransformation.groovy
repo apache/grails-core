@@ -28,6 +28,7 @@ import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.AbstractASTTransformation
+
 import org.grails.datastore.mapping.core.Ordered
 
 /**

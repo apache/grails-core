@@ -27,5 +27,4 @@ import grails.events.Event
  * @author Graeme Rocher
  * @since 3.3
  */
-interface EventSubscriber<T> extends Subscriber<Event, T> {
-}
+interface EventSubscriber<T> extends Subscriber<Event, T> {}
