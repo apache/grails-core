@@ -59,7 +59,7 @@ jobs:
         env:
           GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: liberica
           java-version: '17.0.14' # this must be a specific version for reproducible builds
@@ -527,7 +527,7 @@ jobs:
       - name: 'Ensure Common Build Date' # to ensure a reproducible build
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: 17
           distribution: liberica
@@ -559,7 +559,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: v${{ needs.publish.outputs.release_version }}
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'liberica'
           java-version: '17'
@@ -599,7 +599,7 @@ jobs:
       - name: 'Ensure Common Build Date' # to ensure a reproducible build
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: liberica
           java-version: 17
