@@ -20,8 +20,6 @@ import grails.gorm.MultiTenant;
 import groovy.lang.Closure;
 import groovy.lang.DelegatesTo;
 import groovy.lang.GroovyObjectSupport;
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaClass;
 import groovy.lang.MetaMethod;
 import groovy.lang.MissingMethodException;
 import groovy.util.logging.Slf4j;
@@ -38,11 +36,9 @@ import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.BuildableCriteria;
 import org.grails.datastore.mapping.query.api.Criteria;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
-import org.grails.datastore.mapping.reflect.NameUtils;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
-import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.query.HibernateQueryConstants;
 import org.hibernate.FetchMode;
@@ -191,12 +187,8 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     protected SessionFactory sessionFactory;
     protected Session hibernateSession;
     protected Class<?> targetClass;
-    protected Query.Junction junction = new Query.Conjunction();
     protected CriteriaQuery criteriaQuery;
-    protected MetaClass criteriaMetaClass;
     protected boolean uniqueResult = false;
-    protected List<LogicalExpression> logicalExpressionStack = new ArrayList<LogicalExpression>();
-    protected List<String> associationStack = new ArrayList<String>();
     protected boolean participate;
     protected boolean scroll;
     protected boolean count;
@@ -249,6 +241,11 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         hibernateQuery.projections().property(propertyName);
         return this;
     }
+
+    public Query.ProjectionList projections() {
+       return  hibernateQuery.projections();
+    }
+
 
     /**
      * A projection that selects a distince property name
@@ -383,7 +380,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     }
 
     public ProjectionList count() {
-        return rowCount();
+        return hibernateQuery.projections().count();
     }
 
     /**
@@ -1170,11 +1167,21 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
 
     @Override
     public Object list(@DelegatesTo(Criteria.class) Closure c) {
+        hibernateQuery.setDetachedCriteria(new DetachedCriteria(targetClass));
         return invokeMethod(LIST_CALL, new Object[]{c});
+    }
+
+    public List list() {
+        return hibernateQuery.list();
+    }
+
+    public Object singleResult() {
+        return hibernateQuery.singleResult();
     }
 
     @Override
     public Object list(Map params, @DelegatesTo(Criteria.class) Closure c) {
+        hibernateQuery.setDetachedCriteria(new DetachedCriteria(targetClass));
         return invokeMethod(LIST_CALL, new Object[]{params, c});
     }
     
@@ -1204,6 +1211,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @SuppressWarnings("rawtypes")
     @Override
     public Object invokeMethod(String name, Object obj) {
+
         Object[] args = obj.getClass().isArray() ? (Object[])obj : new Object[]{obj};
 
         if (paginationEnabledList && SET_RESULT_TRANSFORMER_CALL.equals(name) && args.length == 1 &&
@@ -1230,6 +1238,14 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
             // Check for pagination params
             if (name.equals(LIST_CALL) && args.length == 2) {
                 paginationEnabledList = true;
+                if (args[0] instanceof Map map ) {
+                    if (map.get("max") instanceof Number max) {
+                        hibernateQuery.maxResults(max.intValue());
+                    }
+                    if (map.get("offset") instanceof Number offset) {
+                        hibernateQuery.firstResult(offset.intValue());
+                    }
+                }
                 invokeClosureNode(args[1]);
             }
             else {
@@ -1281,22 +1297,13 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
             return result;
         }
 
-        if (criteriaQuery == null) createCriteriaInstance();
 
         MetaMethod metaMethod = getMetaClass().getMetaMethod(name, args);
         if (metaMethod != null) {
             return metaMethod.invoke(this, args);
         }
 
-        MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(targetClass);
-        metaMethod = metaClass.getMetaMethod(name, args);
-        if (metaMethod != null) {
-            return metaMethod.invoke(criteriaQuery, args);
-        }
-        metaMethod = metaClass.getMetaMethod(NameUtils.getSetterName(name), args);
-        if (metaMethod != null) {
-            return metaMethod.invoke(criteriaQuery, args);
-        }
+
 
         if (isAssociationQueryMethod(args) || isAssociationQueryWithJoinSpecificationMethod(args)) {
             final boolean hasMoreThanOneArg = args.length > 1;
@@ -1376,10 +1383,6 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         throw new MissingMethodException(name, getClass(), args);
     }
 
-    protected List createPagedResultList(Map args) {
-        GrailsHibernateTemplate ght = new GrailsHibernateTemplate(sessionFactory, (HibernateDatastore) datastore, getDefaultFlushMode());
-        return null;
-    }
 
     private boolean isAssociationQueryMethod(Object[] args) {
         return args.length == 1 && args[0] instanceof Closure;
@@ -1389,16 +1392,6 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         return args.length == 2 && (args[0] instanceof Number) && (args[1] instanceof Closure);
     }
 
-
-    private String getAssociationPath() {
-        StringBuilder fullPath = new StringBuilder();
-        for (Object anAssociationStack : associationStack) {
-            String propertyName = (String) anAssociationStack;
-            if (fullPath.length() > 0) fullPath.append(".");
-            fullPath.append(propertyName);
-        }
-        return fullPath.toString();
-    }
 
     private boolean isCriteriaConstructionMethod(String name, Object[] args) {
         return (name.equals(LIST_CALL) && args.length == 2 && args[0] instanceof Map && args[1] instanceof Closure) ||
@@ -1411,13 +1404,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
                         name.equals(SCROLL_CALL) && args.length == 1 && args[0] instanceof Closure);
     }
 
-    protected void createCriteriaInstance() {
-        // no-op
-    }
 
-    protected void cacheCriteriaMapping() {
-        // no-op
-    }
 
     private void invokeClosureNode(Object args) {
         Closure<?> callable = (Closure<?>)args;
@@ -1426,20 +1413,6 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         callable.call();
     }
 
-    /**
-     * adds and returns the given criterion to the currently active criteria set.
-     * this might be either the root criteria or a currently open
-     * LogicalExpression.
-     */
-    protected Query.Criterion addToCriteria(Query.Criterion c) {
-        if (false) {
-            // logicalExpressionStack.get(logicalExpressionStack.size() - 1).args.add(c);
-        }
-        else {
-            junction.add(c);
-        }
-        return c;
-    }
 
     /**
      * Returns the criteria instance
