@@ -34,7 +34,7 @@ class RestfulServiceController<T> extends RestfulController<T> {
     }
 
     protected def getService() {
-        Holders.grailsApplication.getMainContext().getBean(resourceName + 'Service')
+        DomainServiceLocator.resolve(resource)
     }
 
     protected T queryForResource(Serializable id) {
