@@ -269,7 +269,7 @@ class WebDriverContainerHolder {
         }
         try {
             // Use reflection to access the VNC recording container field
-            Field vncRecordingContainerField = BrowserWebDriverContainer.class.getDeclaredField('vncRecordingContainer')
+            Field vncRecordingContainerField = BrowserWebDriverContainer.getDeclaredField('vncRecordingContainer')
             vncRecordingContainerField.setAccessible(true)
 
             VncRecordingContainer vncContainer = vncRecordingContainerField.get(currentContainer) as VncRecordingContainer
