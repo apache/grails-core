@@ -57,9 +57,13 @@ class Foo {
 
     static hasOne = [bar: Bar]
 
+
     static constraints = {
-        bar nullable: true
-        name unique: ["bar"]
+        bar nullable: true, unique: true
+    }
+
+    static mapping = {
+        bar column: 'bar_id'
     }
 }
 
