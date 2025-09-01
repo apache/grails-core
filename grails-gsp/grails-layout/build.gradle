@@ -44,7 +44,7 @@ dependencies {
     implementation platform(project(':grails-bom'))
     implementation project(':grails-web-common') // GrailsViewResolver
     implementation project(':grails-core') // for plugin & groovy
-    implementation project(':grails-gsp-core') // for grails layout preprocessor
+    implementation project(':grails-gsp') // for grails layout preprocessor & gsp configuration classes
 
     runtimeOnly project(':grails-web-jsp')
 

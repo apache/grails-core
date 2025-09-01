@@ -19,10 +19,11 @@
 
 package org.apache.grails.web.layout
 
+import org.grails.plugins.web.GroovyPagesPostProcessor
+import org.grails.web.servlet.view.GroovyPageViewResolver
 import org.springframework.beans.BeansException
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.beans.factory.config.BeanDefinition
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.beans.factory.config.RuntimeBeanReference
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
@@ -46,25 +47,30 @@ class GrailsLayoutViewResolverPostProcessor implements BeanDefinitionRegistryPos
 
     private static final String GRAILS_VIEW_RESOLVER_BEAN_NAME = 'jspViewResolver'
     private static final String GROOVY_PAGE_LAYOUT_FINDER_BEAN_NAME = 'groovyPageLayoutFinder'
-    int order = 0
+    int order = GroovyPagesPostProcessor.ORDER - 1
     Class<?> layoutViewResolverClass = GrailsLayoutViewResolver
     String layoutViewResolverBeanParentName = null
     boolean markBeanPrimary = true
-
     boolean enabled = true
 
     @Override
-    void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-    }
-
-    @Override
     void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
-        if (enabled && registry.containsBeanDefinition(GRAILS_VIEW_RESOLVER_BEAN_NAME)) {
-            BeanDefinition previousViewResolver = registry.getBeanDefinition(GRAILS_VIEW_RESOLVER_BEAN_NAME)
-            registry.removeBeanDefinition(GRAILS_VIEW_RESOLVER_BEAN_NAME)
+        if (enabled) {
+            BeanDefinition innerViewDefinition
+            if (registry.containsBeanDefinition(GRAILS_VIEW_RESOLVER_BEAN_NAME)) {
+                innerViewDefinition = registry.getBeanDefinition(GRAILS_VIEW_RESOLVER_BEAN_NAME)
+                registry.removeBeanDefinition(GRAILS_VIEW_RESOLVER_BEAN_NAME)
+            } else {
+                // default to what GroovyPagesPostProcessor would
+                innerViewDefinition = new GenericBeanDefinition()
+                innerViewDefinition.beanClass = GroovyPageViewResolver
+                innerViewDefinition.parentName = 'abstractViewResolver'
+                innerViewDefinition.lazyInit = true
+            }
 
             GenericBeanDefinition beanDefinition = new GenericBeanDefinition()
             beanDefinition.beanClass = layoutViewResolverClass
+            beanDefinition.lazyInit = true
             if (layoutViewResolverBeanParentName) {
                 beanDefinition.parentName = layoutViewResolverBeanParentName
             }
@@ -72,8 +78,8 @@ class GrailsLayoutViewResolverPostProcessor implements BeanDefinitionRegistryPos
                 beanDefinition.primary = true
             }
             final MutablePropertyValues propertyValues = beanDefinition.getPropertyValues()
-            propertyValues.addPropertyValue('innerViewResolver', previousViewResolver)
-            propertyValues.addPropertyValue('groovyPageLayoutFinder', new RuntimeBeanReference((String) GROOVY_PAGE_LAYOUT_FINDER_BEAN_NAME, false))
+            propertyValues.addPropertyValue('innerViewResolver', innerViewDefinition)
+            propertyValues.addPropertyValue('groovyPageLayoutFinder', new RuntimeBeanReference(GROOVY_PAGE_LAYOUT_FINDER_BEAN_NAME, false))
             registry.registerBeanDefinition(GRAILS_VIEW_RESOLVER_BEAN_NAME, beanDefinition)
         }
     }
