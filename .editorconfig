@@ -23,5 +23,4 @@ indent_size = 4
 indent_style = space
 insert_final_newline = true
 spaces_around_operators = true
-spaces_around_brackets = outside
 wildcard_import_limit = 999
