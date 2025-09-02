@@ -20,7 +20,7 @@
 apply plugin: 'com.github.hierynomus.license-report'
 
 List<String> licenseExclusions = rootProject.subprojects.collect {
-    "org.apache.grails:${it.findProperty('pomArtifactId') ?: it.name}:${rootProject.projectVersion}" as String
+    "${it.group}:${it.findProperty('pomArtifactId') ?: it.name}:${rootProject.projectVersion}" as String
 }
 
 downloadLicenses {
