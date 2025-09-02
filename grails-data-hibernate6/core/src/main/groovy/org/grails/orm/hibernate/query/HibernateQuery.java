@@ -646,8 +646,12 @@ public class HibernateQuery extends Query {
         final GrailsHibernateTemplate hibernateTemplate = (GrailsHibernateTemplate) hibernateSession.getNativeInterface();
         return hibernateTemplate.execute((GrailsHibernateTemplate.HibernateCallback<Object>) session -> {
             HibernateQuery hibernateQuery = new HibernateQuery(hibernateSession, entity);
-            hibernateQuery.max(this.max);
-            hibernateQuery.offset(this.offset);
+            if (this.max != null) {
+                hibernateQuery.max(this.max);
+            }
+            if (this.offset != null) {
+                hibernateQuery.offset(this.offset);
+            }
             hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());
             return hibernateQuery;
         });

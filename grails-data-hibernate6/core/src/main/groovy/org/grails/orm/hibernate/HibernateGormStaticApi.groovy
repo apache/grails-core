@@ -526,20 +526,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         return queryArgs
     }
 
-    protected String buildOrdinalParameterQueryFromGString(GString query, List params) {
-        StringBuilder sqlString = new StringBuilder()
-        int i = 0
-        Object[] values = query.values
-        def strings = query.getStrings()
-        for (str in strings) {
-            sqlString.append(str)
-            if (i < values.length) {
-                sqlString.append('?')
-                params.add(values[i++])
-            }
-        }
-        return sqlString.toString()
-    }
+
 
     protected String buildNamedParameterQueryFromGString(GString query, Map params) {
         StringBuilder sqlString = new StringBuilder()
@@ -598,78 +585,15 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         return id
     }
 
-    protected void populateQueryWithNamedArguments(Query q, Map queryNamedArgs) {
-        if (queryNamedArgs) {
-            for (Map.Entry entry in queryNamedArgs.entrySet()) {
-                def key = entry.key
-                if (!(key instanceof CharSequence)) {
-                    throw new GrailsQueryException("Named parameter's name must be String: $queryNamedArgs")
-                }
-                String stringKey = key.toString()
-                def value = entry.value
 
-                if(value == null) {
-                    q.setParameter stringKey, null
-                } else if (value instanceof CharSequence) {
-                    q.setParameter stringKey, value.toString()
-                } else if (List.class.isAssignableFrom(value.getClass())) {
-                    q.setParameterList stringKey, (List) value
-                } else if (Set.class.isAssignableFrom(value.getClass())) {
-                    q.setParameterList stringKey, (Set) value
-                } else if (value.getClass().isArray()) {
-                    q.setParameterList stringKey, (Object[]) value
-                } else {
-                    q.setParameter stringKey, value
-                }
-            }
-        }
-    }
 
-    protected Integer intValue(Map args, String key) {
-        def value = args.get(key)
-        if(value) {
-            return conversionService.convert(value, Integer.class)
-        }
-        return null
-    }
 
-    protected void populateQueryArguments(Query q, Map args) {
-        Integer max = intValue(args, DynamicFinder.ARGUMENT_MAX)
-        args.remove(DynamicFinder.ARGUMENT_MAX)
-        Integer offset = intValue(args, DynamicFinder.ARGUMENT_OFFSET)
-        args.remove(DynamicFinder.ARGUMENT_OFFSET)
 
-        if (max != null) {
-            q.maxResults = max
-        }
-        if (offset != null) {
-            q.firstResult = offset
-        }
 
-        if (args.containsKey(DynamicFinder.ARGUMENT_CACHE)) {
-            q.cacheable = ClassUtils.getBooleanFromMap(DynamicFinder.ARGUMENT_CACHE, args)
-        }
-        if (args.containsKey(DynamicFinder.ARGUMENT_FETCH_SIZE)) {
-            Integer fetchSizeParam = conversionService.convert(args.remove(DynamicFinder.ARGUMENT_FETCH_SIZE), Integer.class);
-            q.setFetchSize(fetchSizeParam.intValue());
-        }
-        if (args.containsKey(DynamicFinder.ARGUMENT_TIMEOUT)) {
-            Integer timeoutParam = conversionService.convert(args.remove(DynamicFinder.ARGUMENT_TIMEOUT), Integer.class);
-            q.setTimeout(timeoutParam.intValue());
-        }
-        if (args.containsKey(DynamicFinder.ARGUMENT_READ_ONLY)) {
-            q.setReadOnly((Boolean)args.remove(DynamicFinder.ARGUMENT_READ_ONLY));
-        }
-        if (args.containsKey(DynamicFinder.ARGUMENT_FLUSH_MODE)) {
-            q.setHibernateFlushMode((FlushMode)args.remove(DynamicFinder.ARGUMENT_FLUSH_MODE));
-        }
-
-        args.remove(DynamicFinder.ARGUMENT_CACHE)
-    }
 
     private String normalizeMultiLineQueryString(String query) {
         if (query?.indexOf('\n') != -1)
-           return query.trim().replace('\n', ' ')
+           return query?.trim().replace('\n', ' ')
         return query
     }
 
@@ -751,15 +675,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         doInternalExecuteUpdate(query,[:],indexedParams,args)
     }
 
-    protected <T> T withQueryEvents(Query query, Closure<T> callable) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore)datastore
-        def eventPublisher = hibernateDatastore.applicationEventPublisher
-        def hqlQuery = new HibernateHqlQuery(new HibernateSession(hibernateDatastore, sessionFactory), persistentEntity, query)
-        eventPublisher.publishEvent(new PreQueryEvent(hibernateDatastore, hqlQuery))
-        def result = callable.call()
-        eventPublisher.publishEvent(new PostQueryEvent(hibernateDatastore, hqlQuery, Collections.singletonList(result)))
-        return result
-    }
+
 
     protected void firePostQueryEvent(Object result) {
         def hibernateQuery = new HibernateQuery(new HibernateSession((HibernateDatastore) datastore, sessionFactory), persistentEntity)
