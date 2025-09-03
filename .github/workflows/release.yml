@@ -33,6 +33,7 @@ jobs:
     outputs:
       release_version: ${{ steps.release_version.outputs.value }}
       extract_repository_name: ${{ steps.extract_repository_name.outputs.repository_name }}
+      commit_hash: ${{ steps.commit_hash.outputs.value }}
     steps:
       - name: "📝 Store the current release version"
         id: release_version
@@ -75,6 +76,25 @@ jobs:
         uses: apache/grails-github-actions/pre-release@asf
         env:
           RELEASE_VERSION: ${{ steps.release_version.outputs.value }}
+      - name: 'Fetch release Commit Hash'
+        id: commit_hash
+        env:
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ steps.extract_repository_name.outputs.repository_name }}
+          TAG: 'v${{ steps.release_version.outputs.value }}'
+        run: |
+          ref_json=$(gh api "repos/$OWNER/$REPO/git/ref/tags/$TAG")
+
+          type=$(jq -r '.object.type' <<<"$ref_json")
+          sha=$(jq -r '.object.sha'  <<<"$ref_json")
+
+          if [ "$type" = "tag" ]; then
+            sha=$(gh api "repos/$OWNER/$REPO/git/tags/$sha" --jq '.object.sha')
+          fi
+
+          echo "Found Commit Sha: $sha"
+
+          echo "value=$sha" >>"$GITHUB_OUTPUT"
       - name: "📤 Publish to staging repository"
         env:
           GRAILS_PUBLISH_RELEASE: 'true'
