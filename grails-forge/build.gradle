@@ -72,6 +72,15 @@ allprojects {
                 snapshotsOnly()
             }
         }
+        maven {
+            url = 'https://repository.apache.org/content/groups/staging'
+            content {
+                includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
+            }
+            mavenContent {
+                releasesOnly()
+            }
+        }
     }
 
     tasks.withType(Test).configureEach { Task testTask ->
