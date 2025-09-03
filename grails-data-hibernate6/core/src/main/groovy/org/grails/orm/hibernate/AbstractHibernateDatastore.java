@@ -271,6 +271,18 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
         return autoTimestampEventListener;
     }
 
+    @Override
+    public boolean hasCurrentSession() {
+        // Consider a session present only if a bound session exists and is connected
+        org.grails.datastore.mapping.transactions.SessionHolder sessionHolder =
+                (org.grails.datastore.mapping.transactions.SessionHolder)
+                        org.springframework.transaction.support.TransactionSynchronizationManager.getResource(this);
+        if (sessionHolder == null) {
+            return false;
+        }
+        return sessionHolder.getValidatedSession() != null;
+    }
+
     /**
      * @return The data source name being used
      */
