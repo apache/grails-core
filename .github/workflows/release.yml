@@ -112,7 +112,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   source:
     # to ensure we never publish any build artifacts, run the source distribution as a separate build workflow
-    environment: source
     name: "Source Distribution"
     needs: publish
     permissions:
@@ -204,10 +203,142 @@ jobs:
           set -e
           cd ${{ needs.publish.outputs.extract_repository_name }}
           gh release --repo ${{ github.repository }} delete-asset v${{ needs.publish.outputs.release_version }} PUBLISHED_ARTIFACTS.txt --yes
+  upload:
+    needs: [ publish, source ]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      SVN_USERNAME: ${{ secrets.SVC_DIST_GRAILS_USERNAME }}
+      SVN_PASSWORD: ${{ secrets.SVC_DIST_GRAILS_PASSWORD }}
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "Setup SVN and Tools"
+        run: sudo apt-get install -y subversion subversion-tools tree gettext-base
+      - name: "Ensure grails dev folder exists"
+        run: |
+          set -e
+
+          if svn ls https://dist.apache.org/repos/dist/dev/incubator/grails --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive; then
+            echo "Dev Folder 'grails' already exists — skipping creation"
+          else
+            echo "Dev Folder 'grails' does not exist, creating"
+            svnmucc --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive \
+              mkdir https://dist.apache.org/repos/dist/dev/incubator/grails \
+              -m "Create 'grails' dev folder"
+          fi
+      - name: "Ensure grails redis folder exists"
+        run: |
+          set -e
+
+          if svn ls https://dist.apache.org/repos/dist/dev/incubator/grails/redis --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive; then
+            echo "Dev Folder 'grails/redis' already exists — skipping creation"
+          else
+            echo "Dev Folder 'grails/redis' does not exist, creating"
+            svnmucc --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive \
+              mkdir https://dist.apache.org/repos/dist/dev/incubator/grails/redis \
+              -m "Create 'grails redis' dev folder"
+          fi
+      - name: "Checkout dev repo"
+        run: |
+          svn checkout --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive https://dist.apache.org/repos/dist/dev/incubator/grails/redis dev-repo
+      - name: "Remove existing dev version"
+        run: |
+          export VERSION="${{ needs.publish.outputs.release_version }}"
+          cd dev-repo
+          if [ -d "$VERSION" ]; then
+            svn delete "$VERSION"
+            svn commit -m "Remove grails redis dev version $VERSION" --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive
+          else
+            echo "No existing dev version $VERSION to remove"
+          fi
+      - name: "Fetch source distributions"
+        run: |
+          export TAG="v${{ needs.publish.outputs.release_version }}"
+          export VERSION="${{ needs.publish.outputs.release_version }}"
+          cd dev-repo
+          mkdir -p $VERSION/sources          
+          cd $VERSION/sources
+          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-${{ needs.publish.outputs.extract_repository_name }}-$VERSION-incubating-src.zip
+          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-${{ needs.publish.outputs.extract_repository_name }}-$VERSION-incubating-src.zip.sha512
+          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-${{ needs.publish.outputs.extract_repository_name }}-$VERSION-incubating-src.zip.asc
+          echo "Downloaded the following files:"
+          ls -l
+      - name: "Upload distributions"
+        run: |
+          export TAG="v${{ needs.publish.outputs.release_version }}"
+          export VERSION="${{ needs.publish.outputs.release_version }}"
+          cd dev-repo
+          echo "Adding the following files to SVN:"
+          tree
+          svn add $VERSION --force
+          svn commit -m "Upload grails distribution files for $VERSION" --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive
+          pwd
+      - name: "Store Distribution SVN revision"
+        run: |
+          export VERSION="${{ needs.publish.outputs.release_version }}"
+          cd dev-repo
+          svn info $VERSION > "DIST_SVN_REVISION.txt"
+      - name: "Upload Distribution SVN revision"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dev-repo/DIST_SVN_REVISION.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: v${{ needs.publish.outputs.release_version }}
+          path: "${{ needs.publish.outputs.extract_repository_name }}"
+      - name: 'Initial Vote Email'
+        env:
+          VERSION: ${{ needs.publish.outputs.release_version }}
+          VERSION_COMMIT_ID: ${{ needs.publish.outputs.commit_hash }}
+        run: |
+          export DIST_SVN_REVISION=$(awk '/Last Changed Rev:/ {print $4}' dev-repo/DIST_SVN_REVISION.txt)
+
+          echo "*************************************************"
+          echo "Subject: [VOTE] Release Apache Grails (incubating) Redis Plugin ${VERSION}"
+          echo "*************************************************"
+          echo "Body:"
+          echo "*************************************************"
+          cat ${{ needs.publish.outputs.extract_repository_name }}/.github/vote_templates/staged.txt | envsubst
+          echo "*************************************************"
+      - name: 'Groovy Vote Email'
+        env:
+          VERSION: ${{ needs.publish.outputs.release_version }}
+          VERSION_COMMIT_ID: ${{ needs.publish.outputs.commit_hash }}
+        run: |
+          export DIST_SVN_REVISION=$(awk '/Last Changed Rev:/ {print $4}' dev-repo/DIST_SVN_REVISION.txt)
+
+          echo "*************************************************"
+          echo "Subject: [VOTE] Approval of Apache Grails (incubating) Redis Plugin ${VERSION} release by Groovy PMC"
+          echo "*************************************************"
+          echo "Body:"
+          echo "*************************************************"
+          cat ${{ needs.publish.outputs.extract_repository_name }}/.github/vote_templates/groovy_pmc.txt | envsubst
+          echo "*************************************************"
+      - name: 'Announcement Email'
+        env:
+          VERSION: ${{ needs.publish.outputs.release_version }}
+          VERSION_COMMIT_ID: ${{ needs.publish.outputs.commit_hash }}
+          PREVIOUS_VERSION: 'TODO_PREVIOUS_VERSION'
+        run: |
+          export DIST_SVN_REVISION=$(awk '/Last Changed Rev:/ {print $4}' dev-repo/DIST_SVN_REVISION.txt)
+
+          echo "*************************************************"
+          echo "Subject: [ANNOUNCE] Apache Grails (incubating) Redis Plugin ${VERSION}"
+          echo "*************************************************"
+          echo "Body:"
+          echo "*************************************************"
+          cat ${{ needs.publish.outputs.extract_repository_name }}/.github/vote_templates/announce.txt | envsubst
+          echo "*************************************************"
   docs:
     environment: docs
     name: "Publish Documentation"
-    needs: [publish, source]
+    needs: [publish, source, upload]
     runs-on: ubuntu-latest
     permissions:
       contents: write # required for gradle.properties revert
@@ -241,7 +372,7 @@ jobs:
   release:
     name: "Close Release"
     environment: release
-    needs: [publish, source, docs]
+    needs: [publish, source, upload, docs]
     runs-on: ubuntu-latest
     permissions:
       contents: write # required for gradle.properties revert
