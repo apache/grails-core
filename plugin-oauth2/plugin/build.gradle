@@ -84,7 +84,6 @@ dependencies {
 		// impl: ModelAndView
 	}
 
-	runtimeOnly 'org.apache.grails:grails-i18n'
 	runtimeOnly 'org.apache.grails:grails-services'
 
 	compileOnly 'org.apache.grails:grails-core', { // Provided as this is a Grails plugin

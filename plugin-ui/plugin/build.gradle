@@ -63,7 +63,6 @@ dependencies {
     compileOnly 'org.apache.grails:grails-domain-class'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
-    runtimeOnly 'org.apache.grails:grails-i18n'
 
     testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.spockframework:spock-core'

@@ -44,7 +44,6 @@
         "org.grails:grails-plugin-databinding",
         "org.grails:grails-plugin-datasource",
         "org.grails:grails-plugin-domain-class",
-        "org.grails:grails-plugin-i18n",
         "org.grails:grails-plugin-interceptors",
         "org.grails:grails-plugin-mimetypes",
         "org.grails:grails-plugin-rest",

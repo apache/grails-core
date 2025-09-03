@@ -37,7 +37,6 @@ dependencies {
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
     runtimeOnly 'org.apache.grails:grails-data-hibernate5'
-    runtimeOnly 'org.apache.grails:grails-i18n'
     runtimeOnly 'org.apache.grails:grails-services'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'

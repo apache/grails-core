@@ -46,7 +46,6 @@ dependencies {
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
     runtimeOnly 'org.fusesource.jansi:jansi'
-    runtimeOnly 'org.apache.grails:grails-i18n'
     runtimeOnly 'org.apache.grails:grails-databinding'
     runtimeOnly 'org.apache.grails:grails-services'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
