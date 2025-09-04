@@ -247,11 +247,8 @@ class GroovyPagesGrailsPlugin extends Plugin {
                     cacheTimeout = gspCacheTimeout
                 }
             }
-            // Configure a Spring MVC view resolver
-            jspViewResolver(GroovyPageViewResolver) { bean ->
-                bean.lazyInit = true
-                bean.parent = 'abstractViewResolver'
-            }
+            // Configure a Spring MVC view resolver if none is defined
+            groovyPagesPostProcessor(GroovyPagesPostProcessor)
 
             // Now go through tag libraries and configure them in Spring too. With AOP proxies and so on
             for (taglib in application.tagLibClasses) {

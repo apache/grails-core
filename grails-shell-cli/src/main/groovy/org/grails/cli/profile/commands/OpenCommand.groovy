@@ -19,8 +19,7 @@
 
 package org.grails.cli.profile.commands
 
-import java.awt.*
-import java.util.List
+import java.awt.Desktop
 
 import groovy.transform.CompileStatic
 

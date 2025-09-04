@@ -25,12 +25,12 @@ ext {
             'ant.version'                   : '1.10.15',
             'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.0',
-            'asset-pipeline-gradle.version' : '5.0.15',
+            'asset-pipeline-gradle.version' : '5.0.16',
             'byte-buddy.version'            : '1.17.7',
             'commons-text.version'          : '1.13.1',
             'directory-watcher.version'     : '0.19.1',
             'gradle-spock.version'          : '2.3-groovy-3.0',
-            'grails-publish-plugin.version' : '7.0.0-SNAPSHOT',
+            'grails-publish-plugin.version' : '0.0.1',
             'grails-gdoc-engine.version'    : '1.0.1',
             'jansi.version'                 : '1.18',
             'javaparser-core.version'       : '3.27.0',
@@ -72,7 +72,7 @@ ext {
     ]
 
     bomDependencyVersions = [
-            'asset-pipeline-bom.version'  : '5.0.15',
+            'asset-pipeline-bom.version'  : '5.0.16',
             'bootstrap-icons.version'     : '1.13.1',
             'bootstrap.version'           : '5.3.7',
             'commons-codec.version'       : '1.18.0',

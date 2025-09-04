@@ -72,6 +72,15 @@ allprojects {
                 snapshotsOnly()
             }
         }
+        maven {
+            url = 'https://repository.apache.org/content/groups/staging'
+            content {
+                includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
+            }
+            mavenContent {
+                releasesOnly()
+            }
+        }
     }
 
     tasks.withType(Test).configureEach { Task testTask ->
@@ -98,5 +107,4 @@ apply {
     // we must apply the publish configuration first or the docs config will not work
     from layout.projectDirectory.file('gradle/publish-root-config.gradle')
     from layout.projectDirectory.file('gradle/gradle-wrapper-root-config.gradle')
-    from layout.projectDirectory.file('gradle/doc-root-config.gradle')
 }

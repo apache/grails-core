@@ -44,12 +44,16 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import grails.config.Settings;
 import grails.core.GrailsApplication;
+import org.grails.plugins.domain.GrailsDomainClassAutoConfiguration;
 import org.grails.web.config.http.GrailsFilters;
 import org.grails.web.filters.HiddenHttpMethodFilter;
 import org.grails.web.servlet.mvc.GrailsDispatcherServlet;
 import org.grails.web.servlet.mvc.GrailsWebRequestFilter;
 
-@AutoConfiguration(before = { HttpEncodingAutoConfiguration.class, WebMvcAutoConfiguration.class })
+@AutoConfiguration(
+        before = {HttpEncodingAutoConfiguration.class, WebMvcAutoConfiguration.class},
+        after = {GrailsDomainClassAutoConfiguration.class}
+)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class ControllersAutoConfiguration {
 

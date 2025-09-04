@@ -20,7 +20,6 @@
 package org.grails.plugins.domain.support
 
 import org.springframework.beans.factory.FactoryBean
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.MessageSource
 
@@ -36,22 +35,16 @@ import org.grails.validation.ConstraintEvalUtils
 class DefaultConstraintEvaluatorFactoryBean implements FactoryBean<ConstraintsEvaluator> {
 
     MessageSource messageSource
-
-    @Autowired
-    setMessageSource(List<MessageSource> messageSources) {
-        setMessageSource(GrailsMessageSourceUtils.findPreferredMessageSource(messageSources))
-    }
-
-    void setMessageSource(MessageSource messageSource) {
-        this.messageSource = messageSource
-    }
-
-    @Autowired
-    @Qualifier('grailsDomainClassMappingContext')
     MappingContext grailsDomainClassMappingContext
-
-    @Autowired
     GrailsApplication grailsApplication
+
+    DefaultConstraintEvaluatorFactoryBean(List<MessageSource> messageSources,
+                                          @Qualifier('grailsDomainClassMappingContext') MappingContext mappingContext,
+                                          GrailsApplication grailsApplication) {
+        this.messageSource = GrailsMessageSourceUtils.findPreferredMessageSource(messageSources)
+        this.grailsDomainClassMappingContext = mappingContext
+        this.grailsApplication = grailsApplication
+    }
 
     @Override
     ConstraintsEvaluator getObject() throws Exception {

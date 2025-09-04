@@ -34,7 +34,6 @@ dependencies {
     testImplementation project(':grails-databinding')
     testImplementation project(':grails-datasource')
     testImplementation project(':grails-domain-class')
-    testImplementation project(':grails-i18n')
     testImplementation project(':grails-interceptors')
     testImplementation project(':grails-rest-transforms')
     testImplementation project(':grails-services')

@@ -130,7 +130,7 @@ trait ResponseRenderer extends WebAttributes {
      * @param object The object to render
      */
     @Generated
-    void render(object) {
+    void render(Object object) {
         GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes()
         HttpServletResponse response = webRequest.currentResponse
         webRequest.renderView = false

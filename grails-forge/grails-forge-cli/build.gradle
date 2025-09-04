@@ -109,9 +109,9 @@ rocker {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/style-enforcement-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')
 }
 

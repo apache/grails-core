@@ -359,11 +359,6 @@ class NavigableMap implements Map<String, Object>, Cloneable {
             return new NullSafeNavigator(this, [name].asImmutable())
         }
         Object result = get(name)
-        if (!(result instanceof NavigableMap)) {
-            if (LOG.isWarnEnabled()) {
-                LOG.warn("Accessing config key '{}' through dot notation is deprecated, and it will be removed in a future release. Use 'config.getProperty(key, targetClass)' instead.", name)
-            }
-        }
         return result
     }
 

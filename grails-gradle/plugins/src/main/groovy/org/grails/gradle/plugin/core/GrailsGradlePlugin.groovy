@@ -27,7 +27,6 @@ import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
 import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
 import org.apache.tools.ant.filters.EscapeUnicode
 import org.apache.tools.ant.filters.ReplaceTokens
-import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Plugin
@@ -386,17 +385,34 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     @CompileStatic
     protected void configureMicronaut(Project project) {
-        final String micronautVersion = project.properties['micronautVersion']
-        if (micronautVersion) {
-            project.configurations.configureEach({ Configuration configuration ->
-                configuration.resolutionStrategy.eachDependency({ DependencyResolveDetails details ->
+        project.afterEvaluate {
+            boolean micronautEnabled = project.getConfigurations().getByName('implementation').getDependencies().findAll { Dependency dep -> dep.group == 'org.apache.grails' && dep.name == 'grails-micronaut' } as boolean
+            if (!micronautEnabled) {
+                return
+            }
+            project.logger.lifecycle('Micronaut Support Detected for {}', project.name)
+
+            final String micronautPlatformVersion = project.properties['micronautPlatformVersion']
+            if (!micronautPlatformVersion) {
+                throw new GradleException('`micronautPlatformVersion` property must be set to use the Grails Micronaut plugin.')
+            }
+
+            // grails-micronaut exports the platform, but force the version to the user specified version
+            project.configurations.configureEach { Configuration configuration ->
+                configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
                     String dependencyName = details.requested.name
                     String group = details.requested.group
-                    if (group == 'io.micronaut' && dependencyName.startsWith('micronaut')) {
-                        details.useVersion(micronautVersion)
+                    if (group == 'io.micronaut' && dependencyName.startsWith('micronaut-platform')) {
+                        project.logger.info('Forcing Micronaut Platform version to {}', micronautPlatformVersion)
+                        details.useVersion(micronautPlatformVersion)
                     }
-                } as Action<DependencyResolveDetails>)
-            } as Action<Configuration>)
+                }
+            }
+
+            project.logger.info('Adding Micronaut annotationProcessor dependencies to project {}', project.name)
+            project.getDependencies().add('annotationProcessor', project.dependencies.platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion"))
+            project.getDependencies().add('annotationProcessor', 'io.micronaut:micronaut-inject-java')
+            project.getDependencies().add('annotationProcessor', 'jakarta.annotation:jakarta.annotation-api')
         }
     }
 

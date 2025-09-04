@@ -49,9 +49,9 @@ class BeanInjectionServiceSpec extends Specification {
         service != null
     }
 
-    void "test there are two beans for a Grails service when we inject Micronaut bean in it"() {
+    void "test there are 1 bean for a Grails service when we inject Micronaut bean in it"() {
         expect:
         bInjectService != null
-        bInjectService.size() == 2
+        bInjectService.size() == 1
     }
 }

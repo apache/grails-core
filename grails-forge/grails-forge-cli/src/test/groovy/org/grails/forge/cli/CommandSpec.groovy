@@ -70,6 +70,7 @@ class CommandSpec extends Specification {
         String[] args = builder.toString().split(' ')
         ProcessBuilder pb = new ProcessBuilder(args)
         pb.environment().put('JAVA_HOME', System.getenv('JAVA_HOME') ?: System.getProperty('java.home'))
+        pb.environment().put('GRAILS_REPO_URL', System.getenv('GRAILS_REPO_URL') ?: null)
         process = pb.directory(dir).start()
         process.consumeProcessOutputStream(output)
         process

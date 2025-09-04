@@ -27,6 +27,7 @@ extensions.configure(JavaPluginExtension) {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    // Preserve method parameter names in Java classes for IDE parameter hints & bean reflection metadata.
     options.compilerArgs.add('-parameters')
 }
 
