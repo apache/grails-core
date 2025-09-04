@@ -19,12 +19,13 @@
 
 package org.grails.datastore.mapping.multitenancy;
 
+import java.io.Serializable;
+
 import groovy.lang.Closure;
+
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider;
-
-import java.io.Serializable;
 
 /**
  * An implementation that is capable of multi tenancy
@@ -53,7 +54,6 @@ public interface MultiTenantCapableDatastore<T, S extends ConnectionSourceSettin
      * @return The datastore
      */
     Datastore getDatastoreForTenantId(Serializable tenantId);
-
 
     /**
      * Execute a new session with the given tenantId IF the session is not already present. This differs from the regular withNewSession method.

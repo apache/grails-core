@@ -18,20 +18,21 @@
  */
 package org.grails.web.mapping;
 
-import grails.util.GrailsStringUtils;
-import grails.web.mapping.LinkGenerator;
-import grails.web.mapping.UrlMapping;
-import grails.web.mapping.UrlMappingInfo;
-import grails.web.mapping.UrlMappingsHolder;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
 import groovy.lang.Binding;
-import org.grails.web.mapping.mvc.UrlMappingsHandlerMapping;
-import org.grails.web.servlet.WrappedResponseHolder;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException;
-import org.grails.web.util.GrailsApplicationAttributes;
-import org.grails.web.util.IncludeResponseWrapper;
-import org.grails.web.util.IncludedContent;
-import org.grails.web.util.WebUtils;
+
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.WebRequest;
@@ -41,17 +42,19 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.ViewResolver;
 
-import jakarta.servlet.RequestDispatcher;
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import grails.util.GrailsStringUtils;
+import grails.web.mapping.LinkGenerator;
+import grails.web.mapping.UrlMapping;
+import grails.web.mapping.UrlMappingInfo;
+import grails.web.mapping.UrlMappingsHolder;
+import org.grails.web.mapping.mvc.UrlMappingsHandlerMapping;
+import org.grails.web.servlet.WrappedResponseHolder;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException;
+import org.grails.web.util.GrailsApplicationAttributes;
+import org.grails.web.util.IncludeResponseWrapper;
+import org.grails.web.util.IncludedContent;
+import org.grails.web.util.WebUtils;
 
 /**
  * Utility methods for working with UrlMappings
@@ -67,13 +70,13 @@ public class UrlMappingUtils {
      *
      * @return a Map without entries whose key belongs to UrlMapping#KEYWORDS
      */
-    public static  Map findAllParamsNotInUrlMappingKeywords(Map params) {
+    public static Map findAllParamsNotInUrlMappingKeywords(Map params) {
         return findAllParamsNotInKeys(params, UrlMapping.KEYWORDS);
     }
 
-    public static  Map findAllParamsNotInKeys(Map params, Set keys) {
+    public static Map findAllParamsNotInKeys(Map params, Set keys) {
         Map urlParams = new HashMap<>();
-        if ( params != null && keys != null ) {
+        if (params != null && keys != null) {
             for (Object key : params.keySet()) {
                 if (!keys.contains(key)) {
                     urlParams.put(key, params.get(key));
@@ -91,7 +94,7 @@ public class UrlMappingUtils {
      */
     public static UrlMappingsHolder lookupUrlMappings(ServletContext servletContext) {
         WebApplicationContext wac = WebApplicationContextUtils.getRequiredWebApplicationContext(servletContext);
-        return (UrlMappingsHolder)wac.getBean(UrlMappingsHolder.BEAN_ID);
+        return (UrlMappingsHolder) wac.getBean(UrlMappingsHolder.BEAN_ID);
     }
 
     /**
@@ -314,7 +317,7 @@ public class UrlMappingUtils {
             currentId = webRequest.getId();
             currentParams = new HashMap();
             currentParams.putAll(webRequest.getParameterMap());
-            currentMv = (ModelAndView)webRequest.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, 0);
+            currentMv = (ModelAndView) webRequest.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, 0);
         }
         try {
             if (webRequest != null) {
@@ -326,10 +329,10 @@ public class UrlMappingUtils {
             return includeForUrl(includeUrl, request, response, model);
         }
         finally {
-            if (webRequest!=null) {
+            if (webRequest != null) {
                 if (webRequest.isActive()) {
 
-                    webRequest.setAttribute(GrailsApplicationAttributes.PAGE_SCOPE,currentPageBinding, 0);
+                    webRequest.setAttribute(GrailsApplicationAttributes.PAGE_SCOPE, currentPageBinding, 0);
                     if (currentLayoutAttribute != null) {
                         webRequest.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, currentLayoutAttribute, 0);
                     }
@@ -387,7 +390,7 @@ public class UrlMappingUtils {
                 WrappedResponseHolder.setWrappedResponse(responseWrapper);
                 WebUtils.clearGrailsWebRequest();
                 dispatcher.include(request, responseWrapper);
-                if (responseWrapper.getRedirectURL()!=null) {
+                if (responseWrapper.getRedirectURL() != null) {
                     return new IncludedContent(responseWrapper.getRedirectURL());
                 }
                 return new IncludedContent(responseWrapper.getContentType(), responseWrapper.getContent());
@@ -396,8 +399,8 @@ public class UrlMappingUtils {
                 if (hasPreviousWebRequest) {
                     WebUtils.storeGrailsWebRequest(webRequest);
                     if (webRequest.isActive()) {
-                        webRequest.setAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS_AVAILABLE, previousControllerClass,WebRequest.SCOPE_REQUEST);
-                        webRequest.setAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST,previousMatchedRequest, WebRequest.SCOPE_REQUEST);
+                        webRequest.setAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS_AVAILABLE, previousControllerClass, WebRequest.SCOPE_REQUEST);
+                        webRequest.setAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST, previousMatchedRequest, WebRequest.SCOPE_REQUEST);
                     }
                 }
 

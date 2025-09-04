@@ -19,15 +19,13 @@
 
 package org.grails.datastore.gorm.jdbc;
 
-import org.springframework.util.StringUtils;
-
-
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.springframework.util.StringUtils;
 
 /**
  * Generates relaxed name variations from a given source.
@@ -146,8 +144,8 @@ final class RelaxedNames implements Iterable<String> {
                 Matcher matcher = CAMEL_CASE_PATTERN.matcher(value);
                 StringBuffer result = new StringBuffer();
                 while (matcher.find()) {
-                    matcher.appendReplacement(result, matcher.group(1) + '_'
-                            + StringUtils.uncapitalize(matcher.group(2)));
+                    matcher.appendReplacement(result, matcher.group(1) + '_' +
+                            StringUtils.uncapitalize(matcher.group(2)));
                 }
                 matcher.appendTail(result);
                 return result.toString();
@@ -160,8 +158,8 @@ final class RelaxedNames implements Iterable<String> {
                 Matcher matcher = CAMEL_CASE_PATTERN.matcher(value);
                 StringBuffer result = new StringBuffer();
                 while (matcher.find()) {
-                    matcher.appendReplacement(result, matcher.group(1) + '-'
-                            + StringUtils.uncapitalize(matcher.group(2)));
+                    matcher.appendReplacement(result, matcher.group(1) + '-' +
+                            StringUtils.uncapitalize(matcher.group(2)));
                 }
                 matcher.appendTail(result);
                 return result.toString();
@@ -201,6 +199,4 @@ final class RelaxedNames implements Iterable<String> {
 
         }
     }
-
-
 }

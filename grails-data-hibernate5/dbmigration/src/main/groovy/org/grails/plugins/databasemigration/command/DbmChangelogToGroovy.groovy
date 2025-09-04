@@ -21,8 +21,10 @@ package org.grails.plugins.databasemigration.command
 import groovy.transform.CompileStatic
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
+
 import liquibase.parser.ChangeLogParserFactory
 import liquibase.serializer.ChangeLogSerializerFactory
+
 import org.grails.plugins.databasemigration.DatabaseMigrationException
 
 @CompileStatic
@@ -65,7 +67,7 @@ class DbmChangelogToGroovy implements ScriptDatabaseMigrationCommand {
         }
     }
 
-    private static void withFileOrSystemOutputStream(File file, @ClosureParams(value = SimpleType, options = "java.io.OutputStream") Closure closure) {
+    private static void withFileOrSystemOutputStream(File file, @ClosureParams(value = SimpleType, options = 'java.io.OutputStream') Closure closure) {
         if (!file) {
             closure.call(System.out)
             return

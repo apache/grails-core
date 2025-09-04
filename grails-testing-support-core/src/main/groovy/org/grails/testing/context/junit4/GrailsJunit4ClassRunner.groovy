@@ -19,10 +19,12 @@
 
 package org.grails.testing.context.junit4
 
-import grails.boot.test.GrailsApplicationContextLoader
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
+
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
+
+import grails.boot.test.GrailsApplicationContextLoader
 
 /**
  * @author Graeme Rocher

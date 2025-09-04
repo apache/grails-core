@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.cfg
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
 
@@ -33,6 +34,7 @@ import org.springframework.validation.DataBinder
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 @CompileStatic
 class Table {
+
     /**
      * The table name
      */

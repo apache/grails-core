@@ -18,6 +18,15 @@
  */
 package org.grails.plugins.web
 
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+
+import org.springframework.beans.factory.config.PropertiesFactoryBean
+import org.springframework.boot.web.servlet.ServletRegistrationBean
+import org.springframework.core.io.Resource
+import org.springframework.util.ClassUtils
+import org.springframework.web.servlet.view.InternalResourceViewResolver
+
 import grails.config.Config
 import grails.core.gsp.GrailsTagLibClass
 import grails.gsp.PageRenderer
@@ -27,8 +36,6 @@ import grails.util.Environment
 import grails.util.GrailsUtil
 import grails.util.Metadata
 import grails.web.pages.GroovyPagesUriService
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 import org.grails.core.artefact.gsp.TagLibArtefactHandler
 import org.grails.gsp.GroovyPageResourceLoader
 import org.grails.gsp.GroovyPagesTemplateEngine
@@ -54,11 +61,6 @@ import org.grails.web.pages.FilteringCodecsByContentTypeSettings
 import org.grails.web.pages.GroovyPagesServlet
 import org.grails.web.servlet.view.GroovyPageViewResolver
 import org.grails.web.util.GrailsApplicationAttributes
-import org.springframework.beans.factory.config.PropertiesFactoryBean
-import org.springframework.boot.web.servlet.ServletRegistrationBean
-import org.springframework.core.io.Resource
-import org.springframework.util.ClassUtils
-import org.springframework.web.servlet.view.InternalResourceViewResolver
 
 /**
  * Sets up and configures the GSP and GSP tag library support in Grails.
@@ -91,7 +93,6 @@ class GroovyPagesGrailsPlugin extends Plugin {
             ValidationTagLib,
             PluginTagLib,
     ]
-
 
     /**
      * Clear the page cache with the ApplicationContext is loaded
@@ -135,7 +136,6 @@ class GroovyPagesGrailsPlugin extends Plugin {
             gspTagLibraryLookup(TagLibraryLookup) { bean ->
                 bean.lazyInit = true
             }
-
 
             boolean customResourceLoader = false
             // If the development environment is used we need to load GSP files relative to the base directory
@@ -235,7 +235,7 @@ class GroovyPagesGrailsPlugin extends Plugin {
             }
 
             boolean jstlPresent = ClassUtils.isPresent(
-                    'jakarta.servlet.jsp.jstl.core.Config', InternalResourceViewResolver.class.getClassLoader())
+                    'jakarta.servlet.jsp.jstl.core.Config', InternalResourceViewResolver.getClassLoader())
 
             abstractViewResolver {
                 prefix = GrailsApplicationAttributes.PATH_TO_VIEWS
@@ -247,11 +247,8 @@ class GroovyPagesGrailsPlugin extends Plugin {
                     cacheTimeout = gspCacheTimeout
                 }
             }
-            // Configure a Spring MVC view resolver
-            jspViewResolver(GroovyPageViewResolver) { bean ->
-                bean.lazyInit = true
-                bean.parent = 'abstractViewResolver'
-            }
+            // Configure a Spring MVC view resolver if none is defined
+            groovyPagesPostProcessor(GroovyPagesPostProcessor)
 
             // Now go through tag libraries and configure them in Spring too. With AOP proxies and so on
             for (taglib in application.tagLibClasses) {

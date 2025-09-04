@@ -47,8 +47,6 @@ public class ValidationEvent extends AbstractPersistenceEvent {
         super(source, entity, entityAccess);
     }
 
-
-
     public List<?> getValidatedFields() {
         return validatedFields;
     }

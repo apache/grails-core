@@ -32,7 +32,7 @@ class CountByWithEmbeddedSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         manager.domainClasses.addAll([CountByPerson])
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/9846')
+    @Issue('https://github.com/apache/grails-core/issues/9846')
     void "Test countBy query with embedded entity"() {
         given:
         new CountByPerson(name: "Fred", bornInCountry: new CountByCountry(name: "England")).save(flush: true)

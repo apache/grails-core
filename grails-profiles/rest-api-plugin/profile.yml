@@ -26,7 +26,6 @@ features:
 build:
     plugins:
         - org.apache.grails.gradle.grails-plugin
-        - org.apache.grails.gradle.grails-publish
     excludes:
         - org.apache.grails.gradle.grails-app
         - org.apache.grails.gradle.grails-web

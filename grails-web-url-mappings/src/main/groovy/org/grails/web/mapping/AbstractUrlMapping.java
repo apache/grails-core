@@ -18,18 +18,19 @@
  */
 package org.grails.web.mapping;
 
-import grails.core.GrailsApplication;
-import grails.gorm.validation.Constrained;
-import grails.gorm.validation.ConstrainedProperty;
-import grails.web.mapping.UrlMapping;
-import org.springframework.context.ApplicationContext;
-import org.springframework.web.context.WebApplicationContext;
-
 import java.net.URI;
 import java.util.Collections;
 import java.util.Map;
 
 import jakarta.servlet.ServletContext;
+
+import org.springframework.context.ApplicationContext;
+import org.springframework.web.context.WebApplicationContext;
+
+import grails.core.GrailsApplication;
+import grails.gorm.validation.Constrained;
+import grails.gorm.validation.ConstrainedProperty;
+import grails.web.mapping.UrlMapping;
 
 /**
  * Abstract UrlMapping implementation that provides common basic functionality.
@@ -49,7 +50,7 @@ public abstract class AbstractUrlMapping implements UrlMapping {
     protected Object redirectInfo;
     protected ServletContext servletContext;
     protected GrailsApplication grailsApplication;
-    protected Map<String,Object> parameterValues = Collections.emptyMap();
+    protected Map<String, Object> parameterValues = Collections.emptyMap();
     protected boolean parseRequest;
     protected String mappingName;
     protected String httpMethod = ANY_HTTP_METHOD;
@@ -77,11 +78,11 @@ public abstract class AbstractUrlMapping implements UrlMapping {
 
     private void setGrailsApplication(GrailsApplication grailsApplication) {
         this.grailsApplication = grailsApplication;
-        if(grailsApplication != null) {
+        if (grailsApplication != null) {
 
             final ApplicationContext applicationContext = grailsApplication.getMainContext();
-            if(applicationContext instanceof WebApplicationContext) {
-                this.servletContext = ((WebApplicationContext)applicationContext).getServletContext();
+            if (applicationContext instanceof WebApplicationContext) {
+                this.servletContext = ((WebApplicationContext) applicationContext).getServletContext();
             }
         }
     }
@@ -146,7 +147,7 @@ public abstract class AbstractUrlMapping implements UrlMapping {
         return viewName;
     }
 
-    public void setParameterValues(Map<String,Object> parameterValues) {
+    public void setParameterValues(Map<String, Object> parameterValues) {
         this.parameterValues = Collections.unmodifiableMap(parameterValues);
     }
 
@@ -175,7 +176,6 @@ public abstract class AbstractUrlMapping implements UrlMapping {
     public Object getRedirectInfo() {
         return redirectInfo;
     }
-
 
     public void setPluginIndex(int pluginIndex) {
         this.pluginIndex = pluginIndex;

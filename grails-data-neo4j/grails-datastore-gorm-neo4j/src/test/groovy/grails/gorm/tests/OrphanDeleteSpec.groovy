@@ -28,7 +28,7 @@ import spock.lang.Issue
 class OrphanDeleteSpec extends GormDatastoreSpec {
 
 
-    @Issue('https://github.com/grails/gorm-neo4j/issues/6')
+    @Issue('https://github.com/grails/grails-data-neo4j/issues/6')
     void "test cascade delete orphan results in removing orphaned nodes"() {
         when:
         new Contact()

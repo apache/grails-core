@@ -56,6 +56,9 @@ repositories {
         content {
             includeGroupByRegex('org[.]apache[.]grails.*')
         }
+        mavenContent {
+            releasesOnly()
+        }
     }
     maven {
         url = 'https://central.sonatype.com/repository/maven-snapshots'

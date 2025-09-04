@@ -18,10 +18,6 @@
  */
 package org.grails.plugins.core;
 
-import grails.config.ConfigProperties;
-import grails.config.Settings;
-import grails.core.GrailsApplication;
-import org.grails.spring.context.support.GrailsPlaceholderConfigurer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
@@ -30,6 +26,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.core.Ordered;
+
+import grails.config.ConfigProperties;
+import grails.config.Settings;
+import grails.core.GrailsApplication;
+import org.grails.spring.context.support.GrailsPlaceholderConfigurer;
 
 /**
  * Core beans.

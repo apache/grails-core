@@ -28,6 +28,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class CommandArgument {
+
     /**
      * The name of the argument
      */

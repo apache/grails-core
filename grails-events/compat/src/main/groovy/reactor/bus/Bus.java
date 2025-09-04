@@ -53,7 +53,6 @@ public interface Bus<T> {
     <V extends T> Subscription<Object, Consumer<? extends T>> on(final Selector selector,
                                                                  final Consumer<V> consumer);
 
-
     /**
      * Notify this component that an {@link Event} is ready to be processed.
      *

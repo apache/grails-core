@@ -18,11 +18,14 @@
  */
 package org.grails.cli.profile.commands.templates
 
-import grails.codegen.model.Model
+import java.nio.charset.StandardCharsets
+
 import groovy.text.GStringTemplateEngine
 import groovy.text.Template
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
+import grails.codegen.model.Model
 import org.grails.cli.interactive.completers.ClassNameCompleter
 import org.grails.cli.profile.ExecutionContext
 import org.grails.cli.profile.Profile
@@ -33,8 +36,6 @@ import org.grails.cli.profile.commands.io.FileSystemInteractionImpl
 import org.grails.io.support.DefaultResourceLoader
 import org.grails.io.support.Resource
 import org.grails.io.support.ResourceLoader
-
-import java.nio.charset.StandardCharsets
 
 /**
  * Interface for classes that can render templates
@@ -73,11 +74,11 @@ class TemplateRendererImpl implements TemplateRenderer, ProfileRepositoryAware {
     @Override
     @CompileDynamic
     void render(Map<String, Object> namedArguments) {
-        if(namedArguments?.template && namedArguments?.destination) {
+        if (namedArguments?.template && namedArguments?.destination) {
             def templateArg = namedArguments.template
             def template = templateArg instanceof Resource ? templateArg : template(templateArg)
             boolean overwrite = namedArguments.overwrite as Boolean ?: false
-            render template, file(namedArguments.destination), namedArguments.model ?: [:], overwrite
+            render(template, file(namedArguments.destination), namedArguments.model ?: [:], overwrite)
         }
     }
 
@@ -101,9 +102,9 @@ class TemplateRendererImpl implements TemplateRenderer, ProfileRepositoryAware {
      * @param model The model
      */
     void render(CharSequence template, File destination, Map model = Collections.emptyMap(), boolean overwrite = false) {
-        if(template && destination) {
-            if(destination.exists() && !overwrite) {
-                executionContext.console.warn("Destination file ${projectPath( destination )} already exists, skipping...")
+        if (template && destination) {
+            if (destination.exists() && !overwrite) {
+                executionContext.console.warn("Destination file ${projectPath(destination)} already exists, skipping...")
             }
             else {
                 def templateEngine = new GStringTemplateEngine()
@@ -112,13 +113,11 @@ class TemplateRendererImpl implements TemplateRenderer, ProfileRepositoryAware {
                     writeTemplateToDestination(t, model, destination)
                 } catch (e) {
                     destination.delete()
-                    throw new TemplateException("Error rendering template to destination ${projectPath( destination )}: ${e.message}", e)
+                    throw new TemplateException("Error rendering template to destination ${projectPath(destination)}: ${e.message}", e)
                 }
             }
         }
     }
-
-
 
     /**
      * Render the given template to the give destination for the given model
@@ -138,26 +137,26 @@ class TemplateRendererImpl implements TemplateRenderer, ProfileRepositoryAware {
      * @param model The model
      */
     void render(File template, File destination, Map model = Collections.emptyMap(), boolean overwrite = false) {
-        if(template && destination) {
-            if(destination.exists() && !overwrite) {
-                executionContext.console.warn("Destination file ${projectPath( destination )} already exists, skipping...")
+        if (template && destination) {
+            if (destination.exists() && !overwrite) {
+                executionContext.console.warn("Destination file ${projectPath( destination)} already exists, skipping...")
             }
             else {
                 Template t = templateCache[template.absolutePath]
-                if(t == null) {
+                if (t == null) {
                     try {
                         def templateEngine = new GStringTemplateEngine()
                         t = templateEngine.createTemplate(template)
                     } catch (e) {
-                        throw new TemplateException("Error rendering template [$template] to destination ${projectPath( destination )}: ${e.message}", e)
+                        throw new TemplateException("Error rendering template [$template] to destination ${projectPath(destination)}: ${e.message}", e)
                     }
                 }
                 try {
                     writeTemplateToDestination(t, model, destination)
-                    executionContext.console.addStatus("Rendered template ${template.name} to destination ${projectPath( destination )}")
+                    executionContext.console.addStatus("Rendered template ${template.name} to destination ${projectPath(destination)}")
                 } catch (Throwable e) {
                     destination.delete()
-                    throw new TemplateException("Error rendering template [$template] to destination ${projectPath( destination )}: ${e.message}", e)
+                    throw new TemplateException("Error rendering template [$template] to destination ${projectPath(destination)}: ${e.message}", e)
                 }
             }
         }
@@ -181,20 +180,20 @@ class TemplateRendererImpl implements TemplateRenderer, ProfileRepositoryAware {
      * @param model The model
      */
     void render(Resource template, File destination, Map model = Collections.emptyMap(), boolean overwrite = false) {
-        if(template && destination) {
-            if(destination.exists() && !overwrite) {
+        if (template && destination) {
+            if (destination.exists() && !overwrite) {
                 executionContext.console.warn("Destination file ${projectPath( destination )} already exists, skipping...")
             }
-            else if(!template?.exists()) {
+            else if (!template?.exists()) {
                 throw new TemplateException("Template [$template.filename] not found.")
             }
             else {
                 Template t = templateCache[template.filename]
-                if(t == null) {
+                if (t == null) {
 
                     try {
                         def templateEngine = new GStringTemplateEngine()
-                        def reader = new InputStreamReader(template.inputStream, "UTF-8")
+                        def reader = new InputStreamReader(template.inputStream, 'UTF-8')
                         try {
                             t = templateEngine.createTemplate(reader)
                         } finally {
@@ -208,7 +207,7 @@ class TemplateRendererImpl implements TemplateRenderer, ProfileRepositoryAware {
                         throw new TemplateException("Error rendering template [$template.filename] to destination ${projectPath( destination )}: ${e.message}", e)
                     }
                 }
-                if(t != null) {
+                if (t != null) {
                     try {
                         writeTemplateToDestination(t, model, destination)
                         executionContext.console.addStatus("Rendered template ${template.filename} to destination ${projectPath( destination )}")
@@ -229,8 +228,8 @@ class TemplateRendererImpl implements TemplateRenderer, ProfileRepositoryAware {
      */
     Iterable<Resource> templates(String pattern) {
         Collection<Resource> resList = []
-        resList.addAll( resources(pattern) )
-        resList.addAll( resources("classpath*:META-INF/templates/$pattern"))
+        resList.addAll(resources(pattern))
+        resList.addAll(resources("classpath*:META-INF/templates/$pattern"))
         return resList.unique()
     }
 
@@ -242,31 +241,30 @@ class TemplateRendererImpl implements TemplateRenderer, ProfileRepositoryAware {
      */
     Resource template(Object location) {
         Resource f = resource(file("src/main/templates/$location"))
-        if(!f?.exists()) {
-            if( file('profile.yml').exists()  ) {
-                f = resource( file("templates/$location") )
-                if(f.exists()) {
+        if (!f?.exists()) {
+            if (file('profile.yml').exists()) {
+                f = resource(file("templates/$location"))
+                if (f.exists()) {
                     return f
                 }
             }
-            if(profile) {
+            if (profile) {
                 def path = location.toString()
                 f = profile.getTemplate(path)
-                if(!f.exists()) {
+                if (!f.exists()) {
                     def allProfiles = profileRepository.getProfileAndDependencies(profile)
-                    for(parent in allProfiles) {
+                    for (parent in allProfiles) {
                         f = parent.getTemplate(path)
-                        if(f.exists()) break
+                        if (f.exists()) break
                     }
                 }
             }
-            if(!f?.exists()) {
-                return resource("classpath*:META-INF/templates/" + location)
+            if (!f?.exists()) {
+                return resource('classpath*:META-INF/templates/' + location)
             }
         }
         return resource(f)
     }
-
 
     private static void writeTemplateToDestination(Template template, Map model, File destination) {
         destination.parentFile.mkdirs()

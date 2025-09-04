@@ -24,6 +24,7 @@ import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.feature.migration.templates.dbMigrationGradle;
 import org.grails.forge.template.RockerWritable;
 import org.grails.forge.template.URLTemplate;
+import org.grails.forge.util.VersionInfo;
 
 @Singleton
 public class DatabaseMigrationPlugin implements MigrationFeature {
@@ -35,21 +36,22 @@ public class DatabaseMigrationPlugin implements MigrationFeature {
 
     @Override
     public String getTitle() {
-        return "Grails Database Migration Plugin";
+        return "Database Migration";
     }
 
     @Override
     public String getDescription() {
-        return "Adds support for Liquibase database migrations. The Database Migration plugin helps you manage database changes while developing Grails applications. ";
+        return "Add support for Liquibase database migrations. The Database Migration Plugin " +
+                "helps you manage database schema changes while developing Grails applications.";
     }
 
     public String getThirdPartyDocumentation() {
-        return "https://www.liquibase.org/";
+        return "https://docs.liquibase.com/home.html";
     }
 
     @Override
     public String getDocumentation() {
-        return "https://docs.grails.org/latest/grails-data/hibernate5/manual/index.html#databaseMigration";
+        return "https://docs.grails.org/" + VersionInfo.getDocumentationVersion() + "/grails-data/hibernate5/manual/index.html#databaseMigration";
     }
 
     @Override

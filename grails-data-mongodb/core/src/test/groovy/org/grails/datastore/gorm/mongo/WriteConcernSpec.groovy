@@ -44,7 +44,7 @@ class WriteConcernSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
         sw != null
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/600')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/600')
     void "Test unacknowledged write concern"() {
         when: "An object is saved"
         def sw = new UnacknowledgedWrite(name: "Bob")

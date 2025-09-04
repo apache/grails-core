@@ -18,14 +18,14 @@
  */
 package org.grails.transaction;
 
-import grails.util.CollectionUtils;
-
 import java.lang.reflect.Method;
 import java.util.Properties;
 import java.util.Set;
 
 import org.springframework.transaction.interceptor.NameMatchTransactionAttributeSource;
 import org.springframework.transaction.interceptor.TransactionAttribute;
+
+import grails.util.CollectionUtils;
 
 /**
  * @author Graeme Rocher

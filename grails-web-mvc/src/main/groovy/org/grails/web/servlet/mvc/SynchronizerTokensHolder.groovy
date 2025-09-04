@@ -32,15 +32,15 @@ class SynchronizerTokensHolder implements Serializable {
 
     private static final long serialVersionUID = 1
 
-    public static final String HOLDER = "SYNCHRONIZER_TOKENS_HOLDER"
-    public static final String TOKEN_KEY = "SYNCHRONIZER_TOKEN"
-    public static final String TOKEN_URI = "SYNCHRONIZER_URI"
+    public static final String HOLDER = 'SYNCHRONIZER_TOKENS_HOLDER'
+    public static final String TOKEN_KEY = 'SYNCHRONIZER_TOKEN'
+    public static final String TOKEN_URI = 'SYNCHRONIZER_URI'
 
-    Map<String, Set<UUID>> currentTokens= [:]
+    Map<String, Set<UUID>> currentTokens = [:]
 
     boolean isValid(String url, String token) {
         try {
-            getTokens(url).contains UUID.fromString(token)
+            getTokens(url).contains(UUID.fromString(token))
         }
         catch (IllegalArgumentException e) {
             false
@@ -61,7 +61,7 @@ class SynchronizerTokensHolder implements Serializable {
         if (url && token) {
             final Set set = getTokens(url)
             try {
-                set.remove UUID.fromString(token)
+                set.remove(UUID.fromString(token))
             }
             catch (IllegalArgumentException ignored) {}
             if (set.isEmpty()) {

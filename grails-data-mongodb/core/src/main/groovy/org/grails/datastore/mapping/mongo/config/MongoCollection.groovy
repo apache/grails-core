@@ -14,10 +14,12 @@
  */
 package org.grails.datastore.mapping.mongo.config
 
-import com.mongodb.WriteConcern
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
+import com.mongodb.WriteConcern
+
 import org.grails.datastore.mapping.config.Entity
 import org.grails.datastore.mapping.document.config.Attribute
 import org.grails.datastore.mapping.document.config.Collection
@@ -28,7 +30,7 @@ import org.grails.datastore.mapping.query.Query
  *
  * @author Graeme Rocher
  */
-@SuppressWarnings("rawtypes")
+@SuppressWarnings('rawtypes')
 @CompileStatic
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 class MongoCollection extends Collection {
@@ -52,9 +54,8 @@ class MongoCollection extends Collection {
         return new MongoAttribute()
     }
 
-
     Query.Order getSort() {
-        return (Query.Order)super.getSort()
+        return (Query.Order) super.getSort()
     }
 
     /**
@@ -64,23 +65,23 @@ class MongoCollection extends Collection {
      */
     MongoCollection setSort(Object s) {
         if (s instanceof Query.Order) {
-            super.setSort( (Query.Order) s )
+            super.setSort((Query.Order) s)
         }
         if (s instanceof Map) {
             Map m = (Map) s
             if (!m.isEmpty()) {
                 Map.Entry entry = (Map.Entry) m.entrySet().iterator().next()
                 Object key = entry.getKey()
-                if ("desc".equalsIgnoreCase(entry.getValue().toString())) {
-                    super.setSort( Query.Order.desc(key.toString()) )
+                if ('desc'.equalsIgnoreCase(entry.getValue().toString())) {
+                    super.setSort(Query.Order.desc(key.toString()))
                 }
                 else {
-                    super.setSort( Query.Order.asc(key.toString()) )
+                    super.setSort(Query.Order.asc(key.toString()))
                 }
             }
         }
         else {
-            super.setSort( Query.Order.asc(s.toString()) )
+            super.setSort(Query.Order.asc(s.toString()))
         }
         return this
     }
@@ -118,7 +119,7 @@ class MongoCollection extends Collection {
      * @param options The index options
      */
     void index(Map<String, Object> definition, Map<String, Object> options) {
-        if(definition != null && !definition.isEmpty()) {
+        if (definition != null && !definition.isEmpty()) {
             indices.add(new Index(definition, options))
         }
     }
@@ -158,28 +159,28 @@ class MongoCollection extends Collection {
     }
 
     @Override
-    Entity property(String name, @DelegatesTo(MongoAttribute.class) Closure propertyConfig) {
+    Entity property(String name, @DelegatesTo(MongoAttribute) Closure propertyConfig) {
         return super.property(name, propertyConfig)
     }
 
     @Override
-    Entity<Attribute> id(@DelegatesTo(MongoAttribute.class) Closure identityConfig) {
+    Entity<Attribute> id(@DelegatesTo(MongoAttribute) Closure identityConfig) {
         return super.id(identityConfig)
     }
 
     @Override
-    Entity version(@DelegatesTo(MongoAttribute.class) Closure versionConfig) {
+    Entity version(@DelegatesTo(MongoAttribute) Closure versionConfig) {
         return super.version(versionConfig)
     }
 
     @Override
-    MongoAttribute property(@DelegatesTo(MongoAttribute.class) Closure propertyConfig) {
-        return (MongoAttribute)super.property(propertyConfig)
+    MongoAttribute property(@DelegatesTo(MongoAttribute) Closure propertyConfig) {
+        return (MongoAttribute) super.property(propertyConfig)
     }
 
     @Override
     MongoAttribute property(Map propertyConfig) {
-        return (MongoAttribute)super.property(propertyConfig)
+        return (MongoAttribute) super.property(propertyConfig)
     }
     /**
      * Definition of an index
@@ -187,7 +188,6 @@ class MongoCollection extends Collection {
     static class Index {
         Map<String, Object> definition = new HashMap<String, Object>()
         Map<String, Object> options = new HashMap<String, Object>()
-
 
         Index(Map<String, Object> definition) {
             this.definition = definition

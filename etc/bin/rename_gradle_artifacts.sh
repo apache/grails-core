@@ -67,7 +67,7 @@ declare -a core_mappings=(
 "org[.]grails:grails-plugin-rest|org.apache.grails:grails-rest-transforms"
 "org[.]grails:grails-plugin-mimetypes|org.apache.grails:grails-mimetypes"
 "org[.]grails:grails-plugin-interceptors|org.apache.grails:grails-interceptors"
-"org[.]grails:grails-plugin-i18n|org.apache.grails:grails-i18n"
+"org[.]grails:grails-plugin-i18n|REMOVE_ME" # i18n is now included by default and should not be included explicitly
 "org[.]grails:grails-plugin-domain-class|org.apache.grails:grails-domain-class"
 "org[.]grails:grails-plugin-datasource|org.apache.grails:grails-datasource"
 "org[.]grails:grails-plugin-databinding|org.apache.grails:grails-databinding"
@@ -109,7 +109,7 @@ declare -a excluded_core_mappings=(
 "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-plugin-rest['\"]|exclude module:'grails-rest-transforms'"
 "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-plugin-mimetypes['\"]|exclude module:'grails-mimetypes'"
 "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-plugin-interceptors['\"]|exclude module:'grails-interceptors'"
-"exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-plugin-i18n['\"]|exclude module:'grails-i18n'"
+"exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-plugin-i18n['\"]|exclude module:'REMOVE_THIS_EXCLUDE'"
 "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-plugin-domain-class['\"]|exclude module:'grails-domain-class'"
 "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-plugin-datasource['\"]|exclude module:'grails-datasource'"
 "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-plugin-databinding['\"]|exclude module:'grails-databinding'"

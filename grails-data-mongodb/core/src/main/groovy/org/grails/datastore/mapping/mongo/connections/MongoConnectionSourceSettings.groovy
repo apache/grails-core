@@ -19,10 +19,11 @@
 
 package org.grails.datastore.mapping.mongo.connections
 
-import com.mongodb.MongoClientSettings
 import groovy.transform.AutoClone
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
+import com.mongodb.MongoClientSettings
 
 /**
  * Settings for MongoDB driver

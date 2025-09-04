@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class ClassWithListArgBeforeValidate implements Serializable {
+
     Long id
     Long version
     def listArgCounter = 0
@@ -35,6 +36,6 @@ class ClassWithListArgBeforeValidate implements Serializable {
     }
 
     static constraints = {
-        name blank: false
+        name(blank: false)
     }
 }

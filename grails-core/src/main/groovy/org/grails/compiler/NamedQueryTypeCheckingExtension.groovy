@@ -32,7 +32,7 @@ import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport.Type
 class NamedQueryTypeCheckingExtension extends TypeCheckingDSL {
 
     @Override
-    public Object run() {
+    Object run() {
         setup { newScope() }
 
         finish { scopeExit() }
@@ -40,7 +40,7 @@ class NamedQueryTypeCheckingExtension extends TypeCheckingDSL {
         beforeVisitClass { ClassNode classNode ->
             def namedQueryProperty = classNode.getField('namedQueries')
 
-            if(namedQueryProperty && namedQueryProperty.isStatic() && namedQueryProperty.initialExpression instanceof ClosureExpression) {
+            if (namedQueryProperty && namedQueryProperty.isStatic() && namedQueryProperty.initialExpression instanceof ClosureExpression) {
                 newScope {
                     namedQueryClosureCode = namedQueryProperty.initialExpression.code
                 }
@@ -51,7 +51,7 @@ class NamedQueryTypeCheckingExtension extends TypeCheckingDSL {
         }
 
         afterVisitClass { ClassNode classNode ->
-            if(currentScope.namedQueryClosureCode) {
+            if (currentScope.namedQueryClosureCode) {
                 def namedQueryProperty = classNode.getField('namedQueries')
                 namedQueryProperty.initialExpression.code = currentScope.namedQueryClosureCode
                 currentScope.checkingNamedQueryClosure = true
@@ -61,8 +61,8 @@ class NamedQueryTypeCheckingExtension extends TypeCheckingDSL {
 
         methodNotFound { ClassNode receiver, String name, ArgumentListExpression argList, ClassNode[] argTypes, MethodCall call ->
             def dynamicCall
-            if(currentScope.namedQueryClosureCode && currentScope.checkingNamedQueryClosure) {
-                dynamicCall = makeDynamic (call)
+            if (currentScope.namedQueryClosureCode && currentScope.checkingNamedQueryClosure) {
+                dynamicCall = makeDynamic(call)
             }
             dynamicCall
         }

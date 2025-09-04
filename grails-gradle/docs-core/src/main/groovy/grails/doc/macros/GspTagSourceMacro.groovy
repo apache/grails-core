@@ -18,13 +18,11 @@
  */
 package grails.doc.macros
 
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.Internal
-import org.radeox.api.engine.context.InitialRenderContext
-
 import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
+
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
 import org.radeox.macro.BaseMacro
 import org.radeox.macro.CodeMacro
 import org.radeox.macro.parameter.BaseMacroParameter
@@ -34,13 +32,12 @@ import org.radeox.util.Encoder
 class GspTagSourceMacro extends BaseMacro implements Serializable {
 
     @Internal
-    protected String description = " ";
+    protected String description = ' '
+
     @Internal
-    protected String[] paramDescription = {};
+    protected String[] paramDescription = {}
 
-    private static final long serialVersionUID = 0L;
-
-
+    private static final long serialVersionUID = 0L
 
     @Input
     List baseDirs
@@ -51,20 +48,20 @@ class GspTagSourceMacro extends BaseMacro implements Serializable {
     }
 
     @Input
-    String getName() { "source" }
+    String getName() { 'source' }
 
     void execute(Writer out, MacroParameter params) {
-        def source = params.params.get("0")
+        def source = params.params.get('0')
 
         def i = source.indexOf('=')
-        def type = source[0..i-1]
-        def name = source[i+1..-1]
+        def type = source[0..i - 1]
+        def name = source[i + 1..-1]
 
         switch (type) {
-            case "tag":
+            case 'tag':
                 def j = name.indexOf('.')
-                def className = name[0..j-1]
-                def tagName = name[j+1..-1]
+                def className = name[0..j - 1]
+                def tagName = name[j + 1..-1]
 
                 // Recursively search for the tag library source file in the
                 // configured base directory.
@@ -74,7 +71,7 @@ class GspTagSourceMacro extends BaseMacro implements Serializable {
                     return tagLibFile
                 }
 
-                def text = tagLibFile?.getText(StandardCharsets.UTF_8.name()) ?: ""
+                def text = tagLibFile?.getText(StandardCharsets.UTF_8.name()) ?: ''
                 String closureSource = extractTagClosureSource(tagName, text)
                 if (closureSource) {
                     out << '<p><a href="#' + tagName +
@@ -88,7 +85,7 @@ class GspTagSourceMacro extends BaseMacro implements Serializable {
                     def macroParams = new BaseMacroParameter()
                     macroParams.content = text
                     macro.execute(out, macroParams)
-                    out << "</div>"
+                    out << '</div>'
                 }
                 break
         }

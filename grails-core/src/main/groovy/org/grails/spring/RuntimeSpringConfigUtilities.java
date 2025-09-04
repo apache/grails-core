@@ -18,17 +18,19 @@
  */
 package org.grails.spring;
 
-import grails.spring.BeanBuilder;
-import grails.util.CollectionUtils;
 import groovy.lang.Binding;
 import groovy.lang.Closure;
 import groovy.lang.Script;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import grails.core.GrailsApplication;
+
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.util.ClassUtils;
-import org.grails.spring.RuntimeSpringConfiguration;
+
+import grails.core.GrailsApplication;
+import grails.spring.BeanBuilder;
+import grails.util.CollectionUtils;
 
 /**
  * @since 2.4
@@ -43,7 +45,6 @@ public class RuntimeSpringConfigUtilities {
     public static final String SPRING_RESOURCES_CLASS = "resources";
 
     private static final String DEVELOPMENT_SPRING_RESOURCES_XML = "file:./grails-app/conf/spring/resources.xml";
-
 
     private static volatile BeanBuilder springGroovyResourcesBeanBuilder = null;
 
@@ -95,14 +96,14 @@ public class RuntimeSpringConfigUtilities {
     }
 
     public static BeanBuilder reloadSpringResourcesConfig(RuntimeSpringConfiguration config, GrailsApplication application, Class<?> groovySpringResourcesClass) throws InstantiationException, IllegalAccessException {
-        springGroovyResourcesBeanBuilder = new BeanBuilder(null, config,Thread.currentThread().getContextClassLoader());
+        springGroovyResourcesBeanBuilder = new BeanBuilder(null, config, Thread.currentThread().getContextClassLoader());
         springGroovyResourcesBeanBuilder.setBinding(new Binding(CollectionUtils.newMap(
             "application", application,
             "grailsApplication", application))); // GRAILS-7550
         Script script = (Script) groovySpringResourcesClass.newInstance();
         script.run();
         Object beans = script.getProperty("beans");
-        springGroovyResourcesBeanBuilder.beans((Closure<?>)beans);
+        springGroovyResourcesBeanBuilder.beans((Closure<?>) beans);
         return springGroovyResourcesBeanBuilder;
     }
 
@@ -115,7 +116,6 @@ public class RuntimeSpringConfigUtilities {
         loadExternalSpringConfig(config, application);
         doLoadSpringGroovyResources(config, application, context);
     }
-
 
     /**
      * Resets the GrailsRumtimeConfigurator.

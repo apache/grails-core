@@ -1,0 +1,99 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+To create an application using the `rest-api-plugin` profile:
+
+[source, bash]
+----
+grails create-app myplugin --profile=rest-api-plugin
+----
+
+To get information about the profile and available features, when not inside a Grails' project directory:
+
+[source, bash]
+----
+grails profile-info rest-api-plugin
+----
+
+You will see an output similar to:
+
+[source, bash]
+----
+Profile: rest-api-plugin
+--------------------
+Profile for REST API plugins
+
+Provided Commands:
+--------------------
+* help - Prints help information for a specific command
+* url-mappings-report - Prints out a report of the project's URL mappings
+* open - Opens a file in the project
+* gradle - Allows running of Gradle tasks
+* install - Installs a plugin into the local Maven cache
+* package-plugin - Packages the plugin into a JAR file
+* publish-plugin - Publishes the plugin to the Grails central repository
+* clean - Cleans a Grails application's compiled sources
+* compile - Compiles a Grails application
+* create-command - Creates an Application Command
+* create-domain-class - Creates a Domain Class
+* create-unit-test - Creates a unit test
+* assemble - Creates a JAR or WAR archive for production deployment
+* test-app - Runs the applications tests
+* run-command - Executes Grails commands
+* console - Runs the Grails interactive console
+* run-script - Executes Groovy scripts in a Grails context
+* stop-app - Stops the running Grails application
+* stats - Prints statistics about the project
+* plugin-info - Prints information about the given plugin
+* create-script - Creates a Grails script
+* bug-report - Creates a zip file that can be attached to issue reports for the current project
+* run-app - Runs a Grails application
+* dependency-report - Prints out the Grails application's dependencies
+* list-plugins - Lists available plugins from the Plugin Repository
+* shell - Runs the Grails interactive shell
+* create-controller - Creates a controller
+* create-domain-resource - Creates a domain class that represents a resource
+* create-functional-test - Creates an functional test
+* create-integration-test - Creates an integration test
+* create-interceptor - Creates an interceptor
+* create-restful-controller - Creates a REST controller
+* create-service - Creates a Service
+* generate-all - Generates a controller that performs REST operations
+* generate-controller - Generates a controller that performs REST operations
+* generate-functional-test - Generates a functional test for a controller that performs REST operations
+* generate-views - Generates a controller that performs REST operations
+* generate-unit-test - Generates a unit test for a controller that performs REST operations
+
+Provided Features:
+--------------------
+* asset-pipeline-plugin - Adds Asset Pipeline to a Grails Plugin for packaging
+* maven-publish - Publish Artifacts to Maven Central
+* asset-pipeline - Adds Asset Pipeline to a Grails project
+* events - Adds support for the Grails EventBus abstraction
+* geb2 - Adds Geb dependencies to run functional tests.
+* gsp - Adds support for GSP to the project
+* hibernate5 - Adds GORM for Hibernate 5 to the project
+* json-views - Adds support for JSON Views to the project
+* less-asset-pipeline - Adds LESS Transpiler Asset Pipeline to a Grails project
+* markup-views - Adds support for Markup Views to the project
+* mongodb - Adds GORM for MongoDB to the project
+* neo4j - Adds GORM for Neo4j to the project
+* rx-mongodb - Adds RxGORM for MongoDB to the project
+* security - Adds Spring Security REST to the project
+----

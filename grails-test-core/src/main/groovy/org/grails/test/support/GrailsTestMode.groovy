@@ -21,6 +21,7 @@ package org.grails.test.support
 import org.springframework.context.ApplicationContext
 
 class GrailsTestMode {
+
     boolean autowire = false
     boolean wrapInRequestEnvironment = false
     boolean wrapInTransaction = false

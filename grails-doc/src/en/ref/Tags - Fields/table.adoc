@@ -88,7 +88,7 @@ When *theme* is specified, the _\_display_ template will be searched first in *t
 
 To make you own version of a `f:table` template, the file should be located in `grails-app/views/templates/_fields/_table.gsp`
 unless a different location is specified with the template property.
-You can find a starting point for a new file link:https://github.com/grails-fields-plugin/grails-fields/blob/master/grails-app/views/templates/_fields/_table.gsp[on GitHub]
+You can find a starting point for a new file link:https://github.com/apache/grails-core/blob/HEAD/grails-fields/grails-app/views/templates/_fields/_table.gsp[on GitHub]
 
 ====== Model in the template
 

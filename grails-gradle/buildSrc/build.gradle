@@ -44,6 +44,15 @@ repositories {
             snapshotsOnly()
         }
     }
+    maven {
+        url = 'https://repository.apache.org/content/groups/staging'
+        content {
+            includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
+        }
+        mavenContent {
+            releasesOnly()
+        }
+    }
 }
 
 file('../../gradle.properties').withInputStream {

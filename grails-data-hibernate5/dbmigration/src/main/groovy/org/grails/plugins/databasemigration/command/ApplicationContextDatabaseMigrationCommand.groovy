@@ -18,25 +18,28 @@
  */
 package org.grails.plugins.databasemigration.command
 
+import groovy.transform.CompileStatic
+import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.SimpleType
+
+import liquibase.database.Database
+import liquibase.parser.ChangeLogParser
+import liquibase.parser.ChangeLogParserFactory
+import org.hibernate.dialect.Dialect
+import org.hibernate.engine.jdbc.spi.JdbcServices
+import org.hibernate.engine.spi.SessionFactoryImplementor
+
+import org.springframework.context.ConfigurableApplicationContext
+
 import grails.config.ConfigMap
 import grails.core.GrailsApplication
 import grails.dev.commands.ExecutionContext
 import grails.util.Environment
-import groovy.transform.CompileStatic
-import groovy.transform.stc.ClosureParams
-import groovy.transform.stc.SimpleType
-import liquibase.database.Database
-import liquibase.parser.ChangeLogParser
-import liquibase.parser.ChangeLogParserFactory
 import org.grails.config.PropertySourcesConfig
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.plugins.databasemigration.DatabaseMigrationTransactionManager
 import org.grails.plugins.databasemigration.liquibase.GormDatabase
 import org.grails.plugins.databasemigration.liquibase.GroovyChangeLogParser
-import org.hibernate.dialect.Dialect
-import org.hibernate.engine.jdbc.spi.JdbcServices
-import org.hibernate.engine.spi.SessionFactoryImplementor
-import org.springframework.context.ConfigurableApplicationContext
 
 import static org.grails.plugins.databasemigration.DatabaseMigrationGrailsPlugin.isDefaultDataSource
 import static org.grails.plugins.databasemigration.PluginConstants.DEFAULT_DATASOURCE_NAME
@@ -80,16 +83,16 @@ trait ApplicationContextDatabaseMigrationCommand implements DatabaseMigrationCom
     }
 
     private Database createGormDatabase(ConfigurableApplicationContext applicationContext, String dataSource) {
-        String sessionFactoryName = "sessionFactory"
+        String sessionFactoryName = 'sessionFactory'
         if (!isDefaultDataSource(dataSource)) {
             sessionFactoryName = sessionFactoryName + '_' + dataSource
         }
 
         def serviceRegistry = applicationContext.getBean(sessionFactoryName, SessionFactoryImplementor).serviceRegistry.parentServiceRegistry
 
-        Dialect dialect = serviceRegistry.getService(JdbcServices.class).dialect
+        Dialect dialect = serviceRegistry.getService(JdbcServices).dialect
 
-        HibernateDatastore hibernateDatastore = applicationContext.getBean("hibernateDatastore", HibernateDatastore)
+        HibernateDatastore hibernateDatastore = applicationContext.getBean('hibernateDatastore', HibernateDatastore)
         hibernateDatastore = hibernateDatastore.getDatastoreForConnection(dataSource)
 
         Database database = new GormDatabase(dialect, serviceRegistry, hibernateDatastore)

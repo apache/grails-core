@@ -142,7 +142,7 @@ class NamespacedBookSpec extends HttpClientSpec {
         rsp.body().title == 'API - The Shining'
     }
 
-    @Issue('https://github.com/grails/grails-views/issues/186')
+    @Issue('https://github.com/apache/grails-views/issues/186')
     void 'test view rendering with a namespace from a map'() {
         when: 'A request is sent to a controller with a namespace'
         HttpRequest request = HttpRequest.GET('/api/book/message')

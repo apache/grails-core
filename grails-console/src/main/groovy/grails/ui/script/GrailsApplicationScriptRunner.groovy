@@ -18,14 +18,17 @@
  */
 package grails.ui.script
 
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.customizers.ImportCustomizer
+
+import org.springframework.context.ConfigurableApplicationContext
+
 import grails.config.Config
 import grails.core.GrailsApplication
 import grails.persistence.support.PersistenceContextInterceptor
 import grails.ui.support.DevelopmentGrailsApplication
-import groovy.transform.CompileStatic
-import org.codehaus.groovy.control.CompilerConfiguration
-import org.codehaus.groovy.control.customizers.ImportCustomizer
-import org.springframework.context.ConfigurableApplicationContext
+
 /**
  * Used to run Grails scripts within the context of a Grails application
  *
@@ -34,6 +37,7 @@ import org.springframework.context.ConfigurableApplicationContext
  */
 @CompileStatic
 class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
+
     List<File> scripts
 
     private GrailsApplicationScriptRunner(List<File> scripts, Class<?>... sources) {
@@ -52,7 +56,7 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
         }
 
         def binding = new Binding()
-        binding.setVariable("ctx", ctx)
+        binding.setVariable('ctx', ctx)
 
         Config config = ctx.getBean('grailsApplication', GrailsApplication).config
         String defaultPackageKey = 'grails.codegen.defaultPackage'
@@ -60,7 +64,7 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
         CompilerConfiguration configuration = CompilerConfiguration.DEFAULT
         if (config.containsProperty(defaultPackageKey)) {
             ImportCustomizer importCustomizer = new ImportCustomizer()
-            importCustomizer.addStarImports config.getProperty(defaultPackageKey, String)
+            importCustomizer.addStarImports(config.getProperty(defaultPackageKey, String))
             configuration.addCompilationCustomizers(importCustomizer)
         }
         sh = new GroovyShell(binding, configuration)
@@ -70,11 +74,11 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
         try {
             scripts.each {
                 try {
-                    for(i in interceptors) {
+                    for (i in interceptors) {
                         i.init()
                     }
                     sh.evaluate(it)
-                    for(i in interceptors) {
+                    for (i in interceptors) {
                         i.destroy()
                     }
                 } catch (Throwable e) {
@@ -84,7 +88,7 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
             }
         } finally {
             try {
-                for(i in interceptors) {
+                for (i in interceptors) {
                     i.destroy()
                 }
                 ctx?.close()
@@ -93,7 +97,6 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
             }
         }
 
-
         return ctx
     }
     /**
@@ -101,8 +104,8 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
      *
      * @param args The last argument is the Application class name. All other args are script names
      */
-    public static void main(String[] args) {
-        if(args.size() > 1) {
+    static void main(String[] args) {
+        if (args.size() > 1) {
             Class applicationClass = null
             String className = args.last()
             try {
@@ -125,7 +128,7 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
 
             new GrailsApplicationScriptRunner(scripts, applicationClass).run(args)
         } else {
-            System.err.println("Missing application class name and script name arguments")
+            System.err.println('Missing application class name and script name arguments')
             System.exit(1)
         }
     }

@@ -22,6 +22,7 @@ import groovy.transform.AutoClone
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
 import org.grails.datastore.mapping.config.Property
 
 /**
@@ -34,6 +35,7 @@ import org.grails.datastore.mapping.config.Property
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 @CompileStatic
 class CompositeIdentity extends Property {
+
     /**
      * The property names that make up the custom identity
      */

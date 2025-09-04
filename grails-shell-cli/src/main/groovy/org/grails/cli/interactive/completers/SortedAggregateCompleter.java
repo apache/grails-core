@@ -18,9 +18,15 @@
  */
 package org.grails.cli.interactive.completers;
 
-import jline.console.completer.Completer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
-import java.util.*;
+import jline.console.completer.Completer;
 
 import static jline.internal.Preconditions.checkNotNull;
 
@@ -33,7 +39,7 @@ import static jline.internal.Preconditions.checkNotNull;
 public class SortedAggregateCompleter
     implements Completer
 {
-    private final List<Completer> completers = new ArrayList<Completer>();
+    private final List<Completer> completers = new ArrayList<>();
 
     public SortedAggregateCompleter() {
         // empty
@@ -79,7 +85,7 @@ public class SortedAggregateCompleter
         // buffer could be null
         checkNotNull(candidates);
 
-        List<Completion> completions = new ArrayList<Completion>(completers.size());
+        List<Completion> completions = new ArrayList<>(completers.size());
 
         // Run each completer, saving its completion results
         int max = -1;
@@ -125,7 +131,7 @@ public class SortedAggregateCompleter
 
         public Completion(final List<CharSequence> candidates) {
             checkNotNull(candidates);
-            this.candidates = new LinkedList<CharSequence>(candidates);
+            this.candidates = new LinkedList<>(candidates);
         }
 
         public void complete(final Completer completer, final String buffer, final int cursor) {

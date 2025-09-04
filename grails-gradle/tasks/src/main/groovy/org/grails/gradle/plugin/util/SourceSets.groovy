@@ -19,6 +19,7 @@
 package org.grails.gradle.plugin.util
 
 import groovy.transform.CompileStatic
+
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.SourceSet
@@ -37,7 +38,7 @@ class SourceSets {
      * @return The main source set or null if it can't be found
      */
     static SourceSet findMainSourceSet(Project project) {
-       return findSourceSet(project, SourceSet.MAIN_SOURCE_SET_NAME)
+        return findSourceSet(project, SourceSet.MAIN_SOURCE_SET_NAME)
     }
 
     /**

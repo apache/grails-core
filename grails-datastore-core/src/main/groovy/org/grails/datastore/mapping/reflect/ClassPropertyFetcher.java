@@ -18,23 +18,33 @@
  */
 package org.grails.datastore.mapping.reflect;
 
-import groovy.lang.*;
-import org.codehaus.groovy.reflection.CachedClass;
-import org.codehaus.groovy.reflection.CachedField;
-import org.codehaus.groovy.reflection.CachedMethod;
-import org.codehaus.groovy.reflection.ClassInfo;
-import org.codehaus.groovy.runtime.MetaClassHelper;
-import org.codehaus.groovy.runtime.metaclass.MultipleSetterProperty;
-import org.springframework.beans.BeanUtils;
-
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaBeanProperty;
+import groovy.lang.MetaClass;
+import groovy.lang.MetaMethod;
+import groovy.lang.MetaProperty;
+import org.codehaus.groovy.reflection.CachedClass;
+import org.codehaus.groovy.reflection.CachedField;
+import org.codehaus.groovy.reflection.CachedMethod;
+import org.codehaus.groovy.reflection.ClassInfo;
+import org.codehaus.groovy.runtime.MetaClassHelper;
+import org.codehaus.groovy.runtime.metaclass.MultipleSetterProperty;
+
+import org.springframework.beans.BeanUtils;
 
 /**
  * Reads the properties of a class in an optimized manner avoiding exceptions.
@@ -59,7 +69,7 @@ public class ClassPropertyFetcher {
      * @deprecated Does nothing, no longer needed
      */
     @Deprecated
-    public static void clearCache()  {
+    public static void clearCache() {
         // no-op
     }
 
@@ -72,29 +82,29 @@ public class ClassPropertyFetcher {
         for (MetaProperty property : properties) {
             int modifiers = property.getModifiers();
             String propertyName = property.getName();
-            if(!Modifier.isPublic(modifiers) || Modifier.isStatic(modifiers) || EXCLUDED_PROPERTIES.contains(propertyName)) {
+            if (!Modifier.isPublic(modifiers) || Modifier.isStatic(modifiers) || EXCLUDED_PROPERTIES.contains(propertyName)) {
                 continue;
             }
 
-            if(property instanceof MetaBeanProperty) {
+            if (property instanceof MetaBeanProperty) {
                 MetaBeanProperty beanProperty = (MetaBeanProperty) property;
                 MetaMethod getter = beanProperty.getGetter();
-                if(getter instanceof CachedMethod) {
+                if (getter instanceof CachedMethod) {
                     this.metaProperties.add(property);
                 }
             }
-            else if(property instanceof MultipleSetterProperty) {
+            else if (property instanceof MultipleSetterProperty) {
                 MultipleSetterProperty msp = (MultipleSetterProperty) property;
                 MetaMethod getter = msp.getGetter();
-                if(getter instanceof CachedMethod) {
+                if (getter instanceof CachedMethod) {
                     try {
                         CachedClass cachedClass = classInfo.getCachedClass();
                         Method foundGetter = clazz.getDeclaredMethod(NameUtils.getGetterName(propertyName));
-                        if(foundGetter != null) {
+                        if (foundGetter != null) {
 
                             getter = new CachedMethod(cachedClass, foundGetter);
                             Method foundSetter = clazz.getDeclaredMethod(NameUtils.getSetterName(propertyName), getter.getReturnType());
-                            if(foundSetter != null) {
+                            if (foundSetter != null) {
                                 MetaMethod setter = new CachedMethod(cachedClass, foundSetter);
                                 this.metaProperties.add(new MetaBeanProperty(msp.getName(), getter.getReturnType(), getter, setter));
                             }
@@ -143,7 +153,7 @@ public class ClassPropertyFetcher {
 
     public boolean isReadableProperty(String name) {
         MetaProperty metaProperty = theMetaClass.getMetaProperty(name);
-        if(metaProperty instanceof MetaBeanProperty) {
+        if (metaProperty instanceof MetaBeanProperty) {
             MetaBeanProperty metaBeanProperty = (MetaBeanProperty) metaProperty;
             return metaBeanProperty.getField() != null || metaBeanProperty.getGetter() != null;
         }
@@ -157,7 +167,7 @@ public class ClassPropertyFetcher {
 
     private static Object getStaticPropertyValue(MetaClass theMetaClass, String name) {
         MetaProperty metaProperty = theMetaClass.getMetaProperty(name);
-        if(metaProperty != null && Modifier.isStatic(metaProperty.getModifiers())) {
+        if (metaProperty != null && Modifier.isStatic(metaProperty.getModifiers())) {
             return metaProperty.getProperty(theMetaClass.getTheClass());
         }
         return null;
@@ -215,31 +225,31 @@ public class ClassPropertyFetcher {
         Class javaClass = cachedClass.getTheClass();
         List<T> values = new ArrayList<>(hierarchy.size());
         for (ClassInfo current : hierarchy) {
-            if(cachedClass.isInterface()) continue;
+            if (cachedClass.isInterface()) continue;
             MetaProperty metaProperty = current.getMetaClass().getMetaProperty(name);
-            if(metaProperty != null && Modifier.isStatic(metaProperty.getModifiers())) {
+            if (metaProperty != null && Modifier.isStatic(metaProperty.getModifiers())) {
                 Class type = metaProperty.getType();
-                if(type == Object.class || c.isAssignableFrom(type)) {
-                    if(metaProperty instanceof MetaBeanProperty) {
+                if (type == Object.class || c.isAssignableFrom(type)) {
+                    if (metaProperty instanceof MetaBeanProperty) {
                         MetaBeanProperty beanProperty = (MetaBeanProperty) metaProperty;
                         CachedField field = beanProperty.getField();
                         // try the field
-                        if(field != null) {
+                        if (field != null) {
                             Object val = field.getProperty(javaClass);
-                            if(c.isInstance(val)) {
+                            if (c.isInstance(val)) {
                                 values.add((T) val);
                             }
                         }
                         else {
                             Object val = metaProperty.getProperty(javaClass);
-                            if(c.isInstance(val)) {
+                            if (c.isInstance(val)) {
                                 values.add((T) val);
                             }
                         }
                     }
                     else {
                         Object val = metaProperty.getProperty(javaClass);
-                        if(c.isInstance(val)) {
+                        if (c.isInstance(val)) {
                             values.add((T) val);
                         }
                     }
@@ -271,9 +281,9 @@ public class ClassPropertyFetcher {
 
     public Class getPropertyType(String name, boolean onlyInstanceProperties) {
         MetaProperty metaProperty = theMetaClass.getMetaProperty(name);
-        if(metaProperty != null) {
+        if (metaProperty != null) {
             boolean isStatic = Modifier.isStatic(metaProperty.getModifiers());
-            if(onlyInstanceProperties && isStatic) {
+            if (onlyInstanceProperties && isStatic) {
                 return null;
             }
             else {
@@ -287,7 +297,7 @@ public class ClassPropertyFetcher {
 
     public PropertyDescriptor getPropertyDescriptor(String name) {
         MetaProperty property = theMetaClass.getMetaProperty(name);
-        if(property  != null) {
+        if (property != null) {
             return createPropertyDescriptor(clazz, property);
         }
         return null;
@@ -301,17 +311,17 @@ public class ClassPropertyFetcher {
      */
     public static PropertyDescriptor createPropertyDescriptor(Class declaringClass, MetaProperty property) {
         int modifiers = property.getModifiers();
-        if(!Modifier.isStatic(modifiers)) {
+        if (!Modifier.isStatic(modifiers)) {
             String propertyName = property.getName();
-            if(property instanceof MetaBeanProperty) {
+            if (property instanceof MetaBeanProperty) {
                 MetaBeanProperty beanProperty = (MetaBeanProperty) property;
                 MetaMethod getter = beanProperty.getGetter();
                 MetaMethod setter = beanProperty.getSetter();
-                if(getter instanceof CachedMethod && setter instanceof CachedMethod) {
+                if (getter instanceof CachedMethod && setter instanceof CachedMethod) {
                     try {
                         Method getterMethod = ((CachedMethod) getter).getCachedMethod();
                         Method setterMethod = ((CachedMethod) setter).getCachedMethod();
-                        if(getterMethod.getReturnType().equals(setterMethod.getParameterTypes()[0])) {
+                        if (getterMethod.getReturnType().equals(setterMethod.getParameterTypes()[0])) {
                             return new PropertyDescriptor(propertyName, getterMethod, setterMethod);
                         }
                         else {
@@ -327,7 +337,7 @@ public class ClassPropertyFetcher {
                         return null;
                     }
                 }
-                else if(getter instanceof CachedMethod) {
+                else if (getter instanceof CachedMethod) {
                     try {
                         return new PropertyDescriptor(propertyName, ((CachedMethod) getter).getCachedMethod(), null);
                     } catch (IntrospectionException e) {
@@ -335,17 +345,17 @@ public class ClassPropertyFetcher {
                     }
                 }
             }
-            else if(property instanceof MultipleSetterProperty) {
+            else if (property instanceof MultipleSetterProperty) {
                 MultipleSetterProperty msp = (MultipleSetterProperty) property;
 
                 MetaMethod getter = msp.getGetter();
-                if(getter instanceof CachedMethod) {
+                if (getter instanceof CachedMethod) {
                     try {
                         Method foundGetter = declaringClass.getDeclaredMethod(NameUtils.getGetterName(propertyName));
-                        if(foundGetter != null) {
+                        if (foundGetter != null) {
 
                             Method foundSetter = declaringClass.getDeclaredMethod(NameUtils.getSetterName(propertyName), foundGetter.getReturnType());
-                            if(foundSetter != null) {
+                            if (foundSetter != null) {
                                 try {
                                     return new PropertyDescriptor(propertyName, foundGetter, foundSetter);
                                 } catch (IntrospectionException e) {
@@ -375,7 +385,7 @@ public class ClassPropertyFetcher {
 
         for (MetaProperty property : properties) {
             int modifiers = property.getModifiers();
-            if(Modifier.isStatic(modifiers) || property.getName().contains("$") || !property.getType().equals(javaClass)) continue;
+            if (Modifier.isStatic(modifiers) || property.getName().contains("$") || !property.getType().equals(javaClass)) continue;
 
             addBeanProperty(propertyDescriptors, property);
         }
@@ -388,7 +398,7 @@ public class ClassPropertyFetcher {
         List<PropertyDescriptor> propertyDescriptors = new ArrayList<>(2);
         for (MetaProperty property : properties) {
             int modifiers = property.getModifiers();
-            if(Modifier.isStatic(modifiers) || property.getName().contains("$") || !assignableType.isAssignableFrom(property.getType())) {
+            if (Modifier.isStatic(modifiers) || property.getName().contains("$") || !assignableType.isAssignableFrom(property.getType())) {
                 continue;
             }
 
@@ -403,7 +413,7 @@ public class ClassPropertyFetcher {
         List<PropertyDescriptor> propertyDescriptors = new ArrayList<>(2);
         for (MetaProperty property : properties) {
             int modifiers = property.getModifiers();
-            if(Modifier.isStatic(modifiers) || property.getName().contains("$") || !property.getType().isAssignableFrom( assignableType )) continue;
+            if (Modifier.isStatic(modifiers) || property.getName().contains("$") || !property.getType().isAssignableFrom(assignableType)) continue;
             addBeanProperty(propertyDescriptors, property);
         }
         return propertyDescriptors;
@@ -411,7 +421,7 @@ public class ClassPropertyFetcher {
 
     public static Class<?> getPropertyType(Class<?> cls, String propertyName) {
         MetaProperty metaProperty = GroovySystem.getMetaClassRegistry().getMetaClass(cls).getMetaProperty(propertyName);
-        if(metaProperty != null) {
+        if (metaProperty != null) {
             return metaProperty.getType();
         }
         return null;
@@ -419,16 +429,16 @@ public class ClassPropertyFetcher {
 
     public Field getDeclaredField(String name) {
         MetaProperty metaProperty = theMetaClass.getMetaProperty(name);
-        if(metaProperty instanceof MetaBeanProperty) {
+        if (metaProperty instanceof MetaBeanProperty) {
             CachedField field = ((MetaBeanProperty) metaProperty).getField();
-            if(field != null) {
+            if (field != null) {
                 return field.getCachedField();
             }
         }
-        else if(metaProperty instanceof MultipleSetterProperty) {
+        else if (metaProperty instanceof MultipleSetterProperty) {
             MultipleSetterProperty msp = (MultipleSetterProperty) metaProperty;
             CachedField field = msp.getField();
-            if(field != null) {
+            if (field != null) {
                 return field.getCachedField();
             }
         }
@@ -436,12 +446,12 @@ public class ClassPropertyFetcher {
     }
 
     protected void addBeanProperty(List<PropertyDescriptor> propertyDescriptors, MetaProperty property) {
-        if(property instanceof MetaBeanProperty) {
+        if (property instanceof MetaBeanProperty) {
             MetaBeanProperty beanProperty = (MetaBeanProperty) property;
             MetaMethod getter = beanProperty.getGetter();
             MetaMethod setter = beanProperty.getSetter();
             boolean isGetterCachedMethod = getter instanceof CachedMethod;
-            if(isGetterCachedMethod && setter instanceof CachedMethod) {
+            if (isGetterCachedMethod && setter instanceof CachedMethod) {
                 CachedMethod cachedGetter = (CachedMethod) getter;
                 CachedMethod cachedSetter = (CachedMethod) setter;
                 try {
@@ -450,7 +460,7 @@ public class ClassPropertyFetcher {
                     // ignore
                 }
             }
-            else if(isGetterCachedMethod) {
+            else if (isGetterCachedMethod) {
                 CachedMethod cachedGetter = (CachedMethod) getter;
                 try {
                     propertyDescriptors.add(new PropertyDescriptor(beanProperty.getName(), cachedGetter.getCachedMethod(), null));
@@ -465,22 +475,22 @@ public class ClassPropertyFetcher {
     @SuppressWarnings("unchecked")
     private static <T> T returnOnlyIfInstanceOf(Object value, Class<T> type) {
         if (value != null && (type == Object.class || ReflectionUtils.isAssignableFrom(type, value.getClass()))) {
-            return (T)value;
+            return (T) value;
         }
         return null;
     }
 
     private static Object getInstancePropertyValue(Object instance, String name, MetaClass metaClass) {
         MetaProperty metaProperty = metaClass.getMetaProperty(name);
-        if(metaProperty != null && !Modifier.isStatic(metaProperty.getModifiers())) {
-            if(metaProperty instanceof MetaBeanProperty) {
+        if (metaProperty != null && !Modifier.isStatic(metaProperty.getModifiers())) {
+            if (metaProperty instanceof MetaBeanProperty) {
                 MetaBeanProperty beanProperty = (MetaBeanProperty) metaProperty;
                 CachedField field = beanProperty.getField();
                 MetaMethod getter = beanProperty.getGetter();
                 Object result = getPropertyWithFieldOrGetter(instance, name, field, getter);
                 if (result != null) return result;
             }
-            else if(metaProperty instanceof MultipleSetterProperty) {
+            else if (metaProperty instanceof MultipleSetterProperty) {
                 MultipleSetterProperty msp = (MultipleSetterProperty) metaProperty;
                 CachedField field = msp.getField();
                 MetaMethod getter = msp.getGetter();
@@ -495,17 +505,17 @@ public class ClassPropertyFetcher {
     }
 
     private static Object getPropertyWithFieldOrGetter(Object instance, String name, CachedField field, MetaMethod getter) {
-        if(field != null) {
+        if (field != null) {
             return field.getProperty(instance);
         }
         else {
-            if(getter instanceof CachedMethod) {
+            if (getter instanceof CachedMethod) {
                 return getter.invoke(instance, MetaClassHelper.EMPTY_ARRAY);
             }
             else {
                 // take the slow path and reflect
                 Method method = org.springframework.util.ReflectionUtils.findMethod(instance.getClass(), NameUtils.getGetterName(name));
-                if(method != null) {
+                if (method != null) {
                     org.springframework.util.ReflectionUtils.makeAccessible(method);
                     return org.springframework.util.ReflectionUtils.invokeMethod(method, instance);
                 }

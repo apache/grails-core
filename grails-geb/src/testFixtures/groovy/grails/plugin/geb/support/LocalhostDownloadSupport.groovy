@@ -18,11 +18,12 @@
  */
 package grails.plugin.geb.support
 
-import geb.Browser
-import geb.download.DefaultDownloadSupport
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 
-import java.util.regex.Pattern
+import geb.Browser
+import geb.download.DefaultDownloadSupport
 
 /**
  * @author Mattias Reichel

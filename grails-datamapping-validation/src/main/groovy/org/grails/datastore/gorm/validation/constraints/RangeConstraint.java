@@ -19,18 +19,20 @@
 
 package org.grails.datastore.gorm.validation.constraints;
 
-import grails.gorm.validation.ConstrainedProperty;
 import groovy.lang.Range;
-import org.grails.datastore.mapping.reflect.ClassUtils;
+
 import org.springframework.context.MessageSource;
 import org.springframework.validation.Errors;
+
+import grails.gorm.validation.ConstrainedProperty;
+import org.grails.datastore.mapping.reflect.ClassUtils;
 
 /**
  * Validates a range.
  *
  * @author Graeme Rocher
  */
-@SuppressWarnings({"unchecked","rawtypes"})
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class RangeConstraint extends AbstractConstraint {
 
     private final Range range;
@@ -76,8 +78,13 @@ public class RangeConstraint extends AbstractConstraint {
             return;
         }
 
-        Object[] args = new Object[] { constraintPropertyName, constraintOwningClass,
-                propertyValue, range.getFrom(), range.getTo()};
+        Object[] args = new Object[] {
+            constraintPropertyName,
+            constraintOwningClass,
+            propertyValue,
+            range.getFrom(),
+            range.getTo()
+        };
 
         Comparable from = range.getFrom();
         Comparable to = range.getTo();
@@ -87,10 +94,10 @@ public class RangeConstraint extends AbstractConstraint {
             // Upgrade the numbers to Long, so all integer types can be compared.
             from = ((Number) from).longValue();
             to = ((Number) to).longValue();
-            if(propertyValue instanceof Number) {
+            if (propertyValue instanceof Number) {
                 propertyValue = ((Number) propertyValue).longValue();
             }
-            else if(propertyValue instanceof CharSequence) {
+            else if (propertyValue instanceof CharSequence) {
                 try {
                     propertyValue = Long.valueOf(propertyValue.toString());
                 } catch (NumberFormatException e) {

@@ -55,7 +55,7 @@ public class GrailsDefaultPlugins implements DefaultFeature {
 
     @Override
     public void apply(GeneratorContext generatorContext) {
-        Arrays.asList("rest-transforms", "databinding", "i18n", "services", "url-mappings", "interceptors")
+        Arrays.asList("rest-transforms", "databinding", "services", "url-mappings", "interceptors")
                 .forEach((artifact) -> {
                     generatorContext.addDependency(Dependency.builder()
                             .groupId("org.apache.grails")

@@ -18,13 +18,14 @@
  */
 package org.grails.databinding.converters
 
-import grails.databinding.converters.ValueConverter
 import groovy.transform.CompileStatic
 
+import grails.databinding.converters.ValueConverter
+
 /**
- * 
+ *
  * A ValueConverter for converting String to Currency.
- * 
+ *
  * @see ValueConverter
  * @since 2.3.10
  *
@@ -33,17 +34,17 @@ import groovy.transform.CompileStatic
 class CurrencyValueConverter implements ValueConverter {
 
     @Override
-    public boolean canConvert(Object value) {
+    boolean canConvert(Object value) {
         value instanceof String
     }
 
     @Override
-    public Object convert(Object value) {
+    Object convert(Object value) {
         Currency.getInstance(value as String)
     }
 
     @Override
-    public Class<?> getTargetType() {
+    Class<?> getTargetType() {
         Currency
     }
 

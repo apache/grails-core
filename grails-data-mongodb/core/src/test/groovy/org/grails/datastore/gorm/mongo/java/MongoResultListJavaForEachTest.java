@@ -58,7 +58,7 @@ public class MongoResultListJavaForEachTest {
         }
     }
 
-    // Test for issue https://github.com/grails/gorm-mongodb/issues/45
+    // Test for issue https://github.com/grails/grails-data-mongodb/issues/45
     @Test
     public void testForEachWithMongoResultList() {
         PersistentEntity entity = datastore.getMappingContext().getPersistentEntity(Book.class.getName());

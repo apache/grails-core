@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 interface GroovyTransformOrder {
+
     static final int HIGHEST_PRIORITY = Integer.MAX_VALUE
     static final int HIGHEST_STARTING_PRIORITY = HIGHEST_PRIORITY - 1000000
     static final int DECREMENT_PRIORITY = -5

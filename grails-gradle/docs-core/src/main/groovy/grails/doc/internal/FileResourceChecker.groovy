@@ -24,6 +24,7 @@ package grails.doc.internal
  * or not. Each instance of the class can have its own base directory.
  */
 class FileResourceChecker {
+
     private final File baseDir
 
     FileResourceChecker(File baseDir) {

@@ -19,10 +19,10 @@
 package org.grails.cli.profile.commands.factory
 
 import groovy.transform.CompileStatic
+
 import org.grails.cli.profile.Profile
 import org.grails.io.support.PathMatchingResourcePatternResolver
 import org.grails.io.support.Resource
-
 
 /**
  * A {@link CommandResourceResolver} that resolves commands from the classpath under the directory META-INF/commands
@@ -32,6 +32,7 @@ import org.grails.io.support.Resource
  */
 @CompileStatic
 class ClasspathCommandResourceResolver implements CommandResourceResolver {
+
     final Collection<String> matchingFileExtensions
     ClassLoader classLoader
 
@@ -43,14 +44,14 @@ class ClasspathCommandResourceResolver implements CommandResourceResolver {
 
     @Override
     Collection<Resource> findCommandResources(Profile profile) {
-        if(resources != null) return resources
+        if (resources != null) return resources
         def classLoader = classLoader ?: Thread.currentThread().contextClassLoader
         PathMatchingResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver(classLoader)
 
         try {
-           resources = []
-            for(String ext in matchingFileExtensions) {
-                resources.addAll resourcePatternResolver.getResources("classpath*:META-INF/commands/*.$ext").toList()
+            resources = []
+            for (String ext in matchingFileExtensions) {
+                resources.addAll(resourcePatternResolver.getResources("classpath*:META-INF/commands/*.$ext").toList())
             }
             return resources
         } catch (Throwable e) {

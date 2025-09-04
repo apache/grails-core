@@ -81,6 +81,20 @@ class CreateAppSpec extends CommandSpec {
         '''.stripIndent(8)
     }
 
+    void "test create-app with micronaut feature"() {
+        given:
+        generateProject(OperatingSystem.MACOS_ARCH64, ['grails-micronaut'], ApplicationType.WEB)
+
+        def gradleProperties = new File(dir, 'gradle.properties')
+        def gradleBuildFile = new File(dir, 'build.gradle')
+
+        expect:
+        gradleProperties.exists()
+        gradleProperties.text.contains('micronautPlatformVersion=4.9.2')
+        gradleBuildFile.exists()
+        gradleBuildFile.text.contains('implementation "org.apache.grails:grails-micronaut"')
+    }
+
     void "test create-app web-plugin creates a correct Application.groovy"() {
         given:
         generateProject(OperatingSystem.MACOS_ARCH64, [], ApplicationType.WEB_PLUGIN)

@@ -28,7 +28,7 @@ class ServiceInjectionSpec extends Specification {
 
     ClassUsingAService classUsingAService
 
-    @Issue('https://github.com/grails/gorm-hibernate5/issues/202')
+    @Issue('https://github.com/grails/grails-data-hibernate5/issues/202')
     void 'data-service is injected correctly'() {
         when:
         classUsingAService.doSomethingWithTheService()

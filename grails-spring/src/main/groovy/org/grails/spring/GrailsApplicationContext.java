@@ -114,7 +114,7 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
                 removeBeanDefinition(property);
             }
 
-            registerBeanDefinition(property, (BeanDefinition)newValue);
+            registerBeanDefinition(property, (BeanDefinition) newValue);
         }
         else {
             metaClass.setProperty(this, property, newValue);
@@ -174,8 +174,8 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
         super.prepareBeanFactory(beanFactory);
 
         // workaround for GRAILS-7851, until Spring allows the environment bean name to be configurable
-        ((DefaultListableBeanFactory)beanFactory).destroySingleton(ENVIRONMENT_BEAN_NAME);
-        beanFactory.registerSingleton(GRAILS_ENVIRONMENT_BEAN_NAME,getEnvironment());
+        ((DefaultListableBeanFactory) beanFactory).destroySingleton(ENVIRONMENT_BEAN_NAME);
+        beanFactory.registerSingleton(GRAILS_ENVIRONMENT_BEAN_NAME, getEnvironment());
     }
 
     @Override

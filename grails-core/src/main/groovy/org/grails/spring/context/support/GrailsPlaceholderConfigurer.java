@@ -18,8 +18,10 @@
  */
 package org.grails.spring.context.support;
 
-import grails.config.Config;
-import grails.core.support.GrailsConfigurationAware;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Properties;
+
 import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -28,9 +30,8 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.util.StringValueResolver;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.Properties;
+import grails.config.Config;
+import grails.core.support.GrailsConfigurationAware;
 
 /**
  * Uses Grails' ConfigObject for place holder values.
@@ -39,7 +40,6 @@ import java.util.Properties;
  * @since 1.0
  */
 public class GrailsPlaceholderConfigurer extends PropertySourcesPlaceholderConfigurer implements GrailsConfigurationAware {
-
 
     private Properties properties;
     private String beanName;
@@ -61,7 +61,7 @@ public class GrailsPlaceholderConfigurer extends PropertySourcesPlaceholderConfi
         if (config != null) {
             props.putAll(config.toProperties());
         }
-        else if(this.properties != null) {
+        else if (this.properties != null) {
             props.putAll(properties);
         }
         this.properties = props;
@@ -88,7 +88,7 @@ public class GrailsPlaceholderConfigurer extends PropertySourcesPlaceholderConfi
         BeanDefinitionVisitor visitor = new BeanDefinitionVisitor(valueResolver) {
             @Override
             protected void visitMap(Map<?, ?> mapVal) {
-                if(mapVal instanceof Config) return;
+                if (mapVal instanceof Config) return;
                 super.visitMap(mapVal);
             }
         };

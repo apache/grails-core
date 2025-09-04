@@ -18,16 +18,18 @@
  */
 package grails.artefact.gsp
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.annotation.Autowired
+
 import grails.util.Environment
 import grails.util.GrailsMetaClassUtils
 import grails.web.api.WebAttributes
-import groovy.transform.CompileStatic
 import org.grails.taglib.NamespacedTagDispatcher
 import org.grails.taglib.TagLibraryLookup
 import org.grails.taglib.TagLibraryMetaUtils
 import org.grails.taglib.TagOutput
 import org.grails.taglib.encoder.WithCodecHelper
-import org.springframework.beans.factory.annotation.Autowired
 
 /**
  * A trait that adds the ability invoke tags to any class
@@ -36,8 +38,7 @@ import org.springframework.beans.factory.annotation.Autowired
  * @since 3.0
  */
 @CompileStatic
-trait TagLibraryInvoker extends WebAttributes{
-
+trait TagLibraryInvoker extends WebAttributes {
 
     private TagLibraryLookup tagLibraryLookup
     private boolean developmentMode = Environment.isDevelopmentMode()
@@ -49,10 +50,10 @@ trait TagLibraryInvoker extends WebAttributes{
 
     TagLibraryLookup getTagLibraryLookup() {
         def lookup = this.tagLibraryLookup
-        if(lookup == null) {
+        if (lookup == null) {
             def applicationContext = getGrailsApplication()?.mainContext
-            if(applicationContext?.containsBean("gspTagLibraryLookup")) {
-                lookup = applicationContext?.getBean("gspTagLibraryLookup", TagLibraryLookup)
+            if (applicationContext?.containsBean('gspTagLibraryLookup')) {
+                lookup = applicationContext?.getBean('gspTagLibraryLookup', TagLibraryLookup)
                 setTagLibraryLookup(lookup)
             }
         }
@@ -63,7 +64,6 @@ trait TagLibraryInvoker extends WebAttributes{
         TagOutput.DEFAULT_NAMESPACE
     }
 
-
     /**
      * Method missing implementation that handles tag invocation by method name
      *
@@ -73,15 +73,15 @@ trait TagLibraryInvoker extends WebAttributes{
      * @return The result
      */
     Object methodMissing(String methodName, Object argsObject) {
-        Object[] args = argsObject instanceof Object[] ? (Object[])argsObject : [argsObject] as Object[]
+        Object[] args = argsObject instanceof Object[] ? (Object[]) argsObject : [argsObject] as Object[]
         if (shouldHandleMethodMissing(methodName, args)) {
             TagLibraryLookup lookup = getTagLibraryLookup()
             if (lookup) {
                 def usedNamespace = getTaglibNamespace()
                 GroovyObject tagLibrary = lookup.lookupTagLibrary(usedNamespace, methodName)
                 if (tagLibrary == null) {
-                    tagLibrary = lookup.lookupTagLibrary(TagOutput.DEFAULT_NAMESPACE, methodName);
-                    usedNamespace = TagOutput.DEFAULT_NAMESPACE;
+                    tagLibrary = lookup.lookupTagLibrary(TagOutput.DEFAULT_NAMESPACE, methodName)
+                    usedNamespace = TagOutput.DEFAULT_NAMESPACE
                 }
 
                 if (tagLibrary) {
@@ -97,9 +97,9 @@ trait TagLibraryInvoker extends WebAttributes{
     }
 
     private boolean shouldHandleMethodMissing(String methodName, Object[] args) {
-        if("render".equals(methodName)) {
+        if ('render'.equals(methodName)) {
             // don't add any new metamethod if an existing render method exists, see GRAILS-11581
-            return !this.respondsTo("render")
+            return !this.respondsTo('render')
         } else {
             return true
         }
@@ -112,12 +112,12 @@ trait TagLibraryInvoker extends WebAttributes{
      * @param propertyName The property name
      * @return The namespace or a MissingPropertyException
      */
-     Object propertyMissing(String propertyName) {
+    Object propertyMissing(String propertyName) {
         TagLibraryLookup lookup = getTagLibraryLookup()
         NamespacedTagDispatcher namespacedTagDispatcher = lookup?.lookupNamespaceDispatcher(propertyName)
         if (namespacedTagDispatcher) {
             if (!developmentMode) {
-                TagLibraryMetaUtils.registerPropertyMissingForTag(GrailsMetaClassUtils.getMetaClass(this),propertyName, namespacedTagDispatcher)
+                TagLibraryMetaUtils.registerPropertyMissingForTag(GrailsMetaClassUtils.getMetaClass(this), propertyName, namespacedTagDispatcher)
             }
             return namespacedTagDispatcher
         }
@@ -131,6 +131,5 @@ trait TagLibraryInvoker extends WebAttributes{
     def <T> T withCodec(Object codecInfo, Closure<T> body) {
         return WithCodecHelper.withCodec(getGrailsApplication(), codecInfo, body)
     }
-
 
 }

@@ -36,7 +36,7 @@ class BulletinSpec extends HttpClientSpec {
         super.init()
     }
 
-    @Issue('https://github.com/grails/grails-views/issues/175')
+    @Issue('https://github.com/apache/grails-views/issues/175')
     void 'test render collections with same objects'() {
         when: 'a GET is issued'
         HttpRequest request = HttpRequest.GET("/bulletin")

@@ -28,7 +28,7 @@ import spock.lang.Specification
  */
 class PogoDeepRenderingSpec  extends Specification implements JsonViewTest {
 
-    @Issue('https://github.com/grails/grails-views/issues/18')
+    @Issue('https://github.com/apache/grails-views/issues/18')
     void "Test deep rendering a POGO produces the correct json"() {
         given:"A deep graph of POGOs"
         def child = new Child2(name: "child")

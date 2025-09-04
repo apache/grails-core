@@ -18,20 +18,23 @@
  */
 package grails.util
 
-import grails.io.IOUtils
+import java.lang.ref.Reference
+import java.lang.ref.SoftReference
+
 import groovy.transform.CompileStatic
+
+import org.springframework.boot.env.YamlPropertySourceLoader
+import org.springframework.core.env.ConfigurablePropertyResolver
+import org.springframework.core.env.MapPropertySource
+import org.springframework.core.env.MutablePropertySources
+import org.springframework.core.env.PropertySource
+import org.springframework.core.env.PropertySourcesPropertyResolver
+import org.springframework.core.io.InputStreamResource
+
+import grails.io.IOUtils
 import org.grails.io.support.FileSystemResource
 import org.grails.io.support.Resource
 import org.grails.io.support.UrlResource
-import org.springframework.core.env.ConfigurablePropertyResolver
-import org.springframework.core.env.MutablePropertySources
-import org.springframework.core.env.PropertySource
-import org.springframework.core.env.MapPropertySource
-import org.springframework.core.env.PropertySourcesPropertyResolver
-import org.springframework.core.io.InputStreamResource
-import org.springframework.boot.env.YamlPropertySourceLoader
-import java.lang.ref.Reference
-import java.lang.ref.SoftReference
 
 /**
  * Represents the application Metadata and loading mechanics.
@@ -43,16 +46,16 @@ import java.lang.ref.SoftReference
 // #12012 - Slf4j cannot be used on this class because this is used prior to the context being initialized
 class Metadata {
     private static final long serialVersionUID = -582452926111226898L
-    public static final String FILE = "application.yml"
-    public static final String APPLICATION_VERSION = "info.app.version"
-    public static final String APPLICATION_NAME = "info.app.name"
-    public static final String DEFAULT_APPLICATION_NAME = "grailsApplication"
-    public static final String APPLICATION_GRAILS_VERSION = "info.app.grailsVersion"
-    public static final String SERVLET_VERSION = "info.app.servletVersion"
-    public static final String DEFAULT_SERVLET_VERSION = "6.0"
-    public static final String BUILD_INFO_FILE = "META-INF/grails.build.info"
+    public static final String FILE = 'application.yml'
+    public static final String APPLICATION_VERSION = 'info.app.version'
+    public static final String APPLICATION_NAME = 'info.app.name'
+    public static final String DEFAULT_APPLICATION_NAME = 'grailsApplication'
+    public static final String APPLICATION_GRAILS_VERSION = 'info.app.grailsVersion'
+    public static final String SERVLET_VERSION = 'info.app.servletVersion'
+    public static final String DEFAULT_SERVLET_VERSION = '6.0'
+    public static final String BUILD_INFO_FILE = 'META-INF/grails.build.info'
 
-    private static Holder<Reference<Metadata>> holder = new Holder<Reference<Metadata>>("Metadata")
+    private static Holder<Reference<Metadata>> holder = new Holder<Reference<Metadata>>('Metadata')
     private final MutablePropertySources propertySources = new MutablePropertySources()
     private final ConfigurablePropertyResolver propertyResolver
     private Resource metadataFile
@@ -82,7 +85,7 @@ class Metadata {
     private Metadata(Map<String, String> properties) {
         this.propertyResolver = new PropertySourcesPropertyResolver(propertySources)
         props = new LinkedHashMap<String, Object>(properties)
-        addPropertySource(new MapPropertySource("properties", props))
+        addPropertySource(new MapPropertySource('properties', props))
         afterLoading()
     }
 
@@ -103,11 +106,11 @@ class Metadata {
 
     private void afterLoading() {
         // Allow override via system properties
-        addPropertySource(new MapPropertySource("systemProperties", System.getProperties() as Map))
+        addPropertySource(new MapPropertySource('systemProperties', System.getProperties() as Map))
 
         if (!containsKey(APPLICATION_NAME)) {
             final Map<String, Object> m = [(APPLICATION_NAME): (Object) DEFAULT_APPLICATION_NAME]
-            addPropertySource(new MapPropertySource("appName", m))
+            addPropertySource(new MapPropertySource('appName', m))
         }
     }
 
@@ -141,16 +144,16 @@ class Metadata {
             if (url != null) {
                 if (IOUtils.isWithinBinary(url) || !Environment.isDevelopmentEnvironmentAvailable()) {
                     url.withInputStream { input ->
-                        addPropertySource(loadProperties(input, "build.info"))
+                        addPropertySource(loadProperties(input, 'build.info'))
                     }
                 }
             } else {
                 // try WAR packaging resolve
-                url = classLoader.getResource("../../" + BUILD_INFO_FILE)
+                url = classLoader.getResource('../../' + BUILD_INFO_FILE)
                 if (url != null) {
                     if (IOUtils.isWithinBinary(url) || !Environment.isDevelopmentEnvironmentAvailable()) {
                         url.withInputStream { input ->
-                            addPropertySource(loadProperties(input, "build.info"))
+                            addPropertySource(loadProperties(input, 'build.info'))
                         }
                     }
                 }
@@ -158,14 +161,14 @@ class Metadata {
             afterLoading()
         }
         catch (Exception e) {
-            throw new RuntimeException("Cannot load application metadata:" + e.getMessage(), e)
+            throw new RuntimeException('Cannot load application metadata:' + e.getMessage(), e)
         }
     }
 
     private PropertySource<?> loadYml(InputStream input) {
         def loader = new YamlPropertySourceLoader()
         def resource = new InputStreamResource(input)
-        def propertySources = loader.load("application", resource)
+        def propertySources = loader.load('application', resource)
         return propertySources.isEmpty() ? null : propertySources[0]
     }
 
@@ -265,36 +268,35 @@ class Metadata {
     }
 
     String getApplicationVersion() {
-        return getProperty(APPLICATION_VERSION, String.class, null)
+        return getProperty(APPLICATION_VERSION, String, null)
     }
 
     /**
      * @return The Grails version used to build the application
      */
     String getGrailsVersion() {
-        return getProperty(APPLICATION_GRAILS_VERSION, String.class, null)
+        return getProperty(APPLICATION_GRAILS_VERSION, String, null)
     }
 
     /**
      * @return The environment the application expects to run in
      */
     String getEnvironment() {
-        return getProperty("grails.env", String.class, null)
+        return getProperty('grails.env', String, null)
     }
 
     /**
      * @return The application name
      */
     String getApplicationName() {
-        return getProperty(APPLICATION_NAME, String.class, DEFAULT_APPLICATION_NAME)
+        return getProperty(APPLICATION_NAME, String, DEFAULT_APPLICATION_NAME)
     }
-
 
     /**
      * @return The version of the servlet spec the application was created for
      */
     String getServletVersion() {
-        return getProperty(SERVLET_VERSION, String.class, DEFAULT_SERVLET_VERSION)
+        return getProperty(SERVLET_VERSION, String, DEFAULT_SERVLET_VERSION)
     }
 
     void setServletVersion(String servletVersion) {

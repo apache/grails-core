@@ -19,11 +19,12 @@
 
 package grails.plugin.markup.view
 
-import grails.plugin.markup.view.api.MarkupView
-import grails.views.WritableScript
 import groovy.text.markup.BaseTemplate
 import groovy.text.markup.MarkupTemplateEngine
 import groovy.text.markup.TemplateConfiguration
+
+import grails.plugin.markup.view.api.MarkupView
+import grails.views.WritableScript
 
 /**
  * Base class for markup engine templates
@@ -33,8 +34,8 @@ import groovy.text.markup.TemplateConfiguration
  */
 abstract class MarkupViewTemplate extends BaseTemplate implements WritableScript, MarkupView {
 
-    public static final String EXTENSION = "gml"
-    public static final String TYPE = "views.gml"
+    public static final String EXTENSION = 'gml'
+    public static final String TYPE = 'views.gml'
 
     File sourceFile
 
@@ -44,11 +45,11 @@ abstract class MarkupViewTemplate extends BaseTemplate implements WritableScript
 
     @Override
     void setBinding(Binding binding) {
-        ((Script)this).setBinding(binding)
+        ((Script) this).setBinding(binding)
     }
 
     @Override
     Binding getBinding() {
-        return ((Script)this).getBinding()
+        return ((Script) this).getBinding()
     }
 }

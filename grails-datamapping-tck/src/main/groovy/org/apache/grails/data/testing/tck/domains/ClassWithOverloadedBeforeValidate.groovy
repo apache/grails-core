@@ -23,6 +23,7 @@ import grails.persistence.Entity
 
 @Entity
 class ClassWithOverloadedBeforeValidate implements Serializable {
+
     Long id
     Long version
     def noArgCounter = 0
@@ -40,6 +41,6 @@ class ClassWithOverloadedBeforeValidate implements Serializable {
     }
 
     static constraints = {
-        name blank: false
+        name(blank: false)
     }
 }

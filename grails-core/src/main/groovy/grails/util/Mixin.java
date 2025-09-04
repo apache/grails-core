@@ -25,7 +25,6 @@ import java.lang.annotation.Target;
 
 import org.codehaus.groovy.transform.GroovyASTTransformationClass;
 
-
 /**
  *
  * @author Graeme Rocher

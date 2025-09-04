@@ -18,19 +18,21 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.TestPlayer
+import spock.lang.PendingFeatureIf
+import spock.util.concurrent.PollingConditions
+
+import org.springframework.context.ApplicationEvent
+import org.springframework.context.ApplicationEventPublisher
+import org.springframework.context.ConfigurableApplicationContext
+
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.TestPlayer
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener
 import org.grails.datastore.mapping.engine.event.PreInsertEvent
 import org.grails.datastore.mapping.engine.event.PreUpdateEvent
-import org.springframework.context.ApplicationEvent
-import org.springframework.context.ApplicationEventPublisher
-import org.springframework.context.ConfigurableApplicationContext
-import spock.lang.PendingFeatureIf
-import spock.util.concurrent.PollingConditions
 
 class DirtyCheckingAfterListenerSpec extends GrailsDataTckSpec {
 
@@ -53,10 +55,10 @@ class DirtyCheckingAfterListenerSpec extends GrailsDataTckSpec {
     }
 
     @PendingFeatureIf({ !Boolean.getBoolean('hibernate5.gorm.suite') && !Boolean.getBoolean('hibernate6.gorm.suite') && !Boolean.getBoolean('mongodb.gorm.suite') })
-    void "test state change from listener update the object"() {
+    void 'test state change from listener update the object'() {
 
         when:
-        TestPlayer john = new TestPlayer(name: "John").save(flush: true)
+        TestPlayer john = new TestPlayer(name: 'John').save(flush: true)
 
         then:
         new PollingConditions().eventually { listener.isExecuted && TestPlayer.count() }
@@ -84,7 +86,7 @@ class TestSaveOrUpdateEventListener extends AbstractPersistenceEventListener {
     @Override
     protected void onPersistenceEvent(AbstractPersistenceEvent event) {
         TestPlayer player = (TestPlayer) event.entityObject
-        player.attributes = ["test0", "test1", "test2"]
+        player.attributes = ['test0', 'test1', 'test2']
         isExecuted = true
     }
 

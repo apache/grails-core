@@ -30,6 +30,7 @@ import org.grails.datastore.mapping.model.config.GormProperties
  * @since 6.0
  */
 interface ConstraintsEvaluator {
+
     /**
      * The name of the constraints property
      */
@@ -46,7 +47,7 @@ interface ConstraintsEvaluator {
      * @param cls The class to evaluate constraints for
      * @return A map of constrained properties
      */
-    Map<String, ConstrainedProperty> evaluate(@SuppressWarnings("rawtypes") Class cls)
+    Map<String, ConstrainedProperty> evaluate(@SuppressWarnings('rawtypes') Class cls)
 
     /**
      * Evaluate constraints for the given class
@@ -55,7 +56,7 @@ interface ConstraintsEvaluator {
      * @oaram defaultNullable Whether to default to allow nullable
      * @return A map of constrained properties
      */
-    Map<String, ConstrainedProperty> evaluate(@SuppressWarnings("rawtypes") Class cls, boolean defaultNullable)
+    Map<String, ConstrainedProperty> evaluate(@SuppressWarnings('rawtypes') Class cls, boolean defaultNullable)
 
     /**
      * Evaluate constraints for the given class

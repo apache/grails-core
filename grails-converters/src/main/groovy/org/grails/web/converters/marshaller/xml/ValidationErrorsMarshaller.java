@@ -18,19 +18,19 @@
  */
 package org.grails.web.converters.marshaller.xml;
 
-import grails.converters.XML;
-
 import java.util.Locale;
 
-import org.grails.web.converters.exceptions.ConverterException;
-import org.grails.web.converters.marshaller.NameAwareMarshaller;
-import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.validation.Errors;
 import org.springframework.validation.FieldError;
+
+import grails.converters.XML;
+import org.grails.web.converters.exceptions.ConverterException;
+import org.grails.web.converters.marshaller.NameAwareMarshaller;
+import org.grails.web.converters.marshaller.ObjectMarshaller;
 
 /**
  * @author Siegfried Puchbauer
@@ -62,7 +62,7 @@ public class ValidationErrorsMarshaller implements ObjectMarshaller<XML>, NameAw
                     }
                     else {
                         String defaultMessage = fe.getDefaultMessage();
-                        if(defaultMessage != null)
+                        if (defaultMessage != null)
                             xml.startNode("message").chars(defaultMessage).end();
                     }
                     xml.end();

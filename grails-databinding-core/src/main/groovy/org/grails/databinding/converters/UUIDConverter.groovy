@@ -18,8 +18,9 @@
  */
 package org.grails.databinding.converters
 
-import grails.databinding.converters.ValueConverter;
 import groovy.transform.CompileStatic
+
+import grails.databinding.converters.ValueConverter
 
 @CompileStatic
 class UUIDConverter implements ValueConverter {
@@ -31,10 +32,10 @@ class UUIDConverter implements ValueConverter {
 
     @Override
     def convert(value) {
-        if(value) {
+        if (value) {
             try {
                 return UUID.fromString(value as String)
-            } catch(IllegalArgumentException ignore) {
+            } catch (IllegalArgumentException ignore) {
                 return null
             }
         }

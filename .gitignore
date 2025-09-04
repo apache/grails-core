@@ -13,6 +13,9 @@
 .gradle/
 .idea
 .idea/
+!.idea/codeStyles/
+!.idea/codeStyles/Project.xml
+!.idea/codeStyles/codeStyleConfig.xml
 .project
 .settings
 /*/*.iml

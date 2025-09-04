@@ -18,24 +18,26 @@
  */
 package grails.gsp
 
-import org.grails.buffer.FastStringWriter
-import org.grails.gsp.GroovyPagesTemplateEngine
-import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
-import org.grails.gsp.io.GroovyPageScriptSource
-import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.springframework.context.ApplicationContext
-import org.springframework.context.ApplicationContextAware
-import org.springframework.web.context.ServletContextAware
-import org.springframework.web.context.request.RequestContextHolder
+import java.lang.reflect.InvocationHandler
+import java.lang.reflect.Method
+import java.lang.reflect.Proxy
+import java.util.concurrent.ConcurrentHashMap
 
 import jakarta.servlet.ServletContext
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import java.lang.reflect.InvocationHandler
-import java.lang.reflect.Method
-import java.lang.reflect.Proxy
-import java.util.concurrent.ConcurrentHashMap
+
+import org.springframework.context.ApplicationContext
+import org.springframework.context.ApplicationContextAware
+import org.springframework.web.context.ServletContextAware
+import org.springframework.web.context.request.RequestContextHolder
+
+import org.grails.buffer.FastStringWriter
+import org.grails.gsp.GroovyPagesTemplateEngine
+import org.grails.gsp.io.GroovyPageScriptSource
+import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * Simplified API for rendering GSP pages from services, jobs and other non-request classes.
@@ -147,9 +149,9 @@ class PageRenderer implements ApplicationContextAware, ServletContextAware {
             def attributes = new ConcurrentHashMap()
 
             String contentType = null
-            String characterEncoding = "UTF-8"
+            String characterEncoding = 'UTF-8'
 
-            (HttpServletRequest)Proxy.newProxyInstance(HttpServletRequest.classLoader, [HttpServletRequest] as Class[], new InvocationHandler() {
+            (HttpServletRequest) Proxy.newProxyInstance(HttpServletRequest.classLoader, [HttpServletRequest] as Class[], new InvocationHandler() {
                 Object invoke(proxy, Method method, Object[] args) {
 
                     String methodName = method.name
@@ -172,10 +174,10 @@ class PageRenderer implements ApplicationContextAware, ServletContextAware {
                         return requestURI
                     }
                     if (methodName == 'getLocalName') {
-                        return "localhost"
+                        return 'localhost'
                     }
                     if (methodName == 'getLocalAddr') {
-                        return "127.0.0.1"
+                        return '127.0.0.1'
                     }
                     if (methodName == 'getLocalPort') {
                         return 80
@@ -215,37 +217,37 @@ class PageRenderer implements ApplicationContextAware, ServletContextAware {
                     }
 
                     if (methodName == 'getSession') {
-                        throw new UnsupportedOperationException("You cannot use the session in non-request rendering operations")
+                        throw new UnsupportedOperationException('You cannot use the session in non-request rendering operations')
                     }
                     if (methodName == 'getInputStream') {
-                        throw new UnsupportedOperationException("You cannot read the input stream in non-request rendering operations")
+                        throw new UnsupportedOperationException('You cannot read the input stream in non-request rendering operations')
                     }
                     if (methodName == 'getProtocol') {
-                        throw new UnsupportedOperationException("You cannot read the protocol in non-request rendering operations")
+                        throw new UnsupportedOperationException('You cannot read the protocol in non-request rendering operations')
                     }
                     if (methodName == 'getScheme') {
-                        throw new UnsupportedOperationException("You cannot read the scheme in non-request rendering operations")
+                        throw new UnsupportedOperationException('You cannot read the scheme in non-request rendering operations')
                     }
                     if (methodName == 'getServerName') {
-                        throw new UnsupportedOperationException("You cannot read server name in non-request rendering operations")
+                        throw new UnsupportedOperationException('You cannot read server name in non-request rendering operations')
                     }
                     if (methodName == 'getServerPort') {
-                        throw new UnsupportedOperationException("You cannot read the server port in non-request rendering operations")
+                        throw new UnsupportedOperationException('You cannot read the server port in non-request rendering operations')
                     }
                     if (methodName == 'getReader') {
-                        throw new UnsupportedOperationException("You cannot read input in non-request rendering operations")
+                        throw new UnsupportedOperationException('You cannot read input in non-request rendering operations')
                     }
                     if (methodName == 'getRemoteAddr') {
-                        throw new UnsupportedOperationException("You cannot read the remote address in non-request rendering operations")
+                        throw new UnsupportedOperationException('You cannot read the remote address in non-request rendering operations')
                     }
                     if (methodName == 'getRemoteHost') {
-                        throw new UnsupportedOperationException("You cannot read the remote host in non-request rendering operations")
+                        throw new UnsupportedOperationException('You cannot read the remote host in non-request rendering operations')
                     }
                     if (methodName == 'getRequestDispatcher') {
-                        throw new UnsupportedOperationException("You cannot use the request dispatcher in non-request rendering operations")
+                        throw new UnsupportedOperationException('You cannot use the request dispatcher in non-request rendering operations')
                     }
                     if (methodName == 'getRemotePort') {
-                        throw new UnsupportedOperationException("You cannot read the remote port in non-request rendering operations")
+                        throw new UnsupportedOperationException('You cannot read the remote port in non-request rendering operations')
                     }
 
                     if (methodName == 'getParts') {
@@ -262,14 +264,14 @@ class PageRenderer implements ApplicationContextAware, ServletContextAware {
                         String name = args[0]
                         Object o = args[1]
                         if (o == null) {
-                            attributes.remove name
+                            attributes.remove(name)
                         } else {
                             attributes[name] = o
                         }
                         return null
                     }
                     if (methodName == 'removeAttribute') {
-                        attributes.remove args[0]
+                        attributes.remove(args[0])
                         return null
                     }
 
@@ -306,7 +308,7 @@ class PageRenderer implements ApplicationContextAware, ServletContextAware {
                 }
             })
         }
-        
+
         private static Enumeration iteratorAsEnumeration(Iterator iterator) {
             new Enumeration() {
                 @Override
@@ -326,11 +328,11 @@ class PageRenderer implements ApplicationContextAware, ServletContextAware {
 
         static HttpServletResponse createInstance(final PrintWriter writer, Locale localeToUse = Locale.getDefault()) {
 
-            String characterEncoding = "UTF-8"
+            String characterEncoding = 'UTF-8'
             String contentType = null
             int bufferSize = 0
 
-            (HttpServletResponse)Proxy.newProxyInstance(HttpServletResponse.classLoader, [HttpServletResponse] as Class[], new InvocationHandler() {
+            (HttpServletResponse) Proxy.newProxyInstance(HttpServletResponse.classLoader, [HttpServletResponse] as Class[], new InvocationHandler() {
                 Object invoke(proxy, Method method, Object[] args) {
 
                     String methodName = method.name
@@ -370,7 +372,7 @@ class PageRenderer implements ApplicationContextAware, ServletContextAware {
                     }
 
                     if (methodName == 'getOutputStream') {
-                        throw new UnsupportedOperationException("You cannot use the OutputStream in non-request rendering operations. Use getWriter() instead")
+                        throw new UnsupportedOperationException('You cannot use the OutputStream in non-request rendering operations. Use getWriter() instead')
                     }
 
                     if (methodName == 'getHeaderNames') {

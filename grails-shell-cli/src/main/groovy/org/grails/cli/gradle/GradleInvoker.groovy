@@ -18,9 +18,11 @@
  */
 package org.grails.cli.gradle
 
-import grails.util.Environment
 import groovy.transform.CompileStatic
+
 import org.gradle.tooling.BuildLauncher
+
+import grails.util.Environment
 import org.grails.build.parsing.CommandLine
 import org.grails.cli.profile.ExecutionContext
 
@@ -43,27 +45,24 @@ class GradleInvoker {
     Object invokeMethod(String name, Object args) {
         Object[] argArray = (Object[]) args
 
-
         GradleUtil.runBuildWithConsoleOutput(executionContext) { BuildLauncher buildLauncher ->
             buildLauncher.forTasks(name.split(' '))
             List<String> arguments = []
             arguments << "-Dgrails.env=${Environment.current.name}".toString()
 
-
             def commandLine = executionContext.commandLine
-            if(commandLine.hasOption(CommandLine.STACKTRACE_ARGUMENT)) {
+            if (commandLine.hasOption(CommandLine.STACKTRACE_ARGUMENT)) {
                 arguments << '--stacktrace'
                 arguments << '-Dgrails.full.stacktrace=true'
             }
 
-            arguments.addAll argArray.collect() { it.toString() }
-            buildLauncher.withArguments( arguments as String[])
+            arguments.addAll(argArray.collect() { it.toString() })
+            buildLauncher.withArguments(arguments as String[])
         }
     }
 
     GradleAsyncInvoker getAsync() {
         return new GradleAsyncInvoker(this)
     }
-
 
 }

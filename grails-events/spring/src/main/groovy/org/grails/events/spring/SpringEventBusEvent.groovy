@@ -19,10 +19,12 @@
 
 package org.grails.events.spring
 
-import grails.events.Event
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
+
 import org.springframework.context.ApplicationEvent
+
+import grails.events.Event
 
 /**
  * An event issues by the {@link SpringEventBus}

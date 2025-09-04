@@ -19,20 +19,11 @@
 
 package org.grails.testing
 
-import grails.boot.config.GrailsApplicationPostProcessor
-import grails.core.GrailsApplication
-import grails.core.GrailsApplicationLifeCycle
-import grails.core.support.proxy.DefaultProxyHandler
-import grails.plugins.GrailsPluginManager
-import grails.spring.BeanBuilder
-import grails.util.Holders
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
 import jakarta.servlet.ServletContext
-import org.grails.plugins.IncludingPluginFilter
-import org.grails.spring.context.support.GrailsPlaceholderConfigurer
-import org.grails.spring.context.support.MapBasedSmartPropertyOverrideConfigurer
-import org.grails.transaction.TransactionManagerPostProcessor
+
 import org.springframework.beans.BeansException
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.beans.factory.config.BeanDefinition
@@ -53,6 +44,18 @@ import org.springframework.context.support.PropertySourcesPlaceholderConfigurer
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.core.Ordered
 import org.springframework.util.ClassUtils
+
+import grails.boot.config.GrailsApplicationPostProcessor
+import grails.core.GrailsApplication
+import grails.core.GrailsApplicationLifeCycle
+import grails.core.support.proxy.DefaultProxyHandler
+import grails.plugins.GrailsPluginManager
+import grails.spring.BeanBuilder
+import grails.util.Holders
+import org.grails.plugins.IncludingPluginFilter
+import org.grails.spring.context.support.GrailsPlaceholderConfigurer
+import org.grails.spring.context.support.MapBasedSmartPropertyOverrideConfigurer
+import org.grails.transaction.TransactionManagerPostProcessor
 
 /**
  * Created by jameskleeh on 5/31/17.
@@ -130,8 +133,8 @@ class GrailsApplicationBuilder {
 
         def classLoader = this.class.classLoader
         ImportCandidates.load(AutoConfiguration, classLoader).asList().findAll {
-            it.startsWith("org.grails")
-            && !it.contains("UrlMappingsAutoConfiguration") // this currently is causing an issue with tests
+            it.startsWith('org.grails')
+            && !it.contains('UrlMappingsAutoConfiguration') // this currently is causing an issue with tests
         }.each {
             ((AnnotationConfigRegistry) context).register(ClassUtils.forName(it, classLoader))
         }
@@ -178,7 +181,7 @@ class GrailsApplicationBuilder {
 
             conversionService(ConversionServiceFactoryBean)
 
-            xmlns context: "http://www.springframework.org/schema/context"
+            xmlns(context: 'http://www.springframework.org/schema/context')
             // adds AutowiredAnnotationBeanPostProcessor, CommonAnnotationBeanPostProcessor and others
             // see org.springframework.context.annotation.AnnotationConfigUtils.registerAnnotationConfigProcessors method
             context.'annotation-config'()

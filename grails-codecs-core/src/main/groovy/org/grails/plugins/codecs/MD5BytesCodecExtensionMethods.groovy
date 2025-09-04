@@ -21,16 +21,17 @@ package org.grails.plugins.codecs
 import org.codehaus.groovy.runtime.NullObject
 
 class MD5BytesCodecExtensionMethods {
+
     // Returns the byte[] of the digest, taken from UTF-8 of the string representation
     // or the raw data coerced to bytes
     static encodeAsMD5Bytes(theTarget) {
-        if(theTarget == null || theTarget instanceof NullObject) {
+        if (theTarget == null || theTarget instanceof NullObject) {
             return null
         }
-        DigestUtils.digest("MD5", theTarget)
+        DigestUtils.digest('MD5', theTarget)
     }
 
     static decodeMD5Bytes(theTarget) {
-        throw new UnsupportedOperationException("Cannot decode MD5 hashes")
+        throw new UnsupportedOperationException('Cannot decode MD5 hashes')
     }
 }

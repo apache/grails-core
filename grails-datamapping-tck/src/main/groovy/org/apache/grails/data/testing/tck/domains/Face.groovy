@@ -19,11 +19,11 @@
 
 package org.apache.grails.data.testing.tck.domains
 
-
 import grails.persistence.Entity
 
 @Entity
 class Face implements Serializable {
+
     Long id
     Long version
     String name
@@ -33,6 +33,6 @@ class Face implements Serializable {
     static belongsTo = [person: Person]
 
     static constraints = {
-        person nullable: true
+        person(nullable: true)
     }
 }

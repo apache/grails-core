@@ -20,6 +20,7 @@
 package testapp
 
 class Person {
+
     String firstName
     String lastName
     String gender

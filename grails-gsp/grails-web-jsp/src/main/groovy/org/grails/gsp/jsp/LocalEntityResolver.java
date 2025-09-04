@@ -18,12 +18,12 @@
  */
 package org.grails.gsp.jsp;
 
-import org.xml.sax.EntityResolver;
-import org.xml.sax.InputSource;
-
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.Map;
+
+import org.xml.sax.EntityResolver;
+import org.xml.sax.InputSource;
 
 import static java.util.Map.entry;
 

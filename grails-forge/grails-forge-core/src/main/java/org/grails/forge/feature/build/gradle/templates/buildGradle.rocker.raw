@@ -115,7 +115,7 @@ run {
 }
 
 @if (features.contains("spock")) {
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
     useJUnitPlatform()
     @if (features.contains("geb")) {
     systemProperty "geb.env", System.getProperty('geb.env')

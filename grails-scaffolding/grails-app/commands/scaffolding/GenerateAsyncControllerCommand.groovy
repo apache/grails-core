@@ -18,13 +18,14 @@
  */
 package scaffolding
 
+import groovy.transform.CompileStatic
+
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import grails.dev.commands.GrailsApplicationCommand
 import grails.plugin.scaffolding.CommandLineHelper
 import grails.plugin.scaffolding.SkipBootstrap
-import groovy.transform.CompileStatic
 import org.grails.io.support.Resource
 
 /**
@@ -45,13 +46,13 @@ class GenerateAsyncControllerCommand implements GrailsApplicationCommand, Comman
     @Override
     boolean handle() {
         if (!args) {
-            error("No domain-class specified")
+            error('No domain-class specified')
             return FAILURE
         }
 
         List<String> domainClassNames
         if (args[0] == '*') {
-            domainClassNames = resources("file:grails-app/domain/**/*.groovy")
+            domainClassNames = resources('file:grails-app/domain/**/*.groovy')
                     .collect { className(it) }
         } else {
             domainClassNames = args
@@ -75,7 +76,7 @@ class GenerateAsyncControllerCommand implements GrailsApplicationCommand, Comman
 
                 addStatus("Scaffolding complete for ${projectPath(sourceClass)}")
             } else {
-                error "No domain-class not found for name: $domainClassName"
+                error("No domain-class not found for name: $domainClassName")
                 failureCount++
             }
         }

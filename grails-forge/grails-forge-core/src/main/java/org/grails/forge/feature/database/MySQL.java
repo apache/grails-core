@@ -43,7 +43,7 @@ public class MySQL extends DatabaseDriverFeature {
 
     @Override
     public String getDescription() {
-        return "Adds the MySQL driver and default config";
+        return "Add MySQL driver and default configuration";
     }
 
     @Override

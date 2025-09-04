@@ -32,7 +32,6 @@ dependencies {
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-logging'
     implementation 'org.apache.grails:grails-databinding'
-    implementation 'org.apache.grails:grails-i18n'
     implementation 'org.apache.grails:grails-interceptors'
     implementation 'org.apache.grails:grails-rest-transforms'
     implementation 'org.apache.grails:grails-services'
@@ -70,9 +69,20 @@ dependencies {
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
 }
 
-//tasks.withType(Test).configureEach {
-//    //systemProperty('grails.geb.recording.mode', 'RECORD_ALL')
-//}
+tasks.withType(Test).configureEach {
+    systemProperty('grails.geb.recording.mode', 'RECORD_ALL')
+    doLast {
+        // Delete all but the two most recent recording directories to save space
+        def baseDir = file(System.getProperty('grails.geb.recording.directory', 'build/gebContainer/recordings'))
+        if (!baseDir.isDirectory()) return
+        def dirs = (baseDir.listFiles() ?: [])
+                .findAll { it.directory && it.name ==~ /^\d{8}_\d{6}$/ }
+                .sort { it.name }
+        if (dirs.size() > 2) {
+            delete(dirs.dropRight(2)) // keep the two most recent
+        }
+    }
+}
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')

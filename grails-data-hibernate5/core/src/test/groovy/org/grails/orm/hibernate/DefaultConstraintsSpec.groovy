@@ -45,7 +45,7 @@ class DefaultConstraintsSpec extends Specification {
     @Shared PlatformTransactionManager transactionManager = hibernateDatastore.getTransactionManager()
 
     @Rollback
-    @Issue('https://github.com/grails/grails-data-mapping/issues/746')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/746')
     void "Test that when constraints are nullable true by default, they can be altered to nullable false"() {
         when:"An object is validated"
         Book book = new Book()

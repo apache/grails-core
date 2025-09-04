@@ -29,16 +29,17 @@ import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.Statement
+
 import org.grails.datastore.mapping.reflect.AstUtils
 
-import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
-import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
-import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
+import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.namedArgs
 
 /**
@@ -49,6 +50,7 @@ import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.namedAr
  */
 @CompileStatic
 abstract class AbstractSaveImplementer extends AbstractWriteOperationImplementer {
+
     protected Statement bindParametersAndSave(ClassNode domainClassNode, MethodNode abstractMethodNode, Parameter[] parameters, BlockStatement body, VariableExpression entityVar) {
         Expression argsExpression = null
 
@@ -75,18 +77,18 @@ abstract class AbstractSaveImplementer extends AbstractWriteOperationImplementer
                     declS(saveArgs, namedArgs(failOnError: ConstantExpression.TRUE))
             )
             body.addStatement(
-                    stmt(callX(saveArgs, "putAll", argsExpression))
+                    stmt(callX(saveArgs, 'putAll', argsExpression))
             )
         } else {
             saveArgs = namedArgs(failOnError: ConstantExpression.TRUE)
         }
 
         Expression connectionId = findConnectionId(abstractMethodNode)
-        if(connectionId != null) {
-            returnS(callX(buildInstanceApiLookup(domainClassNode, connectionId), "save", args(entityVar, saveArgs)))
+        if (connectionId != null) {
+            returnS(callX(buildInstanceApiLookup(domainClassNode, connectionId), 'save', args(entityVar, saveArgs)))
         }
         else {
-            return returnS(callX(entityVar, "save", saveArgs))
+            return returnS(callX(entityVar, 'save', saveArgs))
         }
     }
 

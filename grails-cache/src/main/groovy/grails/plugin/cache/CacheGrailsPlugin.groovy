@@ -19,16 +19,18 @@
 
 package grails.plugin.cache
 
-import grails.plugins.Plugin
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.grails.plugin.cache.GrailsCacheManager
+
 import org.springframework.cache.Cache
+
+import grails.plugins.Plugin
+import org.grails.plugin.cache.GrailsCacheManager
 
 @Slf4j
 class CacheGrailsPlugin extends Plugin {
 
-    def grailsVersion = "7.0.0 > *"
+    def grailsVersion = '7.0.0-SNAPSHOT > *'
     def observe = ['controllers', 'services']
     def loadAfter = ['controllers', 'services']
     def authorEmail = 'brownj@objectcomputing.com'
@@ -47,16 +49,15 @@ class CacheGrailsPlugin extends Plugin {
     Closure doWithSpring() {
         { ->
             if (!cachingEnabled) {
-                log.warn 'Cache plugin is disabled'
+                log.warn('Cache plugin is disabled')
                 return
             }
 
             customCacheKeyGenerator(CustomCacheKeyGenerator)
 
-
             Class<? extends GrailsCacheManager> cacheClazz = GrailsConcurrentMapCacheManager
             // Selects cache manager from config
-            if (config.getProperty("grails.cache.cacheManager", String, null) == "GrailsConcurrentLinkedMapCacheManager") {
+            if (config.getProperty('grails.cache.cacheManager', String, null) == 'GrailsConcurrentLinkedMapCacheManager') {
                 cacheClazz = GrailsConcurrentLinkedMapCacheManager
             }
 
@@ -76,14 +77,14 @@ class CacheGrailsPlugin extends Plugin {
 
             if (pluginConfiguration.clearAtStartup) {
                 for (String cacheName in grailsCacheManager.cacheNames) {
-                    log.info "Clearing cache $cacheName"
+                    log.info('Clearing cache {}', cacheName)
                     Cache cache = grailsCacheManager.getCache(cacheName)
                     cache.clear()
                 }
             }
 
             List<String> defaultCaches = ['grailsBlocksCache', 'grailsTemplatesCache']
-            for(name in defaultCaches) {
+            for (name in defaultCaches) {
                 if (!grailsCacheManager.cacheExists(name)) {
                     grailsCacheManager.getCache(name)
                 }

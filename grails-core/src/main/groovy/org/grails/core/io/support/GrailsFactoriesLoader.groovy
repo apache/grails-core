@@ -20,10 +20,12 @@
 package org.grails.core.io.support
 
 import groovy.transform.CompileStatic
-import org.grails.io.support.FactoriesLoaderSupport
+
 import org.springframework.core.OrderComparator
 import org.springframework.util.Assert
 import org.springframework.util.ClassUtils
+
+import org.grails.io.support.FactoriesLoaderSupport
 
 /**
  * General purpose factory loading mechanism for internal use within the framework.
@@ -36,10 +38,8 @@ import org.springframework.util.ClassUtils
 @CompileStatic
 class GrailsFactoriesLoader extends FactoriesLoaderSupport {
 
-
     private static final Object[] NO_ARGUMENTS = [] as Object[]
-    
-    
+
     /**
      * Load the factory implementations of the given type from the default location,
      * using the given class loader.
@@ -47,7 +47,7 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
      * @param factoryClass the interface or abstract class representing the factory
      */
     static <T> List<T> loadFactories(Class<T> factoryClass) {
-        (List<T>)loadFactoriesWithArguments(factoryClass, GrailsFactoriesLoader.class.classLoader)
+        (List<T>) loadFactoriesWithArguments(factoryClass, GrailsFactoriesLoader.classLoader)
     }
 
     /**
@@ -58,13 +58,13 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
      * @param classLoader the ClassLoader to use for loading (can be {@code null} to use the default)
      */
     static <T> List<T> loadFactories(Class<T> factoryClass, ClassLoader classLoader) {
-        (List<T>)loadFactoriesWithArguments(factoryClass, classLoader, NO_ARGUMENTS)
+        (List<T>) loadFactoriesWithArguments(factoryClass, classLoader, NO_ARGUMENTS)
     }
 
     static <T> List<T> loadFactoriesWithArguments(Class<T> factoryClass, ClassLoader classLoader, Object[] arguments) {
-        boolean hasArguments = !(arguments != null && arguments.length==0)
-        List<T> results = new ArrayList<T>() 
-        for(Class<? extends T> clazz : loadFactoryClasses(factoryClass, classLoader)) {
+        boolean hasArguments = !(arguments != null && arguments.length == 0)
+        List<T> results = new ArrayList<T>()
+        for (Class<? extends T> clazz : loadFactoryClasses(factoryClass, classLoader)) {
             results.add(hasArguments ? clazz.newInstance(arguments) : clazz.getDeclaredConstructor().newInstance())
         }
 
@@ -76,22 +76,21 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
         OrderComparator.sort((List<T>) results)
         results
     }
-    
-    static <T> List<Class<T>> loadFactoryClasses(Class<T> factoryClass, ClassLoader classLoader = GrailsFactoriesLoader.class.classLoader) {
-        Assert.notNull factoryClass, "'factoryClass' must not be null"
-        
+
+    static <T> List<Class<T>> loadFactoryClasses(Class<T> factoryClass, ClassLoader classLoader = GrailsFactoriesLoader.classLoader) {
+        Assert.notNull(factoryClass, "'factoryClass' must not be null")
+
         def factoryNames = loadFactoryNames(factoryClass, classLoader)
 
         List<Class<T>> result = []
         for (String factoryName in factoryNames) {
             def clazz = loadFactoryClass(factoryName, factoryClass, classLoader)
-            if(clazz) {
-                result.add clazz
+            if (clazz) {
+                result.add(clazz)
             }
         }
         return result
     }
-
 
     private static <T> Class<? extends T> loadFactoryClass(String instanceClassName, Class<T> factoryClass, ClassLoader classLoader) {
         try {
@@ -108,21 +107,21 @@ class GrailsFactoriesLoader extends FactoriesLoaderSupport {
         }
     }
 
-    static <T> T loadFactory(Class<T> factoryClass, ClassLoader classLoader = GrailsFactoriesLoader.class.classLoader) {
+    static <T> T loadFactory(Class<T> factoryClass, ClassLoader classLoader = GrailsFactoriesLoader.classLoader) {
         def all = loadFactories(factoryClass, classLoader)
-        if(all) {
+        if (all) {
             return all.get(0)
         }
     }
 
     static <T> T loadFactory(Class<T> factoryClass, Object... arguments) {
-        loadFactory(factoryClass, GrailsFactoriesLoader.class.classLoader, arguments)
+        loadFactory(factoryClass, GrailsFactoriesLoader.classLoader, arguments)
     }
 
     static <T> T loadFactory(Class<T> factoryClass, ClassLoader classLoader, Object... arguments) {
         def all = loadFactoriesWithArguments(factoryClass, classLoader, arguments)
-        if(all) {
-            return (T)all.get(0)
+        if (all) {
+            return (T) all.get(0)
         }
     }
 }

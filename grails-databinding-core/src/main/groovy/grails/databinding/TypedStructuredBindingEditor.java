@@ -18,7 +18,6 @@
  */
 package grails.databinding;
 
-
 /**
  * 
  * @since 3.0

@@ -19,6 +19,7 @@
 package org.grails.gradle.plugin.model
 
 import groovy.transform.CompileStatic
+
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolveException
@@ -30,7 +31,8 @@ import org.gradle.tooling.provider.model.ToolingModelBuilder
  */
 @CompileStatic
 class GrailsClasspathToolingModelBuilder implements ToolingModelBuilder {
-    public static final String PROFILE_CONFIGURATION_NAME = "profile"
+
+    public static final String PROFILE_CONFIGURATION_NAME = 'profile'
 
     @Override
     boolean canBuild(String modelName) {
@@ -40,7 +42,7 @@ class GrailsClasspathToolingModelBuilder implements ToolingModelBuilder {
     @Override
     Object buildAll(String modelName, Project project) {
         try {
-            List<URL> runtimeDependencies = project.getConfigurations().getByName("testRuntimeClasspath").getResolvedConfiguration().getResolvedArtifacts().collect { ResolvedArtifact artifact ->
+            List<URL> runtimeDependencies = project.getConfigurations().getByName('testRuntimeClasspath').getResolvedConfiguration().getResolvedArtifacts().collect { ResolvedArtifact artifact ->
                 artifact.getFile().toURI().toURL()
             }
 

@@ -18,9 +18,6 @@
  */
 package org.grails.spring.context.annotation;
 
-import grails.util.BuildSettings;
-import grails.util.Environment;
-
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -31,11 +28,12 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import grails.util.GrailsStringUtils;
-import grails.plugins.GrailsPluginManager;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+import org.w3c.dom.Element;
+
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.HierarchicalBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -49,7 +47,11 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.ReflectionUtils;
-import org.w3c.dom.Element;
+
+import grails.plugins.GrailsPluginManager;
+import grails.util.BuildSettings;
+import grails.util.Environment;
+import grails.util.GrailsStringUtils;
 
 /**
  * Extends Spring's default &lt;context:component-scan/&gt; element to ignore
@@ -95,8 +97,8 @@ public class ClosureClassIgnoringComponentScanBeanDefinitionParser extends Compo
      * @author Lari Hotari
      */
     private static final class ParentOnlyGetResourcesClassLoader extends ClassLoader {
-        private final Method findResourcesMethod=ReflectionUtils.findMethod(ClassLoader.class, "findResources", String.class);
-        private final Method findResourceMethod=ReflectionUtils.findMethod(ClassLoader.class, "findResource", String.class);
+        private final Method findResourcesMethod = ReflectionUtils.findMethod(ClassLoader.class, "findResources", String.class);
+        private final Method findResourceMethod = ReflectionUtils.findMethod(ClassLoader.class, "findResource", String.class);
 
         private ClassLoader rootLoader;
 
@@ -109,13 +111,13 @@ public class ClosureClassIgnoringComponentScanBeanDefinitionParser extends Compo
 
         @Override
         public Enumeration<URL> getResources(String name) throws IOException {
-            if(Environment.isFork()) {
+            if (Environment.isFork()) {
                 return super.getResources(name);
             }
             else {
                 if (rootLoader != null) {
                     // search all parents up to rootLoader
-                    Collection<URL> urls = new LinkedHashSet<URL>();
+                    Collection<URL> urls = new LinkedHashSet<>();
                     findResourcesRecursive(getParent(), name, urls);
                     return Collections.enumeration(urls);
                 }
@@ -136,12 +138,12 @@ public class ClosureClassIgnoringComponentScanBeanDefinitionParser extends Compo
 
         @SuppressWarnings("unchecked")
         private Enumeration<URL> invokeFindResources(ClassLoader parent, String name) {
-            return (Enumeration<URL>)ReflectionUtils.invokeMethod(findResourcesMethod, parent, name);
+            return (Enumeration<URL>) ReflectionUtils.invokeMethod(findResourcesMethod, parent, name);
         }
 
         @Override
         public URL getResource(String name) {
-            if(Environment.isFork()) {
+            if (Environment.isFork()) {
                 return super.getResource(name);
             }
             else {
@@ -167,7 +169,7 @@ public class ClosureClassIgnoringComponentScanBeanDefinitionParser extends Compo
         }
 
         private URL invokeFindResource(ClassLoader parent, String name) {
-            return (URL)ReflectionUtils.invokeMethod(findResourceMethod, parent, name);
+            return (URL) ReflectionUtils.invokeMethod(findResourceMethod, parent, name);
         }
     }
 
@@ -202,9 +204,9 @@ public class ClosureClassIgnoringComponentScanBeanDefinitionParser extends Compo
         final PathMatchingResourcePatternResolver resourceResolver = new PathMatchingResourcePatternResolver(parentOnlyResourceLoader) {
             @Override
             protected Resource[] findAllClassPathResources(String location) throws IOException {
-                Set<Resource> result = new LinkedHashSet<Resource>(16);
+                Set<Resource> result = new LinkedHashSet<>(16);
 
-                if(BuildSettings.CLASSES_DIR != null) {
+                if (BuildSettings.CLASSES_DIR != null) {
                     @SuppressWarnings("unused")
                     URL classesDir = BuildSettings.CLASSES_DIR.toURI().toURL();
 
@@ -219,14 +221,14 @@ public class ClosureClassIgnoringComponentScanBeanDefinitionParser extends Compo
                         if (LOG.isDebugEnabled()) {
                             LOG.debug("Scanning URL " + url.toExternalForm() + " while searching for '" + location + "'");
                         }
-                    /*
-                    if (!warDeployed && classesDir!= null && url.equals(classesDir)) {
-                        result.add(convertClassLoaderURL(url));
-                    }
-                    else if (warDeployed) {
-                        result.add(convertClassLoaderURL(url));
-                    }
-                    */
+                        /*
+                        if (!warDeployed && classesDir!= null && url.equals(classesDir)) {
+                            result.add(convertClassLoaderURL(url));
+                        }
+                        else if (warDeployed) {
+                            result.add(convertClassLoaderURL(url));
+                        }
+                        */
                         result.add(convertClassLoaderURL(url));
                     }
                 }

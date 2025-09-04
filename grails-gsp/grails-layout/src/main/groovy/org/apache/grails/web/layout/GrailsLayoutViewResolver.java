@@ -18,15 +18,19 @@
  */
 package org.apache.grails.web.layout;
 
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.Map;
-import java.util.Collections;
 
 import jakarta.servlet.FilterConfig;
 import jakarta.servlet.ServletContext;
 
-import grails.core.GrailsApplication;
-import grails.core.support.GrailsApplicationAware;
+import com.opensymphony.module.sitemesh.Config;
+import com.opensymphony.module.sitemesh.Factory;
+import com.opensymphony.module.sitemesh.factory.DefaultFactory;
+import com.opensymphony.sitemesh.ContentProcessor;
+import com.opensymphony.sitemesh.compatability.PageParser2ContentProcessor;
+
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -34,11 +38,8 @@ import org.springframework.core.Ordered;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.ViewResolver;
 
-import com.opensymphony.module.sitemesh.Config;
-import com.opensymphony.module.sitemesh.Factory;
-import com.opensymphony.module.sitemesh.factory.DefaultFactory;
-import com.opensymphony.sitemesh.ContentProcessor;
-import com.opensymphony.sitemesh.compatability.PageParser2ContentProcessor;
+import grails.core.GrailsApplication;
+import grails.core.support.GrailsApplicationAware;
 
 public class GrailsLayoutViewResolver extends EmbeddedGrailsLayoutViewResolver implements GrailsApplicationAware, DisposableBean, Ordered, ApplicationListener<ContextRefreshedEvent> {
     private static final String FACTORY_SERVLET_CONTEXT_ATTRIBUTE = "grails.layout.factory";

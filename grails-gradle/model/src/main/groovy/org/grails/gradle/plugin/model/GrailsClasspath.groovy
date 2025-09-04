@@ -27,6 +27,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 interface GrailsClasspath extends Serializable {
+
     /**
      * @return All Grails dependencies, pull from 'testRuntimeOnly' scope
      */

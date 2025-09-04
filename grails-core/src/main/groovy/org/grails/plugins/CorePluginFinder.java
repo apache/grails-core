@@ -18,25 +18,34 @@
  */
 package org.grails.plugins;
 
-import grails.core.GrailsApplication;
-import grails.core.support.ParentApplicationContextAware;
-import org.grails.core.exceptions.GrailsConfigurationException;
-import org.grails.io.support.SpringIOUtils;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.util.*;
+import org.springframework.context.ApplicationContext;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+
+import grails.core.GrailsApplication;
+import grails.core.support.ParentApplicationContextAware;
+import org.grails.core.exceptions.GrailsConfigurationException;
+import org.grails.io.support.SpringIOUtils;
 
 /**
  * Loads core plugin classes. Contains functionality moved in from <code>DefaultGrailsPluginManager</code>.
@@ -49,11 +58,11 @@ public class CorePluginFinder implements ParentApplicationContextAware {
     private static final Logger LOG = LoggerFactory.getLogger(CorePluginFinder.class);
     public static final String CORE_PLUGIN_PATTERN = "META-INF/grails-plugin.xml";
 
-    private final Set<Class<?>> foundPluginClasses = new HashSet<Class<?>>();
+    private final Set<Class<?>> foundPluginClasses = new HashSet<>();
     @SuppressWarnings("unused")
     private final GrailsApplication application;
     @SuppressWarnings("rawtypes")
-    private final Map<Class, BinaryGrailsPluginDescriptor> binaryDescriptors = new HashMap<Class, BinaryGrailsPluginDescriptor>();
+    private final Map<Class, BinaryGrailsPluginDescriptor> binaryDescriptors = new HashMap<>();
 
     public CorePluginFinder(GrailsApplication application) {
         this.application = application;
@@ -91,8 +100,6 @@ public class CorePluginFinder implements ParentApplicationContextAware {
         return resourceList.toArray(new Resource[resourceList.size()]);
     }
 
-
-
     @SuppressWarnings("rawtypes")
     private void loadCorePluginsFromResources(Resource[] resources) throws IOException {
 
@@ -109,7 +116,7 @@ public class CorePluginFinder implements ParentApplicationContextAware {
 
                     for (String pluginType : ph.pluginTypes) {
                         Class<?> pluginClass = attemptCorePluginClassLoad(pluginType);
-                        if(pluginClass != null) {
+                        if (pluginClass != null) {
                             addPlugin(pluginClass);
                             binaryDescriptors.put(pluginClass, new BinaryGrailsPluginDescriptor(resource, ph.pluginClasses));
                         }
@@ -128,7 +135,6 @@ public class CorePluginFinder implements ParentApplicationContextAware {
         }
     }
 
-
     private Class<?> attemptCorePluginClassLoad(String pluginClassName) {
         try {
             final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
@@ -142,7 +148,6 @@ public class CorePluginFinder implements ParentApplicationContextAware {
         }
         return null;
     }
-
 
     private void addPlugin(Class<?> plugin) {
         foundPluginClasses.add(plugin);
@@ -164,11 +169,11 @@ public class CorePluginFinder implements ParentApplicationContextAware {
 
         @Override
         public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
-            if(localName.equals("type")) {
+            if (localName.equals("type")) {
                 state = PluginParseState.TYPE;
                 buff = new StringBuilder();
             }
-            else if(localName.equals("resource")) {
+            else if (localName.equals("resource")) {
                 state = PluginParseState.RESOURCE;
                 buff = new StringBuilder();
             }

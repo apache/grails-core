@@ -19,16 +19,18 @@
 
 package org.grails.events.gpars
 
-import grails.events.Event
-import grails.events.subscriber.Subscription
-import grails.events.trigger.EventTrigger
+import java.util.concurrent.Callable
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import groovyx.gpars.actor.Actor
-import org.grails.events.bus.AbstractEventBus
 
-import java.util.concurrent.Callable
+import groovyx.gpars.actor.Actor
+
+import grails.events.Event
+import grails.events.subscriber.Subscription
+import grails.events.trigger.EventTrigger
+import org.grails.events.bus.AbstractEventBus
 
 import static groovyx.gpars.actor.Actors.actor
 
@@ -54,7 +56,7 @@ class ActorEventBus extends AbstractEventBus implements Closeable {
                         for (Subscription sub : subscriptions) {
                             try {
                                 EventTrigger eventTrigger = sub.buildTrigger(msg)
-                                replyIfExists( eventTrigger.proceed() )
+                                replyIfExists(eventTrigger.proceed())
                             } catch (Throwable e) {
                                 replyIfExists(e)
                             }

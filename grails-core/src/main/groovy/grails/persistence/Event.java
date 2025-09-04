@@ -31,14 +31,15 @@ public enum Event {
     onLoad, onSave, beforeLoad, beforeInsert, beforeUpdate, beforeDelete, afterLoad, afterInsert, afterUpdate, afterDelete;
 
     private static final String[] allEvents;
+
     static {
-        List<String> events = new ArrayList<String>();
+        List<String> events = new ArrayList<>();
         for (Event e : values()) {
             events.add(e.toString());
         }
         allEvents = events.toArray(new String[events.size()]);
-
     }
+
     /**
      * @return The names of all persistence events
      */

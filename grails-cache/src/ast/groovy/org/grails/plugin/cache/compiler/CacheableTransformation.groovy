@@ -18,10 +18,8 @@
  */
 package org.grails.plugin.cache.compiler
 
-import grails.plugin.cache.Cacheable
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
@@ -32,11 +30,24 @@ import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.GroovyASTTransformation
-import org.grails.core.artefact.ControllerArtefactHandler
+
 import org.springframework.cache.Cache
 
-import static org.codehaus.groovy.ast.ClassHelper.*
-import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.*
+import grails.plugin.cache.Cacheable
+import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.grails.core.artefact.ControllerArtefactHandler
+
+import static org.codehaus.groovy.ast.ClassHelper.make
+import static org.codehaus.groovy.ast.tools.GeneralUtils.args
+import static org.codehaus.groovy.ast.tools.GeneralUtils.block
+import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifElseS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
+import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
+import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 
 /**
  * @since 4.0.0
@@ -60,8 +71,8 @@ class CacheableTransformation extends AbstractCacheTransformation {
     @Override
     protected Expression buildDelegatingMethodCall(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, MethodNode methodNode, MethodCallExpression originalMethodCallExpr, BlockStatement newMethodBody) {
         boolean isControllerClass = classNode.name.endsWith(ControllerArtefactHandler.TYPE)
-        if(isControllerClass) {
-            log.warn("@Cacheable is not supported on controller methods. Ignoring method: ${methodNode.name}")
+        if (isControllerClass) {
+            log.warn('@Cacheable is not supported on controller methods. Ignoring method: {}', methodNode.name)
             return originalMethodCallExpr
         }
 
@@ -81,11 +92,10 @@ class CacheableTransformation extends AbstractCacheTransformation {
         // def $_cache_cacheKey = customCacheKeyGenerator.generate(className, methodName, hashCode, $_method_parameter_map)
         VariableExpression cacheKeyDeclaration = declareCacheKey(sourceUnit, annotationNode, classNode, methodNode , cachingBlock)
 
-
         // ValueWrapper $_cache_valueWrapper = $_cache_cacheVariable.get($_cache_cacheKey);
         VariableExpression cacheValueWrapper = varX(CACHE_VALUE_WRAPPER_LOCAL_VARIABLE_NAME, make(Cache.ValueWrapper))
         cachingBlock.addStatement(
-            declS(cacheValueWrapper, callD(cacheDeclaration, "get", cacheKeyDeclaration))
+            declS(cacheValueWrapper, callD(cacheDeclaration, 'get', cacheKeyDeclaration))
         )
 
         // if($_cache_valueWrapper != null) {
@@ -98,10 +108,10 @@ class CacheableTransformation extends AbstractCacheTransformation {
         VariableExpression originalValueExpr = varX(CACHE_ORIGINAL_METHOD_RETURN_VALUE_LOCAL_VARIABLE_NAME)
         cachingBlock.addStatement(
             ifElseS(notNullX(cacheValueWrapper),
-                returnS( callD(cacheValueWrapper, "get")),
+                returnS(callD(cacheValueWrapper, 'get')),
                 block(
                     declS(originalValueExpr, originalMethodCallExpr),
-                    stmt(callD(cacheDeclaration,"put", args(cacheKeyDeclaration, originalValueExpr))),
+                    stmt(callD(cacheDeclaration, 'put', args(cacheKeyDeclaration, originalValueExpr))),
                     returnS(originalValueExpr)
                 )
             )

@@ -20,9 +20,10 @@
 package org.grails.datastore.mapping.core.connections
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.core.DatastoreUtils
+
 import org.springframework.core.env.PropertyResolver
 
+import org.grails.datastore.mapping.core.DatastoreUtils
 
 /**
  * A static non-mutable implementation for existing for a set of existing {@link ConnectionSource} instances
@@ -33,13 +34,13 @@ import org.springframework.core.env.PropertyResolver
 @CompileStatic
 class StaticConnectionSources<T, S extends ConnectionSourceSettings> extends AbstractConnectionSources<T, S> {
 
-    protected final Map<String, ConnectionSource<T, S>> connectionSourceMap = new LinkedHashMap<>();
+    protected final Map<String, ConnectionSource<T, S>> connectionSourceMap = new LinkedHashMap<>()
 
     StaticConnectionSources(ConnectionSource<T, S> defaultConnectionSource, Iterable<ConnectionSource<T, S>> otherConnectionSources, PropertyResolver configuration = DatastoreUtils.createPropertyResolver(null)) {
         super(defaultConnectionSource, new SingletonConnectionSources.NullConnectionFactory<T, S>(), configuration)
 
         connectionSourceMap.put(ConnectionSource.DEFAULT, defaultConnectionSource)
-        for( ConnectionSource<T, S> source in otherConnectionSources) {
+        for (ConnectionSource<T, S> source in otherConnectionSources) {
             connectionSourceMap.put(source.name, source)
         }
     }
@@ -56,7 +57,7 @@ class StaticConnectionSources<T, S extends ConnectionSourceSettings> extends Abs
 
     @Override
     ConnectionSource<T, S> addConnectionSource(String name, PropertyResolver configuration) {
-        throw new UnsupportedOperationException("Cannot add a connection source it a SingletonConnectionSources")
+        throw new UnsupportedOperationException('Cannot add a connection source it a SingletonConnectionSources')
     }
 
     @Override

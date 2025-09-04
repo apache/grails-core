@@ -18,10 +18,10 @@
  */
 package org.grails.databinding.converters.web
 
-import groovy.transform.CompileStatic
-
 import java.text.DecimalFormat
 import java.text.NumberFormat
+
+import groovy.transform.CompileStatic
 
 /**
  * A ValueConverter that knows how to convert a String to a BigDecimal or a BigInteger and is Locale aware.  The
@@ -38,10 +38,10 @@ class LocaleAwareBigDecimalConverter extends LocaleAwareNumberConverter {
     protected NumberFormat getNumberFormatter() {
         def nf = super.getNumberFormatter()
         if (!(nf instanceof DecimalFormat)) {
-            throw new IllegalStateException("Cannot support non-DecimalFormat: " + nf)
+            throw new IllegalStateException('Cannot support non-DecimalFormat: ' + nf)
         }
 
-        ((DecimalFormat)nf).setParseBigDecimal(true)
+        ((DecimalFormat) nf).setParseBigDecimal(true)
         nf
     }
 }

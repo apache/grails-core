@@ -18,6 +18,8 @@
  */
 package org.grails.plugins.codecs;
 
+import org.springframework.beans.factory.InitializingBean;
+
 import grails.core.GrailsApplication;
 import grails.core.support.GrailsApplicationAware;
 import org.grails.encoder.CodecFactory;
@@ -27,8 +29,6 @@ import org.grails.encoder.Encoder;
 import org.grails.encoder.impl.HTML4Decoder;
 import org.grails.encoder.impl.HTML4Encoder;
 import org.grails.encoder.impl.HTMLEncoder;
-
-import org.springframework.beans.factory.InitializingBean;
 
 /**
  * Encodes and decodes strings to and from HTML.

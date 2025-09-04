@@ -27,13 +27,18 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.mongodb.*;
+import com.mongodb.DBObject;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.FindOneAndUpdateOptions;
 import com.mongodb.client.model.ReturnDocument;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.convert.ConversionService;
+import org.springframework.core.convert.TypeDescriptor;
+
 import org.grails.datastore.mapping.core.IdentityGenerationException;
 import org.grails.datastore.mapping.core.SessionImplementor;
 import org.grails.datastore.mapping.core.impl.PendingDeleteAdapter;
@@ -46,9 +51,6 @@ import org.grails.datastore.mapping.mongo.MongoSession;
 import org.grails.datastore.mapping.mongo.config.MongoMappingContext;
 import org.grails.datastore.mapping.mongo.query.MongoQuery;
 import org.grails.datastore.mapping.query.Query;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.core.convert.ConversionService;
-import org.springframework.core.convert.TypeDescriptor;
 
 /**
  * A {@link org.grails.datastore.mapping.engine.EntityPersister} implementation for the Mongo document store
@@ -59,7 +61,7 @@ import org.springframework.core.convert.TypeDescriptor;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Document> {
 
-    public static final ValueRetrievalStrategy<Document> VALUE_RETRIEVAL_STRATEGY = new ValueRetrievalStrategy<Document>() {
+    public static final ValueRetrievalStrategy<Document> VALUE_RETRIEVAL_STRATEGY = new ValueRetrievalStrategy<>() {
         @Override
         public Object getValue(Document document, String name) {
             return document.get(name);
@@ -76,22 +78,21 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
         super(mappingContext, entity, mongoSession, publisher);
     }
 
-
     @Override
     protected void loadEmbeddedCollection(EmbeddedCollection embeddedCollection,
                                           EntityAccess ea, Object embeddedInstances, String propertyKey) {
 
-        if(Map.class.isAssignableFrom(embeddedCollection.getType())) {
-            if(embeddedInstances instanceof Document) {
+        if (Map.class.isAssignableFrom(embeddedCollection.getType())) {
+            if (embeddedInstances instanceof Document) {
                 Map instances = new HashMap();
-                Document embedded = (Document)embeddedInstances;
+                Document embedded = (Document) embeddedInstances;
                 for (String key : embedded.keySet()) {
                     Object o = embedded.get(key);
-                    if(o instanceof Document) {
+                    if (o instanceof Document) {
                         Document nativeEntry = (Document) o;
                         Object instance =
                                 createObjectFromEmbeddedNativeEntry(embeddedCollection.getAssociatedEntity(), nativeEntry);
-                        SessionImplementor<Document> si = (SessionImplementor<Document>)getSession();
+                        SessionImplementor<Document> si = (SessionImplementor<Document>) getSession();
                         si.cacheEntry(embeddedCollection.getAssociatedEntity(), createEmbeddedCacheEntryKey(instance), nativeEntry);
                         instances.put(key, instance);
                     }
@@ -104,13 +105,13 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
             Collection<Object> instances = MappingUtils.createConcreteCollection(embeddedCollection.getType());
 
             if (embeddedInstances instanceof Collection) {
-                Collection coll = (Collection)embeddedInstances;
+                Collection coll = (Collection) embeddedInstances;
                 for (Object dbo : coll) {
                     if (dbo instanceof Document) {
-                        Document nativeEntry = (Document)dbo;
+                        Document nativeEntry = (Document) dbo;
                         Object instance =
                                 createObjectFromEmbeddedNativeEntry(embeddedCollection.getAssociatedEntity(), nativeEntry);
-                        SessionImplementor<Document> si = (SessionImplementor<Document>)getSession();
+                        SessionImplementor<Document> si = (SessionImplementor<Document>) getSession();
                         si.cacheEntry(embeddedCollection.getAssociatedEntity(), createEmbeddedCacheEntryKey(instance), nativeEntry);
                         instances.add(instance);
                     }
@@ -130,19 +131,16 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
         return new MongoQuery((MongoSession) getSession(), getPersistentEntity());
     }
 
-
     @Override
     protected void deleteEntry(String family, final Object key, final Object entry) {
         final MongoSession session = (MongoSession) getSession();
-        session.
-            addPendingDelete(new PendingDeleteAdapter(getPersistentEntity(), key, entry) {
+        session.addPendingDelete(new PendingDeleteAdapter(getPersistentEntity(), key, entry) {
                 public void run() {
-                    session.clear(entry);
-                }
-            });
+                session.clear(entry);
+            }
+        });
 
     }
-
 
     @Override
     protected Object generateIdentifier(final PersistentEntity persistentEntity, final Document nativeEntry) {
@@ -156,10 +154,9 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
             final MongoClient client = mongoSession
                     .getNativeInterface();
 
-            final MongoCollection<Document>  dbCollection = client
+            final MongoCollection<Document> dbCollection = client
                     .getDatabase(mongoSession.getDatabase(persistentEntity))
                     .getCollection(collectionName + NEXT_ID_SUFFIX);
-
 
             int attempts = 0;
             while (true) {
@@ -175,7 +172,7 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
                 } else {
                     attempts++;
                     if (attempts > 3) {
-                        throw new IdentityGenerationException("Unable to generate identity for ["+persistentEntity.getName()+"] using findAndModify after 3 attempts");
+                        throw new IdentityGenerationException("Unable to generate identity for [" + persistentEntity.getName() + "] using findAndModify after 3 attempts");
                     }
                 }
             }
@@ -194,20 +191,18 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
         return stringId;
     }
 
-
     @Override
     protected Document createNewEntry(String family, Object instance) {
-        SessionImplementor<Document> si = (SessionImplementor<Document>)getSession();
+        SessionImplementor<Document> si = (SessionImplementor<Document>) getSession();
 
         Document dbo = si.getCachedEntry(getPersistentEntity(), createInstanceCacheEntryKey(instance));
-        if(dbo != null) {
+        if (dbo != null) {
             return dbo;
         }
         else {
             return super.createNewEntry(family, instance);
         }
     }
-
 
     @Override
     protected Document createNewEntry(String family) {
@@ -220,13 +215,11 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
         return dbo;
     }
 
-
     @Override
     protected void setEntryValue(Document nativeEntry, String key, Object value) {
         MappingContext mappingContext = getMappingContext();
         setDBObjectValue(nativeEntry, key, value, mappingContext);
     }
-
 
     public static void setDBObjectValue(Document nativeEntry, String key, Object value, MappingContext mappingContext) {
         Object nativeValue = getSimpleNativePropertyValue(value, mappingContext);
@@ -252,21 +245,21 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
             nativeValue = value;
         } else if (value.getClass().isArray()) {
             Object[] array = (Object[]) value;
-            List<Object> nativeColl = new ArrayList<Object>(array.length);
+            List<Object> nativeColl = new ArrayList<>(array.length);
             for (Object item : array) {
                 nativeColl.add(getSimpleNativePropertyValue(item, mappingContext));
             }
             nativeValue = nativeColl;
         } else if (value instanceof Collection) {
-            Collection existingColl = (Collection)value;
-            List<Object> nativeColl = new ArrayList<Object>(existingColl.size());
+            Collection existingColl = (Collection) value;
+            List<Object> nativeColl = new ArrayList<>(existingColl.size());
             for (Object item : existingColl) {
                 nativeColl.add(getSimpleNativePropertyValue(item, mappingContext));
             }
             nativeValue = nativeColl;
         } else if (value instanceof Map) {
-            Map<String, Object> existingMap = (Map)value;
-            Map<String, Object> newMap = new LinkedHashMap<String, Object>();
+            Map<String, Object> existingMap = (Map) value;
+            Map<String, Object> newMap = new LinkedHashMap<>();
             for (Map.Entry<String, Object> entry :existingMap.entrySet()) {
                 newMap.put(entry.getKey(), getSimpleNativePropertyValue(entry.getValue(), mappingContext));
             }
@@ -298,7 +291,6 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
         return nativeValue;
     }
 
-
     @Override
     protected Document retrieveEntry(final PersistentEntity persistentEntity,
                                      String family, final Serializable key) {
@@ -306,30 +298,30 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
         final MongoCollection<Document> collection =
                 mongoSession
                         .getNativeInterface()
-                        .getDatabase( mongoSession.getDatabase(persistentEntity))
-                        .getCollection( mongoSession.getCollectionName(persistentEntity ));
+                        .getDatabase(mongoSession.getDatabase(persistentEntity))
+                        .getCollection(mongoSession.getCollectionName(persistentEntity));
         return collection.find(createDBObjectWithKey(key)).limit(1).first();
     }
 
     private Document removeNullEntries(Document nativeEntry) {
-        for (String key : new HashSet<String>(nativeEntry.keySet())) {
+        for (String key : new HashSet<>(nativeEntry.keySet())) {
             Object o = nativeEntry.get(key);
             if (o == null) {
                 nativeEntry.remove(key);
             } else if (o instanceof Object[]) {
-                for (Object o2 : (Object[])o) {
+                for (Object o2 : (Object[]) o) {
                     if (o2 instanceof Document) {
-                        removeNullEntries((Document)o2);
+                        removeNullEntries((Document) o2);
                     }
                 }
             } else if (o instanceof List) {
-                for (Object o2 : (List)o) {
+                for (Object o2 : (List) o) {
                     if (o2 instanceof Document) {
-                        removeNullEntries((Document)o2);
+                        removeNullEntries((Document) o2);
                     }
                 }
             } else if (o instanceof Document) {
-                removeNullEntries((Document)o);
+                removeNullEntries((Document) o);
             }
         }
         return nativeEntry;
@@ -366,20 +358,20 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
             } else if ("_id".equals(key)) {
             } else if (o instanceof Object[]) {
                 sets.put(key, o);
-                for (Object o2 : (Object[])o) {
+                for (Object o2 : (Object[]) o) {
                     if (o2 instanceof Document) {
-                        removeNullEntries((Document)o2);
+                        removeNullEntries((Document) o2);
                     }
                 }
             } else if (o instanceof List) {
                 sets.put(key, o);
-                for (Object o2 : (List)o) {
+                for (Object o2 : (List) o) {
                     if (o2 instanceof Document) {
-                        removeNullEntries((Document)o2);
+                        removeNullEntries((Document) o2);
                     }
                 }
             } else if (o instanceof DBObject) {
-                sets.put(key, removeNullEntries((Document)o));
+                sets.put(key, removeNullEntries((Document) o));
             } else {
                 sets.put(key, o);
             }
@@ -408,7 +400,7 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
         final MongoCollection dbCollection = getMongoSession().getCollection(getPersistentEntity());
 
         MongoSession mongoSession = (MongoSession) getSession();
-        MongoQuery query = (MongoQuery)mongoSession.createQuery(getPersistentEntity().getJavaClass());
+        MongoQuery query = (MongoQuery) mongoSession.createQuery(getPersistentEntity().getJavaClass());
         query.in(getPersistentEntity().getIdentity().getName(), keys);
 
         dbCollection.deleteMany(query.getMongoQuery());
@@ -430,6 +422,5 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
         }
         return dbo;
     }
-
 
 }

@@ -18,9 +18,9 @@
  */
 package org.grails.cli.interactive.completers
 
-import jline.console.completer.Completer
-
 import java.util.regex.Pattern
+
+import jline.console.completer.Completer
 
 /**
  * JLine Completor that accepts a string if it matches a given regular
@@ -30,6 +30,7 @@ import java.util.regex.Pattern
  * @since 2.0
  */
 class RegexCompletor implements Completer {
+
     Pattern pattern
 
     RegexCompletor(String pattern) {

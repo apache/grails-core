@@ -27,6 +27,7 @@ import org.springframework.core.convert.converter.Converter
  */
 @CompileStatic
 class IntegerToByteConverter implements Converter<Integer, Byte> {
+
     @Override
     Byte convert(Integer source) {
         source as Byte

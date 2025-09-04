@@ -24,6 +24,7 @@ import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.feature.Category;
 import org.grails.forge.feature.Feature;
+import org.grails.forge.util.VersionInfo;
 
 import java.util.Map;
 
@@ -37,12 +38,12 @@ public class GrailsCache implements Feature {
 
     @Override
     public String getTitle() {
-        return "Grails Cache Plugin";
+        return "Cache";
     }
 
     @Override
     public String getDescription() {
-        return "The Grails Cache plugin provides powerful and easy to use caching functionality to Grails applications and plugins.";
+        return "The Cache Plugin provides powerful and easy-to-use caching functionality for Grails applications and plugins.";
     }
 
     @Override
@@ -69,7 +70,7 @@ public class GrailsCache implements Feature {
 
     @Override
     public String getDocumentation() {
-        return "https://docs.grails.org/";
+        return "https://docs.grails.org/" + VersionInfo.getDocumentationVersion() + "/guide/cache.html";
     }
 
 }

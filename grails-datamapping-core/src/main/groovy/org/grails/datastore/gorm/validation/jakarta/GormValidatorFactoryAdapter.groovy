@@ -137,7 +137,7 @@ class GormValidatorFactoryAdapter implements ValidatorFactory  {
 
         @Override
         Validator getValidator() {
-            return new GormValidatorAdapter( delegate.getValidator() )
+            return new GormValidatorAdapter(delegate.getValidator())
         }
     }
 }

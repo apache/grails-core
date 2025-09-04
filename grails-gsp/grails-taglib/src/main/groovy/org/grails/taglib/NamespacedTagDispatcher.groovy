@@ -18,9 +18,10 @@
  */
 package org.grails.taglib
 
+import groovy.transform.CompileStatic
+
 import grails.core.GrailsApplication
 import grails.util.Environment
-import groovy.transform.CompileStatic
 
 /**
  * Allows dispatching to namespaced tag libraries and is used within controllers and tag libraries
@@ -31,6 +32,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class NamespacedTagDispatcher extends GroovyObjectSupport {
+
     protected String namespace
     protected GrailsApplication application
     protected Class type

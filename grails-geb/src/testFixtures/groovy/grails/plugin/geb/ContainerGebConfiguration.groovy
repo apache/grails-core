@@ -18,12 +18,12 @@
  */
 package grails.plugin.geb
 
-import org.testcontainers.containers.GenericContainer
-
 import java.lang.annotation.ElementType
 import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
+
+import org.testcontainers.containers.GenericContainer
 
 /**
  * Can be used to configure the protocol and hostname that the container's browser will use

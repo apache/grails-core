@@ -118,7 +118,7 @@ public class GrailsHttpSession implements HttpSession {
      * @see jakarta.servlet.http.HttpSession#getSessionContext()
      * @deprecated
      */
-/*
+    /*
     @Deprecated
     public jakarta.servlet.http.HttpSessionContext getSessionContext() {
         createSessionIfNecessary();
@@ -126,13 +126,13 @@ public class GrailsHttpSession implements HttpSession {
             return adaptee.getSessionContext();
         }
     }
-*/
+    */
 
     /**
      * @see jakarta.servlet.http.HttpSession#getValue(java.lang.String)
      * @deprecated
      */
-/*
+    /*
     @Deprecated
     public Object getValue(String name) {
         createSessionIfNecessary();
@@ -140,13 +140,13 @@ public class GrailsHttpSession implements HttpSession {
             return adaptee.getAttribute(name);
         }
     }
-*/
+    */
 
     /**
      * @see jakarta.servlet.http.HttpSession#getValueNames()
      * @deprecated
      */
-/*
+    /*
     @Deprecated
     public String[] getValueNames() {
         createSessionIfNecessary();
@@ -154,13 +154,13 @@ public class GrailsHttpSession implements HttpSession {
             return adaptee.getValueNames();
         }
     }
-*/
+    */
 
     /**
      * @see jakarta.servlet.http.HttpSession#putValue(java.lang.String, java.lang.Object)
      * @deprecated
      */
-/*
+    /*
     @Deprecated
     public void putValue(String name, Object value) {
         createSessionIfNecessary();
@@ -168,13 +168,13 @@ public class GrailsHttpSession implements HttpSession {
             adaptee.setAttribute(name, value);
         }
     }
-*/
+    */
 
     /**
      * @see jakarta.servlet.http.HttpSession
      * @deprecated
      */
-/*
+    /*
     @Deprecated
     public void removeValue(String name) {
         createSessionIfNecessary();
@@ -182,7 +182,7 @@ public class GrailsHttpSession implements HttpSession {
             adaptee.removeAttribute(name);
         }
     }
-*/
+    */
 
     /* (non-Javadoc)
      * @see jakarta.servlet.http.HttpSession#invalidate()

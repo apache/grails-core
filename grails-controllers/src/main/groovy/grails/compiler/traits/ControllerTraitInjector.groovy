@@ -18,8 +18,9 @@
  */
 package grails.compiler.traits
 
-import grails.artefact.Controller
 import groovy.transform.CompileStatic
+
+import grails.artefact.Controller
 
 /**
  *
@@ -33,7 +34,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class ControllerTraitInjector implements TraitInjector {
-    
+
     @Override
     Class getTrait() {
         Controller

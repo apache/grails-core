@@ -24,7 +24,7 @@ import grails.plugins.*
 class LoadfirstGrailsPlugin extends Plugin {
 
    // the version or versions of Grails the plugin is designed for
-    def grailsVersion = "3.0.0.BUILD-SNAPSHOT > *"
+    def grailsVersion = '7.0.0.SNAPSHOT > *'
     // resources that are excluded from plugin packaging
     def pluginExcludes = [
         "grails-app/views/error.gsp"
@@ -40,5 +40,5 @@ This plugin should be loaded before the loadsecond plugin because loadsecond exp
     def profiles = ['web']
 
     // URL to the plugin's documentation
-    def documentation = "http://grails.org/plugin/loadfirst"
+    def documentation = "https://grails.apache.org/plugins.html"
 }

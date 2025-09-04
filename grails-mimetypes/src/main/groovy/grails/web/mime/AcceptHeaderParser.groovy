@@ -17,6 +17,7 @@
  *  under the License.
  */
 package grails.web.mime
+
 /**
  * <p>Defines an interface for classes that parse the HTTP Accept header into a set or MimeType definitions ordered by
  * priority.

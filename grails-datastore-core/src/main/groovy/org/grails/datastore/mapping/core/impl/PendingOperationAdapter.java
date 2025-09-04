@@ -37,8 +37,8 @@ public abstract class PendingOperationAdapter<E, K> implements PendingOperation<
     protected PersistentEntity entity;
     protected K nativeKey;
     protected E nativeEntry;
-    private List<PendingOperation<E, K>> pendingOperations = new LinkedList<PendingOperation<E, K>>();
-    private List<PendingOperation<E, K>> preOperations = new LinkedList<PendingOperation<E, K>>();
+    private List<PendingOperation<E, K>> pendingOperations = new LinkedList<>();
+    private List<PendingOperation<E, K>> preOperations = new LinkedList<>();
     private boolean vetoed;
     protected boolean executed;
 

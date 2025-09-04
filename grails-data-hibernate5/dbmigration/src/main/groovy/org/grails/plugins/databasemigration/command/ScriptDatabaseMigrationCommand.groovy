@@ -18,12 +18,14 @@
  */
 package org.grails.plugins.databasemigration.command
 
+import groovy.transform.CompileStatic
+
+import liquibase.parser.ChangeLogParser
+import liquibase.parser.ChangeLogParserFactory
+
 import grails.config.ConfigMap
 import grails.util.Environment
 import grails.util.GrailsNameUtils
-import groovy.transform.CompileStatic
-import liquibase.parser.ChangeLogParser
-import liquibase.parser.ChangeLogParserFactory
 import org.grails.cli.profile.ExecutionContext
 import org.grails.config.CodeGenConfig
 import org.grails.plugins.databasemigration.EnvironmentAwareCodeGenConfig
@@ -59,7 +61,7 @@ trait ScriptDatabaseMigrationCommand implements DatabaseMigrationCommand {
     abstract void handle()
 
     String getName() {
-        return GrailsNameUtils.getScriptName(GrailsNameUtils.getLogicalName(getClass().getName(), "Command"))
+        return GrailsNameUtils.getScriptName(GrailsNameUtils.getLogicalName(getClass().getName(), 'Command'))
     }
 
     void setConfig(ConfigMap config) {

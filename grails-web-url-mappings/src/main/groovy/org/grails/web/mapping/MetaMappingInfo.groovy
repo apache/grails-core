@@ -18,19 +18,19 @@
  */
 package org.grails.web.mapping
 
-import grails.gorm.validation.Constrained
-import grails.gorm.validation.ConstrainedProperty
 import groovy.transform.PackageScope
 
+import grails.gorm.validation.ConstrainedProperty
 
 /**
  * Meta data describing a url mapping
- * 
+ *
  * @since 2.3.5
  *
  */
 @PackageScope
 class MetaMappingInfo {
+
     def namespace
     def controller
     def action

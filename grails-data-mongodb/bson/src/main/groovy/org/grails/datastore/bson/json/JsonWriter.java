@@ -16,11 +16,6 @@
 
 package org.grails.datastore.bson.json;
 
-import org.bson.*;
-import org.bson.json.JsonWriterSettings;
-import org.bson.types.Decimal128;
-import org.bson.types.ObjectId;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.text.DateFormat;
@@ -28,6 +23,17 @@ import java.text.SimpleDateFormat;
 import java.util.Base64;
 import java.util.Date;
 import java.util.TimeZone;
+
+import org.bson.AbstractBsonWriter;
+import org.bson.BSONException;
+import org.bson.BsonBinary;
+import org.bson.BsonContextType;
+import org.bson.BsonDbPointer;
+import org.bson.BsonRegularExpression;
+import org.bson.BsonTimestamp;
+import org.bson.json.JsonWriterSettings;
+import org.bson.types.Decimal128;
+import org.bson.types.ObjectId;
 
 /**
  * Simplified fork of {@link org.bson.json.JsonWriter} that ignores behaviour specific to MongoDB and produces more compat output
@@ -95,6 +101,7 @@ public class JsonWriter extends AbstractBsonWriter {
         }
 
     }
+
     @Override
     protected void doWriteEndArray() {
         try {
@@ -137,7 +144,7 @@ public class JsonWriter extends AbstractBsonWriter {
             writeNameHelper(getName());
             writer.write(JsonToken.QUOTE);
             Date date = new Date(value);
-            writer.write( df.format(date) );
+            writer.write(df.format(date));
             writer.write(JsonToken.QUOTE);
             setState(getNextState());
         } catch (IOException e) {
@@ -260,7 +267,7 @@ public class JsonWriter extends AbstractBsonWriter {
                     writer.write(escaped);
                     writer.write(JsonToken.FORWARD_SLASH);
                     writer.write(regularExpression.getOptions());
-                break;
+                    break;
             }
         } catch (IOException e) {
             throwBsonException(e);
@@ -406,7 +413,6 @@ public class JsonWriter extends AbstractBsonWriter {
         }
         writer.write('"');
     }
-
 
     /**
      * The context for the writer, inheriting all the values from {@link org.bson.AbstractBsonWriter.Context}, and additionally providing

@@ -18,31 +18,45 @@
  */
 package org.grails.compiler.web.taglib;
 
-import grails.artefact.TagLibrary;
-import grails.compiler.ast.AnnotatedClassInjector;
-import grails.compiler.ast.AstTransformer;
-import grails.compiler.ast.GrailsArtefactClassInjector;
-import groovy.lang.Closure;
-import org.codehaus.groovy.ast.*;
-import org.codehaus.groovy.ast.expr.*;
-import org.codehaus.groovy.ast.stmt.BlockStatement;
-import org.codehaus.groovy.ast.stmt.ExpressionStatement;
-import org.codehaus.groovy.ast.stmt.ReturnStatement;
-import org.codehaus.groovy.ast.stmt.Statement;
-import org.codehaus.groovy.classgen.GeneratorContext;
-import org.codehaus.groovy.control.SourceUnit;
-import org.grails.compiler.injection.GrailsASTUtils;
-import org.grails.core.artefact.gsp.TagLibArtefactHandler;
-import org.grails.io.support.GrailsResourceUtils;
-import org.grails.taglib.TagOutput;
-import org.grails.taglib.encoder.OutputContextLookupHelper;
-
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+
+import groovy.lang.Closure;
+import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.PropertyNode;
+import org.codehaus.groovy.ast.expr.ArgumentListExpression;
+import org.codehaus.groovy.ast.expr.CastExpression;
+import org.codehaus.groovy.ast.expr.ClassExpression;
+import org.codehaus.groovy.ast.expr.ClosureExpression;
+import org.codehaus.groovy.ast.expr.ConstantExpression;
+import org.codehaus.groovy.ast.expr.ConstructorCallExpression;
+import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.MapExpression;
+import org.codehaus.groovy.ast.expr.MethodCallExpression;
+import org.codehaus.groovy.ast.expr.VariableExpression;
+import org.codehaus.groovy.ast.stmt.BlockStatement;
+import org.codehaus.groovy.ast.stmt.ExpressionStatement;
+import org.codehaus.groovy.ast.stmt.ReturnStatement;
+import org.codehaus.groovy.ast.stmt.Statement;
+import org.codehaus.groovy.classgen.GeneratorContext;
+import org.codehaus.groovy.control.SourceUnit;
+
+import grails.artefact.TagLibrary;
+import grails.compiler.ast.AnnotatedClassInjector;
+import grails.compiler.ast.AstTransformer;
+import grails.compiler.ast.GrailsArtefactClassInjector;
+import org.grails.compiler.injection.GrailsASTUtils;
+import org.grails.core.artefact.gsp.TagLibArtefactHandler;
+import org.grails.io.support.GrailsResourceUtils;
+import org.grails.taglib.TagOutput;
+import org.grails.taglib.encoder.OutputContextLookupHelper;
 
 /**
  * Enhances tag library classes with the appropriate API at compile time.
@@ -80,7 +94,6 @@ public class TagLibraryTransformer implements GrailsArtefactClassInjector, Annot
     private static final String NAMESPACE_PROPERTY = "namespace";
     private static final ClassNode CLOSURE_CLASS_NODE = new ClassNode(Closure.class);
 
-
     @Override
     public String[] getArtefactTypes() {
         return new String[] { getArtefactType(), "TagLibrary" };
@@ -117,8 +130,7 @@ public class TagLibraryTransformer implements GrailsArtefactClassInjector, Annot
                 namespace = initialExpression.getText();
             }
         }
-        
-        
+
         addGetTagLibNamespaceMethod(classNode, namespace);
 
         MethodCallExpression tagLibraryLookupMethodCall = new MethodCallExpression(new VariableExpression("this", ClassHelper.make(TagLibrary.class)), "getTagLibraryLookup", ZERO_ARGS);
@@ -168,26 +180,26 @@ public class TagLibraryTransformer implements GrailsArtefactClassInjector, Annot
                  .addExpression(includeBody ? BODY_EXPRESSION : NULL_EXPRESSION)
                  .addExpression(CURRENT_OUTPUT_CONTEXT_METHOD_CALL);
 
-        methodBody.addStatement(new ExpressionStatement(new MethodCallExpression(new ClassExpression(TAG_OUTPUT_CLASS_NODE),"captureTagOutput", arguments)));
+        methodBody.addStatement(new ExpressionStatement(new MethodCallExpression(new ClassExpression(TAG_OUTPUT_CLASS_NODE), "captureTagOutput", arguments)));
 
         if (includeBody && includeAttrs) {
             if (!methodExists(classNode, tagName, MAP_CLOSURE_PARAMETERS)) {
-                classNode.addMethod(new MethodNode(tagName, Modifier.PUBLIC,GrailsASTUtils.OBJECT_CLASS_NODE, MAP_CLOSURE_PARAMETERS, null, methodBody));
+                classNode.addMethod(new MethodNode(tagName, Modifier.PUBLIC, GrailsASTUtils.OBJECT_CLASS_NODE, MAP_CLOSURE_PARAMETERS, null, methodBody));
             }
         }
         else if (includeAttrs) {
             if (!methodExists(classNode, tagName, MAP_PARAMETERS)) {
-                classNode.addMethod(new MethodNode(tagName, Modifier.PUBLIC,GrailsASTUtils.OBJECT_CLASS_NODE, MAP_PARAMETERS, null, methodBody));
+                classNode.addMethod(new MethodNode(tagName, Modifier.PUBLIC, GrailsASTUtils.OBJECT_CLASS_NODE, MAP_PARAMETERS, null, methodBody));
             }
         }
         else if (includeBody) {
             if (!methodExists(classNode, tagName, CLOSURE_PARAMETERS)) {
-                classNode.addMethod(new MethodNode(tagName, Modifier.PUBLIC,GrailsASTUtils.OBJECT_CLASS_NODE, CLOSURE_PARAMETERS, null, methodBody));
+                classNode.addMethod(new MethodNode(tagName, Modifier.PUBLIC, GrailsASTUtils.OBJECT_CLASS_NODE, CLOSURE_PARAMETERS, null, methodBody));
             }
         }
         else {
             if (!methodExists(classNode, tagName, Parameter.EMPTY_ARRAY)) {
-                classNode.addMethod(new MethodNode(tagName, Modifier.PUBLIC,GrailsASTUtils.OBJECT_CLASS_NODE, Parameter.EMPTY_ARRAY, null, methodBody));
+                classNode.addMethod(new MethodNode(tagName, Modifier.PUBLIC, GrailsASTUtils.OBJECT_CLASS_NODE, Parameter.EMPTY_ARRAY, null, methodBody));
             }
         }
     }
@@ -197,9 +209,9 @@ public class TagLibraryTransformer implements GrailsArtefactClassInjector, Annot
     }
 
     private List<PropertyNode> findTags(ClassNode classNode) {
-        List<PropertyNode> tags = new ArrayList<PropertyNode>();
+        List<PropertyNode> tags = new ArrayList<>();
         List<PropertyNode> properties = classNode.getProperties();
-        List<PropertyNode> potentialAliases = new ArrayList<PropertyNode>();
+        List<PropertyNode> potentialAliases = new ArrayList<>();
         for (PropertyNode property : properties) {
             if (property.isPublic()) {
                 Expression initialExpression = property.getInitialExpression();

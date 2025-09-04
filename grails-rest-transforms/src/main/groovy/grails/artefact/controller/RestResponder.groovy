@@ -19,6 +19,17 @@
 package grails.artefact.controller
 
 import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
+import groovy.transform.Generated
+import groovy.transform.TypeCheckingMode
+
+import jakarta.servlet.http.HttpServletResponse
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpStatus
+import org.springframework.validation.BeanPropertyBindingResult
+import org.springframework.validation.Errors
+
 import grails.artefact.Controller
 import grails.artefact.controller.support.ResponseRenderer
 import grails.core.support.proxy.ProxyHandler
@@ -26,20 +37,10 @@ import grails.rest.Resource
 import grails.rest.render.Renderer
 import grails.rest.render.RendererRegistry
 import grails.web.mime.MimeType
-import groovy.transform.Generated
 import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.web.util.GrailsApplicationAttributes
-import groovy.transform.CompileStatic
-import groovy.transform.TypeCheckingMode
-
-import jakarta.servlet.http.HttpServletResponse
-
 import org.grails.plugins.web.rest.render.DefaultRendererRegistry
 import org.grails.plugins.web.rest.render.ServletRenderContext
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.http.HttpStatus
-import org.springframework.validation.BeanPropertyBindingResult
-import org.springframework.validation.Errors
+import org.grails.web.util.GrailsApplicationAttributes
 
 /**
  *
@@ -50,7 +51,7 @@ import org.springframework.validation.Errors
 @CompileStatic
 trait RestResponder {
 
-    private String PROPERTY_RESPONSE_FORMATS = "responseFormats"
+    private String PROPERTY_RESPONSE_FORMATS = 'responseFormats'
 
     private RendererRegistry rendererRegistry
     private ProxyHandler proxyHandler
@@ -82,7 +83,7 @@ trait RestResponder {
      */
     @Generated
     def respond(Map args, value) {
-        internalRespond value, args
+        internalRespond(value, args)
     }
 
     /**
@@ -97,7 +98,7 @@ trait RestResponder {
      */
     @Generated
     def respond(Map value) {
-        internalRespond value
+        internalRespond(value)
     }
 
     /**
@@ -105,7 +106,7 @@ trait RestResponder {
      */
     @Generated
     def respond(Map namedArgs, Map value) {
-        internalRespond value, namedArgs
+        internalRespond(value, namedArgs)
     }
 
     /**
@@ -121,10 +122,10 @@ trait RestResponder {
      */
     @Generated
     def respond(value, Map args = [:]) {
-        internalRespond value, args
+        internalRespond(value, args)
     }
 
-    private internalRespond(value, Map args=[:]) {
+    private internalRespond(value, Map args = [:]) {
         Integer statusCode
         if (args.status) {
             final statusValue = args.status
@@ -132,21 +133,21 @@ trait RestResponder {
                 statusCode = statusValue.intValue()
             } else {
                 if (statusValue instanceof HttpStatus) {
-                    statusCode = ((HttpStatus)statusValue).value()
+                    statusCode = ((HttpStatus) statusValue).value()
                 } else {
                     statusCode = statusValue.toString().toInteger()
                 }
             }
         }
         if (value == null) {
-            return callRender([status:statusCode ?: 404 ])
+            return callRender([status: statusCode ?: 404 ])
         }
 
         if (proxyHandler != null) {
             value = proxyHandler.unwrapIfProxy(value)
         }
 
-        final webRequest = ((Controller)this).getWebRequest()
+        final webRequest = ((Controller) this).getWebRequest()
         List<String> formats = calculateFormats(webRequest.actionName, value, args)
         final response = webRequest.getCurrentResponse()
         MimeType[] mimeTypes = getResponseFormat(response)
@@ -158,12 +159,12 @@ trait RestResponder {
 
         Renderer renderer = null
 
-        for(MimeType mimeType in mimeTypes) {
+        for (MimeType mimeType in mimeTypes) {
             if (mimeType == MimeType.ALL && formats) {
                 final allMimeTypes = MimeType.getConfiguredMimeTypes()
                 final firstFormat = formats[0]
-                mimeType = allMimeTypes.find { MimeType mt -> mt.extension == firstFormat}
-                if(mimeType) {
+                mimeType = allMimeTypes.find { MimeType mt -> mt.extension == firstFormat }
+                if (mimeType) {
                     webRequest.currentRequest.setAttribute(GrailsApplicationAttributes.RESPONSE_MIME_TYPE, mimeType)
                 }
             }
@@ -171,23 +172,22 @@ trait RestResponder {
             if (mimeType && formats.contains(mimeType.extension)) {
                 Errors errors = value.hasProperty(GormProperties.ERRORS) ? getDomainErrors(value) : null
 
-
                 if (errors && errors.hasErrors()) {
                     def target = errors instanceof BeanPropertyBindingResult ? errors.getTarget() : null
                     if (proxyHandler != null && target != null) {
                         target = proxyHandler.unwrapIfProxy(target)
                     }
-                    Renderer<Errors> errorsRenderer = registry.findContainerRenderer(mimeType, Errors.class, target)
+                    Renderer<Errors> errorsRenderer = registry.findContainerRenderer(mimeType, Errors, target)
                     if (errorsRenderer) {
                         final context = new ServletRenderContext(webRequest, [model: args.model])
                         if (args.view) {
                             context.viewName = args.view as String
                         }
-                        if(statusCode != null) {
+                        if (statusCode != null) {
                             context.setStatus(HttpStatus.valueOf(statusCode))
                         }
                         errorsRenderer.render(errors, context)
-                        if(context.wasWrittenTo() && !response.isCommitted()) {
+                        if (context.wasWrittenTo() && !response.isCommitted()) {
                             response.flushBuffer()
                         }
                         return
@@ -207,25 +207,25 @@ trait RestResponder {
                 }
             }
 
-            if(renderer) break
+            if (renderer) break
         }
 
         if (renderer) {
             final context = new ServletRenderContext(webRequest, args)
-            if(statusCode != null) {
+            if (statusCode != null) {
                 context.setStatus(HttpStatus.valueOf(statusCode))
             }
             renderer.render(value, context)
-            if(context.wasWrittenTo() && !response.isCommitted()) {
+            if (context.wasWrittenTo() && !response.isCommitted()) {
                 response.flushBuffer()
             }
             return
         }
         callRender([status: statusCode ?: HttpStatus.NOT_ACCEPTABLE.value() ])
     }
-    
+
     private callRender(Map args) {
-        ((ResponseRenderer)this).render args
+        ((ResponseRenderer) this).render(args)
     }
 
     private List<String> calculateFormats(String actionName, value, Map args) {
@@ -256,7 +256,7 @@ trait RestResponder {
     private MimeType[] getResponseFormat(HttpServletResponse response) {
         response.mimeTypesFormatAware
     }
-    
+
     @CompileStatic(TypeCheckingMode.SKIP)
     private Errors getDomainErrors(object) {
         if (object instanceof Errors) {
@@ -268,7 +268,7 @@ trait RestResponder {
         }
         return null
     }
-    
+
     private List<String> getDefaultResponseFormats(value) {
         Resource resAnn = value != null ? value.getClass().getAnnotation(Resource) : null
         if (resAnn) {

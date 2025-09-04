@@ -29,7 +29,7 @@ import grails.core.support.GrailsApplicationAware;
  * @author Graeme Rocher
  * @since 0.1
  */
-public interface GrailsClass extends GrailsApplicationAware{
+public interface GrailsClass extends GrailsApplicationAware {
 
     /**
      * Whether the class is abstract or not

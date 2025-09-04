@@ -31,6 +31,10 @@ build:
 dependencies:
     - scope: build
       coords: "org.apache.grails:grails-gradle-plugins"
+    - scope: developmentOnly
+      coords: "org.springframework.boot:spring-boot-devtools"
+    - scope: implementation
+      coords: 'platform("org.apache.grails:grails-bom:$grailsVersion")'
     - scope: implementation
       coords: "org.springframework.boot:spring-boot-starter-logging"
     - scope: implementation
@@ -41,8 +45,6 @@ dependencies:
       coords: "org.springframework.boot:spring-boot-starter"
     - scope: implementation
       coords: "org.apache.grails:grails-core"
-    - scope: implementation
-      coords: "org.apache.grails:grails-i18n"
     - scope: testImplementation
       coords: "org.apache.grails:grails-testing-support-datamapping"
     - scope: console

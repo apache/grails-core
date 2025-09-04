@@ -34,11 +34,11 @@ public class DefaultCodecIdentifier implements CodecIdentifier {
     final private Set<String> codecAliases;
 
     public DefaultCodecIdentifier(String codecName) {
-        this(codecName, (Set<String>)null);
+        this(codecName, (Set<String>) null);
     }
 
     public DefaultCodecIdentifier(String codecName, String... codecAliases) {
-        this(codecName, codecAliases != null ? new HashSet<String>(Arrays.asList(codecAliases)) : null);
+        this(codecName, codecAliases != null ? new HashSet<>(Arrays.asList(codecAliases)) : null);
     }
 
     public DefaultCodecIdentifier(String codecName, Set<String> codecAliases) {
@@ -83,7 +83,7 @@ public class DefaultCodecIdentifier implements CodecIdentifier {
             return false;
         if (getClass() != obj.getClass())
             return false;
-        DefaultCodecIdentifier other = (DefaultCodecIdentifier)obj;
+        DefaultCodecIdentifier other = (DefaultCodecIdentifier) obj;
         if (codecAliases == null) {
             if (other.codecAliases != null)
                 return false;

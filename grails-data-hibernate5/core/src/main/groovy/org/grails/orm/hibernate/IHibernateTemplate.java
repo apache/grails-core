@@ -22,6 +22,7 @@ import java.io.Serializable;
 import java.util.Collection;
 
 import groovy.lang.Closure;
+
 import org.hibernate.Criteria;
 import org.hibernate.LockMode;
 import org.hibernate.SessionFactory;

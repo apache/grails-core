@@ -18,10 +18,11 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import spock.lang.Issue
+
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.EnumThing
 import org.apache.grails.data.testing.tck.domains.TestEnum
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Issue
 
 class EnumSpec extends GrailsDataTckSpec {
 
@@ -45,7 +46,6 @@ class EnumSpec extends GrailsDataTckSpec {
         'e1' == t.name
         TestEnum.V1 == t.en
     }
-
 
     @Issue('GPMONGODB-248')
     void "Test findByInList()"() {
