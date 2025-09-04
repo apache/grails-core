@@ -30,6 +30,7 @@ import org.springframework.core.env.PropertyResolver
 
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
+import grails.util.GrailsMessageSourceUtils
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.gorm.validation.constraints.factory.ConstraintFactory
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry
@@ -53,9 +54,9 @@ class DefaultMappingContextFactoryBean implements FactoryBean<MappingContext>, I
     protected final ApplicationContext applicationContext
     private MappingContext mappingContext
 
-    DefaultMappingContextFactoryBean(GrailsApplication grailsApplication, MessageSource messageSource) {
+    DefaultMappingContextFactoryBean(GrailsApplication grailsApplication, List<MessageSource> messageSources) {
         this.configuration = grailsApplication.config
-        this.messageSource = messageSource
+        this.messageSource = GrailsMessageSourceUtils.findPreferredMessageSource(messageSources)
         this.grailsApplication = grailsApplication
         if (messageSource instanceof ApplicationContext) {
             this.applicationContext = (ApplicationContext) messageSource

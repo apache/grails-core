@@ -41,7 +41,7 @@ class MongodbGrailsPlugin extends Plugin {
     def organization = [name: 'Grails', url: 'https://grails.apache.org/']
     def issueManagement = [system: 'Github', url: 'https://github.com/apache/grails-core/issues']
     def scm = [url: 'https://github.com/apache/grails-core']
-    def grailsVersion = '7.0.0 > *'
+    def grailsVersion = '7.0.0-SNAPSHOT > *'
     def observe = ['services', 'domainClass']
     def loadAfter = ['domainClass', 'hibernate', 'hibernate5', 'hibernate6', 'services']
     def title = 'GORM MongoDB'

@@ -40,13 +40,14 @@ class GrailsGebSettings {
 
     private static VncRecordingMode DEFAULT_RECORDING_MODE = VncRecordingMode.SKIP
     private static VncRecordingFormat DEFAULT_RECORDING_FORMAT = VncRecordingFormat.MP4
-    private static int DEFAULT_TIMEOUT_IMPLICITLY_WAIT = 0
-    private static int DEFAULT_TIMEOUT_PAGE_LOAD = 300
-    private static int DEFAULT_TIMEOUT_SCRIPT = 30
+    public static int DEFAULT_TIMEOUT_IMPLICITLY_WAIT = 0
+    public static int DEFAULT_TIMEOUT_PAGE_LOAD = 300
+    public static int DEFAULT_TIMEOUT_SCRIPT = 30
 
     String tracingEnabled
     String recordingDirectoryName
     String reportingDirectoryName
+    boolean restartRecordingContainerPerTest
     VncRecordingMode recordingMode
     VncRecordingFormat recordingFormat
     LocalDateTime startTime
@@ -64,6 +65,7 @@ class GrailsGebSettings {
         recordingFormat = VncRecordingFormat.valueOf(
                 System.getProperty('grails.geb.recording.format', DEFAULT_RECORDING_FORMAT.name())
         )
+        restartRecordingContainerPerTest = Boolean.parseBoolean(System.getProperty('grails.geb.recording.restartRecordingContainerPerTest', 'true'))
         implicitlyWait = getIntProperty('grails.geb.timeouts.implicitlyWait', DEFAULT_TIMEOUT_IMPLICITLY_WAIT)
         pageLoadTimeout = getIntProperty('grails.geb.timeouts.pageLoad', DEFAULT_TIMEOUT_PAGE_LOAD)
         scriptTimeout = getIntProperty('grails.geb.timeouts.script', DEFAULT_TIMEOUT_SCRIPT)

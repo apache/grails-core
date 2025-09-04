@@ -47,7 +47,7 @@ class HibernateGrailsPlugin extends Plugin {
 
     public static final String DEFAULT_DATA_SOURCE_NAME = HibernateDatastoreSpringInitializer.DEFAULT_DATA_SOURCE_NAME
 
-    def grailsVersion = '7.0.0 > *'
+    def grailsVersion = '7.0.0-SNAPSHOT > *'
 
     def author = 'Grails Core Team'
     def title = 'Hibernate 5 for Grails'

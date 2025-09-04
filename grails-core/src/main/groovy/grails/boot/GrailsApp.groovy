@@ -21,7 +21,6 @@ package grails.boot
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.control.CompilationFailedException
@@ -145,7 +144,6 @@ class GrailsApp extends SpringApplication {
         configuredEnvironment = environment
     }
 
-    @CompileDynamic // TODO: Report Groovy VerifierError
     protected void enableDevelopmentModeWatch(Environment environment, ConfigurableApplicationContext applicationContext, String... args) {
         def location = environment.getReloadLocation()
 
@@ -236,7 +234,7 @@ class GrailsApp extends SpringApplication {
 
                 while (isDevelopmentModeActive()) {
                     // Workaround for some IDE / OS combos - 2 events (new + update) for the same file
-                    def uniqueChangedFiles = changedFiles as Set
+                    def uniqueChangedFiles = changedFiles as Set<File>
 
                     def i = uniqueChangedFiles.size()
                     try {

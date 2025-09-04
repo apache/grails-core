@@ -35,6 +35,9 @@ dependencies {
     api project(':grails-validation')
     api 'org.apache.groovy:groovy'
 
+    compileOnly project(':grails-i18n')
+    runtimeOnly project(':grails-i18n')
+
     // Datastore APIs
     api project(':grails-datamapping-validation')
     api(project(':grails-datamapping-core')) {

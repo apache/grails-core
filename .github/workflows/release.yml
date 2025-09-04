@@ -114,11 +114,6 @@ jobs:
         run: ./gradlew grails-doc:build -PgithubBranch=${{ steps.extract_branch.outputs.value }}
         env:
           GRAILS_PUBLISH_RELEASE: "true"
-      - name: "📦 Generate grails-forge docs"
-        working-directory: grails-forge
-        run: ./gradlew docs -PgithubBranch=${{ steps.extract_branch.outputs.value }}
-        env:
-          GRAILS_PUBLISH_RELEASE: "true"
       - name: "🔏 Sign wrapper ZIP"
         env:
           GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
