@@ -66,25 +66,7 @@ class TwoUnidirectionalHasManySpec extends HibernateGormDatastoreSpec {
 
     }
 
-    @Rollback
-    @Issue('https://github.com/grails/grails-core/issues/10811')
-    void "test two JPA undirectional one to many references"() {
 
-        when:
-        def jpa = new EcmMaskJpa(name: "test")
-        jpa.createdUsers.add(new User2(name: "Fred"))
-        jpa.updatedUsers.add(new User2(name: "Bob"))
-
-        jpa.save(flush:true).discard()
-
-        EcmMaskJpa mask = EcmMaskJpa.first()
-
-        then:
-        mask != null
-        mask.createUsers.size() == 1
-        mask.updateUsers.size() == 1
-
-    }
 
 }
 

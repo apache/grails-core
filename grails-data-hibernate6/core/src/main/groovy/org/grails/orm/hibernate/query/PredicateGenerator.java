@@ -86,7 +86,9 @@ public class PredicateGenerator {
                     } else if (criterion instanceof Query.Equals c) {
                         return cb.equal(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValue());
                     } else if (criterion instanceof Query.NotEquals c) {
-                        return cb.notEqual(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValue());
+                        var notEqualToValue = cb.notEqual(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValue());
+                        var isNull = cb.isNull(fromsByProvider.getFullyQualifiedPath(c.getProperty()));
+                        return cb.or(notEqualToValue, isNull);
                     } else if (criterion instanceof Query.EqualsProperty c) {
                         return cb.equal(fromsByProvider.getFullyQualifiedPath(c.getProperty()), root_.get(c.getOtherProperty()));
                     } else if (criterion instanceof Query.NotEqualsProperty c) {
