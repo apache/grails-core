@@ -18,6 +18,7 @@
  */
 package grails.gorm.specs.validation
 
+
 import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
 import org.grails.orm.hibernate.HibernateDatastore
@@ -46,7 +47,7 @@ class SaveWithInvalidEntitySpec extends Specification {
         hibernateDatastore.currentSession.flush()
 
         then:
-        A.count() == 1
+        IllegalStateException e = thrown()
 
     }
 }
