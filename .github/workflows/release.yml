@@ -157,21 +157,21 @@ jobs:
         run: |
           cd ${{ needs.publish.outputs.extract_repository_name }}
           release_url=$(gh release view v${{ needs.publish.outputs.release_version }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "CHECKSUMS.txt") | .url')
-          curl -L -H "Authorization: token $GH_TOKEN" -o CHECKSUMS "$release_url"
+          curl -f -L -H "Authorization: token $GH_TOKEN" -o CHECKSUMS "$release_url"
       - name: "Download PUBLISHED_ARTIFACTS.txt and rename to PUBLISHED_ARTIFACTS"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd ${{ needs.publish.outputs.extract_repository_name }}
           release_url=$(gh release view v${{ needs.publish.outputs.release_version }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "PUBLISHED_ARTIFACTS.txt") | .url')
-          curl -L -H "Authorization: token $GH_TOKEN" -o PUBLISHED_ARTIFACTS "$release_url"
+          curl -f -L -H "Authorization: token $GH_TOKEN" -o PUBLISHED_ARTIFACTS "$release_url"
       - name: "Download BUILD_DATE.txt and rename to BUILD_DATE"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd ${{ needs.publish.outputs.extract_repository_name }}
           release_url=$(gh release view v${{ needs.publish.outputs.release_version }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "BUILD_DATE.txt") | .url')
-          curl -L -H "Authorization: token $GH_TOKEN" -o BUILD_DATE "$release_url"
+          curl -f -L -H "Authorization: token $GH_TOKEN" -o BUILD_DATE "$release_url"
       - name: "Ensure source files use common date"
         run: |
           SOURCE_DATE_EPOCH=$(cat ${{ needs.publish.outputs.extract_repository_name }}/BUILD_DATE)
@@ -280,9 +280,9 @@ jobs:
           cd dev-repo
           mkdir -p $VERSION/sources          
           cd $VERSION/sources
-          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-${{ needs.publish.outputs.extract_repository_name }}-$VERSION-incubating-src.zip
-          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-${{ needs.publish.outputs.extract_repository_name }}-$VERSION-incubating-src.zip.sha512
-          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-${{ needs.publish.outputs.extract_repository_name }}-$VERSION-incubating-src.zip.asc
+          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-${{ needs.publish.outputs.extract_repository_name }}-$VERSION-incubating-src.zip
+          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-${{ needs.publish.outputs.extract_repository_name }}-$VERSION-incubating-src.zip.sha512
+          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-${{ needs.publish.outputs.extract_repository_name }}-$VERSION-incubating-src.zip.asc
           echo "Downloaded the following files:"
           ls -l
       - name: "Upload distributions"
