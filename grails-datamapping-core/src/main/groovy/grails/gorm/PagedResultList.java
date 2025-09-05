@@ -107,6 +107,9 @@ public class PagedResultList<E> implements Serializable, List<E> {
             } else {
                 Query newQuery = (Query)query.clone();
                 newQuery.offset(0);
+                //TODO HACK!!
+                newQuery.order(null);
+                newQuery.max(1);
                 newQuery.projections().count();
                 Number result = (Number) newQuery.singleResult();
                 totalCount = result == null ? 0 : result.intValue();

@@ -387,7 +387,12 @@ public class HibernateQuery extends Query {
 
     @Override
     public Query order(Order order) {
-        detachedCriteria.order(order);
+        //TODO HACK
+        if (order == null) {
+            detachedCriteria.getOrders().clear();
+        } else {
+            detachedCriteria.order(order);
+        }
         return this;
     }
 
@@ -646,10 +651,10 @@ public class HibernateQuery extends Query {
         final GrailsHibernateTemplate hibernateTemplate = (GrailsHibernateTemplate) hibernateSession.getNativeInterface();
         return hibernateTemplate.execute((GrailsHibernateTemplate.HibernateCallback<Object>) session -> {
             HibernateQuery hibernateQuery = new HibernateQuery(hibernateSession, entity);
-            if (this.max != null) {
+            if (this.max != null && this.max > 0) {
                 hibernateQuery.max(this.max);
             }
-            if (this.offset != null) {
+            if (this.offset != null && this.offset > 0) {
                 hibernateQuery.offset(this.offset);
             }
             hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());

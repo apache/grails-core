@@ -51,13 +51,13 @@ public record HibernateQueryExecutor(
 
   private Query configureQuery(Session session, JpaCriteriaQuery jpaCq) {
       var query = session.createQuery(jpaCq);
-      Optional.ofNullable(offset).ifPresent(query::setFirstResult);
+      Optional.ofNullable(offset).filter(v -> v > 0).ifPresent(query::setFirstResult);
       Optional.ofNullable(queryCache).ifPresent( qc -> query.setHint("org.hibernate.cacheable", qc));
-      Optional.ofNullable(maxResults).ifPresent(query::setMaxResults);
+      Optional.ofNullable(maxResults).filter(v -> v > 0).ifPresent(query::setMaxResults);
       Optional.ofNullable(lockResult).ifPresent(query::setLockMode);
       Optional.ofNullable(resultTransformer).ifPresent(query::setResultTransformer);
-      Optional.ofNullable(fetchSize).ifPresent(query::setFetchSize);
-      Optional.ofNullable(timeout).ifPresent(query::setTimeout);
+      Optional.ofNullable(fetchSize).filter(v -> v > 0).ifPresent(query::setFetchSize);
+      Optional.ofNullable(timeout).filter(v -> v > 0).ifPresent(query::setTimeout);
       Optional.ofNullable(flushMode).map(mode -> mode.toJpaFlushMode()).ifPresent(query::setFlushMode);
       Optional.ofNullable(readOnly).ifPresent(query::setReadOnly);
       return query;

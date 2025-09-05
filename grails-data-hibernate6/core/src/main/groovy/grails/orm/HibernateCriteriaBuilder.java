@@ -17,6 +17,8 @@ package grails.orm;
 
 import grails.gorm.DetachedCriteria;
 import grails.gorm.MultiTenant;
+import grails.gorm.PagedResultList;
+
 import groovy.lang.Closure;
 import groovy.lang.DelegatesTo;
 import groovy.lang.GroovyObjectSupport;
@@ -1282,7 +1284,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
                         }
                         hibernateQuery.order(order);
                     }
-                    result = hibernateQuery.list();
+                    result = new PagedResultList<>(hibernateQuery);
                 }
                 else {
                     result = hibernateQuery.list();
