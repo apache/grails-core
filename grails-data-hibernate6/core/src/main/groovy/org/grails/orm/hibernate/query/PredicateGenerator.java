@@ -10,6 +10,8 @@ import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
+
+import org.grails.datastore.gorm.GormEntity;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -29,7 +31,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -184,6 +188,13 @@ public class PredicateGenerator {
                             }
                             return cb.not(value);
                         } else if (criterion instanceof Query.In c && !c.getValues().isEmpty()) {
+                            boolean areGormEntities = c.getValues().stream().allMatch(GormEntity.class::isInstance);
+                            if (areGormEntities) {
+                                List<GormEntity> gormEntities = new ArrayList<>(c.getValues());
+                                Path id = criteriaQuery.from(gormEntities.get(0).getClass()).get("id");
+                                Collection newValues = gormEntities.stream().map(GormEntity::ident).toList();
+                                return cb.in(id, newValues);
+                            }
                             return cb.in(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValues());
                         } else if (criterion instanceof Query.NotIn c) {
                             return cb.not(cb.in(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValue()));
