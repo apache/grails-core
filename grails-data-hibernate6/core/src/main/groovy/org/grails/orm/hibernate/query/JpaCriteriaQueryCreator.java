@@ -48,7 +48,7 @@ public class JpaCriteriaQueryCreator {
         assignGroupBy(groupProjections, root, cq, tablesByName);
 
         assignOrderBy(cq, tablesByName);
-        assignCriteria(cq, root,tablesByName);
+        assignCriteria(cq, root,tablesByName,entity);
         return cq;
     }
 
@@ -129,10 +129,10 @@ public class JpaCriteriaQueryCreator {
         }
     }
 
-    private void assignCriteria(CriteriaQuery cq ,From root, JpaFromProvider tablesByName) {
+    private void assignCriteria(CriteriaQuery cq , From root, JpaFromProvider tablesByName, PersistentEntity entity) {
         List<Query.Criterion>  criteriaList =detachedCriteria.getCriteria();
         if (!criteriaList.isEmpty()) {
-            jakarta.persistence.criteria.Predicate[] predicates = PredicateGenerator.getPredicates(criteriaBuilder, cq, root, criteriaList, tablesByName);
+            jakarta.persistence.criteria.Predicate[] predicates = PredicateGenerator.getPredicates(criteriaBuilder, cq, root, criteriaList, tablesByName,entity);
             cq.where(criteriaBuilder.and(predicates));
         }
     }

@@ -35,9 +35,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -50,35 +48,191 @@ public class PredicateGenerator {
     public static Predicate[] getPredicates(HibernateCriteriaBuilder cb,
                                             CriteriaQuery criteriaQuery,
                                             From root_,
-                                            List<Query.Criterion> criteriaList, JpaFromProvider fromsByProvider) {
+                                            List<Query.Criterion> criteriaList, JpaFromProvider fromsByProvider, PersistentEntity entity) {
 
 
         List<Predicate> list = criteriaList.stream().
                 map(criterion -> {
-                    if (criterion instanceof Query.Disjunction) {
-                        List<Query.Criterion> criterionList = ((Query.Disjunction) criterion).getCriteria();
-                        return cb.or(getPredicates(cb, criteriaQuery, root_, criterionList, fromsByProvider));
+                    if (criterion instanceof Query.Junction junction) {
+                        if (junction instanceof Query.Disjunction) {
+                            List<Query.Criterion> criterionList = junction.getCriteria();
+                            return cb.or(getPredicates(cb, criteriaQuery, root_, criterionList, fromsByProvider, entity));
 
-                    } else if (criterion instanceof Query.Conjunction) {
-                        List<Query.Criterion> criterionList = ((Query.Conjunction) criterion).getCriteria();
-                        return cb.and(getPredicates(cb, criteriaQuery, root_, criterionList, fromsByProvider));
-                    } else if (criterion instanceof Query.Negation) {
-                        List<Query.Criterion> criterionList = ((Query.Negation) criterion).getCriteria();
-                        Predicate[] predicates = getPredicates(cb, criteriaQuery, root_, criterionList, fromsByProvider);
-                        if (predicates.length != 1) {
-                            log.error("Must have a single predicate behind a not");
-                            throw new RuntimeException("Must have a single predicate behind a not");
+                        } else if (junction instanceof Query.Conjunction) {
+                            List<Query.Criterion> criterionList = junction.getCriteria();
+                            return cb.and(getPredicates(cb, criteriaQuery, root_, criterionList, fromsByProvider, entity));
+                        } else if (junction instanceof Query.Negation) {
+                            List<Query.Criterion> criterionList = junction.getCriteria();
+                            Predicate[] predicates = getPredicates(cb, criteriaQuery, root_, criterionList, fromsByProvider, entity);
+                            if (predicates.length != 1) {
+                                log.error("Must have a single predicate behind a not");
+                                throw new RuntimeException("Must have a single predicate behind a not");
+                            }
+                            return cb.not(predicates[0]);
                         }
-                        return cb.not(predicates[0]);
                     } else if (criterion instanceof Query.DistinctProjection) {
                         // this returns always true
                         return cb.conjunction();
                     } else if (criterion instanceof DetachedAssociationCriteria<?> c) {
-                            Join child = root_.join(c.getAssociationPath(), JoinType.LEFT);
-                            List<Query.Criterion> criterionList = c.getCriteria();
-                            JpaFromProvider childTablesByName = (JpaFromProvider )fromsByProvider.clone();
-                            childTablesByName.put("root",child);
-                            return cb.and(getPredicates(cb, criteriaQuery, child, criterionList, childTablesByName));
+                        Join child = root_.join(c.getAssociationPath(), JoinType.LEFT);
+                        List<Query.Criterion> criterionList = c.getCriteria();
+                        JpaFromProvider childTablesByName = (JpaFromProvider) fromsByProvider.clone();
+                        childTablesByName.put("root", child);
+                        return cb.and(getPredicates(cb, criteriaQuery, child, criterionList, childTablesByName, entity));
+                    } else if (criterion instanceof Query.PropertyCriterion) {
+                        if (criterion instanceof Query.Equals c) {
+                            return cb.equal(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValue());
+                        } else if (criterion instanceof Query.NotEquals c) {
+                            var notEqualToValue = cb.notEqual(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValue());
+                            var isNull = cb.isNull(fromsByProvider.getFullyQualifiedPath(c.getProperty()));
+                            return cb.or(notEqualToValue, isNull);
+                        } else if (criterion instanceof Query.IdEquals c) {
+                            return cb.equal(root_.get("id"), c.getValue());
+                        } else if (criterion instanceof Query.GreaterThan c) {
+                            return cb.gt(fromsByProvider.getFullyQualifiedPath(c.getProperty()), getNumericValue(c));
+                        } else if (criterion instanceof Query.GreaterThanEquals c) {
+                            return cb.ge(fromsByProvider.getFullyQualifiedPath(c.getProperty()), getNumericValue(c));
+                        } else if (criterion instanceof Query.LessThan c) {
+                            return cb.lt(fromsByProvider.getFullyQualifiedPath(c.getProperty()), getNumericValue(c));
+                        } else if (criterion instanceof Query.LessThanEquals c) {
+                            return cb.le(fromsByProvider.getFullyQualifiedPath(c.getProperty()), getNumericValue(c));
+                        } else if (criterion instanceof Query.SizeEquals c) {
+                            return cb.equal(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), c.getValue());
+                        } else if (criterion instanceof Query.SizeNotEquals c) {
+                            return cb.notEqual(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), c.getValue());
+                        } else if (criterion instanceof Query.SizeGreaterThan c) {
+                            return cb.gt(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
+                        } else if (criterion instanceof Query.SizeGreaterThanEquals c) {
+                            return cb.ge(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
+                        } else if (criterion instanceof Query.SizeLessThan c) {
+                            return cb.lt(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
+                        } else if (criterion instanceof Query.SizeLessThanEquals c) {
+                            return cb.le(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
+                        } else if (criterion instanceof Query.Between c) {
+                            if (c.getFrom() instanceof String && c.getTo() instanceof String) {
+                                return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (String) c.getFrom(), (String) c.getTo());
+                            } else if (c.getFrom() instanceof Short && c.getTo() instanceof Short) {
+                                return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (Short) c.getFrom(), (Short) c.getTo());
+                            } else if (c.getFrom() instanceof Integer && c.getTo() instanceof Integer) {
+                                return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (Integer) c.getFrom(), (Integer) c.getTo());
+                            } else if (c.getFrom() instanceof Long && c.getTo() instanceof Long) {
+                                return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (Long) c.getFrom(), (Long) c.getTo());
+                            } else if (c.getFrom() instanceof Date && c.getTo() instanceof Date) {
+                                return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (Date) c.getFrom(), (Date) c.getTo());
+                            } else if (c.getFrom() instanceof Instant && c.getTo() instanceof Instant) {
+                                return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (Instant) c.getFrom(), (Instant) c.getTo());
+                            } else if (c.getFrom() instanceof LocalDate && c.getTo() instanceof LocalDate) {
+                                return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (LocalDate) c.getFrom(), (LocalDate) c.getTo());
+                            } else if (c.getFrom() instanceof LocalDateTime && c.getTo() instanceof LocalDateTime) {
+                                return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (LocalDateTime) c.getFrom(), (LocalDateTime) c.getTo());
+                            } else if (c.getFrom() instanceof OffsetDateTime && c.getTo() instanceof OffsetDateTime) {
+                                return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (OffsetDateTime) c.getFrom(), (OffsetDateTime) c.getTo());
+                            } else if (c.getFrom() instanceof ZonedDateTime && c.getTo() instanceof ZonedDateTime) {
+                                return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (ZonedDateTime) c.getFrom(), (ZonedDateTime) c.getTo());
+                            }
+                        } else if (criterion instanceof Query.ILike c) {
+                            return cb.ilike(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValue().toString());
+                        } else if (criterion instanceof Query.RLike c) {
+                            return cb.like(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getPattern(), '\\');
+                        } else if (criterion instanceof Query.Like c) {
+                            return cb.like(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValue().toString());
+                        } else if (criterion instanceof Query.SizeEquals c) {
+                            return cb.equal(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), c.getValue());
+                        } else if (criterion instanceof Query.SizeGreaterThan c) {
+                            return cb.gt(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
+                        } else if (criterion instanceof Query.SizeGreaterThanEquals c) {
+                            return cb.ge(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
+                        } else if (criterion instanceof Query.SizeLessThan c) {
+                            return cb.lt(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
+                        } else if (criterion instanceof Query.SizeLessThanEquals c) {
+                            return cb.le(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
+                        } else if (criterion instanceof Query.In c) {
+                            var queryableCriteria = getQueryableCriteriaFromInCriteria(criterion);
+                            if (Objects.nonNull(queryableCriteria)) {
+
+                                CriteriaBuilder.In value = getQueryableCriteriaValue(cb, criteriaQuery, fromsByProvider, entity, (Query.PropertyNameCriterion) criterion, queryableCriteria);
+                                return value;
+                            } else if (!c.getValues().isEmpty()) {
+                                boolean areGormEntities = c.getValues().stream().allMatch(GormEntity.class::isInstance);
+                                if (areGormEntities) {
+                                    List<GormEntity> gormEntities = new ArrayList<>(c.getValues());
+                                    Path id = criteriaQuery.from(gormEntities.get(0).getClass()).get("id");
+                                    Collection newValues = gormEntities.stream().map(GormEntity::ident).toList();
+                                    return cb.in(id, newValues);
+                                }
+                                return cb.in(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValues());
+                            }
+                        } else if (criterion instanceof Query.NotIn c) {
+                            var queryableCriteria = getQueryableCriteriaFromInCriteria(criterion);
+                            if (Objects.nonNull(queryableCriteria)) {
+                                CriteriaBuilder.In value = getQueryableCriteriaValue(cb, criteriaQuery, fromsByProvider, entity, (Query.PropertyNameCriterion) criterion, queryableCriteria);
+                                return cb.not(value);
+                            } else if (Objects.nonNull(c.getSubquery())
+                                    && !c.getSubquery().getProjections().isEmpty()
+                                    && c.getSubquery().getProjections().get(0) instanceof Query.PropertyProjection
+                            ) {
+                                Subquery subquery2 = criteriaQuery.subquery(Number.class);
+                                Root from2 = subquery2.from(c.getValue().getPersistentEntity().getJavaClass());
+                                List subCriteria2 = c.getValue().getCriteria();
+                                Query.PropertyProjection projection = (Query.PropertyProjection) c.getSubquery().getProjections().get(0);
+                                boolean distinct = projection instanceof Query.DistinctPropertyProjection;
+                                JpaFromProvider newMap2 = (JpaFromProvider) fromsByProvider.clone();
+                                Predicate[] predicates2 = getPredicates(cb, criteriaQuery, from2, subCriteria2, newMap2, entity);
+                                subquery2.select(from2.get(projection.getPropertyName())).distinct(distinct).where(cb.and(predicates2));
+                                return cb.not(cb.in(fromsByProvider.getFullyQualifiedPath(c.getProperty())).value(subquery2));
+                            } else if ( Objects.nonNull(c.getSubquery())
+                                    && !c.getSubquery().getProjections().isEmpty()
+                                    && c.getSubquery().getProjections().get(0) instanceof Query.IdProjection
+                            ) {
+                                Subquery subquery2 = criteriaQuery.subquery(Number.class);
+                                Root from2 = subquery2.from(c.getValue().getPersistentEntity().getJavaClass());
+                                List subCriteria2 = c.getValue().getCriteria();
+                                JpaFromProvider newMap2 = (JpaFromProvider) fromsByProvider.clone();
+                                Predicate[] predicates2 = getPredicates(cb, criteriaQuery, from2, subCriteria2, newMap2, entity);
+                                subquery2.select(from2).where(cb.and(predicates2));
+                                return cb.not(cb.in(root_.get("id")).value(subquery2));
+                            } else {
+                                return cb.not(cb.in(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValue()));
+                            }
+
+                        } else if (criterion instanceof Query.SubqueryCriterion c) {
+                            Subquery subquery = criteriaQuery.subquery(Number.class);
+                            Root from = subquery.from(c.getValue().getPersistentEntity().getJavaClass());
+                            List subCriteria = c.getValue().getCriteria();
+                            JpaFromProvider newMap = (JpaFromProvider) fromsByProvider.clone();
+                            newMap.put("root", from);
+                            Predicate[] predicates = getPredicates(cb, criteriaQuery, from, subCriteria, newMap, entity);
+                            if (c instanceof Query.GreaterThanEqualsAll sc) {
+                                subquery.select(cb.max(from.get(c.getProperty()))).where(cb.and(predicates));
+                                return cb.greaterThanOrEqualTo(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
+                            } else if (c instanceof Query.GreaterThanAll sc) {
+                                subquery.select(cb.max(from.get(c.getProperty()))).where(cb.and(predicates));
+                                return cb.greaterThan(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
+                            } else if (c instanceof Query.LessThanEqualsAll sc) {
+                                subquery.select(cb.min(from.get(c.getProperty()))).where(cb.and(predicates));
+                                return cb.lessThanOrEqualTo(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
+                            } else if (c instanceof Query.LessThanAll sc) {
+                                subquery.select(cb.min(from.get(c.getProperty()))).where(cb.and(predicates));
+                                return cb.lessThan(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
+                            } else if (c instanceof Query.EqualsAll sc) {
+                                subquery.select(from.get(c.getProperty())).where(cb.and(predicates));
+                                return cb.equal(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
+                            } else if (c instanceof Query.GreaterThanEqualsSome sc) {
+                                subquery.select(cb.max(from.get(c.getProperty()))).where(cb.or(predicates));
+                                return cb.greaterThanOrEqualTo(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
+                            } else if (c instanceof Query.GreaterThanSome sc) {
+                                subquery.select(cb.max(from.get(c.getProperty()))).where(cb.or(predicates));
+                                return cb.greaterThan(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
+                            } else if (c instanceof Query.LessThanEqualsSome sc) {
+                                subquery.select(cb.min(from.get(c.getProperty()))).where(cb.or(predicates));
+                                return cb.lessThanOrEqualTo(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
+                            } else if (c instanceof Query.LessThanSome sc) {
+                                subquery.select(cb.min(from.get(c.getProperty()))).where(cb.or(predicates));
+                                return cb.lessThan(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
+
+                            }
+                        }
+
                     } else if (criterion instanceof Query.IsNull c) {
                         return cb.isNull(fromsByProvider.getFullyQualifiedPath(c.getProperty()));
                     } else if (criterion instanceof Query.IsNotNull c) {
@@ -87,12 +241,6 @@ public class PredicateGenerator {
                         return cb.isEmpty(fromsByProvider.getFullyQualifiedPath(c.getProperty()));
                     } else if (criterion instanceof Query.IsNotEmpty c) {
                         return cb.isNotEmpty(fromsByProvider.getFullyQualifiedPath(c.getProperty()));
-                    } else if (criterion instanceof Query.Equals c) {
-                        return cb.equal(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValue());
-                    } else if (criterion instanceof Query.NotEquals c) {
-                        var notEqualToValue = cb.notEqual(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValue());
-                        var isNull = cb.isNull(fromsByProvider.getFullyQualifiedPath(c.getProperty()));
-                        return cb.or(notEqualToValue, isNull);
                     } else if (criterion instanceof Query.EqualsProperty c) {
                         return cb.equal(fromsByProvider.getFullyQualifiedPath(c.getProperty()), root_.get(c.getOtherProperty()));
                     } else if (criterion instanceof Query.NotEqualsProperty c) {
@@ -105,100 +253,6 @@ public class PredicateGenerator {
                         return cb.ge(fromsByProvider.getFullyQualifiedPath(c.getProperty()), root_.get(c.getOtherProperty()));
                     } else if (criterion instanceof Query.GreaterThanProperty c) {
                         return cb.gt(fromsByProvider.getFullyQualifiedPath(c.getProperty()), root_.get(c.getOtherProperty()));
-                    } else if (criterion instanceof Query.IdEquals c) {
-                        return cb.equal(root_.get("id"), c.getValue());
-                    } else if (criterion instanceof Query.GreaterThan c) {
-                        return cb.gt(fromsByProvider.getFullyQualifiedPath(c.getProperty()), getNumericValue(c));
-                    } else if (criterion instanceof Query.GreaterThanEquals c) {
-                        return cb.ge(fromsByProvider.getFullyQualifiedPath(c.getProperty()), getNumericValue(c));
-                    } else if (criterion instanceof Query.LessThan c) {
-                        return cb.lt(fromsByProvider.getFullyQualifiedPath(c.getProperty()), getNumericValue(c));
-                    } else if (criterion instanceof Query.LessThanEquals c) {
-                        return cb.le(fromsByProvider.getFullyQualifiedPath(c.getProperty()), getNumericValue(c));
-                    } else if (criterion instanceof Query.SizeEquals c) {
-                        return cb.equal(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), c.getValue());
-                    } else if (criterion instanceof Query.SizeNotEquals c) {
-                        return cb.notEqual(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), c.getValue());
-                    } else if (criterion instanceof Query.SizeGreaterThan c) {
-                        return cb.gt(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
-                    } else if (criterion instanceof Query.SizeGreaterThanEquals c) {
-                        return cb.ge(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
-                    } else if (criterion instanceof Query.SizeLessThan c) {
-                        return cb.lt(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
-                    } else if (criterion instanceof Query.SizeLessThanEquals c) {
-                        return cb.le(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
-                    } else if (criterion instanceof Query.Between c) {
-                        if (c.getFrom() instanceof String && c.getTo() instanceof String) {
-                            return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (String) c.getFrom(), (String) c.getTo());
-                        } else if (c.getFrom() instanceof Short && c.getTo() instanceof Short) {
-                            return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (Short) c.getFrom(), (Short) c.getTo());
-                        } else if (c.getFrom() instanceof Integer && c.getTo() instanceof Integer) {
-                            return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (Integer) c.getFrom(), (Integer) c.getTo());
-                        } else if (c.getFrom() instanceof Long && c.getTo() instanceof Long) {
-                            return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (Long) c.getFrom(), (Long) c.getTo());
-                        } else if (c.getFrom() instanceof Date && c.getTo() instanceof Date) {
-                            return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (Date) c.getFrom(), (Date) c.getTo());
-                        } else if (c.getFrom() instanceof Instant && c.getTo() instanceof Instant) {
-                            return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (Instant) c.getFrom(), (Instant) c.getTo());
-                        } else if (c.getFrom() instanceof LocalDate && c.getTo() instanceof LocalDate) {
-                            return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (LocalDate) c.getFrom(), (LocalDate) c.getTo());
-                        } else if (c.getFrom() instanceof LocalDateTime && c.getTo() instanceof LocalDateTime) {
-                            return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (LocalDateTime) c.getFrom(), (LocalDateTime) c.getTo());
-                        } else if (c.getFrom() instanceof OffsetDateTime && c.getTo() instanceof OffsetDateTime) {
-                            return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (OffsetDateTime) c.getFrom(), (OffsetDateTime) c.getTo());
-                        } else if (c.getFrom() instanceof ZonedDateTime && c.getTo() instanceof ZonedDateTime) {
-                            return cb.between(fromsByProvider.getFullyQualifiedPath(c.getProperty()), (ZonedDateTime) c.getFrom(), (ZonedDateTime) c.getTo());
-                        }
-                    } else if (criterion instanceof Query.ILike c) {
-                        return cb.ilike(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValue().toString());
-                    } else if (criterion instanceof Query.RLike c) {
-                        return cb.like(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getPattern(), '\\');
-                    } else if (criterion instanceof Query.Like c) {
-                        return cb.like(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValue().toString());
-                    } else if (criterion instanceof Query.SizeEquals c) {
-                        return cb.equal(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), c.getValue());
-                    } else if (criterion instanceof Query.SizeGreaterThan c) {
-                        return cb.gt(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
-                    } else if (criterion instanceof Query.SizeGreaterThanEquals c) {
-                        return cb.ge(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
-                    } else if (criterion instanceof Query.SizeLessThan c) {
-                        return cb.lt(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
-                    } else if (criterion instanceof Query.SizeLessThanEquals c) {
-                        return cb.le(cb.size(fromsByProvider.getFullyQualifiedPath(c.getProperty())), getNumericValue(c));
-                    } else if(criterion instanceof Query.In || criterion instanceof Query.NotIn) {
-                        var queryableCriteria = getQueryableCriteriaFromInCriteria(criterion);
-                        if (Objects.nonNull(queryableCriteria)) {
-
-                            var projection = findPropertyOrIdProjection(queryableCriteria);
-                            var subProperty = findSubproperty(projection);
-                            var path = getPathFromInCriterion(fromsByProvider, (Query.PropertyNameCriterion) criterion);
-                            var in = findInPredicate(cb, projection, path, subProperty);
-                            var subquery = criteriaQuery.subquery(getJavaTypeOfInClause((SqmInListPredicate) in));
-                            var from = subquery.from(queryableCriteria.getPersistentEntity().getJavaClass());
-                            var subCriteria = queryableCriteria.getCriteria();
-                            var clonedProviderByName = (JpaFromProvider) fromsByProvider.clone();
-                            clonedProviderByName.put("root", from);
-                            var predicates = getPredicates(cb, criteriaQuery, from, subCriteria, clonedProviderByName);
-                            subquery.select(clonedProviderByName.getFullyQualifiedPath(subProperty))
-                                    .distinct(true)
-                                    .where(cb.and(predicates));
-                            CriteriaBuilder.In value = in.value(subquery);
-                            if (criterion instanceof Query.In) {
-                                return value;
-                            }
-                            return cb.not(value);
-                        } else if (criterion instanceof Query.In c && !c.getValues().isEmpty()) {
-                            boolean areGormEntities = c.getValues().stream().allMatch(GormEntity.class::isInstance);
-                            if (areGormEntities) {
-                                List<GormEntity> gormEntities = new ArrayList<>(c.getValues());
-                                Path id = criteriaQuery.from(gormEntities.get(0).getClass()).get("id");
-                                Collection newValues = gormEntities.stream().map(GormEntity::ident).toList();
-                                return cb.in(id, newValues);
-                            }
-                            return cb.in(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValues());
-                        } else if (criterion instanceof Query.NotIn c) {
-                            return cb.not(cb.in(fromsByProvider.getFullyQualifiedPath(c.getProperty()), c.getValue()));
-                        }
                     } else if (criterion instanceof Query.Exists c) {
                         Subquery subquery = criteriaQuery.subquery(Integer.class);
                         PersistentEntity childPersistentEntity = c.getSubquery().getPersistentEntity();
@@ -207,7 +261,7 @@ public class PredicateGenerator {
 
                         JpaFromProvider newMap = (JpaFromProvider) fromsByProvider.clone();
                         newMap.put("root", subRoot);
-                        var predicates = getPredicates(cb, criteriaQuery, subRoot, c.getSubquery().getCriteria(), newMap);
+                        var predicates = getPredicates(cb, criteriaQuery, subRoot, c.getSubquery().getCriteria(), newMap, entity);
 
                         var existsPredicate = getExistsPredicate(cb, root_, childPersistentEntity, subRoot);
                         Predicate[] allPredicates = Stream.concat(
@@ -226,7 +280,7 @@ public class PredicateGenerator {
 
                         JpaFromProvider newMap = (JpaFromProvider) fromsByProvider.clone();
                         newMap.put("root", subRoot);
-                        var predicates = getPredicates(cb, criteriaQuery, subRoot, c.getSubquery().getCriteria(), newMap);
+                        var predicates = getPredicates(cb, criteriaQuery, subRoot, c.getSubquery().getCriteria(), newMap, entity);
 
                         var existsPredicate = getExistsPredicate(cb, root_, childPersistentEntity, subRoot);
                         Predicate[] allPredicates = Stream.concat(
@@ -237,57 +291,6 @@ public class PredicateGenerator {
                         subquery.select(cb.literal(1)).where(cb.and(allPredicates));
                         JpaPredicate exists = cb.exists(subquery);
                         return cb.not(exists);
-                    } else if (criterion instanceof Query.SubqueryCriterion c) {
-                        Subquery subquery = criteriaQuery.subquery(Number.class);
-                        Root from = subquery.from(c.getValue().getPersistentEntity().getJavaClass());
-                        List subCriteria = c.getValue().getCriteria();
-                        JpaFromProvider newMap = (JpaFromProvider) fromsByProvider.clone();
-                        newMap.put("root", from);
-                        Predicate[] predicates = getPredicates(cb, criteriaQuery, from, subCriteria, newMap);
-                        if (c instanceof Query.GreaterThanEqualsAll sc) {
-                            subquery.select(cb.max(from.get(c.getProperty()))).where(cb.and(predicates));
-                            return cb.greaterThanOrEqualTo(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
-                        } else if (c instanceof Query.GreaterThanAll sc) {
-                            subquery.select(cb.max(from.get(c.getProperty()))).where(cb.and(predicates));
-                            return cb.greaterThan(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
-                        } else if (c instanceof Query.LessThanEqualsAll sc) {
-                            subquery.select(cb.min(from.get(c.getProperty()))).where(cb.and(predicates));
-                            return cb.lessThanOrEqualTo(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
-                        } else if (c instanceof Query.LessThanAll sc) {
-                            subquery.select(cb.min(from.get(c.getProperty()))).where(cb.and(predicates));
-                            return cb.lessThan(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
-                        } else if (c instanceof Query.EqualsAll sc) {
-                            subquery.select(from.get(c.getProperty())).where(cb.and(predicates));
-                            return cb.equal(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
-                        } else if (c instanceof Query.GreaterThanEqualsSome sc) {
-                            subquery.select(cb.max(from.get(c.getProperty()))).where(cb.or(predicates));
-                            return cb.greaterThanOrEqualTo(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
-                        } else if (c instanceof Query.GreaterThanSome sc) {
-                            subquery.select(cb.max(from.get(c.getProperty()))).where(cb.or(predicates));
-                            return cb.greaterThan(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
-                        } else if (c instanceof Query.LessThanEqualsSome sc) {
-                            subquery.select(cb.min(from.get(c.getProperty()))).where(cb.or(predicates));
-                            return cb.lessThanOrEqualTo(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
-                        } else if (c instanceof Query.LessThanSome sc) {
-                            subquery.select(cb.min(from.get(c.getProperty()))).where(cb.or(predicates));
-                            return cb.lessThan(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
-                        } else if (criterion instanceof Query.NotIn sc
-                                && Objects.nonNull(sc.getSubquery())
-                                && !sc.getSubquery().getProjections().isEmpty()
-                                && sc.getSubquery().getProjections().get(0) instanceof Query.PropertyProjection
-                        ) {
-                            Query.PropertyProjection projection = (Query.PropertyProjection) sc.getSubquery().getProjections().get(0);
-                            boolean distinct = projection instanceof Query.DistinctPropertyProjection;
-                            subquery.select(from.get(projection.getPropertyName())).distinct(distinct).where(cb.and(predicates));
-                            return cb.in(fromsByProvider.getFullyQualifiedPath(sc.getProperty())).value(subquery);
-                        } else if (criterion instanceof Query.NotIn sc
-                                && Objects.nonNull(sc.getSubquery())
-                                && !sc.getSubquery().getProjections().isEmpty()
-                                && sc.getSubquery().getProjections().get(0) instanceof Query.IdProjection
-                        ) {
-                            subquery.select(from).where(cb.and(predicates));
-                            return cb.in(root_.get("id")).value(subquery);
-                        }
                     }
                     throw new IllegalArgumentException("Unsupported criterion: " + criterion);
                 }).filter(Objects::nonNull).toList();
@@ -295,6 +298,24 @@ public class PredicateGenerator {
             list = List.of(cb.equal(cb.literal(1),cb.literal(1)));
         }
         return list.toArray(new Predicate[0]);
+    }
+
+    private static CriteriaBuilder.In getQueryableCriteriaValue(HibernateCriteriaBuilder cb, CriteriaQuery criteriaQuery, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.PropertyNameCriterion criterion, QueryableCriteria queryableCriteria) {
+        var projection = findPropertyOrIdProjection(queryableCriteria);
+        var subProperty = findSubproperty(projection);
+        var path = getPathFromInCriterion(fromsByProvider, criterion);
+        var in = findInPredicate(cb, projection, path, subProperty);
+        var subquery = criteriaQuery.subquery(getJavaTypeOfInClause((SqmInListPredicate) in));
+        var from = subquery.from(queryableCriteria.getPersistentEntity().getJavaClass());
+        var subCriteria = queryableCriteria.getCriteria();
+        var clonedProviderByName = (JpaFromProvider) fromsByProvider.clone();
+        clonedProviderByName.put("root", from);
+        var predicates = getPredicates(cb, criteriaQuery, from, subCriteria, clonedProviderByName, entity);
+        subquery.select(clonedProviderByName.getFullyQualifiedPath(subProperty))
+                .distinct(true)
+                .where(cb.and(predicates));
+        CriteriaBuilder.In value = in.value(subquery);
+        return value;
     }
 
     private static Predicate getExistsPredicate(HibernateCriteriaBuilder cb, From root_, PersistentEntity childPersistentEntity, Root subRoot) {
