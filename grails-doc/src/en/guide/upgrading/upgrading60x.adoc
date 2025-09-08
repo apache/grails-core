@@ -430,3 +430,7 @@ ServletContext servletContext
 For Grails 7, as was the case with Grails 4 and 5 and shell-generated applications in 6, Spring Boot Developer Tools is used by default for development reloading within generated applications.
 
 To learn more about development reloading options, please see the link:gettingStarted.html#developmentReloading[Development Reloading] section of this guide.
+
+===== 12.18 grails-i18n plugin
+
+`org.apache.grails:grails-i18n` has been changed to `org.apache.grails.i18n:grails-i18n` and is provided transitively, remove `org.apache.grails:grails-i18n` and `org.grails:grails-plugin-i18n` from your dependency list
