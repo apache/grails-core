@@ -1,4 +1,5 @@
 Hi Everyone,
+
 The Apache Grails community has voted to approve the release of Apache Grails Redis Plugin ${VERSION}.
 
 As the incubation host, we now kindly request the Groovy PMC to review & approve our ASF release.
