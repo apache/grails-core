@@ -18,10 +18,11 @@
  */
 package grails.databinding;
 
-import grails.databinding.events.DataBindingListener;
+import java.util.List;
+
 import groovy.xml.slurpersupport.GPathResult;
 
-import java.util.List;
+import grails.databinding.events.DataBindingListener;
 
 /**
  * @author Jeff Brown

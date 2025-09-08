@@ -19,6 +19,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.order.ManualEntityOrdering;
@@ -92,7 +93,7 @@ public class ManualProjections {
         }
 
         final List sorted = order.applyOrder(new ArrayList(results), Query.Order.asc(property));
-        final Object o = sorted.get(results.size()-1);
+        final Object o = sorted.get(results.size() - 1);
         if (entity.isInstance(o)) {
             return FieldEntityAccess.getOrIntializeReflector(entity).getProperty(o, property);
         }

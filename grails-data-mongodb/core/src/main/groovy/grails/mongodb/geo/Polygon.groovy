@@ -16,6 +16,7 @@ package grails.mongodb.geo
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+
 import org.springframework.util.Assert
 
 /**
@@ -24,7 +25,7 @@ import org.springframework.util.Assert
  */
 @CompileStatic
 @EqualsAndHashCode
-class Polygon extends Shape implements GeoJSON{
+class Polygon extends Shape implements GeoJSON {
 
     /**
      * The {@link Point} instances that constitute the Polygon
@@ -40,18 +41,18 @@ class Polygon extends Shape implements GeoJSON{
      * @param others The remaining {@link Point} instances
      */
     Polygon(Point x, Point y, Point z, Point...others) {
-        Assert.notNull(x, "Point x is required")
-        Assert.notNull(y, "Point y is required")
-        Assert.notNull(z, "Point z is required")
-        Assert.notNull(others, "Point others is required")
+        Assert.notNull(x, 'Point x is required')
+        Assert.notNull(y, 'Point y is required')
+        Assert.notNull(z, 'Point z is required')
+        Assert.notNull(others, 'Point others is required')
 
         List<Point> list = []
-        list.addAll Arrays.asList(x, y, z)
-        list.addAll others
+        list.addAll(Arrays.asList(x, y, z))
+        list.addAll(others)
         this.points = [list]
     }
 
-    private Polygon(List<List<Point>> points){
+    private Polygon(List<List<Point>> points) {
         this.points = points
     }
 
@@ -61,9 +62,9 @@ class Polygon extends Shape implements GeoJSON{
      *
      * @return The list
      */
-    public List<List<List<Double>>> asList() {
-         points.collect() { List<Point> ring ->
-            ring.collect { Point p -> 
+    List<List<List<Double>>> asList() {
+        points.collect() { List<Point> ring ->
+            ring.collect { Point p ->
                 p.asList()
             }
         }
@@ -80,68 +81,66 @@ class Polygon extends Shape implements GeoJSON{
      * @return A Polygon
      */
     static Polygon valueOf(List coords) {
-        Assert.notNull(coords, "Argument coords cannot be null")
-
-        
+        Assert.notNull(coords, 'Argument coords cannot be null')
 
         /*
-         * Search for list type - it could be 
+         * Search for list type - it could be
          * (1) List<Point>  - a single ring polygon
          * (2) List<List<Number>> - a single ring with list as long/lat/alt
          * (3) List<List<Point> - a multi-ring polygon
          * (4) List<List<List<Double> - a multi-ring polygon with list as long/lat/alt
          */
-         try 
-         {
-            if(coords[0] instanceof Point){
-                return new Polygon( [fromSingleCoordsList(coords)] ) // case (1) above
-             }
-             else if(coords[0] instanceof List )
-             {
-                if( ((List)coords[0])[0] instanceof Number) {
-                    return new Polygon( [fromSingleCoordsList(coords)] ) // case (2) above
+        try
+        {
+            if (coords[0] instanceof Point) {
+                return new Polygon([fromSingleCoordsList(coords)]) // case (1) above
+            }
+            else if (coords[0] instanceof List)
+            {
+                if (((List) coords[0])[0] instanceof Number) {
+                    return new Polygon([fromSingleCoordsList(coords)]) // case (2) above
                 }
-                else if( ((List)coords[0])[0] instanceof Point){
-                    return new Polygon( coords.collect { poly_ring ->
+                else if (((List) coords[0])[0] instanceof Point) {
+                    return new Polygon(coords.collect { poly_ring ->
                         // each is a List<Point>
-                        return fromSingleCoordsList((List<Point>)poly_ring)
+                        return fromSingleCoordsList((List<Point>) poly_ring)
                     }) // case (3) above
                 }
-                else if( ((List)coords[0])[0] instanceof List && ((List)((List)coords[0])[0])[0] instanceof Number ){
-                    return new Polygon( coords.collect { poly_ring ->
+                else if (((List) coords[0])[0] instanceof List && ((List) ((List)coords[0])[0])[0] instanceof Number) {
+                    return new Polygon(coords.collect { poly_ring ->
                         // each is a List<Point>
-                        return fromSingleCoordsList((List<List<Number>>)poly_ring)
-                    } ) // case (4) above
+                        return fromSingleCoordsList((List<List<Number>>) poly_ring)
+                    }) // case (4) above
                 }
                 else {
-                    throw new IllegalArgumentException("Coordinate list must be Points or number-lists")
+                    throw new IllegalArgumentException('Coordinate list must be Points or number-lists')
                 }
-             }
-             else {
-                throw new IllegalArgumentException("Coordinate list must be Points or number-lists")
-             }
-         }
-         catch(IndexOutOfBoundsException ioobe){
-            throw new IllegalArgumentException("Coordinate lists cannot be empty")
-         }
-         
+            }
+            else {
+                throw new IllegalArgumentException('Coordinate list must be Points or number-lists')
+            }
+        }
+        catch (IndexOutOfBoundsException ioobe) {
+            throw new IllegalArgumentException('Coordinate lists cannot be empty')
+        }
+
     }
 
     /**
      *  A single ring.  This could be a list of Point objects or a List points as number lists.
-     *   E.g. List<Point> or List<List<Number>> 
+     *   E.g. List<Point> or List<List<Number>>
      */
     private static List<Point> fromSingleCoordsList(List coords) {
-        Assert.notNull(coords, "Argument coords cannot be null")
+        Assert.notNull(coords, 'Argument coords cannot be null')
 
-        if(coords.size() < 4) throw new IllegalArgumentException("Coordinates should contain at least 4 entries for a Polygon")
+        if (coords.size() < 4) throw new IllegalArgumentException('Coordinates should contain at least 4 entries for a Polygon')
 
         return coords.collect {
-            if(it instanceof Point) {
-                return (Point)it
+            if (it instanceof Point) {
+                return (Point) it
             }
-            else if(it instanceof List) {
-                return Point.valueOf((List<Number>)it)
+            else if (it instanceof List) {
+                return Point.valueOf((List<Number>) it)
             }
             else {
                 throw new IllegalArgumentException("Invalid coordinates: $coords")

@@ -49,7 +49,6 @@ dependencies {
     runtimeOnly 'com.zaxxer:HikariCP'
     runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'org.apache.grails:grails-scaffolding'
-    runtimeOnly 'org.apache.grails:grails-i18n'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly "org.hibernate:hibernate-ehcache:$hibernate5Version", {
         // exclude javax variant of hibernate-core

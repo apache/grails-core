@@ -19,8 +19,6 @@
 
 package org.grails.plugins.web
 
-import groovy.transform.CompileStatic
-
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -32,6 +30,8 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
 import java.time.format.FormatStyle
 import java.time.temporal.TemporalAccessor
+
+import groovy.transform.CompileStatic
 
 /**
  * The default implementation of {@link GrailsTagDateHelper}
@@ -60,7 +60,7 @@ class DefaultGrailsTagDateHelper implements GrailsTagDateHelper {
 
     @Override
     Object getFormatFromPattern(String format, Object timeZone, Locale locale) {
-        DateTimeFormatter.ofPattern(format, locale).withZone((ZoneId)timeZone)
+        DateTimeFormatter.ofPattern(format, locale).withZone((ZoneId) timeZone)
 
     }
 
@@ -69,7 +69,7 @@ class DefaultGrailsTagDateHelper implements GrailsTagDateHelper {
         new DateTimeFormatterBuilder()
                 .appendLocalized(parseStyle(dateStyle), null)
                 .toFormatter(locale)
-                .withZone((ZoneId)timeZone)
+                .withZone((ZoneId) timeZone)
     }
 
     @Override
@@ -77,7 +77,7 @@ class DefaultGrailsTagDateHelper implements GrailsTagDateHelper {
         new DateTimeFormatterBuilder()
                 .appendLocalized(null, parseStyle(timeStyle))
                 .toFormatter(locale)
-                .withZone((ZoneId)timeZone)
+                .withZone((ZoneId) timeZone)
     }
 
     @Override
@@ -85,7 +85,7 @@ class DefaultGrailsTagDateHelper implements GrailsTagDateHelper {
         new DateTimeFormatterBuilder()
                 .appendLocalized(parseStyle(dateStyle), parseStyle(timeStyle))
                 .toFormatter(locale)
-                .withZone((ZoneId)timeZone)
+                .withZone((ZoneId) timeZone)
     }
 
     @Override
@@ -102,10 +102,10 @@ class DefaultGrailsTagDateHelper implements GrailsTagDateHelper {
         } else if (date instanceof TemporalAccessor) {
             instant = date
         } else {
-            throw new IllegalArgumentException("Cannot format class as date: " +
-                    (date == null ? "<null>" : date.getClass().getName()));
+            throw new IllegalArgumentException('Cannot format class as date: ' +
+                    (date == null ? '<null>' : date.getClass().getName()))
         }
-        ((DateTimeFormatter)formatter).format(instant)
+        ((DateTimeFormatter) formatter).format(instant)
     }
 
     private static FormatStyle parseStyle(String styleStr) {
@@ -122,12 +122,11 @@ class DefaultGrailsTagDateHelper implements GrailsTagDateHelper {
         clazz == Date || TemporalAccessor.isAssignableFrom(clazz)
     }
 
-
     @Override
     GregorianCalendar buildCalendar(Object date) {
         if (date instanceof Date) {
             GregorianCalendar c = new GregorianCalendar()
-            c.setTime((Date)date)
+            c.setTime((Date) date)
             c
         } else {
             ZonedDateTime zonedDateTime

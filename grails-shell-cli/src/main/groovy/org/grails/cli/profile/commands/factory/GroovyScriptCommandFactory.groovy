@@ -19,20 +19,21 @@
 
 package org.grails.cli.profile.commands.factory
 
-import grails.build.logging.GrailsConsole
-import grails.util.GrailsNameUtils
+import java.nio.charset.StandardCharsets
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
+
+import grails.build.logging.GrailsConsole
+import grails.util.GrailsNameUtils
 import org.grails.cli.profile.Command
 import org.grails.cli.profile.Profile
 import org.grails.cli.profile.commands.script.GroovyScriptCommand
 import org.grails.cli.profile.commands.script.GroovyScriptCommandTransform
 import org.grails.io.support.Resource
-
-import java.nio.charset.StandardCharsets
 
 /**
  * A {@link CommandFactory} that creates {@link Command} instances from Groovy scripts
@@ -43,36 +44,35 @@ import java.nio.charset.StandardCharsets
 @CompileStatic
 class GroovyScriptCommandFactory extends ResourceResolvingCommandFactory<GroovyScriptCommand> {
 
-    final Collection<String> matchingFileExtensions = ["groovy"]
+    final Collection<String> matchingFileExtensions = ['groovy']
     final String fileNamePattern = /^.*\.(groovy)$/
 
     @Override
     protected GroovyScriptCommand readCommandFile(Resource resource) {
         GroovyClassLoader classLoader = createGroovyScriptCommandClassLoader()
         try {
-            return (GroovyScriptCommand) classLoader.parseClass(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8 ), resource.filename).getDeclaredConstructor().newInstance()
+            return (GroovyScriptCommand) classLoader.parseClass(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8), resource.filename).getDeclaredConstructor().newInstance()
         } catch (Throwable e) {
             GrailsConsole.getInstance().error("Failed to compile ${resource.filename}: " + e.getMessage(), e)
         }
     }
 
     @CompileDynamic
-    public static GroovyClassLoader createGroovyScriptCommandClassLoader() {
+    static GroovyClassLoader createGroovyScriptCommandClassLoader() {
         def configuration = new CompilerConfiguration()
         // TODO: Report bug, this fails with @CompileStatic with a ClassCastException
-        String baseClassName = GroovyScriptCommand.class.getName()
+        String baseClassName = GroovyScriptCommand.getName()
         return createClassLoaderForBaseClass(configuration, baseClassName)
     }
 
     private static GroovyClassLoader createClassLoaderForBaseClass(CompilerConfiguration configuration, String baseClassName) {
         configuration.setScriptBaseClass(baseClassName)
 
-
         def importCustomizer = new ImportCustomizer()
-        importCustomizer.addStarImports("org.grails.cli.interactive.completers")
-        importCustomizer.addStarImports("grails.util")
-        importCustomizer.addStarImports("grails.codegen.model")
-        configuration.addCompilationCustomizers(importCustomizer,new ASTTransformationCustomizer(new GroovyScriptCommandTransform()))
+        importCustomizer.addStarImports('org.grails.cli.interactive.completers')
+        importCustomizer.addStarImports('grails.util')
+        importCustomizer.addStarImports('grails.codegen.model')
+        configuration.addCompilationCustomizers(importCustomizer, new ASTTransformationCustomizer(new GroovyScriptCommandTransform()))
         def classLoader = new GroovyClassLoader(Thread.currentThread().contextClassLoader, configuration)
         return classLoader
     }

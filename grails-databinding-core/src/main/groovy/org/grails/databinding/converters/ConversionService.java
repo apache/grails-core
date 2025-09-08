@@ -23,6 +23,8 @@ package org.grails.databinding.converters;
  * @since 2.3
  */
 public interface ConversionService {
+
     boolean canConvert(Class<?> source, Class<?> target);
+
     Object convert(Object objet, Class<?> targetType);
 }

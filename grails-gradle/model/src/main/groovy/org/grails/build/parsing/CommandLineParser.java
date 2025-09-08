@@ -18,13 +18,12 @@
  */
 package org.grails.build.parsing;
 
-import grails.util.Environment;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.StringTokenizer;
 
+import grails.util.Environment;
 
 /**
  * Command line parser that parses arguments to the command line. Written as a
@@ -38,8 +37,8 @@ import java.util.StringTokenizer;
  */
 public class CommandLineParser {
 
-    static Map<String, String> ENV_ARGS = new HashMap<String, String>();
-    static Map<String, String> DEFAULT_ENVS = new HashMap<String, String>();
+    static Map<String, String> ENV_ARGS = new HashMap<>();
+    static Map<String, String> DEFAULT_ENVS = new HashMap<>();
     private static CommandLine CURRENT = null;
     private static final String DEFAULT_PADDING = "        ";
 
@@ -51,7 +50,7 @@ public class CommandLineParser {
         DEFAULT_ENVS.put("test-app", Environment.TEST.getName());
     }
 
-    private Map<String, Option> declaredOptions = new HashMap<String, Option> ();
+    private Map<String, Option> declaredOptions = new HashMap<>();
     private int longestOptionNameLength = 0;
     private String usageMessage;
 
@@ -67,7 +66,7 @@ public class CommandLineParser {
      */
     public void addOption(String name, String description) {
         int length = name.length();
-        if (length >longestOptionNameLength) {
+        if (length > longestOptionNameLength) {
             longestOptionNameLength = length;
         }
         declaredOptions.put(name, new Option(name, description));
@@ -103,7 +102,7 @@ public class CommandLineParser {
         final int inDoubleQuote = 2;
         int state = normal;
         final StringTokenizer tok = new StringTokenizer(toProcess, "\"\' ", true);
-        final ArrayList<String> result = new ArrayList<String>();
+        final ArrayList<String> result = new ArrayList<>();
         final StringBuilder current = new StringBuilder();
         boolean lastTokenHasBeenQuoted = false;
 
@@ -152,10 +151,10 @@ public class CommandLineParser {
         return result.toArray(new String[result.size()]);
     }
 
-   /**
+    /**
      * Parses a string of all the command line options converting them into an array of arguments to pass to #parse(String..args)
      *
-    *  @param commandName The command name
+     * @param commandName The command name
      * @param args The string
      * @return The command line
      */
@@ -168,6 +167,7 @@ public class CommandLineParser {
         parseInternal(cl, argArray, false);
         return cl;
     }
+
     /**
      * Parses the given list of command line arguments. Arguments starting with -D become system properties,
      * arguments starting with -- or - become either declared or undeclared options. All other arguments are
@@ -192,7 +192,7 @@ public class CommandLineParser {
         for (String arg : args) {
             if (arg == null) continue;
             String trimmed = arg.trim();
-            if (trimmed != null && trimmed.length()>0) {
+            if (trimmed != null && trimmed.length() > 0) {
                 if (trimmed.charAt(0) == '"' && trimmed.charAt(trimmed.length() - 1) == '"') {
                     trimmed = trimmed.substring(1, trimmed.length() - 1);
                 }
@@ -200,7 +200,7 @@ public class CommandLineParser {
                     lastWasOption = processOption(cl, trimmed);
                 }
                 else {
-                    if(lastWasOption != null) {
+                    if (lastWasOption != null) {
                         cl.addUndeclaredOption(lastWasOption, trimmed);
                         lastWasOption = null;
                         continue;
@@ -209,13 +209,13 @@ public class CommandLineParser {
                         cl.setEnvironment(ENV_ARGS.get(trimmed));
                     }
                     else {
-                       if (firstArgumentIsCommand) {
-                           cl.setCommandName(trimmed);
-                           firstArgumentIsCommand = false;
-                       }
-                       else {
-                           cl.addRemainingArg(trimmed);
-                       }
+                        if (firstArgumentIsCommand) {
+                            cl.setCommandName(trimmed);
+                            firstArgumentIsCommand = false;
+                        }
+                        else {
+                            cl.addRemainingArg(trimmed);
+                        }
                     }
                 }
             }
@@ -289,7 +289,7 @@ public class CommandLineParser {
     protected void processSystemArg(DefaultCommandLine cl, String arg) {
         int i = arg.indexOf("=");
         String name = arg.substring(2, i);
-        String value = arg.substring(i+1,arg.length());
+        String value = arg.substring(i + 1, arg.length());
         cl.addSystemProperty(name, value);
     }
 }

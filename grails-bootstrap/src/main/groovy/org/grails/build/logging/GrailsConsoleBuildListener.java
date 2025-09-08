@@ -18,9 +18,10 @@
  */
 package org.grails.build.logging;
 
-import grails.build.logging.GrailsConsole;
 import org.apache.tools.ant.BuildEvent;
 import org.apache.tools.ant.BuildListener;
+
+import grails.build.logging.GrailsConsole;
 
 /**
  * Mainly silences a lot of redundant Ant output.

@@ -130,6 +130,4 @@ public interface ConsoleLogger {
      * @param msg The message
      */
     void verbose(String msg);
-
-
 }

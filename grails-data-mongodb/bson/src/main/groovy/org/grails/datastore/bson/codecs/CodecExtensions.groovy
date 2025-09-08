@@ -18,7 +18,11 @@
  */
 package org.grails.datastore.bson.codecs
 
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.GStringImpl
+
 import org.bson.BsonArray
 import org.bson.BsonBinary
 import org.bson.BsonBoolean
@@ -53,10 +57,8 @@ import org.bson.codecs.StringCodec
 import org.bson.codecs.configuration.CodecProvider
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.types.ObjectId
-import org.codehaus.groovy.runtime.GStringImpl
-import org.springframework.core.convert.converter.Converter
 
-import java.util.regex.Pattern
+import org.springframework.core.convert.converter.Converter
 
 /**
  * Additional {@link Codec} extensions. This class implements {@CodecProvider} and integrates with the {@CodecRegistry} to make it easier to convert objects to and from BSON documents
@@ -66,21 +68,22 @@ import java.util.regex.Pattern
  */
 @CompileStatic
 class CodecExtensions implements CodecProvider {
+
     private static final Map<Class, Codec> ADDITIONAL_CODECS = [:]
     private static final Map<Class<? extends BsonValue>, List<Converter>> BSON_VALUE_CONVERTERS = new LinkedHashMap<Class<? extends BsonValue>, List<Converter>>().withDefault { Class<? extends BsonValue> cls ->
         new ArrayList<Converter>() as List<Converter>
     }
     private static final Map<BsonType, Codec<?>> BSON_TYPE_CODECS = [
-            (BsonType.ARRAY) : new ListCodec(),
-            (BsonType.DOCUMENT) : new DocumentCodec(),
-            (BsonType.BINARY) : new ByteArrayCodec(),
-            (BsonType.BOOLEAN) : new BooleanCodec(),
-            (BsonType.DATE_TIME) : new DateCodec(),
-            (BsonType.DOUBLE) : new DoubleCodec(),
-            (BsonType.INT32) : new IntegerCodec(),
-            (BsonType.INT64) : new LongCodec(),
-            (BsonType.STRING) : new StringCodec(),
-            (BsonType.OBJECT_ID) : new ObjectIdCodec()
+            (BsonType.ARRAY): new ListCodec(),
+            (BsonType.DOCUMENT): new DocumentCodec(),
+            (BsonType.BINARY): new ByteArrayCodec(),
+            (BsonType.BOOLEAN): new BooleanCodec(),
+            (BsonType.DATE_TIME): new DateCodec(),
+            (BsonType.DOUBLE): new DoubleCodec(),
+            (BsonType.INT32): new IntegerCodec(),
+            (BsonType.INT64): new LongCodec(),
+            (BsonType.STRING): new StringCodec(),
+            (BsonType.OBJECT_ID): new ObjectIdCodec()
     ]
 
     static {
@@ -182,8 +185,8 @@ class CodecExtensions implements CodecProvider {
             @Override
             List convert(BsonArray source) {
                 List list = []
-                for(BsonValue v in source) {
-                    if(v != null) {
+                for (BsonValue v in source) {
+                    if (v != null) {
                         def converter = BSON_VALUE_CONVERTERS[v.getClass()]?.first()
                         list << (converter ? converter.convert(v) : v)
                     }
@@ -199,8 +202,8 @@ class CodecExtensions implements CodecProvider {
             Object[] convert(BsonArray source) {
                 Object[] array = new Object[source.size()]
                 int i = 0
-                for(BsonValue v in source) {
-                    if(v != null) {
+                for (BsonValue v in source) {
+                    if (v != null) {
                         def converter = BSON_VALUE_CONVERTERS[v.getClass()]?.first()
                         array[i++] = (converter ? converter.convert(v) : v)
                     }
@@ -216,9 +219,9 @@ class CodecExtensions implements CodecProvider {
             Map<String, Object> convert(BsonDocument source) {
                 Map<String, Object> map = [:]
 
-                for(key in source.keySet()) {
+                for (key in source.keySet()) {
                     def v = source[key]
-                    if(v != null) {
+                    if (v != null) {
                         def converter = BSON_VALUE_CONVERTERS[v.getClass()]?.first()
                         map[key] = (converter ? converter.convert(v) : v)
                     }
@@ -240,22 +243,21 @@ class CodecExtensions implements CodecProvider {
     }
 
     static Collection<Converter> getBsonConverters() {
-        return (Collection<Converter>)BSON_VALUE_CONVERTERS.values().flatten()
+        return (Collection<Converter>) BSON_VALUE_CONVERTERS.values().flatten()
     }
 
     static Converter getBsonConverter(Class<? extends BsonValue> type) {
         def converters = BSON_VALUE_CONVERTERS.get(type)
-        if(!converters.isEmpty()) {
+        if (!converters.isEmpty()) {
             return converters.first()
         }
         return null
     }
 
-
     static Codec getCodecForBsonType(BsonType bsonType, CodecRegistry registry) {
         def codec = BSON_TYPE_CODECS.get(bsonType)
-        if(codec != null) {
-            if(codec instanceof CodecRegistryAware) {
+        if (codec != null) {
+            if (codec instanceof CodecRegistryAware) {
                 codec.codecRegistry = registry
             }
             return codec
@@ -266,8 +268,8 @@ class CodecExtensions implements CodecProvider {
     @Override
     def <T> Codec<T> get(Class<T> clazz, CodecRegistry registry) {
         def codec = ADDITIONAL_CODECS.get(clazz)
-        if(codec != null) {
-            if(codec instanceof CodecRegistryAware) {
+        if (codec != null) {
+            if (codec instanceof CodecRegistryAware) {
                 codec.codecRegistry = registry
             }
             return codec
@@ -284,11 +286,11 @@ class CodecExtensions implements CodecProvider {
             Map<String, Object> map = [:]
             reader.readStartDocument()
             BsonType bsonType = reader.readBsonType()
-            while(bsonType != BsonType.END_OF_DOCUMENT) {
+            while (bsonType != BsonType.END_OF_DOCUMENT) {
                 def key = reader.readName()
                 BsonValue bsonValue = readValue(reader, decoderContext)
                 Object value = null
-                if(bsonValue != null) {
+                if (bsonValue != null) {
                     def converter = BSON_VALUE_CONVERTERS.get(bsonValue.getClass())?.first()
                     value = converter ? converter.convert(bsonValue) : bsonValue
                 }
@@ -302,14 +304,14 @@ class CodecExtensions implements CodecProvider {
         @Override
         void encode(BsonWriter writer, Map<String, Object> values, EncoderContext encoderContext) {
             writer.writeStartDocument()
-            for(entry in values) {
+            for (entry in values) {
                 def v = entry.value
                 writer.writeName(entry.key)
-                if(v == null) {
+                if (v == null) {
                     writer.writeNull()
                 }
                 else {
-                    Codec<Object> c = (Codec<Object>)codecRegistry.get( v.getClass() )
+                    Codec<Object> c = (Codec<Object>) codecRegistry.get(v.getClass())
                     c.encode(writer, v, encoderContext)
                 }
             }
@@ -322,7 +324,7 @@ class CodecExtensions implements CodecProvider {
         }
 
         protected BsonValue readValue(final BsonReader reader, final DecoderContext decoderContext) {
-            return codecRegistry.get(BsonValueCodecProvider.getClassForBsonType(reader.getCurrentBsonType())).decode(reader, decoderContext);
+            return codecRegistry.get(BsonValueCodecProvider.getClassForBsonType(reader.getCurrentBsonType())).decode(reader, decoderContext)
         }
     }
     static class ListCodec implements Codec<List>, CodecRegistryAware {
@@ -333,11 +335,11 @@ class CodecExtensions implements CodecProvider {
             List list = new ArrayList()
             reader.readStartArray()
             BsonType bsonType = reader.readBsonType()
-            while(bsonType != BsonType.END_OF_DOCUMENT) {
+            while (bsonType != BsonType.END_OF_DOCUMENT) {
 
                 BsonValue bsonValue = readValue(reader, decoderContext)
                 Object value = null
-                if(bsonValue != null) {
+                if (bsonValue != null) {
                     def converters = BSON_VALUE_CONVERTERS.get(bsonValue.getClass())
                     Converter converter = !converters.isEmpty() ? converters?.first() : null
                     value = converter != null ? converter.convert(bsonValue) : bsonValue
@@ -352,12 +354,12 @@ class CodecExtensions implements CodecProvider {
         @Override
         void encode(BsonWriter writer, List values, EncoderContext encoderContext) {
             writer.writeStartArray()
-            for(v in values) {
-                if(v == null) {
+            for (v in values) {
+                if (v == null) {
                     writer.writeNull()
                 }
                 else {
-                    Codec<Object> c = (Codec<Object>)codecRegistry.get( v.getClass() )
+                    Codec<Object> c = (Codec<Object>) codecRegistry.get(v.getClass())
                     c.encode(writer, v, encoderContext)
                 }
             }
@@ -374,17 +376,16 @@ class CodecExtensions implements CodecProvider {
             def targetClass = BsonValueCodecProvider.getClassForBsonType(currentBsonType)
 
             def codec = codecRegistry.get(targetClass)
-            return codec.decode(reader, decoderContext);
+            return codec.decode(reader, decoderContext)
         }
     }
 
-    static class IntRangeCodec implements Codec<IntRange>{
-
+    static class IntRangeCodec implements Codec<IntRange> {
 
         @Override
         void encode(BsonWriter writer, IntRange value, EncoderContext encoderContext) {
-            Integer from = (Integer)value.from
-            Integer to = (Integer)value.to
+            Integer from = (Integer) value.from
+            Integer to = (Integer) value.to
 
             writer.writeStartArray()
             writer.writeInt32(from)
@@ -411,7 +412,7 @@ class CodecExtensions implements CodecProvider {
 
         @Override
         Locale decode(BsonReader reader, DecoderContext decoderContext) {
-            new Locale( reader.readString() )
+            new Locale(reader.readString())
         }
 
         @Override
@@ -429,7 +430,7 @@ class CodecExtensions implements CodecProvider {
 
         @Override
         Currency decode(BsonReader reader, DecoderContext decoderContext) {
-            Currency.getInstance( reader.readString() )
+            Currency.getInstance(reader.readString())
         }
 
         @Override

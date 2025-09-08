@@ -19,13 +19,15 @@
 
 package grails.plugin.json.view
 
-import grails.views.GenericViewConfiguration
-import grails.web.mime.MimeType
+import java.beans.PropertyDescriptor
+
 import groovy.transform.CompileStatic
+
 import org.springframework.beans.BeanUtils
 import org.springframework.boot.context.properties.ConfigurationProperties
 
-import java.beans.PropertyDescriptor
+import grails.views.GenericViewConfiguration
+import grails.web.mime.MimeType
 
 /**
  * Default configuration for JSON views
@@ -37,7 +39,7 @@ import java.beans.PropertyDescriptor
 @ConfigurationProperties('grails.views.json')
 class JsonViewConfiguration implements GenericViewConfiguration {
 
-    public static final String MODULE_NAME = "json"
+    public static final String MODULE_NAME = 'json'
 
     List<String> mimeTypes = [MimeType.JSON.name, MimeType.HAL_JSON.name]
 
@@ -51,7 +53,7 @@ class JsonViewConfiguration implements GenericViewConfiguration {
 
     @Override
     String getViewModuleName() {
-         MODULE_NAME
+        MODULE_NAME
     }
 
     PropertyDescriptor[] findViewConfigPropertyDescriptor() {

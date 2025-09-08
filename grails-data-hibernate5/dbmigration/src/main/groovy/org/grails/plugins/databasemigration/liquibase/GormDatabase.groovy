@@ -19,6 +19,7 @@
 package org.grails.plugins.databasemigration.liquibase
 
 import groovy.transform.CompileStatic
+
 import liquibase.database.DatabaseConnection
 import liquibase.database.OfflineConnection
 import liquibase.exception.DatabaseException
@@ -27,11 +28,12 @@ import liquibase.snapshot.DatabaseSnapshot
 import liquibase.snapshot.JdbcDatabaseSnapshot
 import liquibase.snapshot.SnapshotControl
 import liquibase.structure.DatabaseObject
-import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataSources
 import org.hibernate.dialect.Dialect
 import org.hibernate.service.ServiceRegistry
+
+import org.grails.orm.hibernate.HibernateDatastore
 
 @CompileStatic
 class GormDatabase extends HibernateDatabase {
@@ -51,7 +53,7 @@ class GormDatabase extends HibernateDatabase {
         this.metadata = hibernateDatastore.getMetadata()
         SnapshotControl snapshotControl = new SnapshotControl(this, null, null)
         GormDatabase database = this
-        OfflineConnection connection = new OfflineConnection("offline:gorm", null) {
+        OfflineConnection connection = new OfflineConnection('offline:gorm', null) {
             DatabaseSnapshot getSnapshot(DatabaseObject[] examples) {
                 new JdbcDatabaseSnapshot(examples, database, snapshotControl)
             }
@@ -68,7 +70,7 @@ class GormDatabase extends HibernateDatabase {
      * Return the hibernate {@link Metadata} used by this database.
      */
     @Override
-    public Metadata getMetadata() {
+    Metadata getMetadata() {
         metadata
     }
 
@@ -77,15 +79,9 @@ class GormDatabase extends HibernateDatabase {
         //no op
     }
 
-
     @Override
     boolean isCorrectDatabaseImplementation(DatabaseConnection conn) throws DatabaseException {
         return false
     }
 
 }
-
-
-
-
-

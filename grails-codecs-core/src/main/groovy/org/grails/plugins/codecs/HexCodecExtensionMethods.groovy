@@ -18,9 +18,9 @@
  */
 package org.grails.plugins.codecs
 
-import org.codehaus.groovy.runtime.NullObject
-
 import java.nio.charset.StandardCharsets
+
+import org.codehaus.groovy.runtime.NullObject
 
 class HexCodecExtensionMethods {
 
@@ -50,7 +50,7 @@ class HexCodecExtensionMethods {
 
         def str = theTarget.toString().toLowerCase()
         if (str.size() % 2) {
-            throw new UnsupportedOperationException("Decode of hex strings requires strings of even length")
+            throw new UnsupportedOperationException('Decode of hex strings requires strings of even length')
         }
 
         def currentByte

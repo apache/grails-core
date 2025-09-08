@@ -18,6 +18,8 @@
  */
 package org.grails.gsp.io;
 
+import org.springframework.core.io.Resource;
+
 import grails.plugins.GrailsPlugin;
 import org.grails.core.io.DefaultResourceLocator;
 import org.grails.gsp.GroovyPageBinding;
@@ -25,7 +27,6 @@ import org.grails.io.support.GrailsResourceUtils;
 import org.grails.taglib.AbstractTemplateVariableBinding;
 import org.grails.taglib.encoder.OutputContext;
 import org.grails.taglib.encoder.OutputContextLookupHelper;
-import org.springframework.core.io.Resource;
 
 /**
  * <p>
@@ -45,7 +46,7 @@ public class GroovyPageStaticResourceLocator extends DefaultResourceLocator {
         if (resource == null || !resource.exists()) {
             AbstractTemplateVariableBinding binding = findBindingInOutputContext();
             if (binding instanceof GroovyPageBinding) {
-                GrailsPlugin pagePlugin = ((GroovyPageBinding)binding).getPagePlugin();
+                GrailsPlugin pagePlugin = ((GroovyPageBinding) binding).getPagePlugin();
                 if (pagePlugin != null && pluginManager != null) {
                     resource = findResourceForPlugin(pagePlugin, uri);
                 }

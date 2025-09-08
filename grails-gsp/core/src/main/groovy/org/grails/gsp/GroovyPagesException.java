@@ -34,7 +34,7 @@ public class GroovyPagesException extends GrailsException implements SourceCodeA
     private String fileName;
 
     public GroovyPagesException(String message, Throwable e) {
-        super(message,e);
+        super(message, e);
     }
 
     public GroovyPagesException(String message, Throwable exception, int lineNumber, String fileName) {
@@ -49,14 +49,14 @@ public class GroovyPagesException extends GrailsException implements SourceCodeA
 
     public String getFileName() {
         if (fileName == null && getCause() instanceof SourceCodeAware) {
-            return ((SourceCodeAware)getCause()).getFileName();
+            return ((SourceCodeAware) getCause()).getFileName();
         }
         return fileName;
     }
 
     public int getLineNumber() {
         if (lineNumber == -1 && getCause() instanceof SourceCodeAware) {
-            return ((SourceCodeAware)getCause()).getLineNumber();
+            return ((SourceCodeAware) getCause()).getLineNumber();
         }
         return lineNumber;
     }

@@ -30,28 +30,28 @@ import org.codehaus.groovy.control.customizers.ImportCustomizer;
  */
 class SmartImportCustomizer extends ImportCustomizer {
 
-	private SourceUnit source;
+    private SourceUnit source;
 
-	SmartImportCustomizer(SourceUnit source) {
-		this.source = source;
-	}
+    SmartImportCustomizer(SourceUnit source) {
+        this.source = source;
+    }
 
-	@Override
-	public ImportCustomizer addImport(String alias, String className) {
-		if (this.source.getAST().getImport(ClassHelper.make(className).getNameWithoutPackage()) == null) {
-			super.addImport(alias, className);
-		}
-		return this;
-	}
+    @Override
+    public ImportCustomizer addImport(String alias, String className) {
+        if (this.source.getAST().getImport(ClassHelper.make(className).getNameWithoutPackage()) == null) {
+            super.addImport(alias, className);
+        }
+        return this;
+    }
 
-	@Override
-	public ImportCustomizer addImports(String... imports) {
-		for (String alias : imports) {
-			if (this.source.getAST().getImport(ClassHelper.make(alias).getNameWithoutPackage()) == null) {
-				super.addImports(alias);
-			}
-		}
-		return this;
-	}
+    @Override
+    public ImportCustomizer addImports(String... imports) {
+        for (String alias : imports) {
+            if (this.source.getAST().getImport(ClassHelper.make(alias).getNameWithoutPackage()) == null) {
+                super.addImports(alias);
+            }
+        }
+        return this;
+    }
 
 }

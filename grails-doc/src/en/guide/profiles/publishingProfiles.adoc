@@ -36,8 +36,8 @@ grailsPublish {
         license {
             name = 'Apache-2.0'
         }
-        title = 'My plugin title'
-        desc = 'My plugin description'
+        title = 'My profile title'
+        desc = 'My profile description'
         developers = [johndoe: 'John Doe']
     }
 ----

@@ -19,13 +19,13 @@
 package org.grails.datastore.mapping.config.groovy
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.config.Entity
-import org.grails.datastore.mapping.config.Property
-import org.grails.datastore.mapping.reflect.NameUtils
+
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
 
-import java.lang.reflect.Constructor
+import org.grails.datastore.mapping.config.Entity
+import org.grails.datastore.mapping.config.Property
+import org.grails.datastore.mapping.reflect.NameUtils
 
 /**
  * @author Graeme Rocher
@@ -46,8 +46,8 @@ class DefaultMappingConfigurationBuilder implements MappingConfigurationBuilder 
     }
 
     Map<String, Property> getProperties() {
-        if(!target.propertyConfigs.isEmpty()) {
-            properties.putAll( target.propertyConfigs )
+        if (!target.propertyConfigs.isEmpty()) {
+            properties.putAll(target.propertyConfigs)
         }
         return properties
     }
@@ -68,7 +68,7 @@ class DefaultMappingConfigurationBuilder implements MappingConfigurationBuilder 
             target[name] = args.size() == 1 ? args[0] : args
         }
         else {
-            if(target.respondsTo(name)) {
+            if (target.respondsTo(name)) {
                 target."$name"(*args)
             }
             else if (args.size() == 1 && args[0] instanceof Map) {

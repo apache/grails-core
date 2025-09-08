@@ -18,14 +18,14 @@
  */
 package org.grails.web.mapping.reporting
 
+import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
+import groovy.util.logging.Slf4j
+
 import grails.dev.commands.ApplicationCommand
 import grails.dev.commands.ExecutionContext
 import grails.web.mapping.UrlMappings
 import grails.web.mapping.reporting.UrlMappingsRenderer
-import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
-import groovy.util.logging.Commons
-
 
 /**
  * A {@link ApplicationCommand} that renders the URL mappings
@@ -35,15 +35,15 @@ import groovy.util.logging.Commons
  */
 @CompileStatic
 @EqualsAndHashCode
-@Commons
+@Slf4j
 class UrlMappingsReportCommand implements ApplicationCommand {
 
-    final String description = "Prints out a report of the project's URL mappings"
+    final String description = /Prints out a report of the project's URL mappings/
 
     @Override
     boolean handle(ExecutionContext executionContext) {
         try {
-            def urlMappings = applicationContext.getBean("grailsUrlMappingsHolder", UrlMappings)
+            def urlMappings = applicationContext.getBean('grailsUrlMappingsHolder', UrlMappings)
 
             UrlMappingsRenderer renderer = new AnsiConsoleUrlMappingsRenderer()
             renderer.render(urlMappings.getUrlMappings().toList())

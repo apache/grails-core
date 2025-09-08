@@ -42,17 +42,17 @@ public class PersistentList extends AbstractPersistentCollection implements List
 
     public PersistentList(Collection keys, Class childType, Session session) {
         super(keys, childType, session, new ArrayList());
-        list = (List)collection;
+        list = (List) collection;
     }
 
     public PersistentList(Serializable associationKey, Session session, AssociationQueryExecutor indexer) {
         super(associationKey, session, indexer, new ArrayList());
-        list = (List)collection;
+        list = (List) collection;
     }
 
     public PersistentList(Association association, Serializable associationKey, Session session) {
         super(association, associationKey, session, new ArrayList());
-        list = (List)collection;
+        list = (List) collection;
     }
 
     public int indexOf(Object o) {

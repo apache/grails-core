@@ -19,9 +19,9 @@
 
 package org.grails.async.factory.future
 
-import grails.async.PromiseFactory
-
 import java.util.concurrent.ExecutorService
+
+import grails.async.PromiseFactory
 
 /**
  * Interface for classes that are both a PromiseFactory and an ExecutorService

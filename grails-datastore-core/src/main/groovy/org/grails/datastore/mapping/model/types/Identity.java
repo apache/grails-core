@@ -35,6 +35,7 @@ public abstract class Identity<T extends Property> extends AbstractPersistentPro
     public Identity(PersistentEntity owner, MappingContext context, PropertyDescriptor descriptor) {
         super(owner, context, descriptor);
     }
+
     public Identity(PersistentEntity owner, MappingContext context, String name, @SuppressWarnings("rawtypes") Class type) {
         super(owner, context, name, type);
     }

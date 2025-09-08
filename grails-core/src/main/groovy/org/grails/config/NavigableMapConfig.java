@@ -18,17 +18,6 @@
  */
 package org.grails.config;
 
-import grails.config.Config;
-import grails.util.GrailsStringUtils;
-import groovy.util.ConfigObject;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
-import org.grails.core.exceptions.GrailsConfigurationException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.core.convert.ConversionException;
-import org.springframework.core.convert.support.ConfigurableConversionService;
-import org.springframework.core.convert.support.DefaultConversionService;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.IdentityHashMap;
@@ -39,6 +28,20 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
+
+import groovy.util.ConfigObject;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.core.convert.ConversionException;
+import org.springframework.core.convert.support.ConfigurableConversionService;
+import org.springframework.core.convert.support.DefaultConversionService;
+
+import grails.config.Config;
+import grails.util.GrailsStringUtils;
+import org.grails.core.exceptions.GrailsConfigurationException;
 
 /**
  * A {@link Config} implementation that operates against a {@link org.grails.config.NavigableMap}
@@ -55,7 +58,7 @@ public abstract class NavigableMapConfig implements Config {
     protected NavigableMap configMap = new NavigableMap() {
         @Override
         protected Object mergeMapEntry(NavigableMap targetMap, String sourceKey, Object newValue) {
-            if(newValue instanceof CharSequence) {
+            if (newValue instanceof CharSequence) {
                 newValue = resolvePlaceholders(newValue.toString());
             }
             return super.mergeMapEntry(targetMap, sourceKey, newValue);
@@ -69,8 +72,8 @@ public abstract class NavigableMapConfig implements Config {
 
     @Override
     public boolean equals(Object obj) {
-        if(obj instanceof NavigableMapConfig) {
-            return this.configMap.equals(((NavigableMapConfig)obj).configMap);
+        if (obj instanceof NavigableMapConfig) {
+            return this.configMap.equals(((NavigableMapConfig) obj).configMap);
         }
         return false;
     }
@@ -153,7 +156,7 @@ public abstract class NavigableMapConfig implements Config {
     @Override
     @Deprecated
     public Map<String, Object> flatten() {
-        if(LOG.isWarnEnabled()) {
+        if (LOG.isWarnEnabled()) {
             LOG.warn("A plugin or your application called the flatten() method which can degrade startup performance");
         }
         return configMap;
@@ -176,7 +179,7 @@ public abstract class NavigableMapConfig implements Config {
     }
 
     public Object asType(Class c) {
-        if(c==Boolean.class || c==boolean.class) return false;
+        if (c == Boolean.class || c == boolean.class) return false;
         return null;
     }
 
@@ -208,7 +211,7 @@ public abstract class NavigableMapConfig implements Config {
     @Override
     public <T> T getProperty(String key, Class<T> targetType, T defaultValue, List<T> allowedValues) {
         T value = getProperty(key, targetType, defaultValue);
-        if(!allowedValues.contains(value)) {
+        if (!allowedValues.contains(value)) {
             throw new GrailsConfigurationException("Invalid configuration value [$value] for key [${key}]. Possible values $allowedValues");
         }
         return value;
@@ -302,7 +305,7 @@ public abstract class NavigableMapConfig implements Config {
     }
 
     private ConfigObject convertPropsToMap(ConfigObject config) {
-        for(Map.Entry<String, Object> entry: (Set<Map.Entry<String, Object>>) config.entrySet()) {
+        for (Map.Entry<String, Object> entry: (Set<Map.Entry<String, Object>>) config.entrySet()) {
             final IdentityHashMap<NavigableMap, Map<Object, Object>> cache = new IdentityHashMap<>();
             if (entry.getValue() instanceof NavigableMap) {
                 config.setProperty(entry.getKey(), convertToMap((NavigableMap) entry.getValue(), cache));
@@ -362,8 +365,8 @@ public abstract class NavigableMapConfig implements Config {
     @Override
     public String getRequiredProperty(String key) throws IllegalStateException {
         String value = getProperty(key);
-        if(GrailsStringUtils.isBlank(value)) {
-            throw new IllegalStateException("Value for key ["+key+"] cannot be resolved");
+        if (GrailsStringUtils.isBlank(value)) {
+            throw new IllegalStateException("Value for key [" + key + "] cannot be resolved");
         }
         return value;
     }
@@ -371,8 +374,8 @@ public abstract class NavigableMapConfig implements Config {
     @Override
     public <T> T getRequiredProperty(String key, Class<T> targetType) throws IllegalStateException {
         T value = getProperty(key, targetType);
-        if(value == null) {
-            throw new IllegalStateException("Value for key ["+key+"] cannot be resolved");
+        if (value == null) {
+            throw new IllegalStateException("Value for key [" + key + "] cannot be resolved");
         }
         return value;
     }
@@ -418,7 +421,7 @@ public abstract class NavigableMapConfig implements Config {
     }
 
     private List<String> convertTokensIntoArrayList(StringTokenizer st) {
-        List<String> elements = new ArrayList<String>();
+        List<String> elements = new ArrayList<>();
         while (st.hasMoreTokens()) {
             elements.add(st.nextToken());
         }

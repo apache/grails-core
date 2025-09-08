@@ -27,6 +27,7 @@ import org.springframework.core.convert.converter.Converter
  */
 @CompileStatic
 class StringToBigIntegerConverter implements Converter<String, BigInteger> {
+
     BigInteger convert(String source) {
         new BigInteger(source)
     }

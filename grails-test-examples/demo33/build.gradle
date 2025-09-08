@@ -35,7 +35,6 @@ dependencies {
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-rest-transforms'
     implementation 'org.apache.grails:grails-databinding'
-    implementation 'org.apache.grails:grails-i18n'
     implementation 'org.apache.grails:grails-services'
     implementation 'org.apache.grails:grails-url-mappings'
     implementation 'org.apache.grails:grails-interceptors'

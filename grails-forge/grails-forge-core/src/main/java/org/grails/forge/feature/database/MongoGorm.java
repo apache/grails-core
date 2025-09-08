@@ -52,7 +52,7 @@ public class MongoGorm extends GormOneOfFeature {
 
     @Override
     public String getDescription() {
-        return "Configures GORM for MongoDB for Groovy applications";
+        return "Configure GORM for using MongoDB.";
     }
 
     @Override

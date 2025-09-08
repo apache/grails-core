@@ -27,6 +27,7 @@ import org.springframework.core.convert.converter.Converter
  */
 @CompileStatic
 class StringToURLConverter implements Converter<String, URL> {
+
     URL convert(String source) {
         new URL(source)
     }

@@ -32,12 +32,12 @@ interface ServiceImplementer {
     /**
      * Marker that should be stored on the method node once a method has been implemented
      */
-    String IMPLEMENTED = "IMPLEMENTED"
+    String IMPLEMENTED = 'IMPLEMENTED'
 
     /**
      * Used to store the resolved return type when it has been resolved from generics within the ast metadata
      */
-    String RETURN_TYPE = "RETURN_TYPE"
+    String RETURN_TYPE = 'RETURN_TYPE'
     /**
      * Does this service implement the method
      *

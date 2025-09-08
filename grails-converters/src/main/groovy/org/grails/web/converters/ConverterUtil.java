@@ -18,24 +18,25 @@
  */
 package org.grails.web.converters;
 
-import groovy.lang.Closure;
-
 import java.io.File;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.util.Collection;
 import java.util.Map;
 
+import groovy.lang.Closure;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.codehaus.groovy.runtime.NullObject;
 import org.codehaus.groovy.runtime.ResourceGroovyMethods;
 import org.codehaus.groovy.runtime.StringGroovyMethods;
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation;
-import org.grails.web.converters.exceptions.ConverterException;
+
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+
+import org.grails.web.converters.exceptions.ConverterException;
 
 /**
  * A utility class for creating and dealing with Converter objects.
@@ -58,7 +59,7 @@ public class ConverterUtil {
         try {
             Class<?> c = Class.forName(PERSISTENCE_BEAN_WRAPPER_CLASS, true, Thread.currentThread().getContextClassLoader());
             Constructor<?> init = c.getConstructor(new Class[]{Object.class});
-            beanWrapper = (BeanWrapper)init.newInstance(new Object[]{o});
+            beanWrapper = (BeanWrapper) init.newInstance(new Object[]{o});
         }
         catch (Exception e) {
             beanWrapper = new BeanWrapperImpl(o);
@@ -70,13 +71,13 @@ public class ConverterUtil {
         return createConverter(converterClass, target, null);
     }
 
-    public static <T> T createConverter(Class<T> converterClass, Object target, ApplicationContext applicationContext) throws ConverterException{
+    public static <T> T createConverter(Class<T> converterClass, Object target, ApplicationContext applicationContext) throws ConverterException {
         try {
             T converter = converterClass.newInstance();
             if (converter instanceof ApplicationContextAware && applicationContext != null) {
-                ((ApplicationContextAware)converter).setApplicationContext(applicationContext);
+                ((ApplicationContextAware) converter).setApplicationContext(applicationContext);
             }
-            ((AbstractConverter)converter).setTarget(target);
+            ((AbstractConverter) converter).setTarget(target);
             return converter;
         }
         catch (Exception e) {
@@ -107,15 +108,15 @@ public class ConverterUtil {
         }
 
         if (delegate instanceof NullObject) {
-            return ((NullObject)delegate).asType(clazz);
+            return ((NullObject) delegate).asType(clazz);
         }
         if (delegate instanceof Collection<?> && clazz.isArray()) {
-            int size = ((Collection<?>)delegate).size();
+            int size = ((Collection<?>) delegate).size();
             if (clazz.getComponentType() == Object.class) {
                 if (size == 0) {
                     return EMPTY_OBJECT_ARRAY;
                 }
-                return ((Collection<?>)delegate).toArray((Object[])Array.newInstance(clazz.getComponentType(), size));
+                return ((Collection<?>) delegate).toArray((Object[]) Array.newInstance(clazz.getComponentType(), size));
             }
             if (size == 0) {
                 return Array.newInstance(clazz.getComponentType(), 0);

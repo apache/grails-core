@@ -18,6 +18,15 @@
  */
 package org.grails.core;
 
+import java.util.Collections;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.util.ClassUtils;
+import org.springframework.validation.Validator;
+
 import grails.core.GrailsDomainClass;
 import grails.util.GrailsNameUtils;
 import grails.validation.Constrained;
@@ -27,12 +36,6 @@ import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingConte
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.validation.discovery.ConstrainedDiscovery;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.util.ClassUtils;
-import org.springframework.validation.Validator;
-
-import java.util.*;
 
 /**
  * Default implementation of the {@link GrailsDomainClass} interface
@@ -45,7 +48,6 @@ import java.util.*;
 public class DefaultGrailsDomainClass extends AbstractGrailsClass implements GrailsDomainClass {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultGrailsDomainClass.class);
-
 
     private PersistentEntity persistentEntity;
     private MappingContext mappingContext;
@@ -66,7 +68,6 @@ public class DefaultGrailsDomainClass extends AbstractGrailsClass implements Gra
         super(clazz, "");
     }
 
-
     private void verifyContextIsInitialized() {
         if (mappingContext == null) {
             throw new GrailsConfigurationException("That API cannot be accessed before the spring context is initialized");
@@ -78,7 +79,7 @@ public class DefaultGrailsDomainClass extends AbstractGrailsClass implements Gra
                 persistentEntity = mappingContext.getPersistentEntity(this.getFullName());
                 if (persistentEntity == null) {
                     MappingContext concreteMappingContext = getApplication().getMappingContext();
-                    if(concreteMappingContext.getClass() == KeyValueMappingContext.class) {
+                    if (concreteMappingContext.getClass() == KeyValueMappingContext.class) {
                         // In a unit testing context, allow
                         persistentEntity = concreteMappingContext.addPersistentEntity(getClazz());
                     }
@@ -92,7 +93,7 @@ public class DefaultGrailsDomainClass extends AbstractGrailsClass implements Gra
 
     @Override
     public boolean isAutowire() {
-        if(autowire == null) {
+        if (autowire == null) {
             verifyContextIsInitialized();
             autowire = persistentEntity.getMapping().getMappedForm().isAutowire();
         }
@@ -128,9 +129,9 @@ public class DefaultGrailsDomainClass extends AbstractGrailsClass implements Gra
     @Override
     public Map getConstrainedProperties() {
         verifyContextIsInitialized();
-        if(constrainedProperties == null) {
+        if (constrainedProperties == null) {
             ConstrainedDiscovery constrainedDiscovery = GrailsFactoriesLoader.loadFactory(ConstrainedDiscovery.class);
-            if(constrainedDiscovery == null) {
+            if (constrainedDiscovery == null) {
                 constrainedProperties = Collections.emptyMap();
             }
             else {

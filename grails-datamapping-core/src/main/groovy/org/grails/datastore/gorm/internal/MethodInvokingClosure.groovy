@@ -15,20 +15,20 @@
 package org.grails.datastore.gorm.internal
 
 import groovy.transform.CompileStatic
-
 import org.codehaus.groovy.runtime.metaclass.MethodSelectionException
 
 /**
  * Not public API. Used by GormEnhancer
  */
-@SuppressWarnings("rawtypes")
+@SuppressWarnings('rawtypes')
 @CompileStatic
 abstract class MethodInvokingClosure extends Closure {
+
     protected String methodName
     protected apiDelegate
     protected Class[] parameterTypes
     protected MetaMethod metaMethod
-    
+
     MethodInvokingClosure(apiDelegate, String methodName, Class[] parameterTypes) {
         super(apiDelegate, apiDelegate)
         this.apiDelegate = apiDelegate
@@ -37,7 +37,7 @@ abstract class MethodInvokingClosure extends Closure {
     }
 
     @Override
-    abstract Object call(Object[] args);
+    abstract Object call(Object[] args)
 
     Object doCall(Object[] args) {
         call(args)
@@ -50,11 +50,11 @@ abstract class MethodInvokingClosure extends Closure {
     int getMaximumNumberOfParameters() {
         parameterTypes.length
     }
-    
+
     /**
-     * Utility method for choosing matching metamethod, handles MethodSelectionException 
-     * 
-     * 
+     * Utility method for choosing matching metamethod, handles MethodSelectionException
+     *
+     *
      * @param theMetaClass
      * @param methodName
      * @param parameterTypes
@@ -67,7 +67,7 @@ abstract class MethodInvokingClosure extends Closure {
         } catch (MethodSelectionException mse) {
             // the metamethod already exists with multiple signatures, pick the most specific
             return theMetaClass.methods.find { MetaMethod existingMethod ->
-                existingMethod.name == methodName && existingMethod.isStatic()==staticScope && ((!parameterTypes && !existingMethod.parameterTypes) || parameterTypes==existingMethod.parameterTypes)
+                existingMethod.name == methodName && existingMethod.isStatic() == staticScope && ((!parameterTypes && !existingMethod.parameterTypes) || parameterTypes == existingMethod.parameterTypes)
             }
         }
     }

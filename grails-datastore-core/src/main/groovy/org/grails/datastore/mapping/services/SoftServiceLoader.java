@@ -18,18 +18,26 @@
  */
 package org.grails.datastore.mapping.services;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.helpers.NOPLogger;
-import org.springframework.util.ClassUtils;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.*;
+import java.util.Enumeration;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.ServiceConfigurationError;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.helpers.NOPLogger;
+
+import org.springframework.util.ClassUtils;
 
 /**
  * <p>Variation of {@link java.util.ServiceLoader} that allows soft loading and conditional loading of
@@ -46,7 +54,6 @@ public final class SoftServiceLoader<S> implements Iterable<ServiceDefinition<S>
 
     private static final boolean ENABLE_CLASS_LOADER_LOGGING = Boolean.getBoolean(PROPERTY_GRAILS_CLASSLOADER_LOGGING);
 
-
     private final Class<S> serviceType;
     private final ClassLoader classLoader;
     private final Map<String, ServiceDefinition<S>> loadedServices = new LinkedHashMap<>();
@@ -56,7 +63,6 @@ public final class SoftServiceLoader<S> implements Iterable<ServiceDefinition<S>
     static {
         REFLECTION_LOGGER = getLogger(ClassUtils.class);
     }
-
 
     private SoftServiceLoader(Class<S> serviceType, ClassLoader classLoader) {
         this(serviceType, classLoader, (String name) -> true);
@@ -163,7 +169,7 @@ public final class SoftServiceLoader<S> implements Iterable<ServiceDefinition<S>
      */
     @Override
     public Iterator<ServiceDefinition<S>> iterator() {
-        return new Iterator<ServiceDefinition<S>>() {
+        return new Iterator<>() {
             Iterator<ServiceDefinition<S>> loaded = loadedServices.values().iterator();
 
             @Override

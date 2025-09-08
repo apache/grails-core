@@ -18,14 +18,14 @@
  */
 package org.grails.gsp
 
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.CompileStatic
+
 import org.grails.core.lifecycle.ShutdownOperations
 import org.grails.gsp.compiler.GroovyPageParser
 import org.grails.gsp.jsp.JspTagLib
 import org.grails.taglib.encoder.OutputContext
-
-import java.util.concurrent.ConcurrentHashMap
-
 
 /**
  * Development time helper class to add model definitions to existing GSP pages
@@ -41,10 +41,11 @@ import java.util.concurrent.ConcurrentHashMap
  */
 @CompileStatic
 abstract class ModelRecordingGroovyPage extends GroovyPage {
+
     public static final String CONFIG_SYSTEM_PROPERTY_NAME
     public static final boolean ENABLED
     static {
-        CONFIG_SYSTEM_PROPERTY_NAME = "grails.views.gsp.modelrecording"
+        CONFIG_SYSTEM_PROPERTY_NAME = 'grails.views.gsp.modelrecording'
         ENABLED = Boolean.getBoolean(CONFIG_SYSTEM_PROPERTY_NAME)
     }
     private static final ModelRecordingCache modelRecordingCache = new ModelRecordingCache()
@@ -100,6 +101,7 @@ abstract class ModelRecordingGroovyPage extends GroovyPage {
 
 @CompileStatic
 class ModelRecordingCache {
+
     private Map<String, ModelEntry> models = new ConcurrentHashMap<>()
     private boolean initialized
 
@@ -112,15 +114,15 @@ class ModelRecordingCache {
     }
 
     private void initialize() {
-        System.err.println("Initialized model recording.")
+        System.err.println('Initialized model recording.')
         ShutdownOperations.addOperation {
-            System.err.println("Writing model recordings to disk...")
+            System.err.println('Writing model recordings to disk...')
             try {
                 close()
             } catch (e) {
                 e.printStackTrace(System.err)
             } finally {
-                System.err.println("Done.")
+                System.err.println('Done.')
             }
         }
     }
@@ -143,18 +145,19 @@ class ModelRecordingCache {
 
 @CompileStatic
 class ModelEntry {
+
     // defaults are defined by org.grails.web.taglib.WebRequestTemplateVariableBinding
-    static Map<String, String> DEFAULT_TYPES = [webRequest        : 'org.grails.web.servlet.mvc.GrailsWebRequest',
-                                                request           : 'jakarta.servlet.http.HttpServletRequest',
-                                                response          : 'jakarta.servlet.http.HttpServletResponse',
-                                                flash             : 'grails.web.mvc.FlashScope',
-                                                application       : 'jakarta.servlet.ServletContext',
+    static Map<String, String> DEFAULT_TYPES = [webRequest: 'org.grails.web.servlet.mvc.GrailsWebRequest',
+                                                request: 'jakarta.servlet.http.HttpServletRequest',
+                                                response: 'jakarta.servlet.http.HttpServletResponse',
+                                                flash: 'grails.web.mvc.FlashScope',
+                                                application: 'jakarta.servlet.ServletContext',
                                                 applicationContext: 'org.springframework.context.ApplicationContext',
-                                                grailsApplication : 'grails.core.GrailsApplication',
-                                                session           : 'grails.web.servlet.mvc.GrailsHttpSession',
-                                                params            : 'grails.web.servlet.mvc.GrailsParameterMap',
-                                                actionName        : 'CharSequence',
-                                                controllerName    : 'CharSequence']
+                                                grailsApplication: 'grails.core.GrailsApplication',
+                                                session: 'grails.web.servlet.mvc.GrailsHttpSession',
+                                                params: 'grails.web.servlet.mvc.GrailsParameterMap',
+                                                actionName: 'CharSequence',
+                                                controllerName: 'CharSequence']
 
     Map<String, String> model = Collections.synchronizedMap([:])
     Set<String> taglibs = Collections.synchronizedSet([] as Set<String>)
@@ -177,13 +180,13 @@ class ModelEntry {
     String getGspDeclaration() {
         if (model || hasTagLibs()) {
             def gspDeclaration = new StringBuilder()
-            gspDeclaration << "@{"
+            gspDeclaration << '@{'
             if (model) {
-                gspDeclaration << " model='''\n"
+                gspDeclaration << / model='''\n/
                 model.each { String fieldName, String fieldType ->
                     String cleanedFieldType = fieldType - ~/^java\.(util|lang)\./
                     String defaultType = DEFAULT_TYPES.get(fieldName)
-                    if(defaultType) {
+                    if (defaultType) {
                         try {
                             // use default field type for if field type is instance of the class
                             // for example instance of 'org.apache.catalina.core.ApplicationHttpRequest', use 'jakarta.servlet.http.HttpServletRequest'
@@ -198,12 +201,12 @@ class ModelEntry {
                     }
                     gspDeclaration << "${cleanedFieldType} ${fieldName}\n"
                 }
-                gspDeclaration << "''' "
+                gspDeclaration << /''' /
             }
             if (hasTagLibs()) {
                 gspDeclaration << " taglibs='${customTagLibs.join(', ')}' "
             }
-            gspDeclaration << "}\n"
+            gspDeclaration << '}\n'
             return gspDeclaration.toString()
         }
         return null

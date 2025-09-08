@@ -19,11 +19,13 @@
 
 package org.grails.plugin.cache
 
-import grails.plugin.cache.CustomCacheKeyGenerator
-import grails.plugin.cache.GrailsCacheKeyGenerator
 import groovy.transform.CompileStatic
+
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.CacheManager
+
+import grails.plugin.cache.CustomCacheKeyGenerator
+import grails.plugin.cache.GrailsCacheKeyGenerator
 
 /**
  * A trait for classes that are cache aware

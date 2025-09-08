@@ -18,7 +18,12 @@
  */
 package org.grails.cli.boot;
 
-import grails.util.Environment;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import groovy.lang.Grab;
 import groovy.lang.GroovyClassLoader;
 import org.codehaus.groovy.ast.AnnotationNode;
@@ -32,6 +37,8 @@ import org.codehaus.groovy.classgen.GeneratorContext;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.customizers.ImportCustomizer;
+
+import grails.util.Environment;
 import org.grails.cli.compiler.AstUtils;
 import org.grails.cli.compiler.CompilerAutoConfiguration;
 import org.grails.cli.compiler.DependencyCustomizer;
@@ -41,13 +48,6 @@ import org.grails.cli.compiler.dependencies.Dependency;
 import org.grails.cli.compiler.dependencies.DependencyManagement;
 import org.grails.cli.compiler.grape.DependencyResolutionContext;
 
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-
 /**
  * A {@link CompilerAutoConfiguration} for Grails Micro Service applications
  *
@@ -56,13 +56,14 @@ import java.util.Map;
  */
 public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConfiguration {
 
-    public static final String[] DEFAULT_IMPORTS = new String[]{
-                                                        "grails.persistence",
-                                                        "grails.gorm",
-                                                        "grails.rest",
-                                                        "grails.artefact",
-                                                        "grails.web",
-                                                        "grails.boot.config" };
+    public static final String[] DEFAULT_IMPORTS = new String[] {
+        "grails.persistence",
+        "grails.gorm",
+        "grails.rest",
+        "grails.artefact",
+        "grails.web",
+        "grails.boot.config"
+    };
     public static final String ENABLE_AUTO_CONFIGURATION = "org.springframework.boot.autoconfigure.EnableAutoConfiguration";
     public static final ClassNode ENABLE_AUTO_CONFIGURATION_CLASS_NODE = ClassHelper.make(ENABLE_AUTO_CONFIGURATION);
     ClassNode lastMatch = null;
@@ -70,15 +71,14 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
     @Override
     public boolean matches(ClassNode classNode) {
         boolean matches = AstUtils.hasAtLeastOneAnnotation(classNode, "grails.persistence.Entity", "grails.rest.Resource", "Resource", "grails.artefact.Artefact", "grails.web.Controller");
-        if(matches) lastMatch = classNode;
+        if (matches) lastMatch = classNode;
         return matches;
     }
-
 
     @Override
     public void applyDependencies(DependencyCustomizer dependencies) throws CompilationFailedException {
         addManagedDependencies(dependencies);
-        if(lastMatch != null) {
+        if (lastMatch != null) {
             lastMatch.addAnnotation(createGrabAnnotation("org.apache.grails", "grails-dependencies", Environment.class.getPackage().getImplementationVersion(), null, "pom", true));
             lastMatch.addAnnotation(createGrabAnnotation("org.apache.grails", "grails-web-boot", Environment.class.getPackage().getImplementationVersion(), null, null, true));
         }
@@ -97,7 +97,6 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
         return new GrailsDependencyVersions();
     }
 
-
     public static AnnotationNode createGrabAnnotation(String group, String module,
                                                 String version, String classifier, String type, boolean transitive) {
         AnnotationNode annotationNode = new AnnotationNode(new ClassNode(Grab.class));
@@ -115,7 +114,6 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
         return annotationNode;
     }
 
-
     @Override
     public void applyImports(ImportCustomizer imports) throws CompilationFailedException {
         imports.addStarImports(DEFAULT_IMPORTS);
@@ -129,7 +127,7 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
         ClassNode applicationClassNode = new ClassNode("Application", Modifier.PUBLIC, ClassHelper.make("grails.boot.config.GrailsAutoConfiguration"));
         AnnotationNode enableAutoAnnotation = new AnnotationNode(ENABLE_AUTO_CONFIGURATION_CLASS_NODE);
         try {
-            enableAutoAnnotation.addMember("exclude", new ClassExpression( ClassHelper.make("org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration")) );
+            enableAutoAnnotation.addMember("exclude", new ClassExpression(ClassHelper.make("org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration")));
         } catch (Throwable e) {
             // ignore
         }
@@ -142,10 +140,10 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
 
     class GrailsDependencies implements DependencyManagement {
 
-        private Map<String, Dependency> groupAndArtifactToDependency = new HashMap<String, Dependency>();
+        private Map<String, Dependency> groupAndArtifactToDependency = new HashMap<>();
 
-        private Map<String, String> artifactToGroupAndArtifact = new HashMap<String, String>();
-        private List<Dependency> dependencies = new ArrayList<Dependency>();
+        private Map<String, String> artifactToGroupAndArtifact = new HashMap<>();
+        private List<Dependency> dependencies = new ArrayList<>();
 
         public GrailsDependencies(List<org.eclipse.aether.graph.Dependency> dependencies) {
             for (org.eclipse.aether.graph.Dependency dependency : dependencies) {
@@ -153,7 +151,7 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
                 String artifactId = dependency.getArtifact().getArtifactId();
                 String version = dependency.getArtifact().getVersion();
 
-                List<Dependency.Exclusion> exclusions = new ArrayList<Dependency.Exclusion>();
+                List<Dependency.Exclusion> exclusions = new ArrayList<>();
                 Dependency value = new Dependency(groupId, artifactId, version, exclusions);
                 this.dependencies.add(value);
                 groupAndArtifactToDependency.put(groupId + ":" + artifactId, value);
@@ -161,11 +159,12 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
             }
         }
 
-//        @Override
-//        public Dependency find(String groupId, String artifactId) {
-//            return groupAndArtifactToDependency.get(groupId + ":" + artifactId);
-//        }
-
+        /*
+        @Override
+        public Dependency find(String groupId, String artifactId) {
+            return groupAndArtifactToDependency.get(groupId + ":" + artifactId);
+        }
+        */
 
         @Override
         public List<Dependency> getDependencies() {
@@ -180,16 +179,18 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
         @Override
         public Dependency find(String artifactId) {
             String groupAndArtifact = artifactToGroupAndArtifact.get(artifactId);
-            if (groupAndArtifact==null) {
+            if (groupAndArtifact == null) {
                 return null;
             }
             return groupAndArtifactToDependency.get(groupAndArtifact);
         }
 
-//        @Override
-//        public Iterator<Dependency> iterator() {
-//            return groupAndArtifactToDependency.values().iterator();
-//        }
+        /*
+        @Override
+        public Iterator<Dependency> iterator() {
+            return groupAndArtifactToDependency.values().iterator();
+        }
+        */
     }
 
 }

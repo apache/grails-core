@@ -19,19 +19,21 @@
 
 package org.grails.plugins.web.taglib
 
-import org.grails.web.util.WebUtils
+import java.nio.CharBuffer
+
 import org.sitemesh.content.Content
 import org.sitemesh.content.ContentProperty
 import org.sitemesh.webapp.SiteMeshFilter
 import org.sitemesh.webapp.WebAppContext
 import org.sitemesh.webapp.contentfilter.ResponseMetaData
+
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.web.servlet.FilterRegistrationBean
+
 import grails.artefact.TagLibrary
 import grails.gsp.TagLib
-
-import java.nio.CharBuffer
+import org.grails.web.util.WebUtils
 
 /**
  * The tags in this library are rendered by sitemesh itself instead of the grails tags so they should always be written
@@ -43,21 +45,21 @@ class RenderSitemeshTagLib implements TagLibrary {
     SiteMeshFilter siteMeshFilter
 
     @Autowired
-    RenderSitemeshTagLib(@Qualifier("sitemesh") FilterRegistrationBean sitemesh) {
+    RenderSitemeshTagLib(@Qualifier('sitemesh') FilterRegistrationBean sitemesh) {
         this.siteMeshFilter = (SiteMeshFilter) sitemesh.getFilter()
     }
 
     Closure applyLayout = { Map attrs, body ->
         String savedAttribute = request.getAttribute(WebUtils.LAYOUT_ATTRIBUTE)
-        WebAppContext context = new WebAppContext("text/html", request, response,
-                servletContext, siteMeshFilter.contentProcessor,  new ResponseMetaData(), false);
-        Content content = siteMeshFilter.contentProcessor.build(CharBuffer.wrap(body()), context);
+        WebAppContext context = new WebAppContext('text/html', request, response,
+                servletContext, siteMeshFilter.contentProcessor,  new ResponseMetaData(), false)
+        Content content = siteMeshFilter.contentProcessor.build(CharBuffer.wrap(body()), context)
         if (attrs.name) {
             request.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, attrs.name)
         }
-        String[] decoratorPaths = siteMeshFilter.decoratorSelector.selectDecoratorPaths(content, context);
+        String[] decoratorPaths = siteMeshFilter.decoratorSelector.selectDecoratorPaths(content, context)
         for (String decoratorPath : decoratorPaths) {
-            content = context.decorate(decoratorPath, content);
+            content = context.decorate(decoratorPath, content)
         }
         content.getData().writeValueTo(out)
         request.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, savedAttribute)
@@ -68,9 +70,9 @@ class RenderSitemeshTagLib implements TagLibrary {
             return null
         }
         Content content = request.getAttribute(WebAppContext.CONTENT_KEY)
-        ContentProperty currentProperty = content.getExtractedProperties();
-        for (String childPropertyName : name.split("\\.")) {
-            currentProperty = currentProperty.getChild(childPropertyName);
+        ContentProperty currentProperty = content.getExtractedProperties()
+        for (String childPropertyName : name.split('\\.')) {
+            currentProperty = currentProperty.getChild(childPropertyName)
         }
         currentProperty
     }
@@ -88,19 +90,19 @@ class RenderSitemeshTagLib implements TagLibrary {
      */
     Closure pageProperty = { attrs ->
         if (!attrs.name) {
-            throwTagError("Tag [pageProperty] is missing required attribute [name]")
+            throwTagError('Tag [pageProperty] is missing required attribute [name]')
         }
         String propertyName = attrs.name as String
         ContentProperty contentProperty = getContentProperty(propertyName)
-        def propertyValue = contentProperty?.hasValue()? contentProperty.getValue() : attrs.'default' ?: null
+        def propertyValue = contentProperty?.hasValue() ? contentProperty.getValue() : attrs.'default' ?: null
 
         if (propertyValue) {
             if (attrs.writeEntireProperty) {
                 out << ' '
                 out << propertyName.substring(propertyName.lastIndexOf('.') + 1)
-                out << "=\""
+                out << '="'
                 out << propertyValue
-                out << "\""
+                out << '"'
             } else {
                 out << propertyValue
             }
@@ -123,7 +125,7 @@ class RenderSitemeshTagLib implements TagLibrary {
         if (!attrs.name) {
             return
         }
-        List names = ((attrs.name instanceof List) ? (List)attrs.name : [attrs.name])
+        List names = ((attrs.name instanceof List) ? (List) attrs.name : [attrs.name])
 
         def invokeBody = true
         for (i in 0..<names.size()) {
@@ -131,7 +133,7 @@ class RenderSitemeshTagLib implements TagLibrary {
             if (propertyValue) {
                 if (attrs.containsKey('equals')) {
                     if (attrs.equals instanceof List) {
-                        invokeBody = ((List)attrs.equals)[i] == propertyValue
+                        invokeBody = ((List) attrs.equals)[i] == propertyValue
                     } else {
                         invokeBody = attrs.equals == propertyValue
                     }
@@ -147,7 +149,7 @@ class RenderSitemeshTagLib implements TagLibrary {
     }
 
     Closure layoutTitle = { attrs ->
-        out << """<sitemesh:write property="title">${attrs.default?:''}</sitemesh:write>""".toString()
+        out << """<sitemesh:write property="title">${attrs.default ?: ''}</sitemesh:write>""".toString()
     }
 
     Closure layoutHead = { attrs, body ->

@@ -58,18 +58,18 @@ public class DefaultConnectionSource<T, S extends ConnectionSourceSettings> impl
 
     @Override
     public void close() throws IOException {
-        if(source instanceof Closeable) {
+        if (source instanceof Closeable) {
             try {
-                ((Closeable)source).close();
+                ((Closeable) source).close();
             } finally {
                 this.closed = true;
             }
         }
-        else if(source instanceof AutoCloseable) {
+        else if (source instanceof AutoCloseable) {
             try {
-                ((AutoCloseable)source).close();
+                ((AutoCloseable) source).close();
             } catch (Exception e) {
-                throw new IOException("Error closing connection source ["+name+"]:" + e.getMessage(), e);
+                throw new IOException("Error closing connection source [" + name + "]:" + e.getMessage(), e);
             }
             finally {
                 this.closed = true;

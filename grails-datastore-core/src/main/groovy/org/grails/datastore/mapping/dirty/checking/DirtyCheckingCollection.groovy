@@ -68,7 +68,7 @@ class DirtyCheckingCollection<T> implements DirtyCheckableCollection {
     @Override
     boolean add(T o) {
         parent.markDirty(property)
-        target.add o
+        target.add(o)
     }
 
     @Override
@@ -94,7 +94,6 @@ class DirtyCheckingCollection<T> implements DirtyCheckableCollection {
         parent.markDirty(property)
         target.remove(o)
     }
-
 
 }
 

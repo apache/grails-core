@@ -15,8 +15,8 @@ buildscript {
     }
 }
 
-version "0.1"
-group "@grails.app.group@"
+version = "0.1"
+group = "@grails.app.group@"
 
 @buildPlugins@
 
@@ -32,14 +32,11 @@ repositories {
 }
 
 dependencies {
-    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
-    developmentOnly "org.springframework.boot:spring-boot-devtools" // Spring Boot DevTools may cause performance slowdowns or compatibility issues on larger applications
-    integrationTestImplementation testFixtures("org.apache.grails:grails-geb")
 @dependencies@
 }
 
 compileJava.options.release = 17
 
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
     useJUnitPlatform()
 }

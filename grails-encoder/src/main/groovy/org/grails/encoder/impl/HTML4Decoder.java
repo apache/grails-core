@@ -18,9 +18,10 @@
  */
 package org.grails.encoder.impl;
 
+import org.springframework.web.util.HtmlUtils;
+
 import org.grails.encoder.CodecIdentifier;
 import org.grails.encoder.Decoder;
-import org.springframework.web.util.HtmlUtils;
 
 /**
  * HTML4 decoder that uses Spring's HtmlUtils.htmlUnescape to do the unescaping.

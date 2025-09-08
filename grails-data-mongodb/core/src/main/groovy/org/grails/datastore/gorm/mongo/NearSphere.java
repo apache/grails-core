@@ -24,7 +24,7 @@ import org.grails.datastore.mapping.query.Query;
  * @author Graeme Rocher
  * @since 2.0
  */
-public class NearSphere extends Near{
+public class NearSphere extends Near {
     public NearSphere(Class<?> targetClass, String propertyName) {
         super(targetClass, propertyName);
     }
@@ -33,13 +33,13 @@ public class NearSphere extends Near{
     public Query.Criterion createCriterion() {
         MongoQuery.NearSphere near = new MongoQuery.NearSphere(propertyName, arguments[0]);
 
-        if(arguments.length > 1) {
+        if (arguments.length > 1) {
             Object o = arguments[1];
-            if(o instanceof Number) {
+            if (o instanceof Number) {
                 near.setMaxDistance(Distance.valueOf(((Number) o).doubleValue()));
             }
             else {
-                near.setMaxDistance((Distance)o);
+                near.setMaxDistance((Distance) o);
             }
         }
         return near;

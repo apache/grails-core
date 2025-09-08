@@ -55,12 +55,12 @@ public class HibernateGorm extends GormFeature implements DatabaseDriverConfigur
 
     @Override
     public String getTitle() {
-        return "GORM for Hibernate5";
+        return "GORM for Hibernate 5";
     }
 
     @Override
     public String getDescription() {
-        return "Adds support for Hibernate5 using GORM";
+        return "Configure GORM for using Hibernate 5.";
     }
 
     @Override

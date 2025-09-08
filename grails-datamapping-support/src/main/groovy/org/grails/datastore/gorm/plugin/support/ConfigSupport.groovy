@@ -19,11 +19,12 @@
 
 package org.grails.datastore.gorm.plugin.support
 
-import org.grails.config.PropertySourcesConfig
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.core.convert.converter.Converter
 import org.springframework.core.convert.support.ConfigurableConversionService
 import org.springframework.core.env.PropertyResolver
+
+import org.grails.config.PropertySourcesConfig
 
 /**
  * Support for configuration when developing Grails plugins
@@ -40,7 +41,7 @@ class ConfigSupport {
      * @param applicationContext The application context
      */
     static void prepareConfig(PropertyResolver config, ConfigurableApplicationContext applicationContext) {
-        if(config instanceof PropertySourcesConfig) {
+        if (config instanceof PropertySourcesConfig) {
             ConfigurableConversionService conversionService = applicationContext.getEnvironment().getConversionService()
             conversionService.addConverter(new Converter<String, Class>() {
                 @Override
@@ -48,7 +49,7 @@ class ConfigSupport {
                     Class.forName(source)
                 }
             })
-            ((PropertySourcesConfig)config).setConversionService(conversionService)
+            ((PropertySourcesConfig) config).setConversionService(conversionService)
         }
     }
 }

@@ -14,8 +14,35 @@
  */
 package org.grails.datastore.mapping.core;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import jakarta.persistence.FlushModeType;
+
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
+
+import org.springframework.beans.BeanWrapper;
+import org.springframework.beans.BeanWrapperImpl;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.convert.ConversionFailedException;
+import org.springframework.core.convert.ConversionService;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
+import org.springframework.transaction.NoTransactionException;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
+import org.springframework.util.Assert;
+
 import org.grails.datastore.mapping.cache.TPCacheAdapterRepository;
 import org.grails.datastore.mapping.config.Entity;
 import org.grails.datastore.mapping.core.impl.PendingDelete;
@@ -36,31 +63,6 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.datastore.mapping.transactions.Transaction;
-import org.springframework.beans.BeanWrapper;
-import org.springframework.beans.BeanWrapperImpl;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.core.convert.ConversionFailedException;
-import org.springframework.core.convert.ConversionService;
-import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.dao.InvalidDataAccessResourceUsageException;
-import org.springframework.transaction.NoTransactionException;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.support.DefaultTransactionDefinition;
-import org.springframework.util.Assert;
-
-import jakarta.persistence.FlushModeType;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
 
 /**
  * Abstract implementation of the {@link org.grails.datastore.mapping.core.Session} interface that uses
@@ -137,7 +139,6 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
 
     protected boolean stateless = false;
     protected boolean flushActive = false;
-
 
     public AbstractSession(Datastore datastore, MappingContext mappingContext,
                            ApplicationEventPublisher publisher) {
@@ -378,7 +379,6 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
             return false;
         }
 
-
         EntityPersister persister = (EntityPersister) getPersister(instance);
         if (persister == null) {
             return false;
@@ -411,7 +411,6 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
         }
         return null;
     }
-
 
     /**
      * The default implementation of flushPendingUpdates is to iterate over each update operation
@@ -511,7 +510,7 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
             p = createPersister(cls, getMappingContext());
             if (p != null) {
                 if (!isStateless(((EntityPersister) p).getPersistentEntity())) {
-                    firstLevelCache.put(cls, new ConcurrentHashMap<Serializable, Object>());
+                    firstLevelCache.put(cls, new ConcurrentHashMap<>());
                 }
                 persisters.put(cls, p);
             }
@@ -760,7 +759,6 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
             return;
         }
 
-
         p.delete(obj);
         clear(obj);
     }
@@ -771,7 +769,7 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
         }
 
         // sort the objects into sets by Persister, in case the objects are of different types.
-        Map<Persister, List> toDelete = new HashMap<Persister, List>();
+        Map<Persister, List> toDelete = new HashMap<>();
         for (Object object : objects) {
             if (object == null) {
                 continue;
@@ -822,7 +820,7 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
         }
 
         List list = new ArrayList();
-        List<Serializable> toRetrieve = new ArrayList<Serializable>();
+        List<Serializable> toRetrieve = new ArrayList<>();
         final Map<Serializable, Object> cache = getInstanceCache(type);
         for (Object key : keys) {
             Serializable serializable = (Serializable) key;
@@ -834,7 +832,7 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
         }
         List<Object> retrieved = p.retrieveAll(toRetrieve);
         Iterator<Serializable> keyIterator = toRetrieve.iterator();
-        Map<Serializable, Object> retrievedMap = new HashMap<Serializable, Object>();
+        Map<Serializable, Object> retrievedMap = new HashMap<>();
         for (Object o : retrieved) {
             final Serializable identifier = p.getObjectIdentifier(o);
             if (identifier != null) {

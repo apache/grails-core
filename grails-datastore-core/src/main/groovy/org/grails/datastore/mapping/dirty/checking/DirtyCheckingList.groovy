@@ -55,10 +55,9 @@ class DirtyCheckingList<T> extends DirtyCheckingCollection<T> {
         target.add(index, element)
     }
 
-
     @Override
     T remove(int index) {
         parent.markDirty(property)
-        target.remove((int)index)
+        target.remove((int) index)
     }
 }

@@ -114,11 +114,6 @@ jobs:
         run: ./gradlew grails-doc:build -PgithubBranch=${{ steps.extract_branch.outputs.value }}
         env:
           GRAILS_PUBLISH_RELEASE: "true"
-      - name: "📦 Generate grails-forge docs"
-        working-directory: grails-forge
-        run: ./gradlew docs -PgithubBranch=${{ steps.extract_branch.outputs.value }}
-        env:
-          GRAILS_PUBLISH_RELEASE: "true"
       - name: "🔏 Sign wrapper ZIP"
         env:
           GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
@@ -300,21 +295,21 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           release_url=$(gh release view v${{ needs.publish.outputs.release_version }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "CHECKSUMS.txt") | .url')
-          curl -L -H "Authorization: token $GH_TOKEN" -o CHECKSUMS "$release_url"
+          curl -f -L -H "Authorization: token $GH_TOKEN" -o CHECKSUMS "$release_url"
       - name: "Download PUBLISHED_ARTIFACTS.txt and rename to PUBLISHED_ARTIFACTS"
         working-directory: "grails"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           release_url=$(gh release view v${{ needs.publish.outputs.release_version }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "PUBLISHED_ARTIFACTS.txt") | .url')
-          curl -L -H "Authorization: token $GH_TOKEN" -o PUBLISHED_ARTIFACTS "$release_url"
+          curl -f -L -H "Authorization: token $GH_TOKEN" -o PUBLISHED_ARTIFACTS "$release_url"
       - name: "Download BUILD_DATE.txt and rename to BUILD_DATE"
         working-directory: "grails"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           release_url=$(gh release view v${{ needs.publish.outputs.release_version }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "BUILD_DATE.txt") | .url')
-          curl -L -H "Authorization: token $GH_TOKEN" -o BUILD_DATE "$release_url"
+          curl -f -L -H "Authorization: token $GH_TOKEN" -o BUILD_DATE "$release_url"
       - name: "Ensure source files use common date"
         run: |
           SOURCE_DATE_EPOCH=$(cat grails/BUILD_DATE)
@@ -422,9 +417,9 @@ jobs:
           cd dev-repo
           mkdir -p $VERSION/sources          
           cd $VERSION/sources
-          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-$VERSION-incubating-src.zip
-          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-$VERSION-incubating-src.zip.sha512
-          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-$VERSION-incubating-src.zip.asc
+          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-grails-$VERSION-incubating-src.zip
+          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-grails-$VERSION-incubating-src.zip.sha512
+          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-grails-$VERSION-incubating-src.zip.asc
           echo "Downloaded the following files:"
           ls -l
       - name: "Fetch binary distributions"
@@ -434,12 +429,12 @@ jobs:
           cd dev-repo
           mkdir -p $VERSION/distribution          
           cd $VERSION/distribution
-          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-$VERSION-incubating-bin.zip
-          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-$VERSION-incubating-bin.zip.sha512
-          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-$VERSION-incubating-bin.zip.asc
-          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-wrapper-$VERSION-incubating-bin.zip
-          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-wrapper-$VERSION-incubating-bin.zip.sha512
-          curl -LO https://github.com/apache/grails-core/releases/download/$TAG/apache-grails-wrapper-$VERSION-incubating-bin.zip.asc
+          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-grails-$VERSION-incubating-bin.zip
+          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-grails-$VERSION-incubating-bin.zip.sha512
+          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-grails-$VERSION-incubating-bin.zip.asc
+          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-grails-wrapper-$VERSION-incubating-bin.zip
+          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-grails-wrapper-$VERSION-incubating-bin.zip.sha512
+          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-grails-wrapper-$VERSION-incubating-bin.zip.asc
           echo "Downloaded the following files:"
           ls -l
       - name: "Upload distributions"

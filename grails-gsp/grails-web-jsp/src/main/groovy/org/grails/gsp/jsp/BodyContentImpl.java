@@ -18,13 +18,14 @@
  */
 package org.grails.gsp.jsp;
 
-import jakarta.servlet.jsp.JspWriter;
-import jakarta.servlet.jsp.tagext.BodyContent;
-import org.grails.buffer.StreamCharBuffer;
-
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
+
+import jakarta.servlet.jsp.JspWriter;
+import jakarta.servlet.jsp.tagext.BodyContent;
+
+import org.grails.buffer.StreamCharBuffer;
 
 /**
  * Uses an internal CharArrayWriter.

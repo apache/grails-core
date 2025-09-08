@@ -26,6 +26,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 interface Request {
+
     /**
      * @return The context path
      */

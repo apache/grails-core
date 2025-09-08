@@ -28,9 +28,9 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
  * @author Graeme Rocher
  * @since 2.3
  */
-public interface MimeTypeResolver {
+interface MimeTypeResolver {
 
-    String BEAN_NAME = "mimeTypeResolver"
+    String BEAN_NAME = 'mimeTypeResolver'
 
     /**
      * @return The response format requested by the client

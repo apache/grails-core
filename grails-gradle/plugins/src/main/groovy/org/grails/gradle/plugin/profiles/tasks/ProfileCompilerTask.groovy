@@ -16,11 +16,14 @@
  */
 package org.grails.gradle.plugin.profiles.tasks
 
+import javax.inject.Inject
+
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
+
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
@@ -47,15 +50,14 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.compile.AbstractCompile
-import org.grails.cli.profile.commands.script.GroovyScriptCommandTransform
-import org.grails.gradle.plugin.profiles.GrailsProfileGradlePlugin
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.SafeConstructor
 import org.yaml.snakeyaml.representer.Representer
 
-import javax.inject.Inject
+import org.grails.cli.profile.commands.script.GroovyScriptCommandTransform
+import org.grails.gradle.plugin.profiles.GrailsProfileGradlePlugin
 
 /**
  * Compiles the classes for a profile
@@ -70,6 +72,7 @@ class ProfileCompilerTask extends AbstractCompile {
     public static final String DEFAULT_COMPATIBILITY = JavaVersion.VERSION_17.majorVersion
     public static final String PROFILE_NAME = 'name'
     public static final String PROFILE_COMMANDS = 'commands'
+
     @OutputDirectory
     final DirectoryProperty destinationDirectory
 
@@ -108,7 +111,7 @@ class ProfileCompilerTask extends AbstractCompile {
     @PathSensitive(PathSensitivity.RELATIVE)
     @Override
     FileTree getSource() {
-        return super.getSource();
+        return super.getSource()
     }
 
     // commands map to source property
@@ -228,7 +231,7 @@ class ProfileCompilerTask extends AbstractCompile {
                 }
                 List featureNames = []
                 for (f in featureDirs) {
-                    featureNames.add f.name
+                    featureNames.add(f.name)
                 }
                 if (featureNames) {
                     map.put('provided', featureNames.sort())
@@ -241,7 +244,7 @@ class ProfileCompilerTask extends AbstractCompile {
             List<String> templates = []
             templatesDirectory.get().asFileTree.visit { FileVisitDetails f ->
                 if (!f.isDirectory() && !f.name.startsWith('.')) {
-                    templates.add f.relativePath.pathString
+                    templates.add(f.relativePath.pathString)
                 }
             }
             profileData.put('templates', templates.sort())

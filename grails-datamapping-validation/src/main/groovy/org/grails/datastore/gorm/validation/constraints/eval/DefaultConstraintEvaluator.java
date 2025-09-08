@@ -19,11 +19,30 @@
 
 package org.grails.datastore.gorm.validation.constraints.eval;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import groovy.lang.Closure;
+import groovy.lang.GroovyObject;
+import groovy.lang.MetaBeanProperty;
+import groovy.lang.MetaMethod;
+import groovy.lang.MetaProperty;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.context.MessageSource;
+import org.springframework.context.support.StaticMessageSource;
+
 import grails.gorm.validation.Constrained;
 import grails.gorm.validation.ConstrainedProperty;
-import grails.gorm.validation.exceptions.ValidationConfigurationException;
-import groovy.lang.*;
 import grails.gorm.validation.DefaultConstrainedProperty;
+import grails.gorm.validation.exceptions.ValidationConfigurationException;
 import org.grails.datastore.gorm.validation.constraints.builder.ConstrainedPropertyBuilder;
 import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry;
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry;
@@ -37,12 +56,6 @@ import org.grails.datastore.mapping.model.types.Identity;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import org.grails.datastore.mapping.reflect.NameUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.MessageSource;
-import org.springframework.context.support.StaticMessageSource;
-
-import java.util.*;
 
 /**
  * Evaluates constraints for entities
@@ -57,12 +70,11 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
     protected final MappingContext mappingContext;
     protected final Map<String, Object> defaultConstraints;
 
-
     public DefaultConstraintEvaluator() {
         this(new DefaultConstraintRegistry(new StaticMessageSource()), new KeyValueMappingContext("default"), Collections.<String, Object>emptyMap());
     }
 
-    public DefaultConstraintEvaluator( Map<String, Object> defaultConstraints ) {
+    public DefaultConstraintEvaluator(Map<String, Object> defaultConstraints) {
         this(new DefaultConstraintRegistry(new StaticMessageSource()), new KeyValueMappingContext("default"), defaultConstraints);
     }
 
@@ -101,9 +113,9 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
 
     @Override
     public Map<String, ConstrainedProperty> evaluate(Class<?> theClass, boolean defaultNullable, boolean useOnlyAdHocConstraints, Closure... adHocConstraintsClosures) {
-        List<Closure> constraints = useOnlyAdHocConstraints ? new ArrayList<Closure>() : ClassPropertyFetcher.getStaticPropertyValuesFromInheritanceHierarchy(theClass, PROPERTY_NAME, Closure.class);
-        if(adHocConstraintsClosures != null) {
-            constraints.addAll( Arrays.asList(adHocConstraintsClosures) );
+        List<Closure> constraints = useOnlyAdHocConstraints ? new ArrayList<>() : ClassPropertyFetcher.getStaticPropertyValuesFromInheritanceHierarchy(theClass, PROPERTY_NAME, Closure.class);
+        if (adHocConstraintsClosures != null) {
+            constraints.addAll(Arrays.asList(adHocConstraintsClosures));
         }
         ConstrainedPropertyBuilder delegate = newConstrainedPropertyBuilder(theClass);
         delegate.setDefaultNullable(defaultNullable);
@@ -122,7 +134,7 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
         Map<String, ConstrainedProperty> constrainedProperties = delegate.getConstrainedProperties();
         PersistentEntity entity = mappingContext.getPersistentEntity(theClass.getName());
         List<PersistentProperty> properties = null;
-        if(entity != null) {
+        if (entity != null) {
 
             properties = entity.getPersistentProperties();
             if (properties != null) {
@@ -169,17 +181,17 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
             List<MetaProperty> metaProperties = cpf.getMetaProperties();
             for (MetaProperty metaProperty : metaProperties) {
                 String propertyName = metaProperty.getName();
-                if(!constrainedProperties.containsKey(propertyName) && NameUtils.isNotConfigurational(propertyName)) {
+                if (!constrainedProperties.containsKey(propertyName) && NameUtils.isNotConfigurational(propertyName)) {
                     Class propertyType = metaProperty.getType();
-                    if(metaProperty instanceof MetaBeanProperty) {
+                    if (metaProperty instanceof MetaBeanProperty) {
                         MetaBeanProperty beanProperty = (MetaBeanProperty) metaProperty;
                         MetaMethod getter = beanProperty.getGetter();
                         // getters of type Boolean should start with 'get' not 'is'
-                        if(Boolean.class == propertyType && getter != null && getter.getName().startsWith("is")) {
+                        if (Boolean.class == propertyType && getter != null && getter.getName().startsWith("is")) {
                             continue;
                         }
                     }
-                    if(!defaultNullable) {
+                    if (!defaultNullable) {
                         DefaultConstrainedProperty constrainedProperty = new DefaultConstrainedProperty(theClass, propertyName, propertyType, constraintRegistry);
                         constrainedProperty.setOrder(constrainedProperties.size() + 1);
                         constrainedProperties.put(propertyName, constrainedProperty);
@@ -208,7 +220,7 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
             String propertyName = entry.getKey();
             Constrained constrainedProperty = entry.getValue();
             String sharedConstraintReference = constrainedPropertyBuilder.getSharedConstraint(propertyName);
-            if (sharedConstraintReference != null && defaultConstraints !=  null) {
+            if (sharedConstraintReference != null && defaultConstraints != null) {
                 Object o = defaultConstraints.get(sharedConstraintReference);
                 if (o instanceof Map) {
                     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -238,7 +250,7 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
             if (defaultConstraints.containsKey("*")) {
                 final Object o = defaultConstraints.get("*");
                 if (o instanceof Map) {
-                    Map<String, Object> globalConstraints = (Map<String, Object>)o;
+                    Map<String, Object> globalConstraints = (Map<String, Object>) o;
                     applyMapOfConstraints(globalConstraints, propertyName, persistentProperty, cp);
                 }
             }
@@ -277,19 +289,19 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
             Object constrainingValue = entry.getValue();
             if (!cp.hasAppliedConstraint(constraintName) && cp.supportsContraint(constraintName)) {
                 if (ConstrainedProperty.NULLABLE_CONSTRAINT.equals(constraintName)) {
-                    if (isConstrainableProperty(persistentProperty,propertyName)) {
+                    if (isConstrainableProperty(persistentProperty, propertyName)) {
                         cp.applyConstraint(constraintName, constrainingValue);
                     }
                 }
                 else {
-                    cp.applyConstraint(constraintName,constrainingValue);
+                    cp.applyConstraint(constraintName, constrainingValue);
                 }
             }
         }
     }
 
     protected boolean isConstrainableProperty(PersistentProperty persistentProperty, String propertyName) {
-        if(persistentProperty == null) {
+        if (persistentProperty == null) {
             return NameUtils.isNotConfigurational(propertyName);
         }
         else {
@@ -298,7 +310,7 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
                     !propertyName.equals(GormProperties.LAST_UPDATED) &&
                     !(persistentProperty instanceof Identity) &&
                     !(persistentProperty.getMapping().getMappedForm().isDerived()) &&
-                    !( (persistentProperty instanceof ToOne) && ((ToOne)persistentProperty).isBidirectional() && ((ToOne) persistentProperty).isCircular());
+                    !((persistentProperty instanceof ToOne) && ((ToOne) persistentProperty).isBidirectional() && ((ToOne) persistentProperty).isCircular());
         }
 
     }

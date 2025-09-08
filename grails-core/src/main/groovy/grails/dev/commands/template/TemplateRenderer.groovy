@@ -18,8 +18,9 @@
  */
 package grails.dev.commands.template
 
-import grails.codegen.model.Model
 import groovy.transform.CompileDynamic
+
+import grails.codegen.model.Model
 import org.grails.io.support.Resource
 
 /**
@@ -53,7 +54,7 @@ interface TemplateRenderer {
      * @param destination The destination
      * @param model The model
      */
-    void render(CharSequence template, File destination )
+    void render(CharSequence template, File destination)
 
     /**
      * Render the given template to the given destination
@@ -62,7 +63,7 @@ interface TemplateRenderer {
      * @param destination The destination
      * @param model The model
      */
-    void render(CharSequence template, File destination, Map model )
+    void render(CharSequence template, File destination, Map model)
     /**
      * Render the given template to the given destination
      *
@@ -97,7 +98,7 @@ interface TemplateRenderer {
      * @param destination The destination
      * @param model The model
      */
-    void render(File template, File destination, Map model )
+    void render(File template, File destination, Map model)
 
     /**
      * Render the given template to the given destination
@@ -116,7 +117,6 @@ interface TemplateRenderer {
      * @param model The model
      */
     void render(Resource template, File destination, Model model)
-
 
     /**
      * Render the given template to the give destination for the given model

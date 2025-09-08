@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.plugins.web.controllers;
+package org.grails.plugins.web.controllers
 
 import groovy.transform.Immutable
 
@@ -28,6 +28,7 @@ import groovy.transform.Immutable
  */
 @Immutable(knownImmutableClasses = [Class])
 class DefaultControllerExceptionHandlerMetaData implements ControllerExceptionHandlerMetaData {
+
     String methodName
     Class<? extends Exception> exceptionType
 }

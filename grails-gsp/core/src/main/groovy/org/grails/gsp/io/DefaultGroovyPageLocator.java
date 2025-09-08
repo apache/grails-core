@@ -18,18 +18,22 @@
  */
 package org.grails.gsp.io;
 
-import grails.plugins.GrailsPlugin;
-import grails.plugins.GrailsPluginManager;
-import grails.plugins.PluginManagerAware;
-import grails.util.CollectionUtils;
-import grails.util.Environment;
+import java.io.File;
+import java.security.PrivilegedAction;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArraySet;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.grails.gsp.GroovyPage;
-import org.grails.gsp.GroovyPageBinding;
-import org.grails.io.support.GrailsResourceUtils;
-import org.grails.plugins.BinaryGrailsPlugin;
-import org.grails.taglib.TemplateVariableBinding;
+
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -38,13 +42,16 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 
-import java.io.File;
-import java.security.PrivilegedAction;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CopyOnWriteArraySet;
+import grails.plugins.GrailsPlugin;
+import grails.plugins.GrailsPluginManager;
+import grails.plugins.PluginManagerAware;
+import grails.util.CollectionUtils;
+import grails.util.Environment;
+import org.grails.gsp.GroovyPage;
+import org.grails.gsp.GroovyPageBinding;
+import org.grails.io.support.GrailsResourceUtils;
+import org.grails.plugins.BinaryGrailsPlugin;
+import org.grails.taglib.TemplateVariableBinding;
 
 /**
  * Used to locate GSPs whether in development or WAR deployed mode from static
@@ -60,12 +67,12 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
     private static final String SLASHED_VIEWS_DIR_PATH = "/" + GrailsResourceUtils.VIEWS_DIR_PATH;
     private static final String PLUGINS_PATH = "/plugins/";
     private static final String BLANK = "";
-    protected Collection<ResourceLoader> resourceLoaders = new ConcurrentLinkedQueue<ResourceLoader>();
+    protected Collection<ResourceLoader> resourceLoaders = new ConcurrentLinkedQueue<>();
     protected GrailsPluginManager pluginManager;
     private ConcurrentMap<String, String> precompiledGspMap;
     protected boolean warDeployed = Environment.isWarDeployed();
     protected boolean reloadEnabled = !warDeployed;
-    private Set<String> reloadedPrecompiledGspClassNames = new CopyOnWriteArraySet<String>();
+    private Set<String> reloadedPrecompiledGspClassNames = new CopyOnWriteArraySet<>();
 
     public void setResourceLoader(ResourceLoader resourceLoader) {
         addResourceLoader(resourceLoader);
@@ -81,7 +88,7 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
         if (precompiledGspMap == null) {
             this.precompiledGspMap = null;
         } else {
-            this.precompiledGspMap = new ConcurrentHashMap<String, String>(precompiledGspMap);
+            this.precompiledGspMap = new ConcurrentHashMap<>(precompiledGspMap);
         }
     }
 
@@ -110,14 +117,14 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
         String contextPath = resolveContextPath(pluginName, uri, binding);
         String fullURI = GrailsResourceUtils.appendPiecesForUri(contextPath, uri);
 
-        if(pluginManager != null) {
+        if (pluginManager != null) {
             GrailsPlugin grailsPlugin = pluginManager.getGrailsPlugin(pluginName);
-            if(grailsPlugin instanceof BinaryGrailsPlugin) {
+            if (grailsPlugin instanceof BinaryGrailsPlugin) {
                 BinaryGrailsPlugin binaryGrailsPlugin = (BinaryGrailsPlugin) grailsPlugin;
                 File projectDirectory = binaryGrailsPlugin.getProjectDirectory();
-                if(projectDirectory != null) {
+                if (projectDirectory != null) {
                     File f = new File(projectDirectory, GrailsResourceUtils.VIEWS_DIR_PATH + uri);
-                    if(f.exists()) {
+                    if (f.exists()) {
                         scriptSource = new GroovyPageResourceScriptSource(uri, new FileSystemResource(f));
                     }
                 }
@@ -127,14 +134,13 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
             }
         }
 
-        if(scriptSource == null) {
+        if (scriptSource == null) {
             scriptSource = findPageInBinding(fullURI, binding);
         }
 
         if (scriptSource == null) {
             scriptSource = findResourceScriptSource(uri);
         }
-
 
         //last effort to resolve and force name of plugin to use camel case
         if (scriptSource == null) {
@@ -209,7 +215,7 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
     protected GroovyPageCompiledScriptSource createGroovyPageCompiledScriptSource(final String uri, String fullPath, Class<?> viewClass) {
         GroovyPageCompiledScriptSource scriptSource = new GroovyPageCompiledScriptSource(uri, fullPath, viewClass);
         if (reloadEnabled) {
-            scriptSource.setResourceCallable(new PrivilegedAction<Resource>() {
+            scriptSource.setResourceCallable(new PrivilegedAction<>() {
                 public Resource run() {
                     return findReloadablePage(uri);
                 }
@@ -242,9 +248,9 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
                 }
                 return scriptSource;
             }
-            else if(binaryPlugin.getProjectDirectory() != null) {
+            else if (binaryPlugin.getProjectDirectory() != null) {
                 scriptSource = resolveViewInPluginProjectDirectory(binaryPlugin, uri);
-                if(scriptSource != null) {
+                if (scriptSource != null) {
                     return scriptSource;
                 }
             }
@@ -256,7 +262,7 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
     private GroovyPageScriptSource resolveViewInPluginProjectDirectory(BinaryGrailsPlugin binaryPlugin, String uri) {
         File projectDirectory = binaryPlugin.getProjectDirectory();
         File f = new File(projectDirectory, "grails-app/views" + uri);
-        if(f.exists()) {
+        if (f.exists()) {
             return new GroovyPageResourceScriptSource(uri, new FileSystemResource(f));
         }
         return null;

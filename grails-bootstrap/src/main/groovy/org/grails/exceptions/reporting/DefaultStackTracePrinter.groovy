@@ -41,7 +41,7 @@ class DefaultStackTracePrinter implements StackTracePrinter {
         def lineNumWidth = mln.toString().size()
         def methodNameBaseWidth = t.stackTrace.methodName*.size().max() + 1
 
-        def lh = "Line".padLeft(lineNumWidth + 4)
+        def lh = 'Line'.padLeft(lineNumWidth + 4)
         String header = "$lh | Method"
         printHeader(sb, header)
 
@@ -62,7 +62,7 @@ class DefaultStackTracePrinter implements StackTracePrinter {
                 printCausedByMessage(sb, e)
             }
             if (e instanceof MultipleCompilationErrorsException) break
-            if(last > 0) {
+            if (last > 0) {
                 stackTrace[0..-1].eachWithIndex { te, idx ->
                     def fileName = getFileName(te)
                     def lineNumber
@@ -122,7 +122,7 @@ class DefaultStackTracePrinter implements StackTracePrinter {
     }
 
     static String makeRelativeIfPossible(String fileName) {
-        final base = System.getProperty("base.dir")
+        final base = System.getProperty('base.dir')
         if (base) {
             fileName = fileName - base
         }
@@ -135,24 +135,24 @@ class DefaultStackTracePrinter implements StackTracePrinter {
 
     protected void printCausedByMessage(PrintWriter sb, Throwable e) {
         sb.println()
-        sb.println "Caused by ${e.class.simpleName}: ${e.message}"
+        sb.println("Caused by ${e.class.simpleName}: ${e.message}")
     }
 
     protected void printHeader(PrintWriter sb, String header) {
-        sb.println header
+        sb.println(header)
     }
 
     protected void printLastEntry(PrintWriter sb, String lineNumber, String methodName, String fileName) {
-        sb.println "^   $lineNumber | $methodName in $fileName"
+        sb.println("^   $lineNumber | $methodName in $fileName")
     }
 
     protected void printStackLine(PrintWriter sb, String lineNumber, String methodName, String fileName) {
-        sb.println "|   $lineNumber | $methodName in $fileName"
+        sb.println("|   $lineNumber | $methodName in $fileName")
     }
 
     protected void printFailureLocation(PrintWriter sb, String lineNumber, String methodName, String fileName) {
-        sb.println "->> $lineNumber | $methodName in $fileName"
-        sb << "- " * 36
+        sb.println("->> $lineNumber | $methodName in $fileName")
+        sb << '- ' * 36
         sb.println()
     }
 

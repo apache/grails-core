@@ -18,13 +18,13 @@
  */
 package org.grails.web.beans
 
-import grails.databinding.DataBinder;
-import grails.util.Environment
+import java.text.NumberFormat
+import java.text.SimpleDateFormat
+
 import groovy.transform.CompileStatic
 
-import org.grails.web.binding.CompositeEditor
-import org.grails.web.binding.StructuredDateEditor
-import org.grails.web.servlet.mvc.GrailsWebRequest
+import jakarta.servlet.ServletContext
+
 import org.springframework.beans.PropertyEditorRegistrar
 import org.springframework.beans.PropertyEditorRegistry
 import org.springframework.beans.propertyeditors.CustomDateEditor
@@ -32,9 +32,11 @@ import org.springframework.beans.propertyeditors.CustomNumberEditor
 import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.support.WebApplicationContextUtils
 
-import jakarta.servlet.ServletContext
-import java.text.NumberFormat
-import java.text.SimpleDateFormat
+import grails.databinding.DataBinder
+import grails.util.Environment
+import org.grails.web.binding.CompositeEditor
+import org.grails.web.binding.StructuredDateEditor
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * @author Graeme Rocher
@@ -43,8 +45,8 @@ import java.text.SimpleDateFormat
 @CompileStatic
 class PropertyEditorRegistryUtils {
 
-    private static final String PROPERTY_EDITOR_REGISTRARS = "org.codehaus.groovy.grails.PROPERTY_EDITOR_REGISTRARS";
-    private static final String JSON_DATE_FORMAT = "yyyy-MM-dd'T'hh:mm:ss'Z'";
+    private static final String PROPERTY_EDITOR_REGISTRARS = 'org.codehaus.groovy.grails.PROPERTY_EDITOR_REGISTRARS'
+    private static final String JSON_DATE_FORMAT = /yyyy-MM-dd'T'hh:mm:ss'Z'/
 
     /**
      * Registers all known
@@ -53,31 +55,31 @@ class PropertyEditorRegistryUtils {
      * @param registry
      * @param locale
      */
-    public static void registerCustomEditors(GrailsWebRequest grailsWebRequest, PropertyEditorRegistry registry, Locale locale) {
+    static void registerCustomEditors(GrailsWebRequest grailsWebRequest, PropertyEditorRegistry registry, Locale locale) {
         // Formatters for the different number types.
         def floatFormat = NumberFormat.getInstance(locale)
         def integerFormat = NumberFormat.getIntegerInstance(locale)
 
         def dateFormat = new SimpleDateFormat(DataBinder.DEFAULT_DATE_FORMAT, locale)
 
-        registry.registerCustomEditor(Date, new CustomDateEditor(dateFormat,true));
-        registry.registerCustomEditor(BigDecimal, new CustomNumberEditor(BigDecimal.class, floatFormat, true));
-        registry.registerCustomEditor(BigInteger, new CustomNumberEditor(BigInteger.class, floatFormat, true));
-        registry.registerCustomEditor(Double, new CustomNumberEditor(Double.class, floatFormat, true));
-        registry.registerCustomEditor(double.class, new CustomNumberEditor(Double.class, floatFormat, true));
-        registry.registerCustomEditor(Float, new CustomNumberEditor(Float.class, floatFormat, true));
-        registry.registerCustomEditor(float.class, new CustomNumberEditor(Float.class, floatFormat, true));
-        registry.registerCustomEditor(Long, new CustomNumberEditor(Long.class, integerFormat, true));
-        registry.registerCustomEditor(long.class, new CustomNumberEditor(Long.class, integerFormat, true));
-        registry.registerCustomEditor(Integer, new CustomNumberEditor(Integer.class, integerFormat, true));
-        registry.registerCustomEditor(int.class, new CustomNumberEditor(Integer.class, integerFormat, true));
-        registry.registerCustomEditor(Short, new CustomNumberEditor(Short.class, integerFormat, true));
-        registry.registerCustomEditor(short.class, new CustomNumberEditor(Short.class, integerFormat, true));
-        registry.registerCustomEditor(Date, new CompositeEditor(new StructuredDateEditor(dateFormat,true), new CustomDateEditor(new SimpleDateFormat(JSON_DATE_FORMAT), true)));
-        registry.registerCustomEditor(Calendar, new StructuredDateEditor(dateFormat,true));
+        registry.registerCustomEditor(Date, new CustomDateEditor(dateFormat, true))
+        registry.registerCustomEditor(BigDecimal, new CustomNumberEditor(BigDecimal, floatFormat, true))
+        registry.registerCustomEditor(BigInteger, new CustomNumberEditor(BigInteger, floatFormat, true))
+        registry.registerCustomEditor(Double, new CustomNumberEditor(Double, floatFormat, true))
+        registry.registerCustomEditor(double, new CustomNumberEditor(Double, floatFormat, true))
+        registry.registerCustomEditor(Float, new CustomNumberEditor(Float, floatFormat, true))
+        registry.registerCustomEditor(float, new CustomNumberEditor(Float, floatFormat, true))
+        registry.registerCustomEditor(Long, new CustomNumberEditor(Long, integerFormat, true))
+        registry.registerCustomEditor(long, new CustomNumberEditor(Long, integerFormat, true))
+        registry.registerCustomEditor(Integer, new CustomNumberEditor(Integer, integerFormat, true))
+        registry.registerCustomEditor(int, new CustomNumberEditor(Integer, integerFormat, true))
+        registry.registerCustomEditor(Short, new CustomNumberEditor(Short, integerFormat, true))
+        registry.registerCustomEditor(short, new CustomNumberEditor(Short, integerFormat, true))
+        registry.registerCustomEditor(Date, new CompositeEditor(new StructuredDateEditor(dateFormat, true), new CustomDateEditor(new SimpleDateFormat(JSON_DATE_FORMAT), true)))
+        registry.registerCustomEditor(Calendar, new StructuredDateEditor(dateFormat, true))
 
-        ServletContext servletContext = grailsWebRequest != null ? grailsWebRequest.getServletContext() : null;
-        registerCustomEditorsFromContext(servletContext, registry);
+        ServletContext servletContext = grailsWebRequest != null ? grailsWebRequest.getServletContext() : null
+        registerCustomEditorsFromContext(servletContext, registry)
     }
 
     /**
@@ -89,23 +91,23 @@ class PropertyEditorRegistryUtils {
      */
     private static void registerCustomEditorsFromContext(ServletContext servletContext, PropertyEditorRegistry registry) {
         if (servletContext == null) {
-            return;
+            return
         }
 
-        WebApplicationContext context = WebApplicationContextUtils.getWebApplicationContext(servletContext);
+        WebApplicationContext context = WebApplicationContextUtils.getWebApplicationContext(servletContext)
         if (context == null) {
-            return;
+            return
         }
 
-        Map<String, PropertyEditorRegistrar> editors = (Map<String, PropertyEditorRegistrar>)servletContext.getAttribute(PROPERTY_EDITOR_REGISTRARS);
+        Map<String, PropertyEditorRegistrar> editors = (Map<String, PropertyEditorRegistrar>) servletContext.getAttribute(PROPERTY_EDITOR_REGISTRARS)
         if (editors == null) {
-            editors = context.getBeansOfType(PropertyEditorRegistrar.class);
+            editors = context.getBeansOfType(PropertyEditorRegistrar)
             if (!Environment.isDevelopmentMode()) {
-                servletContext.setAttribute(PROPERTY_EDITOR_REGISTRARS, editors);
+                servletContext.setAttribute(PROPERTY_EDITOR_REGISTRARS, editors)
             }
         }
         for (PropertyEditorRegistrar editorRegistrar : editors.values()) {
-            editorRegistrar.registerCustomEditors(registry);
+            editorRegistrar.registerCustomEditors(registry)
         }
     }
 }

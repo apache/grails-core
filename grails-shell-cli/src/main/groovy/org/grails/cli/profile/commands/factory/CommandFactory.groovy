@@ -38,6 +38,6 @@ interface CommandFactory {
      * @param inherited Whether the profile passed is inherited (ie a parent profile)
      * @return A command or null if it wasn't possible to create one
      */
-    Collection<Command> findCommands( Profile profile, boolean inherited )
+    Collection<Command> findCommands(Profile profile, boolean inherited)
 
 }

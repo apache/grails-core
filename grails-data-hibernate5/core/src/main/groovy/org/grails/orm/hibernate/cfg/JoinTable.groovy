@@ -34,6 +34,7 @@ import groovy.transform.builder.SimpleStrategy
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 @CompileStatic
 class JoinTable extends Table {
+
     /**
      * The foreign key column
      */

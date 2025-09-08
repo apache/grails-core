@@ -19,9 +19,9 @@
 
 package org.grails.datastore.mapping.cache;
 
-import org.grails.datastore.mapping.cache.exception.CacheException;
-
 import java.io.Serializable;
+
+import org.grails.datastore.mapping.cache.exception.CacheException;
 
 /**
  * <p>

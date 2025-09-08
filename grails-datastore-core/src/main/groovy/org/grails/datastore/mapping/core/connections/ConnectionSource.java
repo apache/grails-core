@@ -19,7 +19,6 @@
 
 package org.grails.datastore.mapping.core.connections;
 
-
 import java.io.Closeable;
 
 /**

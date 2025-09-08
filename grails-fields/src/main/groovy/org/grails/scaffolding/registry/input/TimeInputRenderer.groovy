@@ -36,7 +36,7 @@ class TimeInputRenderer implements DomainInputRenderer {
 
     @Override
     Closure renderInput(Map defaultAttributes, DomainProperty property) {
-        defaultAttributes.type = "datetime-local"
+        defaultAttributes.type = 'datetime-local'
         return { ->
             input(defaultAttributes)
         }

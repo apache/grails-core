@@ -18,10 +18,11 @@
  */
 package grails.dev.commands
 
+import org.springframework.context.ConfigurableApplicationContext
+
 import grails.util.Described
 import grails.util.GrailsNameUtils
 import grails.util.Named
-import org.springframework.context.ConfigurableApplicationContext
 
 /**
  * Represents a command that is run against the {@link org.springframework.context.ApplicationContext}
@@ -48,7 +49,7 @@ trait ApplicationCommand implements Named, Described {
 
     @Override
     String getName() {
-        return GrailsNameUtils.getScriptName( GrailsNameUtils.getLogicalName(getClass().getName(),"Command") )
+        return GrailsNameUtils.getScriptName(GrailsNameUtils.getLogicalName(getClass().getName(), 'Command'))
     }
 
     @Override

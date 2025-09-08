@@ -26,9 +26,13 @@ import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.Statement
+
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.mapping.reflect.AstUtils
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
+
 /**
  * An implementer that implements logic for finding a single entity
  *
@@ -37,7 +41,8 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.*
  */
 @CompileStatic
 class FindOneImplementer extends AbstractDetachedCriteriaServiceImplementor implements SingleResultServiceImplementer<GormEntity> {
-    static final List<String> HANDLED_PREFIXES = ['retrieve','get', 'find', 'read']
+
+    static final List<String> HANDLED_PREFIXES = ['retrieve', 'get', 'find', 'read']
 
     @Override
     protected boolean isCompatibleReturnType(ClassNode domainClass, MethodNode methodNode, ClassNode returnType, String prefix) {
@@ -71,7 +76,7 @@ class FindOneImplementer extends AbstractDetachedCriteriaServiceImplementor impl
     }
 
     protected String findMethodToInvoke(ClassNode domainClassNode, MethodNode newMethodNode) {
-        "find"
+        'find'
     }
 
     protected Statement buildReturnStatement(ClassNode targetDomainClass, MethodNode abstractMethodNode, Expression queryMethodCall, Expression args, MethodNode newMethodNode) {

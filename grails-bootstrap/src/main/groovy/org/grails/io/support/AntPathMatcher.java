@@ -212,7 +212,7 @@ public class AntPathMatcher {
     }
 
     private String[] tokenize(String pattern) {
-        List<String> list = StringGroovyMethods.tokenize((CharSequence)pattern, (CharSequence)pathSeparator);
+        List<String> list = StringGroovyMethods.tokenize((CharSequence) pattern, (CharSequence) pathSeparator);
         return list.toArray(new String[list.size()]);
     }
 
@@ -272,7 +272,7 @@ public class AntPathMatcher {
     }
 
     public Map<String, String> extractUriTemplateVariables(String pattern, String path) {
-        Map<String, String> variables = new LinkedHashMap<String, String>();
+        Map<String, String> variables = new LinkedHashMap<>();
         /*boolean result =*/ doMatch(pattern, path, true, variables);
         return variables;
     }
@@ -353,7 +353,7 @@ public class AntPathMatcher {
     }
 
     private boolean hasText(String txt) {
-        return txt != null && txt.length()>0;
+        return txt != null && txt.length() > 0;
     }
 
     /**
@@ -465,7 +465,7 @@ public class AntPathMatcher {
      * @author Rossen Stoyanchev
      * @since 3.0
      */
-     static class AntPathStringMatcher {
+    static class AntPathStringMatcher {
 
         private static final Pattern GLOB_PATTERN = Pattern.compile("\\?|\\*|\\{((?:\\{[^/]+?\\}|[^/{}]|\\\\[{}])+?)\\}");
 
@@ -475,7 +475,7 @@ public class AntPathMatcher {
 
         private String str;
 
-        private final List<String> variableNames = new LinkedList<String>();
+        private final List<String> variableNames = new LinkedList<>();
 
         private final Map<String, String> uriTemplateVariables;
 

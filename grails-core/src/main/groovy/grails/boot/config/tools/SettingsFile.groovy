@@ -21,7 +21,6 @@ package grails.boot.config.tools
 
 import groovy.transform.CompileStatic
 
-
 /**
  * Used to interpret the Gradle settings.gradle file
  *
@@ -31,13 +30,12 @@ import groovy.transform.CompileStatic
 @CompileStatic
 abstract class SettingsFile extends Script {
 
-
     void include(String[] projectPaths) {
-        binding.setVariable("projectPaths", projectPaths)
+        binding.setVariable('projectPaths', projectPaths)
     }
 
     void includeFlat(String[] projectPaths) {
-        binding.setVariable("projectPaths", projectPaths)
+        binding.setVariable('projectPaths', projectPaths)
     }
 
     def methodMissing(String name, args) {

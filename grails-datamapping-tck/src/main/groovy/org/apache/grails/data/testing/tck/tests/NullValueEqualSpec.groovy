@@ -18,17 +18,18 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.TestEntity
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.IgnoreIf
+
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.TestEntity
 
 class NullValueEqualSpec extends GrailsDataTckSpec {
 
-    void "test null value in equal"() {
+    void 'test null value in equal'() {
         when:
-        new TestEntity(name: "Fred", age: null).save(failOnError: true)
-        new TestEntity(name: "Bob", age: 11).save(failOnError: true)
-        new TestEntity(name: "Jack", age: null).save(flush: true, failOnError: true)
+        new TestEntity(name: 'Fred', age: null).save(failOnError: true)
+        new TestEntity(name: 'Bob', age: 11).save(failOnError: true)
+        new TestEntity(name: 'Jack', age: null).save(flush: true, failOnError: true)
 
         then:
         TestEntity.countByAge(11) == 1
@@ -37,11 +38,11 @@ class NullValueEqualSpec extends GrailsDataTckSpec {
     }
 
     @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') })
-    void "test null value in not equal"() {
+    void 'test null value in not equal'() {
         when:
-        new TestEntity(name: "Fred", age: null).save(failOnError: true)
-        new TestEntity(name: "Bob", age: 11).save(failOnError: true)
-        new TestEntity(name: "Jack", age: null).save(flush: true, failOnError: true)
+        new TestEntity(name: 'Fred', age: null).save(failOnError: true)
+        new TestEntity(name: 'Bob', age: 11).save(failOnError: true)
+        new TestEntity(name: 'Jack', age: null).save(flush: true, failOnError: true)
 
         then:
         TestEntity.countByAgeNotEqual(11) == 2

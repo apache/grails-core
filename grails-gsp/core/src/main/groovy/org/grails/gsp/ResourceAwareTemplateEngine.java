@@ -18,16 +18,25 @@
  */
 package org.grails.gsp;
 
-import grails.io.IOUtils;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.Reader;
+import java.net.URL;
+
 import groovy.text.Template;
 import groovy.text.TemplateEngine;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.runtime.DefaultGroovyMethodsSupport;
-import org.grails.buffer.StreamByteBuffer;
+
 import org.springframework.core.io.Resource;
 
-import java.io.*;
-import java.net.URL;
+import grails.io.IOUtils;
+import org.grails.buffer.StreamByteBuffer;
 
 /**
  * An abstract TemplateEngine that extends the default Groovy TemplateEngine (@see groovy.text.TemplateEngine) and
@@ -64,7 +73,7 @@ public abstract class ResourceAwareTemplateEngine extends TemplateEngine {
 
     @Override
     public final Template createTemplate(Reader reader) throws IOException {
-        StreamByteBuffer buf=new StreamByteBuffer();
+        StreamByteBuffer buf = new StreamByteBuffer();
         IOUtils.copy(reader, new OutputStreamWriter(buf.getOutputStream(), GROOVY_SOURCE_CHAR_ENCODING));
         return createTemplate(buf.getInputStream());
     }
@@ -101,8 +110,8 @@ public abstract class ResourceAwareTemplateEngine extends TemplateEngine {
             DefaultGroovyMethodsSupport.closeWithWarning(input);
         }
     }
-    
+
     abstract public Template createTemplateForUri(String[] uris);
-    
+
     abstract public int mapStackLineNumber(String url, int lineNumber);
 }

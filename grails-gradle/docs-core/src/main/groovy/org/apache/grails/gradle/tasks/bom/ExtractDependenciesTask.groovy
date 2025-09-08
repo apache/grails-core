@@ -19,23 +19,31 @@
 
 package org.apache.grails.gradle.tasks.bom
 
+import java.util.regex.Pattern
+
 import io.spring.gradle.dependencymanagement.org.apache.maven.model.Model
 import io.spring.gradle.dependencymanagement.org.apache.maven.model.io.xpp3.MavenXpp3Reader
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
-import org.gradle.api.artifacts.*
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.DependencyConstraint
+import org.gradle.api.artifacts.ExcludeRule
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.component.ModuleComponentSelector
 import org.gradle.api.artifacts.result.DependencyResult
 import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependencyConstraint
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.*
-
-import java.util.regex.Pattern
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Classpath
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
 
 /**
  * Grails Bom files define their dependencies in a series of maps, this task takes those maps and generates an
@@ -43,6 +51,7 @@ import java.util.regex.Pattern
  */
 @CacheableTask
 abstract class ExtractDependenciesTask extends DefaultTask {
+
     @InputFiles
     @Classpath
     abstract ConfigurableFileCollection getDependencyArtifacts()
@@ -75,8 +84,8 @@ abstract class ExtractDependenciesTask extends DefaultTask {
 
     ExtractDependenciesTask() {
         doFirst {
-            if(!project.pluginManager.hasPlugin('java-platform')) {
-                throw new GradleException("The 'java-platform' plugin must be applied to the project to use this task.")
+            if (!project.pluginManager.hasPlugin('java-platform')) {
+                throw new GradleException(/The 'java-platform' plugin must be applied to the project to use this task./)
             }
         }
     }
@@ -94,7 +103,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
         )
 
         Configuration configuration = project.configurations.named(configurationName.get()).get()
-        if(!configuration.canBeResolved) {
+        if (!configuration.canBeResolved) {
             throw new GradleException("The configuration ${configuration.name} must be resolvable to use this task.")
         }
 
@@ -105,13 +114,13 @@ abstract class ExtractDependenciesTask extends DefaultTask {
 
         List<String> lines = generateAsciiDoc(constraints)
         destination.get().asFile.withWriter { writer ->
-            writer.writeLine '[cols="1,1,1,1,1,1", options="header"]'
-            writer.writeLine '|==='
-            writer.writeLine '| Index | Group | Artifact | Version | Property Name | Source'
+            writer.writeLine('[cols="1,1,1,1,1,1", options="header"]')
+            writer.writeLine('|===')
+            writer.writeLine('| Index | Group | Artifact | Version | Property Name | Source')
             lines.each { line ->
                 writer.writeLine(line)
             }
-            writer.writeLine '|==='
+            writer.writeLine('|===')
         }
     }
 
@@ -133,7 +142,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
             String artifactId = constraint.module.name as String
             String artifactVersion = constraint.version as String
 
-            if(artifactIdMappings.containsKey(constraint.name)) {
+            if (artifactIdMappings.containsKey(constraint.name)) {
                 artifactId = artifactIdMappings.get(constraint.name)
             }
 
@@ -160,8 +169,8 @@ abstract class ExtractDependenciesTask extends DefaultTask {
 
     private void populateInheritedConstraints(Configuration configuration, Map<CoordinateHolder, List<CoordinateHolder>> exclusions, Map<CoordinateHolder, ExtractedDependencyConstraint> constraints, PropertyNameCalculator propertyNameCalculator) {
         for (DependencyResult result  : configuration.incoming.resolutionResult.allDependencies) {
-            if(!(result instanceof ResolvedDependencyResult)) {
-                throw new GradleException("Dependencies should be resolved prior to running this task.")
+            if (!(result instanceof ResolvedDependencyResult)) {
+                throw new GradleException('Dependencies should be resolved prior to running this task.')
             }
 
             ResolvedDependencyResult dep = (ResolvedDependencyResult) result
@@ -193,14 +202,14 @@ abstract class ExtractDependenciesTask extends DefaultTask {
         Model model = reader.read(new FileReader(bomPomFile))
 
         Properties versionProperties = new Properties()
-        if(model.parent) {
+        if (model.parent) {
             // Need to populate the parent bom if it's present first
             CoordinateVersionHolder parentBom = new CoordinateVersionHolder(
                     groupId: model.parent.groupId,
                     artifactId: model.parent.artifactId,
                     version: model.parent.version
             )
-            populatePlatformDependencies(parentBom, exclusionRules, constraints,false, level + 1)?.entrySet()?.each { Map.Entry<Object, Object> entry ->
+            populatePlatformDependencies(parentBom, exclusionRules, constraints, false, level + 1)?.entrySet()?.each { Map.Entry<Object, Object> entry ->
                 versionProperties.put(entry.key, entry.value)
             }
         }
@@ -256,7 +265,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
                             )
                             populatePlatformDependencies(resolvedBomCoordinates, exclusionRules, constraints, error, level + 1)
                         } else {
-                            constraints.put(resolvedCoordinates,constraint)
+                            constraints.put(resolvedCoordinates, constraint)
                         }
                     }
                 }
@@ -286,7 +295,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
         }
 
         if ((expandedVersion =~ dynamicPattern).find()) {
-            logger.warn("Reached max iterations for {} while resolving properties in: {}", errorDescription, dynamicVersion)
+            logger.warn('Reached max iterations for {} while resolving properties in: {}', errorDescription, dynamicVersion)
         }
 
         expandedVersion

@@ -37,7 +37,7 @@ public class CombinedCodecIdentifier implements CodecIdentifier {
         int size = encodersOrDecoders.length;
         codecIdentifiers = new CodecIdentifier[size];
         String[] encoderNamesArr = new String[size];
-        for(int i=0;i < size;i++) {
+        for (int i = 0; i < size; i++) {
             int targetIndex = reverseOrder ? (size - 1 - i) : i;
             codecIdentifiers[targetIndex] = encodersOrDecoders[i].getCodecIdentifier();
             encoderNamesArr[targetIndex] = codecIdentifiers[targetIndex].getCodecName();
@@ -58,8 +58,8 @@ public class CombinedCodecIdentifier implements CodecIdentifier {
 
     @Override
     public boolean isEquivalent(CodecIdentifier other) {
-        for(CodecIdentifier codecIdentifier : codecIdentifiers) { 
-            if(codecIdentifier.isEquivalent(other)) {
+        for (CodecIdentifier codecIdentifier : codecIdentifiers) {
+            if (codecIdentifier.isEquivalent(other)) {
                 return true;
             }
         }

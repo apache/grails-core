@@ -34,7 +34,7 @@ tasks.withType(Javadoc).configureEach { Javadoc it ->
 
 tasks.withType(GroovyCompile).configureEach {
     groovyOptions.encoding = 'UTF-8' // encoding needs to be the same since it's different across platforms
-    // Preserve method parameter names in Groovy classes for IDE parameter hints.
+    // Preserve method parameter names in Groovy/Java classes for IDE parameter hints & bean reflection metadata.
     groovyOptions.parameters = true
     options.encoding = 'UTF-8' // encoding needs to be the same since it's different across platforms
     options.fork = true

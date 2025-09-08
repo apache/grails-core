@@ -25,7 +25,8 @@ import groovy.transform.EqualsAndHashCode
  */
 @CompileStatic
 @EqualsAndHashCode
-class LineString extends Shape implements GeoJSON{
+class LineString extends Shape implements GeoJSON {
+
     /**
      * The points that constitute the LineString
      */
@@ -37,8 +38,8 @@ class LineString extends Shape implements GeoJSON{
      * @param points The {@link Point} instances. Must be at least 2 points.
      */
     LineString(Point...points) {
-        if(points.size() < 2)
-            throw new IllegalArgumentException("At least 2 points required for a LineString")
+        if (points.size() < 2)
+            throw new IllegalArgumentException('At least 2 points required for a LineString')
         this.coordinates = points.toList()
     }
 
@@ -49,7 +50,7 @@ class LineString extends Shape implements GeoJSON{
      */
     @Override
     List<List<Double>> asList() {
-        coordinates.collect() { Point p -> p.asList()}
+        coordinates.collect() { Point p -> p.asList() }
     }
 
     @Override
@@ -62,14 +63,14 @@ class LineString extends Shape implements GeoJSON{
      * @param coords The coordinates, which should be a list of {@link Point} instances or lists containing x and y values
      * @return A LineString
      */
-    public static LineString valueOf(List coords) {
-        if(coords.size() < 2) throw new IllegalArgumentException("Coordinates should contain at least 2 entries for a LineString")
+    static LineString valueOf(List coords) {
+        if (coords.size() < 2) throw new IllegalArgumentException('Coordinates should contain at least 2 entries for a LineString')
 
         List<Point> points = (List<Point>) coords.collect() {
-            if(it instanceof Point) {
+            if (it instanceof Point) {
                 return it
             }
-            else if(it instanceof List) {
+            else if (it instanceof List) {
                 return Point.valueOf((List<Number>)it)
             }
             throw new IllegalArgumentException("Invalid coordinates: $coords")

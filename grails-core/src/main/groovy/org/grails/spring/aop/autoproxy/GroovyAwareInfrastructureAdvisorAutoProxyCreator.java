@@ -19,6 +19,7 @@
 package org.grails.spring.aop.autoproxy;
 
 import groovy.lang.GroovyObject;
+
 import org.springframework.aop.framework.autoproxy.InfrastructureAdvisorAutoProxyCreator;
 
 /**

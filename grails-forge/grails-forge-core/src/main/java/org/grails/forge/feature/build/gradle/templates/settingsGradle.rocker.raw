@@ -32,4 +32,4 @@ Function<String, Coordinate> coordinateResolver,
 Features features)
 
 @gradleBuild.renderSettingsExtensions()
-rootProject.name="@project.getName()"
+rootProject.name = "@project.getName()"

@@ -19,22 +19,16 @@
 
 package org.grails.compiler.injection
 
-import grails.artefact.Artefact
-import grails.compiler.ast.ClassInjector
-import grails.core.ArtefactHandler
-import grails.io.IOUtils
-import grails.plugins.metadata.GrailsPlugin
-import grails.util.GrailsNameUtils
+import java.lang.reflect.Modifier
+import java.nio.charset.StandardCharsets
+
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.springframework.core.CollectionFactory
 import groovy.xml.MarkupBuilder
 import groovy.xml.StreamingMarkupBuilder
 import groovy.xml.XmlSlurper
 import groovy.xml.slurpersupport.GPathResult
-import org.apache.grails.common.compiler.GroovyTransformOrder
-import org.apache.grails.gradle.common.PropertyFileUtils
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
@@ -48,13 +42,21 @@ import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.TransformWithPriority
+
+import org.springframework.core.CollectionFactory
+
+import grails.artefact.Artefact
+import grails.compiler.ast.ClassInjector
+import grails.core.ArtefactHandler
+import grails.io.IOUtils
+import grails.plugins.metadata.GrailsPlugin
+import grails.util.GrailsNameUtils
+import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.apache.grails.gradle.common.PropertyFileUtils
 import org.grails.core.io.support.GrailsFactoriesLoader
 import org.grails.io.support.AntPathMatcher
 import org.grails.io.support.GrailsResourceUtils
 import org.grails.io.support.UrlResource
-
-import java.lang.reflect.Modifier
-import java.nio.charset.StandardCharsets
 
 /**
  * A global transformation that applies Grails' transformations to classes within a Grails project
@@ -66,9 +68,9 @@ import java.nio.charset.StandardCharsets
 @CompileStatic
 class GlobalGrailsClassInjectorTransformation implements ASTTransformation, CompilationUnitAware, TransformWithPriority {
 
-    public static final ClassNode ARTEFACT_HANDLER_CLASS = ClassHelper.make("grails.core.ArtefactHandler")
-    public static final ClassNode APPLICATION_CONTEXT_COMMAND_CLASS = ClassHelper.make("grails.dev.commands.ApplicationCommand")
-    public static final ClassNode TRAIT_INJECTOR_CLASS = ClassHelper.make("grails.compiler.traits.TraitInjector")
+    public static final ClassNode ARTEFACT_HANDLER_CLASS = ClassHelper.make('grails.core.ArtefactHandler')
+    public static final ClassNode APPLICATION_CONTEXT_COMMAND_CLASS = ClassHelper.make('grails.dev.commands.ApplicationCommand')
+    public static final ClassNode TRAIT_INJECTOR_CLASS = ClassHelper.make('grails.compiler.traits.TraitInjector')
 
     @Override
     int priority() {
@@ -78,13 +80,13 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
     @Override
     void visit(ASTNode[] nodes, SourceUnit source) {
 
-        ModuleNode ast = source.getAST();
-        List<ClassNode> classes = new ArrayList<>(ast.getClasses());
+        ModuleNode ast = source.getAST()
+        List<ClassNode> classes = new ArrayList<>(ast.getClasses())
 
-        URL url = GrailsASTUtils.getSourceUrl(source);
+        URL url = GrailsASTUtils.getSourceUrl(source)
 
         if (url == null) return
-        if (!GrailsResourceUtils.isProjectSource(new UrlResource(url))) return;
+        if (!GrailsResourceUtils.isProjectSource(new UrlResource(url))) return
 
         List<ArtefactHandler> artefactHandlers = GrailsFactoriesLoader.loadFactories(ArtefactHandler)
         ClassInjector[] classInjectors = GrailsAwareInjectionOperation.getClassInjectors()
@@ -97,11 +99,11 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
         String pluginVersion = null
         ClassNode pluginClassNode = null
         def compilationTargetDirectory = resolveCompilationTargetDirectory(source)
-        def pluginXmlFile = new File(compilationTargetDirectory, "META-INF/grails-plugin.xml")
+        def pluginXmlFile = new File(compilationTargetDirectory, 'META-INF/grails-plugin.xml')
 
         for (ClassNode classNode : classes) {
-            def projectName = classNode.getNodeMetaData("projectName")
-            def projectVersion = classNode.getNodeMetaData("projectVersion")
+            def projectName = classNode.getNodeMetaData('projectName')
+            def projectVersion = classNode.getNodeMetaData('projectVersion')
             if (projectVersion == null) {
                 projectVersion = getClass().getPackage().getImplementationVersion()
             }
@@ -110,7 +112,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
 
             def classNodeName = classNode.name
 
-            if (classNodeName.endsWith("GrailsPlugin") && !classNode.isAbstract()) {
+            if (classNodeName.endsWith('GrailsPlugin') && !classNode.isAbstract()) {
                 pluginClassNode = classNode
 
                 if (!classNode.getProperty('version')) {
@@ -130,20 +132,20 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
                 continue
             }
 
-            if (!GrailsResourceUtils.isGrailsResource(new UrlResource(url))) continue;
+            if (!GrailsResourceUtils.isGrailsResource(new UrlResource(url))) continue
 
             if (projectName && projectVersion) {
                 GrailsASTUtils.addAnnotationOrGetExisting(classNode, GrailsPlugin, [name: GrailsNameUtils.getPropertyNameForLowerCaseHyphenSeparatedName(projectName.toString()), version: projectVersion])
             }
 
-            classNode.getModule().addImport("Autowired", ClassHelper.make("org.springframework.beans.factory.annotation.Autowired"))
+            classNode.getModule().addImport('Autowired', ClassHelper.make('org.springframework.beans.factory.annotation.Autowired'))
 
             for (ArtefactHandler handler in artefactHandlers) {
                 if (handler.isArtefact(classNode)) {
                     if (!classNode.getAnnotations(ARTEFACT_CLASS_NODE)) {
-                        transformedClasses.add classNodeName
-                        def annotationNode = new AnnotationNode(new ClassNode(Artefact.class))
-                        annotationNode.addMember("value", new ConstantExpression(handler.getType()))
+                        transformedClasses.add(classNodeName)
+                        def annotationNode = new AnnotationNode(new ClassNode(Artefact))
+                        annotationNode.addMember('value', new ConstantExpression(handler.getType()))
                         classNode.addAnnotation(annotationNode)
 
                         List<ClassInjector> injectors = cache[handler.type]
@@ -197,20 +199,20 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             def superTypeName = superType.getName()
 
             // generate META-INF/grails.factories
-            File factoriesFile = new File(compilationTargetDirectory, "META-INF/grails.factories")
+            File factoriesFile = new File(compilationTargetDirectory, 'META-INF/grails.factories')
             if (!factoriesFile.parentFile.exists()) {
                 factoriesFile.parentFile.mkdirs()
             }
             loadFromFile(props, factoriesFile)
 
             File sourceDirectory = findSourceDirectory(compilationTargetDirectory)
-            File sourceFactoriesFile = new File(sourceDirectory, "src/main/resources/META-INF/grails.factories")
+            File sourceFactoriesFile = new File(sourceDirectory, 'src/main/resources/META-INF/grails.factories')
             loadFromFile(props, sourceFactoriesFile)
 
             addToProps(props, superTypeName, classNodeName)
 
             factoriesFile.withWriter { Writer writer ->
-                props.store(writer, "Grails Factories File")
+                props.store(writer, 'Grails Factories File')
             }
 
             PropertyFileUtils.makePropertiesFileReproducible(factoriesFile)
@@ -247,7 +249,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
 
     private static File findSourceDirectory(File compilationTargetDirectory) {
         File sourceDirectory = compilationTargetDirectory
-        while (sourceDirectory != null && !(sourceDirectory.name in ["build", "target"])) {
+        while (sourceDirectory != null && !(sourceDirectory.name in ['build', 'target'])) {
             sourceDirectory = sourceDirectory.parentFile
         }
         sourceDirectory.parentFile
@@ -287,7 +289,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
 
             pluginXml.withWriter(StandardCharsets.UTF_8.name()) { Writer writer ->
                 def mkp = new MarkupBuilder(writer)
-                def pluginName = GrailsNameUtils.getLogicalPropertyName(pluginClassNode.name, "GrailsPlugin")
+                def pluginName = GrailsNameUtils.getLogicalPropertyName(pluginClassNode.name, 'GrailsPlugin')
 
                 def pluginProperties = info.getProperties()
                 def excludes = pluginProperties.get('pluginExcludes')
@@ -296,7 +298,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
                     pluginExcludes.addAll(excludes)
                 }
 
-                def grailsVersion = pluginProperties['grailsVersion'] ?: getClass().getPackage().getImplementationVersion() + " > *"
+                def grailsVersion = pluginProperties['grailsVersion'] ?: getClass().getPackage().getImplementationVersion() + ' > *'
                 mkp.plugin(name: pluginName, version: pluginVersion, grailsVersion: grailsVersion) {
                     type(pluginClassNode.name)
 
@@ -310,7 +312,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
                         resources {
                             for (String cn in artefactClasses) {
                                 if (!pluginExcludes.any() { String exc -> antPathMatcher.match(exc, cn.replace('.', '/')) }) {
-                                    resource cn
+                                    resource(cn)
                                 }
                             }
                         }
@@ -331,7 +333,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
 
             def pluginXml = xmlSlurper.parse(pluginXmlFile)
             if (pluginClassNode) {
-                def pluginName = GrailsNameUtils.getLogicalPropertyName(pluginClassNode.name, "GrailsPlugin")
+                def pluginName = GrailsNameUtils.getLogicalPropertyName(pluginClassNode.name, 'GrailsPlugin')
                 pluginXml.@name = pluginName
                 pluginXml.@version = pluginVersion
                 pluginXml.type = pluginClassNode.name
@@ -340,7 +342,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
                 def info = pluginAstReader.readPluginInfo(pluginClassNode)
 
                 def pluginProperties = info.getProperties()
-                def grailsVersion = pluginProperties['grailsVersion'] ?: getClass().getPackage().getImplementationVersion() + " > *"
+                def grailsVersion = pluginProperties['grailsVersion'] ?: getClass().getPackage().getImplementationVersion() + ' > *'
                 pluginXml.@grailsVersion = grailsVersion
                 for (entry in pluginProperties) {
                     pluginXml."$entry.key" = entry.value
@@ -366,7 +368,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             handleExcludes(pluginXml)
 
             Writable writable = new StreamingMarkupBuilder().bind {
-                mkp.yield pluginXml
+                mkp.yield(pluginXml)
             }
 
             pluginXmlFile.withWriter(StandardCharsets.UTF_8.name()) { Writer writer ->
@@ -394,7 +396,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
         }
     }
 
-    public static final ClassNode ARTEFACT_CLASS_NODE = new ClassNode(Artefact.class)
+    public static final ClassNode ARTEFACT_CLASS_NODE = new ClassNode(Artefact)
 
     CompilationUnit compilationUnit
 }

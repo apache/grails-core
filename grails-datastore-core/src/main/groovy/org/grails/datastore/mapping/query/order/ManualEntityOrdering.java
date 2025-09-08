@@ -28,12 +28,13 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.query.Query;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.PropertyAccessorFactory;
 import org.springframework.util.ReflectionUtils;
+
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.query.Query;
 
 /**
  * Manual implementation of query ordering for datastores that don't support native ordering. Not all
@@ -47,7 +48,7 @@ import org.springframework.util.ReflectionUtils;
 public class ManualEntityOrdering {
 
     PersistentEntity entity;
-    private static Map<String, Method> cachedReadMethods = new ConcurrentHashMap<String, Method>();
+    private static Map<String, Method> cachedReadMethods = new ConcurrentHashMap<>();
 
     public ManualEntityOrdering(PersistentEntity entity) {
         this.entity = entity;
@@ -84,7 +85,7 @@ public class ManualEntityOrdering {
     }
 
     public List applyOrder(List results, Query.Order order) {
-       final String name = order.getProperty();
+        final String name = order.getProperty();
 
         final PersistentEntity entity = getEntity();
         PersistentProperty property = entity.getPropertyByName(name);
@@ -126,7 +127,7 @@ public class ManualEntityOrdering {
                                 if (left != null && right == null) return 1;
                                 if (left == null) return -1;
                                 if ((left instanceof Comparable) && (right instanceof Comparable)) {
-                                    return ((Comparable)left).compareTo(right);
+                                    return ((Comparable) left).compareTo(right);
                                 }
                             }
                         }

@@ -18,24 +18,25 @@
  */
 package org.grails.web.databinding.bindingsource
 
-import grails.databinding.CollectionDataBindingSource
-import grails.databinding.DataBindingSource
-import grails.web.mime.MimeType
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 
 import jakarta.annotation.PostConstruct
 
+import org.springframework.beans.factory.annotation.Autowired
+
+import grails.databinding.CollectionDataBindingSource
+import grails.databinding.DataBindingSource
+import grails.web.mime.MimeType
 import org.grails.databinding.bindingsource.DataBindingSourceCreator
 import org.grails.web.util.ClassAndMimeTypeRegistry
-import org.springframework.beans.factory.annotation.Autowired
 
 @CompileStatic
 class DefaultDataBindingSourceRegistry extends ClassAndMimeTypeRegistry<DataBindingSourceCreator, DataBindingSourceCreatorCacheKey> implements DataBindingSourceRegistry {
 
     @Autowired(required = false)
     void setDataBindingSourceCreators(DataBindingSourceCreator[] dataBindingSourceCreators) {
-        for(dbsc in dataBindingSourceCreators) {
+        for (dbsc in dataBindingSourceCreators) {
             addToRegisteredObjects(dbsc.targetType, dbsc)
         }
     }
@@ -50,7 +51,7 @@ class DefaultDataBindingSourceRegistry extends ClassAndMimeTypeRegistry<DataBind
 
     protected DataBindingSourceCreator getDataBindingSourceCreator(MimeType mimeType, Class targetType, Object bindingSource) {
         def bindingSourceCreator = findMatchingObjectForMimeType(mimeType, targetType)
-        if(bindingSourceCreator == null) {
+        if (bindingSourceCreator == null) {
             bindingSourceCreator = new DefaultDataBindingSourceCreator()
         }
         return bindingSourceCreator
@@ -70,7 +71,7 @@ class DefaultDataBindingSourceRegistry extends ClassAndMimeTypeRegistry<DataBind
     @Override
     CollectionDataBindingSource createCollectionDataBindingSource(MimeType mimeType, Class bindingTargetType, bindingSource) {
         def helper = getDataBindingSourceCreator(mimeType, bindingTargetType, bindingSource)
-                helper.createCollectionDataBindingSource(mimeType, bindingTargetType, bindingSource)
+        helper.createCollectionDataBindingSource(mimeType, bindingTargetType, bindingSource)
     }
 
     @Override

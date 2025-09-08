@@ -18,19 +18,13 @@
  */
 package org.grails.compiler.injection;
 
-import grails.artefact.Artefact;
-
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
-import grails.compiler.ast.AstTransformer;
-import grails.compiler.ast.GrailsArtefactClassInjector;
-import grails.compiler.ast.GrailsDomainClassInjector;
 import org.apache.groovy.ast.tools.AnnotatedNodeUtils;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
@@ -38,11 +32,25 @@ import org.codehaus.groovy.ast.GenericsType;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.PropertyNode;
-import org.codehaus.groovy.ast.expr.*;
+import org.codehaus.groovy.ast.expr.BooleanExpression;
+import org.codehaus.groovy.ast.expr.ClassExpression;
+import org.codehaus.groovy.ast.expr.ConstantExpression;
+import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.GStringExpression;
+import org.codehaus.groovy.ast.expr.ListExpression;
+import org.codehaus.groovy.ast.expr.MapEntryExpression;
+import org.codehaus.groovy.ast.expr.MapExpression;
+import org.codehaus.groovy.ast.expr.TernaryExpression;
+import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.classgen.GeneratorContext;
 import org.codehaus.groovy.control.SourceUnit;
+
+import grails.artefact.Artefact;
+import grails.compiler.ast.AstTransformer;
+import grails.compiler.ast.GrailsArtefactClassInjector;
+import grails.compiler.ast.GrailsDomainClassInjector;
 import org.grails.core.artefact.DomainClassArtefactHandler;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.io.support.GrailsResourceUtils;
@@ -57,7 +65,7 @@ import org.grails.io.support.GrailsResourceUtils;
 @AstTransformer
 public class DefaultGrailsDomainClassInjector implements GrailsDomainClassInjector, GrailsArtefactClassInjector {
 
-    private List<ClassNode> classesWithInjectedToString = new ArrayList<ClassNode>();
+    private List<ClassNode> classesWithInjectedToString = new ArrayList<>();
 
     public void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode) {
         if (GrailsASTUtils.isDomainClass(classNode, source) && shouldInjectClass(classNode)) {
@@ -100,7 +108,7 @@ public class DefaultGrailsDomainClassInjector implements GrailsDomainClassInject
 
     private void injectAssociations(ClassNode classNode) {
 
-        List<PropertyNode> propertiesToAdd = new ArrayList<PropertyNode>();
+        List<PropertyNode> propertiesToAdd = new ArrayList<>();
         for (PropertyNode propertyNode : classNode.getProperties()) {
             final String name = propertyNode.getName();
             final boolean isHasManyProperty = name.equals(GormProperties.HAS_MANY);
@@ -241,7 +249,6 @@ public class DefaultGrailsDomainClassInjector implements GrailsDomainClassInject
     public void performInjection(SourceUnit source, ClassNode classNode) {
         performInjection(source, null, classNode);
     }
-
 
     public void performInjectionOnAnnotatedClass(SourceUnit source, ClassNode classNode) {
         performInjectionOnAnnotatedEntity(classNode);

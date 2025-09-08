@@ -18,32 +18,33 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import spock.lang.PendingFeature
+
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.PlantCategory
 import org.apache.grails.data.testing.tck.domains.Publication
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.PendingFeature
 
 /**
  * @author graemerocher
  */
 class NamedQuerySpec extends GrailsDataTckSpec {
 
-    void "Test Named Query Passing Multiple Params To Nested Named Query"() {
+    void 'Test Named Query Passing Multiple Params To Nested Named Query'() {
         given:
         def now = new Date()
 
-        new Publication(title: "Some Book",
+        new Publication(title: 'Some Book',
                 datePublished: now - 10, paperback: false).save()
-        new Publication(title: "Some Book",
+        new Publication(title: 'Some Book',
                 datePublished: now - 1000, paperback: true).save()
-        new Publication(title: "Some Book",
+        new Publication(title: 'Some Book',
                 datePublished: now - 2, paperback: true).save()
 
-        new Publication(title: "Some Title",
+        new Publication(title: 'Some Title',
                 datePublished: now - 2, paperback: false).save()
-        new Publication(title: "Some Title",
+        new Publication(title: 'Some Title',
                 datePublished: now - 1000, paperback: false).save()
-        new Publication(title: "Some Title",
+        new Publication(title: 'Some Title',
                 datePublished: now - 2, paperback: true).save(flush: true)
         manager.session.clear()
 
@@ -63,22 +64,22 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         results?.size() == 2
     }
 
-    void "Test findWhere method after chaining named queries"() {
+    void 'Test findWhere method after chaining named queries'() {
         given:
         def now = new Date()
 
-        new Publication(title: "Book 1",
+        new Publication(title: 'Book 1',
                 datePublished: now - 10, paperback: false).save()
-        new Publication(title: "Book 2",
+        new Publication(title: 'Book 2',
                 datePublished: now - 1000, paperback: true).save()
-        new Publication(title: "Book 3",
+        new Publication(title: 'Book 3',
                 datePublished: now - 10, paperback: true).save()
 
-        new Publication(title: "Some Title",
+        new Publication(title: 'Some Title',
                 datePublished: now - 10, paperback: false).save()
-        new Publication(title: "Some Title",
+        new Publication(title: 'Some Title',
                 datePublished: now - 1000, paperback: false).save()
-        new Publication(title: "Some Title",
+        new Publication(title: 'Some Title',
                 datePublished: now - 10, paperback: true).save(flush: true)
         manager.session.clear()
 
@@ -89,29 +90,29 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         1 == results?.size()
     }
 
-    void "Test chaining named queries"() {
+    void 'Test chaining named queries'() {
 
         given:
         def now = new Date()
         [true, false].each { isPaperback ->
             4.times {
                 Publication.newInstance(
-                        title: "Book Some",
+                        title: 'Book Some',
                         datePublished: now - 10, paperback: isPaperback).save()
                 Publication.newInstance(
-                        title: "Book Some Other",
+                        title: 'Book Some Other',
                         datePublished: now - 10, paperback: isPaperback).save()
                 Publication.newInstance(
-                        title: "Some Other Title",
+                        title: 'Some Other Title',
                         datePublished: now - 10, paperback: isPaperback).save()
                 Publication.newInstance(
-                        title: "Book Some",
+                        title: 'Book Some',
                         datePublished: now - 1000, paperback: isPaperback).save()
                 Publication.newInstance(
-                        title: "Book Some Other",
+                        title: 'Book Some Other',
                         datePublished: now - 1000, paperback: isPaperback).save()
                 Publication.newInstance(
-                        title: "Some Other Title",
+                        title: 'Some Other Title',
                         datePublished: now - 1000, paperback: isPaperback).save()
             }
         }
@@ -121,7 +122,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         when:
         def results = Publication.recentPublications().publicationsWithBookInTitle().list()
 
-        then: "The result size should be 16 when returned from chained queries"
+        then: 'The result size should be 16 when returned from chained queries'
         16 == results?.size()
 
         when:
@@ -131,7 +132,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.recentPublications.publicationsWithBookInTitle.list()
-        then: "The result size should be 16 when returned from chained queries"
+        then: 'The result size should be 16 when returned from chained queries'
         16 == results?.size()
 
         when:
@@ -141,7 +142,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.paperbacks().recentPublications().publicationsWithBookInTitle().list()
-        then: "The result size should be 8 when returned from chained queries"
+        then: 'The result size should be 8 when returned from chained queries'
         8 == results?.size()
 
         when:
@@ -151,12 +152,12 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.recentPublications().publicationsWithBookInTitle().findAllByPaperback(true)
-        then: "The result size should be 8"
+        then: 'The result size should be 8'
         8 == results?.size()
 
         when:
         results = Publication.paperbacks.recentPublications.publicationsWithBookInTitle.list()
-        then: "The result size should be 8 when returned from chained queries"
+        then: 'The result size should be 8 when returned from chained queries'
         8 == results?.size()
 
         when:
@@ -165,7 +166,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         8 == results
     }
 
-    void "Test named query with disjunction"() {
+    void 'Test named query with disjunction'() {
         given:
         def now = new Date()
         def oldDate = now - 2000
@@ -184,7 +185,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         3 == publications?.size()
     }
 
-    void "Test max and offset parameter"() {
+    void 'Test max and offset parameter'() {
         given:
         (1..25).each { num ->
             Publication.newInstance(title: "Book Number ${num}",
@@ -204,12 +205,12 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         10 == pubs?.size()
     }
 
-    void "Test that parameter to get is converted"() {
+    void 'Test that parameter to get is converted'() {
 
         given:
         def now = new Date()
-        def newPublication = Publication.newInstance(title: "Some New Book", datePublished: now - 10).save(failOnError: true)
-        def oldPublication = Publication.newInstance(title: "Some Old Book",
+        def newPublication = Publication.newInstance(title: 'Some New Book', datePublished: now - 10).save(failOnError: true)
+        def oldPublication = Publication.newInstance(title: 'Some Old Book',
                 datePublished: now - 900).save(flush: true, failOnError: true)
         manager.session.clear()
 
@@ -221,16 +222,16 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         'Some New Book' == publication.title
     }
 
-    void "Test named query with additional criteria closure"() {
+    void 'Test named query with additional criteria closure'() {
 
         given:
         def now = new Date()
         6.times {
-            Publication.newInstance(title: "Some Book",
+            Publication.newInstance(title: 'Some Book',
                     datePublished: now - 10).save(failOnError: true)
-            Publication.newInstance(title: "Some Other Book",
+            Publication.newInstance(title: 'Some Other Book',
                     datePublished: now - 10).save(failOnError: true)
-            Publication.newInstance(title: "Some Book",
+            Publication.newInstance(title: 'Some Book',
                     datePublished: now - 900).save(failOnError: true)
         }
         manager.session.flush()
@@ -238,7 +239,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         def publications = Publication.recentPublications {
-            eq 'title', 'Some Book'
+            eq('title', 'Some Book')
         }
 
         then:
@@ -246,7 +247,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         publications = Publication.recentPublications {
-            like 'title', 'Some%'
+            like('title', 'Some%')
         }
 
         then:
@@ -254,7 +255,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         def cnt = Publication.recentPublications.count {
-            eq 'title', 'Some Book'
+            eq('title', 'Some Book')
         }
 
         then:
@@ -262,14 +263,14 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         publications = Publication.recentPublications(max: 3) {
-            like 'title', 'Some%'
+            like('title', 'Some%')
         }
 
         then:
         3 == publications?.size()
     }
 
-    void "Test passing parameters to additional criteria"() {
+    void 'Test passing parameters to additional criteria'() {
         given:
         def now = new Date()
 
@@ -284,7 +285,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         def results = Publication.publishedAfter(now - 5) {
-            eq 'paperback', true
+            eq('paperback', true)
         }
 
         then:
@@ -292,7 +293,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedAfter(now - 5, [max: 2, offset: 1]) {
-            eq 'paperback', true
+            eq('paperback', true)
         }
 
         then:
@@ -300,7 +301,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedBetween(now - 5, now + 1) {
-            eq 'paperback', true
+            eq('paperback', true)
         }
 
         then:
@@ -308,7 +309,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedBetween(now - 5, now + 1, [max: 2, offset: 1]) {
-            eq 'paperback', true
+            eq('paperback', true)
         }
 
         then:
@@ -316,7 +317,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedAfter(now - 1005) {
-            eq 'paperback', true
+            eq('paperback', true)
         }
 
         then:
@@ -324,7 +325,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedAfter(now - 5) {
-            eq 'paperback', false
+            eq('paperback', false)
         }
 
         then:
@@ -332,7 +333,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedAfter(now - 5, [max: 2, offset: 1]) {
-            eq 'paperback', false
+            eq('paperback', false)
         }
 
         then:
@@ -340,7 +341,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedBetween(now - 5, now + 1) {
-            eq 'paperback', false
+            eq('paperback', false)
         }
 
         then:
@@ -348,7 +349,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedBetween(now - 5, now + 1, [max: 2, offset: 1]) {
-            eq 'paperback', false
+            eq('paperback', false)
         }
 
         then:
@@ -356,22 +357,22 @@ class NamedQuerySpec extends GrailsDataTckSpec {
 
         when:
         results = Publication.publishedAfter(now - 1005) {
-            eq 'paperback', false
+            eq('paperback', false)
         }
 
         then:
         0 == results?.size()
     }
 
-    void "Test get method followed named query chaining"() {
+    void 'Test get method followed named query chaining'() {
         given:
         def now = new Date()
 
         def oldPaperBackWithBookInTitleId = new Publication(
-                title: "Book 1",
+                title: 'Book 1',
                 datePublished: now - 1000, paperback: true).save().id
         def newPaperBackWithBookInTitleId = new Publication(
-                title: "Book 2",
+                title: 'Book 2',
                 datePublished: now, paperback: true).save().id
 
         manager.session.flush()
@@ -402,13 +403,13 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         publication != null
     }
 
-    void "Test named query with findBy*() dynamic finder"() {
+    void 'Test named query with findBy*() dynamic finder'() {
 
         given:
         def now = new Date()
-        Publication.newInstance(title: "Book 1", datePublished: now - 900).save(failOnError: true)
+        Publication.newInstance(title: 'Book 1', datePublished: now - 900).save(failOnError: true)
         def recentBookId = Publication.newInstance(
-                title: "Book 1",
+                title: 'Book 1',
                 datePublished: now - 10).save(flush: true).id
         manager.session.clear()
 
@@ -420,15 +421,15 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         recentBookId == publication.id
     }
 
-    void "Test named query with findAllBy*() dyamic finder"() {
+    void 'Test named query with findAllBy*() dyamic finder'() {
         given:
         def now = new Date()
         3.times {
-            new Publication(title: "Some Recent Book",
+            new Publication(title: 'Some Recent Book',
                     datePublished: now - 10).save(failOnError: true)
-            new Publication(title: "Some Other Book",
+            new Publication(title: 'Some Other Book',
                     datePublished: now - 10).save(failOnError: true)
-            new Publication(title: "Some Book",
+            new Publication(title: 'Some Book',
                     datePublished: now - 900).save(flush: true, failOnError: true)
         }
         manager.session.clear()
@@ -444,20 +445,20 @@ class NamedQuerySpec extends GrailsDataTckSpec {
     }
 
     @PendingFeature(reason = 'queries on associations not yet supported')
-    void "Test named query with relationships in criteria"() {
+    void 'Test named query with relationships in criteria'() {
 
         given:
 
-        new PlantCategory(name: "leafy")
-                .addToPlants(goesInPatch: true, name: "Lettuce")
+        new PlantCategory(name: 'leafy')
+                .addToPlants(goesInPatch: true, name: 'Lettuce')
                 .save(flush: true)
 
-        new PlantCategory(name: "groovy")
+        new PlantCategory(name: 'groovy')
                 .addToPlants(goesInPatch: true, name: 'Gplant')
                 .save(flush: true)
 
-        new PlantCategory(name: "grapes")
-                .addToPlants(goesInPatch: false, name: "Gray")
+        new PlantCategory(name: 'grapes')
+                .addToPlants(goesInPatch: false, name: 'Gray')
                 .save(flush: true)
 
         manager.session.clear()
@@ -487,22 +488,22 @@ class NamedQuerySpec extends GrailsDataTckSpec {
     }
 
     @PendingFeature(reason = 'queries on associations not yet supported')
-    void "Test list distinct entities"() {
+    void 'Test list distinct entities'() {
 
         given:
-        new PlantCategory(name: "leafy")
-                .addToPlants(goesInPatch: true, name: "lettuce")
-                .addToPlants(goesInPatch: true, name: "cabbage")
+        new PlantCategory(name: 'leafy')
+                .addToPlants(goesInPatch: true, name: 'lettuce')
+                .addToPlants(goesInPatch: true, name: 'cabbage')
                 .save(flush: true)
 
-        new PlantCategory(name: "orange")
-                .addToPlants(goesInPatch: true, name: "carrots")
-                .addToPlants(goesInPatch: true, name: "pumpkin")
+        new PlantCategory(name: 'orange')
+                .addToPlants(goesInPatch: true, name: 'carrots')
+                .addToPlants(goesInPatch: true, name: 'pumpkin')
                 .save(flush: true)
 
-        new PlantCategory(name: "grapes")
-                .addToPlants(goesInPatch: false, name: "red")
-                .addToPlants(goesInPatch: false, name: "white")
+        new PlantCategory(name: 'grapes')
+                .addToPlants(goesInPatch: false, name: 'red')
+                .addToPlants(goesInPatch: false, name: 'white')
                 .save(flush: true)
 
         manager.session.clear()
@@ -519,21 +520,21 @@ class NamedQuerySpec extends GrailsDataTckSpec {
     }
 
     @PendingFeature(reason = 'queries on associations not yet supported')
-    void "Another test on listing distinct entities"() {
+    void 'Another test on listing distinct entities'() {
         given:
-        new PlantCategory(name: "leafy")
-                .addToPlants(goesInPatch: true, name: "lettuce")
-                .addToPlants(goesInPatch: true, name: "cabbage")
+        new PlantCategory(name: 'leafy')
+                .addToPlants(goesInPatch: true, name: 'lettuce')
+                .addToPlants(goesInPatch: true, name: 'cabbage')
                 .save(flush: true)
 
-        new PlantCategory(name: "orange")
-                .addToPlants(goesInPatch: true, name: "carrots")
-                .addToPlants(goesInPatch: true, name: "pumpkin")
+        new PlantCategory(name: 'orange')
+                .addToPlants(goesInPatch: true, name: 'carrots')
+                .addToPlants(goesInPatch: true, name: 'pumpkin')
                 .save(flush: true)
 
-        new PlantCategory(name: "grapes")
-                .addToPlants(goesInPatch: false, name: "red")
-                .addToPlants(goesInPatch: false, name: "white")
+        new PlantCategory(name: 'grapes')
+                .addToPlants(goesInPatch: false, name: 'red')
+                .addToPlants(goesInPatch: false, name: 'white')
                 .save(flush: true)
 
         manager.session.clear()
@@ -554,10 +555,10 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         given:
         def now = new Date()
 
-        new Publication(title: "Ten Day Old Paperback",
+        new Publication(title: 'Ten Day Old Paperback',
                 datePublished: now - 10,
                 paperback: true).save(flush: true)
-        new Publication(title: "One Hundred Day Old Paperback",
+        new Publication(title: 'One Hundred Day Old Paperback',
                 datePublished: now - 100,
                 paperback: true).save(flush: true)
         manager.session.clear()
@@ -575,23 +576,22 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         'One Hundred Day Old Paperback' == result?.title
     }
 
-
-    void "Test named query passing multiple parameters to a nested query"() {
+    void 'Test named query passing multiple parameters to a nested query'() {
         given:
         def now = new Date()
 
-        new Publication(title: "Some Book",
+        new Publication(title: 'Some Book',
                 datePublished: now - 10, paperback: false).save()
-        new Publication(title: "Some Book",
+        new Publication(title: 'Some Book',
                 datePublished: now - 1000, paperback: true).save()
-        new Publication(title: "Some Book",
+        new Publication(title: 'Some Book',
                 datePublished: now - 2, paperback: true).save()
 
-        new Publication(title: "Some Title",
+        new Publication(title: 'Some Title',
                 datePublished: now - 2, paperback: false).save()
-        new Publication(title: "Some Title",
+        new Publication(title: 'Some Title',
                 datePublished: now - 1000, paperback: false).save()
-        new Publication(title: "Some Title",
+        new Publication(title: 'Some Title',
                 datePublished: now - 2, paperback: true).save(flush: true)
         manager.session.clear()
 
@@ -602,9 +602,8 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         2 == results?.size()
     }
 
-
     void testChainingQueriesWithParams() {
-        def Publication = ga.getDomainClass("Publication").clazz
+        def Publication = ga.getDomainClass('Publication').clazz
 
         def now = new Date()
         def lastWeek = now - 7
@@ -630,19 +629,19 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         manager.session.clear()
 
         def results = Publication.recentPublicationsByTitle('Some Book').publishedAfter(now - 2).list()
-        assertEquals 'wrong number of books were returned from chained queries', 2, results?.size()
+        assertEquals('wrong number of books were returned from chained queries', 2, results?.size())
 
         results = Publication.recentPublicationsByTitle('Some Book').publishedAfter(now - 2).count()
-        assertEquals 2, results
+        assertEquals(2, results)
 
         results = Publication.recentPublicationsByTitle('Some Book').publishedAfter(lastWeek - 2).list()
-        assertEquals 'wrong number of books were returned from chained queries', 5, results?.size()
+        assertEquals('wrong number of books were returned from chained queries', 5, results?.size())
 
         results = Publication.recentPublicationsByTitle('Some Book').publishedAfter(lastWeek - 2).count()
-        assertEquals 5, results
+        assertEquals(5, results)
     }
 
-    void "Test referencing named query before any dynamic methods"() {
+    void 'Test referencing named query before any dynamic methods'() {
 
         /*
          * currently this will work:
@@ -661,7 +660,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         0 == publications.size()
     }
 
-    void "Test named query with conjunction"() {
+    void 'Test named query with conjunction'() {
         given:
         def now = new Date()
         def oldDate = now - 2000
@@ -680,13 +679,13 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         1 == publications?.size()
     }
 
-    void "Test named query with list() method"() {
+    void 'Test named query with list() method'() {
 
         given:
         def now = new Date()
-        Publication.newInstance(title: "Some New Book",
+        Publication.newInstance(title: 'Some New Book',
                 datePublished: now - 10).save(failOnError: true)
-        Publication.newInstance(title: "Some Old Book",
+        Publication.newInstance(title: 'Some Old Book',
                 datePublished: now - 900).save(flush: true, failOnError: true)
 
         manager.session.clear()
@@ -700,9 +699,9 @@ class NamedQuerySpec extends GrailsDataTckSpec {
     }
 
     @PendingFeature(reason = 'findby boolean queries not yet supported')
-    void "Test named query with findAll by boolean property"() {
+    void 'Test named query with findAll by boolean property'() {
         given:
-        def Publication = ga.getDomainClass("Publication").clazz
+        def Publication = ga.getDomainClass('Publication').clazz
         def now = new Date()
 
         Publication.newInstance(title: 'Some Book', datePublished: now - 900, paperback: false).save(failOnError: true)
@@ -719,7 +718,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         publications[1].title == 'Some Book'
     }
 
-    void "Test named query with find by boolean property"() {
+    void 'Test named query with find by boolean property'() {
 
         given:
         def now = new Date()
@@ -736,15 +735,15 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         publication.title == 'Some Book'
     }
 
-    void "Test named query with countBy*() dynamic finder"() {
+    void 'Test named query with countBy*() dynamic finder'() {
         given:
         def now = new Date()
         3.times {
-            Publication.newInstance(title: "Some Book",
+            Publication.newInstance(title: 'Some Book',
                     datePublished: now - 10).save(failOnError: true)
-            Publication.newInstance(title: "Some Other Book",
+            Publication.newInstance(title: 'Some Other Book',
                     datePublished: now - 10).save(failOnError: true)
-            Publication.newInstance(title: "Some Book",
+            Publication.newInstance(title: 'Some Book',
                     datePublished: now - 900).save(flush: true, failOnError: true)
         }
         manager.session.clear()
@@ -756,16 +755,16 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         3 == numberOfNewBooksNamedSomeBook
     }
 
-    void "Test named query with listOrderBy*() dynamic finder"() {
+    void 'Test named query with listOrderBy*() dynamic finder'() {
 
         given:
         def now = new Date()
 
-        Publication.newInstance(title: "Book 1", datePublished: now).save(failOnError: true)
-        Publication.newInstance(title: "Book 5", datePublished: now).save(failOnError: true)
-        Publication.newInstance(title: "Book 3", datePublished: now - 900).save(failOnError: true)
-        Publication.newInstance(title: "Book 2", datePublished: now - 900).save(failOnError: true)
-        Publication.newInstance(title: "Book 4", datePublished: now).save(flush: true, failOnError: true)
+        Publication.newInstance(title: 'Book 1', datePublished: now).save(failOnError: true)
+        Publication.newInstance(title: 'Book 5', datePublished: now).save(failOnError: true)
+        Publication.newInstance(title: 'Book 3', datePublished: now - 900).save(failOnError: true)
+        Publication.newInstance(title: 'Book 2', datePublished: now - 900).save(failOnError: true)
+        Publication.newInstance(title: 'Book 4', datePublished: now).save(flush: true, failOnError: true)
         manager.session.clear()
 
         when:
@@ -778,15 +777,15 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         'Book 5' == publications[2].title
     }
 
-    void "Test get with id of object which does not match criteria"() {
+    void 'Test get with id of object which does not match criteria'() {
 
         given:
         def now = new Date()
         def hasBookInTitle = Publication.newInstance(
-                title: "Book 1",
+                title: 'Book 1',
                 datePublished: now - 10).save(failOnError: true)
         def doesNotHaveBookInTitle = Publication.newInstance(
-                title: "Some Publication",
+                title: 'Some Publication',
                 datePublished: now - 900).save(flush: true, failOnError: true)
 
         manager.session.clear()
@@ -798,15 +797,15 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         result == null
     }
 
-    void "Test get method returns correct object"() {
+    void 'Test get method returns correct object'() {
 
         given:
         def now = new Date()
         def newPublication = Publication.newInstance(
-                title: "Some New Book",
+                title: 'Some New Book',
                 datePublished: now - 10).save(failOnError: true)
         def oldPublication = Publication.newInstance(
-                title: "Some Old Book",
+                title: 'Some Old Book',
                 datePublished: now - 900).save(flush: true, failOnError: true)
 
         manager.session.clear()
@@ -819,15 +818,15 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         'Some New Book' == publication.title
     }
 
-    void "Test get method returns null"() {
+    void 'Test get method returns null'() {
 
         given:
         def now = new Date()
         def newPublication = Publication.newInstance(
-                title: "Some New Book",
+                title: 'Some New Book',
                 datePublished: now - 10).save(failOnError: true)
         def oldPublication = Publication.newInstance(
-                title: "Some Old Book",
+                title: 'Some Old Book',
                 datePublished: now - 900).save(flush: true, failOnError: true)
 
         manager.session.clear()
@@ -839,15 +838,15 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         publication == null
     }
 
-    void "Test count method following named criteria"() {
+    void 'Test count method following named criteria'() {
 
         given:
         def now = new Date()
         def newPublication = Publication.newInstance(
-                title: "Book Some New ",
+                title: 'Book Some New ',
                 datePublished: now - 10).save(failOnError: true)
         def oldPublication = Publication.newInstance(
-                title: "Book Some Old ",
+                title: 'Book Some Old ',
                 datePublished: now - 900).save(flush: true, failOnError: true)
 
         manager.session.clear()
@@ -861,15 +860,15 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         1 == recentPublicationsCount
     }
 
-    void "Test count with parameterized named query"() {
+    void 'Test count with parameterized named query'() {
 
         given:
         def now = new Date()
-        Publication.newInstance(title: "Book",
+        Publication.newInstance(title: 'Book',
                 datePublished: now - 10).save(failOnError: true)
-        Publication.newInstance(title: "Book",
+        Publication.newInstance(title: 'Book',
                 datePublished: now - 10).save(failOnError: true)
-        Publication.newInstance(title: "Book",
+        Publication.newInstance(title: 'Book',
                 datePublished: now - 900).save(flush: true, failOnError: true)
 
         manager.session.clear()
@@ -881,7 +880,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         2 == recentPublicationsCount
     }
 
-    void "Test max parameter"() {
+    void 'Test max parameter'() {
         given:
         (1..25).each { num ->
             Publication.newInstance(title: "Book Number ${num}",
@@ -894,7 +893,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         10 == pubs?.size()
     }
 
-    void "Test max results"() {
+    void 'Test max results'() {
         given:
         (1..25).each { num ->
             Publication.newInstance(title: 'Book Title',
@@ -908,7 +907,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         10 == pubs?.size()
     }
 
-    void "Test findAllWhere method combined with named query"() {
+    void 'Test findAllWhere method combined with named query'() {
         given:
         def now = new Date()
         (1..5).each { num ->
@@ -925,7 +924,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         3 == pubs?.size()
     }
 
-    void "Test findAllWhere method with named query and disjunction"() {
+    void 'Test findAllWhere method with named query and disjunction'() {
 
         given:
         def now = new Date()
@@ -957,13 +956,13 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         2 == publications?.size()
     }
 
-    void "Test get with parameterized named query"() {
+    void 'Test get with parameterized named query'() {
 
         given:
         def now = new Date()
-        def recentPub = Publication.newInstance(title: "Some Title",
+        def recentPub = Publication.newInstance(title: 'Some Title',
                 datePublished: now).save()
-        def oldPub = Publication.newInstance(title: "Some Title",
+        def oldPub = Publication.newInstance(title: 'Some Title',
                 datePublished: now - 900).save()
 
         when:
@@ -979,7 +978,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         recentPub.id == pub?.id
     }
 
-    void "Test named query with one parameter"() {
+    void 'Test named query with one parameter'() {
 
         given:
         def now = new Date()
@@ -998,7 +997,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         3 == pubs?.size()
     }
 
-    void "Test named query with multiple parameters"() {
+    void 'Test named query with multiple parameters'() {
 
         given:
         def now = new Date()
@@ -1015,7 +1014,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         3 == pubs?.size()
     }
 
-    void "Test named query with multiple parameters and dynamic finder"() {
+    void 'Test named query with multiple parameters and dynamic finder'() {
         given:
         def now = new Date()
         (1..5).each { num ->
@@ -1034,7 +1033,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         2 == pubs?.size()
     }
 
-    void "Test named query with multiple parameters and map"() {
+    void 'Test named query with multiple parameters and map'() {
 
         given:
         def now = new Date()
@@ -1051,7 +1050,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         4 == pubs?.size()
     }
 
-    void "Test findWhere with named query"() {
+    void 'Test findWhere with named query'() {
 
         given:
         def now = new Date()

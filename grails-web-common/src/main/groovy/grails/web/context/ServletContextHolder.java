@@ -18,10 +18,10 @@
  */
 package grails.web.context;
 
+import jakarta.servlet.ServletContext;
+
 import grails.util.Holders;
 import org.grails.web.context.ServletEnvironmentGrailsApplicationDiscoveryStrategy;
-
-import jakarta.servlet.ServletContext;
 
 /**
  * Holds a reference to the ServletContext.

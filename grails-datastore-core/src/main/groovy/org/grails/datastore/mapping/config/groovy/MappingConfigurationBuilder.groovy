@@ -21,7 +21,6 @@ package org.grails.datastore.mapping.config.groovy
 import org.grails.datastore.mapping.config.Entity
 import org.grails.datastore.mapping.config.Property
 
-
 /**
  * Interface for objects that build a mapping configuration
  *

@@ -19,8 +19,10 @@
 package org.grails.cli.profile.repository
 
 import groovy.transform.CompileStatic
+
 import org.eclipse.aether.artifact.Artifact
 import org.eclipse.aether.artifact.DefaultArtifact
+
 import org.grails.cli.GrailsCli
 import org.grails.cli.profile.AbstractProfile
 import org.grails.cli.profile.Command
@@ -42,7 +44,7 @@ abstract class AbstractJarProfileRepository implements ProfileRepository {
 
     protected final List<Profile> allProfiles = []
     protected final Map<String, Profile> profilesByName = [:]
-    protected static final String DEFAULT_PROFILE_GROUPID = "org.apache.grails.profiles"
+    protected static final String DEFAULT_PROFILE_GROUPID = 'org.apache.grails.profiles'
 
     private Set<URL> registeredUrls = []
 
@@ -81,35 +83,35 @@ abstract class AbstractJarProfileRepository implements ProfileRepository {
         String groupId = DEFAULT_PROFILE_GROUPID
         String version = null
 
-        Map<String, Map> defaultValues = GrailsCli.getSetting("grails.profiles", Map, [:])
-        defaultValues.remove("repositories")
+        Map<String, Map> defaultValues = GrailsCli.getSetting('grails.profiles', Map, [:])
+        defaultValues.remove('repositories')
         def data = defaultValues.get(profileName)
-        if(data instanceof Map) {
-            groupId = data.get("groupId")
-            version = data.get("version")
+        if (data instanceof Map) {
+            groupId = data.get('groupId')
+            version = data.get('version')
         }
 
         return new DefaultArtifact(groupId, profileName, null, version)
     }
 
     protected void registerProfile(URL url, ClassLoader parent) {
-        if(registeredUrls.contains(url)) return
+        if (registeredUrls.contains(url)) return
 
         def classLoader = new URLClassLoader([url] as URL[], parent)
-        def profileYml = classLoader.getResource("META-INF/grails-profile/profile.yml")
+        def profileYml = classLoader.getResource('META-INF/grails-profile/profile.yml')
         if (profileYml != null) {
             registeredUrls.add(url)
-            def profile = new JarProfile(this, new ClassPathResource("META-INF/grails-profile/", classLoader), classLoader)
+            def profile = new JarProfile(this, new ClassPathResource('META-INF/grails-profile/', classLoader), classLoader)
             profile.profileRepository = this
-            allProfiles.add profile
+            allProfiles.add(profile)
             profilesByName[profile.name] = profile
         }
     }
     private void visitTopologicalSort(Profile profile, List<Profile> sortedProfiles, Set<Profile> visitedProfiles) {
-        if(profile != null && !visitedProfiles.contains(profile)) {
+        if (profile != null && !visitedProfiles.contains(profile)) {
             visitedProfiles.add(profile)
             profile.getExtends().each { Profile dependentProfile ->
-                visitTopologicalSort(dependentProfile, sortedProfiles, visitedProfiles);
+                visitTopologicalSort(dependentProfile, sortedProfiles, visitedProfiles)
             }
             sortedProfiles.add(profile)
         }
@@ -118,7 +120,7 @@ abstract class AbstractJarProfileRepository implements ProfileRepository {
     static class JarProfile extends AbstractProfile {
 
         JarProfile(ProfileRepository repository, Resource profileDir, ClassLoader classLoader) {
-            super(profileDir,classLoader)
+            super(profileDir, classLoader)
             this.profileRepository = repository
             initialize()
         }
@@ -131,9 +133,9 @@ abstract class AbstractJarProfileRepository implements ProfileRepository {
         @Override
         Iterable<Command> getCommands(ProjectContext context) {
             super.getCommands(context)
-            for(cmd in internalCommands) {
-                if(cmd instanceof ProjectContextAware) {
-                    ((ProjectContextAware)cmd).setProjectContext(context)
+            for (cmd in internalCommands) {
+                if (cmd instanceof ProjectContextAware) {
+                    ((ProjectContextAware) cmd).setProjectContext(context)
                 }
                 commandsByName[cmd.name] = cmd
             }

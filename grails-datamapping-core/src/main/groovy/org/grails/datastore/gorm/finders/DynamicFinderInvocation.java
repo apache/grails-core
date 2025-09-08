@@ -18,10 +18,11 @@
  */
 package org.grails.datastore.gorm.finders;
 
-import grails.gorm.DetachedCriteria;
+import java.util.List;
+
 import groovy.lang.Closure;
 
-import java.util.List;
+import grails.gorm.DetachedCriteria;
 
 /**
  * Value object used to construct all the information necessary to invoke a dynamic finder.

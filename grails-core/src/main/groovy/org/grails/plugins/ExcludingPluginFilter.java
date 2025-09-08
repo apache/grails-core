@@ -18,13 +18,13 @@
  */
 package org.grails.plugins;
 
-import grails.plugins.GrailsPlugin;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
+import grails.plugins.GrailsPlugin;
 
 /**
  * Implementation of <code>PluginFilter</code> which removes that all of the supplied

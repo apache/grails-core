@@ -19,17 +19,23 @@
 
 package org.grails.orm.hibernate.cfg;
 
-import org.grails.datastore.gorm.GormEntity;
-import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
-import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry;
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.validation.ValidatorRegistry;
-import org.grails.orm.hibernate.EventListenerIntegrator;
-import org.grails.orm.hibernate.GrailsSessionContext;
-import org.grails.orm.hibernate.HibernateEventListeners;
-import org.grails.orm.hibernate.MetadataIntegrator;
-import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+
+import javax.sql.DataSource;
+
+import jakarta.persistence.Embeddable;
+import jakarta.persistence.Entity;
+import jakarta.persistence.MappedSuperclass;
+
 import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
 import org.hibernate.SessionFactory;
@@ -50,6 +56,7 @@ import org.hibernate.internal.util.config.ConfigurationHelper;
 import org.hibernate.property.access.spi.PropertyAccessStrategy;
 import org.hibernate.service.ServiceRegistry;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
+
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -64,12 +71,15 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.ClassUtils;
 
-import jakarta.persistence.Embeddable;
-import jakarta.persistence.Entity;
-import jakarta.persistence.MappedSuperclass;
-import javax.sql.DataSource;
-import java.io.IOException;
-import java.util.*;
+import org.grails.datastore.gorm.GormEntity;
+import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.orm.hibernate.EventListenerIntegrator;
+import org.grails.orm.hibernate.GrailsSessionContext;
+import org.grails.orm.hibernate.HibernateEventListeners;
+import org.grails.orm.hibernate.MetadataIntegrator;
+import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
 
 /**
  * A Configuration that uses a MappingContext to configure Hibernate
@@ -82,9 +92,10 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
     private static final String RESOURCE_PATTERN = "/**/*.class";
 
     private static final TypeFilter[] ENTITY_TYPE_FILTERS = new TypeFilter[] {
-            new AnnotationTypeFilter(Entity.class, false),
-            new AnnotationTypeFilter(Embeddable.class, false),
-            new AnnotationTypeFilter(MappedSuperclass.class, false)};
+        new AnnotationTypeFilter(Entity.class, false),
+        new AnnotationTypeFilter(Embeddable.class, false),
+        new AnnotationTypeFilter(MappedSuperclass.class, false)
+    };
 
     protected String sessionFactoryBeanName = "sessionFactory";
     protected String dataSourceName = ConnectionSource.DEFAULT;
@@ -107,7 +118,7 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         String dsName = ConnectionSource.DEFAULT.equals(dataSourceName) ? "dataSource" : "dataSource_" + dataSourceName;
         Properties properties = getProperties();
 
-        if(applicationContext.containsBean(dsName)) {
+        if (applicationContext.containsBean(dsName)) {
             properties.put(Environment.DATASOURCE, applicationContext.getBean(dsName));
         }
         properties.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, currentSessionContext.getName());
@@ -228,7 +239,7 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         Object classLoaderObject = getProperties().get(AvailableSettings.CLASSLOADERS);
         ClassLoader appClassLoader;
 
-        if(classLoaderObject instanceof ClassLoader) {
+        if (classLoaderObject instanceof ClassLoader) {
             appClassLoader = (ClassLoader) classLoaderObject;
         }
         else {
@@ -246,26 +257,26 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         List<Class> annotatedClasses = new ArrayList<>();
         for (PersistentEntity persistentEntity : hibernateMappingContext.getPersistentEntities()) {
             Class javaClass = persistentEntity.getJavaClass();
-            if(javaClass.isAnnotationPresent(Entity.class)) {
+            if (javaClass.isAnnotationPresent(Entity.class)) {
                 annotatedClasses.add(javaClass);
             }
         }
 
-        if(!additionalClasses.isEmpty()) {
+        if (!additionalClasses.isEmpty()) {
             for (Class additionalClass : additionalClasses) {
-                if(GormEntity.class.isAssignableFrom(additionalClass)) {
+                if (GormEntity.class.isAssignableFrom(additionalClass)) {
                     hibernateMappingContext.addPersistentEntity(additionalClass);
                 }
             }
         }
 
-        addAnnotatedClasses( annotatedClasses.toArray(new Class[annotatedClasses.size()]));
+        addAnnotatedClasses(annotatedClasses.toArray(new Class[annotatedClasses.size()]));
 
         ClassLoaderService classLoaderService = new ClassLoaderServiceImpl(appClassLoader) {
             @Override
             public <S> Collection<S> loadJavaServices(Class<S> serviceContract) {
-                if(MetadataContributor.class.isAssignableFrom(serviceContract)) {
-                    if(metadataContributor != null) {
+                if (MetadataContributor.class.isAssignableFrom(serviceContract)) {
+                    if (metadataContributor != null) {
                         return (Collection<S>) Arrays.asList(domainBinder, metadataContributor);
                     }
                     else {
@@ -291,10 +302,12 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
 
         setSessionFactoryObserver(new SessionFactoryObserver() {
             private static final long serialVersionUID = 1;
+
             public void sessionFactoryCreated(SessionFactory factory) {}
+
             public void sessionFactoryClosed(SessionFactory factory) {
                 if (serviceRegistry != null) {
-                    ((ServiceRegistryImplementor)serviceRegistry).destroy();
+                    ((ServiceRegistryImplementor) serviceRegistry).destroy();
                 }
             }
         });
@@ -347,7 +360,6 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
     public ServiceRegistry getServiceRegistry() {
         return serviceRegistry;
     }
-
 
     @Override
     protected void reset() {

@@ -18,17 +18,17 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Person
 
 /**
  * @author graemerocher
  */
 class AttachMethodSpec extends GrailsDataTckSpec {
 
-    void "Test attach method"() {
+    void 'Test attach method'() {
         given:
-        def test = new Person(firstName: "Bob", lastName: "Builder").save()
+        def test = new Person(firstName: 'Bob', lastName: 'Builder').save()
 
         when:
         manager.session.flush()

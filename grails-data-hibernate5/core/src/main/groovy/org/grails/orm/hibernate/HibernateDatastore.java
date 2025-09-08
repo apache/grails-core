@@ -18,6 +18,42 @@
  */
 package org.grails.orm.hibernate;
 
+import java.io.IOException;
+import java.io.Serializable;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+
+import javax.sql.DataSource;
+
+import org.hibernate.SessionFactory;
+import org.hibernate.boot.Metadata;
+import org.hibernate.boot.SchemaAutoTooling;
+import org.hibernate.cfg.Environment;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.integrator.spi.Integrator;
+import org.hibernate.integrator.spi.IntegratorService;
+import org.hibernate.service.ServiceRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.MessageSource;
+import org.springframework.context.MessageSourceAware;
+import org.springframework.context.support.StaticMessageSource;
+import org.springframework.core.env.PropertyResolver;
+import org.springframework.jdbc.datasource.ConnectionHolder;
+import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import grails.gorm.MultiTenant;
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
 import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher;
@@ -36,7 +72,11 @@ import org.grails.datastore.mapping.core.ConnectionNotFoundException;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.DatastoreUtils;
 import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.core.connections.*;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.core.connections.ConnectionSources;
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer;
+import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
+import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.engine.event.DatastoreInitializedEvent;
 import org.grails.datastore.mapping.model.DatastoreConfigurationException;
@@ -54,31 +94,6 @@ import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.event.listener.HibernateEventListener;
 import org.grails.orm.hibernate.multitenancy.MultiTenantEventListener;
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
-import org.hibernate.SessionFactory;
-import org.hibernate.boot.Metadata;
-import org.hibernate.boot.SchemaAutoTooling;
-import org.hibernate.cfg.Environment;
-import org.hibernate.engine.spi.SessionFactoryImplementor;
-import org.hibernate.integrator.spi.Integrator;
-import org.hibernate.integrator.spi.IntegratorService;
-import org.hibernate.service.ServiceRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeansException;
-import org.springframework.context.*;
-import org.springframework.context.support.StaticMessageSource;
-import org.springframework.core.env.PropertyResolver;
-import org.springframework.jdbc.datasource.ConnectionHolder;
-import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
-
-import javax.sql.DataSource;
-import java.io.IOException;
-import java.io.Serializable;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.*;
-import java.util.concurrent.Callable;
 
 /**
  * Datastore implementation that uses a Hibernate SessionFactory underneath.
@@ -132,9 +147,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
         });
         initializeConverters(this.mappingContext);
 
-
-
-        if(!(connectionSources instanceof SingletonConnectionSources)) {
+        if (!(connectionSources instanceof SingletonConnectionSources)) {
 
             final HibernateDatastore parent = this;
             Iterable<ConnectionSource<SessionFactory, HibernateConnectionSourceSettings>> allConnectionSources = connectionSources.getAllConnectionSources();
@@ -158,8 +171,8 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
                 registerAllEntitiesWithEnhancer();
             });
 
-            if(multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-                if(this.tenantResolver instanceof AllTenantsResolver) {
+            if (multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+                if (this.tenantResolver instanceof AllTenantsResolver) {
                     AllTenantsResolver allTenantsResolver = (AllTenantsResolver) tenantResolver;
                     Iterable<Serializable> tenantIds = allTenantsResolver.resolveTenantIds();
 
@@ -175,7 +188,6 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
                 }
             }
         }
-
 
         this.gormEnhancer = initialize();
     }
@@ -233,7 +245,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
      * @param eventPublisher The {@link ConfigurableApplicationEventPublisher} instance
      * @param classes The persistent classes
      */
-    public HibernateDatastore(PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Class...classes) {
+    public HibernateDatastore(PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
         this(configuration, new HibernateConnectionSourceFactory(classes), eventPublisher);
     }
 
@@ -244,7 +256,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
      * @param eventPublisher The {@link ConfigurableApplicationEventPublisher} instance
      * @param classes The persistent classes
      */
-    public HibernateDatastore(DataSource dataSource, PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Class...classes) {
+    public HibernateDatastore(DataSource dataSource, PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
         this(configuration, createConnectionFactoryForDataSource(dataSource, classes), eventPublisher);
     }
 
@@ -255,7 +267,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
      * @param eventPublisher The event publisher
      * @param packagesToScan The packages to scan
      */
-    public HibernateDatastore(PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher,  Package...packagesToScan) {
+    public HibernateDatastore(PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Package... packagesToScan) {
         this(configuration, eventPublisher, new ClasspathEntityScanner().scan(packagesToScan));
     }
 
@@ -266,7 +278,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
      * @param eventPublisher The event publisher
      * @param packagesToScan The packages to scan
      */
-    public HibernateDatastore(DataSource dataSource, PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher,  Package...packagesToScan) {
+    public HibernateDatastore(DataSource dataSource, PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Package... packagesToScan) {
         this(dataSource, configuration, eventPublisher, new ClasspathEntityScanner().scan(packagesToScan));
     }
 
@@ -276,16 +288,17 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
      * @param configuration The configuration
      * @param classes The persistent classes
      */
-    public HibernateDatastore(PropertyResolver configuration, Class...classes) {
+    public HibernateDatastore(PropertyResolver configuration, Class... classes) {
         this(configuration, new HibernateConnectionSourceFactory(classes));
     }
+
     /**
      * Construct a Hibernate datastore scanning the given packages
      *
      * @param configuration The configuration
      * @param packagesToScan The packages to scan
      */
-    public HibernateDatastore(PropertyResolver configuration, Package...packagesToScan) {
+    public HibernateDatastore(PropertyResolver configuration, Package... packagesToScan) {
         this(configuration, new ClasspathEntityScanner().scan(packagesToScan));
     }
 
@@ -294,16 +307,17 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
      *
      * @param classes The classes
      */
-    public HibernateDatastore(Map<String,Object> configuration, Class...classes) {
+    public HibernateDatastore(Map<String, Object> configuration, Class... classes) {
         this(DatastoreUtils.createPropertyResolver(configuration), new HibernateConnectionSourceFactory(classes));
     }
+
     /**
      * Construct a Hibernate datastore scanning the given packages
      *
      * @param configuration The configuration
      * @param packagesToScan The packages to scan
      */
-    public HibernateDatastore(Map<String,Object> configuration, Package...packagesToScan) {
+    public HibernateDatastore(Map<String, Object> configuration, Package... packagesToScan) {
         this(DatastoreUtils.createPropertyResolver(configuration), packagesToScan);
     }
 
@@ -312,7 +326,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
      *
      * @param classes The classes
      */
-    public HibernateDatastore(Class...classes) {
+    public HibernateDatastore(Class... classes) {
         this(DatastoreUtils.createPropertyResolver(Collections.singletonMap(Settings.SETTING_DB_CREATE, "create-drop")), new HibernateConnectionSourceFactory(classes));
     }
 
@@ -321,7 +335,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
      *
      * @param packagesToScan The packages to scan
      */
-    public HibernateDatastore(Package...packagesToScan) {
+    public HibernateDatastore(Package... packagesToScan) {
         this(new ClasspathEntityScanner().scan(packagesToScan));
     }
 
@@ -346,7 +360,6 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
         return transactionManager;
     }
 
-
     /**
      * Obtain a child {@link HibernateDatastore} by connection name
      *
@@ -355,12 +368,12 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
      * @return The {@link HibernateDatastore}
      */
     public HibernateDatastore getDatastoreForConnection(String connectionName) {
-        if(connectionName.equals(Settings.SETTING_DATASOURCE) || connectionName.equals(ConnectionSource.DEFAULT)) {
+        if (connectionName.equals(Settings.SETTING_DATASOURCE) || connectionName.equals(ConnectionSource.DEFAULT)) {
             return this;
         } else {
             HibernateDatastore hibernateDatastore = this.datastoresByConnectionSource.get(connectionName);
-            if(hibernateDatastore == null) {
-                throw new ConfigurationException("DataSource not found for name ["+connectionName+"] in configuration. Please check your multiple data sources configuration and try again.");
+            if (hibernateDatastore == null) {
+                throw new ConfigurationException("DataSource not found for name [" + connectionName + "] in configuration. Please check your multiple data sources configuration and try again.");
             }
             return hibernateDatastore;
         }
@@ -386,7 +399,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
 
     protected void registerEventListeners(ConfigurableApplicationEventPublisher eventPublisher) {
         eventPublisher.addApplicationListener(autoTimestampEventListener);
-        if(multiTenantMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+        if (multiTenantMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
             eventPublisher.addApplicationListener(new MultiTenantEventListener());
         }
         eventPublisher.addApplicationListener(eventTriggeringInterceptor);
@@ -399,8 +412,8 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
     }
 
     protected void configureValidatorRegistry(HibernateConnectionSourceSettings settings, HibernateMappingContext mappingContext, ValidatorRegistry validatorRegistry, MessageSource messageSource) {
-        if(validatorRegistry instanceof ConstraintRegistry) {
-            ((ConstraintRegistry)validatorRegistry).addConstraintFactory(
+        if (validatorRegistry instanceof ConstraintRegistry) {
+            ((ConstraintRegistry) validatorRegistry).addConstraintFactory(
                     new MappingContextAwareConstraintFactory(UniqueConstraint.class, messageSource, mappingContext)
             );
         }
@@ -411,15 +424,15 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
 
     protected HibernateGormEnhancer initialize() {
         final HibernateConnectionSource defaultConnectionSource = (HibernateConnectionSource) getConnectionSources().getDefaultConnectionSource();
-        if(multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+        if (multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
             return new HibernateGormEnhancer(this, transactionManager, defaultConnectionSource.getSettings()) {
                 @Override
                 public List<String> allQualifiers(Datastore datastore, PersistentEntity entity) {
                     List<String> allQualifiers = super.allQualifiers(datastore, entity);
-                    if( MultiTenant.class.isAssignableFrom(entity.getJavaClass()) ) {
-                        if(tenantResolver instanceof AllTenantsResolver) {
+                    if (MultiTenant.class.isAssignableFrom(entity.getJavaClass())) {
+                        if (tenantResolver instanceof AllTenantsResolver) {
                             Iterable<Serializable> tenantIds = ((AllTenantsResolver) tenantResolver).resolveTenantIds();
-                            for(Serializable id : tenantIds) {
+                            for (Serializable id : tenantIds) {
                                 allQualifiers.add(id.toString());
                             }
                         }
@@ -427,9 +440,9 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
                             Collection<String> schemaNames = schemaHandler.resolveSchemaNames(defaultConnectionSource.getDataSource());
                             for (String schemaName : schemaNames) {
                                 // skip common internal schemas
-                                if(schemaName.equals("INFORMATION_SCHEMA") || schemaName.equals("PUBLIC")) continue;
+                                if (schemaName.equals("INFORMATION_SCHEMA") || schemaName.equals("PUBLIC")) continue;
                                 for (String connectionName : datastoresByConnectionSource.keySet()) {
-                                    if(schemaName.equalsIgnoreCase(connectionName)) {
+                                    if (schemaName.equalsIgnoreCase(connectionName)) {
                                         allQualifiers.add(connectionName);
                                     }
                                 }
@@ -457,11 +470,11 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
     }
 
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        if(applicationContext instanceof ConfigurableApplicationContext) {
+        if (applicationContext instanceof ConfigurableApplicationContext) {
             super.setApplicationContext(applicationContext);
 
             for (HibernateDatastore hibernateDatastore : datastoresByConnectionSource.values()) {
-                if(hibernateDatastore != this) {
+                if (hibernateDatastore != this) {
                     hibernateDatastore.setApplicationContext(applicationContext);
                 }
             }
@@ -480,7 +493,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
             );
 
             registerEventListeners(eventPublisher);
-            this.eventPublisher.publishEvent( new DatastoreInitializedEvent(this) );
+            this.eventPublisher.publishEvent(new DatastoreInitializedEvent(this));
         }
     }
 
@@ -545,15 +558,15 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
         registerAllEntitiesWithEnhancer();
         HibernateConnectionSource defaultConnectionSource = (HibernateConnectionSource) connectionSources.getDefaultConnectionSource();
         DataSource dataSource = defaultConnectionSource.getDataSource();
-        if(dataSource instanceof TransactionAwareDataSourceProxy) {
+        if (dataSource instanceof TransactionAwareDataSourceProxy) {
             dataSource = ((TransactionAwareDataSourceProxy) dataSource).getTargetDataSource();
         }
         Object existing = TransactionSynchronizationManager.getResource(dataSource);
-        if(existing instanceof ConnectionHolder) {
+        if (existing instanceof ConnectionHolder) {
             ConnectionHolder connectionHolder = (ConnectionHolder) existing;
             Connection connection = connectionHolder.getConnection();
             try {
-                if(!connection.isClosed() && !connection.isReadOnly()) {
+                if (!connection.isClosed() && !connection.isReadOnly()) {
                     schemaHandler.useDefaultSchema(connection);
                 }
             } catch (SQLException e) {
@@ -574,14 +587,14 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
     }
 
     private void addTenantForSchemaInternal(final String schemaName) {
-        if( multiTenantMode != MultiTenancySettings.MultiTenancyMode.SCHEMA ) {
+        if (multiTenantMode != MultiTenancySettings.MultiTenancyMode.SCHEMA) {
             throw new ConfigurationException("The method [addTenantForSchema] can only be called with multi-tenancy mode SCHEMA. Current mode is: " + multiTenantMode);
         }
         HibernateConnectionSourceFactory factory = (HibernateConnectionSourceFactory) connectionSources.getFactory();
         HibernateConnectionSource defaultConnectionSource = (HibernateConnectionSource) connectionSources.getDefaultConnectionSource();
         HibernateConnectionSourceSettings tenantSettings;
         try {
-            tenantSettings = (HibernateConnectionSourceSettings)connectionSources.getDefaultConnectionSource().getSettings().clone();
+            tenantSettings = (HibernateConnectionSourceSettings) connectionSources.getDefaultConnectionSource().getSettings().clone();
         } catch (CloneNotSupportedException e) {
             throw new ConfigurationException("Couldn't clone default Hibernate settings! " + e.getMessage(), e);
         }
@@ -589,8 +602,8 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
 
         String dbCreate = tenantSettings.getDataSource().getDbCreate();
 
-        SchemaAutoTooling schemaAutoTooling = dbCreate != null ?  SchemaAutoTooling.interpret(dbCreate) : null;
-        if(schemaAutoTooling != null && schemaAutoTooling != SchemaAutoTooling.VALIDATE && schemaAutoTooling != SchemaAutoTooling.NONE) {
+        SchemaAutoTooling schemaAutoTooling = dbCreate != null ? SchemaAutoTooling.interpret(dbCreate) : null;
+        if (schemaAutoTooling != null && schemaAutoTooling != SchemaAutoTooling.VALIDATE && schemaAutoTooling != SchemaAutoTooling.NONE) {
 
             Connection connection = null;
             try {
@@ -606,7 +619,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
                 throw new DatastoreConfigurationException(String.format("Failed to create schema for name [%s]", schemaName));
             }
             finally {
-                if(connection != null) {
+                if (connection != null) {
                     try {
                         schemaHandler.useDefaultSchema(connection);
                         connection.close();
@@ -663,7 +676,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
                 new DataSourceConnectionSourceFactory() {
                     @Override
                     public ConnectionSource<DataSource, DataSourceSettings> create(String name, DataSourceSettings settings) {
-                        if(ConnectionSource.DEFAULT.equals(name)) {
+                        if (ConnectionSource.DEFAULT.equals(name)) {
                             return new DataSourceConnectionSource(ConnectionSource.DEFAULT, dataSource, settings);
                         }
                         else {

@@ -69,3 +69,5 @@ tasks.named('dockerBuildNative') {
 tasks.named('dockerBuild') {
     images = [findProperty('dockerImageName') ?: 'grailsforge']
 }
+
+apply from: rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')

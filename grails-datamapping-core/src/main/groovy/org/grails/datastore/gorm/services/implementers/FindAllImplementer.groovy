@@ -24,11 +24,14 @@ import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
+
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.mapping.core.Ordered
 import org.grails.datastore.mapping.reflect.AstUtils
 
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 
 /**
  * Automatically implements {@link grails.gorm.services.Service} interface methods that start with "list" and
@@ -60,7 +63,7 @@ class FindAllImplementer extends AbstractDetachedCriteriaServiceImplementor impl
     @Override
     protected ClassNode resolveDomainClassFromSignature(ClassNode currentDomainClassNode, MethodNode methodNode) {
         ClassNode returnType = methodNode.returnType
-        if(returnType.isArray()) {
+        if (returnType.isArray()) {
             return returnType.componentType
         }
         else {
@@ -75,9 +78,9 @@ class FindAllImplementer extends AbstractDetachedCriteriaServiceImplementor impl
 
     @Override
     void implementWithQuery(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode, BlockStatement body, VariableExpression detachedCriteriaVar, Expression queryArgs) {
-        ClassNode returnType = (ClassNode)newMethodNode.getNodeMetaData(RETURN_TYPE) ?: newMethodNode.returnType
-        Expression methodCall = callX(detachedCriteriaVar, "list", queryArgs)
-        if(returnType.isArray()) {
+        ClassNode returnType = (ClassNode) newMethodNode.getNodeMetaData(RETURN_TYPE) ?: newMethodNode.returnType
+        Expression methodCall = callX(detachedCriteriaVar, 'list', queryArgs)
+        if (returnType.isArray()) {
             methodCall = castX(returnType.plainNodeReference, methodCall)
         }
         body.addStatement(

@@ -19,7 +19,11 @@
 package org.grails.orm.hibernate;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 import org.hibernate.boot.Metadata;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
@@ -76,7 +80,6 @@ public class EventListenerIntegrator implements Integrator {
             EventType.POST_COLLECTION_REMOVE,
             EventType.POST_COLLECTION_UPDATE);
 
-
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     public void integrate(Metadata metadata, SessionFactoryImplementor sessionFactory, SessionFactoryServiceRegistry serviceRegistry) {
@@ -88,7 +91,7 @@ public class EventListenerIntegrator implements Integrator {
                 EventType type = EventType.resolveEventTypeByName(entry.getKey());
                 Object listenerObject = entry.getValue();
                 if (listenerObject instanceof Collection) {
-                    appendListeners(listenerRegistry, type, (Collection)listenerObject);
+                    appendListeners(listenerRegistry, type, (Collection) listenerObject);
                 }
                 else if (listenerObject != null) {
                     appendListeners(listenerRegistry, type, Collections.singleton(listenerObject));
@@ -97,7 +100,7 @@ public class EventListenerIntegrator implements Integrator {
         }
 
         if (hibernateEventListeners != null && hibernateEventListeners.getListenerMap() != null) {
-            Map<String,Object> listenerMap = hibernateEventListeners.getListenerMap();
+            Map<String, Object> listenerMap = hibernateEventListeners.getListenerMap();
             for (EventType<?> type : TYPES) {
                 appendListeners(listenerRegistry, type, listenerMap);
             }
@@ -111,7 +114,7 @@ public class EventListenerIntegrator implements Integrator {
         EventListenerGroup<T> group = listenerRegistry.getEventListenerGroup(eventType);
         for (T listener : listeners) {
             if (listener != null) {
-                if(shouldOverrideListeners(eventType, listener)) {
+                if (shouldOverrideListeners(eventType, listener)) {
                     // since ClosureEventTriggeringInterceptor extends DefaultSaveOrUpdateEventListener we want to override instead of append the listener here
                     // to avoid there being 2 implementations which would impact performance too
                     group.clear();
@@ -125,8 +128,8 @@ public class EventListenerIntegrator implements Integrator {
     }
 
     private <T> boolean shouldOverrideListeners(EventType<T> eventType, Object listener) {
-        return (listener instanceof org.hibernate.event.internal.DefaultSaveOrUpdateEventListener)
-                && eventType.equals(EventType.SAVE_UPDATE);
+        return (listener instanceof org.hibernate.event.internal.DefaultSaveOrUpdateEventListener) &&
+                eventType.equals(EventType.SAVE_UPDATE);
     }
 
     @SuppressWarnings("unchecked")
@@ -135,18 +138,16 @@ public class EventListenerIntegrator implements Integrator {
 
         Object listener = listeners.get(eventType.eventName());
         if (listener != null) {
-            if(shouldOverrideListeners(eventType, listener)) {
+            if (shouldOverrideListeners(eventType, listener)) {
                 // since ClosureEventTriggeringInterceptor extends DefaultSaveOrUpdateEventListener we want to override instead of append the listener here
                 // to avoid there being 2 implementations which would impact performance too
                 listenerRegistry.setListeners(eventType, (T) listener);
             }
             else {
-                listenerRegistry.appendListeners(eventType, (T)listener);
+                listenerRegistry.appendListeners(eventType, (T) listener);
             }
         }
     }
-
-
 
     public void disintegrate(SessionFactoryImplementor sessionFactory, SessionFactoryServiceRegistry serviceRegistry) {
         // nothing to do

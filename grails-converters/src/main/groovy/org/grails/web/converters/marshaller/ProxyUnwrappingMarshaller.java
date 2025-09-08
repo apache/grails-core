@@ -18,11 +18,11 @@
  */
 package org.grails.web.converters.marshaller;
 
-import grails.util.GrailsNameUtils;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
 import groovy.lang.MetaClassRegistry;
 
+import grails.util.GrailsNameUtils;
 import org.grails.web.converters.Converter;
 import org.grails.web.converters.exceptions.ConverterException;
 

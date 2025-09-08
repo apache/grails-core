@@ -33,7 +33,7 @@ public class TestStacktraceSanitizer {
     public static Throwable sanitize(Throwable t) {
         new DefaultStackTraceFilterer().filter(t, true);
         StackTraceElement[] trace = t.getStackTrace();
-        List<StackTraceElement> newTrace = new ArrayList<StackTraceElement>();
+        List<StackTraceElement> newTrace = new ArrayList<>();
         for (StackTraceElement stackTraceElement : trace) {
             if (stackTraceElement.getClassName().startsWith(TEST_RUNNING_CLASS)) {
                 break;

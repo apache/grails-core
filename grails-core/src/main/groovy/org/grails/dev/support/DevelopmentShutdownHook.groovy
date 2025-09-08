@@ -19,8 +19,9 @@
 package org.grails.dev.support
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
+
 import org.slf4j.LoggerFactory
+
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.context.ConfigurableApplicationContext
@@ -33,7 +34,7 @@ import org.springframework.context.ConfigurableApplicationContext
  */
 class DevelopmentShutdownHook implements ApplicationContextAware {
 
-    public static final String INSTALLED = "grails.shutdown.hook.installed"
+    public static final String INSTALLED = 'grails.shutdown.hook.installed'
 
     @CompileStatic
     void setApplicationContext(ApplicationContext applicationContext) {
@@ -44,13 +45,13 @@ class DevelopmentShutdownHook implements ApplicationContextAware {
         Runtime.runtime.addShutdownHook {
             try {
                 Thread.start {
-                    ((ConfigurableApplicationContext)applicationContext).close()
+                    ((ConfigurableApplicationContext) applicationContext).close()
                 }.join(2000)
             } catch (Throwable e) {
                 LoggerFactory.getLogger(DevelopmentShutdownHook).warn("Error shutting down application: ${e.message}", e)
             }
         }
 
-        System.setProperty(INSTALLED, "true")
+        System.setProperty(INSTALLED, 'true')
     }
 }

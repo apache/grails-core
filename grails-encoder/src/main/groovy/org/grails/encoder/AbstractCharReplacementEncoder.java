@@ -23,13 +23,6 @@ import java.io.Writer;
 import java.util.List;
 
 import org.grails.charsequences.CharSequences;
-import org.grails.encoder.CodecIdentifier;
-import org.grails.encoder.EncodedAppender;
-import org.grails.encoder.Encoder;
-import org.grails.encoder.EncodesToWriter;
-import org.grails.encoder.EncodesToWriterAdapter;
-import org.grails.encoder.EncodingState;
-import org.grails.encoder.StreamingEncoder;
 
 /**
  * Abstract base class for implementing encoders that do character replacements
@@ -69,10 +62,10 @@ public abstract class AbstractCharReplacementEncoder implements Encoder, Streami
 
         CharSequence str = null;
         if (o instanceof CharSequence) {
-            str = (CharSequence)o;
+            str = (CharSequence) o;
         }
         else if (o instanceof Character) {
-            String escaped = escapeCharacter((Character)o, (char)0);
+            String escaped = escapeCharacter((Character) o, (char) 0);
             if (escaped != null) {
                 return escaped;
             }
@@ -99,7 +92,7 @@ public abstract class AbstractCharReplacementEncoder implements Encoder, Streami
         StringBuilder sb = null;
         int n = str.length(), i;
         int startPos = -1;
-        char prevChar = (char)0;
+        char prevChar = (char) 0;
         for (i = 0; i < n; i++) {
             char ch = str.charAt(i);
             if (startPos == -1) {
@@ -139,7 +132,7 @@ public abstract class AbstractCharReplacementEncoder implements Encoder, Streami
         int n = Math.min(str.length(), off + len);
         int i;
         int startPos = -1;
-        char prevChar = (char)0;
+        char prevChar = (char) 0;
         for (i = off; i < n; i++) {
             char ch = str.charAt(i);
             if (startPos == -1) {
@@ -170,7 +163,7 @@ public abstract class AbstractCharReplacementEncoder implements Encoder, Streami
         int n = Math.min(buf.length, off + len);
         int i;
         int startPos = -1;
-        char prevChar = (char)0;
+        char prevChar = (char) 0;
         for (i = off; i < n; i++) {
             char ch = buf[i];
             if (startPos == -1) {
@@ -209,7 +202,7 @@ public abstract class AbstractCharReplacementEncoder implements Encoder, Streami
         int n = Math.min(str.length(), off + len);
         int i;
         int startPos = -1;
-        char prevChar = (char)0;
+        char prevChar = (char) 0;
         for (i = off; i < n; i++) {
             char ch = str.charAt(i);
             if (startPos == -1) {

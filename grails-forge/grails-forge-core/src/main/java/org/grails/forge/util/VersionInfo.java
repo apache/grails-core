@@ -84,6 +84,17 @@ public class VersionInfo {
     }
 
     /**
+     * Retrieves the documentation version for Grails, which is determined based on whether
+     * Grails is in a snapshot state or a specific version.
+     *
+     * @return The documentation version as a string, either "snapshot" if Grails is a snapshot
+     *         version, or the specific version of Grails.
+     */
+    public static String getDocumentationVersion() {
+        return isGrailsSnapshot() ? "snapshot" : getGrailsVersion();
+    }
+
+    /**
      * Gets the dependency versions.
      *
      * @return The versions

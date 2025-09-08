@@ -36,8 +36,8 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target([ElementType.TYPE])
-@GroovyASTTransformationClass("org.grails.plugins.web.rest.transform.ResourceTransform")
-public @interface Resource {
+@GroovyASTTransformationClass('org.grails.plugins.web.rest.transform.ResourceTransform')
+@interface Resource {
 
     /**
      * @return Whether this is a read-only resource (one that doesn't allow DELETE, POST, PUT or PATCH requests)
@@ -47,17 +47,17 @@ public @interface Resource {
     /**
      * @return The allowed response formats
      */
-    String[] formats() default ["json", 'xml']
+    String[] formats() default ['json', 'xml']
 
     /**
      * @return The URI of the resource. If specified a {@link grails.web.mapping.UrlMapping} will automatically be registered for the resource
      */
-    String uri() default ""
+    String uri() default ''
 
     /**
      * @return The namespace of the resource. If specified a {@link grails.web.mapping.UrlMapping} with this namespace will automatically be registered for the resource
      */
-    String namespace() default ""
+    String namespace() default ''
 
     /**
      * @return The super class to use for the generated controller class
