@@ -127,6 +127,10 @@ class FutureTaskPromiseFactorySpec extends Specification {
             }
     }
 
+    @PendingFeatureIf(
+        reason = "org.codehaus.groovy.runtime.typehandling.GroovyCastException: Cannot cast object '4' with class 'java.lang.Integer' to class 'java.lang.Throwable'",
+        value = { GroovySystem.version.startsWith('5') }
+    )
     void 'Test promise chaining'() {
         
         when: 'a promise is chained'

@@ -18,12 +18,17 @@
  */
 package grails.init
 
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 import spock.lang.Unroll
 import uk.org.webcompere.systemstubs.SystemStubs
 
 class GrailsVersionSpec extends Specification {
 
+    @PendingFeatureIf(
+            reason = 'groovy.lang.MissingMethodException: No signature of method: MockImpl for class: grails.init.GrailsVersionSpec is applicable for argument types: (String, Class, Class) values: [mockVersion, class grails.init.GrailsWrapper, class grails.init.GrailsWrapper]',
+            value = { GroovySystem.version.startsWith('5') }
+    )
     def "allowed release types - specified valid"() {
         given:
         GrailsWrapper mockVersion = Mock(GrailsWrapper)
@@ -44,6 +49,10 @@ class GrailsVersionSpec extends Specification {
         0 * mockVersion._
     }
 
+    @PendingFeatureIf(
+            reason = 'groovy.lang.MissingMethodException: No signature of method: MockImpl for class: grails.init.GrailsVersionSpec is applicable for argument types: (String, Class, Class) values: [mockVersion, class grails.init.GrailsWrapper, class grails.init.GrailsWrapper]',
+            value = { GroovySystem.version.startsWith('5') }
+    )
     def "allowed release types - specified invalid"() {
         given:
         GrailsWrapper mockVersion = Mock(GrailsWrapper)
@@ -62,6 +71,10 @@ class GrailsVersionSpec extends Specification {
         0 * mockVersion._
     }
 
+    @PendingFeatureIf(
+            reason = 'groovy.lang.MissingMethodException: No signature of method: MockImpl for class: grails.init.GrailsVersionSpec is applicable for argument types: (String, Class, Class) values: [mockVersion, class grails.init.GrailsWrapper, class grails.init.GrailsWrapper]',
+            value = { GroovySystem.version.startsWith('5') }
+    )
     def "allowed release types - with preferred version defined and allowed types override"() {
         given:
         GrailsWrapper mockVersion = Mock(GrailsWrapper)
@@ -85,6 +98,10 @@ class GrailsVersionSpec extends Specification {
         0 * mockVersion._
     }
 
+    @PendingFeatureIf(
+            reason = 'groovy.lang.MissingMethodException: No signature of method: MockImpl for class: grails.init.GrailsVersionSpec is applicable for argument types: (String, Class, Class) values: [mockVersion, class grails.init.GrailsWrapper, class grails.init.GrailsWrapper]',
+            value = { GroovySystem.version.startsWith('5') }
+    )
     def "allowed release types - with preferred version defined and no types override"() {
         given:
         GrailsWrapper mockVersion = Mock(GrailsWrapper)
@@ -108,6 +125,10 @@ class GrailsVersionSpec extends Specification {
         0 * mockVersion._
     }
 
+    @PendingFeatureIf(
+            reason = 'groovy.lang.MissingMethodException: No signature of method: MockImpl for class: grails.init.GrailsVersionSpec is applicable for argument types: (String, Class, Class) values: [mockVersion, class grails.init.GrailsWrapper, class grails.init.GrailsWrapper]',
+            value = { GroovySystem.version.startsWith('5') }
+    )
     def "allowed release types - no preferred version - development"() {
         given:
         GrailsWrapper mockVersion = Mock(GrailsWrapper) {
@@ -127,6 +148,10 @@ class GrailsVersionSpec extends Specification {
         allowedTypes == [GrailsReleaseType.RELEASE, GrailsReleaseType.RC, GrailsReleaseType.MILESTONE, GrailsReleaseType.SNAPSHOT] as LinkedHashSet
     }
 
+    @PendingFeatureIf(
+            reason = 'groovy.lang.MissingMethodException: No signature of method: MockImpl for class: grails.init.GrailsVersionSpec is applicable for argument types: (String, Class, Class) values: [mockVersion, class grails.init.GrailsWrapper, class grails.init.GrailsWrapper]',
+            value = { GroovySystem.version.startsWith('5') }
+    )
     def "allowed release types - no preferred version - non-development for non-release"() {
         given:
         GrailsWrapper mockVersion = Mock(GrailsWrapper) {
@@ -146,6 +171,10 @@ class GrailsVersionSpec extends Specification {
         allowedTypes == [GrailsReleaseType.RELEASE, GrailsReleaseType.RC] as LinkedHashSet
     }
 
+    @PendingFeatureIf(
+            reason = 'groovy.lang.MissingMethodException: No signature of method: MockImpl for class: grails.init.GrailsVersionSpec is applicable for argument types: (String, Class, Class) values: [mockVersion, class grails.init.GrailsWrapper, class grails.init.GrailsWrapper]',
+            value = { GroovySystem.version.startsWith('5') }
+    )
     def "allowed release types - no preferred version - non-development for release"() {
         given:
         GrailsWrapper mockVersion = Mock(GrailsWrapper) {
