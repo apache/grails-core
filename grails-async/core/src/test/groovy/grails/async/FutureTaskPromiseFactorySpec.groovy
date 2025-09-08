@@ -18,14 +18,15 @@
  */
 package grails.async
 
-import grails.async.decorator.PromiseDecorator
-import org.grails.async.factory.future.CachedThreadPoolPromiseFactory
+import java.util.concurrent.ExecutionException
+
 import spock.lang.Issue
 import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 
-import java.util.concurrent.ExecutionException
+import grails.async.decorator.PromiseDecorator
+import org.grails.async.factory.future.CachedThreadPoolPromiseFactory
 
 /**
  * Created by graemerocher on 29/03/2017.

@@ -459,8 +459,8 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                     } else {
                         fullKey = stringKey
                     }
-                    if(value instanceof Collection) {
-                        if(forceStrings) {
+                    if (value instanceof Collection) {
+                        if (forceStrings) {
                             ((Map<Object, Object>) flatConfig).put(fullKey, ((Collection)value).join(','))
                         } else {
                             ((Map<Object, Object>) flatConfig).put(fullKey, value)
