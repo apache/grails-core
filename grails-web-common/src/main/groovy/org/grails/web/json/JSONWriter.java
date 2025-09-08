@@ -1,33 +1,20 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
+Public Domain.
+*/
 
 package org.grails.web.json;
-
-import static org.grails.web.json.JSONWriter.Mode.*;
-
-import groovy.lang.Writable;
 
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Stack;
 
-/*
-Public Domain.
-*/
+import groovy.lang.Writable;
+
+import static org.grails.web.json.JSONWriter.Mode.ARRAY;
+import static org.grails.web.json.JSONWriter.Mode.DONE;
+import static org.grails.web.json.JSONWriter.Mode.INIT;
+import static org.grails.web.json.JSONWriter.Mode.KEY;
+import static org.grails.web.json.JSONWriter.Mode.OBJECT;
 
 /**
  * JSONWriter provides a quick and convenient way of producing JSON text.
@@ -75,7 +62,7 @@ public class JSONWriter {
     /**
      * The Mode stack.
      */
-    private Stack<Mode> stack = new Stack<Mode>();
+    private Stack<Mode> stack = new Stack<>();
 
     /**
      * The writer that will receive the output.
@@ -90,25 +77,25 @@ public class JSONWriter {
         this.mode = INIT;
         this.writer = w;
     }
-    
+
     private static class WritableString implements Writable {
         private String string;
-        
+
         WritableString(String string) {
             this.string = string;
         }
-        
+
         @Override
         public Writer writeTo(Writer out) throws IOException {
             out.write(string);
             return out;
         }
-        
+
         public String toString() {
             return string;
         }
     }
-    
+
     /**
      * Append a value.
      * @param s A string value.
@@ -235,7 +222,6 @@ public class JSONWriter {
         throw new JSONException("Misplaced key: expected mode of KEY but was " + this.mode);
     }
 
-
     /**
      * Begin appending a new object. All keys and values until the balancing
      * <code>endObject</code> will be appended to this object. The
@@ -256,7 +242,6 @@ public class JSONWriter {
         throw new JSONException("Misplaced object: expected mode of INIT, OBJECT or ARRAY but was " + this.mode);
 
     }
-
 
     /**
      * Pop an array or object scope.
@@ -283,7 +268,6 @@ public class JSONWriter {
         this.stack.push(c);
         this.mode = c;
     }
-
 
     /**
      * Append either the value <code>true</code> or the value
@@ -318,20 +302,20 @@ public class JSONWriter {
 
     /**
      * Append a number value
-     * 
+     *
      * @param number
      * @return
      */
     public JSONWriter value(Number number) {
         return number != null ? append(number.toString()) : valueNull();
     }
-    
+
     public JSONWriter valueNull() {
         return append(nullWritable);
     }
-    
+
     static Writable nullWritable = new NullWritable();
-    
+
     private static class NullWritable implements Writable {
         @Override
         public Writer writeTo(Writer out) throws IOException {
@@ -348,12 +332,12 @@ public class JSONWriter {
      * @return this
      */
     public JSONWriter value(Object o) {
-        return  o != null ? append(new QuotedWritable(o)) : valueNull();
+        return o != null ? append(new QuotedWritable(o)) : valueNull();
     }
-    
+
     private static class QuotedWritable implements Writable {
         Object o;
-        
+
         QuotedWritable(Object o) {
             this.o = o;
         }
@@ -363,7 +347,7 @@ public class JSONWriter {
             JSONObject.writeValue(out, o);
             return out;
         }
-        
+
         public String toString() {
             return String.valueOf(o);
         }

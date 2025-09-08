@@ -19,6 +19,15 @@
 
 package grails.plugin.json.view.test
 
+import groovy.json.JsonSlurper
+import groovy.text.Template
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.MessageSource
+import org.springframework.context.support.StaticMessageSource
+import org.springframework.http.HttpStatus
+
 import grails.core.GrailsApplication
 import grails.plugin.json.view.JsonViewConfiguration
 import grails.plugin.json.view.JsonViewTemplateEngine
@@ -30,16 +39,8 @@ import grails.views.api.HttpView
 import grails.views.api.http.Response
 import grails.web.mapping.LinkGenerator
 import grails.web.mime.MimeUtility
-import groovy.json.JsonSlurper
-import groovy.text.Template
-import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.context.MessageSource
-import org.springframework.context.support.StaticMessageSource
-import org.springframework.http.HttpStatus
 
 /**
  * A trait that test classes can implement to add support for easily testing JSON views
@@ -64,7 +65,7 @@ trait JsonViewTest {
 
     @Autowired(required = false)
     MappingContext mappingContext = {
-        def ctx = new KeyValueMappingContext("test")
+        def ctx = new KeyValueMappingContext('test')
         ctx.setCanInitializeEntities(true)
         return ctx
     }()
@@ -89,14 +90,14 @@ trait JsonViewTest {
     @Lazy JsonViewTemplateEngine templateEngine = {
 
         def templateEngine = new JsonViewTemplateEngine(viewConfiguration, Thread.currentThread().contextClassLoader)
-        if(messageSource != null) {
+        if (messageSource != null) {
             templateEngine.setMessageSource(messageSource)
         }
         templateEngine.setLinkGenerator(linkGenerator)
-        if(mimeUtility != null) {
+        if (mimeUtility != null) {
             templateEngine.setMimeUtility(mimeUtility)
         }
-        if(mappingContext != null) {
+        if (mappingContext != null) {
             templateEngine.setMappingContext(mappingContext)
         }
         templateEngine.setJsonApiIdRenderStrategy(jsonApiIdRenderStrategy)
@@ -162,7 +163,7 @@ trait JsonViewTest {
      * @return The render result
      */
     JsonRenderResult render(Map arguments) {
-        render arguments, null
+        render(arguments, null)
     }
 
     /**
@@ -176,13 +177,13 @@ trait JsonViewTest {
     JsonRenderResult render(Map arguments, @DelegatesTo(TestRequestConfigurer) Closure configurer) {
 
         String viewUri
-        if( arguments.template ) {
+        if (arguments.template) {
             viewUri = templateEngine
                             .viewUriResolver
                             .resolveTemplateUri(null, arguments.template.toString())
 
         }
-        else if( arguments.view ) {
+        else if (arguments.view) {
             viewUri = arguments.view.toString()
         }
         else {
@@ -191,11 +192,11 @@ trait JsonViewTest {
         }
         def template = templateEngine.resolveTemplate(viewUri)
 
-        if(template == null) {
+        if (template == null) {
             throw new IllegalArgumentException("No view or template found for URI $viewUri")
         }
 
-        def model = arguments.model instanceof Map ? (Map)arguments.model : [:]
+        def model = arguments.model instanceof Map ? (Map) arguments.model : [:]
         return produceResult(template, model, configurer)
     }
 

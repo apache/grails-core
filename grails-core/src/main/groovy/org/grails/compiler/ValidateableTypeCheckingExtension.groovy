@@ -32,14 +32,14 @@ import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport.Type
 class ValidateableTypeCheckingExtension extends TypeCheckingDSL {
 
     @Override
-    public Object run() {
+    Object run() {
         setup { newScope() }
 
         finish { scopeExit() }
         
         beforeVisitClass { ClassNode classNode ->
             def constraintsProperty = classNode.getField('constraints')
-            if(constraintsProperty && constraintsProperty.isStatic() && constraintsProperty.initialExpression instanceof ClosureExpression) {
+            if (constraintsProperty && constraintsProperty.isStatic() && constraintsProperty.initialExpression instanceof ClosureExpression) {
                 newScope {
                     constraintsClosureCode = constraintsProperty.initialExpression.code
                 }
@@ -50,20 +50,20 @@ class ValidateableTypeCheckingExtension extends TypeCheckingDSL {
         }
 
         afterVisitClass { ClassNode classNode ->
-            if(currentScope.constraintsClosureCode) {
+            if (currentScope.constraintsClosureCode) {
                 def constraintsProperty = classNode.getField('constraints')
                 constraintsProperty.initialExpression.code = currentScope.constraintsClosureCode
                 currentScope.checkingConstraintsClosure = true
-                withTypeChecker { visitClosureExpression constraintsProperty.initialExpression }
+                withTypeChecker { visitClosureExpression(constraintsProperty.initialExpression) }
             }
             scopeExit()
         }
 
         methodNotFound { ClassNode receiver, String name, ArgumentListExpression argList, ClassNode[] argTypes, MethodCall call ->
             def dynamicCall
-            if(currentScope.constraintsClosureCode && currentScope.checkingConstraintsClosure) {
-                if(receiver.getField(name) || 'importFrom' == name) {
-                    dynamicCall = makeDynamic (call)
+            if (currentScope.constraintsClosureCode && currentScope.checkingConstraintsClosure) {
+                if (receiver.getField(name) || 'importFrom' == name) {
+                    dynamicCall = makeDynamic(call)
                 }
             }
             dynamicCall

@@ -30,7 +30,10 @@ import java.util.List;
  *
  */
 public interface EncodesToWriter {
+
     public void encodeToWriter(CharSequence str, int off, int len, Writer writer, EncodingState encodingState) throws IOException;
+
     public void encodeToWriter(char[] buf, int off, int len, Writer writer, EncodingState encodingState) throws IOException;
+
     public EncodesToWriter createChainingEncodesToWriter(List<StreamingEncoder> additionalEncoders, boolean applyAdditionalFirst);
 }

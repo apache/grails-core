@@ -120,10 +120,10 @@ public class StringCharArrayAccessor {
         }
 
         char[] value;
-        int internalOffset=0;
+        int internalOffset = 0;
         try {
-            value = (char[])valueField.get(str);
-            if(!jdk7_string) {
+            value = (char[]) valueField.get(str);
+            if (!jdk7_string) {
                 internalOffset = offsetField.getInt(str);
             }
         }
@@ -147,15 +147,15 @@ public class StringCharArrayAccessor {
         char[] value = null;
         int internalOffset = 0;
         try {
-            value = (char[])valueField.get(str);
-            if(!jdk7_string) {
+            value = (char[]) valueField.get(str);
+            if (!jdk7_string) {
                 internalOffset = offsetField.getInt(str);
             }
         }
         catch (Exception e) {
             handleError(e);
         }
-        if (value != null && internalOffset==0) {
+        if (value != null && internalOffset == 0) {
             return value;
         }
 
@@ -182,13 +182,13 @@ public class StringCharArrayAccessor {
         try {
             // try to prevent possible final field setting execution reordering in JIT (JSR-133/JMM, "9.1.1 Post-Construction Modification of Final Fields")
             // it was a bit unclear for me if this could ever happen in a single thread
-            synchronized(str) {
+            synchronized (str) {
                 valueField.set(str, charBuf);
-                if(!jdk7_string) {
+                if (!jdk7_string) {
                     countField.set(str, charBuf.length);
                 }
             }
-            synchronized(str) {
+            synchronized (str) {
                 // safety check, just to be sure that setting the final fields went ok
                 if (str.length() != charBuf.length) {
                     throw new IllegalStateException("Fast java.lang.String construction failed.");

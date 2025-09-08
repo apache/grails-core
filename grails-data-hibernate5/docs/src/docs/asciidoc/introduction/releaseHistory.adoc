@@ -93,4 +93,4 @@ These AST transformations relied on the Grails 2.x compiler infrastructure and h
 
 The first version of GORM was a series of meta-programming functions that built on the capabilities of Groovy's https://groovy-lang.org/metaprogramming.html#metaprogramming_emc[ExpandoMetaClass].
 
-It was purely dynamic and integrated into the https://grails.org[Grails framework] and not usable without Grails and hence no actual distribution exists for this version and it is only available as part of Grails.
+It was purely dynamic and integrated into the https://grails.apache.org[Grails framework] and not usable without Grails and hence no actual distribution exists for this version and it is only available as part of Grails.

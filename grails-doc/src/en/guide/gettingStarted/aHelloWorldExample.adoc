@@ -29,7 +29,9 @@ $ cd your_project_directory
 Create a new Grails project with the following command:
 
 [source,console]
-$ grails create-app myapp
+$ grails -t forge create-app myapp
+
+NOTE: You can omit `-t forge`, to generate the application with Grails Shell CLI and profiles
 
 === Step 2: Access the Project Directory
 
@@ -40,10 +42,10 @@ $ cd myapp
 
 === Step 3: Start Grails Interactive Console
 
-Start the Grails interactive console by running the "grails" command:
+Start the Grails Forge CLI interactive console by running the "grails" command:
 
 [source,console]
-$ grails
+$ grails -t forge
 
 === Step 4: Create a Controller
 
@@ -54,7 +56,7 @@ grails> create-controller greeting
 
 This command will generate a new controller named "GreetingController.groovy" within the grails-app/controllers/myapp directory. You might wonder why there is an additional "myapp" directory. This structure aligns with conventions commonly used in Java development, where classes are organized into packages. Grails automatically includes the application name as part of the package structure. If you do not specify a package, Grails defaults to using the application name.
 
-For more detailed information on creating controllers, you can refer to the documentation on the link:../ref/Command%20Line/create-controller.html[create-controller] page.
+For more detailed information on creating controllers, you can refer to the documentation on the link:{commandLineRef}create-controller.html[create-controller] page.
 
 === Step 5: Edit the Controller
 
@@ -74,7 +76,7 @@ class GreetingController {
 }
 ----
 
-The action is simply a method. In this particular case, it calls a special method provided by Grails to link:../ref/Controllers/render.html[render] the page.
+The action is simply a method. In this particular case, it calls a special method provided by Grails to link:{controllersRef}render.html[render] the page.
 
 === Step 6: Run the Application
 
@@ -183,8 +185,6 @@ $ ./gradlew bootRun -Dgrails.server.port=9090
 Replace "9090" with your preferred port.
 
 === Note for Windows Users
-
-If you encounter an error related to the Java process or filename length, you can use the `--stacktrace` flag or add `grails { pathingJar = true }` to your "build.gradle" file.
 
 It may also be necessary to enclose the system properties in quotes on Windows:
 ----

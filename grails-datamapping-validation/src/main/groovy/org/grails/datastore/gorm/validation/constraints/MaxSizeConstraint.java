@@ -19,12 +19,13 @@
 
 package org.grails.datastore.gorm.validation.constraints;
 
-import grails.gorm.validation.ConstrainedProperty;
+import java.lang.reflect.Array;
+import java.util.Collection;
+
 import org.springframework.context.MessageSource;
 import org.springframework.validation.Errors;
 
-import java.lang.reflect.Array;
-import java.util.Collection;
+import grails.gorm.validation.ConstrainedProperty;
 
 /**
  * Validates maximum size or length of the property, for strings and arrays
@@ -39,7 +40,7 @@ public class MaxSizeConstraint extends AbstractConstraint {
 
     public MaxSizeConstraint(Class<?> constraintOwningClass, String constraintPropertyName, Object constraintParameter, MessageSource messageSource) {
         super(constraintOwningClass, constraintPropertyName, constraintParameter, messageSource);
-        this.maxSize = ((Number)this.constraintParameter).intValue() ;
+        this.maxSize = ((Number) this.constraintParameter).intValue();
     }
 
     /**
@@ -83,10 +84,10 @@ public class MaxSizeConstraint extends AbstractConstraint {
             length = Array.getLength(propertyValue);
         }
         else if (propertyValue instanceof Collection<?>) {
-            length = ((Collection<?>)propertyValue).size();
+            length = ((Collection<?>) propertyValue).size();
         }
         else { // String
-            length = ((String)propertyValue).length();
+            length = ((String) propertyValue).length();
         }
 
         if (length > maxSize) {

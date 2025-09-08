@@ -18,7 +18,22 @@
  */
 package grails.build.logging;
 
-import grails.util.Environment;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.Flushable;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.Collection;
+import java.util.List;
+import java.util.Stack;
+
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+import org.codehaus.groovy.runtime.StackTraceUtils;
+import org.codehaus.groovy.runtime.typehandling.NumberMath;
+
 import jline.Terminal;
 import jline.TerminalFactory;
 import jline.UnixTerminal;
@@ -30,22 +45,18 @@ import jline.internal.Log;
 import jline.internal.ShutdownHooks;
 import jline.internal.TerminalLineSettings;
 import org.apache.tools.ant.BuildException;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
-import org.codehaus.groovy.runtime.StackTraceUtils;
-import org.codehaus.groovy.runtime.typehandling.NumberMath;
 import org.fusesource.jansi.Ansi;
 import org.fusesource.jansi.Ansi.Color;
 import org.fusesource.jansi.AnsiConsole;
+
+import grails.util.Environment;
 import org.grails.build.interactive.CandidateListCompletionHandler;
 import org.grails.build.logging.GrailsConsoleErrorPrintStream;
 import org.grails.build.logging.GrailsConsolePrintStream;
 
-import java.io.*;
-import java.util.Collection;
-import java.util.List;
-import java.util.Stack;
-
-import static org.fusesource.jansi.Ansi.Color.*;
+import static org.fusesource.jansi.Ansi.Color.DEFAULT;
+import static org.fusesource.jansi.Ansi.Color.RED;
+import static org.fusesource.jansi.Ansi.Color.YELLOW;
 import static org.fusesource.jansi.Ansi.Erase.FORWARD;
 import static org.fusesource.jansi.Ansi.ansi;
 
@@ -116,7 +127,7 @@ public class GrailsConsole implements ConsoleLogger {
      * The category of the current output
      */
     @SuppressWarnings("serial")
-    Stack<String> category = new Stack<String>() {
+    Stack<String> category = new Stack<>() {
         @Override
         public String toString() {
             if (size() == 1) return peek() + CATEGORY_SEPARATOR;
@@ -151,7 +162,6 @@ public class GrailsConsole implements ConsoleLogger {
             Runtime.getRuntime().removeShutdownHook(shutdownHookThread);
         }
     }
-
 
     protected GrailsConsole() throws IOException {
         cursorMove = 1;

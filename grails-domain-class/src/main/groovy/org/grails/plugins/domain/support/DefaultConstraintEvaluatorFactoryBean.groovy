@@ -19,6 +19,10 @@
 
 package org.grails.plugins.domain.support
 
+import org.springframework.beans.factory.FactoryBean
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.context.MessageSource
+
 import grails.core.GrailsApplication
 import grails.util.GrailsMessageSourceUtils
 import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator
@@ -27,30 +31,20 @@ import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegis
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.validation.ConstraintEvalUtils
-import org.springframework.beans.factory.FactoryBean
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.context.MessageSource
 
 class DefaultConstraintEvaluatorFactoryBean implements FactoryBean<ConstraintsEvaluator> {
 
     MessageSource messageSource
-
-    @Autowired
-    setMessageSource(List<MessageSource> messageSources) {
-        setMessageSource(GrailsMessageSourceUtils.findPreferredMessageSource(messageSources))
-    }
-
-    void setMessageSource(MessageSource messageSource) {
-        this.messageSource = messageSource
-    }
-
-    @Autowired
-    @Qualifier('grailsDomainClassMappingContext')
     MappingContext grailsDomainClassMappingContext
-
-    @Autowired
     GrailsApplication grailsApplication
+
+    DefaultConstraintEvaluatorFactoryBean(List<MessageSource> messageSources,
+                                          @Qualifier('grailsDomainClassMappingContext') MappingContext mappingContext,
+                                          GrailsApplication grailsApplication) {
+        this.messageSource = GrailsMessageSourceUtils.findPreferredMessageSource(messageSources)
+        this.grailsDomainClassMappingContext = mappingContext
+        this.grailsApplication = grailsApplication
+    }
 
     @Override
     ConstraintsEvaluator getObject() throws Exception {

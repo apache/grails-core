@@ -33,7 +33,7 @@ class SizeConstraintSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManage
         manager.domainClasses.addAll([SizeConstrainedUser])
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/846')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/846')
     void "test size constraint is used in schema"() {
         when:"A constraint is violated"
         new SizeConstrainedUser(username:"blah", columnAa:"123456", columnBb:"123456").save(flush:true, validate:false)

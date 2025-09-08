@@ -19,14 +19,14 @@ under the License.
 
 Functional tests involve making HTTP requests against the running application and verifying the resultant behaviour. This is useful for end-to-end testing scenarios, such as making REST calls against a JSON API.
 
-Grails by default ships with support for writing functional tests using the http://www.gebish.org[Geb framework]. To create a functional test you can use the `create-functional-test` command which will create a new functional test:
+Grails by default ships with support for writing functional tests using the https://groovy.apache.org/geb/[Geb framework]. To create a functional test you can use the `create-functional-test` command which will create a new functional test:
 
 [source,groovy]
 ----
 $ grails create-functional-test MyFunctional
 ----
 
-The above command will create a new Spock spec called `MyFunctionalSpec.groovy` in the `src/integration-test/groovy` directory. The test is annotated with the {apiDocs}grails/test/mixin/integration/Integration.html[Integration] annotation to indicate it is an integration test and extends the `GebSpec` super class:
+The above command will create a new Spock spec called `MyFunctionalSpec.groovy` in the `src/integration-test/groovy` directory. The test is annotated with the link:{api}grails/testing/mixin/integration/Integration.html[Integration] annotation to indicate it is an integration test and extends the `GebSpec` super class:
 
 
 [source,groovy]
@@ -42,7 +42,7 @@ class HomeSpec extends GebSpec {
 
     void "Test the home page renders correctly"() {
         when:"The home page is visited"
-            go '/'
+            go('/')
 
         then:"The title is correct"
             $('title').text() == "Welcome to Grails"
@@ -56,7 +56,7 @@ Note that the application is only loaded once for the entire test run, so functi
 
 In addition the application is loaded in the JVM as the test, this means that the test has full access to the application state and can interact directly with data services such as GORM to setup and cleanup test data.
 
-The `Integration` annotation supports an optional `applicationClass` attribute which may be used to specify the application class to use for the functional test.  The class must extend {apiDocs}grails/boot/config/GrailsAutoConfiguration.html[GrailsAutoConfiguration].
+The `Integration` annotation supports an optional `applicationClass` attribute which may be used to specify the application class to use for the functional test.  The class must extend link:{api}grails/boot/config/GrailsAutoConfiguration.html[GrailsAutoConfiguration].
 
 [source,groovy]
 ----

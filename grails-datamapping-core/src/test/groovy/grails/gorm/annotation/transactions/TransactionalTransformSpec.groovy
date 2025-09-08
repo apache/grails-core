@@ -130,7 +130,7 @@ import grails.gorm.transactions.Transactional
         instance.targetDatastore == mockDatastore
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/9989')
+    @Issue('https://github.com/apache/grails-core/issues/9989')
     void "Test transactional transform when applied to inheritance"() {
         when: "A subclass subclasses a transactional service"
         Class dogService = new GroovyShell().evaluate('''
@@ -171,7 +171,7 @@ import grails.gorm.transactions.Transactional
 
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/9837')
+    @Issue('https://github.com/apache/grails-core/issues/9837')
     void "Test @Rollback when applied to Spock specifications with closures combined with where queries"() {
         when: "A new instance of a class with a @Transactional method is created that subclasses another transactional class"
         Class mySpec = new GroovyShell().evaluate('''
@@ -203,7 +203,7 @@ import grails.gorm.transactions.Transactional
 
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/9646')
+    @Issue('https://github.com/apache/grails-core/issues/9646')
     void "Test @Rollback when applied to Spock specifications with closures in then blocks"() {
         when: "A new instance of a class with a @Transactional method is created that subclasses another transactional class"
         Class mySpec = new GroovyShell().evaluate('''

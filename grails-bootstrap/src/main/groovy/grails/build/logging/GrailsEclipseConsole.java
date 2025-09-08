@@ -18,10 +18,10 @@
  */
 package grails.build.logging;
 
+import java.io.IOException;
+
 import jline.Terminal;
 import jline.UnsupportedTerminal;
-
-import java.io.IOException;
 
 /**
  * This class is meant to keep changes made in support of Eclipse separate from
@@ -65,7 +65,7 @@ public class GrailsEclipseConsole extends GrailsConsole {
 
     private static Boolean boolProp(String propName) {
         try {
-            String prop =  System.getProperty(propName);
+            String prop = System.getProperty(propName);
             return prop != null && Boolean.valueOf(prop);
         } catch (Exception e) {
             return false;

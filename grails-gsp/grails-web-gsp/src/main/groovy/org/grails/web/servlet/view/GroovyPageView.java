@@ -18,28 +18,29 @@
  */
 package org.grails.web.servlet.view;
 
-import grails.util.Environment;
-import grails.util.GrailsUtil;
-import groovy.text.Template;
-
 import java.io.IOException;
 import java.util.Map;
+
+import groovy.text.Template;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.grails.gsp.GroovyPageWritable;
-import org.grails.web.pages.GSPResponseWriter;
-import org.grails.gsp.GroovyPageTemplate;
-import org.grails.gsp.GroovyPagesTemplateEngine;
-import org.grails.gsp.GroovyPagesException;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
+
 import org.springframework.core.io.Resource;
 import org.springframework.scripting.ScriptSource;
 
-import static org.grails.web.pages.GroovyPagesServlet.RENDERING_VIEW_ATTRIBUTE;
+import grails.util.Environment;
+import grails.util.GrailsUtil;
+import grails.web.pages.GroovyPagesUriService;
+import org.grails.gsp.GroovyPageTemplate;
+import org.grails.gsp.GroovyPageWritable;
+import org.grails.gsp.GroovyPagesException;
+import org.grails.gsp.GroovyPagesTemplateEngine;
+import org.grails.web.pages.GSPResponseWriter;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
 
 /**
  * A Spring View that renders Groovy Server Pages to the response. It requires an instance
@@ -61,21 +62,21 @@ public class GroovyPageView extends AbstractGrailsView {
     private static final Log LOG = LogFactory.getLog(GroovyPageView.class);
     protected GroovyPagesTemplateEngine templateEngine;
     private long createTimestamp = System.currentTimeMillis();
-    private static final long LASTMODIFIED_CHECK_INTERVAL =  Long.getLong("grails.gsp.reload.interval", 5000).longValue();
+    private static final long LASTMODIFIED_CHECK_INTERVAL = Long.getLong("grails.gsp.reload.interval", 5000).longValue();
     private ScriptSource scriptSource;
     protected GroovyPageTemplate template;
     public static final String EXCEPTION_MODEL_KEY = "exception";
     private static boolean developmentMode = Environment.isDevelopmentMode();
-    
+
     @Override
     protected void renderTemplate(Map<String, Object> model, GrailsWebRequest webRequest, HttpServletRequest request,
             HttpServletResponse response) {
-        request.setAttribute(RENDERING_VIEW_ATTRIBUTE, Boolean.TRUE);
+        request.setAttribute(GroovyPagesUriService.RENDERING_VIEW_ATTRIBUTE, Boolean.TRUE);
         GSPResponseWriter out = null;
         try {
             out = createResponseWriter(webRequest, response);
             final GroovyPageWritable writable = template.make(model);
-            writable.setShowSource( developmentMode  && request.getParameter("showSource") != null);
+            writable.setShowSource(developmentMode && request.getParameter("showSource") != null);
             writable.writeTo(out);
         }
         catch (Exception e) {
@@ -97,10 +98,10 @@ public class GroovyPageView extends AbstractGrailsView {
      * @param engine The GSP engine
      */
     protected void handleException(Exception exception,
-            GroovyPagesTemplateEngine engine)  {
+            GroovyPagesTemplateEngine engine) {
 
         GrailsUtil.deepSanitize(exception);
-        if(LOG.isDebugEnabled()) {
+        if (LOG.isDebugEnabled()) {
             LOG.debug("Error processing GroovyPageView: " + exception.getMessage(), exception);
         }
         if (exception instanceof GroovyPagesException) {
@@ -168,7 +169,7 @@ public class GroovyPageView extends AbstractGrailsView {
         super.afterPropertiesSet();
         try {
             initTemplate();
-        } catch(Exception e) {
+        } catch (Exception e) {
             handleException(e, templateEngine);
         }
     }
@@ -185,7 +186,7 @@ public class GroovyPageView extends AbstractGrailsView {
             template.setAllowSettingContentType(true);
         }
     }
-    
+
     public void rethrowRenderException(Throwable ex, String message) {
         throw new GroovyPagesException(message, ex);
     }

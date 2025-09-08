@@ -23,7 +23,7 @@ import grails.testing.web.taglib.TagLibUnitTest
 import spock.lang.Issue
 import grails.plugin.formfields.*
 
-@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/13')
+@Issue('https://github.com/grails/fields/issues/13')
 class WithTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<FormFieldsTagLib> {
 
 	def mockFormFieldsTemplateService = Mock(FormFieldsTemplateService)
@@ -41,7 +41,7 @@ class WithTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest
         mockFormFieldsTemplateService.getWidgetPrefix() >> 'input-'
 		tagLib.formFieldsTemplateService = mockFormFieldsTemplateService
 
-        mockEmbeddedSitemeshLayout tagLib
+        mockEmbeddedGrailsLayout(tagLib)
     }
 
 	void 'bean attribute does not have to be specified if it is in scope from f:with'() {

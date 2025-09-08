@@ -19,6 +19,7 @@
 package org.grails.gradle.plugin.core
 
 import groovy.transform.CompileStatic
+
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.Project
 
@@ -30,6 +31,7 @@ import org.gradle.api.Project
  */
 @CompileStatic
 class GrailsExtension {
+
     Project project
 
     GrailsExtension(Project project) {
@@ -56,14 +58,14 @@ class GrailsExtension {
     boolean exploded = true
 
     /**
-     * Whether to create a jar file to reference the classpath to prevent classpath too long issues in Windows
-     */
-    boolean pathingJar = false
-
-    /**
      * Whether java.time.* package should be a default import package
      */
     boolean importJavaTime = false
+
+    /**
+     * Whether the spring dependency management plugin should be applied by default
+     */
+    boolean springDependencyManagement = true
 
     /**
      * Configure the reloading agent
@@ -95,16 +97,15 @@ class GrailsExtension {
     static class Agent {
         boolean enabled = true
         File path
-        String inclusions = "grails.plugins..*"
+        String inclusions = 'grails.plugins..*'
         String exclusions
         Boolean logging
         boolean synchronize = true
         boolean allowSplitPackages = true
-        File cacheDir = new File("build/springloaded")
+        File cacheDir = new File('build/springloaded')
 
         Map<String, String> systemProperties = ['jdk.reflect.allowGetCallerClass': 'true']
         List<String> jvmArgs = ['-Xverify:none']
     }
-
 
 }

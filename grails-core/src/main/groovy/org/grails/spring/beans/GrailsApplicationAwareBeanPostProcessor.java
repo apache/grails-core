@@ -18,10 +18,11 @@
  */
 package org.grails.spring.beans;
 
+import org.springframework.beans.BeansException;
+
 import grails.core.GrailsApplication;
 import grails.core.support.GrailsApplicationAware;
 import grails.core.support.GrailsConfigurationAware;
-import org.springframework.beans.BeansException;
 
 /**
  * Implementation of {@link org.springframework.beans.factory.config.BeanPostProcessor}
@@ -47,10 +48,10 @@ public class GrailsApplicationAwareBeanPostProcessor extends BeanPostProcessorAd
 
     public static void processAwareInterfaces(GrailsApplication grailsApplication, Object bean) {
         if (bean instanceof GrailsApplicationAware) {
-            ((GrailsApplicationAware)bean).setGrailsApplication(grailsApplication);
+            ((GrailsApplicationAware) bean).setGrailsApplication(grailsApplication);
         }
         if (bean instanceof GrailsConfigurationAware) {
-            ((GrailsConfigurationAware)bean).setConfiguration(grailsApplication.getConfig());
+            ((GrailsConfigurationAware) bean).setConfiguration(grailsApplication.getConfig());
         }
     }
 }

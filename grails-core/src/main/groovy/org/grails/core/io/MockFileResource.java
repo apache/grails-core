@@ -19,6 +19,7 @@
 package org.grails.core.io;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 
 import org.springframework.core.io.ByteArrayResource;
 
@@ -33,7 +34,7 @@ public class MockFileResource extends ByteArrayResource {
     private String fileName;
 
     public MockFileResource(String fileName, String contents) throws UnsupportedEncodingException {
-        super(contents.getBytes("UTF-8"));
+        super(contents.getBytes(StandardCharsets.UTF_8));
         this.fileName = fileName;
     }
 

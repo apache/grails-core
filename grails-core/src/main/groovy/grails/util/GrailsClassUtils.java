@@ -18,29 +18,6 @@
  */
 package grails.util;
 
-import grails.artefact.Enhanced;
-import groovy.lang.AdaptingMetaClass;
-import groovy.lang.ExpandoMetaClass;
-import groovy.lang.ExpandoMetaClassCreationHandle;
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaClass;
-import groovy.lang.MetaClassRegistry;
-import groovy.lang.MetaProperty;
-import groovy.util.ConfigObject;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.springframework.beans.BeanInstantiationException;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.BeanWrapper;
-import org.springframework.beans.BeanWrapperImpl;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.FatalBeanException;
-import org.springframework.cglib.reflect.FastClass;
-import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.ReflectionUtils;
-import org.springframework.util.StringUtils;
-
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -56,6 +33,32 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import groovy.lang.AdaptingMetaClass;
+import groovy.lang.ExpandoMetaClass;
+import groovy.lang.ExpandoMetaClassCreationHandle;
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaClass;
+import groovy.lang.MetaClassRegistry;
+import groovy.lang.MetaProperty;
+import groovy.util.ConfigObject;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import org.springframework.beans.BeanInstantiationException;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.BeanWrapper;
+import org.springframework.beans.BeanWrapperImpl;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.FatalBeanException;
+import org.springframework.cglib.reflect.FastClass;
+import org.springframework.util.Assert;
+import org.springframework.util.ClassUtils;
+import org.springframework.util.ReflectionUtils;
+import org.springframework.util.StringUtils;
+
+import grails.artefact.Enhanced;
+
 /**
  * Utility methods for dealing with Grails class artifacts.
  *
@@ -64,7 +67,7 @@ import java.util.TreeSet;
 public class GrailsClassUtils {
 
     private static final Log LOG = LogFactory.getLog(GrailsClassUtils.class);
-    public static final Map<Class<?>, Class<?>> PRIMITIVE_TYPE_COMPATIBLE_CLASSES = new HashMap<Class<?>, Class<?>>();
+    public static final Map<Class<?>, Class<?>> PRIMITIVE_TYPE_COMPATIBLE_CLASSES = new HashMap<>();
 
     /**
      * Just add two entries to the class compatibility map
@@ -156,7 +159,7 @@ public class GrailsClassUtils {
      */
     public static Set<Class> getAllInterfacesForClassAsSet(Class clazz, ClassLoader classLoader) {
         Assert.notNull(clazz, "Class must not be null");
-        Set<Class> interfaces = new LinkedHashSet<Class>();
+        Set<Class> interfaces = new LinkedHashSet<>();
         while (clazz != null) {
             Class<?>[] ifcs = clazz.getInterfaces();
             for (Class<?> ifc : ifcs) {
@@ -167,7 +170,6 @@ public class GrailsClassUtils {
         }
         return interfaces;
     }
-
 
     /**
      * Check whether the given class is visible in the given ClassLoader.
@@ -300,7 +302,7 @@ public class GrailsClassUtils {
         }
 
         try {
-            PropertyDescriptor desc=BeanUtils.getPropertyDescriptor(clazz, propertyName);
+            PropertyDescriptor desc = BeanUtils.getPropertyDescriptor(clazz, propertyName);
             if (desc != null) {
                 return desc.getPropertyType();
             }
@@ -325,7 +327,7 @@ public class GrailsClassUtils {
             return new PropertyDescriptor[0];
         }
 
-        Set<PropertyDescriptor> properties = new HashSet<PropertyDescriptor>();
+        Set<PropertyDescriptor> properties = new HashSet<>();
         PropertyDescriptor descriptor = null;
         try {
             PropertyDescriptor[] descriptors = BeanUtils.getPropertyDescriptors(clazz);
@@ -338,7 +340,7 @@ public class GrailsClassUtils {
             }
         }
         catch (Exception e) {
-            if(descriptor == null) {
+            if (descriptor == null) {
                 LOG.error(String.format("Got exception while checking property descriptors for class %s", clazz.getName()), e);
             } else {
                 LOG.error(String.format("Got exception while checking PropertyDescriptor.propertyType for field %s.%s", clazz.getName(), descriptor.getName()), e);
@@ -363,7 +365,7 @@ public class GrailsClassUtils {
     public static PropertyDescriptor[] getPropertiesAssignableToType(Class<?> clazz, Class<?> propertySuperType) {
         if (clazz == null || propertySuperType == null) return new PropertyDescriptor[0];
 
-        Set<PropertyDescriptor> properties = new HashSet<PropertyDescriptor>();
+        Set<PropertyDescriptor> properties = new HashSet<>();
         PropertyDescriptor descriptor = null;
         try {
             PropertyDescriptor[] descriptors = BeanUtils.getPropertyDescriptors(clazz);
@@ -376,7 +378,7 @@ public class GrailsClassUtils {
             }
         }
         catch (Exception e) {
-            if(descriptor == null) {
+            if (descriptor == null) {
                 LOG.error(String.format("Got exception while checking property descriptors for class %s", clazz.getName()), e);
             } else {
                 LOG.error(String.format("Got exception while checking PropertyDescriptor.propertyType for field %s.%s", clazz.getName(), descriptor.getName()), e);
@@ -456,7 +458,7 @@ public class GrailsClassUtils {
      * of the same native type
      */
     @SuppressWarnings("rawtypes")
-    public static boolean isMatchBetweenPrimativeAndWrapperTypes(Class leftType, Class rightType) {
+    public static boolean isMatchBetweenPrimitiveAndWrapperTypes(Class leftType, Class rightType) {
         if (leftType == null) {
             throw new NullPointerException("Left type is null!");
         }
@@ -524,7 +526,7 @@ public class GrailsClassUtils {
      */
     @SuppressWarnings("rawtypes")
     public static boolean isStaticProperty(Class clazz, String propertyName) {
-        Method getter = BeanUtils.findDeclaredMethod(clazz, getGetterName(propertyName), (Class[])null);
+        Method getter = BeanUtils.findDeclaredMethod(clazz, getGetterName(propertyName), (Class[]) null);
         if (getter != null) {
             return isPublicStatic(getter);
         }
@@ -597,7 +599,7 @@ public class GrailsClassUtils {
      * @return The value if there is one, or null if unset OR there is no such property
      */
     public static Object getStaticPropertyValue(Class<?> clazz, String name) {
-        Method getter = BeanUtils.findDeclaredMethod(clazz, getGetterName(name), (Class[])null);
+        Method getter = BeanUtils.findDeclaredMethod(clazz, getGetterName(name), (Class[]) null);
         try {
             if (getter != null) {
                 ReflectionUtils.makeAccessible(getter);
@@ -743,7 +745,7 @@ public class GrailsClassUtils {
      */
     @SuppressWarnings("rawtypes")
     public static boolean isSetter(String name, Class[] args) {
-        if (!StringUtils.hasText(name) || args == null)return false;
+        if (!StringUtils.hasText(name) || args == null) return false;
 
         if (name.startsWith("set")) {
             if (args.length != 1) return false;
@@ -757,13 +759,13 @@ public class GrailsClassUtils {
     public static MetaClass getExpandoMetaClass(Class clazz) {
         MetaClassRegistry registry = GroovySystem.getMetaClassRegistry();
         Assert.isTrue(registry.getMetaClassCreationHandler() instanceof ExpandoMetaClassCreationHandle,
-                "Grails requires an instance of [ExpandoMetaClassCreationHandle] to be set in Groovy's MetaClassRegistry! (current is : "+registry.getMetaClassCreationHandler()+")");
+                "Grails requires an instance of [ExpandoMetaClassCreationHandle] to be set in Groovy's MetaClassRegistry! (current is : " + registry.getMetaClassCreationHandler() + ")");
 
         MetaClass mc = registry.getMetaClass(clazz);
         AdaptingMetaClass adapter = null;
         if (mc instanceof AdaptingMetaClass) {
             adapter = (AdaptingMetaClass) mc;
-            mc = ((AdaptingMetaClass)mc).getAdaptee();
+            mc = ((AdaptingMetaClass) mc).getAdaptee();
         }
 
         if (!(mc instanceof ExpandoMetaClass)) {
@@ -774,7 +776,7 @@ public class GrailsClassUtils {
                 adapter.setAdaptee(mc);
             }
         }
-        Assert.isTrue(mc instanceof ExpandoMetaClass,"BUG! Method must return an instance of [ExpandoMetaClass]!");
+        Assert.isTrue(mc instanceof ExpandoMetaClass, "BUG! Method must return an instance of [ExpandoMetaClass]!");
         return mc;
     }
 
@@ -830,7 +832,7 @@ public class GrailsClassUtils {
                 return defaultValue;
             }
             if (o instanceof Boolean) {
-                return (Boolean)o;
+                return (Boolean) o;
             }
             return Boolean.valueOf(o.toString());
         }
@@ -874,39 +876,12 @@ public class GrailsClassUtils {
      * The name is assumed to be a valid Java method name, that is not verified.
      *
      * @param name The name of the method
-     * @param args The arguments
-     * @return true if it is a javabean property getter
-     * @deprecated use {@link #isGetter(String, Class, Class[])} instead because this method has a defect for "is.." method with Boolean return types.
-     */
-    @Deprecated
-    public static boolean isGetter(String name, Class<?>[] args) {
-        return GrailsNameUtils.isGetter(name, boolean.class, args);
-    }
-
-    /**
-     * Returns true if the name of the method specified and the number of arguments make it a javabean property getter.
-     * The name is assumed to be a valid Java method name, that is not verified.
-     *
-     * @param name The name of the method
      * @param returnType The return type of the method
      * @param args The arguments
      * @return true if it is a javabean property getter
      */
     public static boolean isGetter(String name, Class returnType, Class<?>[] args) {
         return GrailsNameUtils.isGetter(name, returnType, args);
-    }
-
-    /**
-     * Returns a property name equivalent for the given getter name or null if it is not a valid getter. If not null
-     * or empty the getter name is assumed to be a valid identifier.
-     *
-     * @param getterName The getter name
-     * @return The property name equivalent
-     * @deprecated Use {@link #getPropertyForGetter(String, Class)} instead because this method has a defect for "is.." method with Boolean return types.
-     */
-    @Deprecated
-    public static String getPropertyForGetter(String getterName) {
-        return GrailsNameUtils.getPropertyForGetter(getterName);
     }
 
     /**
@@ -993,9 +968,9 @@ public class GrailsClassUtils {
     public static Boolean hasBeenEnhancedForFeature(final Class<?> controllerClass, final String featureName) {
         boolean hasBeenEnhanced = false;
         final Enhanced enhancedAnnotation = controllerClass.getAnnotation(Enhanced.class);
-        if(enhancedAnnotation != null) {
+        if (enhancedAnnotation != null) {
             final String[] enhancedFor = enhancedAnnotation.enhancedFor();
-            if(enhancedFor != null) {
+            if (enhancedFor != null) {
                 hasBeenEnhanced = GrailsArrayUtils.contains(enhancedFor, featureName);
             }
         }
@@ -1006,7 +981,7 @@ public class GrailsClassUtils {
         FastClass.Generator gen = new FastClass.Generator();
         gen.setType(superClass);
         gen.setClassLoader(superClass.getClassLoader());
-        gen.setUseCache( !Environment.isReloadingAgentEnabled() );
+        gen.setUseCache(!Environment.isReloadingAgentEnabled());
         return gen.create();
     }
 }

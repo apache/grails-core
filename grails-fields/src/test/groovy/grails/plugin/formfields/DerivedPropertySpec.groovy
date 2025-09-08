@@ -24,7 +24,7 @@ import grails.testing.web.taglib.TagLibUnitTest
 import org.grails.datastore.mapping.model.MappingContext
 import spock.lang.*
 
-@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/85')
+@Issue('https://github.com/grails/fields/issues/85')
 class DerivedPropertySpec extends AbstractFormFieldsTagLibSpec  implements TagLibUnitTest<FormFieldsTagLib> {
 
     FormFieldsTemplateService mockFormFieldsTemplateService = Mock(FormFieldsTemplateService)
@@ -40,7 +40,7 @@ class DerivedPropertySpec extends AbstractFormFieldsTagLibSpec  implements TagLi
         tagLib.formFieldsTemplateService = mockFormFieldsTemplateService
 
         // @Mock isn't aware of formulae so we need to set this manually
-        MappingContext mappingContext = dataStore.mappingContext
+        MappingContext mappingContext = datastore.mappingContext
         mappingContext.getPersistentEntity(Product.name).getPropertyByName('tax').mapping.mappedForm.derived = true
 
         productInstance = new Product(name: 'MacBook Pro', netPrice: 1499, taxRate: 0.2).save(failOnError: true)

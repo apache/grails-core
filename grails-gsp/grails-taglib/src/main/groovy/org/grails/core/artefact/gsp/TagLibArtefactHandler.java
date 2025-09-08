@@ -21,11 +21,12 @@ package org.grails.core.artefact.gsp;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.logging.LogFactory;
+
 import grails.core.ArtefactHandlerAdapter;
 import grails.core.ArtefactInfo;
 import grails.core.GrailsClass;
 import grails.core.gsp.GrailsTagLibClass;
-import org.apache.commons.logging.LogFactory;
 import org.grails.core.gsp.DefaultGrailsTagLibClass;
 
 /**
@@ -42,8 +43,8 @@ public class TagLibArtefactHandler extends ArtefactHandlerAdapter {
     public static final String PLUGIN_NAME = "groovyPages";
     public static final String TYPE = "TagLib";
 
-    private Map<String, GrailsTagLibClass> tag2libMap = new HashMap<String, GrailsTagLibClass>();
-    private Map<String, GrailsTagLibClass> namespace2tagLibMap = new HashMap<String, GrailsTagLibClass>();
+    private Map<String, GrailsTagLibClass> tag2libMap = new HashMap<>();
+    private Map<String, GrailsTagLibClass> namespace2tagLibMap = new HashMap<>();
 
     public TagLibArtefactHandler() {
         super(TYPE, GrailsTagLibClass.class, DefaultGrailsTagLibClass.class, TYPE);
@@ -59,7 +60,7 @@ public class TagLibArtefactHandler extends ArtefactHandlerAdapter {
      */
     @Override
     public void initialize(ArtefactInfo artefacts) {
-        tag2libMap = new HashMap<String, GrailsTagLibClass>();
+        tag2libMap = new HashMap<>();
         for (GrailsClass aClass : artefacts.getGrailsClasses()) {
             GrailsTagLibClass taglibClass = (GrailsTagLibClass) aClass;
             String namespace = taglibClass.getNamespace();
@@ -92,7 +93,7 @@ public class TagLibArtefactHandler extends ArtefactHandlerAdapter {
     @Override
     public GrailsClass getArtefactForFeature(Object feature) {
         final Object tagLib = tag2libMap.get(feature);
-        if (tagLib!= null) {
+        if (tagLib != null) {
             return (GrailsClass) tagLib;
         }
 

@@ -37,7 +37,7 @@ class User {
 }
 ----
 
-Refer to the user guide topic on link:{guidePath}/validation.html#constraints[Constraints] for more information.
+Refer to the user guide topic on link:{guidePath}validation.html#constraints[Constraints] for more information.
 
 
 === Global Constraints
@@ -187,7 +187,7 @@ Some constraints have no impact on persistence but customize the scaffolding. It
 === Programmatic access
 
 
-You can access a domain's constraints programmatically in another context by accessing the `constrainedProperties` static property of a domain class. That property is an instance of `Map<String, {apiDocs}grails/validation/ConstrainedProperty.html[ConstrainedProperty]>`.
+You can access a domain's constraints programmatically in another context by accessing the `constrainedProperties` static property of a domain class. That property is an instance of `Map<String, link:{apiFromRef}grails/gorm/validation/ConstrainedProperty.html[ConstrainedProperty]>`.
 
 [source,groovy]
 ----
@@ -207,7 +207,7 @@ In the example above, accessing `User.constrainedProperties.firstName.blank` wou
 
 ==== Command Objects
 
-Accessing the constraints on a command object is slightly different. You can access a command object's constraints programmatically in another context by accessing the `constraintsMap` static property of a class that implements {apiDocs}grails/validation/Validateable.html[Validateable]. That property is an instance of `Map<String, {apiDocs}grails/validation/ConstrainedProperty.html[ConstrainedProperty]>`
+Accessing the constraints on a command object is slightly different. You can access a command object's constraints programmatically in another context by accessing the `constraintsMap` static property of a class that implements link:{apiFromRef}grails/validation/Validateable.html[Validateable]. That property is an instance of `Map<String, link:{apiFromRef}grails/gorm/validation/ConstrainedProperty.html[ConstrainedProperty]>`
 
 [source,groovy]
 ----

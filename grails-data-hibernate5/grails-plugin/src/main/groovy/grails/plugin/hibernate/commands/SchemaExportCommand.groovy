@@ -18,23 +18,19 @@
  */
 package grails.plugin.hibernate.commands
 
+import groovy.transform.CompileStatic
+
+import org.hibernate.engine.spi.SessionFactoryImplementor
+import org.hibernate.tool.hbm2ddl.SchemaExport as HibernateSchemaExport
+import org.hibernate.tool.schema.TargetType
+
 import grails.dev.commands.ApplicationCommand
 import grails.dev.commands.ExecutionContext
 import grails.util.Environment
-import groovy.transform.CompileStatic
 import org.grails.build.parsing.CommandLine
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.orm.hibernate.HibernateDatastore
-import org.grails.orm.hibernate.HibernateMappingContextSessionFactoryBean
-import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration
-import org.hibernate.boot.MetadataBuilder
-import org.hibernate.boot.MetadataSources
-import org.hibernate.boot.spi.MetadataImplementor
-import org.hibernate.engine.spi.SessionFactoryImplementor
-import org.hibernate.service.ServiceRegistry
-import org.hibernate.service.spi.ServiceRegistryImplementor
-import org.hibernate.tool.hbm2ddl.SchemaExport as HibernateSchemaExport
-import org.hibernate.tool.schema.TargetType
+
 /**
  * Adds a schema-export command
  *
@@ -44,7 +40,7 @@ import org.hibernate.tool.schema.TargetType
 @CompileStatic
 class SchemaExportCommand implements ApplicationCommand {
 
-    final String description = "Creates a DDL file of the database schema"
+    final String description = 'Creates a DDL file of the database schema'
     Boolean skipBootstrap = true
 
     @Override
@@ -56,7 +52,7 @@ class SchemaExportCommand implements ApplicationCommand {
         boolean stdout = false
 
         for (arg in commandLine.remainingArgs) {
-            switch(arg) {
+            switch (arg) {
                 case 'export':   export = true; break
                 case 'generate': export = false; break
                 case 'stdout':   stdout = true; break
@@ -70,10 +66,10 @@ class SchemaExportCommand implements ApplicationCommand {
         def file = new File(filename)
         file.parentFile.mkdirs()
 
-        HibernateDatastore hibernateDatastore = applicationContext.getBean("hibernateDatastore", HibernateDatastore)
+        HibernateDatastore hibernateDatastore = applicationContext.getBean('hibernateDatastore', HibernateDatastore)
         hibernateDatastore = hibernateDatastore.getDatastoreForConnection(dataSourceName)
 
-        def serviceRegistry = ((SessionFactoryImplementor)hibernateDatastore.sessionFactory).getServiceRegistry()
+        def serviceRegistry = ((SessionFactoryImplementor) hibernateDatastore.sessionFactory).getServiceRegistry()
                                                                                             .getParentServiceRegistry()
         def metadata = hibernateDatastore.metadata
 
@@ -82,13 +78,12 @@ class SchemaExportCommand implements ApplicationCommand {
                 .setOutputFile(file.path)
                 .setDelimiter(';')
 
-
-        String action = export ? "Exporting" : "Generating script to ${file.path}"
-        String ds = argsMap.datasource ? "for DataSource '$argsMap.datasource'" : "for the default DataSource"
-        println "$action in environment '${Environment.current.name}' $ds"
+        String action = export ? 'Exporting' : "Generating script to ${file.path}"
+        String ds = argsMap.datasource ? "for DataSource '$argsMap.datasource'" : 'for the default DataSource'
+        println("$action in environment '${Environment.current.name}' $ds")
 
         EnumSet<TargetType> targetTypes
-        if(stdout) {
+        if (stdout) {
             targetTypes = EnumSet.of(TargetType.SCRIPT, TargetType.STDOUT)
         }
         else {
@@ -98,7 +93,7 @@ class SchemaExportCommand implements ApplicationCommand {
         schemaExport.execute(targetTypes, HibernateSchemaExport.Action.CREATE, metadata, serviceRegistry)
 
         if (schemaExport.exceptions) {
-            def e = (Exception)schemaExport.exceptions[0]
+            def e = (Exception) schemaExport.exceptions[0]
             e.printStackTrace()
             return false
         }

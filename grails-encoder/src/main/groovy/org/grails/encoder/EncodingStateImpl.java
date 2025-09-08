@@ -29,7 +29,7 @@ import java.util.Set;
  * @since 2.3
  */
 public class EncodingStateImpl implements EncodingState {
-    public static final EncodingState UNDEFINED_ENCODING_STATE = new EncodingStateImpl((Set<Encoder>)null, null);
+    public static final EncodingState UNDEFINED_ENCODING_STATE = new EncodingStateImpl((Set<Encoder>) null, null);
     private final Set<Encoder> encoders;
     private final EncodingState previousEncodingState;
 
@@ -81,7 +81,7 @@ public class EncodingStateImpl implements EncodingState {
             return false;
         if (getClass() != obj.getClass())
             return false;
-        EncodingStateImpl other = (EncodingStateImpl)obj;
+        EncodingStateImpl other = (EncodingStateImpl) obj;
         if (encoders == null) {
             if (other.encoders != null && other.encoders.size() > 0)
                 return false;
@@ -92,14 +92,14 @@ public class EncodingStateImpl implements EncodingState {
     }
 
     public EncodingState appendEncoder(Encoder encoder) {
-        if(encoder==null) return this;
+        if (encoder == null) return this;
         Set<Encoder> newEncoders;
-        if (encoders == null || encoders.size()==0) {
+        if (encoders == null || encoders.size() == 0) {
             newEncoders = Collections.singleton(encoder);
-        } else if (encoders.size()==1 && encoders.contains(encoder)) {
+        } else if (encoders.size() == 1 && encoders.contains(encoder)) {
             return this;
         } else {
-            newEncoders = new LinkedHashSet<Encoder>();
+            newEncoders = new LinkedHashSet<>();
             newEncoders.addAll(encoders);
             newEncoders.add(encoder);
         }
@@ -108,16 +108,16 @@ public class EncodingStateImpl implements EncodingState {
 
     @Override
     public String toString() {
-        StringBuilder sb=new StringBuilder();
+        StringBuilder sb = new StringBuilder();
         sb.append("EncodingStateImpl");
-        if(encoders != null && encoders.size() > 0) {
+        if (encoders != null && encoders.size() > 0) {
             sb.append(" [encoders=");
-            boolean first=true;
-            for(Encoder encoder : encoders) {
-                if(!first) {
+            boolean first = true;
+            for (Encoder encoder : encoders) {
+                if (!first) {
                     sb.append(", ");
                 } else {
-                    first=false;
+                    first = false;
                 }
                 sb.append("[@");
                 sb.append(System.identityHashCode(encoder));

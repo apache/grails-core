@@ -18,10 +18,10 @@
  */
 package grails.async
 
+import java.util.concurrent.TimeUnit
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
-
-import java.util.concurrent.TimeUnit
 
 /**
  * A map-like structure for promises that allows waiting for all values in the map to be populated before
@@ -55,7 +55,7 @@ class PromiseMap<K,V> implements Promise<Map<K,V>> {
 
     @Override
     boolean isDone() {
-        return promisesKeys.keySet().every {it.isDone() }
+        return promisesKeys.keySet().every { it.isDone() }
     }
 
     @Override
@@ -213,7 +213,7 @@ class PromiseMap<K,V> implements Promise<Map<K,V>> {
     Map<K,V> get() throws Throwable {
         def promises = promises.values()
         Map<K,V> resultMap = [:]
-        for(Promise<V> promise : promises) {
+        for (Promise<V> promise : promises) {
             V value = promise.get()
             resultMap.put(promisesKeys.get(promise), value)
         }
@@ -232,7 +232,7 @@ class PromiseMap<K,V> implements Promise<Map<K,V>> {
         List<Promise<V>> promises = new ArrayList<Promise<V>>(promises.values())
         Promises.waitAll(promises, timeout, units)
         Map<K,V> resultMap = [:]
-        for(Promise<V> promise : promises) {
+        for (Promise<V> promise : promises) {
             V value = promise.get()
             resultMap.put(promisesKeys.get(promise), value)
         }
@@ -245,7 +245,7 @@ class PromiseMap<K,V> implements Promise<Map<K,V>> {
         Promises.onComplete(promises) { List<V> values ->
             Map<K,V> resultMap = [:]
             int i = 0
-            for(V value in values) {
+            for (V value in values) {
                 Promise<V> promise = promises[i]
                 K key = promisesKeys.get(promise)
                 resultMap.put(key, value)

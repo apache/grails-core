@@ -29,7 +29,7 @@ import spock.lang.Unroll
 
 
 @Unroll
-@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/210')
+@Issue('https://github.com/grails/fields/issues/210')
 class AttributesOfWithAndAllTagsArePropagatedSpec extends AbstractFormFieldsTagLibSpec  implements TagLibUnitTest<FormFieldsTagLib> {
 
 	FormFieldsTemplateService mockFormFieldsTemplateService = Mock(FormFieldsTemplateService)
@@ -53,7 +53,7 @@ class AttributesOfWithAndAllTagsArePropagatedSpec extends AbstractFormFieldsTagL
 
 		tagLib.formFieldsTemplateService = mockFormFieldsTemplateService
 
-		mockEmbeddedSitemeshLayout(tagLib)
+		mockEmbeddedGrailsLayout(tagLib)
 
 		views["/_fields/default/_wrapper.gsp"] = '<wrapper attr="${attribute}">${widget}</wrapper>'
 		views["/_fields/default/_displayWrapper.gsp"] = '<displayWrapper attr="${attribute}">${widget}</displayWrapper>'

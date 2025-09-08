@@ -18,17 +18,19 @@
  */
 package org.grails.gradle.plugin.web
 
-import grails.util.Environment
+import javax.inject.Inject
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
 import org.gradle.api.Project
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
+
+import grails.util.Environment
 import org.grails.gradle.plugin.commands.ApplicationContextCommandTask
 import org.grails.gradle.plugin.core.GrailsGradlePlugin
-
-import javax.inject.Inject
 
 /**
  * Adds web specific extensions
@@ -38,6 +40,7 @@ import javax.inject.Inject
  */
 @CompileStatic
 class GrailsWebGradlePlugin extends GrailsGradlePlugin {
+
     @Inject
     GrailsWebGradlePlugin(ToolingModelBuilderRegistry registry) {
         super(registry)
@@ -49,11 +52,11 @@ class GrailsWebGradlePlugin extends GrailsGradlePlugin {
         super.apply(project)
 
         TaskContainer taskContainer = project.tasks
-        if (taskContainer.findByName("urlMappingsReport") == null) {
+        if (taskContainer.findByName('urlMappingsReport') == null) {
             FileCollection fileCollection = buildClasspath(project, project.configurations.runtimeClasspath, project.configurations.console)
-            taskContainer.create("urlMappingsReport", ApplicationContextCommandTask) {
+            taskContainer.create('urlMappingsReport', ApplicationContextCommandTask) {
                 classpath = fileCollection
-                systemProperty Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName())
+                systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
                 command = 'url-mappings-report'
             }
         }

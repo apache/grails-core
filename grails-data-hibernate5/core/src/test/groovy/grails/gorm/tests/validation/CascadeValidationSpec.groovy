@@ -36,7 +36,7 @@ class CascadeValidationSpec extends Specification {
     @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(Business, Person, Employee)
 
     @Rollback
-    @Issue('https://github.com/grails/grails-data-mapping/issues/926')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/926')
     void "validation cascades correctly"() {
         given: "an invalid business"
         Business b = new Business(name: null)

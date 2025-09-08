@@ -18,24 +18,25 @@
  */
 package grails.util;
 
-import grails.core.ApplicationAttributes;
-import grails.core.GrailsApplication;
-import org.grails.web.util.GrailsApplicationAttributes;
-import groovy.lang.GroovyObject;
-import groovy.util.ConfigObject;
-
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import groovy.lang.GroovyObject;
+
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.support.WebApplicationContextUtils;
+
+import grails.core.ApplicationAttributes;
+import grails.core.GrailsApplication;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.util.GrailsApplicationAttributes;
 
 /**
  * Utility methods for clients using the web framework.
@@ -46,7 +47,7 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
 @SuppressWarnings("rawtypes")
 public class GrailsWebUtil {
 
-    public static final String DEFAULT_ENCODING = "UTF-8";
+    public static final String DEFAULT_ENCODING = StandardCharsets.UTF_8.name();
     private static final String CHARSET_ATTRIBUTE = ";charset=";
     private static final Pattern CHARSET_IN_CONTENT_TYPE_REGEXP = Pattern.compile(";\\s*charset\\s*=", Pattern.CASE_INSENSITIVE);
 
@@ -64,8 +65,8 @@ public class GrailsWebUtil {
             return null;
         }
 
-        GrailsApplication grailsApplication = (GrailsApplication)servletContext.getAttribute(ApplicationAttributes.APPLICATION);
-        if(grailsApplication != null) {
+        GrailsApplication grailsApplication = (GrailsApplication) servletContext.getAttribute(ApplicationAttributes.APPLICATION);
+        if (grailsApplication != null) {
             return grailsApplication;
         }
 
@@ -87,7 +88,7 @@ public class GrailsWebUtil {
             return null;
         }
 
-        return ((GrailsWebRequest)requestAttributes).getAttributes().getGrailsApplication();
+        return ((GrailsWebRequest) requestAttributes).getAttributes().getGrailsApplication();
     }
 
     /**
@@ -107,7 +108,7 @@ public class GrailsWebUtil {
      */
     public static String getUriFromRequest(HttpServletRequest request) {
         Object includeUri = request.getAttribute("jakarta.servlet.include.request_uri");
-        return includeUri == null ? request.getRequestURI() : (String)includeUri;
+        return includeUri == null ? request.getRequestURI() : (String) includeUri;
     }
 
     /**
@@ -116,7 +117,7 @@ public class GrailsWebUtil {
      * @return The controller or null
      */
     public static GroovyObject getControllerFromRequest(HttpServletRequest request) {
-        return (GroovyObject)request.getAttribute(GrailsApplicationAttributes.CONTROLLER);
+        return (GroovyObject) request.getAttribute(GrailsApplicationAttributes.CONTROLLER);
     }
 
     public static String getContentType(String name, String encoding) {

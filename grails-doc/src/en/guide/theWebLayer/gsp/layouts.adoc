@@ -20,8 +20,7 @@ under the License.
 
 ==== Creating Layouts
 
-
-Grails leverages https://github.com/sitemesh[Sitemesh], a decorator engine, to support view layouts. Layouts are located in the `grails-app/views/layouts` directory. A typical layout can be seen below:
+This product includes software developed by the OpenSymphony Group (https://github.com/sitemesh). The Sitemesh framework is used to provide a decorator engine, to support view layouts. Layouts are located in the `grails-app/views/layouts` directory. A typical layout can be seen below:
 
 [source,xml]
 ----
@@ -39,13 +38,13 @@ Grails leverages https://github.com/sitemesh[Sitemesh], a decorator engine, to s
 </html>
 ----
 
-The key elements are the xref:../../../ref/Tags%20-%20GSP/layoutHead.adoc[layoutHead], xref:../../../ref/Tags%20-%20GSP/layoutTitle.adoc[layoutTitle] and xref:../../../ref/Tags%20-%20GSP/layoutBody.adoc[layoutBody] tag invocations:
+The key elements are the link:{gspTagsRef}layoutHead.html[layoutHead], link:{gspTagsRef}layoutTitle.html[layoutTitle] and link:{gspTagsRef}layoutBody.html[layoutBody] tag invocations:
 
 * `layoutTitle` - outputs the target page's title
 * `layoutHead` - outputs the target page's head tag contents
 * `layoutBody` - outputs the target page's body tag contents
 
-The previous example also demonstrates the xref:../../../ref/Tags%20-%20GSP/pageProperty.adoc[pageProperty] tag which can be used to inspect and return aspects of the target page.
+The previous example also demonstrates the link:{gspTagsRef}pageProperty.html[pageProperty] tag which can be used to inspect and return aspects of the target page.
 
 
 ==== Triggering Layouts
@@ -129,13 +128,13 @@ Alternatively, you can create a layout called `grails-app/views/layouts/book/lis
 If you have both the above-mentioned layouts in place the layout specific to the action will take precedence when the list action is executed.
 
 If a layout is not located using any of those conventions, the convention of last resort is to look for the application default layout which
-is `grails-app/views/layouts/application.gsp`.  The name of the application default layout may be changed by defining the property `grails.sitemesh.default.layout`
+is `grails-app/views/layouts/application.gsp`.  The name of the application default layout may be changed by defining the property `grails.views.layout.default`
 in the application configuration as follows:
 
 [source,yaml]
 .grails-app/conf/application.yml
 ----
-grails.sitemesh.default.layout: myLayoutName
+grails.views.layout.default: myLayoutName
 ----
 
 With that property in place, the application default layout will be `grails-app/views/layouts/myLayoutName.gsp`.
@@ -144,7 +143,7 @@ With that property in place, the application default layout will be `grails-app/
 ==== Inline Layouts
 
 
-Grails' also supports Sitemesh's concept of inline layouts with the xref:../../../ref/Tags%20-%20GSP/applyLayout.adoc[applyLayout] tag. This can be used to apply a layout to a template, URL or arbitrary section of content. This lets you even further modularize your view structure by "decorating" your template includes.
+Grails also supports inline layouts with the link:{gspTagsRef}applyLayout.html[applyLayout] tag. This can be used to apply a layout to a template, URL or arbitrary section of content. This lets you even further modularize your view structure by "decorating" your template includes.
 
 Some examples of usage can be seen below:
 
@@ -163,14 +162,14 @@ The content to apply a layout to
 ==== Server-Side Includes
 
 
-While the xref:../../../ref/Tags%20-%20GSP/applyLayout.adoc[applyLayout] tag is useful for applying layouts to external content, if you simply want to include external content in the current page you use the xref:../../../ref/Tags%20-%20GSP/include.adoc[include] tag:
+While the link:{gspTagsRef}applyLayout.html[applyLayout] tag is useful for applying layouts to external content, if you simply want to include external content in the current page you use the link:{gspTagsRef}include.html[include] tag:
 
 [source,xml]
 ----
 <g:include controller="book" action="list" />
 ----
 
-You can even combine the xref:../../../ref/Tags%20-%20GSP/include.adoc[include] tag and the xref:../../../ref/Tags%20-%20GSP/applyLayout.adoc[applyLayout] tag for added flexibility:
+You can even combine the link:{gspTagsRef}include.html[include] tag and the link:{gspTagsRef}applyLayout.html[applyLayout] tag for added flexibility:
 
 [source,xml]
 ----
@@ -179,11 +178,11 @@ You can even combine the xref:../../../ref/Tags%20-%20GSP/include.adoc[include] 
 </g:applyLayout>
 ----
 
-Finally, you can also call the xref:../../../ref/Tags%20-%20GSP/include.adoc[include] tag from a controller or tag library as a method:
+Finally, you can also call the link:{gspTagsRef}include.html[include] tag from a controller or tag library as a method:
 
 [source,groovy]
 ----
 def content = include(controller:"book", action:"list")
 ----
 
-The resulting content will be provided via the return value of the xref:../../../ref/Tags%20-%20GSP/include.adoc[include] tag.
+The resulting content will be provided via the return value of the link:{gspTagsRef}include.html[include] tag.

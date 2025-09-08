@@ -18,11 +18,12 @@ package org.grails.datastore.gorm.mongo;
 import java.util.Collection;
 import java.util.List;
 
+import org.springframework.util.Assert;
+
 import grails.mongodb.geo.Box;
 import org.grails.datastore.gorm.finders.MethodExpression;
 import org.grails.datastore.mapping.mongo.query.MongoQuery;
 import org.grails.datastore.mapping.query.Query.Criterion;
-import org.springframework.util.Assert;
 
 /**
  * Dynamic finder expression for within box queries
@@ -39,8 +40,8 @@ public class WithinBox extends MethodExpression {
     @Override
     public Criterion createCriterion() {
         Object argument = arguments[0];
-        if(argument instanceof Box) {
-            return new MongoQuery.WithinBox(propertyName, ((Box)argument).asList());
+        if (argument instanceof Box) {
+            return new MongoQuery.WithinBox(propertyName, ((Box) argument).asList());
         }
         else {
             return new MongoQuery.WithinBox(propertyName, (List<?>) argument);
@@ -58,7 +59,7 @@ public class WithinBox extends MethodExpression {
         Assert.isTrue((isList || (arg instanceof Box)),
                 "Only a list of elements is supported in a 'withinBox' query");
 
-        if(isList) {
+        if (isList) {
             Collection<?> argument = (Collection<?>) arg;
             Assert.isTrue(argument.size() == 2,
                     "A 'withinBox' query requires a two dimensional list of values");

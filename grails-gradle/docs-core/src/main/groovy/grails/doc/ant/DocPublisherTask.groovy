@@ -21,6 +21,7 @@ package grails.doc.ant
 import org.apache.tools.ant.BuildException
 import org.apache.tools.ant.Project
 import org.apache.tools.ant.Task
+
 import grails.doc.DocPublisher
 
 /**
@@ -111,6 +112,7 @@ class DocPublisherTask extends Task {
 }
 
 class AntLogAdapter {
+
     private antProject
     private task
 
@@ -120,18 +122,18 @@ class AntLogAdapter {
     }
 
     void error(String msg) {
-        antProject.log task, msg, Project.MSG_ERR
+        antProject.log(task, msg, Project.MSG_ERR)
     }
 
     void warn(String msg) {
-        antProject.log task, msg, Project.MSG_WARN
+        antProject.log(task, msg, Project.MSG_WARN)
     }
 
     void info(String msg) {
-        antProject.log task, msg, Project.MSG_INFO
+        antProject.log(task, msg, Project.MSG_INFO)
     }
 
     void debug(String msg) {
-        antProject.log task, msg, Project.MSG_DEBUG
+        antProject.log(task, msg, Project.MSG_DEBUG)
     }
 }

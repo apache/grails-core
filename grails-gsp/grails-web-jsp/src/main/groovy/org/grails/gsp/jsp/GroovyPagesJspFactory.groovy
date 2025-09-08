@@ -34,18 +34,18 @@ import jakarta.servlet.jsp.PageContext
 class GroovyPagesJspFactory extends JspFactory {
 
     PageContext getPageContext(Servlet servlet, ServletRequest servletRequest, ServletResponse servletResponse, String s, boolean b, int i, boolean b1) {
-         throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException()
     }
 
     void releasePageContext(PageContext pageContext) {
-         throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException()
     }
 
     JspEngineInfo getEngineInfo() {
         return { getSpecificationVersion() } as JspEngineInfo
     }
 
-    protected String getSpecificationVersion() { "2.1" }
+    protected String getSpecificationVersion() { '2.1' }
 
     JspApplicationContext getJspApplicationContext(ServletContext servletContext) {
         def jspCtx = servletContext.getAttribute(GroovyPagesJspApplicationContext.getName())

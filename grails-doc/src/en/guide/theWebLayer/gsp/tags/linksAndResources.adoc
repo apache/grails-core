@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-GSP also features tags to help you manage linking to controllers and actions. The xref:../../../../ref/Tags%20-%20GSP/link.adoc[link] tag lets you specify controller and action name pairing and it will automatically work out the link based on the xref:theWebLayer/urlmappings.adoc[URL Mappings], even if you change them! For example:
+GSP also features tags to help you manage linking to controllers and actions. The link:{gspTagsRef}link.html[link] tag lets you specify controller and action name pairing and it will automatically work out the link based on the link:#urlmappings[URL Mappings], even if you change them! For example:
 
 [,xml]
 ----

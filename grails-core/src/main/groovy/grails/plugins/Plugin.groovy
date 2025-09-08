@@ -18,6 +18,14 @@
  */
 package grails.plugins
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.BeansException
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.context.ApplicationContext
+import org.springframework.context.ApplicationContextAware
+import org.springframework.context.ConfigurableApplicationContext
+
 import grails.config.Config
 import grails.core.ArtefactHandler
 import grails.core.GrailsApplication
@@ -25,14 +33,7 @@ import grails.core.GrailsApplicationLifeCycle
 import grails.core.support.GrailsApplicationAware
 import grails.spring.BeanBuilder
 import grails.util.Environment
-import groovy.transform.CompileStatic
 import org.grails.spring.context.support.MapBasedSmartPropertyOverrideConfigurer
-import org.springframework.beans.BeansException
-import org.springframework.beans.factory.support.BeanDefinitionRegistry
-import org.springframework.context.ApplicationContext
-import org.springframework.context.ApplicationContextAware
-import org.springframework.context.ConfigurableApplicationContext
-
 
 /**
  * Super class for plugins to implement. Plugin implementations should define the various plugin hooks
@@ -69,7 +70,7 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
     /**
      * The {@link GrailsPluginManager} instance
      */
-    GrailsPluginManager getManager() { pluginManager}
+    GrailsPluginManager getManager() { pluginManager }
 
     /**
      * Whether the plugin is enabled
@@ -81,7 +82,6 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
      */
     final List<ArtefactHandler> artefacts = []
 
-
     /**
      * The {@link ApplicationContext} instance
      */
@@ -91,10 +91,10 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
      * @return The ApplicationContext
      */
     ConfigurableApplicationContext getApplicationContext() {
-        if(applicationContext instanceof ConfigurableApplicationContext) {
-            return (ConfigurableApplicationContext)applicationContext
+        if (applicationContext instanceof ConfigurableApplicationContext) {
+            return (ConfigurableApplicationContext) applicationContext
         }
-        return null;
+        return null
     }
 
     @Override
@@ -166,8 +166,8 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
      */
     void beans(Closure beanDefinitions) {
         def bb = new BeanBuilder(null, grailsApplication.classLoader)
-        bb.beans beanDefinitions
-        bb.registerBeans((BeanDefinitionRegistry)applicationContext)
-        new MapBasedSmartPropertyOverrideConfigurer(grailsApplication: grailsApplication).postProcessBeanFactory(((ConfigurableApplicationContext)applicationContext).beanFactory)
+        bb.beans(beanDefinitions)
+        bb.registerBeans((BeanDefinitionRegistry) applicationContext)
+        new MapBasedSmartPropertyOverrideConfigurer(grailsApplication: grailsApplication).postProcessBeanFactory(((ConfigurableApplicationContext) applicationContext).beanFactory)
     }
 }

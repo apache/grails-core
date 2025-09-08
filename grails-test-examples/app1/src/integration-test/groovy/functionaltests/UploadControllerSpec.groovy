@@ -39,7 +39,9 @@ class UploadControllerSpec extends ContainerGebSpec {
         $('#input1').click()
 
         then:"The file is uploaded"
-        $('p').text() == 'Test upload'
+        waitFor {
+            $('p').text() == 'Test upload'
+        }
     }
 
     void "Test file upload parameters"() {
@@ -53,7 +55,8 @@ class UploadControllerSpec extends ContainerGebSpec {
         $('#input2').click()
 
         then:"The file is uploaded"
-        $('p').text() == 'ok'
-
+        waitFor {
+            $('p').text() == 'ok'
+        }
     }
 }

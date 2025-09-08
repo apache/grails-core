@@ -27,7 +27,7 @@ class DownloadSupportSpec extends ContainerGebSpec {
 
     void 'should be able to use download methods'() {
         when:
-        go '/'
+        go('/')
 
         then:
         downloadText().contains('Welcome to Grails')

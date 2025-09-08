@@ -54,7 +54,6 @@ public interface ClassInjector {
      */
     void performInjection(SourceUnit source, ClassNode classNode);
 
-
     /**
      * Handles injection of properties, methods etc. into a class.
      *

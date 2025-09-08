@@ -34,7 +34,10 @@ on:
     # The branches below must be a subset of the branches above
     branches:
       - '[4-9]+.[0-9]+.x'
-    
+# queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   analyze:
     name: Analyze

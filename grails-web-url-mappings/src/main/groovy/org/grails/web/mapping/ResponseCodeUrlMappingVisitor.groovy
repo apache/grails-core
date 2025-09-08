@@ -21,35 +21,31 @@ package org.grails.web.mapping
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.PropertyNode
 import org.codehaus.groovy.ast.expr.MethodCallExpression
-import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.control.SourceUnit
 
 class ResponseCodeUrlMappingVisitor extends ClassCodeVisitorSupport {
+
     boolean insideMapping = false
     List<String> responseCodes = []
 
-    public void visitProperty(PropertyNode node){
-        if (node?.name == "mappings") {
+    void visitProperty(PropertyNode node) {
+        if (node?.name == 'mappings') {
             insideMapping = true
         }
         super.visitProperty(node)
-        if (node?.name == "mappings") {
+        if (node?.name == 'mappings') {
             insideMapping = false
         }
     }
-    public void visitMethodCallExpression(MethodCallExpression call) {
+    void visitMethodCallExpression(MethodCallExpression call) {
         if (insideMapping && call.methodAsString =~ /^\d{3}$/ && !responseCodes.contains(call.methodAsString)) {
             responseCodes << call.methodAsString
         }
         super.visitMethodCallExpression(call)
     }
 
-    public void visitExpressionStatement(ExpressionStatement statement) {
-        super.visitExpressionStatement(statement)
-    }
-
     @Override
     protected SourceUnit getSourceUnit() {
-        return null;
+        return null
     }
 }

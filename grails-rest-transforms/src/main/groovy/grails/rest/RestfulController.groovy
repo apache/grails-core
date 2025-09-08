@@ -18,14 +18,18 @@
  */
 package grails.rest
 
+import org.springframework.http.HttpStatus
+
 import grails.artefact.Artefact
 import grails.gorm.transactions.ReadOnly
 import grails.gorm.transactions.Transactional
 import grails.util.GrailsNameUtils
 import grails.web.http.HttpHeaders
-import org.springframework.http.HttpStatus
 
-import static org.springframework.http.HttpStatus.*
+import static org.springframework.http.HttpStatus.CREATED
+import static org.springframework.http.HttpStatus.NOT_FOUND
+import static org.springframework.http.HttpStatus.NO_CONTENT
+import static org.springframework.http.HttpStatus.OK
 
 /**
  * Base class that can be extended to get the basic CRUD operations needed for a RESTful API.
@@ -33,10 +37,11 @@ import static org.springframework.http.HttpStatus.*
  * @author Graeme Rocher
  * @since 2.3
  */
-@Artefact("Controller")
+@Artefact('Controller')
 @ReadOnly
 class RestfulController<T> {
-    static allowedMethods = [save: "POST", update: ["PUT", "POST"], patch: "PATCH", delete: "DELETE"]
+
+    static allowedMethods = [save: 'POST', update: ['PUT', 'POST'], patch: 'PATCH', delete: 'DELETE']
 
     Class<T> resource
     String resourceName
@@ -63,7 +68,7 @@ class RestfulController<T> {
     def index(Integer max) {
         if (max < 0) { max = null }
         params.max = Math.min(max ?: 10, 100)
-        respond listAllResources(params), model: [("${resourceName}Count".toString()): countResources()]
+        respond(listAllResources(params), model: [("${resourceName}Count".toString()): countResources()])
     }
 
     /**
@@ -72,17 +77,17 @@ class RestfulController<T> {
      * @return The rendered resource or a 404 if it doesn't exist
      */
     def show() {
-        respond queryForResource(params.id)
+        respond(queryForResource(params.id))
     }
 
     /**
      * Displays a form to create a new resource
      */
     def create() {
-        if(handleReadOnly()) {
+        if (handleReadOnly()) {
             return
         }
-        respond createResource()
+        respond(createResource())
     }
 
     /**
@@ -90,7 +95,7 @@ class RestfulController<T> {
      */
     @Transactional
     def save() {
-        if(handleReadOnly()) {
+        if (handleReadOnly()) {
             return
         }
         def instance = createResource()
@@ -98,31 +103,31 @@ class RestfulController<T> {
         instance.validate()
         if (instance.hasErrors()) {
             transactionStatus.setRollbackOnly()
-            respond instance.errors, view:'create' // STATUS CODE 422
+            respond(instance.errors, view: 'create') // STATUS CODE 422
             return
         }
 
-        saveResource instance
+        saveResource(instance)
 
         request.withFormat {
-            form multipartForm {
+            form(multipartForm {
                 flash.message = message(code: 'default.created.message', args: [classMessageArg, instance.id])
                 redirect instance
-            }
+            })
             '*' {
                 response.addHeader(HttpHeaders.LOCATION,
-                        grailsLinkGenerator.link( resource: this.controllerName, action: 'show',id: instance.id, absolute: true,
-                                            namespace: hasProperty('namespace') ? this.namespace : null ))
-                respond instance, [status: CREATED, view:'show']
+                        grailsLinkGenerator.link(resource: this.controllerName, action: 'show', id: instance.id, absolute: true,
+                                            namespace: hasProperty('namespace') ? this.namespace : null))
+                respond(instance, [status: CREATED, view: 'show'])
             }
         }
     }
 
     def edit() {
-        if(handleReadOnly()) {
+        if (handleReadOnly()) {
             return
         }
-        respond queryForResource(params.id)
+        respond(queryForResource(params.id))
     }
 
     /**
@@ -140,7 +145,7 @@ class RestfulController<T> {
      */
     @Transactional
     def update() {
-        if(handleReadOnly()) {
+        if (handleReadOnly()) {
             return
         }
 
@@ -156,21 +161,21 @@ class RestfulController<T> {
         instance.validate()
         if (instance.hasErrors()) {
             transactionStatus.setRollbackOnly()
-            respond instance.errors, view:'edit' // STATUS CODE 422
+            respond(instance.errors, view: 'edit') // STATUS CODE 422
             return
         }
 
-        updateResource instance
+        updateResource(instance)
         request.withFormat {
-            form multipartForm {
+            form(multipartForm {
                 flash.message = message(code: 'default.updated.message', args: [classMessageArg, instance.id])
                 redirect instance
-            }
-            '*'{
+            })
+            '*' {
                 response.addHeader(HttpHeaders.LOCATION,
-                        grailsLinkGenerator.link( resource: this.controllerName, action: 'show',id: instance.id, absolute: true,
-                                            namespace: hasProperty('namespace') ? this.namespace : null ))
-                respond instance, [status: OK]
+                        grailsLinkGenerator.link(resource: this.controllerName, action: 'show', id: instance.id, absolute: true,
+                                            namespace: hasProperty('namespace') ? this.namespace : null))
+                respond(instance, [status: OK])
             }
         }
     }
@@ -181,7 +186,7 @@ class RestfulController<T> {
      */
     @Transactional
     def delete() {
-        if(handleReadOnly()) {
+        if (handleReadOnly()) {
             return
         }
 
@@ -192,36 +197,36 @@ class RestfulController<T> {
             return
         }
 
-        deleteResource instance
+        deleteResource(instance)
 
         request.withFormat {
-            form multipartForm {
+            form(multipartForm {
                 flash.message = message(code: 'default.deleted.message', args: [classMessageArg, instance.id])
-                redirect action:"index", method:"GET"
-            }
-            '*'{ render status: NO_CONTENT } // NO CONTENT STATUS CODE
+                redirect action: 'index', method: 'GET'
+            })
+            '*' { render(status: NO_CONTENT) } // NO CONTENT STATUS CODE
         }
     }
-    
+
     /**
      * handles the request for write methods (create, edit, update, save, delete) when controller is in read only mode
-     * 
+     *
      * @return true if controller is read only
      */
     protected boolean handleReadOnly() {
-        if(readOnly) {
-            render status: HttpStatus.METHOD_NOT_ALLOWED.value()
+        if (readOnly) {
+            render(status: HttpStatus.METHOD_NOT_ALLOWED.value())
             return true
         } else {
             return false
         }
     }
-    
+
     /**
      * The object that can be bound to a domain instance.  Defaults to the request.  Subclasses may override this
      * method to return anything that is a valid second argument to the bindData method in a controller.  This
      * could be the request, a {@link java.util.Map} or a {@link org.grails.databinding.DataBindingSource}.
-     * 
+     *
      * @return the object to bind to a domain instance
      */
     protected getObjectToBind() {
@@ -247,7 +252,7 @@ class RestfulController<T> {
     protected T createResource(Map params) {
         resource.newInstance(params)
     }
-    
+
     /**
      * Creates a new instance of the resource.  If the request
      * contains a body the body will be parsed and used to
@@ -258,7 +263,7 @@ class RestfulController<T> {
      */
     protected T createResource() {
         T instance = resource.getDeclaredConstructor().newInstance()
-        bindData instance, getObjectToBind()
+        bindData(instance, getObjectToBind())
         instance
     }
 
@@ -282,11 +287,11 @@ class RestfulController<T> {
 
     protected void notFound() {
         request.withFormat {
-            form multipartForm {
+            form(multipartForm {
                 flash.message = message(code: 'default.not.found.message', args: [classMessageArg, params.id])
-                redirect action: "index", method: "GET"
-            }
-            '*'{ render status: NOT_FOUND }
+                redirect action: 'index', method: 'GET'
+            })
+            '*' { render(status: NOT_FOUND) }
         }
     }
 
@@ -297,7 +302,7 @@ class RestfulController<T> {
      * @return The saved resource or null if can't save it
      */
     protected T saveResource(T resource) {
-        resource.save flush: true
+        resource.save(flush: true)
     }
 
     /**
@@ -307,16 +312,16 @@ class RestfulController<T> {
      * @return The updated resource or null if can't save it
      */
     protected T updateResource(T resource) {
-        saveResource resource
+        saveResource(resource)
     }
 
     /**
      * Deletes a resource
-     * 
+     *
      * @param resource The resource to be deleted
      */
     protected void deleteResource(T resource) {
-        resource.delete flush: true
+        resource.delete(flush: true)
     }
 
     protected String getClassMessageArg() {

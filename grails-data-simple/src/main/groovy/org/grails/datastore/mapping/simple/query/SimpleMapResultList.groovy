@@ -22,7 +22,8 @@ package org.grails.datastore.mapping.simple.query
  * @author Graeme Rocher
  * @since 1.0
  */
-class SimpleMapResultList{
+class SimpleMapResultList {
+
     SimpleMapQuery query
     List results = []
 

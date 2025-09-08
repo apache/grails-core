@@ -19,21 +19,20 @@
 
 package org.grails.gradle.plugin.views
 
-import grails.util.GrailsNameUtils
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.apache.tools.ant.taskdefs.condition.Os
+
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.Directory
 import org.gradle.api.file.FileCollection
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSetOutput
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.bundling.Jar
-import org.grails.gradle.plugin.core.GrailsExtension
+
+import grails.util.GrailsNameUtils
 import org.grails.gradle.plugin.core.IntegrationTestGradlePlugin
 import org.grails.gradle.plugin.util.SourceSets
 
@@ -75,20 +74,6 @@ class AbstractGroovyTemplatePlugin implements Plugin<Project> {
         FileCollection classesDir = resolveClassesDirs(output, project)
         Provider<Directory> destDir = project.layout.buildDirectory.dir("${templateCompileTask.fileExtension.get()}-classes/main")
         output?.dir(destDir)
-        project.afterEvaluate {
-            GrailsExtension grailsExt = project.extensions.getByType(GrailsExtension)
-            if (grailsExt?.pathingJar && Os.isFamily(Os.FAMILY_WINDOWS)) {
-                Jar pathingJar = tasks.named('pathingJar', Jar).get()
-                ConfigurableFileCollection allClasspath = project.files(
-                        project.layout.buildDirectory.dir('classes/groovy/main'),
-                        project.layout.buildDirectory.dir('resources/main'),
-                        destDir,
-                        pathingJar.archiveFile
-                )
-                templateCompileTask.dependsOn(pathingJar)
-                templateCompileTask.classpath = allClasspath
-            }
-        }
         def allClasspath = classesDir + project.configurations.named('compileClasspath').get()
         templateCompileTask.destinationDirectory.set(destDir)
         templateCompileTask.classpath = allClasspath
@@ -103,14 +88,19 @@ class AbstractGroovyTemplatePlugin implements Plugin<Project> {
         tasks.named('resolveMainClassName').configure { Task task ->
             task.dependsOn(templateCompileTask)
         }
-        if(project.plugins.hasPlugin(IntegrationTestGradlePlugin)) {
+        if (tasks.names.contains('compileTestGroovy')) {
+            tasks.named('compileTestGroovy').configure { Task task ->
+                task.dependsOn(templateCompileTask)
+            }
+        }
+        if (project.plugins.hasPlugin(IntegrationTestGradlePlugin)) {
             project.plugins.withType(IntegrationTestGradlePlugin).configureEach { plugin ->
-                if(tasks.names.contains('compileIntegrationTestGroovy')) {
+                if (tasks.names.contains('compileIntegrationTestGroovy')) {
                     tasks.named('compileIntegrationTestGroovy').configure { Task task ->
                         task.dependsOn(templateCompileTask)
                     }
                 }
-                if(tasks.names.contains('integrationTest')) {
+                if (tasks.names.contains('integrationTest')) {
                     tasks.named('integrationTest').configure { Task task ->
                         task.dependsOn(templateCompileTask)
                     }

@@ -15,7 +15,6 @@
  *  limitations under the License.
  */
 plugins {
-    id 'groovy'
     id 'org.apache.grails.gradle.grails-profile'
 }
 
@@ -30,7 +29,8 @@ ext {
 }
 
 dependencies {
-    profileRuntimeOnly project(':grails-profiles-base')
+    profileRuntimeApi project(':grails-profiles-web')
+    profileRuntimeApi project(':grails-profiles-plugin')
 }
 
 apply {

@@ -18,11 +18,11 @@
  */
 package org.grails.web.converters.marshaller.xml;
 
-import grails.converters.XML;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
 import groovy.lang.MetaMethod;
 
+import grails.converters.XML;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 
@@ -44,9 +44,9 @@ public class InstanceMethodBasedMarshaller implements ObjectMarshaller<XML> {
                 converter.convertAnother(result);
             }
         }
-        catch(Throwable e) {
-            throw e instanceof ConverterException ? (ConverterException)e :
-                new ConverterException("Error invoking toXML method of object with class " + object.getClass().getName(),e);
+        catch (Throwable e) {
+            throw e instanceof ConverterException ? (ConverterException) e :
+                new ConverterException("Error invoking toXML method of object with class " + object.getClass().getName(), e);
         }
     }
 

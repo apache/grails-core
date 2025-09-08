@@ -14,11 +14,12 @@
 */
 package org.grails.datastore.gorm.mongo
 
+import org.springframework.util.Assert
+
 import grails.mongodb.geo.GeoJSON
 import org.grails.datastore.gorm.finders.MethodExpression
 import org.grails.datastore.mapping.mongo.query.MongoQuery
 import org.grails.datastore.mapping.query.Query
-import org.springframework.util.Assert
 
 /**
  * Dynamic finder extension for GeoIntersects style queries
@@ -26,25 +27,25 @@ import org.springframework.util.Assert
  * @author Graeme Rocher
  * @since 2.0
  */
-class GeoIntersects extends MethodExpression{
+class GeoIntersects extends MethodExpression {
+
     GeoIntersects(Class<?> targetClass, String propertyName) {
         super(targetClass, propertyName)
     }
 
     @Override
     Query.Criterion createCriterion() {
-        return new MongoQuery.GeoIntersects(propertyName, arguments[0]);
+        return new MongoQuery.GeoIntersects(propertyName, arguments[0])
     }
 
     @Override
     void setArguments(Object[] arguments) {
-        Assert.isTrue arguments.length == 1, "Exactly 1 argument required to GeoWithin query"
-
+        Assert.isTrue(arguments.length == 1, 'Exactly 1 argument required to GeoWithin query')
 
         def value = arguments[0]
 
-        Assert.isTrue( (value instanceof Map) || (( value instanceof GeoJSON) ),
-                "Argument must be either a Map or a GeoJSON shape (Polygon, LineString or Point)")
+        Assert.isTrue((value instanceof Map) || ((value instanceof GeoJSON)),
+                'Argument must be either a Map or a GeoJSON shape (Polygon, LineString or Point)')
 
         super.setArguments(arguments)
     }

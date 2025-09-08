@@ -19,12 +19,13 @@
 
 package org.grails.datastore.gorm.validation.constraints;
 
-
-import grails.gorm.validation.ConstrainedProperty;
 import org.apache.commons.validator.routines.EmailValidator;
+
 import org.springframework.context.MessageSource;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.Errors;
+
+import grails.gorm.validation.ConstrainedProperty;
 
 /**
  * Validates an email address.
@@ -60,7 +61,6 @@ public class EmailConstraint extends AbstractConstraint {
 
         return constraintParameter;
     }
-
 
     public String getName() {
         return ConstrainedProperty.EMAIL_CONSTRAINT;

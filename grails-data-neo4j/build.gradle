@@ -19,12 +19,11 @@
 
 buildscript {
     repositories {
-        maven { url "https://repo.grails.org/grails/core" }
+        maven { url "https://repo.grails.org/grails/restricted" }
         maven { url "https://plugins.gradle.org/m2/" }
     }
     dependencies {
         classpath "org.codehaus.groovy.modules.http-builder:http-builder:0.7.2"
-        classpath "io.github.gradle-nexus:publish-plugin:1.3.0"
         classpath "org.apache.grails:grails-gradle-plugins:$grailsGradlePluginVersion"
         classpath "org.asciidoctor:asciidoctor-gradle-jvm:4.0.2"
         classpath "com.github.erdi:webdriver-binaries-gradle-plugin:3.2"
@@ -80,7 +79,7 @@ subprojects { subproject ->
 
     repositories {
         mavenLocal()
-        maven { url "https://repo.grails.org/grails/core" }
+        maven { url "https://repo.grails.org/grails/restricted" }
     }
 
     configurations.all {
@@ -359,9 +358,9 @@ class PublishingConvention {
     String projectArtifactId
     String projectName = 'GORM for Neo4j'
     String projectDescription = 'Provides a GORM Object Mapping implementation for the Neo4j Graph Database'
-    String projectURL = 'https://gorm.grails.org/latest/neo4j'
-    String projectIssueTrackerUrl = 'https://github.com/grails/gorm-neo4j/issues'
-    String projectVcsUrl = 'https://github.com/grails/gorm-neo4j'
+    String projectURL = 'https://github.com/apache/grails-core/tree/HEAD/grails-data-neo4j'
+    String projectIssueTrackerUrl = 'https://github.com/apache/grails-core/issues'
+    String projectVcsUrl = 'https://github.com/apache/grails-core'
 
     PublishingConvention(Project project) {
         this.project = project

@@ -25,7 +25,7 @@ import spock.lang.Specification
 
 class DirtyCheckableSpec extends Specification {
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/1231')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/1231')
     def 'setting a field that implements Comparable dirty checks properly'() {
         given: 'a person'
         def person = new Person(name: 'John Doe')

@@ -52,14 +52,14 @@ class TableSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<F
 
 	def setup() {
 		tagLib.formFieldsTemplateService = mockFormFieldsTemplateService
-		mockEmbeddedSitemeshLayout(tagLib)
+		mockEmbeddedGrailsLayout(tagLib)
 	}
 
     def cleanupSpec() {
         alternativeTable.delete()
     }
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/231')
+	@Issue('https://github.com/grails/fields/issues/231')
 	void "table tag renders columns set by '<f:table collection=\"collection\" maxProperties=\"#maxProperties\"/>'"() {
 		when:
 		def table = XML.parse(applyTemplate('<f:table collection="collection" maxProperties="' + maxProperties + '"/>', [collection: personList]))
@@ -81,7 +81,7 @@ class TableSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<F
 		-9            | ['Salutation', 'Name', 'Date Of Birth']
 	}
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/231')
+	@Issue('https://github.com/grails/fields/issues/231')
 	void "table tag renders all columns '<f:table collection=\"collection\" maxProperties=\"#maxProperties\"/>'"() {
 		when:
 		def table = XML.parse(applyTemplate('<f:table collection="collection" maxProperties="' + maxProperties + '"/>', [collection: personList]))
@@ -97,7 +97,7 @@ class TableSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<F
 		1000          | ['Salutation', 'Name', 'Date Of Birth', 'Address', 'Grails Developer', 'Picture', 'Another Picture', 'Password', 'Biography', 'Minor', 'Gender', 'Emails']
 	}
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/231')
+	@Issue('https://github.com/grails/fields/issues/231')
 	void "table tag renders all columns when no maxProperties attribute is set"() {
 		when:
 		def table = XML.parse(applyTemplate('<f:table collection="collection"/>', [collection: personList]))
@@ -136,7 +136,7 @@ class TableSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<F
 		table.tbody.tr.collect { it.td[0].text() } == ['Male', 'Female']
 	}
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/231')
+	@Issue('https://github.com/grails/fields/issues/231')
 	void "table tag renders columns for properties until maxProperties is reached, ordered by the domain class constraints"() {
 		when:
 		def output = applyTemplate('<f:table collection="collection" maxProperties="5"/>', [collection: personList])
@@ -158,7 +158,7 @@ class TableSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<F
 		table.tbody.tr.collect { it.td[1].text() } == ['Male', 'Female']
 	}
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/257')
+	@Issue('https://github.com/grails/fields/issues/257')
 	void "table tag allows to specify the except"() {
 		when:
 		def output = applyTemplate('<f:table collection="collection" except="${except}"  maxProperties="0"/>', [collection: personList, except: except])
@@ -175,7 +175,7 @@ class TableSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<F
 		]
 	}
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/257')
+	@Issue('https://github.com/grails/fields/issues/257')
 	void "table tag allows to specify the except as empty will render id and lastUpdated"() {
 		when:
 		def output = applyTemplate('<f:table collection="collection" except="${except}" maxProperties="0"/>', [collection: personList, except: except])
@@ -191,7 +191,7 @@ class TableSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<F
 		except << ['', [], null]
 	}
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/264')
+	@Issue('https://github.com/grails/fields/issues/264')
 	void "table tag renders transient columns set by '<f:table collection=\"collection\" properties=\"['transient']\"/>'"() {
 		given:
 		List expectedTableColumns = ['Name', 'Transient Text']
@@ -205,7 +205,7 @@ class TableSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<F
 		renderedTableColumns.containsAll(expectedTableColumns)
 	}
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/269')
+	@Issue('https://github.com/grails/fields/issues/269')
 	void "table tag renders reference columns set by '<f:table collection=\"collection\" properties=\"['transient']\"/>'"() {
 		given:
 		List expectedTableColumns = ['Name', 'Street']
@@ -219,7 +219,7 @@ class TableSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<F
 		renderedTableColumns.containsAll(expectedTableColumns)
 	}
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/325')
+	@Issue('https://github.com/grails/fields/issues/325')
 	void "table tag renders transient columns when using the order attribute '<f:table collection=\"collection\" order=\"['transient']\"/>'"(String order, List expectedTableColumns) {
 		when:
 		def table = XML.parse(applyTemplate(
@@ -313,7 +313,7 @@ class TableSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<F
 		table.thead.tr.th.collect { it.text().trim() } == columns
     }
 
-	@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/286')
+	@Issue('https://github.com/grails/fields/issues/286')
 	void "table should pass extra properties to template"() {
 		given:
 		views["/templates/_fields/_table.gsp"] = '<table>${foo}</table>'

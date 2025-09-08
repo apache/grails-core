@@ -14,9 +14,16 @@
  */
 package org.grails.datastore.mapping.mongo;
 
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import com.mongodb.WriteConcern;
 import com.mongodb.client.MongoClient;
 import org.bson.Document;
+
+import org.springframework.context.ApplicationEventPublisher;
+
 import org.grails.datastore.mapping.core.AbstractSession;
 import org.grails.datastore.mapping.core.impl.PendingOperation;
 import org.grails.datastore.mapping.document.config.DocumentMappingContext;
@@ -24,11 +31,6 @@ import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.mongo.config.MongoCollection;
 import org.grails.datastore.mapping.mongo.config.MongoMappingContext;
-import org.springframework.context.ApplicationEventPublisher;
-
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Abstract implementation on the {@link org.grails.datastore.mapping.core.Session} interface for MongoDB
@@ -39,18 +41,19 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class AbstractMongoSession extends AbstractSession<MongoClient> {
     public static final String MONGO_SET_OPERATOR = "$set";
     public static final String MONGO_UNSET_OPERATOR = "$unset";
-    protected static final Map<PersistentEntity, WriteConcern> declaredWriteConcerns = new ConcurrentHashMap<PersistentEntity, WriteConcern>();
+    protected static final Map<PersistentEntity, WriteConcern> declaredWriteConcerns = new ConcurrentHashMap<>();
 
     protected final String defaultDatabase;
     protected MongoDatastore mongoDatastore;
     protected WriteConcern writeConcern = null;
     protected boolean errorOccured = false;
-    protected Map<PersistentEntity, String> mongoCollections = new ConcurrentHashMap<PersistentEntity, String>();
-    protected Map<PersistentEntity, String> mongoDatabases = new ConcurrentHashMap<PersistentEntity, String>();
+    protected Map<PersistentEntity, String> mongoCollections = new ConcurrentHashMap<>();
+    protected Map<PersistentEntity, String> mongoDatabases = new ConcurrentHashMap<>();
 
     public AbstractMongoSession(MongoDatastore datastore, MappingContext mappingContext, ApplicationEventPublisher publisher) {
         this(datastore, mappingContext, publisher, false);
     }
+
     public AbstractMongoSession(MongoDatastore datastore, MappingContext mappingContext, ApplicationEventPublisher publisher, boolean stateless) {
         super(datastore, mappingContext, publisher, stateless);
         mongoDatastore = datastore;
@@ -88,7 +91,7 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
     public String getDatabase(PersistentEntity entity) {
 
         final String name = mongoDatabases.get(entity);
-        if(name != null) {
+        if (name != null) {
             return name;
         }
         return getDatastore().getDatabaseName(entity);
@@ -135,7 +138,7 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
     }
 
     public MongoClient getNativeInterface() {
-        return ((MongoDatastore)getDatastore()).getMongoClient();
+        return ((MongoDatastore) getDatastore()).getMongoClient();
     }
 
     public DocumentMappingContext getDocumentMappingContext() {
@@ -169,7 +172,7 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
      * @return The name of the previous database
      */
     public String useDatabase(PersistentEntity entity, String databaseName) {
-        if(databaseName == null) {
+        if (databaseName == null) {
             return mongoDatabases.put(entity, getDefaultDatabase());
         }
         else {
@@ -178,7 +181,7 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
     }
 
     public com.mongodb.client.MongoCollection<Document> getCollection(PersistentEntity entity) {
-        if(entity.isRoot()) {
+        if (entity.isRoot()) {
             final String database = getDatabase(entity);
             final String collectionName = getCollectionName(entity);
             return getNativeInterface()

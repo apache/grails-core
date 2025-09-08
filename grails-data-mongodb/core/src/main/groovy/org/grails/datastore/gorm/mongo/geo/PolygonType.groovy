@@ -14,8 +14,9 @@
  */
 package org.grails.datastore.gorm.mongo.geo
 
-import grails.mongodb.geo.Polygon
 import groovy.transform.CompileStatic
+
+import grails.mongodb.geo.Polygon
 
 /**
  * Adds support for the {@link Polygon} type to GORM for MongoDB

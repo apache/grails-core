@@ -27,8 +27,8 @@ To get started with a new GORM implementation, the following steps are required:
 
 
 ----
-git clone https://github.com/grails/grails-data-mapping.git
-cd grails-data-mapping
+git clone https://github.com/apache/grails-core
+cd grails-core
 mkdir grails-datastore-gorm-xyz
 ----
 

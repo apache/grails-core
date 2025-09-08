@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-The `logging` plugin configures Grails' support for link:{guidePath}/conf.html#logging[Logging] with logback.
+The `logging` plugin configures Grails' support for link:{guidePath}conf.html#logging[Logging] with logback.
 
 
 === Examples
@@ -49,4 +49,4 @@ catch (Exception e) {
 === Description
 
 
-Refer to the section on link:{guidePath}/conf.html#logging[Logging] in the Grails user guide which details Grails' logging support.
+Refer to the section on link:{guidePath}conf.html#logging[Logging] in the Grails user guide which details Grails' logging support.

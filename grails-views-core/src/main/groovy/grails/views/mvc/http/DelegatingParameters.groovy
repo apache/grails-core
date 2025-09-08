@@ -19,9 +19,10 @@
 
 package grails.views.mvc.http
 
+import groovy.transform.CompileStatic
+
 import grails.util.TypeConvertingMap
 import grails.views.api.http.Parameters
-import groovy.transform.CompileStatic
 
 /**
  * Delegate to a GrailsParameterMap implementation

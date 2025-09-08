@@ -18,20 +18,21 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.TestEntity
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.grails.datastore.mapping.core.Session
-import org.grails.datastore.mapping.core.SessionCreationEvent
+import spock.lang.IgnoreIf
+
 import org.springframework.context.ApplicationEvent
 import org.springframework.context.event.SmartApplicationListener
-import spock.lang.IgnoreIf
-import spock.lang.PendingFeature
+
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.SessionCreationEvent
 
 /**
  * Test case that session creation events are fired.
  */
 // TODO: the application context is null on hibernate tck tests, so this test errors on the add of the application listener
-@IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate6.gorm.suite')  || System.getProperty('mongodb.gorm.suite')})
+@IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate6.gorm.suite')  || System.getProperty('mongodb.gorm.suite') })
 class SessionCreationEventSpec extends GrailsDataTckSpec {
 
     Listener listener
@@ -41,15 +42,15 @@ class SessionCreationEventSpec extends GrailsDataTckSpec {
         manager.session.datastore.applicationContext.addApplicationListener(listener)
     }
 
-    void "test event for new session"() {
-        when:"Using existing session"
+    void 'test event for new session'() {
+        when: 'Using existing session'
         TestEntity.withSession { s ->
             s.flush()
         }
         then:
         listener.events.empty
 
-        when:"Creating new session"
+        when: 'Creating new session'
         def newSession = null
         def isDatastoreSession = false
         TestEntity.withNewSession { s ->
@@ -60,7 +61,6 @@ class SessionCreationEventSpec extends GrailsDataTckSpec {
         !isDatastoreSession || listener.events.size() == 1
         !isDatastoreSession || listener.events[0].session == newSession
     }
-
 
     static class Listener implements SmartApplicationListener {
         List<SessionCreationEvent> events = []

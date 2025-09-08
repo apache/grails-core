@@ -18,13 +18,15 @@
  */
 package grails.plugin.geb.support
 
+import groovy.transform.CompileStatic
+import groovy.transform.SelfType
+
 import geb.report.CompositeReporter
 import geb.report.PageSourceReporter
 import geb.report.Reporter
 import geb.report.ScreenshotReporter
+
 import grails.plugin.geb.ContainerGebSpec
-import groovy.transform.CompileStatic
-import groovy.transform.SelfType
 
 /**
  * Enables reporting support for ContainerGebSpec.

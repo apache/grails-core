@@ -19,6 +19,7 @@
 package org.grails.datastore.mapping.engine.event;
 
 import org.springframework.context.ApplicationEvent;
+
 import org.grails.datastore.mapping.core.Datastore;
 
 /**
@@ -38,10 +39,10 @@ public abstract class AbstractPersistenceEventListener implements PersistenceEve
      *     org.springframework.context.ApplicationEvent)
      */
     public final void onApplicationEvent(ApplicationEvent e) {
-        if(e instanceof AbstractPersistenceEvent) {
+        if (e instanceof AbstractPersistenceEvent) {
 
-            AbstractPersistenceEvent event = (AbstractPersistenceEvent)e;
-            if(!isValidSource(event)) {
+            AbstractPersistenceEvent event = (AbstractPersistenceEvent) e;
+            if (!isValidSource(event)) {
                 return;
             }
 

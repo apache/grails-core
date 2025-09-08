@@ -35,7 +35,6 @@ Grails searches in the following directories for Gant scripts to execute:
 * `USER_HOME/.grails/scripts`
 * `PROJECT_HOME/src/main/scripts/`
 * `PROJECT_HOME/plugins/*/scripts`
-* `GRAILS_HOME/scripts`
 
 If multiple matches are found Grails will give you a choice of which one to execute.
 
@@ -55,7 +54,7 @@ Or using a -D argument if the name is not one of the three standard names:
 grails -Dgrails.env=uat run-app
 ----
 
-Refer to the user guide section on link:{guidePath}/commandLine.html[The Command Line] for more information.
+Refer to the user guide section on link:{guidePath}commandLine.html[The Command Line] for more information.
 
 
 === Grails Forge Command Line Usage
@@ -80,4 +79,4 @@ When running Gradle tasks you can specify the environment that the command execu
 ./gradlew bootRun -Dgrails.env=custom
 ----
 
-Refer to the user guide section on link:{guidePath}/commandLine.html[The Command Line] for more information.
+Refer to the user guide section on link:{guidePath}commandLine.html[The Command Line] for more information.

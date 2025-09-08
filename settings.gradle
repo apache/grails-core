@@ -20,15 +20,24 @@ import org.apache.tools.ant.DirectoryScanner
  */
 
 pluginManagement {
-    includeBuild('./grails-gradle')
+    includeBuild('./grails-gradle') {
+        name = 'grails-gradle'
+    }
 }
 plugins {
-    id 'com.gradle.develocity' version '4.0.1'
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.2.1'
+    id 'com.gradle.develocity' version '4.1.1'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.3'
 }
 
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
+def isReproducibleBuild = System.getenv('SOURCE_DATE_EPOCH') != null
+if (isReproducibleBuild) {
+    gradle.settingsEvaluated {
+        logger.warn('*************** Remote Build Cache Disabled due to Reproducible Build ********************')
+        logger.warn("Build date will be set to (SOURCE_DATE_EPOCH=${System.getenv("SOURCE_DATE_EPOCH")})")
+    }
+}
 
 develocity {
     server = 'https://ge.grails.org'
@@ -41,16 +50,16 @@ develocity {
 }
 
 buildCache {
-    local { enabled = isLocal }
+    local { enabled = (isLocal && !isReproducibleBuild) || (isCI && isReproducibleBuild) }
     remote(develocity.buildCache) {
         push = isCI
-        enabled = true
+        enabled = !isReproducibleBuild
     }
 }
 
 rootProject.name = 'grails.core.ROOT'
 
-include (
+include(
         'grails-bootstrap',
         'grails-cache',
         'grails-codecs-core',
@@ -94,7 +103,9 @@ include (
         'grails-web-url-mappings',
 
         // POM / BOMs
-        'grails-dependencies',
+        'grails-dependencies-starter-web',
+        'grails-dependencies-test',
+        'grails-dependencies-assets',
         'grails-bom',
 
         // Docs
@@ -129,11 +140,13 @@ include (
         'grails-gsp-core',
         'grails-gsp',
         'grails-sitemesh3',
+        'grails-layout',
         'grails-taglib',
         'grails-web-gsp',
         'grails-web-gsp-taglib',
         'grails-web-jsp',
         'grails-web-taglib',
+        'grails-gsp-spring-boot',
 
         'grails-datastore-core',
         'grails-datastore-web',
@@ -158,8 +171,10 @@ include (
         'grails-data-test-report',
 
         // wrapper
-        'grails-wrapper-impl',
-        'grails-wrapper'
+        'grails-wrapper',
+
+        // micronaut plugin for integration with Grails
+        'grails-micronaut',
 )
 
 // Instead of using : to separate nested projects, fix the project directories by setting the projectDir explicitly
@@ -181,14 +196,20 @@ project(':grails-async-rxjava2').projectDir = file('grails-async/rxjava2')
 project(':grails-async-rxjava3').projectDir = file('grails-async/rxjava3')
 project(':grails-async').projectDir = file('grails-async/plugin')
 
+project(':grails-dependencies-starter-web').projectDir = file('grails-dependencies/starter-web')
+project(':grails-dependencies-test').projectDir = file('grails-dependencies/test')
+project(':grails-dependencies-assets').projectDir = file('grails-dependencies/assets')
+
 project(':grails-gsp-core').projectDir = file('grails-gsp/core')
 project(':grails-gsp').projectDir = file('grails-gsp/plugin')
 project(':grails-sitemesh3').projectDir = file('grails-gsp/grails-sitemesh3')
+project(':grails-layout').projectDir = file('grails-gsp/grails-layout')
 project(':grails-taglib').projectDir = file('grails-gsp/grails-taglib')
 project(':grails-web-gsp').projectDir = file('grails-gsp/grails-web-gsp')
 project(':grails-web-gsp-taglib').projectDir = file('grails-gsp/grails-web-gsp-taglib')
 project(':grails-web-jsp').projectDir = file('grails-gsp/grails-web-jsp')
 project(':grails-web-taglib').projectDir = file('grails-gsp/grails-web-taglib')
+project(':grails-gsp-spring-boot').projectDir = file('grails-gsp/spring-boot')
 
 // Data Mapping - Documentation
 include 'grails-data-docs-guide-developer'
@@ -322,7 +343,7 @@ include 'grails-profiles-web-plugin'
 project(':grails-profiles-web-plugin').projectDir = file('grails-profiles/web-plugin')
 
 // Functional Tests
-include (
+include(
         'grails-test-examples-async-events-pubsub-demo',
         'grails-test-examples-app1',
         'grails-test-examples-app2',
@@ -331,7 +352,9 @@ include (
         'grails-test-examples-datasources',
         'grails-test-examples-namespaces',
         'grails-test-examples-geb',
+        'grails-test-examples-geb-gebconfig',
         'grails-test-examples-gorm',
+        'grails-test-examples-gsp-layout',
         'grails-test-examples-gsp-sitemesh3',
         'grails-test-examples-gsp-spring-boot',
         'grails-test-examples-issue-698-domain-save-npe',
@@ -339,13 +362,13 @@ include (
         'grails-test-examples-issue-views-182',
         'grails-test-examples-issue-11102',
         'grails-test-examples-demo33',
-        // 'grails-test-examples-micronaut', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
+        'grails-test-examples-micronaut',
         'grails-test-examples-plugins-loadfirst',
         'grails-test-examples-plugins-loadsecond',
         'grails-test-examples-plugins-loadafter',
         'grails-test-examples-plugins-issue11005',
-        // 'grails-test-examples-issue-11767', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
-        // 'grails-test-examples-plugins-issue-11767-plugin', // micronaut has been removed from Grails can be restored based on https://micronaut-projects.github.io/micronaut-spring/latest/guide/#springBootStarter
+        'grails-test-examples-issue-11767',
+        'grails-test-examples-plugins-issue-11767',
         'grails-test-examples-cache',
         'grails-test-examples-views-functional-tests',
         'grails-test-examples-views-functional-tests-plugin'
@@ -357,27 +380,31 @@ project(':grails-test-examples-app3').projectDir = file('grails-test-examples/ap
 project(':grails-test-examples-external-configuration').projectDir = file('grails-test-examples/external-configuration')
 project(':grails-test-examples-datasources').projectDir = file('grails-test-examples/datasources')
 project(':grails-test-examples-geb').projectDir = file('grails-test-examples/geb')
+project(':grails-test-examples-geb-gebconfig').projectDir = file('grails-test-examples/geb-gebconfig')
 project(':grails-test-examples-namespaces').projectDir = file('grails-test-examples/namespaces')
 project(':grails-test-examples-gorm').projectDir = file('grails-test-examples/gorm')
+project(':grails-test-examples-gsp-layout').projectDir = file('grails-test-examples/gsp-layout')
 project(':grails-test-examples-gsp-sitemesh3').projectDir = file('grails-test-examples/gsp-sitemesh3')
-project(':grails-test-examples-gsp-spring-boot').projectDir = file('grails-test-examples/gsp-spring-boot')
+project(':grails-test-examples-gsp-spring-boot').projectDir = file('grails-test-examples/gsp-spring-boot/app')
 project(':grails-test-examples-issue-698-domain-save-npe').projectDir = file('grails-test-examples/issue-698-domain-save-npe')
 project(':grails-test-examples-hyphenated').projectDir = file('grails-test-examples/hyphenated')
 project(':grails-test-examples-issue-views-182').projectDir = file('grails-test-examples/issue-views-182')
 project(':grails-test-examples-issue-11102').projectDir = file('grails-test-examples/issue-11102')
 project(':grails-test-examples-demo33').projectDir = file('grails-test-examples/demo33')
-// project(':grails-test-examples-micronaut').projectDir = file('grails-test-examples/micronaut')
+project(':grails-test-examples-micronaut').projectDir = file('grails-test-examples/micronaut')
 project(':grails-test-examples-plugins-loadfirst').projectDir = file('grails-test-examples/plugins/loadfirst')
 project(':grails-test-examples-plugins-loadsecond').projectDir = file('grails-test-examples/plugins/loadsecond')
 project(':grails-test-examples-plugins-loadafter').projectDir = file('grails-test-examples/plugins/loadafter')
 project(':grails-test-examples-plugins-issue11005').projectDir = file('grails-test-examples/plugins/issue11005')
-// project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')
-// project(':grails-test-examples-plugins-issue-11767-plugin').projectDir = file('grails-test-examples/plugins/issue-11767-plugin')
+project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')
+project(':grails-test-examples-plugins-issue-11767').projectDir = file('grails-test-examples/plugins/issue-11767')
 project(':grails-test-examples-cache').projectDir = file('grails-test-examples/cache')
 project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')
 project(':grails-test-examples-views-functional-tests-plugin').projectDir = file('grails-test-examples/views-functional-tests-plugin')
 
-includeBuild ('./grails-gradle')
+includeBuild('./grails-gradle') {
+    name = 'grails-gradle'
+}
 
 // Due to https://github.com/gradle/gradle/issues/2986 , we can't change the global exclude for profiles, it must be done everywhere
 for (String pattern in DirectoryScanner.defaultExcludes) {

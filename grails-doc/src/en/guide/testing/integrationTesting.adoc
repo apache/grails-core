@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Integration tests differ from unit tests in that you have full access to the Grails environment within the test. You can create an integration test using the link:../ref/Command%20Line/create-integration-test.html[create-integration-test] command:
+Integration tests differ from unit tests in that you have full access to the Grails environment within the test. You can create an integration test using the link:{commandLineRef}create-integration-test.html[create-integration-test] command:
 
 [source,groovy]
 ----
@@ -32,7 +32,7 @@ Grails uses the test environment for integration tests and loads the application
 ==== Transactions
 
 
-Integration test methods run inside their own database transaction by default, which is rolled back at the end of each test method. This means that data saved during a test is not persisted to the database (which is shared across all tests). The default generated integration test template includes the {apiDocs}grails/transaction/Rollback.html[Rollback] annotation:
+Integration test methods run inside their own database transaction by default, which is rolled back at the end of each test method. This means that data saved during a test is not persisted to the database (which is shared across all tests). The default generated integration test template includes the link:{api}grails/gorm/transactions/Rollback.html[Rollback] annotation:
 
 [source,groovy]
 ----
@@ -173,4 +173,4 @@ class ExampleServiceSpec extends Specification {
 ==== Testing Controllers
 
 
-To integration test controllers it is recommended you use link:../ref/Command%20Line/create-functional-test.html[create-functional-test] command to create a Geb functional test. See the following section on functional testing for more information.
+To integration test controllers it is recommended you use link:{commandLineRef}create-functional-test.html[create-functional-test] command to create a Geb functional test. See the following section on functional testing for more information.

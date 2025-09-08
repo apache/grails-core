@@ -19,11 +19,10 @@
  */
 package org.grails.io.support
 
-import groovy.transform.CompileStatic
-
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
+import groovy.transform.CompileStatic
 
 /**
  * Base functionality for loading grails.factories
@@ -33,8 +32,9 @@ import java.util.concurrent.ConcurrentMap
  */
 @CompileStatic
 class FactoriesLoaderSupport {
+
     /** The location to look for the factories. Can be present in multiple JAR files. */
-    static final String FACTORIES_RESOURCE_LOCATION = "META-INF/grails.factories"
+    static final String FACTORIES_RESOURCE_LOCATION = 'META-INF/grails.factories'
 
     private static ConcurrentMap<Integer, Map<String,String[]>> loadedPropertiesForClassLoader = new ConcurrentHashMap<Integer, Map<String,String[]>>()
 
@@ -46,7 +46,7 @@ class FactoriesLoaderSupport {
      *
      * @return An array of classes that implement the factory class
      */
-    static String[] loadFactoryNames(Class<?> factoryClass, ClassLoader classLoader = FactoriesLoaderSupport.class.classLoader) {
+    static String[] loadFactoryNames(Class<?> factoryClass, ClassLoader classLoader = FactoriesLoaderSupport.classLoader) {
         String factoryClassName = factoryClass.getName()
         return loadFactoryNames(factoryClassName, classLoader)
     }
@@ -59,19 +59,19 @@ class FactoriesLoaderSupport {
      *
      * @return An array of classes that implement the factory class
      */
-    static String[] loadFactoryNames(String factoryClassName, ClassLoader classLoader = FactoriesLoaderSupport.class.classLoader) {
+    static String[] loadFactoryNames(String factoryClassName, ClassLoader classLoader = FactoriesLoaderSupport.classLoader) {
         try {
             Map<String, String[]> loadedProperties = loadedPropertiesForClassLoader.get(System.identityHashCode(classLoader))
             if (loadedProperties == null) {
                 Set<String> allKeys = [] as Set
-                def urls = classLoader.getResources(FACTORIES_RESOURCE_LOCATION);
+                def urls = classLoader.getResources(FACTORIES_RESOURCE_LOCATION)
                 Collection<Properties> allProperties = []
                 urls.each { URL url ->
                     def properties = new Properties()
                     url.withInputStream { InputStream input ->
                         properties.load(input)
                     }
-                    allProperties.add properties
+                    allProperties.add(properties)
                     allKeys.addAll((Set<String>) properties.keySet())
                 }
                 Map<String, String[]> mergedFactoryNames = [:]
@@ -80,10 +80,10 @@ class FactoriesLoaderSupport {
                     for (Properties props : allProperties) {
                         String factoryClassNames = props.getProperty(propertyName)
                         if (factoryClassNames) {
-                            result.addAll factoryClassNames.split(',').toList()
+                            result.addAll(factoryClassNames.split(',').toList())
                         }
                     }
-                    mergedFactoryNames.put propertyName, result as String[]
+                    mergedFactoryNames.put(propertyName, result as String[])
                 }
                 loadedProperties = loadedPropertiesForClassLoader.putIfAbsent(System.identityHashCode(classLoader), mergedFactoryNames)
                 if (loadedProperties == null) {
@@ -93,7 +93,7 @@ class FactoriesLoaderSupport {
             return loadedProperties.get(factoryClassName)
         }
         catch (IOException ex) {
-            throw new IllegalArgumentException("Unable to load [$factoryClassName] factories from location [$FACTORIES_RESOURCE_LOCATION]", ex);
+            throw new IllegalArgumentException("Unable to load [$factoryClassName] factories from location [$FACTORIES_RESOURCE_LOCATION]", ex)
         }
     }
 }

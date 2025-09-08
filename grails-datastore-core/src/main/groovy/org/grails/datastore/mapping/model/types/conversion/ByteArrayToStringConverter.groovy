@@ -27,6 +27,7 @@ import org.springframework.core.convert.converter.Converter
  */
 @CompileStatic
 class ByteArrayToStringConverter implements Converter<byte[], String> {
+
     @Override
     String convert(byte[] source) {
         source.encodeBase64().toString()

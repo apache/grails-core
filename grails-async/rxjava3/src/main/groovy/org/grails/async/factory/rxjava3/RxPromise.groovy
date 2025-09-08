@@ -19,10 +19,14 @@
 
 package org.grails.async.factory.rxjava3
 
-import grails.async.Promise
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Observer
 import io.reactivex.rxjava3.core.Scheduler
@@ -34,11 +38,9 @@ import io.reactivex.rxjava3.functions.Consumer
 import io.reactivex.rxjava3.functions.Function
 import io.reactivex.rxjava3.subjects.ReplaySubject
 import io.reactivex.rxjava3.subjects.Subject
-import org.grails.async.factory.BoundPromise
 
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
+import grails.async.Promise
+import org.grails.async.factory.BoundPromise
 
 /**
  * Promise based on RxJava 3.x
@@ -58,9 +60,9 @@ class RxPromise<T>  implements Promise<T> {
     protected boolean finished = false
 
     RxPromise(RxPromiseFactory promiseFactory, Closure callable, Scheduler scheduler) {
-        this(promiseFactory, Single.create( { SingleEmitter<? super T> singleSubscriber ->
+        this(promiseFactory, Single.create({ SingleEmitter<? super T> singleSubscriber ->
             try {
-                singleSubscriber.onSuccess((T)runCallable(callable))
+                singleSubscriber.onSuccess((T) runCallable(callable))
             } catch (Throwable t) {
                 singleSubscriber.onError(t)
             }
@@ -135,7 +137,7 @@ class RxPromise<T>  implements Promise<T> {
 
     @Override
     boolean cancel(boolean mayInterruptIfRunning) {
-        if(subscription != null) {
+        if (subscription != null) {
             subscription.dispose()
             return subscription.isDisposed()
         }
@@ -144,7 +146,7 @@ class RxPromise<T>  implements Promise<T> {
 
     @Override
     boolean isCancelled() {
-        if(subscription == null) {
+        if (subscription == null) {
             return false
         }
         else {
@@ -167,7 +169,7 @@ class RxPromise<T>  implements Promise<T> {
         try {
             return subject.timeout(timeout, unit).blockingFirst()
         } catch (Throwable e) {
-            if(e.cause instanceof TimeoutException) {
+            if (e.cause instanceof TimeoutException) {
                 throw e.cause
             }
             else {
@@ -178,7 +180,7 @@ class RxPromise<T>  implements Promise<T> {
 
     static Object runCallable(Closure callable) {
         Object rtn = callable.call()
-        if(rtn == null) {
+        if (rtn == null) {
             return Void
         } else {
             return rtn

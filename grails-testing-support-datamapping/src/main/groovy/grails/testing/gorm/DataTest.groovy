@@ -18,11 +18,17 @@
  */
 package grails.testing.gorm
 
-import grails.core.GrailsClass
-import grails.gorm.validation.PersistentEntityValidator
+import java.beans.Introspector
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
+
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.validation.Validator
+
+import grails.core.GrailsClass
+import grails.gorm.validation.PersistentEntityValidator
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.config.Settings
@@ -35,10 +41,6 @@ import org.grails.testing.GrailsUnitTest
 import org.grails.testing.gorm.MockCascadingDomainClassValidator
 import org.grails.testing.gorm.spock.DataTestSetupSpecInterceptor
 import org.grails.validation.ConstraintEvalUtils
-import org.springframework.transaction.PlatformTransactionManager
-import org.springframework.validation.Validator
-
-import java.beans.Introspector
 
 @CompileStatic
 trait DataTest extends GrailsUnitTest {
@@ -104,17 +106,6 @@ trait DataTest extends GrailsUnitTest {
         }
     }
 
-    /**
-     * @deprecated as of v2.1.0 because of of consistency in the method name with
-     * other GORM projects. It is recommended to use {@link #getDatastore()} instead.
-     *
-     * @return The{@link AbstractDatastore}
-     */
-    @Deprecated
-    AbstractDatastore getDataStore() {
-        getDatastore()
-    }
-
     AbstractDatastore getDatastore() {
         applicationContext.getBean(AbstractDatastore)
     }
@@ -133,20 +124,20 @@ trait DataTest extends GrailsUnitTest {
         defineBeans {
             "${domain.javaClass.name}"(domain.javaClass) { bean ->
                 bean.singleton = false
-                bean.autowire = "byName"
+                bean.autowire = 'byName'
             }
 
             if (DataTestSetupSpecInterceptor.IS_OLD_SETUP) {
                 GrailsClass grailsDomain = grailsApplication.getArtefact(DomainClassArtefactHandler.TYPE, domain.javaClass.name)
 
                 "$validationBeanName"(MockCascadingDomainClassValidator) { bean ->
-                    getDelegate().messageSource = ref("messageSource")
                     bean.lazyInit = true
-                    getDelegate().domainClass = grailsDomain
-                    getDelegate().grailsApplication = grailsApplication
+                    delegate.messageSource = ref('messageSource')
+                    delegate.domainClass = grailsDomain
+                    delegate.grailsApplication = grailsApplication
                 }
             } else {
-                "$validationBeanName"(PersistentEntityValidator, domain, ref("messageSource"), ref(DataTestSetupSpecInterceptor.BEAN_NAME))
+                "$validationBeanName"(PersistentEntityValidator, domain, ref('messageSource'), ref(DataTestSetupSpecInterceptor.BEAN_NAME))
             }
 
         }

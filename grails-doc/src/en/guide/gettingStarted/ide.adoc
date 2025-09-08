@@ -23,6 +23,8 @@ Because Grails is built upon the https://spring.io[Spring Framework] (Spring Boo
 
 IntelliJ IDEA is a widely used IDE for Grails development. It offers comprehensive support for Groovy and Grails, including features like code-completion, intelligent code analysis, and seamless integration with Grails artefacts.
 
+The new Apache Grails Maven Coordinates are supported in IntelliJ IDEA 2025.2 and later releases via the https://plugins.jetbrains.com/plugin/18504-grails[Grails Plugin]. 
+
 IntelliJ IDEA also provides powerful database tools that work with Grails' GORM (Grails Object Relational Mapping) seamlessly. It offers both a Community (free) and Ultimate (paid) edition, with the latter offering more advanced Grails support via the regularly updated https://plugins.jetbrains.com/plugin/18504-grails/versions[Grails Plugin], including an embedded version of the https://start.grails.org[Grails Forge], and view resolution for both GSPs and JSON views.
 
 https://www.jetbrains.com/idea/[IntelliJ IDEA Website]
@@ -43,8 +45,6 @@ The https://spring.io/tools[Spring Tool Suite] (STS) is set of IDE tools designe
 
 STS can work as an effective Grails developer platform when used with the https://marketplace.eclipse.org/content/groovy-development-tools[Groovy Development Tools] plugin (which can be installed using the Eclipse Marketplace). STS does not offer specific support for Grails artefacts or GSP views.
 
-https://spring.io/tools/sts[Spring Tool Suite (STS)]
-
 === 4. Netbeans
 
 Apache https://netbeans.apache.org[Netbeans] does not offer specific support for Grails, but it will import Grails applications as Gradle projects and provides reasonable editing support for Groovy and GSP views.
@@ -53,9 +53,8 @@ Apache https://netbeans.apache.org[Netbeans] does not offer specific support for
 
 There are several excellent text editors that work nicely with Groovy and Grails. Here are some references:
 
-* A https://github.com/textmate/groovy-grails.tmbundle[bundle] is available for Groovy / Grails support in http://macromates.com[Textmate].
-* A https://packagecontrol.io/packages/Grails[plugin] can be installed via Sublime Package Control for the http://www.sublimetext.com[Sublime Text Editor].
+* A https://github.com/textmate/groovy-grails.tmbundle[bundle] is available for Groovy / Grails support in https://macromates.com[Textmate].
+* A https://packagecontrol.io/packages/Grails[plugin] can be installed via Sublime Package Control for the https://www.sublimetext.com[Sublime Text Editor].
 * The https://github.com/lifeisfoo/emacs-grails[emacs-grails] extension offers basic support for Grails development in Emacs.
-* See http://www.objectpartners.com/2012/02/21/using-vim-as-your-grails-ide-part-1-navigating-your-project/[this post] for some helpful tips on how to set up VIM as your Grails editor of choice.
 
 These text editors, along with the provided extensions and configurations, can enhance your Groovy and Grails development experience, offering flexibility and customization to meet your coding preferences.

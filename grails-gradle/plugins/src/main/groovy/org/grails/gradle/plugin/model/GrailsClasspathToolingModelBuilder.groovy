@@ -19,6 +19,7 @@
 package org.grails.gradle.plugin.model
 
 import groovy.transform.CompileStatic
+
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolveException
@@ -30,6 +31,9 @@ import org.gradle.tooling.provider.model.ToolingModelBuilder
  */
 @CompileStatic
 class GrailsClasspathToolingModelBuilder implements ToolingModelBuilder {
+
+    public static final String PROFILE_CONFIGURATION_NAME = 'profile'
+
     @Override
     boolean canBuild(String modelName) {
         return modelName == GrailsClasspath.name
@@ -37,19 +41,17 @@ class GrailsClasspathToolingModelBuilder implements ToolingModelBuilder {
 
     @Override
     Object buildAll(String modelName, Project project) {
-        // testRuntimeClasspath includes provided
         try {
-
-            List<URL> runtimeDependencies = project.getConfigurations().getByName("testRuntimeClasspath").getResolvedConfiguration().getResolvedArtifacts().collect { ResolvedArtifact artifact ->
+            List<URL> runtimeDependencies = project.getConfigurations().getByName('testRuntimeClasspath').getResolvedConfiguration().getResolvedArtifacts().collect { ResolvedArtifact artifact ->
                 artifact.getFile().toURI().toURL()
             }
 
             DefaultGrailsClasspath grailsClasspath = new DefaultGrailsClasspath(dependencies: runtimeDependencies)
 
-            Configuration profileConfiguration = project.getConfigurations().getByName("profile")
+            Configuration profileConfiguration = project.getConfigurations().getByName(PROFILE_CONFIGURATION_NAME)
             if (profileConfiguration != null) {
-                grailsClasspath.profileDependencies = profileConfiguration.getResolvedConfiguration().getResolvedArtifacts().collect() { ResolvedArtifact artifact ->
-                    artifact.getFile().toURI().toURL()
+                grailsClasspath.profileDependencies = profileConfiguration.resolvedConfiguration.resolvedArtifacts.collect() { ResolvedArtifact artifact ->
+                    artifact.file.toURI().toURL()
                 }
             }
             return grailsClasspath

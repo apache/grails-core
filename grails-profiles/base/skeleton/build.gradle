@@ -2,7 +2,12 @@ buildscript {
     repositories {
         mavenCentral()
 @buildRepositories@
-
+        maven {
+           url = 'https://repository.apache.org/content/groups/snapshots'
+           content {
+              includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
+           }
+        }
     }
     dependencies {
         classpath platform("org.apache.grails:grails-bom:$grailsVersion")
@@ -10,25 +15,28 @@ buildscript {
     }
 }
 
-version "0.1"
-group "@grails.app.group@"
+version = "0.1"
+group = "@grails.app.group@"
 
 @buildPlugins@
 
 repositories {
     mavenCentral()
 @repositories@
+    maven {
+       url = 'https://repository.apache.org/content/groups/snapshots'
+       content {
+          includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
+       }
+    }
 }
 
 dependencies {
-    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
-    developmentOnly("org.springframework.boot:spring-boot-devtools")
-    integrationTestImplementation testFixtures("org.apache.grails:grails-geb")
 @dependencies@
 }
 
 compileJava.options.release = 17
 
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
     useJUnitPlatform()
 }

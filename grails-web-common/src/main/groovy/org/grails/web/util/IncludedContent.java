@@ -18,12 +18,13 @@
  */
 package org.grails.web.util;
 
-import grails.util.GrailsWebUtil;
-import groovy.lang.Writable;
-import org.grails.buffer.StreamCharBuffer;
-
 import java.io.IOException;
 import java.io.Writer;
+
+import groovy.lang.Writable;
+
+import grails.util.GrailsWebUtil;
+import org.grails.buffer.StreamCharBuffer;
 
 /**
  * Represents some content that has been used in an include request.
@@ -33,7 +34,7 @@ import java.io.Writer;
  */
 public class IncludedContent implements Writable {
 
-    private String contentType = GrailsWebUtil.getContentType("text/html","UTF-8");
+    private String contentType = GrailsWebUtil.getContentType("text/html", "UTF-8");
     private Object content;
     private String redirectURL;
 
@@ -80,10 +81,10 @@ public class IncludedContent implements Writable {
         }
 
         if (content instanceof StreamCharBuffer) {
-            ((StreamCharBuffer)content).writeTo(target);
+            ((StreamCharBuffer) content).writeTo(target);
         }
         else if (content instanceof String) {
-            target.write((String)content);
+            target.write((String) content);
         }
         else {
             target.write(String.valueOf(content));
@@ -97,11 +98,11 @@ public class IncludedContent implements Writable {
         }
 
         if (content instanceof StreamCharBuffer) {
-            return ((StreamCharBuffer)content).toCharArray();
+            return ((StreamCharBuffer) content).toCharArray();
         }
 
         if (content instanceof String) {
-            return ((String)content).toCharArray();
+            return ((String) content).toCharArray();
         }
 
         return String.valueOf(content).toCharArray();

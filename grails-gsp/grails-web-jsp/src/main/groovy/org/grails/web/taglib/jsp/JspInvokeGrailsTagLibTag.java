@@ -18,11 +18,6 @@
  */
 package org.grails.web.taglib.jsp;
 
-import grails.core.gsp.GrailsTagLibClass;
-import grails.util.Holders;
-import groovy.lang.Closure;
-import groovy.lang.GroovyObject;
-
 import java.beans.PropertyDescriptor;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -34,6 +29,10 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import groovy.lang.Closure;
+import groovy.lang.GroovyObject;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
 import jakarta.servlet.jsp.JspException;
 import jakarta.servlet.jsp.JspTagException;
 import jakarta.servlet.jsp.JspWriter;
@@ -41,15 +40,17 @@ import jakarta.servlet.jsp.tagext.BodyContent;
 import jakarta.servlet.jsp.tagext.BodyTagSupport;
 import jakarta.servlet.jsp.tagext.DynamicAttributes;
 
-import grails.core.GrailsApplication;
-import org.grails.core.artefact.gsp.TagLibArtefactHandler;
-import org.grails.buffer.FastStringPrintWriter;
-import org.grails.gsp.GroovyPage;
-import org.grails.taglib.GrailsTagException;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.context.ApplicationContext;
+
+import grails.core.GrailsApplication;
+import grails.core.gsp.GrailsTagLibClass;
+import grails.util.Holders;
+import org.grails.buffer.FastStringPrintWriter;
+import org.grails.core.artefact.gsp.TagLibArtefactHandler;
+import org.grails.gsp.GroovyPage;
+import org.grails.taglib.GrailsTagException;
 
 /**
  * A tag that invokes a tag defined in a the Grails dynamic tag library. Authors of Grails tags
@@ -70,10 +71,10 @@ public class JspInvokeGrailsTagLibTag extends BodyTagSupport implements DynamicA
 
     private String tagName;
     private int invocationCount;
-    private List<Object> invocationArgs = new ArrayList<Object>();
-    private List<String> invocationBodyContent = new ArrayList<String>();
+    private List<Object> invocationArgs = new ArrayList<>();
+    private List<String> invocationBodyContent = new ArrayList<>();
     private BeanWrapper bean;
-    protected Map<String, Object> attributes = new HashMap<String, Object>();
+    protected Map<String, Object> attributes = new HashMap<>();
     private FastStringPrintWriter sw;
     private PrintWriter out;
     private JspWriter jspWriter;
@@ -96,14 +97,14 @@ public class JspInvokeGrailsTagLibTag extends BodyTagSupport implements DynamicA
                     bean.isWritableProperty(pd.getName()) &&
                     bean.isReadableProperty(pd.getName())) {
 
-                String propertyValue = (String)bean.getPropertyValue(pd.getName());
+                String propertyValue = (String) bean.getPropertyValue(pd.getName());
 
                 if (propertyValue != null) {
                     String trimmed = propertyValue.trim();
                     if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-                        trimmed = trimmed.substring(1,trimmed.length() - 1);
+                        trimmed = trimmed.substring(1, trimmed.length() - 1);
                         Matcher m = ATTRIBUTE_MAP.matcher(trimmed);
-                        Map<String, Object> attributeMap = new HashMap<String, Object>();
+                        Map<String, Object> attributeMap = new HashMap<>();
                         while (m.find()) {
                             String attributeName = m.group(1);
                             String attributeValue = m.group(2);
@@ -126,7 +127,7 @@ public class JspInvokeGrailsTagLibTag extends BodyTagSupport implements DynamicA
             initPageState();
         }
 
-        Map tagLibs = (Map)pageContext.getAttribute(TAG_LIBS_ATTRIBUTE);
+        Map tagLibs = (Map) pageContext.getAttribute(TAG_LIBS_ATTRIBUTE);
         if (tagLibs == null) {
             tagLibs = new HashMap();
             pageContext.setAttribute(TAG_LIBS_ATTRIBUTE, tagLibs);
@@ -136,11 +137,11 @@ public class JspInvokeGrailsTagLibTag extends BodyTagSupport implements DynamicA
 
         GroovyObject tagLib;
         if (tagLibs.containsKey(tagLibClass.getFullName())) {
-            tagLib = (GroovyObject)tagLibs.get(tagLibClass.getFullName());
+            tagLib = (GroovyObject) tagLibs.get(tagLibClass.getFullName());
         }
         else {
-            tagLib = (GroovyObject)appContext.getBean(tagLibClass.getFullName());
-            tagLibs.put(tagLibClass.getFullName(),tagLib);
+            tagLib = (GroovyObject) appContext.getBean(tagLibClass.getFullName());
+            tagLibs.put(tagLibClass.getFullName(), tagLib);
         }
         return tagLib;
     }
@@ -179,18 +180,22 @@ public class JspInvokeGrailsTagLibTag extends BodyTagSupport implements DynamicA
 
         Closure body = new Closure(this) {
             private static final long serialVersionUID = 1861498565854341886L;
+
             @SuppressWarnings("unused")
             public Object doCall() {
                 return call();
             }
+
             @SuppressWarnings("unused")
             public Object doCall(Object o) {
                 return call(new Object[]{o});
             }
+
             @SuppressWarnings("unused")
             public Object doCall(Object[] args) {
                 return call(args);
             }
+
             @Override
             public Object call(Object... args) {
                 invocationCount++;
@@ -200,11 +205,11 @@ public class JspInvokeGrailsTagLibTag extends BodyTagSupport implements DynamicA
                 else {
                     invocationArgs.add(ZERO_ARGUMENTS);
                 }
-                out.print("<jsp-body-gen"+invocationCount+">");
+                out.print("<jsp-body-gen" + invocationCount + ">");
                 return "";
             }
         };
-        Closure tag = (Closure)tagLibProp;
+        Closure tag = (Closure) tagLibProp;
         if (tag.getParameterTypes().length == 1) {
             tag.call(new Object[]{ attributes });
             if (body != null) {
@@ -257,9 +262,9 @@ public class JspInvokeGrailsTagLibTag extends BodyTagSupport implements DynamicA
                 String replaceFlag = "<jsp-body-gen" + i + ">";
                 int j = tagContent.indexOf(replaceFlag);
                 if (j > -1) {
-                    buf.append(tagContent.substring(0,j))
-                       .append(body)
-                       .append(tagContent.substring(j + replaceFlag.length(), tagContent.length()));
+                    buf.append(tagContent.substring(0, j))
+                        .append(body)
+                        .append(tagContent.substring(j + replaceFlag.length(), tagContent.length()));
                     tagContent = buf.toString();
                     if (tagContent != null) {
                         try {
@@ -289,7 +294,7 @@ public class JspInvokeGrailsTagLibTag extends BodyTagSupport implements DynamicA
 
             if (tagContent != null) {
                 try {
-                    jspWriter =  pageContext.getOut();
+                    jspWriter = pageContext.getOut();
                     jspWriter.write(tagContent);
                     out.close();
                 }
@@ -312,12 +317,12 @@ public class JspInvokeGrailsTagLibTag extends BodyTagSupport implements DynamicA
 
     public final void setDynamicAttribute(String uri, String localName, Object value) throws JspException {
         if (value instanceof String) {
-            String stringValue = (String)value;
+            String stringValue = (String) value;
             String trimmed = stringValue.trim();
             if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-                trimmed = trimmed.substring(1,trimmed.length() - 1);
+                trimmed = trimmed.substring(1, trimmed.length() - 1);
                 Matcher m = ATTRIBUTE_MAP.matcher(trimmed);
-                Map<String, Object> attributeMap = new HashMap<String, Object>();
+                Map<String, Object> attributeMap = new HashMap<>();
                 while (m.find()) {
                     String attributeName = m.group(1);
                     String attributeValue = m.group(2);
@@ -326,11 +331,11 @@ public class JspInvokeGrailsTagLibTag extends BodyTagSupport implements DynamicA
                 attributes.put(localName, attributeMap);
             }
             else {
-                attributes.put(localName,value);
+                attributes.put(localName, value);
             }
         }
         else {
-            attributes.put(localName,value);
+            attributes.put(localName, value);
         }
     }
 }

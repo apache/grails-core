@@ -20,6 +20,7 @@
 package org.grails.orm.hibernate
 
 import groovy.transform.CompileStatic
+
 import org.hibernate.boot.Metadata
 import org.hibernate.engine.spi.SessionFactoryImplementor
 import org.hibernate.integrator.spi.Integrator

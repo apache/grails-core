@@ -23,6 +23,8 @@ import org.grails.web.databinding.bindingsource.JsonApiDataBindingSourceCreator
 import spock.lang.Shared
 import spock.lang.Specification
 
+import java.nio.charset.StandardCharsets
+
 /**
  * Created by jameskleeh on 9/29/16.
  */
@@ -38,7 +40,7 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
                 "type": "photos",
                 "attributes": {
                     "title": "Ember Hamster",
-                    "src": "http://example.com/images/productivity.png"
+                    "src": "https://example.com/images/productivity.png"
                 },
                 "relationships": {
                     "photographer": {
@@ -52,13 +54,13 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
         }'''
 
         when:
-        def inputStream = new ByteArrayInputStream(json.getBytes("UTF-8"))
+        def inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))
         DataBindingSource source = creator.createDataBindingSource(null, null, inputStream)
 
         then:
         source.containsProperty("data")
         source.getPropertyValue("title") == "Ember Hamster"
-        source.getPropertyValue("src") == "http://example.com/images/productivity.png"
+        source.getPropertyValue("src") == "https://example.com/images/productivity.png"
         source.getPropertyValue("photographer") == "9"
 
     }
@@ -70,7 +72,7 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
                 "type": "photos",
                 "attributes": {
                     "title": "Ember Hamster",
-                    "src": "http://example.com/images/productivity.png"
+                    "src": "https://example.com/images/productivity.png"
                 },
                 "relationships": {
                     "photographer": {
@@ -90,13 +92,13 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
         }'''
 
         when:
-        def inputStream = new ByteArrayInputStream(json.getBytes("UTF-8"))
+        def inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))
         DataBindingSource source = creator.createDataBindingSource(null, null, inputStream)
 
         then:
         source.containsProperty("data")
         source.getPropertyValue("title") == "Ember Hamster"
-        source.getPropertyValue("src") == "http://example.com/images/productivity.png"
+        source.getPropertyValue("src") == "https://example.com/images/productivity.png"
         source.getPropertyValue("photographer") == ["9", "10"]
 
     }
@@ -108,7 +110,7 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
                 "type": "photos",
                 "attributes": {
                     "title": "Ember Hamster",
-                    "src": "http://example.com/images/productivity.png"
+                    "src": "https://example.com/images/productivity.png"
                 },
                 "relationships": {
                 }
@@ -116,13 +118,13 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
         }'''
 
         when:
-        def inputStream = new ByteArrayInputStream(json.getBytes("UTF-8"))
+        def inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))
         DataBindingSource source = creator.createDataBindingSource(null, null, inputStream)
 
         then:
         source.containsProperty("data")
         source.getPropertyValue("title") == "Ember Hamster"
-        source.getPropertyValue("src") == "http://example.com/images/productivity.png"
+        source.getPropertyValue("src") == "https://example.com/images/productivity.png"
     }
 
     void "test create no relationships - without key"() {
@@ -132,19 +134,19 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
                 "type": "photos",
                 "attributes": {
                     "title": "Ember Hamster",
-                    "src": "http://example.com/images/productivity.png"
+                    "src": "https://example.com/images/productivity.png"
                 }
             }
         }'''
 
         when:
-        def inputStream = new ByteArrayInputStream(json.getBytes("UTF-8"))
+        def inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))
         DataBindingSource source = creator.createDataBindingSource(null, null, inputStream)
 
         then:
         source.containsProperty("data")
         source.getPropertyValue("title") == "Ember Hamster"
-        source.getPropertyValue("src") == "http://example.com/images/productivity.png"
+        source.getPropertyValue("src") == "https://example.com/images/productivity.png"
     }
 
     void "test create no attributes - with key"() {
@@ -160,7 +162,7 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
         }'''
 
         when:
-        def inputStream = new ByteArrayInputStream(json.getBytes("UTF-8"))
+        def inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))
         DataBindingSource source = creator.createDataBindingSource(null, null, inputStream)
 
         then:
@@ -176,7 +178,7 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
         }'''
 
         when:
-        def inputStream = new ByteArrayInputStream(json.getBytes("UTF-8"))
+        def inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))
         DataBindingSource source = creator.createDataBindingSource(null, null, inputStream)
 
         then:
@@ -193,7 +195,7 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
         }'''
 
         when:
-        def inputStream = new ByteArrayInputStream(json.getBytes("UTF-8"))
+        def inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))
         DataBindingSource source = creator.createDataBindingSource(null, null, inputStream)
 
         then:

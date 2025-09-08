@@ -20,11 +20,14 @@
 package org.apache.grails.gradle.tasks.bom
 
 import org.gradle.api.GradleException
+import org.gradle.api.Project
+import org.gradle.api.plugins.JavaPlatformPlugin
 
 /**
  * Decides on the property name for a dependency
  */
 class PropertyNameCalculator {
+
     final Map<String, String> keysToPlatformCoordinates = [:]
     final Map<String, ExtractedDependencyConstraint> platformDefinitions = [:]
 
@@ -36,6 +39,25 @@ class PropertyNameCalculator {
         this.platformDefinitions.putAll(populate(platformDefinitions, keysToPlatformCoordinates))
         this.definitions.putAll(populate(definitions, keysToCoordinates))
         this.versions.putAll(definitionVersions)
+    }
+
+    void addProjects(Collection<Project> projects) {
+        for (Project project : projects) {
+            if (project.plugins.hasPlugin(JavaPlatformPlugin) || !project.extensions.findByName('grailsPublish')) {
+                continue
+            }
+
+            String artifactId = (project.findProperty('pomArtifactId') ?: project.name)
+            String baseVersionName = artifactId.replaceAll('-', '.')
+            String versionName = "${baseVersionName}.version" as String
+            String coordinates = "${project.group}:${artifactId}:${project.version}" as String
+            ExtractedDependencyConstraint constraint = new ExtractedDependencyConstraint(coordinates as String)
+            constraint.versionPropertyReference = "\${${versionName}}" as String
+
+            definitions.put(coordinates, constraint)
+            keysToCoordinates.put(coordinates, baseVersionName)
+            versions.put(versionName, project.version as String)
+        }
     }
 
     private static Map<String, ExtractedDependencyConstraint> populate(Map<String, String> definitions, Map<String, String> keyMappings) {
@@ -60,7 +82,7 @@ class PropertyNameCalculator {
             return null
         }
 
-        if(found.versionPropertyReference) {
+        if (found.versionPropertyReference) {
             return found
         }
 

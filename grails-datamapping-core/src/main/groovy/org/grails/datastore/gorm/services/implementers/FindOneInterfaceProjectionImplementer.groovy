@@ -24,6 +24,7 @@ import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.stmt.Statement
+
 import org.grails.datastore.gorm.GormEntity
 
 /**
@@ -47,6 +48,6 @@ class FindOneInterfaceProjectionImplementer extends FindOneImplementer implement
 
     @Override
     protected Statement buildReturnStatement(ClassNode targetDomainClass, MethodNode abstractMethodNode, Expression queryMethodCall, Expression args, MethodNode newMethodNode) {
-       return buildInterfaceProjection(targetDomainClass, abstractMethodNode, queryMethodCall, args, newMethodNode)
+        return buildInterfaceProjection(targetDomainClass, abstractMethodNode, queryMethodCall, args, newMethodNode)
     }
 }

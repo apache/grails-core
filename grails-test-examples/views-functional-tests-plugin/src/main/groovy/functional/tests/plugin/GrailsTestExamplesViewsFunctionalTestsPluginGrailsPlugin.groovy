@@ -24,7 +24,7 @@ import grails.plugins.Plugin
 class GrailsTestExamplesViewsFunctionalTestsPluginGrailsPlugin extends Plugin {
 
     // the version or versions of Grails the plugin is designed for
-    def grailsVersion = "7.0.0-SNAPSHOT > *"
+    def grailsVersion = '7.0.0-SNAPSHOT > *'
     // resources that are excluded from plugin packaging
     def pluginExcludes = [
         "grails-app/views/error.gsp"
@@ -38,6 +38,6 @@ class GrailsTestExamplesViewsFunctionalTestsPluginGrailsPlugin extends Plugin {
 Brief summary/description of the plugin.
 '''
     def profiles = ['web']
-    def documentation = "https://grails.org/plugin/examples-functional-tests-plugin"
+    def documentation = "https://grails.apache.org/plugins.html"
     def license = "APACHE"
 }

@@ -31,7 +31,7 @@ class InOperatorWithAssociationsSpec extends GrailsDataTckSpec<GrailsDataCoreTck
         manager.domainClasses.addAll([InAuthor, InBook])
     }
 
-    @Issue('https://github.com/grails/grails-core/issues/9279')
+    @Issue('https://github.com/apache/grails-core/issues/9279')
     void "Test query association using in operator in where query"() {
         setup: "Creating authors and books."
         InAuthor adams = new InAuthor(name: "Douglas Adams").save(failOnError: 'true')

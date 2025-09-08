@@ -34,6 +34,6 @@ You can then return `rx.Observable` as a return value from any controller and Gr
 
 1. Create a new asynchronous request
 2. Spawn a new thread that subscribes to the observable
-3. When the observable emits a result, process the result using the link:../ref/Controllers/respond.html[respond] method.
+3. When the observable emits a result, process the result using the link:{controllersRef}respond.html[respond] method.
 
 For more detailed instructions on how to use the RxJava plugin see the https://grails-plugins.github.io/grails-rxjava/latest/[user guide documentation] for the plugin.

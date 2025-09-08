@@ -1,33 +1,32 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 package grails.ui.command
+
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory
+import org.springframework.context.ConfigurableApplicationContext
 
 import grails.config.Settings
 import grails.dev.commands.ApplicationContextCommandRegistry
 import grails.dev.commands.ExecutionContext
 import grails.ui.support.DevelopmentGrailsApplication
-import groovy.transform.CompileStatic
 import org.grails.build.parsing.CommandLine
 import org.grails.build.parsing.CommandLineParser
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory
-import org.springframework.context.ConfigurableApplicationContext
-
 
 /**
  * @author Graeme Rocher
@@ -45,10 +44,10 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
 
     @Override
     ConfigurableApplicationContext run(String... args) {
-        def command = ApplicationContextCommandRegistry.findCommand(commandName)
-        if(command) {
+        def command = ApplicationContextCommandRegistry.instance.findCommand(commandName)
+        if (command) {
 
-            Object skipBootstrap = command.hasProperty("skipBootstrap")?.getProperty(command)
+            Object skipBootstrap = command.hasProperty('skipBootstrap')?.getProperty(command)
             if (skipBootstrap instanceof Boolean && !System.getProperty(Settings.SETTING_SKIP_BOOTSTRAP)) {
                 System.setProperty(Settings.SETTING_SKIP_BOOTSTRAP, skipBootstrap.toString())
             }
@@ -91,13 +90,14 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
      *
      * @param args The first argument is the Command name, the last argument is the Application class name
      */
-    public static void main(String[] args) {
-        if(args.size() > 1) {
-            Class applicationClass
+    static void main(String[] args) {
+        if (args.size() > 1) {
+            Class applicationClass = null
+            String className = args.last()
             try {
-                applicationClass = Thread.currentThread().contextClassLoader.loadClass(args.last())
+                applicationClass = Thread.currentThread().contextClassLoader.loadClass(className)
             } catch (Throwable e) {
-                System.err.println("Application class not found")
+                System.err.println("runCommand: Application class ${className} not found")
                 System.exit(1)
             }
 
@@ -105,7 +105,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
             runner.run(args.init() as String[])
         }
         else {
-            System.err.println("Missing application class name and script name arguments")
+            System.err.println('Missing application class name and script name arguments')
             System.exit(1)
         }
     }

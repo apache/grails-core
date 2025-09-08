@@ -85,7 +85,7 @@ public class Projections {
         return new Query.MaxProjection(name);
     }
 
-   /**
+    /**
      * Computes the average value of a property
      *
      * @param name The name of the property

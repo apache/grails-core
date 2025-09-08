@@ -19,7 +19,6 @@
 
 package org.grails.scaffolding.model.property
 
-
 class Constrained {
 
     grails.gorm.validation.Constrained constrained1

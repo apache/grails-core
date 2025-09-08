@@ -18,9 +18,9 @@
  */
 package grails.web.mime
 
-import grails.util.Holders
-import groovy.transform.CompileStatic;
+import groovy.transform.CompileStatic
 
+import grails.util.Holders
 import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
@@ -33,24 +33,24 @@ class MimeType {
     /**
      * The bean name used to store the mime type definitions
      */
-    public static final String BEAN_NAME = "mimeTypes"
+    public static final String BEAN_NAME = 'mimeTypes'
 
-    public static final MimeType ALL = new MimeType("*/*", "all")
-    public static final MimeType FORM = new MimeType("application/x-www-form-urlencoded", "form")
-    public static final MimeType MULTIPART_FORM = new MimeType("multipart/form-data", "multipartForm")
-    public static final MimeType HTML = new MimeType('text/html', "html")
-    public static final MimeType XHTML = new MimeType("application/xhtml+xml", "html")
-    public static final MimeType XML = new MimeType('application/xml', "xml")
-    public static final MimeType JSON = new MimeType('application/json', "json")
-    public static final MimeType TEXT_XML = new MimeType('text/xml', "xml")
-    public static final MimeType TEXT_JSON = new MimeType('text/json', "json")
-    public static final MimeType HAL_JSON = new MimeType('application/hal+json', "json")
-    public static final MimeType HAL_XML = new MimeType('application/hal+xml', "xml")
-    public static final MimeType ATOM_XML = new MimeType('application/atom+xml', "xml")
-    public static final MimeType JSON_API = new MimeType('application/vnd.api+json', "json")
+    public static final MimeType ALL = new MimeType('*/*', 'all')
+    public static final MimeType FORM = new MimeType('application/x-www-form-urlencoded', 'form')
+    public static final MimeType MULTIPART_FORM = new MimeType('multipart/form-data', 'multipartForm')
+    public static final MimeType HTML = new MimeType('text/html', 'html')
+    public static final MimeType XHTML = new MimeType('application/xhtml+xml', 'html')
+    public static final MimeType XML = new MimeType('application/xml', 'xml')
+    public static final MimeType JSON = new MimeType('application/json', 'json')
+    public static final MimeType TEXT_XML = new MimeType('text/xml', 'xml')
+    public static final MimeType TEXT_JSON = new MimeType('text/json', 'json')
+    public static final MimeType HAL_JSON = new MimeType('application/hal+json', 'json')
+    public static final MimeType HAL_XML = new MimeType('application/hal+xml', 'xml')
+    public static final MimeType ATOM_XML = new MimeType('application/atom+xml', 'xml')
+    public static final MimeType JSON_API = new MimeType('application/vnd.api+json', 'json')
 
     private static DEFAULTS = createDefaults()
-    public static final String QUALITY_RATING = "1.0"
+    public static final String QUALITY_RATING = '1.0'
     public static final BigDecimal QUALITY_RATING_NUMBER = 1.0
 
     String name
@@ -64,14 +64,14 @@ class MimeType {
     }
 
     MimeType(String name, String extension, Map<String, String> params = [:]) {
-        if(name && name.contains(';')) {
+        if (name && name.contains(';')) {
             List tokenWithArgs = name.split(';').toList()
             name = tokenWithArgs[0]
             final paramsList = tokenWithArgs[1..-1]
-            paramsList.each{ String it ->
+            paramsList.each { String it ->
                 def i = it.indexOf('=')
                 if (i > -1) {
-                    parameters[it[0..i-1].trim()] = it[i+1..-1].trim()
+                    parameters[it[0..i - 1].trim()] = it[i + 1..-1].trim()
                 }
             }
 
@@ -93,7 +93,7 @@ class MimeType {
      * @return The quality in BigDecimal form
      */
     BigDecimal getQualityAsNumber() {
-        if(this.qualityNumberField == null) {
+        if (this.qualityNumberField == null) {
             this.qualityNumberField = getOrConvertQualityParameterToBigDecimal(this)
         }
         return this.qualityNumberField
@@ -129,7 +129,7 @@ class MimeType {
 
     int hashCode() {
         def result = name.hashCode()
-        result = 31 * result + (version != null ? version.hashCode() : 0);
+        result = 31 * result + (version != null ? version.hashCode() : 0)
         return result
     }
 
@@ -142,10 +142,10 @@ class MimeType {
      */
     static MimeType[] getConfiguredMimeTypes() {
         def ctx = Holders.findApplicationContext()
-        if(ctx == null) {
+        if (ctx == null) {
             ctx = GrailsWebRequest.lookup()?.getApplicationContext()
         }
-        (MimeType[])(ctx?.containsBean(MimeType.BEAN_NAME) ? ctx?.getBean(MimeType.BEAN_NAME, MimeType[]) : DEFAULTS)
+        (MimeType[]) (ctx?.containsBean(MimeType.BEAN_NAME) ? ctx?.getBean(MimeType.BEAN_NAME, MimeType[]) : DEFAULTS)
     }
 
     /**
@@ -166,7 +166,7 @@ class MimeType {
         BigDecimal bd
         try {
             def q = mt.parameters.q
-            if(q == null) return QUALITY_RATING_NUMBER
+            if (q == null) return QUALITY_RATING_NUMBER
             else {
                 bd = q.toString().toBigDecimal()
                 // replace to avoid expensive conversion again

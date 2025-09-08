@@ -30,7 +30,7 @@ class InterceptorDependencyInjectionSpec extends ContainerGebSpec {
 
     void "Test that interceptors are subjected to autowire by name"() {
         when:
-        go '/misc/actionWhichReturnsMap'
+        go('/misc/actionWhichReturnsMap')
 
         then:
         $('h2', text: 'The Magic Number Is 42')

@@ -1,9 +1,0 @@
-/*
- Hidden blocks for translations
-*/
-.hidden-block {
-    display: none;
-    background-color: #DED;
-    color: #622;
-    padding: 0.5em 0;
-}

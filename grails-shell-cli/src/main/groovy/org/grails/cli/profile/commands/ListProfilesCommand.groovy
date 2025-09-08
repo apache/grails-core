@@ -18,8 +18,8 @@
  */
 package org.grails.cli.profile.commands
 
-import grails.build.logging.GrailsConsole
 import groovy.transform.CompileStatic
+
 import org.grails.cli.profile.Command
 import org.grails.cli.profile.CommandDescription
 import org.grails.cli.profile.ExecutionContext
@@ -36,8 +36,8 @@ import org.grails.cli.profile.ProfileRepositoryAware
 @CompileStatic
 class ListProfilesCommand implements Command, ProfileRepositoryAware {
 
-    final String name = "list-profiles"
-    final CommandDescription description = new CommandDescription(name, "Lists the available profiles", "grails list-profiles")
+    final String name = 'list-profiles'
+    final CommandDescription description = new CommandDescription(name, 'Lists the available profiles', 'grails list-profiles')
 
     ProfileRepository profileRepository
 
@@ -45,9 +45,9 @@ class ListProfilesCommand implements Command, ProfileRepositoryAware {
     boolean handle(ExecutionContext executionContext) {
         def allProfiles = profileRepository.allProfiles
         def console = executionContext.console
-        console.addStatus("Available Profiles")
+        console.addStatus('Available Profiles')
         console.log('--------------------')
-        for(Profile p in allProfiles) {
+        for (Profile p in allProfiles) {
             console.log("* $p.name - ${p.description}")
         }
 

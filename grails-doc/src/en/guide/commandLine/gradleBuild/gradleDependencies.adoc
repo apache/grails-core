@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Dependencies for your project are defined in the `dependencies` block. In general, you can follow the http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html[Gradle documentation on dependency management] to understand how to configure additional dependencies.
+Dependencies for your project are defined in the `dependencies` block. In general, you can follow the https://docs.gradle.org/current/userguide/dependency_management_for_java_projects.html[Gradle documentation on dependency management] to understand how to configure additional dependencies.
 
 The default dependencies for the Grails Web application can be seen below:
 
@@ -25,14 +25,13 @@ The default dependencies for the Grails Web application can be seen below:
 ----
 dependencies {
     profile "org.apache.grails.profiles:web"
-    developmentOnly "org.webjars.npm:bootstrap"
-    developmentOnly "org.webjars.npm:bootstrap-icons"
-    developmentOnly "org.webjars.npm:jquery"
+    testAndDevelopmentOnly "org.webjars.npm:bootstrap"
+    testAndDevelopmentOnly "org.webjars.npm:bootstrap-icons"
+    testAndDevelopmentOnly "org.webjars.npm:jquery"
     implementation platform("org.apache.grails:grails-bom:$grailsVersion")
     implementation "org.apache.grails:grails-core"
     implementation "org.apache.grails:grails-logging"
     implementation "org.apache.grails:grails-databinding"
-    implementation "org.apache.grails:grails-i18n"
     implementation "org.apache.grails:grails-interceptors"
     implementation "org.apache.grails:grails-rest-transforms"
     implementation "org.apache.grails:grails-services"
@@ -48,7 +47,7 @@ dependencies {
     implementation "org.springframework.boot:spring-boot-starter-tomcat"
     implementation "org.springframework.boot:spring-boot-starter-validation"
     console "org.apache.grails:grails-console"
-    runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails"
+    runtimeOnly "cloud.wondrify:asset-pipeline-grails"
     runtimeOnly "com.h2database:h2"
     runtimeOnly "com.zaxxer:HikariCP"
     runtimeOnly "org.fusesource.jansi:jansi"

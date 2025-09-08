@@ -38,7 +38,7 @@ public class PropertiesEditor extends org.springframework.beans.propertyeditors.
     public void setValue(Object value) {
         if (!(value instanceof Properties) && value instanceof Map) {
             Properties props = new Properties();
-            for(Map.Entry entry : (Set<Map.Entry>)((Map)value).entrySet()) {
+            for (Map.Entry entry : (Set<Map.Entry>) ((Map) value).entrySet()) {
                 props.put(String.valueOf(entry.getKey()), entry.getValue() != null ? String.valueOf(entry.getValue()) : null);
             }
             super.setValue(props);

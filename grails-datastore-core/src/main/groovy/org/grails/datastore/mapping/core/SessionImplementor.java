@@ -90,6 +90,7 @@ public interface SessionImplementor<T> {
      * @return The cached entry
      */
     T getCachedEntry(PersistentEntity entity, Serializable key);
+
     /**
      * Obtains a cached entry
      * @param entity The entity

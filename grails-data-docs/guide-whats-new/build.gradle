@@ -33,7 +33,7 @@ def asciidoctorAttributes = [
 ]
 
 tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
-    inputs.dir project.layout.projectDirectory.dir('src/main/docs')
+    inputs.dir(project.layout.projectDirectory.dir('src/main/docs')).withPropertyName('docsSrcDir').withPathSensitivity(PathSensitivity.RELATIVE)
     outputs.dir project.layout.buildDirectory.dir('docs')
 
     it.jvm {

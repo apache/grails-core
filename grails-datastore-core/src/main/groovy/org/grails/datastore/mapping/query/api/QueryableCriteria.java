@@ -18,10 +18,10 @@
  */
 package org.grails.datastore.mapping.query.api;
 
+import java.util.List;
+
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.query.Query;
-
-import java.util.List;
 
 /**
  * @author Graeme Rocher
@@ -33,6 +33,7 @@ public interface QueryableCriteria<T> extends Criteria {
      * @return The target entity
      */
     PersistentEntity getPersistentEntity();
+
     /**
      * @return A list of all criteria
      */

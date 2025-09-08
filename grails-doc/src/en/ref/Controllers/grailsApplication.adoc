@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-An instance of the {apiDocs}grails/core/GrailsApplication.html[GrailsApplication] class.
+An instance of the link:{apiFromRef}grails/core/GrailsApplication.html[GrailsApplication] class.
 
 
 === Examples
@@ -45,4 +45,4 @@ class BookController {
 === Description
 
 
-The `GrailsApplication` class provides information about the conventions within Grails and access to {apiDocs}grails/core/GrailsApplication#getMetadata().html[metadata], {apiDocs}grails/core/GrailsApplication#getConfig().html[config] and the {apiDocs}grails/core/GrailsApplication#getClassLoader().html[ClassLoader]
+The `GrailsApplication` class provides information about the conventions within Grails and access to link:{apiFromRef}grails/core/GrailsApplication.html#getMetadata()[metadata], link:{apiFromRef}grails/core/GrailsApplication.html#getConfig()[config] and the link:{apiFromRef}grails/core/GrailsApplication.html#getClassLoader()[ClassLoader]

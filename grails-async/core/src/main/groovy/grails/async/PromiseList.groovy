@@ -18,10 +18,10 @@
  */
 package grails.async
 
+import java.util.concurrent.TimeUnit
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
-
-import java.util.concurrent.TimeUnit
 
 /**
  * A list of promises
@@ -138,7 +138,7 @@ class PromiseList<T> implements Promise<List<T>> {
 
     @Override
     boolean isDone() {
-        return promises.every {promise -> promise.isDone() }
+        return promises.every { promise -> promise.isDone() }
     }
 
     @Override

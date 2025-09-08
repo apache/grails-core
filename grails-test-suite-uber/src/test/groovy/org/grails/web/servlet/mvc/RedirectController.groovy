@@ -116,7 +116,7 @@ class RedirectController {
     }
 
     def toAbsolute() {
-        redirect(url:"http://google.com")
+        redirect(url:"https://www.google.com/")
     }
 }
 

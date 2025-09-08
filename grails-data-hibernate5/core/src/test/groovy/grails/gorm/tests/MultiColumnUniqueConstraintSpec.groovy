@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.springframework.dao.DataIntegrityViolationException
 import spock.lang.Issue
 
-@Issue('https://github.com/grails/grails-data-mapping/issues/617')
+@Issue('https://github.com/apache/grails-data-mapping/issues/617')
 class MultiColumnUniqueConstraintSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
         manager.domainClasses.addAll([DomainOne, Task1, TaskLink])

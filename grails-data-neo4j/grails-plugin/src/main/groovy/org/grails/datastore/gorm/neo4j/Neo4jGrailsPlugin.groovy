@@ -34,12 +34,12 @@ import org.springframework.core.env.PropertyResolver
 class Neo4jGrailsPlugin extends Plugin {
 
     def license = "Apache 2.0 License"
-    def organization = [ name: "Grails", url: "http://grails.org/" ]
+    def organization = [ name: "Grails", url: "https://grails.apache.org/" ]
     def developers = [
         [ name: "Graeme Rocher", email: "graeme@grails.org"],
         [ name: "Stefan Armbruster", email: "stefan@armbruster-it.de" ] ]
-    def issueManagement = [ system: "JIRA", url: "https://github.com/grails/grails-data-mapping/issues" ]
-    def scm = [ url: "https://github.com/grails/grails-data-mapping" ]
+    def issueManagement = [ system: "JIRA", url: "https://github.com/apache/grails-core/issues" ]
+    def scm = [ url: "https://github.com/apache/grails-core" ]
 
     def grailsVersion = "3.3.0 > *"
     def loadAfter = ['domainClass', 'hibernate', 'services', 'converters']
@@ -51,7 +51,7 @@ class Neo4jGrailsPlugin extends Plugin {
     def title = "Neo4j GORM"
     def description = 'A plugin that integrates the Neo4j graph database into Grails, providing a GORM API onto it'
 
-    def documentation = "http://grails.github.io/grails-data-mapping/latest/neo4j"
+    def documentation = "https://gorm.grails.org/latest/neo4j/manual/"
 
     def dependsOn = [:]
     // resources that are excluded from plugin packaging

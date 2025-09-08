@@ -18,14 +18,16 @@
  */
 package grails.testing.services
 
-import grails.gorm.services.Service
-import grails.util.GrailsNameUtils
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
+import org.springframework.util.ClassUtils
+
+import grails.gorm.services.Service
+import grails.util.GrailsNameUtils
 import org.grails.core.artefact.ServiceArtefactHandler
 import org.grails.core.exceptions.GrailsConfigurationException
 import org.grails.testing.ParameterizedGrailsUnitTest
-import org.springframework.util.ClassUtils
 
 @CompileStatic
 trait ServiceUnitTest<T> extends ParameterizedGrailsUnitTest<T> {

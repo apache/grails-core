@@ -20,14 +20,10 @@ package org.grails.plugins.codecs
 
 import grails.plugins.Plugin
 import grails.util.GrailsUtil
-import org.grails.plugins.codecs.DefaultCodecLookup
-import org.grails.commons.CodecArtefactHandler
 import org.grails.encoder.impl.HTML4Codec
-import org.grails.plugins.codecs.HTMLCodec
 import org.grails.encoder.impl.HTMLJSCodec
 import org.grails.encoder.impl.JavaScriptCodec
 import org.grails.encoder.impl.RawCodec
-import org.grails.plugins.codecs.URLCodec
 
 /**
  * Configures pluggable codecs.
@@ -36,9 +32,10 @@ import org.grails.plugins.codecs.URLCodec
  * @since 0.4
  */
 class CodecsGrailsPlugin extends Plugin {
+
     def version = GrailsUtil.getGrailsVersion()
     def dependsOn = [core: version]
-    def watchedResources = "file:./grails-app/utils/**/*Codec.groovy"
+    def watchedResources = 'file:./grails-app/utils/**/*Codec.groovy'
     def providedArtefacts = [
             HTMLCodec,
             HTML4Codec,
@@ -48,4 +45,9 @@ class CodecsGrailsPlugin extends Plugin {
             RawCodec
     ]
 
+    Closure doWithSpring() {
+        { ->
+            codecLookup(DefaultCodecLookup)
+        }
+    }
 }

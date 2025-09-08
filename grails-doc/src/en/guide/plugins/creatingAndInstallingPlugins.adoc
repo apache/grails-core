@@ -20,21 +20,34 @@ under the License.
 
 ==== Creating Plugins
 
-
 Creating a Grails plugin is a simple matter of running the command:
 
+Grails Shell CLI
 [source,groovy]
 ----
 grails create-plugin <<PLUGIN NAME>>
 ----
 
-This will create a web-plugin project for the name you specify. For example running `grails create-plugin example` would create a new web-plugin project called `example`.
-
-In Grails 3.0 you should consider whether the plugin you create requires a web environment or whether the plugin can be used with other profiles. If your plugin does not require a web environment then use the "plugin" profile instead of the default "web-plugin" profile:
-
+Grails Forge CLI
 [source,groovy]
 ----
-grails create-plugin <<PLUGIN NAME>> --profile=plugin
+grails -t forge create-plugin <<PLUGIN NAME>>
+----
+
+This will create a plugin project for the name you specify. For example running `grails create-plugin example` would create a new plugin project called `example`.
+
+You should consider whether the plugin you create requires a web environment or whether the plugin can be used with other profiles. If your plugin requires a web environment then use the "web-plugin" profile instead of the default "plugin" profile:
+
+Grails Shell CLI
+[source,groovy]
+----
+grails create-web-plugin <<PLUGIN NAME>>
+----
+
+Grails Forge CLI
+[source,groovy]
+----
+grails -t forge create-web-plugin <<PLUGIN NAME>>
 ----
 
 Make sure the plugin name does not contain more than one capital letter in a row, or it won't work. Camel case is fine, though.
@@ -118,7 +131,7 @@ These files will be included in the plugin package while the `application.*` fil
 
 ==== Reading configuration properties
 
-Instead of directly accessing Grails configuration as `grailsApplication.config.mail.hostName`, use a Spring Boot configuration bean (or a POJO) annotated with {springbootapi}/org/springframework/boot/context/properties/ConfigurationProperties.html[ConfigurationProperties] annotation. Here is an example plugin configuration:
+Instead of directly accessing Grails configuration as `grailsApplication.config.mail.hostName`, use a Spring Boot configuration bean (or a POJO) annotated with {springbootapi}org/springframework/boot/context/properties/ConfigurationProperties.html[ConfigurationProperties] annotation. Here is an example plugin configuration:
 
 ./src/main/groovy/example/MailPluginConfiguration.groovy
 [source,groovy]
@@ -154,7 +167,7 @@ class MailService {
 }
 ----
 
-Please read the {springBootReference}/html/features.html#features.external-config[Spring Boot Externalized Configuration] section for more information.
+Please read the {springBootReference}features/external-config.html[Spring Boot Externalized Configuration] section for more information.
 
 ==== Installing Local Plugins
 
@@ -299,7 +312,7 @@ Grails application running at http://localhost:8080 in environment: development
 ==== Notes on excluded Artefacts
 
 
-Although the link:../ref/Command%20Line/create-plugin.html[create-plugin] command creates certain files for you so that the plugin can be run as a Grails application, not all of these files are included when packaging a plugin. The following is a list of artefacts created, but not included by link:../ref/Command%20Line/package-plugin.html[package-plugin]:
+Although the link:{commandLineRef}create-plugin.html[create-plugin] command creates certain files for you so that the plugin can be run as a Grails application, not all of these files are included when packaging a plugin. The following is a list of artefacts created, but not included by link:{commandLineRef}package-plugin.html[package-plugin]:
 
 * `grails-app/build.gradle` (although it is used to generate `dependencies.groovy`)
 * `grails-app/conf/logback.xml`
@@ -458,7 +471,7 @@ Adds Quartz job scheduling features
 
 ==== Plugin Configuration
 
-Instead of directly accessing Grails configuration as `grailsApplication.config.getProperty('mail.hostName', String)`, use a Spring Boot configuration bean (or a POJO) annotated with {springbootapi}/org/springframework/boot/context/properties/ConfigurationProperties.html[ConfigurationProperties] annotation. Here is an example plugin configuration:
+Instead of directly accessing Grails configuration as `grailsApplication.config.getProperty('mail.hostName', String)`, use a Spring Boot configuration bean (or a POJO) annotated with {springbootapi}org/springframework/boot/context/properties/ConfigurationProperties.html[ConfigurationProperties] annotation. Here is an example plugin configuration:
 
 ./src/main/groovy/example/MailPluginConfiguration.groovy
 [source,groovy]
@@ -494,7 +507,7 @@ class MailService {
 }
 ----
 
-Please read the {springBootReference}/html/features.html#features.external-config[Spring Boot Externalized Configuration] section for more information.
+Please read the {springBootReference}features/external-config.html[Spring Boot Externalized Configuration] section for more information.
 
 ==== Installing Local Plugins
 
@@ -638,7 +651,7 @@ Grails application running at http://localhost:8080 in environment: development
 ==== Notes on excluded Artefacts
 
 
-Although the link:../ref/Command%20Line/create-plugin.html[create-plugin] command creates certain files for you so that the plugin can be run as a Grails application, not all of these files are included when packaging a plugin. The following is a list of artefacts created, but not included by link:../ref/Command%20Line/package-plugin.html[package-plugin]:
+Although the link:{commandLineRef}create-plugin.html[create-plugin] command creates certain files for you so that the plugin can be run as a Grails application, not all of these files are included when packaging a plugin. The following is a list of artefacts created, but not included by link:{commandLineRef}package-plugin.html[package-plugin]:
 
 * `grails-app/build.gradle` (although it is used to generate `dependencies.groovy`)
 * `grails-app/conf/logback.xml`

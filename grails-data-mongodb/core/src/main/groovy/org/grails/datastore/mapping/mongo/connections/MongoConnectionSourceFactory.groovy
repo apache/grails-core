@@ -19,20 +19,23 @@
 
 package org.grails.datastore.mapping.mongo.connections
 
+import groovy.transform.CompileStatic
+
 import com.mongodb.MongoClientSettings
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
-import groovy.transform.CompileStatic
 import org.bson.codecs.Codec
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.codecs.configuration.CodecRegistry
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.core.env.PropertyResolver
+
 import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource
 import org.grails.datastore.mapping.mongo.config.MongoSettings
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.core.env.PropertyResolver
 
 /**
  * A factory for building {@link MongoClient} instances
@@ -71,13 +74,13 @@ class MongoConnectionSourceFactory extends AbstractConnectionSourceFactory<Mongo
         MongoConnectionSourceSettingsBuilder settingsBuilder = new MongoConnectionSourceSettingsBuilder(configuration, prefix, fallbackSettings)
         MongoClientSettings.Builder builder = clientOptionsBuilder ?: settingsBuilder.clientOptionsBuilder
         MongoConnectionSourceSettings settings = settingsBuilder.build()
-        if(builder != null) {
+        if (builder != null) {
             settings.options = builder
         }
 
-        if(isDefaultDataSource) {
+        if (isDefaultDataSource) {
             CodecRegistry codecRegistry = CodecRegistries.fromCodecs(codecs as List<? extends Codec<?>>)
-            if(this.codecRegistry != null) {
+            if (this.codecRegistry != null) {
                 codecRegistry = CodecRegistries.fromRegistries(codecRegistry, this.codecRegistry)
             }
             settings.codecRegistry = codecRegistry
@@ -101,10 +104,10 @@ class MongoConnectionSourceFactory extends AbstractConnectionSourceFactory<Mongo
 
     @Override
     def <F extends ConnectionSourceSettings> MongoConnectionSourceSettings buildRuntimeSettings(String name, PropertyResolver configuration, F fallbackSettings) {
-        MongoConnectionSourceSettingsBuilder settingsBuilder = new MongoConnectionSourceSettingsBuilder(configuration, "", fallbackSettings)
+        MongoConnectionSourceSettingsBuilder settingsBuilder = new MongoConnectionSourceSettingsBuilder(configuration, '', fallbackSettings)
         MongoClientSettings.Builder builder = clientOptionsBuilder ?: settingsBuilder.clientOptionsBuilder
         MongoConnectionSourceSettings settings = settingsBuilder.build()
-        if(builder != null) {
+        if (builder != null) {
             settings.options = builder
         }
         return settings

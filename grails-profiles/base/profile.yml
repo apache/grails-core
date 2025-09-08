@@ -17,12 +17,13 @@ skeleton:
     executable: ["**/gradlew*", "**/grailsw*"]
     binaryExtensions: ['png','gif','jpg','jpeg','ico','icns','pdf','zip','jar','class']
 repositories:
-    - "https://repository.apache.org/content/groups/public"
-    - "https://repo.grails.org/grails/core"
+    - "https://repo.grails.org/grails/restricted"
+features:
+  defaults:
+    - events
 build:
     repositories:
-        - "https://repository.apache.org/content/groups/public"
-        - "https://repo.grails.org/grails/core"
+        - "https://repo.grails.org/grails/restricted"
     plugins:
         - eclipse
         - idea
@@ -31,11 +32,9 @@ dependencies:
     - scope: build
       coords: "org.apache.grails:grails-gradle-plugins"
     - scope: developmentOnly
-      coords: "org.webjars.npm:bootstrap"
-    - scope: developmentOnly
-      coords: "org.webjars.npm:bootstrap-icons"
-    - scope: developmentOnly
-      coords: "org.webjars.npm:jquery"
+      coords: "org.springframework.boot:spring-boot-devtools"
+    - scope: implementation
+      coords: 'platform("org.apache.grails:grails-bom:$grailsVersion")'
     - scope: implementation
       coords: "org.springframework.boot:spring-boot-starter-logging"
     - scope: implementation
@@ -50,3 +49,7 @@ dependencies:
       coords: "org.apache.grails:grails-testing-support-datamapping"
     - scope: console
       coords: "org.apache.grails:grails-console"
+    - scope: runtimeOnly
+      coords: "org.fusesource.jansi:jansi"
+    - scope: testImplementation
+      coords: "org.spockframework:spock-core"

@@ -23,6 +23,8 @@ import org.grails.web.databinding.bindingsource.JsonDataBindingSourceCreator
 
 import spock.lang.Specification
 
+import java.nio.charset.StandardCharsets
+
 class JsonDataBindingSourceCreatorSpec extends Specification {
 
     void 'Test JSON parsing'() {
@@ -33,8 +35,8 @@ class JsonDataBindingSourceCreatorSpec extends Specification {
   "languages" : [ {"name": "Groovy", "company": "GoPivotal"}, {"name": "Java", "company": "Oracle"}]
 }'''
 
-        def inputStream = new ByteArrayInputStream(json.getBytes("UTF-8"))
-        def bindingSource = new JsonDataBindingSourceCreator().createBindingSource(inputStream, "UTF-8")
+        def inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))
+        def bindingSource = new JsonDataBindingSourceCreator().createBindingSource(inputStream, StandardCharsets.UTF_8.name())
 
         when:
         def propertyNames = bindingSource.propertyNames
@@ -68,7 +70,7 @@ class JsonDataBindingSourceCreatorSpec extends Specification {
         given:
         def json = '''{"mapData": {"name":"Jeff{{{'''
 
-        def inputStream = new ByteArrayInputStream(json.getBytes("UTF-8"))
+        def inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))
 
 
         when:

@@ -140,7 +140,7 @@ class ReverseUrlMappingTests extends Specification implements UrlMappingsUnitTes
     }
 }
 
-@Artefact("UrlMappings")
+@Artefact('UrlMappings')
 public class CustomUrlMappings {
     static mappings = {
         "/$mslug/$controller/$action/$id?" {}

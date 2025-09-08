@@ -1,27 +1,26 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 package grails.util
 
-import grails.io.IOUtils
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 
-import java.util.regex.Pattern
+import grails.io.IOUtils
 
 /**
  * Build time settings and configuration
@@ -34,44 +33,44 @@ class BuildSettings {
     /**
      * The http proxy username
      */
-    public static final String PROXY_HTTP_USER = "http.proxyUser"
+    public static final String PROXY_HTTP_USER = 'http.proxyUser'
     /**
      * The http proxy password
      */
-    public static final String PROXY_HTTP_PASSWORD = "http.proxyPassword"
+    public static final String PROXY_HTTP_PASSWORD = 'http.proxyPassword'
     /**
      * The proxy selector object to use when connecting remotely from the CLI
      */
-    public static final String PROXY_SELECTOR = "grails.proxy.selector"
+    public static final String PROXY_SELECTOR = 'grails.proxy.selector'
     /**
      * The authenticator to use when connecting remotely from the CLI
      */
-    public static final String AUTHENTICATOR = "grails.proxy.authenticator"
+    public static final String AUTHENTICATOR = 'grails.proxy.authenticator'
     /**
      * Name of the System property that specifies the main class name
      */
-    public static final String MAIN_CLASS_NAME = "org.grails.MAIN_CLASS_NAME"
+    public static final String MAIN_CLASS_NAME = 'org.grails.MAIN_CLASS_NAME'
 
     /**
      * The name of the profile being used
      */
-    public static final String PROFILE = "grails.profile"
+    public static final String PROFILE = 'grails.profile'
     /**
      * Specifies the profile repositories to use
      */
-    public static final String PROFILE_REPOSITORIES = "grails.profiles.repositories"
+    public static final String PROFILE_REPOSITORIES = 'grails.profiles.repositories'
 
-    public static final String BUILD_SCOPE = "build"
-    public static final String COMPILE_SCOPE = "compileClasspath"
-    public static final String RUNTIME_SCOPE = "runtimeClasspath"
-    public static final String TEST_SCOPE = "testCompileClasspath"
-    public static final String PROVIDED_SCOPE = "provided"
+    public static final String BUILD_SCOPE = 'build'
+    public static final String COMPILE_SCOPE = 'compileClasspath'
+    public static final String RUNTIME_SCOPE = 'runtimeClasspath'
+    public static final String TEST_SCOPE = 'testCompileClasspath'
+    public static final String PROVIDED_SCOPE = 'provided'
 
-    public static final String BUILD_SCOPE_DESC = "Dependencies for the build system only"
-    public static final String COMPILE_SCOPE_DESC = "Dependencies placed on the classpath for compilation"
-    public static final String RUNTIME_SCOPE_DESC = "Dependencies needed at runtime but not for compilation"
-    public static final String TEST_SCOPE_DESC = "Dependencies needed for test compilation and execution but not at runtime"
-    public static final String PROVIDED_SCOPE_DESC = "Dependencies needed at development time, but not during deployment"
+    public static final String BUILD_SCOPE_DESC = 'Dependencies for the build system only'
+    public static final String COMPILE_SCOPE_DESC = 'Dependencies placed on the classpath for compilation'
+    public static final String RUNTIME_SCOPE_DESC = 'Dependencies needed at runtime but not for compilation'
+    public static final String TEST_SCOPE_DESC = 'Dependencies needed for test compilation and execution but not at runtime'
+    public static final String PROVIDED_SCOPE_DESC = 'Dependencies needed at development time, but not during deployment'
 
     public static final Map<String, String> SCOPE_TO_DESC = [
             (BUILD_SCOPE): BUILD_SCOPE_DESC,
@@ -86,81 +85,81 @@ class BuildSettings {
     /**
      * The compiler source level to use
      */
-    public static final String COMPILER_SOURCE_LEVEL = "grails.project.source.level"
+    public static final String COMPILER_SOURCE_LEVEL = 'grails.project.source.level'
 
     /**
      * The compiler source level to use
      */
-    public static final String COMPILER_TARGET_LEVEL = "grails.project.target.level"
+    public static final String COMPILER_TARGET_LEVEL = 'grails.project.target.level'
     /**
      * The version of the servlet API
      */
-    public static final String SERVLET_VERSION = "grails.servlet.version"
+    public static final String SERVLET_VERSION = 'grails.servlet.version'
     /**
      * The base directory of the application
      */
-    public static final String APP_BASE_DIR = "base.dir"
+    public static final String APP_BASE_DIR = 'base.dir'
     /**
      * The name of the system property for the Grails work directory.
      */
-    public static final String WORK_DIR = "grails.work.dir"
+    public static final String WORK_DIR = 'grails.work.dir'
 
     /**
      * The name of the system property for the project work directory
      */
-    public static final String PROJECT_WORK_DIR = "grails.project.work.dir"
+    public static final String PROJECT_WORK_DIR = 'grails.project.work.dir'
 
-    public static final String OFFLINE_MODE= "grails.offline.mode"
+    public static final String OFFLINE_MODE = 'grails.offline.mode'
 
     /**
      * The name of the system property for {@link #}.
      */
-    public static final String PROJECT_RESOURCES_DIR = "grails.project.resource.dir"
+    public static final String PROJECT_RESOURCES_DIR = 'grails.project.resource.dir'
 
     /**
      * The name of the system property for project source directory. Must be set if changed from src/main/groovy
      */
-    public static final String PROJECT_SOURCE_DIR = "grails.project.source.dir"
+    public static final String PROJECT_SOURCE_DIR = 'grails.project.source.dir'
 
     /**
      * The name of the system property for the project classes directory. Must be set if changed from build/main/classes.
      */
-    public static final String PROJECT_CLASSES_DIR = "grails.project.class.dir"
+    public static final String PROJECT_CLASSES_DIR = 'grails.project.class.dir'
 
     /**
      * The name of the system property for project test classes directory. Must be set if changed from build/test/classes
      */
-    public static final String PROJECT_TEST_CLASSES_DIR = "grails.project.test.class.dir"
+    public static final String PROJECT_TEST_CLASSES_DIR = 'grails.project.test.class.dir'
 
     /**
      * The name of the system property for test reported directory
      */
-    public static final String PROJECT_TEST_REPORTS_DIR = "grails.project.test.reports.dir"
+    public static final String PROJECT_TEST_REPORTS_DIR = 'grails.project.test.reports.dir'
 
     /**
      * The name of the system property for documentation output directory
      */
-    public static final String PROJECT_DOCS_OUTPUT_DIR = "grails.project.docs.output.dir"
+    public static final String PROJECT_DOCS_OUTPUT_DIR = 'grails.project.docs.output.dir'
 
     /**
      * The name of the property specification test locations, must be set of the directory is changed from src/test/groovy
      */
-    public static final String PROJECT_TEST_SOURCE_DIR = "grails.project.test.source.dir"
+    public static final String PROJECT_TEST_SOURCE_DIR = 'grails.project.test.source.dir'
 
     /**
      * The name of the system property for the the project target directory. Must be set if Gradle build location is changed.
      */
-    public static final String PROJECT_TARGET_DIR = "grails.project.target.dir"
+    public static final String PROJECT_TARGET_DIR = 'grails.project.target.dir'
 
     /**
      * The name of the WAR file of the project
      */
-    public static final String PROJECT_WAR_FILE = "grails.project.war.file"
+    public static final String PROJECT_WAR_FILE = 'grails.project.war.file'
 
     /**
      * The name of the WAR file of the project
      */
-    public static final String PROJECT_AUTODEPLOY_DIR = "grails.project.autodeploy.dir"
+    public static final String PROJECT_AUTODEPLOY_DIR = 'grails.project.autodeploy.dir'
 
     /**
      * A system property with this name is populated in the preparation phase of functional testing
@@ -176,13 +175,7 @@ class BuildSettings {
     /**
      *  A property name to enable/disable AST conversion of closures actions&tags to methods
      */
-    public static final String CONVERT_CLOSURES_KEY = "grails.compile.artefacts.closures.convert"
-
-
-    /**
-     * The location of the local Grails installation. Will be null if not known
-     */
-    public static final File GRAILS_HOME = System.getProperty('grails.home') ? new File(System.getProperty('grails.home')) : null
+    public static final String CONVERT_CLOSURES_KEY = 'grails.compile.artefacts.closures.convert'
 
     /**
      * The base directory of the project
@@ -206,7 +199,7 @@ class BuildSettings {
      * The classes directory of the project, null outside of the development environment
      */
     public static final File CLASSES_DIR
-    public static final String RUN_EXECUTED = "grails.run.executed"
+    public static final String RUN_EXECUTED = 'grails.run.executed'
 
     /**
      * The path to the build classes directory
@@ -216,9 +209,9 @@ class BuildSettings {
     /**
      * The path to the build resources directory
      */
-    public static final String BUILD_RESOURCES_PATH = "build/resources/main"
+    public static final String BUILD_RESOURCES_PATH = 'build/resources/main'
 
-    public static final File SETTINGS_FILE = new File("${System.getProperty('user.home')}/.grails/settings.groovy")
+    public static final File SHARED_SETTINGS_FILE = new File("${System.getProperty('user.home')}/.grails/settings.groovy")
 
     /**
      * @return The version of Grails being used
@@ -235,32 +228,32 @@ class BuildSettings {
     }
 
     static {
-        boolean grailsAppDirPresent = new File( "grails-app").exists() || new File( "Application.groovy").exists()
-        if(!grailsAppDirPresent) {
+        boolean grailsAppDirPresent = new File('grails-app').exists() || new File('Application.groovy').exists()
+        if (!grailsAppDirPresent) {
             CLASSES_DIR = null
-            BUILD_CLASSES_PATH = "build/classes/main"
+            BUILD_CLASSES_PATH = 'build/classes/main'
         }
         else {
             String fromSystem = System.getProperty(PROJECT_CLASSES_DIR)
-            if(fromSystem) {
+            if (fromSystem) {
                 CLASSES_DIR = new File(fromSystem)
                 BUILD_CLASSES_PATH = fromSystem
             }
             else  {
-                File groovyDir = new File("build/classes/groovy/main")
-                if(groovyDir.exists()) {
-                    BUILD_CLASSES_PATH = "build/classes/groovy/main"
+                File groovyDir = new File('build/classes/groovy/main')
+                if (groovyDir.exists()) {
+                    BUILD_CLASSES_PATH = 'build/classes/groovy/main'
                     CLASSES_DIR = groovyDir
                 }
                 else {
-                    BUILD_CLASSES_PATH = "build/classes/main"
-                    CLASSES_DIR = new File("build/classes/main")
+                    BUILD_CLASSES_PATH = 'build/classes/main'
+                    CLASSES_DIR = new File('build/classes/main')
                 }
             }
         }
-        BASE_DIR = System.getProperty(APP_BASE_DIR) ? new File(System.getProperty(APP_BASE_DIR)) :  ( IOUtils.findApplicationDirectoryFile() ?: new File("."))
-        GRAILS_APP_DIR_PRESENT = new File(BASE_DIR, "grails-app").exists() || new File(BASE_DIR, "Application.groovy").exists()
-        TARGET_DIR = new File(BASE_DIR, "build")
-        RESOURCES_DIR = !GRAILS_APP_DIR_PRESENT ? null : (System.getProperty(PROJECT_RESOURCES_DIR) ? new File(System.getProperty(PROJECT_RESOURCES_DIR)) : new File(TARGET_DIR, "resources/main"))
+        BASE_DIR = System.getProperty(APP_BASE_DIR) ? new File(System.getProperty(APP_BASE_DIR)) : (IOUtils.findApplicationDirectoryFile() ?: new File('.'))
+        GRAILS_APP_DIR_PRESENT = new File(BASE_DIR, 'grails-app').exists() || new File(BASE_DIR, 'Application.groovy').exists()
+        TARGET_DIR = new File(BASE_DIR, 'build')
+        RESOURCES_DIR = !GRAILS_APP_DIR_PRESENT ? null : (System.getProperty(PROJECT_RESOURCES_DIR) ? new File(System.getProperty(PROJECT_RESOURCES_DIR)) : new File(TARGET_DIR, 'resources/main'))
     }
 }

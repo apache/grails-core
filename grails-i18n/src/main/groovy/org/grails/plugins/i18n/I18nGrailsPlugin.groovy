@@ -18,14 +18,16 @@
  */
 package org.grails.plugins.i18n
 
+import java.nio.file.Files
+
+import groovy.util.logging.Slf4j
+
+import org.springframework.context.support.ReloadableResourceBundleMessageSource
+import org.springframework.core.io.FileSystemResource
+
 import grails.plugins.Plugin
 import grails.util.BuildSettings
 import grails.util.GrailsUtil
-import groovy.util.logging.Slf4j
-import org.springframework.context.support.ReloadableResourceBundleMessageSource
-import org.springframework.core.io.Resource
-
-import java.nio.file.Files
 
 /**
  * Configures Grails' internationalisation support.
@@ -36,7 +38,7 @@ import java.nio.file.Files
 @Slf4j
 class I18nGrailsPlugin extends Plugin {
 
-    String baseDir = "grails-app/i18n"
+    String baseDir = 'grails-app/i18n'
     String version = GrailsUtil.getGrailsVersion()
     String watchedResources = "file:./${baseDir}/**/*.properties".toString()
 
@@ -45,7 +47,7 @@ class I18nGrailsPlugin extends Plugin {
         def ctx = applicationContext
         def application = grailsApplication
         if (!ctx) {
-            log.debug("Application context not found. Can't reload")
+            log.debug(/Application context not found. Can't reload/)
             return
         }
 
@@ -53,17 +55,18 @@ class I18nGrailsPlugin extends Plugin {
         def resourcesDir = BuildSettings.RESOURCES_DIR
         def classesDir = BuildSettings.CLASSES_DIR
 
-        if (resourcesDir.exists() && event.source instanceof Resource) {
-            File eventFile = event.source.file.canonicalFile
+        if (resourcesDir.exists() && event.source instanceof FileSystemResource) {
+            // this MUST be getFile() because there's also a isFile() on this class
+            File eventFile = (event.source as FileSystemResource).getFile().canonicalFile
             File i18nDir = eventFile.parentFile
             if (isChildOfFile(eventFile, i18nDir)) {
-                if( i18nDir.name == 'i18n' && i18nDir.parentFile.name == 'grails-app') {
+                if (i18nDir.name == 'i18n' && i18nDir.parentFile.name == 'grails-app') {
                     def appDir = i18nDir.parentFile.parentFile
                     resourcesDir = new File(appDir, BuildSettings.BUILD_RESOURCES_PATH)
                     classesDir = new File(appDir, BuildSettings.BUILD_CLASSES_PATH)
                 }
 
-                if(nativeascii) {
+                if (nativeascii) {
                     // if native2ascii is enabled then read the properties and write them out again
                     // so that unicode escaping is applied
                     def properties = new Properties()
@@ -72,16 +75,15 @@ class I18nGrailsPlugin extends Plugin {
                     }
                     // by using an OutputStream the unicode characters will be escaped
                     new File(resourcesDir, eventFile.name).withOutputStream {
-                        properties.store(it, "")
+                        properties.store(it, '')
                     }
                     new File(classesDir, eventFile.name).withOutputStream {
-                        properties.store(it, "")
+                        properties.store(it, '')
                     }
-                }
-                else {
+                } else {
                     // otherwise just copy the file as is
-                    Files.copy( eventFile.toPath(),new File(resourcesDir, eventFile.name).toPath() )
-                    Files.copy( eventFile.toPath(),new File(classesDir, eventFile.name).toPath() )
+                    Files.copy(eventFile.toPath(), new File(resourcesDir, eventFile.name).toPath())
+                    Files.copy(eventFile.toPath(), new File(classesDir, eventFile.name).toPath())
                 }
 
             }
@@ -95,7 +97,7 @@ class I18nGrailsPlugin extends Plugin {
 
     protected boolean isChildOfFile(File child, File parent) {
         def currentFile = child.canonicalFile
-        while(currentFile != null) {
+        while (currentFile != null) {
             if (currentFile == parent) {
                 return true
             }

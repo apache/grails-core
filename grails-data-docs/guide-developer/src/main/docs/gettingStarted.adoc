@@ -21,13 +21,13 @@ under the License.
 === Checking out and Building 
 
 
-The project is https://github.com/grails/grails-data-mapping[hosted on GitHub].
+The project is https://github.com/apache/grails-core[hosted on GitHub].
 
 You are free to fork the project from there or clone it anonymously using git:
 
 ----
-git clone https://github.com/grails/grails-data-mapping.git
-cd grails-data-mapping
+git clone https://github.com/apache/grails-core.git
+cd grails-core
 ----
 
 The project has a https://gradle.org[Gradle] build.
@@ -56,11 +56,7 @@ The project is essentially a multi-project Gradle build. There is a core API and
 
 In addition to this, there are separate projects of GORM implementations for various datastores:
 
-* https://github.com/grails/gorm-hibernate4[GORM for Hibernate 4]
-* https://github.com/grails/gorm-hibernate5[GORM for Hibernate 5]
-* https://github.com/grails/gorm-mongodb[GORM for MongoDB]
-* https://github.com/grails/gorm-neo4j[GORM for Neo4j]
-* https://github.com/grails/gorm-redis[GORM for Redis]
-* https://github.com/grails/gorm-cassandra[GORM for Cassandra]
-
-
+* https://github.com/apache/grails-core/tree/HEAD/grails-data-hibernate5[GORM for Hibernate 5]
+* https://github.com/apache/grails-core/tree/HEAD/grails-data-mongodb[GORM for MongoDB]
+* https://github.com/apache/grails-core/tree/HEAD/grails-data-neo4j[GORM for Neo4j]
+* https://github.com/apache/grails-core/tree/HEAD/grails-data-graphql[GORM for GraphQL]

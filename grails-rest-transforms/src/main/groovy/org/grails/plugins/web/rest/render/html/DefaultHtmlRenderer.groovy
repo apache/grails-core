@@ -18,16 +18,17 @@
  */
 package org.grails.plugins.web.rest.render.html
 
-import grails.rest.render.RenderContext
-import grails.rest.render.Renderer
-import grails.util.GrailsNameUtils
 import groovy.transform.CompileStatic
 
-import grails.core.support.proxy.ProxyHandler
-import grails.web.mime.MimeType
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.Errors
+
+import grails.core.support.proxy.ProxyHandler
+import grails.rest.render.RenderContext
+import grails.rest.render.Renderer
+import grails.util.GrailsNameUtils
+import grails.web.mime.MimeType
 
 /**
  * A default renderer for HTML that returns an appropriate model
@@ -37,12 +38,14 @@ import org.springframework.validation.Errors
  */
 @CompileStatic
 class DefaultHtmlRenderer<T> implements Renderer<T> {
+
     protected Class<T> targetType
     protected MimeType[] mimeTypes = [MimeType.XHTML, MimeType.HTML] as MimeType[]
+
     @Autowired(required = false)
     ProxyHandler proxyHandler
 
-    String suffix = ""
+    String suffix = ''
 
     DefaultHtmlRenderer(Class<T> targetType) {
         this.targetType = targetType
@@ -73,7 +76,7 @@ class DefaultHtmlRenderer<T> implements Renderer<T> {
         }
 
         if (object instanceof Errors) {
-            Errors errors = (Errors)object
+            Errors errors = (Errors) object
             def target = errors instanceof BeanPropertyBindingResult ? errors.getTarget() : null
             if (target) {
                 applyModel(context, target)
@@ -84,8 +87,8 @@ class DefaultHtmlRenderer<T> implements Renderer<T> {
     }
 
     protected void applyModel(RenderContext context, Object object) {
-        if(object instanceof Map) {
-            context.setModel((Map)object)
+        if (object instanceof Map) {
+            context.setModel((Map) object)
         }
         else {
             context.setModel([(resolveModelVariableName(object)): object])
@@ -93,40 +96,40 @@ class DefaultHtmlRenderer<T> implements Renderer<T> {
     }
 
     protected String resolveModelVariableName(Object object) {
-        if(object != null) {
+        if (object != null) {
             if (proxyHandler != null) {
                 object = proxyHandler.unwrapIfProxy(object)
             }
 
             Class<?> type = object.getClass()
             if (type.isArray()) {
-                return GrailsNameUtils.getPropertyName(type.getComponentType()) + suffix + "Array"
+                return GrailsNameUtils.getPropertyName(type.getComponentType()) + suffix + 'Array'
             }
 
             if (object instanceof Collection) {
                 Collection coll = (Collection) object
                 if (coll.isEmpty()) {
-                    return "emptyCollection"
+                    return 'emptyCollection'
                 }
 
                 Object first = coll.iterator().next()
                 if (proxyHandler != null) {
                     first = proxyHandler.unwrapIfProxy(first)
                 }
-                if(coll instanceof List) {
-                    return GrailsNameUtils.getPropertyName(first.getClass()) + suffix + "List"
+                if (coll instanceof List) {
+                    return GrailsNameUtils.getPropertyName(first.getClass()) + suffix + 'List'
                 }
-                if(coll instanceof Set) {
-                    return GrailsNameUtils.getPropertyName(first.getClass()) + suffix + "Set"
+                if (coll instanceof Set) {
+                    return GrailsNameUtils.getPropertyName(first.getClass()) + suffix + 'Set'
                 }
-                return GrailsNameUtils.getPropertyName(first.getClass()) + suffix + "Collection"
+                return GrailsNameUtils.getPropertyName(first.getClass()) + suffix + 'Collection'
             }
 
             if (object instanceof Map) {
-                Map map = (Map)object
+                Map map = (Map) object
 
                 if (map.isEmpty()) {
-                    return "emptyMap"
+                    return 'emptyMap'
                 }
 
                 Object entry = map.values().iterator().next()
@@ -134,7 +137,7 @@ class DefaultHtmlRenderer<T> implements Renderer<T> {
                     if (proxyHandler != null) {
                         entry = proxyHandler.unwrapIfProxy(entry)
                     }
-                    return GrailsNameUtils.getPropertyName(entry.getClass()) + suffix + "Map"
+                    return GrailsNameUtils.getPropertyName(entry.getClass()) + suffix + 'Map'
                 }
             }
             else {

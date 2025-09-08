@@ -18,16 +18,18 @@
  */
 package org.grails.orm.hibernate.query;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.orm.hibernate.GrailsHibernateTemplate;
-import org.hibernate.HibernateException;
-import org.hibernate.Session;
-import org.hibernate.query.Query;
+import java.sql.SQLException;
 
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
-import java.sql.SQLException;
+
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
+import org.hibernate.query.Query;
+
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.orm.hibernate.GrailsHibernateTemplate;
 
 public class PagedResultList extends grails.gorm.PagedResultList {
 
@@ -59,12 +61,12 @@ public class PagedResultList extends grails.gorm.PagedResultList {
     @Override
     public int getTotalCount() {
         if (totalCount == Integer.MIN_VALUE) {
-            totalCount = hibernateTemplate.execute(new GrailsHibernateTemplate.HibernateCallback<Integer>() {
+            totalCount = hibernateTemplate.execute(new GrailsHibernateTemplate.HibernateCallback<>() {
                 public Integer doInHibernate(Session session) throws HibernateException, SQLException {
                     final CriteriaQuery finalQuery = criteriaQuery.select(criteriaBuilder.count(queryRoot)).distinct(true).orderBy();
                     final Query query = session.createQuery(finalQuery);
                     hibernateTemplate.applySettings(query);
-                    return ((Number)query.uniqueResult()).intValue();
+                    return ((Number) query.uniqueResult()).intValue();
                 }
             });
         }

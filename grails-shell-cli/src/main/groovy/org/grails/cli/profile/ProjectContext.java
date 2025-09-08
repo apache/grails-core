@@ -18,10 +18,10 @@
  */
 package org.grails.cli.profile;
 
+import java.io.File;
+
 import grails.build.logging.GrailsConsole;
 import grails.config.ConfigMap;
-
-import java.io.File;
 
 /**
  * The project context used by a {@link org.grails.cli.profile.Profile}

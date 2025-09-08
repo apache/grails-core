@@ -18,15 +18,16 @@
  */
 package org.grails.web.taglib;
 
-import groovy.lang.Closure;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
-
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
+
+import groovy.lang.Closure;
+
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
 
 /**
  * Class that can be used by "layout" tags, i.e. tags that use the different parts in their body to assemble a bigger part.
@@ -45,7 +46,7 @@ import java.util.Stack;
  */
 public class LayoutWriterStack {
     private static final String ATTRIBUTE_NAME_WRITER_STACK = "be.ixor.grails.gsptaglib.WRITER_STACK";
-    private Stack<Map<String, Object>> stack = new Stack<Map<String, Object>>();
+    private Stack<Map<String, Object>> stack = new Stack<>();
 
     /**
      * Returns a {@link Writer} where a layout part can write its contents to.
@@ -92,7 +93,7 @@ public class LayoutWriterStack {
     public static Map<String, Object> writeParts(Closure<?> body) {
         LayoutWriterStack stack = LayoutWriterStack.currentStack();
         stack.push();
-        Map<String, Object> result = new HashMap<String, Object>();
+        Map<String, Object> result = new HashMap<>();
         result.put("body", body.call());
         result.putAll(stack.pop());
         return result;
@@ -112,7 +113,7 @@ public class LayoutWriterStack {
     }
 
     private void push() {
-        stack.push(new HashMap<String, Object>());
+        stack.push(new HashMap<>());
     }
 
     private Map<String, Object> pop() {

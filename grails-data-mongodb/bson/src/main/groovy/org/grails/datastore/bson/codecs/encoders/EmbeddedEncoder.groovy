@@ -20,9 +20,11 @@
 package org.grails.datastore.bson.codecs.encoders
 
 import groovy.transform.CompileStatic
+
 import org.bson.BsonWriter
 import org.bson.codecs.EncoderContext
 import org.bson.codecs.configuration.CodecRegistry
+
 import org.grails.datastore.bson.codecs.BsonPersistentEntityCodec
 import org.grails.datastore.bson.codecs.PropertyEncoder
 import org.grails.datastore.mapping.engine.EntityAccess
@@ -38,19 +40,18 @@ class EmbeddedEncoder implements PropertyEncoder<Embedded> {
 
     @Override
     void encode(BsonWriter writer, Embedded property, Object value, EntityAccess parentAccess, EncoderContext encoderContext, CodecRegistry codecRegistry) {
-        if(value != null) {
+        if (value != null) {
 
             def mappingContext = parentAccess.persistentEntity.mappingContext
             PersistentEntity associatedEntity = mappingContext.getPersistentEntity(value.getClass().name)
-            if(associatedEntity == null) {
+            if (associatedEntity == null) {
                 associatedEntity = property.associatedEntity
             }
 
-            writer.writeName MappingUtils.getTargetKey(property)
+            writer.writeName(MappingUtils.getTargetKey(property))
 
             def reflector = mappingContext.getEntityReflector(associatedEntity)
             BsonPersistentEntityCodec codec = createEmbeddedEntityCodec(codecRegistry, associatedEntity)
-
 
             def identifier = reflector.getIdentifier(value)
 

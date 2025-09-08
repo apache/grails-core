@@ -19,14 +19,27 @@
 
 package org.grails.datastore.gorm.jdbc;
 
-import org.springframework.beans.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+
+import org.springframework.beans.BeanWrapper;
+import org.springframework.beans.BeanWrapperImpl;
+import org.springframework.beans.InvalidPropertyException;
+import org.springframework.beans.MutablePropertyValues;
+import org.springframework.beans.PropertyValue;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.DataBinder;
-
-import java.util.*;
 
 /**
  * Binder implementation that allows caller to bind to maps and also allows property names
@@ -157,8 +170,7 @@ class RelaxedDataBinder extends DataBinder {
             String name = value.getName();
             for (String prefix : new RelaxedNames(stripLastDot(this.namePrefix))) {
                 for (String separator : new String[] { ".", "_" }) {
-                    String candidate = (StringUtils.hasLength(prefix) ? prefix + separator
-                            : prefix);
+                    String candidate = (StringUtils.hasLength(prefix) ? prefix + separator : prefix);
                     if (name.startsWith(candidate)) {
                         name = name.substring(candidate.length());
                         if (!(this.ignoreNestedProperties && name.contains("."))) {
@@ -220,8 +232,7 @@ class RelaxedDataBinder extends DataBinder {
         String name = path.prefix(index);
         TypeDescriptor descriptor = wrapper.getPropertyTypeDescriptor(name);
         if (descriptor == null || descriptor.isMap()) {
-            if (isMapValueStringType(descriptor)
-                    || isBlanked(wrapper, name, path.name(index))) {
+            if (isMapValueStringType(descriptor) || isBlanked(wrapper, name, path.name(index))) {
                 path.collapseKeys(index);
             }
             path.mapIndex(index);
@@ -263,8 +274,7 @@ class RelaxedDataBinder extends DataBinder {
 
     @SuppressWarnings("rawtypes")
     private boolean isBlanked(BeanWrapper wrapper, String propertyName, String key) {
-        Object value = (wrapper.isReadableProperty(propertyName)
-                ? wrapper.getPropertyValue(propertyName) : null);
+        Object value = (wrapper.isReadableProperty(propertyName) ? wrapper.getPropertyValue(propertyName) : null);
         if (value instanceof Map) {
             if (((Map) value).get(key) == BLANK) {
                 return true;
@@ -278,8 +288,8 @@ class RelaxedDataBinder extends DataBinder {
         String name = path.prefix(index);
         TypeDescriptor elementDescriptor = wrapper.getPropertyTypeDescriptor(name)
                 .getElementTypeDescriptor();
-        if (!elementDescriptor.isMap() && !elementDescriptor.isCollection()
-                && !elementDescriptor.getType().equals(Object.class)) {
+        if (!elementDescriptor.isMap() && !elementDescriptor.isCollection() &&
+                !elementDescriptor.getType().equals(Object.class)) {
             return;
         }
         Object extend = new LinkedHashMap<String, Object>();
@@ -299,15 +309,14 @@ class RelaxedDataBinder extends DataBinder {
         if (descriptor == null) {
             descriptor = TypeDescriptor.valueOf(Object.class);
         }
-        if (!descriptor.isMap() && !descriptor.isCollection()
-                && !descriptor.getType().equals(Object.class)) {
+        if (!descriptor.isMap() && !descriptor.isCollection() && !descriptor.getType().equals(Object.class)) {
             return;
         }
         String extensionName = path.prefix(index + 1);
         if (wrapper.isReadableProperty(extensionName)) {
             Object currentValue = wrapper.getPropertyValue(extensionName);
-            if ((descriptor.isCollection() && currentValue instanceof Collection)
-                    || (!descriptor.isCollection() && currentValue instanceof Map)) {
+            if ((descriptor.isCollection() && currentValue instanceof Collection) ||
+                    (!descriptor.isCollection() && currentValue instanceof Map)) {
                 return;
             }
         }
@@ -380,7 +389,7 @@ class RelaxedDataBinder extends DataBinder {
             return Collections.singleton(name);
         }
         List<String> nameAndAliases;
-        nameAndAliases = new ArrayList<String>(aliases.size() + 1);
+        nameAndAliases = new ArrayList<>(aliases.size() + 1);
         nameAndAliases.add(name);
         nameAndAliases.addAll(aliases);
         return nameAndAliases;
@@ -428,7 +437,7 @@ class RelaxedDataBinder extends DataBinder {
         }
 
         List<String> prefixes() {
-            List<String> prefixes = new ArrayList<String>();
+            List<String> prefixes = new ArrayList<>();
             for (int index = 1; index < this.nodes.size(); index++) {
                 prefixes.add(prefix(index));
             }

@@ -18,11 +18,10 @@
  */
 package org.grails.web.databinding.bindingsource
 
-import grails.databinding.DataBindingSource;
 import groovy.transform.CompileStatic
 
+import grails.databinding.DataBindingSource
 import grails.web.mime.MimeType
-
 
 /**
  * Creates DataBindingSource objects from HAL JSON in the request body
@@ -38,7 +37,7 @@ import grails.web.mime.MimeType
 @CompileStatic
 class HalJsonDataBindingSourceCreator extends JsonDataBindingSourceCreator {
 
-    public static final String HAL_EMBEDDED_ELEMENT = "_embedded"
+    public static final String HAL_EMBEDDED_ELEMENT = '_embedded'
 
     @Override
     MimeType[] getMimeTypes() {
@@ -47,14 +46,14 @@ class HalJsonDataBindingSourceCreator extends JsonDataBindingSourceCreator {
 
     @Override
     protected Map createJsonMap(Object jsonElement) {
-        if(jsonElement instanceof Map) {
+        if (jsonElement instanceof Map) {
 
             def jsonMap = (Map) jsonElement
-            if(jsonMap.containsKey(HAL_EMBEDDED_ELEMENT)) {
+            if (jsonMap.containsKey(HAL_EMBEDDED_ELEMENT)) {
                 jsonMap = new LinkedHashMap(jsonMap)
                 def embedded = jsonMap.get(HAL_EMBEDDED_ELEMENT)
-                if(embedded instanceof Map) {
-                    jsonMap.putAll((Map)embedded)
+                if (embedded instanceof Map) {
+                    jsonMap.putAll((Map) embedded)
                 }
             }
             return jsonMap

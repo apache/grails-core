@@ -18,22 +18,24 @@
  */
 package org.grails.testing
 
-import grails.config.Config
-import grails.core.DefaultGrailsApplication
-import grails.core.GrailsApplication
-import grails.spring.BeanBuilder
-import grails.util.Holders
-import grails.validation.DeferredBindingActions
+import java.lang.reflect.Method
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.grails.core.lifecycle.ShutdownOperations
+
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.MessageSource
 import org.springframework.util.ClassUtils
 
-import java.lang.reflect.Method
+import grails.config.Config
+import grails.core.DefaultGrailsApplication
+import grails.core.GrailsApplication
+import grails.spring.BeanBuilder
+import grails.util.Holders
+import grails.validation.DeferredBindingActions
+import org.grails.core.lifecycle.ShutdownOperations
 
 @CompileStatic
 trait GrailsUnitTest {
@@ -92,16 +94,16 @@ trait GrailsUnitTest {
      * @return the MessageSource bean from the application context
      */
     MessageSource getMessageSource() {
-        applicationContext.getBean("messageSource", MessageSource)
+        applicationContext.getBean('messageSource', MessageSource)
     }
 
     void defineBeans(Closure closure) {
         def binding = new Binding()
         def bb = new BeanBuilder(null, null, grailsApplication.getClassLoader())
-        binding.setVariable "application", grailsApplication
-        bb.setBinding binding
+        binding.setVariable('application', grailsApplication)
+        bb.setBinding(binding)
         bb.beans(closure)
-        bb.registerBeans((BeanDefinitionRegistry)applicationContext)
+        bb.registerBeans((BeanDefinitionRegistry) applicationContext)
         applicationContext.beanFactory.preInstantiateSingletons()
     }
 
@@ -109,7 +111,7 @@ trait GrailsUnitTest {
         Class clazz = plugin.getClass()
         try {
             Method doWithSpringMethod = clazz.getMethod('doWithSpring')
-            Closure config = (Closure)doWithSpringMethod.invoke(plugin)
+            Closure config = (Closure) doWithSpringMethod.invoke(plugin)
             if (config != null) {
                 defineBeans(config)
                 return
@@ -118,7 +120,7 @@ trait GrailsUnitTest {
 
         try {
             Method doWithSpringField = clazz.getMethod('getDoWithSpring')
-            defineBeans((Closure)doWithSpringField.invoke(plugin))
+            defineBeans((Closure) doWithSpringField.invoke(plugin))
         } catch (NoSuchFieldException e) {}
     }
 
@@ -139,20 +141,19 @@ trait GrailsUnitTest {
     }
 
     void cleanupGrailsApplication() {
-        if (_grailsApplication != null) {        
+        if (_grailsApplication != null) {
             if (_grailsApplication instanceof DefaultGrailsApplication) {
-                ((DefaultGrailsApplication)_grailsApplication).clear()
+                ((DefaultGrailsApplication) _grailsApplication).clear()
             }
 
-            ApplicationContext applicationContext = grailsApplication.getParentContext()
-
+            ApplicationContext applicationContext = _grailsApplication.getParentContext()
             if (applicationContext instanceof ConfigurableApplicationContext) {
                 if (((ConfigurableApplicationContext) applicationContext).isActive()) {
-                    if(grailsApplication.mainContext instanceof Closeable) {
-                        ((Closeable)grailsApplication.mainContext).close()
+                    if (_grailsApplication.mainContext instanceof Closeable) {
+                        ((Closeable) _grailsApplication.mainContext).close()
                     }
                     if (applicationContext instanceof Closeable) {
-                        ((Closeable)applicationContext).close()
+                        ((Closeable) applicationContext).close()
                     }
                 }
             }
@@ -161,6 +162,8 @@ trait GrailsUnitTest {
             DeferredBindingActions.clear()
 
             this._grailsApplication = null
+            this._servletContext = null
+
             cleanupPromiseFactory()
             Holders.clear()
         }
@@ -169,8 +172,8 @@ trait GrailsUnitTest {
     @CompileDynamic
     private void cleanupPromiseFactory() {
         ClassLoader classLoader = getClass().classLoader
-        if (ClassUtils.isPresent("grails.async.Promises", classLoader)) {
-            getClass().classLoader.loadClass("grails.async.Promises")['promiseFactory'] = null
+        if (ClassUtils.isPresent('grails.async.Promises', classLoader)) {
+            getClass().classLoader.loadClass('grails.async.Promises')['promiseFactory'] = null
         }
     }
 }

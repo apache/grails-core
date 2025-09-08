@@ -29,6 +29,6 @@ class CardProfile implements Serializable {
     Card card
 
     static constraints = {
-        card nullable: true
+        card(nullable: true)
     }
 }

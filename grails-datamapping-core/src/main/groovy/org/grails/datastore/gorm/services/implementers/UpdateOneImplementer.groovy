@@ -26,10 +26,18 @@ import org.codehaus.groovy.ast.expr.StaticMethodCallExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.Statement
+
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.reflect.AstUtils
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+
+import static org.codehaus.groovy.ast.tools.GeneralUtils.block
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
+
 /**
  * Implements an update operation that returns the updated domain class
  *
@@ -38,16 +46,17 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.*
  */
 @CompileStatic
 class UpdateOneImplementer extends AbstractSaveImplementer implements SingleResultServiceImplementer<GormEntity> {
+
     static final List<String> HANDLED_PREFIXES = ['update']
 
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
         Parameter[] parameters = methodNode.parameters
-        if( parameters.length < 2 ) {
+        if (parameters.length < 2) {
             return false
         }
         // first parameter should be the id
-        else if(parameters[0].name != GormProperties.IDENTITY) {
+        else if (parameters[0].name != GormProperties.IDENTITY) {
             return false
         }
         else {
@@ -68,23 +77,23 @@ class UpdateOneImplementer extends AbstractSaveImplementer implements SingleResu
     @Override
     void doImplement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode) {
         Parameter[] parameters = newMethodNode.parameters
-        StaticMethodCallExpression lookupCall = callX(domainClassNode, "get", varX(parameters[0]))
+        StaticMethodCallExpression lookupCall = callX(domainClassNode, 'get', varX(parameters[0]))
         VariableExpression entityVar = varX('$entity', domainClassNode)
 
-        BlockStatement body = (BlockStatement)newMethodNode.code
+        BlockStatement body = (BlockStatement) newMethodNode.code
         // def $entity = Foo.get(id)
         // if($entity != null) {
         //    ... bind parameters
         //    $entity.save()
         // }
         body.addStatement(
-            declS( entityVar, lookupCall)
+            declS(entityVar, lookupCall)
         )
         BlockStatement ifBody = block()
         Statement saveStmt = bindParametersAndSave(domainClassNode, abstractMethodNode, parameters[1..-1] as Parameter[], ifBody, entityVar)
         ifBody.addStatement(saveStmt)
         body.addStatement(
-            ifS( notNullX(entityVar),
+            ifS(notNullX(entityVar),
                 ifBody
             )
         )

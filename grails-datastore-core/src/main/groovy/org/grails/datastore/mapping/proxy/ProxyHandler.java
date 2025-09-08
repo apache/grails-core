@@ -41,6 +41,7 @@ public interface ProxyHandler {
      * @return True if it is
      */
     boolean isInitialized(Object object);
+
     /**
      * Checks whether the given association name of the given object is initialized
      *

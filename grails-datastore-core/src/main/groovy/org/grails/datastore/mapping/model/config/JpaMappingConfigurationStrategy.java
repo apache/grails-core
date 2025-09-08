@@ -19,22 +19,42 @@
 
 package org.grails.datastore.mapping.model.config;
 
-import groovy.lang.MetaProperty;
-import org.grails.datastore.mapping.config.Property;
-import org.grails.datastore.mapping.engine.internal.MappingUtils;
-import org.grails.datastore.mapping.model.*;
-import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.EmbeddedCollection;
-import org.grails.datastore.mapping.model.types.Simple;
-import org.grails.datastore.mapping.model.types.ToOne;
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import java.beans.PropertyDescriptor;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.*;
-import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
+import groovy.lang.MetaProperty;
+
+import jakarta.persistence.Embedded;
+import jakarta.persistence.EmbeddedId;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Transient;
+
+import org.grails.datastore.mapping.config.Property;
+import org.grails.datastore.mapping.engine.internal.MappingUtils;
+import org.grails.datastore.mapping.model.ClassMapping;
+import org.grails.datastore.mapping.model.IdentityMapping;
+import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.MappingFactory;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.ValueGenerator;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.EmbeddedCollection;
+import org.grails.datastore.mapping.model.types.Simple;
+import org.grails.datastore.mapping.model.types.ToOne;
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 
 @SuppressWarnings({"rawtypes", "unchecked", "Duplicates"})
 public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStrategy {
@@ -54,7 +74,7 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
             return super.getPersistentProperties(entity, context, classMapping, includeIdentifiers);
         }
 
-        final List<PersistentProperty> persistentProperties = new ArrayList<PersistentProperty>();
+        final List<PersistentProperty> persistentProperties = new ArrayList<>();
         ClassPropertyFetcher cpf = ClassPropertyFetcher.forClass(entityClass);
 
         for (MetaProperty metaProperty : cpf.getMetaProperties()) {
@@ -87,11 +107,11 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
 
             Class<?> propertyType = descriptor.getPropertyType();
 
-            if(hasAnnotation(readMethod, field, Id.class)) {
-                persistentProperties.add( propertyFactory.createIdentity(entity, context, descriptor));
+            if (hasAnnotation(readMethod, field, Id.class)) {
+                persistentProperties.add(propertyFactory.createIdentity(entity, context, descriptor));
             }
-            else if(hasAnnotation(readMethod, field, EmbeddedId.class)) {
-                persistentProperties.add( propertyFactory.createIdentity(entity, context, descriptor));
+            else if (hasAnnotation(readMethod, field, EmbeddedId.class)) {
+                persistentProperties.add(propertyFactory.createIdentity(entity, context, descriptor));
             }
             else if (hasAnnotation(readMethod, field, Embedded.class)) {
                 if (isCollectionType(propertyType)) {
@@ -124,7 +144,7 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
             }
             else if (propertyFactory.isSimpleType(propertyType)) {
                 Simple simpleProperty = propertyFactory.createSimple(entity, context, descriptor);
-                if(hasAnnotation(readMethod, field, GeneratedValue.class)) {
+                if (hasAnnotation(readMethod, field, GeneratedValue.class)) {
                     simpleProperty.getMapping().getMappedForm().setDerived(true);
                 }
                 persistentProperties.add(simpleProperty);
@@ -135,7 +155,6 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
         }
         return persistentProperties;
     }
-
 
     protected Association establishRelationshipForCollection(PropertyDescriptor property, Field field, PersistentEntity entity, MappingContext context, boolean embedded) {
         Class javaClass = entity.getJavaClass();
@@ -178,7 +197,7 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
             association = propertyFactory.createManyToMany(entity, context, property);
             ManyToMany manyToMany = getAnnotation(readMethod, field, ManyToMany.class);
             if (!manyToMany.mappedBy().equals("")) {
-                ((org.grails.datastore.mapping.model.types.ManyToMany)association).setInversePropertyName(manyToMany.mappedBy());
+                ((org.grails.datastore.mapping.model.types.ManyToMany) association).setInversePropertyName(manyToMany.mappedBy());
                 referencedPropertyName = manyToMany.mappedBy();
             } else {
                 List<PropertyDescriptor> descriptors = referencedCpf.getPropertiesAssignableToType(Collection.class);
@@ -240,7 +259,6 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
 
         Method readMethod = property.getReadMethod();
 
-
         if (getAnnotation(readMethod, field, ManyToOne.class) != null) {
             association = propertyFactory.createManyToOne(entity, context, property);
 
@@ -291,7 +309,7 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
         if (association != null) {
             PersistentEntity associatedEntity = getOrCreateAssociatedEntity(entity, context, propType);
             association.setAssociatedEntity(associatedEntity);
-            if (relatedClassPropertyName != null ) {
+            if (relatedClassPropertyName != null) {
                 association.setReferencedPropertyName(relatedClassPropertyName);
             }
         }
@@ -312,7 +330,7 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
             String[] idPropertiesArray;
 
             public String[] getIdentifierName() {
-                if(idPropertiesArray != null) {
+                if (idPropertiesArray != null) {
                     return idPropertiesArray;
                 }
 
@@ -322,11 +340,11 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
 
                 for (MetaProperty metaProperty : cpf.getMetaProperties()) {
                     int modifiers = metaProperty.getModifiers();
-                    if(Modifier.isStatic(modifiers) || Modifier.isAbstract(modifiers)) {
+                    if (Modifier.isStatic(modifiers) || Modifier.isAbstract(modifiers)) {
                         continue;
                     }
                     PropertyDescriptor pd = propertyFactory.createPropertyDescriptor(entity.getJavaClass(), metaProperty);
-                    if(pd != null) {
+                    if (pd != null) {
 
                         if (hasAnnotation(cpf, pd, Id.class)) {
                             idProperties.add(metaProperty.getName());
@@ -337,7 +355,7 @@ public class JpaMappingConfigurationStrategy extends GormMappingConfigurationStr
                     }
                 }
 
-                if(idProperties.isEmpty()) {
+                if (idProperties.isEmpty()) {
                     // default to just use 'id'
                     idProperties.add(GormProperties.IDENTITY);
                 }

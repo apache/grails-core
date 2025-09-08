@@ -31,7 +31,7 @@ class PluginViewsControllerSpec extends ContainerGebSpec {
 
     void "Test that when plugin templates are rendered they render correctly"() {
         when:"A view that renders plugin templates is visisted"
-            go '/pluginViews/testTemplateFromPlugin'
+        go('/pluginViews/testTemplateFromPlugin')
 
         then:"The title is correct"
         	$('div', 0).text() == "Template from plugin: Hello from plugin"
@@ -40,7 +40,7 @@ class PluginViewsControllerSpec extends ContainerGebSpec {
 
     void "Test that views from a plugin loaded after another plugin override when using loadAfter"() {
         when:"A view that renders plugin views"
-            go '/pluginViews/testPluginViewOverrideInPlugin'
+        go('/pluginViews/testPluginViewOverrideInPlugin')
 
         then:"The title is correct"
             $('h1', 0).text() == "Second Plugin"

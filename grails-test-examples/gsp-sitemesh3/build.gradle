@@ -17,25 +17,12 @@
  *  under the License.
  */
 
-buildscript {
-    repositories {
-        // mavenLocal()
-        maven { url = 'https://repo.grails.org/grails/core' }
-        maven { url = 'https://repository.apache.org/content/groups/snapshots' }
-    }
-    dependencies {
-        classpath platform("org.apache.grails:grails-gradle-bom:${project.projectVersion}")
-        classpath 'org.apache.grails:grails-gradle-plugins'
-        classpath 'com.bertramlabs.plugins:asset-pipeline-gradle'
-    }
-}
-
 version = '0.0.1'
-group = 'org.sitemesh.grails.plugins.sitemesh3'
+group = 'org.example.grails.layout'
 
 apply plugin: 'org.apache.grails.gradle.grails-web'
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
-apply plugin: 'com.bertramlabs.asset-pipeline'
+apply plugin: 'cloud.wondrify.asset-pipeline'
 
 ext {
     testForked = true
@@ -45,19 +32,19 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    implementation 'org.apache.grails:grails-sitemesh3'
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-controllers'
     implementation 'org.apache.grails:grails-rest-transforms'
+    implementation 'org.apache.grails:grails-sitemesh3'
 
-    implementation 'org.webjars.npm:bootstrap'
-    implementation 'org.webjars.npm:jquery'
+    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
+    testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly 'org.apache.grails:grails-gsp'
-    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
-    runtimeOnly 'org.apache.grails:grails-i18n'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
@@ -75,4 +62,5 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

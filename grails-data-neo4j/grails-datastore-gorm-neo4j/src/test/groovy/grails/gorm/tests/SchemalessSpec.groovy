@@ -235,7 +235,7 @@ class SchemalessSpec extends GormDatastoreSpec {
 
     }
 
-    @Issue('https://github.com/grails/gorm-neo4j/issues/18')
+    @Issue('https://github.com/grails/grails-data-neo4j/issues/18')
     def "test clear dynamic collection association"() {
         setup:
         def cosima = new Pet(name: 'Cosima')

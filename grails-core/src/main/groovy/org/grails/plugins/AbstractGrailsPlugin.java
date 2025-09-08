@@ -18,19 +18,19 @@
  */
 package org.grails.plugins;
 
-import grails.config.Config;
-import grails.core.GrailsApplication;
-import grails.io.IOUtils;
-import grails.plugins.GrailsPlugin;
-import grails.plugins.GrailsPluginManager;
-import grails.util.GrailsNameUtils;
+import java.io.IOException;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import groovy.lang.GroovyObjectSupport;
-import org.grails.config.yaml.YamlPropertySourceLoader;
-import org.grails.core.AbstractGrailsClass;
-import org.grails.core.cfg.GroovyConfigPropertySourceLoader;
-import org.grails.plugins.support.WatchPattern;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.PropertySource;
@@ -38,9 +38,16 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.util.Assert;
 
-import java.io.IOException;
-import java.net.URL;
-import java.util.*;
+import grails.config.Config;
+import grails.core.GrailsApplication;
+import grails.io.IOUtils;
+import grails.plugins.GrailsPlugin;
+import grails.plugins.GrailsPluginManager;
+import grails.util.GrailsNameUtils;
+import org.grails.config.yaml.YamlPropertySourceLoader;
+import org.grails.core.AbstractGrailsClass;
+import org.grails.core.cfg.GroovyConfigPropertySourceLoader;
+import org.grails.plugins.support.WatchPattern;
 
 /**
  * Abstract implementation that provides some default behaviours
@@ -60,7 +67,7 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
     protected GrailsApplication grailsApplication;
     protected boolean isBase = false;
     protected String version = "1.0";
-    protected Map<String, Object> dependencies = new HashMap<String, Object>();
+    protected Map<String, Object> dependencies = new HashMap<>();
     protected String[] dependencyNames = {};
     protected Class<?> pluginClass;
     protected ApplicationContext applicationContext;
@@ -88,7 +95,7 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
         this.pluginClass = pluginClass;
         Resource resource = readPluginConfiguration(pluginClass);
 
-        if(resource != null && resource.exists()) {
+        if (resource != null && resource.exists()) {
             final String filename = resource.getFilename();
             try {
                 if (filename.equals(PLUGIN_YML)) {
@@ -99,7 +106,7 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
                     this.propertySource = propertySourceLoader.load(GrailsNameUtils.getLogicalPropertyName(pluginClass.getSimpleName(), "GrailsPlugin") + "-" + PLUGIN_GROOVY, resource, DEFAULT_CONFIG_IGNORE_LIST).stream().findFirst().orElse(null);
                 }
             } catch (IOException e) {
-                LOG.warn("Error loading " + filename + " for plugin: " + pluginClass.getName() +": " + e.getMessage(), e);
+                LOG.warn("Error loading " + filename + " for plugin: " + pluginClass.getName() + ": " + e.getMessage(), e);
             }
         }
     }
@@ -116,7 +123,6 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
         // do nothing
     }
 
-
     @Override
     public boolean isEnabled(String[] profiles) {
         return true;
@@ -128,13 +134,13 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
 
         Boolean groovyResourceExists = groovyResource != null && groovyResource.exists();
 
-        if(ymlResource != null && ymlResource.exists()) {
+        if (ymlResource != null && ymlResource.exists()) {
             if (groovyResourceExists) {
-                throw new RuntimeException("A plugin may define a plugin.yml or a plugin.groovy, but not both");
+                throw new RuntimeException("A plugin [" + pluginClass.getName() + "] may define a plugin.yml or a plugin.groovy, but not both");
             }
             return ymlResource;
         }
-        if(groovyResourceExists) {
+        if (groovyResourceExists) {
             return groovyResource;
         }
         return null;
@@ -172,11 +178,6 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
     public boolean hasInterestInChange(String path) {
         return false;
     }
-
-    public boolean checkForChanges() {
-        return false;
-    }
-
 
     public String[] getDependencyNames() {
         return dependencyNames;

@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-Renders different responses based on the incoming request `Accept` header, format parameter or URI extension. See link:{guidePath}/theWebLayer.html#contentNegotiation[Content Negotiation] for more information.
+Renders different responses based on the incoming request `Accept` header, format parameter or URI extension. See link:{guidePath}theWebLayer.html#contentNegotiation[Content Negotiation] for more information.
 
 
 === Examples
@@ -64,7 +64,7 @@ withFormat {
 }
 ----
 
-Here we invoke three methods called `html`, `js` and `xml` that use mime type names configured in `grails-app/conf/application.yml` (See link:{guidePath}/theWebLayer.html#contentNegotiation[Content Negotiation] for more information). The call to `html` accepts a model (a Map) which is passed on to the view. Grails searches for a view called `grails-app/views/book/list.html.gsp` and if that is not found fallback to `grails-app/views/book/list.gsp`.
+Here we invoke three methods called `html`, `js` and `xml` that use mime type names configured in `grails-app/conf/application.yml` (See link:{guidePath}theWebLayer.html#contentNegotiation[Content Negotiation] for more information). The call to `html` accepts a model (a Map) which is passed on to the view. Grails searches for a view called `grails-app/views/book/list.html.gsp` and if that is not found fallback to `grails-app/views/book/list.gsp`.
 
 Note that the order of the types is significant if the request format is "all" or if more than one content type has the same "q" rating in the accept header. In the former case, the first type handler in the block is executed ("html" in the short example above). The latter case is more confusing because it only holds if there is more than one content type with the highest "q" rating for which you have a type handler *and* you have more than one type handler matching that "q" rating. For example if the request has "text/html" and "application/xml" with a "q" rating of 1.0, then this code:
 

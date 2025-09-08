@@ -19,14 +19,12 @@
 
 package grails.doc
 
-import grails.doc.asciidoc.AsciiDocEngine
-import grails.doc.internal.FileResourceChecker
-import grails.doc.internal.StringEscapeCategory
-import grails.doc.internal.UserGuideNode
-import grails.doc.internal.YamlTocStrategy
+import java.nio.charset.StandardCharsets
+
 import groovy.ant.AntBuilder
 import groovy.io.FileType
 import groovy.text.Template
+
 import org.apache.commons.logging.LogFactory
 import org.radeox.api.engine.WikiRenderEngine
 import org.radeox.engine.context.BaseInitialRenderContext
@@ -34,6 +32,12 @@ import org.radeox.engine.context.BaseRenderContext
 import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.SafeConstructor
+
+import grails.doc.asciidoc.AsciiDocEngine
+import grails.doc.internal.FileResourceChecker
+import grails.doc.internal.StringEscapeCategory
+import grails.doc.internal.UserGuideNode
+import grails.doc.internal.YamlTocStrategy
 
 /**
  * Coordinated the DocEngine the produce documentation based on the gdoc format.
@@ -44,7 +48,8 @@ import org.yaml.snakeyaml.constructor.SafeConstructor
  * @since 1.2
  */
 class DocPublisher {
-    static final String TOC_FILENAME = "toc.yml"
+
+    static final String TOC_FILENAME = 'toc.yml'
 
     /** The source directory of the documentation */
     File src
@@ -71,25 +76,25 @@ class DocPublisher {
     /** The AntBuilder instance to use */
     AntBuilder ant
     /** The language we're generating for (gets its own sub-directory). Defaults to '' */
-    String language = ""
+    String language = ''
     /** The encoding to use (default is UTF-8) */
-    String encoding = "UTF-8"
+    String encoding = 'UTF-8'
     /** The title of the documentation */
     String title
     /** The subtitle of the documentation */
-    String subtitle = ""
+    String subtitle = ''
     /** The version of the documentation */
     String version
     /** The authors of the documentation */
-    String authors = ""
+    String authors = ''
     /** The translators of the documentation (if any) */
-    String translators = ""
+    String translators = ''
     /** The documentation license */
-    String license = ""
+    String license = ''
     /** The copyright message */
-    String copyright = ""
+    String copyright = ''
     /** The footer to include */
-    String footer = ""
+    String footer = ''
     /** HTML markup that renders the left logo */
     String logo
     /** HTML markup that renders the right logo */
@@ -119,7 +124,7 @@ class DocPublisher {
         this.output = out
 
         try {
-            engineProperties.load(getClass().classLoader.getResourceAsStream("grails/doc/doc.properties"))
+            engineProperties.load(getClass().classLoader.getResourceAsStream('grails/doc/doc.properties'))
         }
         catch (e) {
             // ignore
@@ -159,10 +164,10 @@ class DocPublisher {
         // unpack documentation resources
         String docResources = "${workDir}/doc-resources"
         ant.mkdir(dir: docResources)
-        unpack(dest: docResources, src: "grails-doc-files.jar")
+        unpack(dest: docResources, src: 'grails-doc-files.jar')
 
-        def refDocsDir = calculateLanguageDir(target?.absolutePath ?: "./docs")
-        def refGuideDir = new File(refDocsDir, "guide")
+        def refDocsDir = calculateLanguageDir(target?.absolutePath ?: './docs')
+        def refGuideDir = new File(refDocsDir, 'guide')
         def refPagesDir = "$refGuideDir/pages"
 
         ant.mkdir(dir: refDocsDir)
@@ -170,13 +175,13 @@ class DocPublisher {
         ant.mkdir(dir: refPagesDir)
         ant.mkdir(dir: "$refDocsDir/ref")
 
-        String imgsDir = new File(refDocsDir, calculatePathToResources("img")).path
-        File fontsDir = new File(refDocsDir, calculatePathToResources("fonts"))
+        String imgsDir = new File(refDocsDir, calculatePathToResources('img')).path
+        File fontsDir = new File(refDocsDir, calculatePathToResources('fonts'))
         ant.mkdir(dir: imgsDir)
-        ant.mkdir(dir: fontsDir )
-        String cssDir = new File(refDocsDir, calculatePathToResources("css")).path
+        ant.mkdir(dir: fontsDir)
+        String cssDir = new File(refDocsDir, calculatePathToResources('css')).path
         ant.mkdir(dir: cssDir)
-        String jsDir = new File(refDocsDir, calculatePathToResources("js")).path
+        String jsDir = new File(refDocsDir, calculatePathToResources('js')).path
         ant.mkdir(dir: jsDir)
         ant.mkdir(dir: "${refDocsDir}/ref")
 
@@ -185,7 +190,7 @@ class DocPublisher {
         }
 
         if (images && images.exists()) {
-            ant.copy(todir: imgsDir, overwrite: true, failonerror:false) {
+            ant.copy(todir: imgsDir, overwrite: true, failonerror: false) {
                 fileset(dir: images)
             }
         }
@@ -198,12 +203,12 @@ class DocPublisher {
         }
 
         if (css && css.exists()) {
-            ant.copy(todir: cssDir, overwrite: true, failonerror:false) {
+            ant.copy(todir: cssDir, overwrite: true, failonerror: false) {
                 fileset(dir: css)
             }
         }
         if (fonts && fonts.exists()) {
-            ant.copy(todir: fontsDir, overwrite: true, failonerror:false) {
+            ant.copy(todir: fontsDir, overwrite: true, failonerror: false) {
                 fileset(dir: fonts)
             }
         }
@@ -211,12 +216,12 @@ class DocPublisher {
             fileset(dir: "${docResources}/js")
         }
         if (js && js.exists()) {
-            ant.copy(todir: jsDir, overwrite: true, failonerror:false) {
+            ant.copy(todir: jsDir, overwrite: true, failonerror: false) {
                 fileset(dir: js)
             }
         }
         if (style && style.exists()) {
-            ant.copy(todir: "${docResources}/style", overwrite: true, failonerror:false) {
+            ant.copy(todir: "${docResources}/style", overwrite: true, failonerror: false) {
                 fileset(dir: style)
             }
         }
@@ -230,10 +235,10 @@ class DocPublisher {
         // The first strategy is used if the TOC file exists, otherwise we call
         // back to the old way of doing it, which means putting the section
         // numbers in the gdoc filenames.
-        def guideSrcDir = new File(src, "guide")
+        def guideSrcDir = new File(src, 'guide')
         def yamlTocFile = new File(guideSrcDir, TOC_FILENAME)
         def guide
-        def ext = asciidoc ? ".adoc" : ".gdoc"
+        def ext = asciidoc ? '.adoc' : '.gdoc'
 
         if (yamlTocFile.exists()) {
             def tocStrategy = new YamlTocStrategy(new FileResourceChecker(guideSrcDir), ext)
@@ -251,7 +256,7 @@ class DocPublisher {
 
             def errors = verifyToc(guideSrcDir, files, guide)
             if (errors) {
-                throw new RuntimeException("Encountered the following errors while building table of contents. Aborting.\n${errors.join("\n")}")
+                throw new RuntimeException("Encountered the following errors while building table of contents. Aborting.\n${errors.join('\n')}")
             }
 
             for (ch in guide.children) {
@@ -267,7 +272,7 @@ class DocPublisher {
         // mitigate against this problem, the user can provide a list of mappings
         // from the new fragment identifiers to the old ones. The docs will then
         // include both.
-        def legacyLinksFile = new File(guideSrcDir, "links.yml")
+        def legacyLinksFile = new File(guideSrcDir, 'links.yml')
         def legacyLinks = [:]
         if (legacyLinksFile.exists()) {
             legacyLinksFile.withInputStream { input ->
@@ -279,7 +284,7 @@ class DocPublisher {
 
         // Reference menu items.
         def sectionFilter = { it.directory && !it.name.startsWith('.') } as FileFilter
-        def files = new File(src, "ref").listFiles(sectionFilter)?.toList()?.sort() ?: []
+        def files = new File(src, 'ref').listFiles(sectionFilter)?.toList()?.sort() ?: []
         def refCategories = files.collect { f ->
             new Expando(
                     name: f.name,
@@ -289,7 +294,7 @@ class DocPublisher {
 
         def fullToc = new StringBuilder()
 
-        def pathToRoot = ".."
+        def pathToRoot = '..'
         Map vars = new LinkedHashMap(engineProperties)
         vars.putAll(
             encoding: encoding,
@@ -314,18 +319,17 @@ class DocPublisher {
             sourceRepo: sourceRepo,
         )
 
-        if(engine instanceof AsciiDocEngine) {
+        if (engine instanceof AsciiDocEngine) {
             // pass attributes to asciidoc
-            ((AsciiDocEngine)engine).attributes.putAll(
+            ((AsciiDocEngine) engine).attributes.putAll(
                     version: version,
                     apiDocs: "https://docs.grails.org/${version}/api/",
                     sourceRepo: sourceRepo
             )
-            ((AsciiDocEngine)engine).attributes.putAll(
+            ((AsciiDocEngine) engine).attributes.putAll(
                     engineProperties
             )
         }
-
 
         // Build the user guide sections first.
         def template = templateEngine.createTemplate(new File("${docResources}/style/guideItem.html").newReader(encoding))
@@ -334,7 +338,7 @@ class DocPublisher {
 
         def chapterVars
         def chapters = guide.children
-        chapters.eachWithIndex{ chapter, i ->
+        chapters.eachWithIndex { chapter, i ->
             chapterVars = [*:vars, chapterNumber: i + 1]
             if (i != 0) {
                 chapterVars['prev'] = chapters[i - 1]
@@ -350,7 +354,7 @@ class DocPublisher {
         def reference = [:]
         template = templateEngine.createTemplate(new File("${docResources}/style/referenceItem.html").newReader(encoding))
 
-        pathToRoot = "../.."
+        pathToRoot = '../..'
         vars.logo = injectPath(logo, pathToRoot)
         vars.sponsorLogo = injectPath(sponsorLogo, pathToRoot)
         vars.path = pathToRoot
@@ -358,73 +362,73 @@ class DocPublisher {
 
         // Generate the reference section of the guide.
         for (f in files) {
-            if (f.directory && !f.name.startsWith(".")) {
+            if (f.directory && !f.name.startsWith('.')) {
                 def section = f.name
                 vars.section = section
 
                 new File("${refDocsDir}/ref/${section}").mkdirs()
-                def textiles = f.listFiles().findAll { it.name.endsWith(ext)}.sort()
+                def textiles = f.listFiles().findAll { it.name.endsWith(ext) }.sort()
                 def usageFile = new File("${src}/ref/${section}${ext}")
                 if (usageFile.exists()) {
-                    def data = usageFile.getText("UTF-8")
+                    def data = usageFile.getText(StandardCharsets.UTF_8.name())
                     context.set(DocEngine.SOURCE_FILE, usageFile)
                     context.set(DocEngine.CONTEXT_PATH, pathToRoot)
                     context.set(DocEngine.API_CONTEXT_PATH, vars.resourcesPath)
-                    output.warn "Rendering document file $usageFile.name"
+                    output.warn("Rendering document file $usageFile.name")
                     vars.content = engine.render(data, context)
                     vars.sourcePath = "ref/$usageFile.name"
-                    new File("${refDocsDir}/ref/${section}/Usage.html").withWriter(encoding) {out ->
+                    new File("${refDocsDir}/ref/${section}/Usage.html").withWriter(encoding) { out ->
                         template.make(vars).writeTo(out)
                     }
                 }
                 for (txt in textiles) {
                     def name = txt.name[0..-6]
-                    def data = txt.getText("UTF-8")
+                    def data = txt.getText(StandardCharsets.UTF_8.name())
                     context.set(DocEngine.SOURCE_FILE, txt.name)
                     context.set(DocEngine.CONTEXT_PATH, pathToRoot)
                     context.set(DocEngine.API_CONTEXT_PATH, vars.resourcesPath)
-                    output.warn "Rendering document file $txt.name"
+                    output.warn("Rendering document file $txt.name")
                     vars.content = engine.render(data, context)
                     vars.sourcePath = "ref/${section}/$txt.name"
-                    new File("${refDocsDir}/ref/${section}/${name}.html").withWriter(encoding) {out ->
+                    new File("${refDocsDir}/ref/${section}/${name}.html").withWriter(encoding) { out ->
                         template.make(vars).writeTo(out)
                     }
                 }
             }
         }
 
-        vars.remove("section")
+        vars.remove('section')
         vars.content = fullContents.toString()
         vars.single = true
 
-        pathToRoot = ".."
+        pathToRoot = '..'
         vars.logo = injectPath(logo, pathToRoot)
         vars.sponsorLogo = injectPath(sponsorLogo, pathToRoot)
         vars.path = pathToRoot
         vars.resourcesPath = calculatePathToResources(pathToRoot)
 
         template = templateEngine.createTemplate(new File("${docResources}/style/layout.html").newReader(encoding))
-        new File("${refGuideDir}/single.html").withWriter(encoding) {out ->
+        new File("${refGuideDir}/single.html").withWriter(encoding) { out ->
             template.make(vars).writeTo(out)
         }
 
-        vars.content = ""
+        vars.content = ''
         vars.single = false
-        new File("${refGuideDir}/index.html").withWriter(encoding) {out ->
+        new File("${refGuideDir}/index.html").withWriter(encoding) { out ->
             template.make(vars).writeTo(out)
         }
 
-        pathToRoot = "."
+        pathToRoot = '.'
         vars.logo = injectPath(logo, pathToRoot)
         vars.sponsorLogo = injectPath(sponsorLogo, pathToRoot)
         vars.path = pathToRoot
         vars.resourcesPath = calculatePathToResources(pathToRoot)
 
-        new File("${refDocsDir}/index.html").withWriter(encoding) {out ->
+        new File("${refDocsDir}/index.html").withWriter(encoding) { out ->
             template.make(vars).writeTo(out)
         }
 
-        ant.echo "Built user manual at ${refDocsDir}/index.html"
+        ant.echo("Built user manual at ${refDocsDir}/index.html")
     }
 
     void writeChapter(
@@ -435,7 +439,7 @@ class DocPublisher {
             String targetDir,
             fullContents,
             vars) {
-        fullContents << writePage(section, layoutTemplate, sectionTemplate, guideSrcDir, targetDir, "", "..", 0, vars)
+        fullContents << writePage(section, layoutTemplate, sectionTemplate, guideSrcDir, targetDir, '', '..', 0, vars)
     }
 
     String writePage(
@@ -460,8 +464,8 @@ class DocPublisher {
         varsCopy.level = level
         varsCopy.sectionToc = section.children
         varsCopy.sourcePath = section.file
-        output.warn "Rendering document file $sourceFile.name"
-        varsCopy.content = engine.render(sourceFile.getText("UTF-8"), context)
+        output.warn("Rendering document file $sourceFile.name")
+        varsCopy.content = engine.render(sourceFile.getText(StandardCharsets.UTF_8.name()), context)
 
         // First create the section content, which usually consists of a header
         // and the translated gdoc content.
@@ -478,7 +482,7 @@ class DocPublisher {
         int subSectionNumber = 1
         for (s in section.children) {
             varsCopy.sectionNumber = "$sectionNumber.$subSectionNumber"
-            accumulatedContent << writePage(s, layoutTemplate, sectionTemplate, guideSrcDir, targetDir, "pages", path, level, varsCopy)
+            accumulatedContent << writePage(s, layoutTemplate, sectionTemplate, guideSrcDir, targetDir, 'pages', path, level, varsCopy)
             subSectionNumber++
         }
 
@@ -516,7 +520,7 @@ class DocPublisher {
         }
 
         if (!workDir) {
-            workDir = new File(System.getProperty("java.io.tmpdir"))
+            workDir = new File(System.getProperty('java.io.tmpdir'))
         }
         if (!apiDir) {
             apiDir = target
@@ -526,7 +530,7 @@ class DocPublisher {
         }
         def metaProps = DocPublisher.metaClass.properties
         Properties props
-        if(engineProperties != null) {
+        if (engineProperties != null) {
             props = engineProperties
         }
         else {
@@ -534,21 +538,20 @@ class DocPublisher {
             engineProperties = props
         }
 
-
-        if(propertiesFile?.exists()) {
-            if(propertiesFile.name.endsWith('.properties')) {
+        if (propertiesFile?.exists()) {
+            if (propertiesFile.name.endsWith('.properties')) {
                 propertiesFile.withInputStream {
                     props.load(it)
                 }
             }
-            else if(propertiesFile.name.endsWith('.yml')) {
+            else if (propertiesFile.name.endsWith('.yml')) {
                 propertiesFile.withInputStream { input ->
                     def ymls = new Yaml(new SafeConstructor(new LoaderOptions())).loadAll(input)
-                    for(yml in ymls) {
-                        if(yml instanceof Map) {
+                    for (yml in ymls) {
+                        if (yml instanceof Map) {
                             def config = yml.grails?.doc
-                            if(config instanceof Map) {
-                                flattenKeys(props, (Map) config,[], true)
+                            if (config instanceof Map) {
+                                flattenKeys(props, (Map) config, [], true)
                             }
                         }
                     }
@@ -557,7 +560,6 @@ class DocPublisher {
             }
 
         }
-
 
         for (MetaProperty mp in metaProps) {
             if (mp.type == String) {
@@ -569,9 +571,9 @@ class DocPublisher {
         }
 
         context = new BaseInitialRenderContext()
-        initContext(context, "..")
+        initContext(context, '..')
 
-        if(asciidoc) {
+        if (asciidoc) {
             engine = new AsciiDocEngine(context)
         }
         else {
@@ -583,7 +585,7 @@ class DocPublisher {
 
         // Add any custom macros registered with this publisher to the engine.
         for (m in customMacros) {
-            if (m.metaClass.hasProperty(m, "initialContext")) {
+            if (m.metaClass.hasProperty(m, 'initialContext')) {
                 m.initialContext = context
             }
             engine.addMacro(m)
@@ -593,24 +595,24 @@ class DocPublisher {
     private void flattenKeys(Map<String, Object> flatConfig, Map currentMap, List<String> path, boolean forceStrings) {
         currentMap.each { key, value ->
             String stringKey = String.valueOf(key)
-            if(value != null) {
-                if(value instanceof Map) {
-                    flattenKeys(flatConfig, (Map)value, ((path + [stringKey]) as List<String>).asImmutable(), forceStrings)
+            if (value != null) {
+                if (value instanceof Map) {
+                    flattenKeys(flatConfig, (Map) value, ((path + [stringKey]) as List<String>).asImmutable(), forceStrings)
                 } else {
                     String fullKey
-                    if(path) {
+                    if (path) {
                         fullKey = path.join('.') + '.' + stringKey
                     } else {
                         fullKey = stringKey
                     }
-                    if(value instanceof Collection) {
-                        if(forceStrings) {
-                            flatConfig.put(fullKey, ((Collection)value).join(","))
+                    if (value instanceof Collection) {
+                        if (forceStrings) {
+                            flatConfig.put(fullKey, ((Collection) value).join(','))
                         } else {
                             flatConfig.put(fullKey, value)
                         }
                         int index = 0
-                        for(Object item: (Collection)value) {
+                        for (Object item: (Collection) value) {
                             String collectionKey = "${fullKey}[${index}]".toString()
                             flatConfig.put(collectionKey, forceStrings ? String.valueOf(item) : item)
                             index++
@@ -638,14 +640,14 @@ class DocPublisher {
 
         for (ch in toc.children) {
             List<String> internalErrors = verifyTocInternal(baseDir, ch, sectionsFound, gdocsNotInToc, [])
-            if(internalErrors) {
+            if (internalErrors) {
                 errors.addAll(internalErrors)
             }
         }
 
         if (gdocsNotInToc) {
             for (gdoc in gdocsNotInToc) {
-                output.warn "No TOC entry found for '${gdoc}'"
+                output.warn("No TOC entry found for '${gdoc}'")
             }
         }
 
@@ -660,25 +662,25 @@ class DocPublisher {
         if (section.name in existing) {
             def duplicateError = "Duplicate section name: ${fullName}" as String
             errors << duplicateError
-            output.error duplicateError
+            output.error(duplicateError)
         }
 
         // Does the file path for the gdoc exist?
         if (!section.file || !new File(baseDir, section.file).exists()) {
             def noFileError = "No file found for '${fullName}'" as String
             errors << noFileError
-            output.error noFileError
+            output.error(noFileError)
         }
         else {
             // Found this gdoc file in the TOC.
-            gdocFiles.remove section.file
+            gdocFiles.remove(section.file)
         }
 
         existing << section.name
 
         for (s in section.children) {
             List<String> internalErrors = verifyTocInternal(baseDir, s, existing, gdocFiles, pathElements + section.name)
-            if(internalErrors) {
+            if (internalErrors) {
                 errors.addAll(internalErrors)
             }
         }
@@ -716,9 +718,9 @@ class DocPublisher {
 
     private unpack(Map args) {
 
-        def dir = args["dest"] ?: "."
-        def src = args["src"]
-        def overwriteOption = args["overwrite"] == null ? true : args["overwrite"]
+        def dir = args['dest'] ?: '.'
+        def src = args['src']
+        def overwriteOption = args['overwrite'] == null ? true : args['overwrite']
 
         // Can't unjar a file from within a JAR, so we copy it to
         // the destination directory first.
@@ -738,18 +740,18 @@ class DocPublisher {
             // Now unjar it, excluding the META-INF directory.
             ant.unjar(dest: dir, src: "${dir}/${src}", overwrite: overwriteOption) {
                 patternset {
-                    exclude(name: "META-INF/**")
+                    exclude(name: 'META-INF/**')
                 }
             }
         }
         finally {
             // Don't need the JAR file any more, so remove it.
-            ant.delete(file: "${dir}/${src}", failonerror:false)
+            ant.delete(file: "${dir}/${src}", failonerror: false)
         }
     }
 
     private overrideAliasesFromToc(node) {
-        engine.engineProperties.setProperty "alias.${node.name}", node.file - ".gdoc"
+        engine.engineProperties.setProperty("alias.${node.name}", node.file - '.gdoc')
 
         for (section in node.children) {
             overrideAliasesFromToc(section)

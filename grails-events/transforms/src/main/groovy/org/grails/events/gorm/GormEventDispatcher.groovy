@@ -19,15 +19,17 @@
 
 package org.grails.events.gorm
 
-import grails.events.bus.EventBus
+import java.beans.Introspector
+
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
+
+import org.springframework.context.ApplicationEvent
+
+import grails.events.bus.EventBus
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener
-import org.springframework.context.ApplicationEvent
-
-import java.beans.Introspector
 
 /**
  * Dispatches GORM events to the {@link EventBus}
@@ -39,7 +41,7 @@ import java.beans.Introspector
 @CompileStatic
 class GormEventDispatcher extends AbstractPersistenceEventListener {
 
-    private static final String GORM_NAMESPACE = "gorm:"
+    private static final String GORM_NAMESPACE = 'gorm:'
     protected final EventBus eventBus
     protected final Map<Class<? extends AbstractPersistenceEvent>, String> subscribedEvents
     protected final Set<Class<? extends AbstractPersistenceEvent>> listenedForEvents = []
@@ -51,15 +53,15 @@ class GormEventDispatcher extends AbstractPersistenceEventListener {
         super(datastore)
         this.eventBus = eventBus
         Map<Class<? extends AbstractPersistenceEvent>, String> subscribedEventMap = [:]
-        for(event in subscribedEvents) {
-            subscribedEventMap.put(event, GORM_NAMESPACE + (Introspector.decapitalize(event.simpleName) - "Event"))
+        for (event in subscribedEvents) {
+            subscribedEventMap.put(event, GORM_NAMESPACE + (Introspector.decapitalize(event.simpleName) - 'Event'))
         }
         this.subscribedEvents = Collections.unmodifiableMap(subscribedEventMap)
         this.listeners = Collections.unmodifiableList(listeners)
         this.hasListeners = !listeners.isEmpty()
         this.hasEventSubscribers = !subscribedEvents.isEmpty() || hasListeners
-        if(hasListeners) {
-            for(listener in listeners) {
+        if (hasListeners) {
+            for (listener in listeners) {
                 listenedForEvents.addAll(listener.subscribedEvents)
             }
         }
@@ -67,16 +69,16 @@ class GormEventDispatcher extends AbstractPersistenceEventListener {
 
     @Override
     protected void onPersistenceEvent(AbstractPersistenceEvent event) {
-        if(hasListeners && listenedForEvents.contains(event.getClass())) {
-            for(listener in listeners) {
-                if(listener.supports(event)) {
+        if (hasListeners && listenedForEvents.contains(event.getClass())) {
+            for (listener in listeners) {
+                if (listener.supports(event)) {
                     listener.dispatch(event)
                 }
             }
         }
 
         String eventName = subscribedEvents.get(event.getClass())
-        if(eventName != null) {
+        if (eventName != null) {
             eventBus.notify(eventName, event)
         }
     }
@@ -90,6 +92,6 @@ class GormEventDispatcher extends AbstractPersistenceEventListener {
     boolean supportsEventType(Class<? extends ApplicationEvent> aClass) {
         return hasEventSubscribers &&
                 AbstractPersistenceEvent.isAssignableFrom(aClass) &&
-                (subscribedEvents.containsKey(aClass) || listenedForEvents.contains(aClass) )
+                (subscribedEvents.containsKey(aClass) || listenedForEvents.contains(aClass))
     }
 }

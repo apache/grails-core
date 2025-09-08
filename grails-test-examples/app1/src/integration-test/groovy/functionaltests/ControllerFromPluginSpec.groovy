@@ -27,7 +27,7 @@ class ControllerFromPluginSpec extends ContainerGebSpec {
 
     void 'test invoking a controller provided by a plugin'() {
         when:
-        go '/alpha'
+        go('/alpha')
 
         then:
         $('h2',0).text() == 'This is views/alpha/index.gsp'

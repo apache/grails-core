@@ -18,56 +18,107 @@
  */
 package org.grails.orm.hibernate.cfg;
 
+import java.lang.reflect.Method;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.sql.Types;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.StringTokenizer;
+
 import groovy.lang.Closure;
-import groovy.transform.Trait;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.codehaus.groovy.transform.trait.Traits;
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
-import org.grails.datastore.mapping.model.*;
-import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.datastore.mapping.model.types.*;
-import org.grails.datastore.mapping.model.types.ToOne;
-import org.grails.datastore.mapping.reflect.EntityReflector;
-import org.grails.datastore.mapping.reflect.NameUtils;
-import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
+
+import jakarta.persistence.Entity;
+
 import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
 import org.hibernate.boot.internal.MetadataBuildingContextRootImpl;
 import org.hibernate.boot.model.naming.Identifier;
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService;
-import org.hibernate.boot.spi.*;
-import org.hibernate.cfg.*;
+import org.hibernate.boot.spi.InFlightMetadataCollector;
+import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.boot.spi.MetadataBuildingOptions;
+import org.hibernate.boot.spi.MetadataContributor;
+import org.hibernate.cfg.AccessType;
+import org.hibernate.cfg.BinderHelper;
+import org.hibernate.cfg.ImprovedNamingStrategy;
+import org.hibernate.cfg.NamingStrategy;
+import org.hibernate.cfg.SecondPass;
 import org.hibernate.engine.OptimisticLockStyle;
 import org.hibernate.engine.spi.FilterDefinition;
 import org.hibernate.engine.spi.PersistentAttributeInterceptable;
 import org.hibernate.id.PersistentIdentifierGenerator;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
-import org.hibernate.mapping.*;
+import org.hibernate.mapping.Backref;
+import org.hibernate.mapping.Bag;
 import org.hibernate.mapping.Collection;
+import org.hibernate.mapping.Column;
+import org.hibernate.mapping.Component;
+import org.hibernate.mapping.DependantValue;
+import org.hibernate.mapping.Formula;
+import org.hibernate.mapping.IndexBackref;
+import org.hibernate.mapping.IndexedCollection;
+import org.hibernate.mapping.JoinedSubclass;
+import org.hibernate.mapping.KeyValue;
 import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.OneToMany;
 import org.hibernate.mapping.OneToOne;
+import org.hibernate.mapping.PersistentClass;
+import org.hibernate.mapping.Property;
+import org.hibernate.mapping.RootClass;
+import org.hibernate.mapping.Selectable;
+import org.hibernate.mapping.SimpleValue;
+import org.hibernate.mapping.SingleTableSubclass;
+import org.hibernate.mapping.Subclass;
 import org.hibernate.mapping.Table;
+import org.hibernate.mapping.UnionSubclass;
+import org.hibernate.mapping.UniqueKey;
+import org.hibernate.mapping.Value;
 import org.hibernate.persister.entity.UnionSubclassEntityPersister;
-import org.hibernate.type.*;
+import org.hibernate.type.EnumType;
+import org.hibernate.type.ForeignKeyDirection;
+import org.hibernate.type.IntegerType;
+import org.hibernate.type.LongType;
+import org.hibernate.type.StandardBasicTypes;
+import org.hibernate.type.TimestampType;
+import org.hibernate.type.Type;
 import org.hibernate.usertype.UserCollectionType;
 import org.jboss.jandex.IndexView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.util.StringUtils;
 
-import jakarta.persistence.Entity;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Method;
-import java.math.BigInteger;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.sql.Types;
-import java.util.*;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
+import org.grails.datastore.mapping.model.DatastoreConfigurationException;
+import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ManyToMany;
+import org.grails.datastore.mapping.model.types.TenantId;
+import org.grails.datastore.mapping.model.types.ToMany;
+import org.grails.datastore.mapping.model.types.ToOne;
+import org.grails.datastore.mapping.reflect.EntityReflector;
+import org.grails.datastore.mapping.reflect.NameUtils;
+import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
 
 /**
  * Handles the binding Grails domain classes and properties to the Hibernate runtime meta model.
@@ -100,6 +151,7 @@ public class GrailsDomainBinder implements MetadataContributor {
      * be configured in DataSource.groovy via <code>hibernate.naming_strategy = ...</code>.
      */
     public static Map<String, NamingStrategy> NAMING_STRATEGIES = new HashMap<>();
+
     static {
         NAMING_STRATEGIES.put(ConnectionSource.DEFAULT, ImprovedNamingStrategy.INSTANCE);
     }
@@ -151,24 +203,21 @@ public class GrailsDomainBinder implements MetadataContributor {
         MetadataBuildingOptions options = metadataCollector.getMetadataBuildingOptions();
         ClassLoaderService classLoaderService = options.getServiceRegistry().getService(ClassLoaderService.class);
 
-
         this.metadataBuildingContext = new MetadataBuildingContextRootImpl(
                 metadataCollector.getBootstrapContext(),
                 options,
                 metadataCollector
         );
 
-            java.util.Collection<PersistentEntity> persistentEntities = hibernateMappingContext.getPersistentEntities();
+        java.util.Collection<PersistentEntity> persistentEntities = hibernateMappingContext.getPersistentEntities();
         for (PersistentEntity persistentEntity : persistentEntities) {
-            if(!persistentEntity.getJavaClass().isAnnotationPresent(Entity.class)) {
-                if(ConnectionSourcesSupport.usesConnectionSource(persistentEntity, dataSourceName) && persistentEntity.isRoot()) {
+            if (!persistentEntity.getJavaClass().isAnnotationPresent(Entity.class)) {
+                if (ConnectionSourcesSupport.usesConnectionSource(persistentEntity, dataSourceName) && persistentEntity.isRoot()) {
                     bindRoot((HibernatePersistentEntity) persistentEntity, metadataCollector, sessionFactoryName);
                 }
             }
         }
     }
-
-
 
     /**
      * Override the default naming strategy for the default datasource given a Class or a full class name.
@@ -195,17 +244,17 @@ public class GrailsDomainBinder implements MetadataContributor {
         Class<?> namingStrategyClass = null;
         NamingStrategy namingStrategy;
         if (strategy instanceof Class<?>) {
-            namingStrategyClass = (Class<?>)strategy;
+            namingStrategyClass = (Class<?>) strategy;
         }
         else if (strategy instanceof CharSequence) {
             namingStrategyClass = Thread.currentThread().getContextClassLoader().loadClass(strategy.toString());
         }
 
         if (namingStrategyClass == null) {
-            namingStrategy = (NamingStrategy)strategy;
+            namingStrategy = (NamingStrategy) strategy;
         }
         else {
-            namingStrategy = (NamingStrategy)namingStrategyClass.newInstance();
+            namingStrategy = (NamingStrategy) namingStrategyClass.newInstance();
         }
 
         NAMING_STRATEGIES.put(datasourceName, namingStrategy);
@@ -229,20 +278,20 @@ public class GrailsDomainBinder implements MetadataContributor {
         }
         map.setIndex(value);
 
-        if(!(property instanceof org.grails.datastore.mapping.model.types.OneToMany) && !(property instanceof ManyToMany)) {
+        if (!(property instanceof org.grails.datastore.mapping.model.types.OneToMany) && !(property instanceof ManyToMany)) {
 
             SimpleValue elt = new SimpleValue(metadataBuildingContext, map.getCollectionTable());
             map.setElement(elt);
 
-            String typeName = getTypeName(property,getPropertyConfig(property), getMapping(property.getOwner()));
-            if (typeName == null ) {
+            String typeName = getTypeName(property, getPropertyConfig(property), getMapping(property.getOwner()));
+            if (typeName == null) {
 
-                if(property instanceof Basic) {
+                if (property instanceof Basic) {
                     Basic basic = (Basic) property;
                     typeName = basic.getComponentType().getName();
                 }
             }
-            if(typeName == null || typeName.equals(Object.class.getName())) {
+            if (typeName == null || typeName.equals(Object.class.getName())) {
                 typeName = StandardBasicTypes.STRING.getName();
             }
             bindSimpleValue(typeName, elt, false, getMapElementName(property, sessionFactoryBeanName), mappings);
@@ -349,17 +398,17 @@ public class GrailsDomainBinder implements MetadataContributor {
         PersistentClass associatedClass = null;
 
         if (LOG.isDebugEnabled())
-            LOG.debug("Mapping collection: "
-                    + collection.getRole()
-                    + " -> "
-                    + collection.getCollectionTable().getName());
+            LOG.debug("Mapping collection: " +
+                    collection.getRole() +
+                    " -> " +
+                    collection.getCollectionTable().getName());
 
         PropertyConfig propConfig = getPropertyConfig(property);
 
         PersistentEntity referenced = property.getAssociatedEntity();
         if (propConfig != null && StringUtils.hasText(propConfig.getSort())) {
             if (!property.isBidirectional() && (property instanceof org.grails.datastore.mapping.model.types.OneToMany)) {
-                throw new DatastoreConfigurationException("Default sort for associations ["+property.getOwner().getName()+"->" + property.getName() +
+                throw new DatastoreConfigurationException("Default sort for associations [" + property.getOwner().getName() + "->" + property.getName() +
                         "] are not supported with unidirectional one to many relationships.");
             }
             if (referenced != null) {
@@ -387,7 +436,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
                 if (rootMapping != null) {
                     DiscriminatorConfig discriminatorConfig = rootMapping.getDiscriminator();
-                    if(discriminatorConfig != null) {
+                    if (discriminatorConfig != null) {
                         final ColumnConfig discriminatorColumn = discriminatorConfig.getColumn();
                         if (discriminatorColumn != null) {
                             discriminatorColumnName = discriminatorColumn.getName();
@@ -403,7 +452,6 @@ public class GrailsDomainBinder implements MetadataContributor {
 
                 collection.setWhere(discriminatorColumnName + " in (" + inclause + ")");
             }
-
 
             OneToMany oneToMany = (OneToMany) collection.getElement();
             String associatedClassName = oneToMany.getReferencedEntityName();
@@ -423,9 +471,9 @@ public class GrailsDomainBinder implements MetadataContributor {
         }
 
         final boolean isManyToMany = property instanceof ManyToMany;
-        if(referenced != null && !isManyToMany && referenced.isMultiTenant()) {
+        if (referenced != null && !isManyToMany && referenced.isMultiTenant()) {
             String filterCondition = getMultiTenantFilterCondition(sessionFactoryBeanName, referenced);
-            if(filterCondition != null) {
+            if (filterCondition != null) {
                 if (isUnidirectionalOneToMany(property)) {
                     collection.addManyToManyFilter(GormProperties.TENANT_IDENTITY, filterCondition, true, Collections.emptyMap(), Collections.emptyMap());
                 } else {
@@ -451,7 +499,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             }
         } else {
             if (hasJoinKeyMapping(propConfig)) {
-                bindSimpleValue("long", key,false, propConfig.getJoinTable().getKey().getName(), mappings);
+                bindSimpleValue("long", key, false, propConfig.getJoinTable().getKey().getName(), mappings);
             } else {
                 bindDependentKeyValue(property, key, mappings, sessionFactoryBeanName);
             }
@@ -474,7 +522,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 if (LOG.isDebugEnabled())
                     LOG.debug("[GrailsDomainBinder] Mapping other side " + otherSide.getOwner().getName() + "." + otherSide.getName() + " -> " + collection.getCollectionTable().getName() + " as ManyToOne");
                 ManyToOne element = new ManyToOne(metadataBuildingContext, collection.getCollectionTable());
-                bindManyToMany((Association)otherSide, element, mappings, sessionFactoryBeanName);
+                bindManyToMany((Association) otherSide, element, mappings, sessionFactoryBeanName);
                 collection.setElement(element);
                 bindCollectionForPropertyConfig(collection, propConfig);
                 if (property.isCircular()) {
@@ -496,7 +544,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     private String getMultiTenantFilterCondition(String sessionFactoryBeanName, PersistentEntity referenced) {
         TenantId tenantId = referenced.getTenantId();
-        if(tenantId != null) {
+        if (tenantId != null) {
             String defaultColumnName = getDefaultColumnName(tenantId, sessionFactoryBeanName);
             return ":tenantId = " + defaultColumnName;
         }
@@ -529,8 +577,8 @@ public class GrailsDomainBinder implements MetadataContributor {
                     if (isNonPropertyToken(token)) {
                         if (currentOrdering != null) {
                             throw new DatastoreConfigurationException(
-                                    "Error while parsing sort clause: " + hqlOrderBy
-                                            + " (" + role + ")"
+                                    "Error while parsing sort clause: " + hqlOrderBy +
+                                            " (" + role + ")"
                             );
                         }
                         currentOrdering = token;
@@ -564,8 +612,8 @@ public class GrailsDomainBinder implements MetadataContributor {
                     Property p = BinderHelper.findPropertyByName(associatedClass, property);
                     if (p == null) {
                         throw new DatastoreConfigurationException(
-                                "property from sort clause not found: "
-                                        + associatedClass.getEntityName() + "." + property
+                                "property from sort clause not found: " +
+                                        associatedClass.getEntityName() + "." + property
                         );
                     }
                     PersistentClass pc = p.getPersistentClass();
@@ -574,8 +622,8 @@ public class GrailsDomainBinder implements MetadataContributor {
                         table = "";
                     }
 
-                    else if (pc == associatedClass
-                            || (associatedClass instanceof SingleTableSubclass &&
+                    else if (pc == associatedClass ||
+                            (associatedClass instanceof SingleTableSubclass &&
                             pc.getMappedClass().isAssignableFrom(associatedClass.getMappedClass()))) {
                         table = "";
                     } else {
@@ -614,7 +662,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         String discriminator = domainClass.getName();
         if (mapping != null && mapping.getDiscriminator() != null) {
             DiscriminatorConfig discriminatorConfig = mapping.getDiscriminator();
-            if(discriminatorConfig.getValue() != null) {
+            if (discriminatorConfig.getValue() != null) {
                 discriminator = discriminatorConfig.getValue();
             }
         }
@@ -622,7 +670,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         String quote = "'";
         if (rootMapping != null && rootMapping.getDatasources() != null) {
             DiscriminatorConfig discriminatorConfig = rootMapping.getDiscriminator();
-            if(discriminatorConfig != null && discriminatorConfig.getType() != null && !discriminatorConfig.getType().equals("string"))
+            if (discriminatorConfig != null && discriminatorConfig.getType() != null && !discriminatorConfig.getType().equals("string"))
                 quote = "";
         }
         theSet.add(quote + discriminator + quote);
@@ -671,7 +719,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         final boolean hasJoinColumnMapping = hasJoinColumnMapping(config);
         if (isBasicCollectionType) {
-            final Class<?> referencedType = ((Basic)property).getComponentType();
+            final Class<?> referencedType = ((Basic) property).getComponentType();
             String className = referencedType.getName();
             final boolean isEnum = referencedType.isEnum();
             if (hasJoinColumnMapping) {
@@ -684,7 +732,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             }
 
             if (isEnum) {
-                bindEnumType(property, referencedType,element,columnName);
+                bindEnumType(property, referencedType, element, columnName);
             }
             else {
 
@@ -697,10 +745,10 @@ public class GrailsDomainBinder implements MetadataContributor {
                 }
                 if (typeName == null) {
                     String domainName = property.getOwner().getName();
-                    throw new MappingException("Missing type or column for column["+columnName+"] on domain["+domainName+"] referencing["+className+"]");
+                    throw new MappingException("Missing type or column for column[" + columnName + "] on domain[" + domainName + "] referencing[" + className + "]");
                 }
 
-                bindSimpleValue(typeName, element,true, columnName, mappings);
+                bindSimpleValue(typeName, element, true, columnName, mappings);
                 if (hasJoinColumnMapping) {
                     bindColumnConfigToColumn(property, getColumnForSimpleValue(element), config.getJoinTable().getColumn());
                 }
@@ -722,7 +770,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                     columnName = namingStrategy.propertyToColumnName(NameUtils.decapitalize(domainClass.getName())) + FOREIGN_KEY_SUFFIX;
                 }
 
-                bindSimpleValue("long", element,true, columnName, mappings);
+                bindSimpleValue("long", element, true, columnName, mappings);
             }
         }
 
@@ -740,14 +788,14 @@ public class GrailsDomainBinder implements MetadataContributor {
     }
 
     protected Column getColumnForSimpleValue(SimpleValue element) {
-        return (Column)element.getColumnIterator().next();
+        return (Column) element.getColumnIterator().next();
     }
 
     protected String getTypeName(PersistentProperty property, PropertyConfig config, Mapping mapping) {
         if (config != null && config.getType() != null) {
             final Object typeObj = config.getType();
             if (typeObj instanceof Class<?>) {
-                return ((Class<?>)typeObj).getName();
+                return ((Class<?>) typeObj).getName();
             }
             return typeObj.toString();
         }
@@ -779,7 +827,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         if (columnConfig.getSqlType() != null && !columnConfig.getSqlType().isEmpty()) {
             column.setSqlType(columnConfig.getSqlType());
         }
-        if(allowUnique) {
+        if (allowUnique) {
             column.setUnique(columnConfig.getUnique());
         }
     }
@@ -806,12 +854,12 @@ public class GrailsDomainBinder implements MetadataContributor {
         } else {
             manyToOne.setIgnoreNotFound(config.getIgnoreNotFound());
             final FetchMode fetch = config.getFetchMode();
-            if(!fetch.equals(FetchMode.JOIN) && !fetch.equals(FetchMode.EAGER)) {
+            if (!fetch.equals(FetchMode.JOIN) && !fetch.equals(FetchMode.EAGER)) {
                 manyToOne.setLazy(true);
             }
 
             final Boolean lazy = config.getLazy();
-            if(lazy != null) {
+            if (lazy != null) {
                 manyToOne.setLazy(lazy);
             }
         }
@@ -826,11 +874,11 @@ public class GrailsDomainBinder implements MetadataContributor {
             collection.setExtraLazy(false);
         } else {
             final FetchMode fetch = config.getFetchMode();
-            if(!fetch.equals(FetchMode.JOIN) && !fetch.equals(FetchMode.EAGER)) {
+            if (!fetch.equals(FetchMode.JOIN) && !fetch.equals(FetchMode.EAGER)) {
                 collection.setLazy(true);
             }
             final Boolean lazy = config.getLazy();
-            if(lazy != null) {
+            if (lazy != null) {
                 collection.setExtraLazy(lazy);
             }
         }
@@ -847,7 +895,7 @@ public class GrailsDomainBinder implements MetadataContributor {
      * @return true if it is unidirectional and a one-to-many
      */
     protected boolean isUnidirectionalOneToMany(PersistentProperty property) {
-        return ((property instanceof org.grails.datastore.mapping.model.types.OneToMany) && !((Association)property).isBidirectional());
+        return ((property instanceof org.grails.datastore.mapping.model.types.OneToMany) && !((Association) property).isBidirectional());
     }
 
     /**
@@ -869,7 +917,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         final Mapping mapping = getMapping(refDomainClass.getJavaClass());
         boolean hasCompositeIdentifier = hasCompositeIdentifier(mapping);
         if ((shouldCollectionBindWithJoinColumn((ToMany) property) && hasCompositeIdentifier) ||
-                (hasCompositeIdentifier && ( property instanceof ManyToMany))) {
+                (hasCompositeIdentifier && (property instanceof ManyToMany))) {
             CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
             bindCompositeIdentifierToManyToOne((Association) property, key, ci, refDomainClass, EMPTY_PATH, sessionFactoryBeanName);
         }
@@ -1109,16 +1157,16 @@ public class GrailsDomainBinder implements MetadataContributor {
         String tableName = (jt != null && jt.getName() != null ? jt.getName() : namingStrategy.tableName(calculateTableForMany(property, sessionFactoryBeanName)));
         String schemaName = getSchemaName(mappings);
         String catalogName = getCatalogName(mappings);
-        if(jt != null) {
-            if(jt.getSchema() != null) {
+        if (jt != null) {
+            if (jt.getSchema() != null) {
                 schemaName = jt.getSchema();
             }
-            if(jt.getCatalog() != null) {
+            if (jt.getCatalog() != null) {
                 catalogName = jt.getCatalog();
             }
         }
 
-        if(schemaName == null && owningTableSchema != null) {
+        if (schemaName == null && owningTableSchema != null) {
             schemaName = owningTableSchema;
         }
 
@@ -1157,7 +1205,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         }
 
         if (property.getAssociatedEntity() == null) {
-            throw new MappingException("Expected an entity to be associated with the association ("  + property + ") and none was found. ");
+            throw new MappingException("Expected an entity to be associated with the association (" + property + ") and none was found. ");
         }
 
         String right = getTableName(property.getAssociatedEntity(), sessionFactoryBeanName);
@@ -1210,10 +1258,10 @@ public class GrailsDomainBinder implements MetadataContributor {
             String shortName = domainClass.getJavaClass().getSimpleName();
             PersistentEntityNamingStrategy namingStrategy = this.namingStrategy;
 
-            if(namingStrategy != null) {
+            if (namingStrategy != null) {
                 tableName = namingStrategy.resolveTableName(domainClass);
             }
-            if(tableName == null) {
+            if (tableName == null) {
                 tableName = getNamingStrategy(sessionFactoryBeanName).classToTableName(shortName);
             }
         }
@@ -1392,8 +1440,6 @@ public class GrailsDomainBinder implements MetadataContributor {
         root.setAbstract(entity.isAbstract());
         final MappingContext mappingContext = entity.getMappingContext();
 
-
-
         final java.util.Collection<PersistentEntity> children = mappingContext.getDirectChildEntities(entity);
         if (children.isEmpty()) {
             root.setPolymorphic(false);
@@ -1468,7 +1514,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         for (PersistentEntity sub : subClasses) {
             final Class javaClass = sub.getJavaClass();
             if (javaClass.getSuperclass().equals(domainClass.getJavaClass()) && ConnectionSourcesSupport.usesConnectionSource(sub, dataSourceName)) {
-                bindSubClass((HibernatePersistentEntity)sub, parent, mappings, sessionFactoryBeanName);
+                bindSubClass((HibernatePersistentEntity) sub, parent, mappings, sessionFactoryBeanName);
             }
         }
     }
@@ -1490,9 +1536,9 @@ public class GrailsDomainBinder implements MetadataContributor {
         boolean tablePerConcreteClass = m != null && m.isTablePerConcreteClass();
         final String fullName = sub.getName();
         if (tablePerSubclass) {
-            subClass = new JoinedSubclass( parent, this.metadataBuildingContext);
+            subClass = new JoinedSubclass(parent, this.metadataBuildingContext);
         }
-        else if(tablePerConcreteClass) {
+        else if (tablePerConcreteClass) {
             subClass = new UnionSubclass(parent, this.metadataBuildingContext);
         }
         else {
@@ -1533,7 +1579,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         if (tablePerSubclass) {
             bindJoinedSubClass(sub, (JoinedSubclass) subClass, mappings, m, sessionFactoryBeanName);
         }
-        else if( tablePerConcreteClass) {
+        else if (tablePerConcreteClass) {
             bindUnionSubclass(sub, (UnionSubclass) subClass, mappings, sessionFactoryBeanName);
         }
         else {
@@ -1549,16 +1595,15 @@ public class GrailsDomainBinder implements MetadataContributor {
         }
     }
 
-
     public void bindUnionSubclass(HibernatePersistentEntity subClass, UnionSubclass unionSubclass,
                                   InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException {
         bindClass(subClass, unionSubclass, mappings);
 
         Mapping subMapping = getMapping(subClass.getJavaClass());
 
-        if ( unionSubclass.getEntityPersisterClass() == null ) {
+        if (unionSubclass.getEntityPersisterClass() == null) {
             unionSubclass.getRootClass().setEntityPersisterClass(
-                    UnionSubclassEntityPersister.class );
+                    UnionSubclassEntityPersister.class);
         }
 
         String schema = subMapping != null && subMapping.getTable().getSchema() != null ?
@@ -1576,7 +1621,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 null,
                 denormalizedSuperTable
         );
-        unionSubclass.setTable( mytable );
+        unionSubclass.setTable(mytable);
         unionSubclass.setClassName(subClass.getName());
 
         LOG.info(
@@ -1587,6 +1632,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         createClassProperties(subClass, unionSubclass, mappings, sessionFactoryBeanName);
 
     }
+
     /**
      * Binds a joined sub-class mapping using table-per-subclass
      *
@@ -1675,14 +1721,14 @@ public class GrailsDomainBinder implements MetadataContributor {
         boolean hasDiscriminatorConfig = discriminatorConfig != null;
         entity.setDiscriminatorValue(hasDiscriminatorConfig ? discriminatorConfig.getValue() : entity.getClassName());
 
-        if(hasDiscriminatorConfig) {
+        if (hasDiscriminatorConfig) {
             if (discriminatorConfig.getInsertable() != null) {
                 entity.setDiscriminatorInsertable(discriminatorConfig.getInsertable());
             }
             Object type = discriminatorConfig.getType();
             if (type != null) {
-                if(type instanceof Class) {
-                    d.setTypeName(((Class)type).getName());
+                if (type instanceof Class) {
+                    d.setTypeName(((Class) type).getName());
                 }
                 else {
                     d.setTypeName(type.toString());
@@ -1690,13 +1736,12 @@ public class GrailsDomainBinder implements MetadataContributor {
             }
         }
 
-
         if (hasDiscriminatorConfig && discriminatorConfig.getFormula() != null) {
             Formula formula = new Formula();
             formula.setFormula(discriminatorConfig.getFormula());
             d.addFormula(formula);
         }
-        else{
+        else {
             bindSimpleValue(STRING_TYPE, d, false, RootClass.DEFAULT_DISCRIMINATOR_COLUMN_NAME, mappings);
 
             ColumnConfig cc = !hasDiscriminatorConfig ? null : discriminatorConfig.getColumn();
@@ -1760,7 +1805,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         final boolean hasTableDefinition = m != null && m.getTable() != null;
         if (hasTableDefinition && m.getTable().getSchema() != null) {
-            schema =  m.getTable().getSchema();
+            schema = m.getTable().getSchema();
         }
         if (hasTableDefinition && m.getTable().getCatalog() != null) {
             catalog = m.getTable().getCatalog();
@@ -1796,8 +1841,6 @@ public class GrailsDomainBinder implements MetadataContributor {
         createClassProperties(domainClass, root, mappings, sessionFactoryBeanName);
     }
 
-
-
     protected void bindIdentity(
             HibernatePersistentEntity domainClass,
             RootClass root,
@@ -1807,7 +1850,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         PersistentProperty identifierProp = domainClass.getIdentity();
         if (gormMapping == null) {
-            if(identifierProp != null) {
+            if (identifierProp != null) {
                 bindSimpleId(identifierProp, root, mappings, null, sessionFactoryBeanName);
             }
             return;
@@ -1822,7 +1865,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             if (propertyName != null) {
                 PersistentProperty namedIdentityProp = domainClass.getPropertyByName(propertyName);
                 if (namedIdentityProp == null) {
-                    throw new MappingException("Mapping specifies an identifier property name that doesn't exist ["+propertyName+"]");
+                    throw new MappingException("Mapping specifies an identifier property name that doesn't exist [" + propertyName + "]");
                 }
                 if (!namedIdentityProp.equals(identifierProp)) {
                     identifierProp = namedIdentityProp;
@@ -1888,7 +1931,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             if (currentGrailsProp.isInherited()) {
                 continue;
             }
-            if(currentGrailsProp.getName().equals(GormProperties.VERSION) ) continue;
+            if (currentGrailsProp.getName().equals(GormProperties.VERSION)) continue;
             if (isCompositeIdProperty(gormMapping, currentGrailsProp)) continue;
             if (isIdentityProperty(gormMapping, currentGrailsProp)) continue;
 
@@ -1911,7 +1954,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 bindSimpleValue(currentGrailsProp, null, (SimpleValue) value, EMPTY_PATH, mappings, sessionFactoryBeanName);
             }
             else if (collectionType != null) {
-                String typeName = getTypeName(currentGrailsProp, getPropertyConfig(currentGrailsProp),gormMapping);
+                String typeName = getTypeName(currentGrailsProp, getPropertyConfig(currentGrailsProp), gormMapping);
                 if ("serializable".equals(typeName)) {
                     value = new SimpleValue(metadataBuildingContext, table);
                     bindSimpleValue(typeName, (SimpleValue) value, currentGrailsProp.isNullable(),
@@ -1929,7 +1972,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 value = new SimpleValue(metadataBuildingContext, table);
                 bindEnumType(currentGrailsProp, (SimpleValue) value, EMPTY_PATH, sessionFactoryBeanName);
             }
-            else if(currentGrailsProp instanceof Association) {
+            else if (currentGrailsProp instanceof Association) {
                 Association association = (Association) currentGrailsProp;
                 if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.ManyToOne) {
                     if (LOG.isDebugEnabled())
@@ -1964,7 +2007,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                     }
                 }
                 else if (currentGrailsProp instanceof Embedded) {
-                    embedded.add((Embedded)currentGrailsProp);
+                    embedded.add((Embedded) currentGrailsProp);
                     continue;
                 }
             }
@@ -1994,7 +2037,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     }
 
     private boolean isHasOne(Association association) {
-        return association instanceof org.grails.datastore.mapping.model.types.OneToOne && ((org.grails.datastore.mapping.model.types.OneToOne)association).isForeignKeyInChild();
+        return association instanceof org.grails.datastore.mapping.model.types.OneToOne && ((org.grails.datastore.mapping.model.types.OneToOne) association).isForeignKeyInChild();
     }
 
     protected void bindNaturalIdentifier(Table table, Mapping mapping, PersistentClass persistentClass) {
@@ -2041,12 +2084,8 @@ public class GrailsDomainBinder implements MetadataContributor {
         catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
-        try {
-            md.update(sb.toString().getBytes("UTF-8"));
-        }
-        catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+
+        md.update(sb.toString().getBytes(StandardCharsets.UTF_8));
 
         String name = "UK" + new BigInteger(1, md.digest()).toString(16);
         if (name.length() > 30) {
@@ -2060,7 +2099,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     protected boolean canBindOneToOneWithSingleColumnAndForeignKey(Association currentGrailsProp) {
         if (currentGrailsProp.isBidirectional()) {
             final Association otherSide = currentGrailsProp.getInverseSide();
-            if(otherSide != null) {
+            if (otherSide != null) {
                 if (isHasOne(otherSide)) {
                     return false;
                 }
@@ -2082,7 +2121,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             return false;
         }
 
-        String identityName = ((Identity)identityMapping).getName();
+        String identityName = ((Identity) identityMapping).getName();
         return identityName != null && identityName.equals(currentGrailsProp.getName());
     }
 
@@ -2108,7 +2147,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 enumProperties.put(EnumType.TYPE, String.valueOf(Types.VARCHAR));
                 enumProperties.put(EnumType.NAMED, Boolean.TRUE.toString());
             }
-            else if("identity".equals(enumType)) {
+            else if ("identity".equals(enumType)) {
                 simpleValue.setTypeName(IdentityEnumType.class.getName());
             }
             else if (!"ordinal".equalsIgnoreCase(enumType)) {
@@ -2155,7 +2194,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         PropertyConfig config = getPropertyConfig(currentGrailsProp);
         Object typeObj = config == null ? null : config.getType();
         if (typeObj instanceof Class<?>) {
-            userType = (Class<?>)typeObj;
+            userType = (Class<?>) typeObj;
         } else if (typeObj != null) {
             String typeName = typeObj.toString();
             try {
@@ -2163,7 +2202,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             } catch (ClassNotFoundException e) {
                 // only print a warning if the user type is in a package this excludes basic
                 // types like string, int etc.
-                if (typeName.indexOf(".")>-1) {
+                if (typeName.indexOf(".") > -1) {
                     if (LOG.isWarnEnabled()) {
                         LOG.warn("UserType not found ", e);
                     }
@@ -2180,7 +2219,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 String[] propertyNames = ((CompositeIdentity) id).getPropertyNames();
                 String property = currentGrailsProp.getName();
                 for (String currentName : propertyNames) {
-                    if(currentName != null && currentName.equals(property)) return true;
+                    if (currentName != null && currentName.equals(property)) return true;
                 }
             }
         }
@@ -2188,7 +2227,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     }
 
     protected boolean isBidirectionalManyToOne(PersistentProperty currentGrailsProp) {
-        return ((currentGrailsProp instanceof org.grails.datastore.mapping.model.types.ManyToOne) && ((Association)currentGrailsProp).isBidirectional());
+        return ((currentGrailsProp instanceof org.grails.datastore.mapping.model.types.ManyToOne) && ((Association) currentGrailsProp).isBidirectional());
     }
 
     /**
@@ -2348,7 +2387,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 if (pc.getColumns().isEmpty()) {
                     mapping.getColumns().put(property.getName(), pc);
                 }
-                if (!hasJoinKeyMapping(pc) ) {
+                if (!hasJoinKeyMapping(pc)) {
                     JoinTable jt = new JoinTable();
                     final ColumnConfig columnConfig = new ColumnConfig();
                     columnConfig.setName(namingStrategy.propertyToColumnName(property.getName()) +
@@ -2394,7 +2433,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             for (String propertyName : propertyNames) {
                 ColumnConfig cc;
                 // if a column configuration exists in the mapping use it
-                if(j < i) {
+                if (j < i) {
                     cc = columns.get(j++);
                 }
                 // otherwise create a new one to represent the composite column
@@ -2402,17 +2441,17 @@ public class GrailsDomainBinder implements MetadataContributor {
                     cc = new ColumnConfig();
                 }
                 // if the name is null then configure the name by convention
-                if(cc.getName() == null) {
+                if (cc.getName() == null) {
                     // use the referenced table name as a prefix
                     String prefix = getTableName(refDomainClass, sessionFactoryBeanName);
                     PersistentProperty referencedProperty = refDomainClass.getPropertyByName(propertyName);
 
                     // if the referenced property is a ToOne and it has a composite id
                     // then a column is needed for each property that forms the composite id
-                    if(referencedProperty instanceof ToOne) {
+                    if (referencedProperty instanceof ToOne) {
                         ToOne toOne = (ToOne) referencedProperty;
                         PersistentProperty[] compositeIdentity = toOne.getAssociatedEntity().getCompositeIdentity();
-                        if(compositeIdentity != null) {
+                        if (compositeIdentity != null) {
                             for (PersistentProperty cip : compositeIdentity) {
                                 // for each property of a composite id by default we use the table name and the property name as a prefix
                                 String compositeIdPrefix = addUnderscore(prefix, namingStrategy.propertyToColumnName(referencedProperty.getName()));
@@ -2442,10 +2481,10 @@ public class GrailsDomainBinder implements MetadataContributor {
         int expectedForeignKeyColumnLength = 0;
         for (String propertyName : propertyNames) {
             PersistentProperty referencedProperty = refDomainClass.getPropertyByName(propertyName);
-            if(referencedProperty instanceof ToOne) {
+            if (referencedProperty instanceof ToOne) {
                 ToOne toOne = (ToOne) referencedProperty;
                 PersistentProperty[] compositeIdentity = toOne.getAssociatedEntity().getCompositeIdentity();
-                if(compositeIdentity != null) {
+                if (compositeIdentity != null) {
                     expectedForeignKeyColumnLength += compositeIdentity.length;
                 }
                 else {
@@ -2568,7 +2607,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         // create the id value
         SimpleValue id = new SimpleValue(metadataBuildingContext, entity.getTable());
-        Property idProperty  = new Property();
+        Property idProperty = new Property();
         idProperty.setName(identifier.getName());
         idProperty.setValue(id);
         entity.setDeclaredIdentifierProperty(idProperty);
@@ -2582,13 +2621,13 @@ public class GrailsDomainBinder implements MetadataContributor {
             id.setIdentifierGeneratorStrategy(useSequence ? "sequence-identity" : "native");
         } else {
             String generator = mappedId.getGenerator();
-            if("native".equals(generator) && useSequence) {
+            if ("native".equals(generator) && useSequence) {
                 generator = "sequence-identity";
             }
             id.setIdentifierGeneratorStrategy(generator);
             params.putAll(mappedId.getParams());
-            if(params.containsKey(SEQUENCE_KEY)) {
-                params.put(SequenceStyleGenerator.SEQUENCE_PARAM,  params.getProperty(SEQUENCE_KEY));
+            if (params.containsKey(SEQUENCE_KEY)) {
+                params.put(SequenceStyleGenerator.SEQUENCE_PARAM, params.getProperty(SEQUENCE_KEY));
             }
             if ("assigned".equals(generator)) {
                 id.setNullValue("undefined");
@@ -2625,7 +2664,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     private String getSchemaName(InFlightMetadataCollector mappings) {
         Identifier schema = mappings.getDatabase().getDefaultNamespace().getName().getSchema();
-        if(schema != null) {
+        if (schema != null) {
             return schema.getCanonicalName();
         }
         return null;
@@ -2633,7 +2672,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     private String getCatalogName(InFlightMetadataCollector mappings) {
         Identifier catalog = mappings.getDatabase().getDefaultNamespace().getName().getCatalog();
-        if(catalog != null) {
+        if (catalog != null) {
             return catalog.getCanonicalName();
         }
         return null;
@@ -2661,20 +2700,19 @@ public class GrailsDomainBinder implements MetadataContributor {
                 grailsProperty.getMapping().getMappedForm().getAccessType()
         );
 
-        if(accessType == AccessType.FIELD) {
+        if (accessType == AccessType.FIELD) {
             EntityReflector.PropertyReader reader = grailsProperty.getReader();
-            Method getter  = reader != null ? reader.getter() : null;
-            if(getter != null && getter.getAnnotation(Traits.Implemented.class) != null) {
+            Method getter = reader != null ? reader.getter() : null;
+            if (getter != null && getter.getAnnotation(Traits.Implemented.class) != null) {
                 prop.setPropertyAccessorName(TraitPropertyAccessStrategy.class.getName());
             }
             else {
-                prop.setPropertyAccessorName( accessType.getType() );
+                prop.setPropertyAccessorName(accessType.getType());
             }
         }
         else {
-            prop.setPropertyAccessorName( accessType.getType() );
+            prop.setPropertyAccessorName(accessType.getType());
         }
-
 
         prop.setOptional(grailsProperty.isNullable());
 
@@ -2691,7 +2729,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             prop.setLazy(isLazy);
 
             if (isLazy && isToOne && !(PersistentAttributeInterceptable.class.isAssignableFrom(propertyOwner.getJavaClass()))) {
-//                handleLazyProxy(propertyOwner, grailsProperty);
+                // handleLazyProxy(propertyOwner, grailsProperty);
             }
         }
     }
@@ -2699,10 +2737,10 @@ public class GrailsDomainBinder implements MetadataContributor {
     protected boolean getLaziness(PersistentProperty grailsProperty) {
         PropertyConfig config = getPropertyConfig(grailsProperty);
         final Boolean lazy = config.getLazy();
-        if(lazy == null && grailsProperty instanceof Association) {
+        if (lazy == null && grailsProperty instanceof Association) {
             return true;
         }
-        else if(lazy != null) {
+        else if (lazy != null) {
             return lazy;
         }
         return false;
@@ -2719,7 +2757,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     }
 
     protected boolean isBidirectionalManyToOneWithListMapping(PersistentProperty grailsProperty, Property prop) {
-        if(grailsProperty instanceof Association) {
+        if (grailsProperty instanceof Association) {
 
             Association association = (Association) grailsProperty;
             Association otherSide = association.getInverseSide();
@@ -2765,7 +2803,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 if (referenced != null && referenced.isOwningEntity(domainClass) && !isCircularAssociation(grailsProperty)) {
                     cascadeStrategy = CASCADE_ALL;
                 }
-                else if(isCompositeIdProperty((Mapping) domainClass.getMapping().getMappedForm(), grailsProperty)) {
+                else if (isCompositeIdProperty((Mapping) domainClass.getMapping().getMappedForm(), grailsProperty)) {
                     cascadeStrategy = CASCADE_ALL;
                 }
                 else {
@@ -2829,7 +2867,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     protected void bindSimpleValue(PersistentProperty property, PersistentProperty parentProperty,
                                    SimpleValue simpleValue, String path, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         // set type
-        bindSimpleValue(property,parentProperty, simpleValue, path, getPropertyConfig(property), sessionFactoryBeanName);
+        bindSimpleValue(property, parentProperty, simpleValue, path, getPropertyConfig(property), sessionFactoryBeanName);
     }
 
     protected void bindSimpleValue(PersistentProperty grailsProp, SimpleValue simpleValue,
@@ -2851,17 +2889,17 @@ public class GrailsDomainBinder implements MetadataContributor {
             boolean hasConfig = propertyConfig != null;
 
             String generator = hasConfig ? propertyConfig.getGenerator() : null;
-            if(generator != null) {
+            if (generator != null) {
                 simpleValue.setIdentifierGeneratorStrategy(generator);
                 Properties params = propertyConfig.getTypeParams();
-                if(params != null) {
+                if (params != null) {
                     Properties generatorProps = new Properties();
                     generatorProps.putAll(params);
 
-                    if(generatorProps.containsKey(SEQUENCE_KEY)) {
-                        generatorProps.put(SequenceStyleGenerator.SEQUENCE_PARAM,  generatorProps.getProperty(SEQUENCE_KEY));
+                    if (generatorProps.containsKey(SEQUENCE_KEY)) {
+                        generatorProps.put(SequenceStyleGenerator.SEQUENCE_PARAM, generatorProps.getProperty(SEQUENCE_KEY));
                     }
-                    simpleValue.setIdentifierGeneratorProperties( generatorProps );
+                    simpleValue.setIdentifierGeneratorProperties(generatorProps);
                 }
             }
 
@@ -2869,8 +2907,8 @@ public class GrailsDomainBinder implements MetadataContributor {
             // not all custom mapped properties will have column definitions,
             // in which case we still need to create a Hibernate column for
             // this value.
-            List<?> columnDefinitions = hasConfig ? propertyConfig.getColumns()
-                    : Arrays.asList(new Object[] { null });
+            List<?> columnDefinitions = hasConfig ? propertyConfig.getColumns() :
+                    Arrays.asList(new Object[] { null });
             if (columnDefinitions.isEmpty()) {
                 columnDefinitions = Arrays.asList(new Object[] { null });
             }
@@ -2891,7 +2929,6 @@ public class GrailsDomainBinder implements MetadataContributor {
 
                 column.setValue(simpleValue);
 
-
                 if (cc != null) {
                     if (cc.getLength() != -1) {
                         column.setLength(cc.getLength());
@@ -2902,7 +2939,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                     if (cc.getScale() != -1) {
                         column.setScale(cc.getScale());
                     }
-                    if(!mappedForm.isUniqueWithinGroup()) {
+                    if (!mappedForm.isUniqueWithinGroup()) {
                         column.setUnique(cc.isUnique());
                     }
                 }
@@ -3024,7 +3061,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             Mapping mapping = getMapping(owner);
             if (mapping == null || mapping.getTablePerHierarchy()) {
                 if (LOG.isDebugEnabled())
-                    LOG.debug("[GrailsDomainBinder] Sub class property [" + property.getName() + "] for column name ["+column.getName()+"] set to nullable");
+                    LOG.debug("[GrailsDomainBinder] Sub class property [" + property.getName() + "] for column name [" + column.getName() + "] set to nullable");
                 column.setNullable(true);
             } else {
                 column.setNullable(property.isNullable());
@@ -3032,9 +3069,8 @@ public class GrailsDomainBinder implements MetadataContributor {
         }
 
         if (LOG.isDebugEnabled())
-            LOG.debug("[GrailsDomainBinder] bound property [" + property.getName() + "] to column name ["+column.getName()+"] in table ["+table.getName()+"]");
+            LOG.debug("[GrailsDomainBinder] bound property [" + property.getName() + "] to column name [" + column.getName() + "] in table [" + table.getName() + "]");
     }
-
 
     protected void createKeyForProps(PersistentProperty grailsProp, String path, Table table,
                                      String columnName, List<?> propertyNames, String sessionFactoryBeanName) {
@@ -3059,7 +3095,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         uk.setTable(table);
         uk.addColumns(columns.iterator());
 
-        if(LOG.isDebugEnabled()) {
+        if (LOG.isDebugEnabled()) {
             LOG.debug("create unique key for " + table.getName() + " columns = " + columns);
         }
         setGeneratedUniqueName(uk);
@@ -3156,7 +3192,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         if (property instanceof Association) {
             Association association = (Association) property;
             boolean isBasic = property instanceof Basic;
-            if(isBasic && ((PropertyConfig)property.getMapping().getMappedForm()).getType() != null ) {
+            if (isBasic && ((PropertyConfig) property.getMapping().getMappedForm()).getType() != null) {
                 return columnName;
             }
 
@@ -3174,19 +3210,18 @@ public class GrailsDomainBinder implements MetadataContributor {
             }
 
             if (property.isInherited() && isBidirectionalManyToOne(property)) {
-                return namingStrategy.propertyToColumnName(property.getOwner().getName()) + '_'+ columnName + FOREIGN_KEY_SUFFIX;
+                return namingStrategy.propertyToColumnName(property.getOwner().getName()) + '_' + columnName + FOREIGN_KEY_SUFFIX;
             }
 
             return columnName + FOREIGN_KEY_SUFFIX;
         }
-
 
         return columnName;
     }
 
     protected String getForeignKeyForPropertyDomainClass(PersistentProperty property,
                                                          String sessionFactoryBeanName) {
-        final String propertyName = NameUtils.decapitalize( property.getOwner().getName() );
+        final String propertyName = NameUtils.decapitalize(property.getOwner().getName());
         NamingStrategy namingStrategy = getNamingStrategy(sessionFactoryBeanName);
         return namingStrategy.propertyToColumnName(propertyName) + FOREIGN_KEY_SUFFIX;
     }
@@ -3223,8 +3258,6 @@ public class GrailsDomainBinder implements MetadataContributor {
         return pc != null && pc.getJoinTable() != null && pc.getJoinTable().getColumn() != null && pc.getJoinTable().getColumn().getName() != null;
     }
 
-
-
     /**
      * Interrogates the specified constraints looking for any constraints that would limit the
      * length of the property's value.  If such constraints exist, this method adjusts the length
@@ -3259,17 +3292,15 @@ public class GrailsDomainBinder implements MetadataContributor {
         int scale = Column.DEFAULT_SCALE;
         int precision = Column.DEFAULT_PRECISION;
 
-
         PropertyConfig constrainedProperty = (PropertyConfig) property.getMapping().getMappedForm();
-        if(  cc != null && cc.getScale() > - 1) {
+        if (cc != null && cc.getScale() > -1) {
             column.setScale(cc.getScale());
         } else if (constrainedProperty.getScale() > -1) {
             scale = constrainedProperty.getScale();
             column.setScale(scale);
         }
 
-
-        if( cc != null && cc.getPrecision() > -1) {
+        if (cc != null && cc.getPrecision() > -1) {
             column.setPrecision(cc.getPrecision());
         }
         else {
@@ -3345,7 +3376,6 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     }
 
-
     protected boolean isNotEmpty(String s) {
         return GrailsHibernateUtil.isNotEmpty(s);
     }
@@ -3379,7 +3409,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         protected String sessionFactoryBeanName;
 
         public GrailsCollectionSecondPass(ToMany property, InFlightMetadataCollector mappings,
-                                          Collection coll,  String sessionFactoryBeanName) {
+                                          Collection coll, String sessionFactoryBeanName) {
             this.property = property;
             this.mappings = mappings;
             this.collection = coll;
@@ -3399,8 +3429,8 @@ public class GrailsDomainBinder implements MetadataContributor {
                 if (collection.isIndexed())
                     msg += ", index: " + columns(((IndexedCollection) collection).getIndex());
                 if (collection.isOneToMany()) {
-                    msg += ", one-to-many: "
-                            + ((OneToMany) collection.getElement()).getReferencedEntityName();
+                    msg += ", one-to-many: " +
+                            ((OneToMany) collection.getElement()).getReferencedEntityName();
                 } else {
                     msg += ", element: " + columns(collection.getElement());
                 }
@@ -3458,7 +3488,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         @Override
         public void doSecondPass(Map<?, ?> persistentClasses, Map<?, ?> inheritedMetas) throws MappingException {
             bindMapSecondPass(property, mappings, persistentClasses,
-                    (org.hibernate.mapping.Map)collection, sessionFactoryBeanName);
+                    (org.hibernate.mapping.Map) collection, sessionFactoryBeanName);
         }
 
         @SuppressWarnings("rawtypes")
@@ -3468,6 +3498,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                     (org.hibernate.mapping.Map) collection, sessionFactoryBeanName);
         }
     }
+
     /**
      * A Collection type, for the moment only Set is supported
      *
@@ -3574,5 +3605,3 @@ public class GrailsDomainBinder implements MetadataContributor {
     }
 
 }
-
-

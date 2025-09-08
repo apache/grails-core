@@ -28,6 +28,8 @@ import groovy.lang.GroovyObject;
  */
 public interface GroovyPagesUriService {
 
+    String RENDERING_VIEW_ATTRIBUTE = "org.grails.rendering.view";
+
     String BEAN_ID = "groovyPagesUriService";
 
     /**

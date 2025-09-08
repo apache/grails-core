@@ -18,21 +18,23 @@
  */
 package grails.boot.config
 
-import grails.config.Config
-import grails.core.GrailsApplication
-import grails.boot.config.tools.ClassPathScanner
-import grails.core.GrailsApplicationClass
+import java.lang.reflect.Field
+
 import groovy.transform.CompileStatic
-import org.grails.compiler.injection.AbstractGrailsArtefactTransformer
-import org.grails.spring.aop.autoproxy.GroovyAwareAspectJAwareAdvisorAutoProxyCreator
-import org.grails.spring.aop.autoproxy.GroovyAwareInfrastructureAdvisorAutoProxyCreator
+
 import org.springframework.aop.config.AopConfigUtils
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.context.annotation.Bean
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 
-import java.lang.reflect.Field
+import grails.boot.config.tools.ClassPathScanner
+import grails.config.Config
+import grails.core.GrailsApplication
+import grails.core.GrailsApplicationClass
+import org.grails.compiler.injection.AbstractGrailsArtefactTransformer
+import org.grails.spring.aop.autoproxy.GroovyAwareAspectJAwareAdvisorAutoProxyCreator
+import org.grails.spring.aop.autoproxy.GroovyAwareInfrastructureAdvisorAutoProxyCreator
 
 /**
  * A base class for configurations that bootstrap a Grails application
@@ -45,18 +47,18 @@ import java.lang.reflect.Field
 // WARNING: Never add logging to the source of this class, early initialization causes problems
 class GrailsAutoConfiguration implements GrailsApplicationClass, ApplicationContextAware {
 
-    private static final String APC_PRIORITY_LIST_FIELD = "APC_PRIORITY_LIST"
+    private static final String APC_PRIORITY_LIST_FIELD = 'APC_PRIORITY_LIST'
 
     static {
         try {
             // patch AopConfigUtils if possible
-            Field field = AopConfigUtils.class.getDeclaredField(APC_PRIORITY_LIST_FIELD)
-            if(field != null) {
+            Field field = AopConfigUtils.getDeclaredField(APC_PRIORITY_LIST_FIELD)
+            if (field != null) {
                 field.setAccessible(true)
                 Object obj = field.get(null)
                 List<Class<?>> list = (List<Class<?>>) obj
-                list.add(GroovyAwareInfrastructureAdvisorAutoProxyCreator.class)
-                list.add(GroovyAwareAspectJAwareAdvisorAutoProxyCreator.class)
+                list.add(GroovyAwareInfrastructureAdvisorAutoProxyCreator)
+                list.add(GroovyAwareAspectJAwareAdvisorAutoProxyCreator)
             }
         } catch (Throwable e) {
             // ignore
@@ -70,7 +72,7 @@ class GrailsAutoConfiguration implements GrailsApplicationClass, ApplicationCont
      */
     @Bean
     GrailsApplicationPostProcessor grailsApplicationPostProcessor() {
-        return new GrailsApplicationPostProcessor( this, applicationContext, classes() as Class[])
+        return new GrailsApplicationPostProcessor(this, applicationContext, classes() as Class[])
     }
 
     /**
@@ -80,15 +82,15 @@ class GrailsAutoConfiguration implements GrailsApplicationClass, ApplicationCont
         Collection<Class> classes = new HashSet()
 
         ClassPathScanner scanner = new ClassPathScanner()
-        if(limitScanningToApplication()) {
-            classes.addAll scanner.scan(getClass(), packageNames())
+        if (limitScanningToApplication()) {
+            classes.addAll(scanner.scan(getClass(), packageNames()))
         }
         else {
-            classes.addAll scanner.scan(new PathMatchingResourcePatternResolver(applicationContext), packageNames())
+            classes.addAll(scanner.scan(new PathMatchingResourcePatternResolver(applicationContext), packageNames()))
         }
 
         ClassLoader classLoader = getClass().getClassLoader()
-        for(cls in AbstractGrailsArtefactTransformer.transformedClassNames) {
+        for (cls in AbstractGrailsArtefactTransformer.transformedClassNames) {
             try {
                 classes << classLoader.loadClass(cls)
             } catch (ClassNotFoundException cnfe) {
@@ -98,7 +100,6 @@ class GrailsAutoConfiguration implements GrailsApplicationClass, ApplicationCont
 
         return classes
     }
-
 
     /**
      * Whether classpath scanning should be limited to the application and not dependent JAR files. Users can override this method to enable more broad scanning
@@ -124,7 +125,6 @@ class GrailsAutoConfiguration implements GrailsApplicationClass, ApplicationCont
     Collection<String> packageNames() {
         packages().collect { Package p -> p.name }
     }
-
 
     @Override
     Closure doWithSpring() { null }

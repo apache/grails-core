@@ -18,18 +18,24 @@
  */
 package org.grails.web.util;
 
-import grails.config.Config;
-import grails.core.GrailsApplication;
-import grails.util.GrailsStringUtils;
-import grails.util.GrailsWebUtil;
-import grails.web.mime.MimeType;
-import grails.web.servlet.mvc.GrailsParameterMap;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.grails.web.servlet.view.CompositeViewResolver;
+
 import org.springframework.context.ApplicationContext;
 import org.springframework.util.Assert;
 import org.springframework.web.context.ContextLoader;
@@ -45,10 +51,14 @@ import org.springframework.web.servlet.handler.WebRequestHandlerInterceptorAdapt
 import org.springframework.web.servlet.view.UrlBasedViewResolver;
 import org.springframework.web.util.UrlPathHelper;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.util.*;
+import grails.config.Config;
+import grails.core.GrailsApplication;
+import grails.util.GrailsStringUtils;
+import grails.util.GrailsWebUtil;
+import grails.web.mime.MimeType;
+import grails.web.servlet.mvc.GrailsParameterMap;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.servlet.view.CompositeViewResolver;
 
 /**
  * Utility methods to access commons objects and perform common
@@ -64,11 +74,13 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
     public static final String DISPATCH_ACTION_PARAMETER = "_action_";
     public static final String SEND_ALLOW_HEADER_FOR_INVALID_HTTP_METHOD = "grails.http.invalid.method.allow.header";
     public static final String LAYOUT_ATTRIBUTE = "org.grails.layout.name";
+    public static final String NONE_LAYOUT = "_none_"; // legacy, sitemesh2 setting to not set a layout
     public static final String RENDERING_VIEW = "org.grails.rendering.view";
     public static final String GRAILS_DISPATCH_EXTENSION = ".dispatch";
     public static final String GRAILS_SERVLET_PATH = "/grails";
     public static final String EXCEPTION_ATTRIBUTE = "exception";
     public static final String ASYNC_REQUEST_URI_ATTRIBUTE = "jakarta.servlet.async.request_uri";
+    public static final String SITEMESH2_PAGE_ATTRIBUTE = "__sitemesh__page";
 
     public static final int SC_METHOD_NOT_ALLOWED = HttpServletResponse.SC_METHOD_NOT_ALLOWED;
 
@@ -98,7 +110,7 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
     public static HandlerInterceptor[] lookupHandlerInterceptors(ServletContext servletContext) {
         WebApplicationContext wac = WebApplicationContextUtils.getRequiredWebApplicationContext(servletContext);
 
-        final Collection<HandlerInterceptor> allHandlerInterceptors = new ArrayList<HandlerInterceptor>();
+        final Collection<HandlerInterceptor> allHandlerInterceptors = new ArrayList<>();
 
         WebRequestInterceptor[] webRequestInterceptors = lookupWebRequestInterceptors(servletContext);
         for (WebRequestInterceptor webRequestInterceptor : webRequestInterceptors) {
@@ -134,7 +146,7 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
         if (request.getRequestURI().endsWith(GRAILS_DISPATCH_EXTENSION)) {
             String path = pathHelper.getPathWithinApplication(request);
             if (path.startsWith(GRAILS_SERVLET_PATH)) {
-                path = path.substring(GRAILS_SERVLET_PATH.length(),path.length());
+                path = path.substring(GRAILS_SERVLET_PATH.length(), path.length());
             }
             return path.substring(0, path.length() - GRAILS_DISPATCH_EXTENSION.length());
         }
@@ -148,7 +160,7 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
      */
     public static GrailsApplication lookupApplication(ServletContext servletContext) {
         WebApplicationContext wac = WebApplicationContextUtils.getRequiredWebApplicationContext(servletContext);
-        return (GrailsApplication)wac.getBean(GrailsApplication.APPLICATION_ID);
+        return (GrailsApplication) wac.getBean(GrailsApplication.APPLICATION_ID);
     }
 
     /**
@@ -158,12 +170,11 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
      */
     public static GrailsApplication findApplication(ServletContext servletContext) {
         ApplicationContext wac = findApplicationContext(servletContext);
-        if(wac != null) {
-            return (GrailsApplication)wac.getBean(GrailsApplication.APPLICATION_ID);
+        if (wac != null) {
+            return (GrailsApplication) wac.getBean(GrailsApplication.APPLICATION_ID);
         }
         return null;
     }
-
 
     /**
      * Locates the ApplicationContext, returns null if not found
@@ -171,7 +182,7 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
      * @return The ApplicationContext
      */
     public static ApplicationContext findApplicationContext(ServletContext servletContext) {
-        if(servletContext == null) {
+        if (servletContext == null) {
             return ContextLoader.getCurrentWebApplicationContext();
         }
         return WebApplicationContextUtils.getWebApplicationContext(servletContext);
@@ -188,7 +199,7 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
      */
     public static View resolveView(HttpServletRequest request, String viewName, String controllerName, ViewResolver viewResolver) throws Exception {
         GrailsWebRequest webRequest = GrailsWebRequest.lookup(request);
-        Locale locale = webRequest != null ? webRequest.getLocale() : Locale.getDefault() ;
+        Locale locale = webRequest != null ? webRequest.getLocale() : Locale.getDefault();
         return viewResolver.resolveViewName(addViewPrefix(viewName, controllerName), locale);
     }
 
@@ -203,7 +214,7 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
 
     public static String addViewPrefix(String viewName, String controllerName) {
         if (!viewName.startsWith(String.valueOf(SLASH))) {
-            if(viewName.startsWith(UrlBasedViewResolver.REDIRECT_URL_PREFIX) || viewName.startsWith(UrlBasedViewResolver.FORWARD_URL_PREFIX)) {
+            if (viewName.startsWith(UrlBasedViewResolver.REDIRECT_URL_PREFIX) || viewName.startsWith(UrlBasedViewResolver.FORWARD_URL_PREFIX)) {
                 return viewName;
             }
             StringBuilder buf = new StringBuilder();
@@ -220,7 +231,7 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
     public static Map<String, Object> exposeRequestAttributesAndReturnOldValues(HttpServletRequest request, Map<String, ?> attributes) {
         Assert.notNull(request, "Request must not be null");
         Assert.notNull(attributes, "Attributes Map must not be null");
-        Map<String, Object> originalValues = new HashMap<String, Object>();
+        Map<String, Object> originalValues = new HashMap<>();
         for (Map.Entry<String, ?> entry : attributes.entrySet()) {
             String name = entry.getKey();
             Object current = request.getAttribute(name);
@@ -287,7 +298,7 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public static Map<String, Object> fromQueryString(String queryString) {
-        Map<String, Object> result = new LinkedHashMap<String, Object>();
+        Map<String, Object> result = new LinkedHashMap<>();
         if (queryString.startsWith("?")) queryString = queryString.substring(1);
 
         String[] pairs = queryString.split("&");
@@ -297,11 +308,11 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
             if (i > -1) {
                 try {
                     String name = URLDecoder.decode(pair.substring(0, i), "UTF-8");
-                    String value = URLDecoder.decode(pair.substring(i+1, pair.length()), "UTF-8");
+                    String value = URLDecoder.decode(pair.substring(i + 1, pair.length()), "UTF-8");
 
                     Object current = result.get(name);
                     if (current instanceof List) {
-                        ((List)current).add(value);
+                        ((List) current).add(value);
                     }
                     else if (current != null) {
                         List multi = new ArrayList();
@@ -361,7 +372,7 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
         if (name.indexOf(".") > -1 && (value instanceof GrailsParameterMap)) return false; // multi-d params handled by recursion
         else if (value == null) value = "";
         else if (value instanceof GrailsParameterMap) {
-            GrailsParameterMap child = (GrailsParameterMap)value;
+            GrailsParameterMap child = (GrailsParameterMap) value;
             Set nestedEntrySet = child.entrySet();
             for (Iterator i = nestedEntrySet.iterator(); i.hasNext();) {
                 Map.Entry childEntry = (Map.Entry) i.next();
@@ -404,10 +415,10 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
 
         int idx = uri.lastIndexOf('/');
         if (idx > -1) {
-            String lastToken = uri.substring(idx+1, uri.length());
+            String lastToken = uri.substring(idx + 1, uri.length());
             idx = lastToken.lastIndexOf('.');
             if (idx > -1 && idx != lastToken.length() - 1) {
-                String extension =  lastToken.substring(idx+1, lastToken.length());
+                String extension = lastToken.substring(idx + 1, lastToken.length());
                 if (mimeTypes != null) {
                     for (MimeType mimeType : mimeTypes) {
                         if (mimeType.getExtension().equals(extension)) return extension;
@@ -439,8 +450,8 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
      */
     public static GrailsWebRequest retrieveGrailsWebRequest() {
         RequestAttributes attributes = RequestContextHolder.currentRequestAttributes();
-        if(attributes instanceof GrailsWebRequest) {
-            return (GrailsWebRequest)attributes;
+        if (attributes instanceof GrailsWebRequest) {
+            return (GrailsWebRequest) attributes;
         }
         return null;
     }
@@ -513,6 +524,7 @@ public class WebUtils extends org.springframework.web.util.WebUtils {
     public static boolean isError(HttpServletRequest request) {
         return request.getAttribute(ERROR_STATUS_CODE_ATTRIBUTE) != null;
     }
+
     /**
      * Check whether the given request is an include request
      *

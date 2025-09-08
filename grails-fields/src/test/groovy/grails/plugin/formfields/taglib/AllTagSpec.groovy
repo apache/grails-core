@@ -41,7 +41,7 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<
         mockFormFieldsTemplateService.findTemplate(_, 'wrapper', _, null) >> [path: '/_fields/default/wrapper']
         tagLib.formFieldsTemplateService = mockFormFieldsTemplateService
 
-        mockEmbeddedSitemeshLayout(tagLib)
+        mockEmbeddedGrailsLayout(tagLib)
     }
 
     void "all tag renders fields for all properties"() {
@@ -60,7 +60,7 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<
         output =~ /\bminor\b/
     }
 
-    @Issue('https://github.com/grails-fields-plugin/grails-fields/issues/21')
+    @Issue('https://github.com/grails/fields/issues/21')
     void 'all tag skips #excluded property and includes #included property'() {
         given:
         views["/_fields/default/_field.gsp"] = '${property} '
@@ -96,7 +96,7 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<
         included << ['salutation', 'name', 'password', 'gender', 'dateOfBirth', 'address.street', 'minor']
     }
 
-    @Issue('https://github.com/grails-fields-plugin/grails-fields/issues/12')
+    @Issue('https://github.com/grails/fields/issues/12')
     void 'all tag skips properties listed with the except attribute'() {
         given:
         views["/_fields/default/_field.gsp"] = '${property} '
@@ -124,7 +124,7 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<
 
     }
 
-    @Issue('https://github.com/gpc/fields/issues/347')
+    @Issue('https://github.com/grails/fields/issues/347')
     void 'allow order and except attributes'() {
         given:
         views["/_fields/default/_field.gsp"] = '|${property}|'

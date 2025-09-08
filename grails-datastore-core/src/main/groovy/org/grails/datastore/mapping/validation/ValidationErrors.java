@@ -38,6 +38,7 @@ public class ValidationErrors extends BeanPropertyBindingResult {
     public ValidationErrors(Object target, String objectName) {
         super(target, objectName);
     }
+
     /**
      * Creates a new instance of the {@link org.springframework.validation.BeanPropertyBindingResult} class.
      *

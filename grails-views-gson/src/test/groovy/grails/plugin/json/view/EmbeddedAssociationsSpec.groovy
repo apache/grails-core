@@ -73,7 +73,7 @@ class EmbeddedAssociationsSpec extends Specification implements JsonViewTest, Gr
         p.otherAddresses = [new Address(postCode: '6789'), new Address(postCode: '54321')]
         p.nickNames = ['Rob', 'Bob']
 
-        when: 'A an instance with embedded assocations is rendered'
+        when: 'A an instance with embedded associations is rendered'
         def result = render('''
             import grails.plugin.json.view.*
             
@@ -108,7 +108,7 @@ class EmbeddedAssociationsSpec extends Specification implements JsonViewTest, Gr
         ''')
     }
 
-    @Issue('https://github.com/grails/grails-views/issues/171')
+    @Issue('https://github.com/apache/grails-views/issues/171')
     void 'test render domain object with embedded associations and include'() {
         given: 'a domain class with embedded associations'
         mappingContext.addPersistentEntities(Person)
@@ -136,7 +136,7 @@ class EmbeddedAssociationsSpec extends Specification implements JsonViewTest, Gr
         ''')
     }
 
-    @Issue('https://github.com/grails/grails-views/issues/171')
+    @Issue('https://github.com/apache/grails-views/issues/171')
     void 'test render domain object with embedded associations and include in json api'() {
         given: 'a domain class with embedded associations'
         mappingContext.addPersistentEntities(Person)

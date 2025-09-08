@@ -19,17 +19,18 @@
 
 package org.apache.grails.gradle.tasks.bom
 
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 import groovy.transform.MapConstructor
 import groovy.transform.ToString
-
-import java.util.regex.Matcher
-import java.util.regex.Pattern
 
 @CompileStatic
 @MapConstructor(includes = ['groupId', 'artifactId', 'version', 'versionPropertyReference', 'source'], includeSuperProperties = true)
 @ToString(includes = ['groupId', 'artifactId', 'version', 'versionPropertyReference', 'source'], includeSuperProperties = true)
 class ExtractedDependencyConstraint extends CoordinateVersionHolder {
+
     String versionPropertyReference
     String source
 
@@ -47,15 +48,15 @@ class ExtractedDependencyConstraint extends CoordinateVersionHolder {
 
     String getVersionPropertyName() {
         String property = getVersionPropertyReference()
-        if(!property) {
+        if (!property) {
             return null
         }
 
         Pattern dynamicPattern = ~/\$\{([^}]+)\}/
 
         Matcher matcher = property =~ dynamicPattern
-        if(!matcher.find()) {
-            throw new IllegalStateException("Invalid Verison Property: ${property}")
+        if (!matcher.find()) {
+            throw new IllegalStateException("Invalid Version Property: ${property}")
         }
 
         matcher.group(1)

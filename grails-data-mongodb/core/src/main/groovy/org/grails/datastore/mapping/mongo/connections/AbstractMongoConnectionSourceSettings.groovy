@@ -19,14 +19,16 @@
 
 package org.grails.datastore.mapping.mongo.connections
 
-import com.mongodb.ConnectionString
-import com.mongodb.ServerAddress
 import groovy.transform.AutoClone
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
+import com.mongodb.ConnectionString
+import com.mongodb.ServerAddress
 import org.bson.codecs.Codec
 import org.bson.codecs.configuration.CodecRegistry
+
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.mongo.MongoConstants
 import org.grails.datastore.mapping.mongo.config.MongoSettings
@@ -50,11 +52,10 @@ abstract class AbstractMongoConnectionSourceSettings extends ConnectionSourceSet
      */
     String databaseName = DEFAULT_DATABASE_NAME
 
-
     /**
      * The host name to use
      */
-    String host = ServerAddress.defaultHost();
+    String host = ServerAddress.defaultHost()
 
     /**
      * The port to use
@@ -89,7 +90,7 @@ abstract class AbstractMongoConnectionSourceSettings extends ConnectionSourceSet
     /**
      * The collection name to use to resolve connections when using {@link MongoConnectionSources}
      */
-    String connectionsCollection = "mongo.connections"
+    String connectionsCollection = 'mongo.connections'
 
     /**
      * Custom MongoDB codecs
@@ -105,7 +106,7 @@ abstract class AbstractMongoConnectionSourceSettings extends ConnectionSourceSet
      * @return Obtain the final URL whether from the connection string or the host/port setting
      */
     ConnectionString getUrl() {
-        if(connectionString != null) {
+        if (connectionString != null) {
             return connectionString
         }
         else {
@@ -126,7 +127,7 @@ abstract class AbstractMongoConnectionSourceSettings extends ConnectionSourceSet
      * @return Obtain the database name
      */
     String getDatabase() {
-        if(connectionString != null) {
+        if (connectionString != null) {
             return connectionString.database ?: databaseName
         }
         else {

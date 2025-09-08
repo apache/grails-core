@@ -18,6 +18,13 @@
  */
 package org.grails.plugins.web.mime
 
+import groovy.transform.CompileStatic
+import groovy.transform.TypeCheckingMode
+
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
+
 import grails.config.Config
 import grails.config.Settings
 import grails.core.GrailsApplication
@@ -25,13 +32,8 @@ import grails.web.mime.MimeType
 import grails.web.mime.MimeTypeProvider
 import grails.web.mime.MimeTypeResolver
 import grails.web.mime.MimeUtility
-import groovy.transform.CompileStatic
-import groovy.transform.TypeCheckingMode
 import org.grails.web.mime.DefaultMimeTypeResolver
 import org.grails.web.mime.DefaultMimeUtility
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Primary
 
 /**
  * Configuration for Codecs
@@ -51,14 +53,14 @@ class MimeTypesConfiguration {
         this.mimeTypeProviders = mimeTypeProviders
     }
 
-    @Bean("mimeTypesHolder")
+    @Bean('mimeTypesHolder')
     @Primary
     MimeTypesHolder mimeTypesHolder() {
-        final MimeType[] mimeTypes = grailsApplication.mainContext.getBean("mimeTypes", MimeType[].class)
+        final MimeType[] mimeTypes = grailsApplication.mainContext.getBean('mimeTypes', MimeType[])
         return new MimeTypesHolder(mimeTypes)
     }
 
-    @Bean("mimeTypes")
+    @Bean('mimeTypes')
     @Primary
     MimeType[] mimeTypes() {
         final Config config = grailsApplication.getConfig()
@@ -85,20 +87,20 @@ class MimeTypesConfiguration {
 
             final List<MimeTypeProvider> mimeTypeProviders = this.mimeTypeProviders
             processProviders(mimes, mimeTypeProviders)
-            final Map<String, MimeTypeProvider> childTypes = grailsApplication.mainContext.getBeansOfType(MimeTypeProvider.class)
+            final Map<String, MimeTypeProvider> childTypes = grailsApplication.mainContext.getBeansOfType(MimeTypeProvider)
             processProviders(mimes, childTypes.values())
             mimeTypes = mimes.toArray(new MimeType[0])
         }
         return mimeTypes
     }
 
-    @Bean("grailsMimeUtility")
+    @Bean('grailsMimeUtility')
     @Primary
     protected MimeUtility mimeUtility(MimeTypesHolder mimeTypesHolder) {
         return new DefaultMimeUtility(mimeTypesHolder.mimeTypes)
     }
 
-    @Bean("mimeTypeResolver")
+    @Bean('mimeTypeResolver')
     @Primary
     protected MimeTypeResolver mimeTypeResolver() {
         return new DefaultMimeTypeResolver()
@@ -106,7 +108,7 @@ class MimeTypesConfiguration {
 
     @CompileStatic(TypeCheckingMode.SKIP)
     protected Map<CharSequence, Object> getMimeConfig(Config config) {
-        return config.getProperty(Settings.MIME_TYPES, Map.class)
+        return config.getProperty(Settings.MIME_TYPES, Map)
     }
 
     private void processProviders(List<MimeType> mimes, Iterable<MimeTypeProvider> mimeTypeProviders) {

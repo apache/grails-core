@@ -19,10 +19,12 @@
 
 package grails.views
 
-import grails.views.api.GrailsView
 import groovy.transform.CompileStatic
+
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+
+import grails.views.api.GrailsView
 
 /**
  * A script that is writable
@@ -58,7 +60,7 @@ abstract class AbstractWritableScript extends Script implements WritableScript, 
         try {
             return doWrite(out)
         } catch (Throwable e) {
-            if(ViewsEnvironment.isDevelopmentMode() && sourceFile != null) {
+            if (ViewsEnvironment.isDevelopmentMode() && sourceFile != null) {
                 throw new ViewRenderException("Error rendering view: ${e.message}", e, this)
             }
             else {
@@ -73,7 +75,6 @@ abstract class AbstractWritableScript extends Script implements WritableScript, 
      * @return The original writer or a wrapped version
      */
     abstract Writer doWrite(Writer writer)
-
 
     void setModelTypes(Map<String, Class> modelTypes) {
         this.modelTypes = modelTypes

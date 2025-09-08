@@ -19,15 +19,18 @@
 
 package org.grails.datastore.mapping.mongo.connections
 
+import groovy.transform.CompileStatic
+
 import com.mongodb.ConnectionString
 import com.mongodb.MongoClientSettings
 import com.mongodb.MongoCredential
-import groovy.transform.CompileStatic
+
+import org.springframework.core.env.PropertyResolver
+import org.springframework.util.ReflectionUtils
+
 import org.grails.datastore.mapping.config.ConfigurationBuilder
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.mongo.config.MongoSettings
-import org.springframework.core.env.PropertyResolver
-import org.springframework.util.ReflectionUtils
 
 /**
  * Creates MongoDB configuration
@@ -36,7 +39,7 @@ import org.springframework.util.ReflectionUtils
  * @since 6.0
  */
 @CompileStatic
-class MongoConnectionSourceSettingsBuilder extends ConfigurationBuilder<MongoConnectionSourceSettings, MongoConnectionSourceSettings>{
+class MongoConnectionSourceSettingsBuilder extends ConfigurationBuilder<MongoConnectionSourceSettings, MongoConnectionSourceSettings> {
 
     MongoClientSettings.Builder clientOptionsBuilder
 
@@ -64,8 +67,8 @@ class MongoConnectionSourceSettingsBuilder extends ConfigurationBuilder<MongoCon
 
     @Override
     protected void newChildBuilder(Object builder, String configurationPath) {
-        if(builder instanceof MongoClientSettings.Builder) {
-            clientOptionsBuilder = (MongoClientSettings.Builder)builder
+        if (builder instanceof MongoClientSettings.Builder) {
+            clientOptionsBuilder = (MongoClientSettings.Builder) builder
         }
         applyConnectionString(builder)
         applyCredentials(builder)
@@ -73,8 +76,8 @@ class MongoConnectionSourceSettingsBuilder extends ConfigurationBuilder<MongoCon
 
     @Override
     Object newChildBuilderForFallback(Object childBuilder, Object fallbackConfig) {
-        if(( childBuilder instanceof MongoClientSettings.Builder) && (fallbackConfig instanceof MongoClientSettings.Builder)) {
-            return MongoClientSettings.builder(((MongoClientSettings.Builder)fallbackConfig).build())
+        if ((childBuilder instanceof MongoClientSettings.Builder) && (fallbackConfig instanceof MongoClientSettings.Builder)) {
+            return MongoClientSettings.builder(((MongoClientSettings.Builder) fallbackConfig).build())
         }
         return childBuilder
     }

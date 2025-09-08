@@ -33,7 +33,7 @@ import spock.lang.Specification
  * @author graemerocher
  */
 class OverlappingParametersReverseMappingSpec extends Specification{
-    def baseUrl = "http://myserver.com/foo"
+    def baseUrl = "https://myserver.com/foo"
     def context = null
 
     def mappings = {
@@ -49,7 +49,7 @@ class OverlappingParametersReverseMappingSpec extends Specification{
     @Issue('https://github.com/apache/grails-core/issues/657')
     void "Test that reverse mapping with overlapping parameters works"() {
         expect:
-            generator.link(resource: 'book', id: 1, absolute:true) == 'http://myserver.com/foo/books/1'
+            generator.link(resource: 'book', id: 1, absolute:true) == 'https://myserver.com/foo/books/1'
     }
 
 

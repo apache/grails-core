@@ -18,16 +18,21 @@
  */
 package grails.testing.web.taglib
 
-import grails.testing.web.GrailsWebUnitTest
-import groovy.transform.CompileStatic
-import org.grails.testing.ParameterizedGrailsUnitTest
-
 import java.lang.reflect.ParameterizedType
+
+import groovy.transform.CompileStatic
+
+import grails.testing.web.GrailsWebUnitTest
+import org.grails.testing.ParameterizedGrailsUnitTest
 
 @CompileStatic
 trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnitTest {
 
     private boolean hasBeenMocked = false
+
+    boolean getPurgeTagLibMetaClass() {
+        true
+    }
 
     /**
      * Renders a template for the given contents and model
@@ -54,7 +59,7 @@ trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnit
      * @return The tag library instance
      */
     void mockArtefact(Class<?> tagLibClass) {
-        mockTagLib tagLibClass
+        mockTagLib(tagLibClass)
     }
 
     String getBeanName(Class<?> tagLibClass) {
@@ -62,7 +67,7 @@ trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnit
     }
 
     private Class<T> getTagLibTypeUnderTest() {
-        ParameterizedType parameterizedType = (ParameterizedType)getClass().genericInterfaces.find { genericInterface ->
+        ParameterizedType parameterizedType = (ParameterizedType) getClass().genericInterfaces.find { genericInterface ->
             genericInterface instanceof ParameterizedType &&
                     TagLibUnitTest.isAssignableFrom((Class)((ParameterizedType)genericInterface).rawType)
         }
@@ -75,10 +80,9 @@ trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnit
         getArtefactInstance()
     }
 
-
     private void ensureTaglibHasBeenMocked() {
-        if(!hasBeenMocked) {
-            mockTagLib getTagLibTypeUnderTest()
+        if (!hasBeenMocked) {
+            mockTagLib(getTagLibTypeUnderTest())
             hasBeenMocked = true
         }
     }

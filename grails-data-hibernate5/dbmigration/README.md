@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-[![Java CI](https://github.com/grails/grails-database-migration/actions/workflows/gradle.yml/badge.svg)](https://github.com/grails/grails-database-migration/actions/workflows/gradle.yml)
-
 # Grails Database Migration Plugin
 
 ## Branches
@@ -52,15 +50,15 @@ One popular approach is to have a root changelog named changlog.groovy (or chang
 * 9.0.x Grails 7
 
 ## Documentation
-* Latest https://gorm.grails.org/latest/hibernate/manual/#_grails_database_migration_plugin
-* Grails 2: https://grails.github.io/grails-database-migration/docs/manual/index.html
+
+* Latest https://docs.grails.org/latest/grails-data/hibernate5/manual/index.html#databaseMigration
+* Snapshot: https://docs.grails.org/snapshot/grails-data/hibernate5/manual/index.html#databaseMigration
+* Grails 2: https://grails.github.io/grails-database-migration/1.4.0/
 * Grails 3 (Hibernate 4): https://grails.github.io/grails-database-migration/2.0.x/index.html
 * Grails 3/4 (Hibernate 5): https://grails.github.io/grails-database-migration/3.0.x/index.html
 * Grails 5 (Hibernate 5): https://grails.github.io/grails-database-migration/4.0.x/index.html
 * Grails 6 (Hibernate 5): https://grails.github.io/grails-database-migration/5.0.x/index.html
-* Grails 7 (Hibernate 5): https://gorm.grails.org/9.0.x/hibernate/manual/#_grails_database_migration_plugin
-* Snapshot: https://gorm.grails.org/snapshot/hibernate/manual/#_grails_database_migration_plugin
-
+* Grails 7 (Hibernate 5): https://docs.grails.org/7.0.x/grails-data/hibernate5/manual/index.html#databaseMigration
 
 ## Package distribution
 

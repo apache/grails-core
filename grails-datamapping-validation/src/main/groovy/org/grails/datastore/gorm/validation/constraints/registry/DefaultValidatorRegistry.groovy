@@ -19,25 +19,23 @@
 
 package org.grails.datastore.gorm.validation.constraints.registry
 
+import java.util.concurrent.ConcurrentHashMap
+
+import groovy.transform.CompileStatic
+
+import org.springframework.context.MessageSource
+import org.springframework.context.support.StaticMessageSource
+import org.springframework.validation.Validator
+
 import grails.gorm.validation.PersistentEntityValidator
 import grails.gorm.validation.exceptions.ValidationConfigurationException
-import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator
 import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.reflect.ClosureToMapPopulator
 import org.grails.datastore.mapping.validation.ValidatorRegistry
-import org.springframework.context.MessageSource
-import org.springframework.context.support.StaticMessageSource
-import org.springframework.core.env.PropertyResolver
-import org.springframework.core.env.StandardEnvironment
-import org.springframework.validation.Validator
-import org.springframework.validation.annotation.Validated
-
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A {@link ValidatorRegistry} that builds validators on demand.
@@ -63,13 +61,13 @@ class DefaultValidatorRegistry implements ValidatorRegistry, ConstraintRegistry,
         this.mappingContext = mappingContext
     }
 
-    protected Map<String, Object> resolveDefaultConstraints( ConnectionSourceSettings connectionSourceSettings ) {
+    protected Map<String, Object> resolveDefaultConstraints(ConnectionSourceSettings connectionSourceSettings) {
         Closure defaultConstraints = connectionSourceSettings.default.constraints
         Map<String, Object> defaultConstraintsMap = null
         if (defaultConstraints != null) {
             defaultConstraintsMap = [:]
             try {
-                new ClosureToMapPopulator(defaultConstraintsMap).populate defaultConstraints
+                new ClosureToMapPopulator(defaultConstraintsMap).populate(defaultConstraints)
             } catch (Throwable e) {
                 throw new ValidationConfigurationException("Error populating default constraints from configuration: ${e.message}", e)
             }
@@ -80,7 +78,7 @@ class DefaultValidatorRegistry implements ValidatorRegistry, ConstraintRegistry,
     @Override
     Validator getValidator(PersistentEntity entity) {
         Validator validator = validatorMap.get(entity)
-        if(validator != null) {
+        if (validator != null) {
             return validator
         }
         else {

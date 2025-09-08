@@ -19,17 +19,23 @@
 
 package org.grails.testing.runtime.support;
 
-import grails.core.gsp.GrailsTagLibClass;
-import groovy.lang.GroovyObject;
-import org.grails.plugins.web.GroovyPagesGrailsPlugin;
-import org.grails.taglib.TagLibraryLookup;
-import org.springframework.beans.factory.support.AbstractBeanDefinition;
-import org.springframework.beans.factory.support.GenericBeanDefinition;
-import org.springframework.context.support.GenericApplicationContext;
-
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import groovy.lang.GroovyObject;
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaClassRegistry;
+
+import org.springframework.beans.factory.support.AbstractBeanDefinition;
+import org.springframework.beans.factory.support.GenericBeanDefinition;
+import org.springframework.context.support.GenericApplicationContext;
+import org.springframework.util.ClassUtils;
+
+import grails.core.gsp.GrailsTagLibClass;
+import org.grails.plugins.web.GroovyPagesGrailsPlugin;
+import org.grails.taglib.TagLibraryLookup;
 
 /**
  * Lazy implementation of the tag library lookup class designed for testing purposes.
@@ -37,14 +43,43 @@ import java.util.Map;
  */
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class LazyTagLibraryLookup extends TagLibraryLookup {
-    List<Class> tagLibClasses = (List<Class>) new GroovyPagesGrailsPlugin().getProvidedArtefacts();
-    private Map<String, GrailsTagLibClass> lazyLoadableTagLibs = new HashMap<String, GrailsTagLibClass>();
+    List<Class> tagLibClasses;
+    private Map<String, GrailsTagLibClass> lazyLoadableTagLibs = new HashMap<>();
+
+    public LazyTagLibraryLookup() {
+        List<Class> mockedClasses = new ArrayList<>((List<Class>) new GroovyPagesGrailsPlugin().getProvidedArtefacts());
+        ClassLoader classLoader = LazyTagLibraryLookup.class.getClassLoader();
+        if (ClassUtils.isPresent("org.apache.grails.web.layout.LayoutGrailsPlugin", classLoader)) {
+            // sitemesh2 support
+            try {
+                mockedClasses.add(Class.forName("org.grails.plugins.web.taglib.GrailsLayoutTagLib"));
+                mockedClasses.add(Class.forName("org.grails.plugins.web.taglib.RenderGrailsLayoutTagLib"));
+            }
+            catch (Exception ignored) {
+            }
+        }
+        if (ClassUtils.isPresent("org.grails.plugins.sitemesh3.Sitemesh3GrailsPlugin", classLoader)) {
+            try {
+                mockedClasses.add(Class.forName("org.grails.plugins.web.taglib.RenderSitemeshTagLib"));
+            }
+            catch (Exception ignored) {
+            }
+        }
+        tagLibClasses = mockedClasses;
+    }
 
     @Override
     protected void registerTagLibraries() {
         super.registerTagLibraries();
         for (Class providedArtefact : tagLibClasses) {
             registerLazyLoadableTagLibClass(providedArtefact);
+        }
+    }
+
+    public void cleanTagLibsMetaClass() {
+        MetaClassRegistry registry = GroovySystem.getMetaClassRegistry();
+        for (Class clazz : tagLibClasses) {
+            registry.removeMetaClass(clazz);
         }
     }
 
@@ -57,7 +92,7 @@ public class LazyTagLibraryLookup extends TagLibraryLookup {
         }
 
         try {
-            grailsTagLibClass = (GrailsTagLibClass)defaultTagLibClass.getConstructor(Class.class).newInstance(tagLibClass);
+            grailsTagLibClass = (GrailsTagLibClass) defaultTagLibClass.getConstructor(Class.class).newInstance(tagLibClass);
         } catch (Exception e) {
         }
 

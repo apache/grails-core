@@ -1,29 +1,16 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
-
-package org.grails.web.json;
-
-/*
 Public Domain.
 */
 
+package org.grails.web.json;
+
 import java.io.IOException;
 import java.io.Writer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
 
 /**
  * A JSONArray is an ordered sequence of values. Its external text form is a
@@ -78,12 +65,10 @@ import java.util.*;
 @SuppressWarnings({ "unchecked", "rawtypes" })
 public class JSONArray implements JSONElement, List {
 
-
     /**
      * The arrayList where the JSONArray's properties are kept.
      */
     private ArrayList myArrayList;
-
 
     /**
      * Construct an empty JSONArray.
@@ -131,7 +116,6 @@ public class JSONArray implements JSONElement, List {
         }
     }
 
-
     /**
      * Construct a JSONArray from a source sJSON text.
      *
@@ -144,7 +128,6 @@ public class JSONArray implements JSONElement, List {
         this(new JSONTokener(string));
     }
 
-
     /**
      * Construct a JSONArray from a Collection.
      *
@@ -153,7 +136,6 @@ public class JSONArray implements JSONElement, List {
     public JSONArray(Collection collection) {
         this.myArrayList = new ArrayList(collection);
     }
-
 
     /**
      * Get the object value associated with an index.
@@ -230,7 +212,6 @@ public class JSONArray implements JSONElement, List {
         return myArrayList.retainAll(collection);
     }
 
-
     /**
      * Get the boolean value associated with an index.
      * The string values "true" and "false" are converted to boolean.
@@ -254,7 +235,6 @@ public class JSONArray implements JSONElement, List {
         throw new JSONException("JSONArray[" + index + "] is not a Boolean.");
     }
 
-
     /**
      * Get the double value associated with an index.
      *
@@ -274,7 +254,6 @@ public class JSONArray implements JSONElement, List {
         }
     }
 
-
     /**
      * Get the int value associated with an index.
      *
@@ -289,7 +268,6 @@ public class JSONArray implements JSONElement, List {
         return o instanceof Number ?
                 ((Number) o).intValue() : (int) getDouble(index);
     }
-
 
     /**
      * Get the JSONArray associated with an index.
@@ -308,7 +286,6 @@ public class JSONArray implements JSONElement, List {
                 "] is not a JSONArray.");
     }
 
-
     /**
      * Get the JSONObject associated with an index.
      *
@@ -326,7 +303,6 @@ public class JSONArray implements JSONElement, List {
                 "] is not a JSONObject.");
     }
 
-
     /**
      * Get the long value associated with an index.
      *
@@ -341,7 +317,6 @@ public class JSONArray implements JSONElement, List {
                 ((Number) o).longValue() : (long) getDouble(index);
     }
 
-
     /**
      * Get the string associated with an index.
      *
@@ -353,7 +328,6 @@ public class JSONArray implements JSONElement, List {
         return get(index).toString();
     }
 
-
     /**
      * Determine if the value is null.
      *
@@ -363,7 +337,6 @@ public class JSONArray implements JSONElement, List {
     public boolean isNull(int index) {
         return opt(index) == null;
     }
-
 
     /**
      * Make a string from the contents of this JSONArray. The
@@ -387,7 +360,6 @@ public class JSONArray implements JSONElement, List {
         return sb.toString();
     }
 
-
     /**
      * Get the number of elements in the JSONArray, included nulls.
      *
@@ -396,7 +368,6 @@ public class JSONArray implements JSONElement, List {
     public int length() {
         return myArrayList.size();
     }
-
 
     /**
      * Get the optional object value associated with an index.
@@ -410,7 +381,6 @@ public class JSONArray implements JSONElement, List {
                 null : this.myArrayList.get(index);
     }
 
-
     /**
      * Get the optional boolean value associated with an index.
      * It returns false if there is no value at that index,
@@ -422,7 +392,6 @@ public class JSONArray implements JSONElement, List {
     public boolean optBoolean(int index) {
         return optBoolean(index, false);
     }
-
 
     /**
      * Get the optional boolean value associated with an index.
@@ -441,7 +410,6 @@ public class JSONArray implements JSONElement, List {
         }
     }
 
-
     /**
      * Get the optional double value associated with an index.
      * NaN is returned if there is no value for the index,
@@ -453,7 +421,6 @@ public class JSONArray implements JSONElement, List {
     public double optDouble(int index) {
         return optDouble(index, Double.NaN);
     }
-
 
     /**
      * Get the optional double value associated with an index.
@@ -472,7 +439,6 @@ public class JSONArray implements JSONElement, List {
         }
     }
 
-
     /**
      * Get the optional int value associated with an index.
      * Zero is returned if there is no value for the index,
@@ -484,7 +450,6 @@ public class JSONArray implements JSONElement, List {
     public int optInt(int index) {
         return optInt(index, 0);
     }
-
 
     /**
      * Get the optional int value associated with an index.
@@ -503,7 +468,6 @@ public class JSONArray implements JSONElement, List {
         }
     }
 
-
     /**
      * Get the optional JSONArray associated with an index.
      *
@@ -515,7 +479,6 @@ public class JSONArray implements JSONElement, List {
         Object o = opt(index);
         return o instanceof JSONArray ? (JSONArray) o : null;
     }
-
 
     /**
      * Get the optional JSONObject associated with an index.
@@ -530,7 +493,6 @@ public class JSONArray implements JSONElement, List {
         return o instanceof JSONObject ? (JSONObject) o : null;
     }
 
-
     /**
      * Get the optional long value associated with an index.
      * Zero is returned if there is no value for the index,
@@ -542,7 +504,6 @@ public class JSONArray implements JSONElement, List {
     public long optLong(int index) {
         return optLong(index, 0);
     }
-
 
     /**
      * Get the optional long value associated with an index.
@@ -561,7 +522,6 @@ public class JSONArray implements JSONElement, List {
         }
     }
 
-
     /**
      * Get the optional string value associated with an index. It returns an
      * empty string if there is no value at that index. If the value
@@ -573,7 +533,6 @@ public class JSONArray implements JSONElement, List {
     public String optString(int index) {
         return optString(index, "");
     }
-
 
     /**
      * Get the optional string associated with an index.
@@ -588,7 +547,6 @@ public class JSONArray implements JSONElement, List {
         return o != null ? o.toString() : defaultValue;
     }
 
-
     /**
      * Append a boolean value. This increases the array's length by one.
      *
@@ -599,7 +557,6 @@ public class JSONArray implements JSONElement, List {
         put(value ? Boolean.TRUE : Boolean.FALSE);
         return this;
     }
-
 
     /**
      * Append a double value. This increases the array's length by one.
@@ -615,7 +572,6 @@ public class JSONArray implements JSONElement, List {
         return this;
     }
 
-
     /**
      * Append an int value. This increases the array's length by one.
      *
@@ -627,7 +583,6 @@ public class JSONArray implements JSONElement, List {
         return this;
     }
 
-
     /**
      * Append an long value. This increases the array's length by one.
      *
@@ -638,7 +593,6 @@ public class JSONArray implements JSONElement, List {
         put(Long.valueOf(value));
         return this;
     }
-
 
     /**
      * Append an object value. This increases the array's length by one.
@@ -652,7 +606,6 @@ public class JSONArray implements JSONElement, List {
         this.myArrayList.add(value);
         return this;
     }
-
 
     /**
      * Put or replace a boolean value in the JSONArray. If the index is greater
@@ -668,7 +621,6 @@ public class JSONArray implements JSONElement, List {
         put(index, value ? Boolean.TRUE : Boolean.FALSE);
         return this;
     }
-
 
     /**
      * Put or replace a double value. If the index is greater than the length of
@@ -686,7 +638,6 @@ public class JSONArray implements JSONElement, List {
         return this;
     }
 
-
     /**
      * Put or replace an int value. If the index is greater than the length of
      * the JSONArray, then null elements will be added as necessary to pad
@@ -702,7 +653,6 @@ public class JSONArray implements JSONElement, List {
         return this;
     }
 
-
     /**
      * Put or replace a long value. If the index is greater than the length of
      * the JSONArray, then null elements will be added as necessary to pad
@@ -717,7 +667,6 @@ public class JSONArray implements JSONElement, List {
         put(index, Long.valueOf(value));
         return this;
     }
-
 
     /**
      * Put or replace an object value in the JSONArray. If the index is greater
@@ -746,7 +695,6 @@ public class JSONArray implements JSONElement, List {
         return this;
     }
 
-
     /**
      * Produce a JSONObject by combining a JSONArray of names with the values
      * of this JSONArray.
@@ -768,7 +716,6 @@ public class JSONArray implements JSONElement, List {
         return jo;
     }
 
-
     /**
      * Make an JSON text of this JSONArray. For compactness, no
      * unnecessary whitespace is added. If it is not possible to produce a
@@ -789,7 +736,6 @@ public class JSONArray implements JSONElement, List {
         }
     }
 
-
     /**
      * Make a prettyprinted JSON text of this JSONArray.
      * Warning: This method assumes that the data structure is acyclical.
@@ -805,7 +751,6 @@ public class JSONArray implements JSONElement, List {
     public String toString(int indentFactor) throws JSONException {
         return toString(indentFactor, 0);
     }
-
 
     /**
      * Make a prettyprinted JSON text of this JSONArray.
@@ -867,7 +812,7 @@ public class JSONArray implements JSONElement, List {
 
     @Override
     public int hashCode() {
-        return  myArrayList != null ? myArrayList.hashCode() : super.hashCode();
+        return myArrayList != null ? myArrayList.hashCode() : super.hashCode();
     }
 
     /**

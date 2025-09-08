@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.interceptor.NoRollbackRuleAttribute;
 import org.springframework.transaction.interceptor.RollbackRuleAttribute;
@@ -49,7 +50,7 @@ public class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
     public GrailsTransactionAttribute(int propagationBehavior, List<RollbackRuleAttribute> rollbackRules) {
         super(propagationBehavior, rollbackRules);
     }
-    
+
     public GrailsTransactionAttribute(TransactionAttribute other) {
         super();
         setPropagationBehavior(other.getPropagationBehavior());
@@ -67,15 +68,15 @@ public class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
         setReadOnly(other.isReadOnly());
         setName(other.getName());
     }
-    
+
     public GrailsTransactionAttribute(GrailsTransactionAttribute other) {
-        this((RuleBasedTransactionAttribute)other);
+        this((RuleBasedTransactionAttribute) other);
     }
-    
+
     public GrailsTransactionAttribute(RuleBasedTransactionAttribute other) {
         super(other);
-        if(other instanceof GrailsTransactionAttribute) {
-            this.inheritRollbackOnly = ((GrailsTransactionAttribute)other).inheritRollbackOnly;
+        if (other instanceof GrailsTransactionAttribute) {
+            this.inheritRollbackOnly = ((GrailsTransactionAttribute) other).inheritRollbackOnly;
         }
     }
 
@@ -100,7 +101,7 @@ public class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
         }
 
         if (log.isTraceEnabled()) {
-            log.trace("Winning rollback rule is: $winner" );
+            log.trace("Winning rollback rule is: $winner");
         }
 
         // User superclass behavior (rollback on unchecked) if no rule matches.
@@ -113,6 +114,7 @@ public class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
 
         return !(winner instanceof NoRollbackRuleAttribute);
     }
+
     public boolean isInheritRollbackOnly() {
         return inheritRollbackOnly;
     }

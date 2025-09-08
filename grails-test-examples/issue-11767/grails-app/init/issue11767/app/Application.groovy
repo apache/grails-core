@@ -22,7 +22,9 @@ package issue11767.app
 import grails.boot.GrailsApp
 import grails.boot.config.GrailsAutoConfiguration
 import groovy.transform.CompileStatic
+import io.micronaut.spring.boot.starter.EnableMicronaut
 
+@EnableMicronaut
 @CompileStatic
 class Application extends GrailsAutoConfiguration {
     static void main(String[] args) {

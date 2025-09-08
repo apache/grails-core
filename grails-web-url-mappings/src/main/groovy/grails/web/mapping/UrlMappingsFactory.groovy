@@ -20,10 +20,12 @@
 package grails.web.mapping
 
 import groovy.transform.CompileStatic
-import org.grails.web.mapping.DefaultUrlMappingEvaluator
-import org.grails.web.mapping.DefaultUrlMappingsHolder
+
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
+
+import org.grails.web.mapping.DefaultUrlMappingEvaluator
+import org.grails.web.mapping.DefaultUrlMappingsHolder
 
 /**
  * Helper class for creating a {@link UrlMapping}. Useful for testing

@@ -1,19 +1,6 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
+Public Domain.
+*/
 
 package org.grails.web.json;
 
@@ -21,10 +8,6 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-/*
-Public Domain.
-*/
 
 /**
  * A JSONTokener takes a source string and extracts characters and tokens from
@@ -41,12 +24,10 @@ public class JSONTokener {
      */
     private int myIndex;
 
-
     /**
      * The source string being tokenized.
      */
     private String mySource;
-
 
     /**
      * Construct a JSONTokener from a string.
@@ -58,7 +39,6 @@ public class JSONTokener {
         this.mySource = s;
     }
 
-
     /**
      * Back up one character. This provides a sort of lookahead capability,
      * so that you can test for a digit or letter before attempting to parse
@@ -69,7 +49,6 @@ public class JSONTokener {
             this.myIndex -= 1;
         }
     }
-
 
     /**
      * Get the hex value of a character (base16).
@@ -91,7 +70,6 @@ public class JSONTokener {
         return -1;
     }
 
-
     /**
      * Determine if the source string still contains characters that next()
      * can consume.
@@ -101,7 +79,6 @@ public class JSONTokener {
     public boolean more() {
         return myIndex < mySource.length();
     }
-
 
     /**
      * Get the next character in the source string.
@@ -116,7 +93,6 @@ public class JSONTokener {
         }
         return 0;
     }
-
 
     /**
      * Consume the next character, and check that it matches a specified
@@ -134,7 +110,6 @@ public class JSONTokener {
         }
         return n;
     }
-
 
     /**
      * Get the next n characters.
@@ -199,7 +174,6 @@ public class JSONTokener {
         }
     }
 
-
     /**
      * Return the characters up to the next close quote character.
      * Backslash processing is done. The formal JSON format does not
@@ -259,7 +233,6 @@ public class JSONTokener {
         }
     }
 
-
     /**
      * Get the text up but not including the specified character or the
      * end of line, whichever comes first.
@@ -280,7 +253,6 @@ public class JSONTokener {
             sb.append(c);
         }
     }
-
 
     /**
      * Get the text up but not including one of the specified delimeter
@@ -304,7 +276,6 @@ public class JSONTokener {
             sb.append(c);
         }
     }
-
 
     /**
      * Get the next value. The value can be a Boolean, Double, Integer,
@@ -427,7 +398,6 @@ public class JSONTokener {
         return s;
     }
 
-
     /**
      * Skip characters until the next character is the requested character.
      * If the requested character is not found, no characters are skipped.
@@ -450,7 +420,6 @@ public class JSONTokener {
         return c;
     }
 
-
     /**
      * Skip characters until past the requested string.
      * If it is not found, we are left at the end of the source.
@@ -466,7 +435,6 @@ public class JSONTokener {
         }
     }
 
-
     /**
      * Make a JSONException to signal a syntax error.
      *
@@ -477,7 +445,6 @@ public class JSONTokener {
 
         return new JSONException(message + toRegexSafeString());
     }
-
 
     /**
      * Make a printable string of this JSONTokener.

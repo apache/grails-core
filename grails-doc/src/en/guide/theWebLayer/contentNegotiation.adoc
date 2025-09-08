@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Grails has built in support for http://en.wikipedia.org/wiki/Content_negotiation[Content negotiation] using either the HTTP `Accept` header, an explicit format request parameter or the extension of a mapped URI.
+Grails has built in support for https://en.wikipedia.org/wiki/Content_negotiation[Content negotiation] using either the HTTP `Accept` header, an explicit format request parameter or the extension of a mapped URI.
 
 
 ==== Configuring Mime Types
@@ -87,10 +87,10 @@ So if you, as a browser or some other client, want a resource as XML, you can us
 
 [source]
 ----
-http://my.domain.org/books.xml
+https://my.domain.org/books.xml
 ----
 
-NOTE: The request parameters `format` is allowed as well `http://my.domain.org/books?format=xml`, but the default Grails URL Mapping `get "/$controller(.$format)?"(action:"index")` will override the `format` parameter with null. So the default mapping should be updated to `get "/$controller"(action:"index")`.
+NOTE: The request parameters `format` is allowed as well `https://my.domain.org/books?format=xml`, but the default Grails URL Mapping `get "/$controller(.$format)?"(action:"index")` will override the `format` parameter with null. So the default mapping should be updated to `get "/$controller"(action:"index")`.
 
 The result of this on the server side is a `format` property on the `response` object with the value `xml` .
 
@@ -144,13 +144,13 @@ withFormat {
 }
 ----
 
-NOTE: When using link:../ref/Controllers/withFormat.html[withFormat] make sure it is the last call in your controller action as the return value of the `withFormat` method is used by the action to dictate what happens next.
+NOTE: When using link:{controllersRef}withFormat.html[withFormat] make sure it is the last call in your controller action as the return value of the `withFormat` method is used by the action to dictate what happens next.
 
 
 ==== Using the Accept header
 
 
-Every incoming HTTP request has a special http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html[Accept] header that defines what media types (or mime types) a client can "accept". In older browsers this is typically:
+Every incoming HTTP request has a special https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html[Accept] header that defines what media types (or mime types) a client can "accept". In older browsers this is typically:
 
 [source]
 ----
@@ -192,7 +192,7 @@ NOTE: If the accept header is used but contains no registered content types, Gra
 
 As of Grails 2.0, there is a separate notion of the _request_ format and the _response_ format. The request format is dictated by the `CONTENT_TYPE` header and is typically used to detect if the incoming request can be parsed into XML or JSON, whilst the response format uses the file extension, format parameter or ACCEPT header to attempt to deliver an appropriate response to the client.
 
-The link:../ref/Controllers/withFormat.html[withFormat] available on controllers deals specifically with the response format. If you wish to add logic that deals with the request format then you can do so using a separate `withFormat` method available on the request:
+The link:{controllersRef}withFormat.html[withFormat] available on controllers deals specifically with the response format. If you wish to add logic that deals with the request format then you can do so using a separate `withFormat` method available on the request:
 
 [source,groovy]
 ----

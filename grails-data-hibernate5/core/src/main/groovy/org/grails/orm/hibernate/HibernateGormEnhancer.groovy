@@ -19,13 +19,16 @@
 package org.grails.orm.hibernate
 
 import groovy.transform.CompileStatic
+
+import org.springframework.transaction.PlatformTransactionManager
+
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.GormValidationApi
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
-import org.springframework.transaction.PlatformTransactionManager
+
 /**
  * Extended GORM Enhancer that fills out the remaining GORM for Hibernate methods
  * and implements string-based query support via HQL.

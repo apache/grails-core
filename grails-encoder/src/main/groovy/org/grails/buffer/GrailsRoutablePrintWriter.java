@@ -18,26 +18,26 @@
  */
 package org.grails.buffer;
 
-import groovy.lang.Writable;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
 
+import groovy.lang.Writable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.objenesis.ObjenesisStd;
 import org.springframework.objenesis.instantiator.ObjectInstantiator;
 
-// Moved from grails-gsp:
-// https://github.com/grails/grails-gsp/blob/v6.0.2/grails-web-sitemesh/src/main/groovy/org/grails/web/sitemesh/GrailsRoutablePrintWriter.java
 public class GrailsRoutablePrintWriter extends GrailsPrintWriterAdapter {
     private static final Logger LOG = LoggerFactory.getLogger(GrailsRoutablePrintWriter.class);
     private DestinationFactory factory;
     private boolean blockFlush = true;
     private boolean blockClose = true;
     private boolean destinationActivated = false;
-    private static ObjectInstantiator instantiator=null;
+    private static ObjectInstantiator instantiator = null;
+
     static {
         try {
             instantiator = new ObjenesisStd(false).getInstantiatorOf(GrailsRoutablePrintWriter.class);
@@ -60,7 +60,7 @@ public class GrailsRoutablePrintWriter extends GrailsPrintWriterAdapter {
 
     public static GrailsRoutablePrintWriter newInstance(DestinationFactory factory) {
         if (instantiator != null) {
-            GrailsRoutablePrintWriter instance = (GrailsRoutablePrintWriter)instantiator.newInstance();
+            GrailsRoutablePrintWriter instance = (GrailsRoutablePrintWriter) instantiator.newInstance();
             instance.out = new NullWriter();
             instance.factory = factory;
             instance.blockFlush = true;

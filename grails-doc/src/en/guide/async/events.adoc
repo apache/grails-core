@@ -19,7 +19,7 @@ under the License.
 
 Grails 3.3 introduces a new Events API that replaces the previous implementation that was based on Reactor 2.x (which is no longer maintained and deprecated).
 
-In Grails 3.3 and above a new link:{asyncApi}/grails/events/bus/EventBus.html[EventBus] abstraction has been introduced. Like the `PromiseFactory` notion, there are implementations of the `EventBus` interface for common asynchronous frameworks like GPars and RxJava.
+In Grails 3.3 and above a new link:{api}grails/events/bus/EventBus.html[EventBus] abstraction has been introduced. Like the `PromiseFactory` notion, there are implementations of the `EventBus` interface for common asynchronous frameworks like GPars and RxJava.
 
 To use the Grails Events abstraction you should add a dependency on the `events` plugin to your `build.gradle` file:
 
@@ -29,7 +29,7 @@ To use the Grails Events abstraction you should add a dependency on the `events`
 implementation "org.apache.grails:grails-events:{version}"
 ----
 
-If no asynchronous framework is present on the classpath then by default Grails creates an EventBus based off of the currently active `PromiseFactory`. The default implementation is link:{asyncApi}/org/grails/async/factory/future/CachedThreadPoolPromiseFactory.html[CachedThreadPoolPromiseFactory] which uses a thread pool that will create threads as needed (the same as `java.util.concurrent.Executors.newCachedThreadPool()`).
+If no asynchronous framework is present on the classpath then by default Grails creates an EventBus based off of the currently active `PromiseFactory`. The default implementation is link:{api}org/grails/async/factory/future/CachedThreadPoolPromiseFactory.html[CachedThreadPoolPromiseFactory] which uses a thread pool that will create threads as needed (the same as `java.util.concurrent.Executors.newCachedThreadPool()`).
 
 If you wish to use a popular async framework such as RxJava as the `EventBus` implementation then you will need to add the appropriate dependency. For example for RxJava 1.x:
 

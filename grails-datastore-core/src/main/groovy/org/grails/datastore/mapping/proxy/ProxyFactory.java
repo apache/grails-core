@@ -51,6 +51,6 @@ public interface ProxyFactory extends ProxyHandler {
      * @param associationKey The key to proxy
      * @return A proxy instance
      */
-    <T,K extends Serializable> T createProxy(Session session, AssociationQueryExecutor<K, T> executor, K associationKey);
+    <T, K extends Serializable> T createProxy(Session session, AssociationQueryExecutor<K, T> executor, K associationKey);
 
 }

@@ -1,36 +1,26 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
-
-package org.grails.web.json;
-
-/*
 Public Domain.
 */
 
+package org.grails.web.json;
+
+import java.io.IOException;
+import java.io.Writer;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+
 import groovy.lang.Writable;
+
+import org.springframework.util.ClassUtils;
+
 import org.grails.encoder.EncodesToWriter;
 import org.grails.encoder.StreamingEncoder;
 import org.grails.encoder.StreamingEncoderWritable;
 import org.grails.encoder.StreamingEncoderWriter;
-import org.springframework.util.ClassUtils;
-
-import java.io.IOException;
-import java.io.Writer;
-import java.util.*;
 
 /**
  * A JSONObject is an unordered collection of name/value pairs. Its
@@ -89,11 +79,12 @@ import java.util.*;
 public class JSONObject implements JSONElement, Map {
     private static EncodesToWriter javascriptEncoderStateless;
     private static StreamingEncoder javascriptEncoder;
-    private static boolean useStreamingJavascriptEncoder=false;
+    private static boolean useStreamingJavascriptEncoder = false;
+
     static {
         try {
-            javascriptEncoder = (StreamingEncoder)ClassUtils.forName("grails.encoders.JSONEncoder", JSONObject.class.getClassLoader()).newInstance();
-            javascriptEncoderStateless = (EncodesToWriter)javascriptEncoder;
+            javascriptEncoder = (StreamingEncoder) ClassUtils.forName("grails.encoders.JSONEncoder", JSONObject.class.getClassLoader()).newInstance();
+            javascriptEncoderStateless = (EncodesToWriter) javascriptEncoder;
             useStreamingJavascriptEncoder = true;
         }
         catch (Exception e) {
@@ -113,7 +104,6 @@ public class JSONObject implements JSONElement, Map {
         this.myHashMap = new HashMap();
     }
 
-
     /**
      * Construct a JSONObject from a subset of another JSONObject.
      * An array of strings is used to identify the keys that should be copied.
@@ -129,7 +119,6 @@ public class JSONObject implements JSONElement, Map {
             putOpt(sa[i], jo.opt(sa[i]));
         }
     }
-
 
     /**
      * Construct a JSONObject from a JSONTokener.
@@ -191,7 +180,6 @@ public class JSONObject implements JSONElement, Map {
         }
     }
 
-
     /**
      * Construct a JSONObject from a Map.
      *
@@ -201,7 +189,6 @@ public class JSONObject implements JSONElement, Map {
     public JSONObject(Map map) {
         this.myHashMap = new HashMap(map);
     }
-
 
     /**
      * Construct a JSONObject from a string.
@@ -215,7 +202,6 @@ public class JSONObject implements JSONElement, Map {
     public JSONObject(String string) throws JSONException {
         this(new JSONTokener(string));
     }
-
 
     /**
      * Accumulate values under a key. It is similar to the put method except
@@ -244,7 +230,6 @@ public class JSONObject implements JSONElement, Map {
         return this;
     }
 
-
     /**
      * Get the value object associated with a key.
      *
@@ -253,13 +238,12 @@ public class JSONObject implements JSONElement, Map {
      * @throws JSONException if the key is not found.
      */
     public Object get(String key) throws JSONException {
-        if(!myHashMap.containsKey(key)) {
+        if (!myHashMap.containsKey(key)) {
             throw new JSONException("JSONObject[" + quote(key) +
                     "] not found.");
         }
         return opt(key);
     }
-
 
     /**
      * Get the boolean value associated with a key.
@@ -283,7 +267,6 @@ public class JSONObject implements JSONElement, Map {
                 "] is not a Boolean.");
     }
 
-
     /**
      * Get the double value associated with a key.
      *
@@ -303,7 +286,6 @@ public class JSONObject implements JSONElement, Map {
         }
     }
 
-
     /**
      * Get the int value associated with a key. If the number value is too
      * large for an int, it will be clipped.
@@ -318,7 +300,6 @@ public class JSONObject implements JSONElement, Map {
         return o instanceof Number ?
                 ((Number) o).intValue() : (int) getDouble(key);
     }
-
 
     /**
      * Get the JSONArray value associated with a key.
@@ -337,7 +318,6 @@ public class JSONObject implements JSONElement, Map {
                 "] is not a JSONArray.");
     }
 
-
     /**
      * Get the JSONObject value associated with a key.
      *
@@ -355,7 +335,6 @@ public class JSONObject implements JSONElement, Map {
                 "] is not a JSONObject.");
     }
 
-
     /**
      * Get the long value associated with a key. If the number value is too
      * long for a long, it will be clipped.
@@ -371,7 +350,6 @@ public class JSONObject implements JSONElement, Map {
                 ((Number) o).longValue() : (long) getDouble(key);
     }
 
-
     /**
      * Get the string associated with a key.
      *
@@ -383,7 +361,6 @@ public class JSONObject implements JSONElement, Map {
         return get(key).toString();
     }
 
-
     /**
      * Determine if the JSONObject contains a specific key.
      *
@@ -393,7 +370,6 @@ public class JSONObject implements JSONElement, Map {
     public boolean has(String key) {
         return myHashMap.containsKey(key);
     }
-
 
     /**
      * Determine if the value associated with the key is null or if there is
@@ -407,7 +383,6 @@ public class JSONObject implements JSONElement, Map {
         return opt(key) == null;
     }
 
-
     /**
      * Get an enumeration of the keys of the JSONObject.
      *
@@ -417,7 +392,6 @@ public class JSONObject implements JSONElement, Map {
         return myHashMap.keySet().iterator();
     }
 
-
     /**
      * Get the number of keys stored in the JSONObject.
      *
@@ -426,7 +400,6 @@ public class JSONObject implements JSONElement, Map {
     public int length() {
         return myHashMap.size();
     }
-
 
     /**
      * Produce a JSONArray containing the names of the elements of this
@@ -458,7 +431,7 @@ public class JSONObject implements JSONElement, Map {
         }
         testValidity(n);
 
-// Shave off trailing zeros and decimal point, if possible.
+        // Shave off trailing zeros and decimal point, if possible.
 
         String s = n.toString();
         if (s.indexOf('.') > 0 && s.indexOf('e') < 0 && s.indexOf('E') < 0) {
@@ -480,7 +453,7 @@ public class JSONObject implements JSONElement, Map {
         StringBuilder sb = new StringBuilder("[");
         boolean first = true;
         Iterator iterator = c.iterator();
-        while(iterator.hasNext()) {
+        while (iterator.hasNext()) {
             if (!first) {
                 sb.append(',');
             }
@@ -491,7 +464,6 @@ public class JSONObject implements JSONElement, Map {
         return sb.toString();
     }
 
-
     /**
      * Get an optional value associated with a key.
      *
@@ -501,7 +473,6 @@ public class JSONObject implements JSONElement, Map {
     public Object opt(String key) {
         return key == null ? null : this.myHashMap.get(key);
     }
-
 
     /**
      * Get an optional boolean associated with a key.
@@ -514,7 +485,6 @@ public class JSONObject implements JSONElement, Map {
     public boolean optBoolean(String key) {
         return optBoolean(key, false);
     }
-
 
     /**
      * Get an optional boolean associated with a key.
@@ -533,7 +503,6 @@ public class JSONObject implements JSONElement, Map {
         }
     }
 
-
     /**
      * Get an optional double associated with a key,
      * or NaN if there is no such key or if its value is not a number.
@@ -546,7 +515,6 @@ public class JSONObject implements JSONElement, Map {
     public double optDouble(String key) {
         return optDouble(key, Double.NaN);
     }
-
 
     /**
      * Get an optional double associated with a key, or the
@@ -568,7 +536,6 @@ public class JSONObject implements JSONElement, Map {
         }
     }
 
-
     /**
      * Get an optional int value associated with a key,
      * or zero if there is no such key or if the value is not a number.
@@ -581,7 +548,6 @@ public class JSONObject implements JSONElement, Map {
     public int optInt(String key) {
         return optInt(key, 0);
     }
-
 
     /**
      * Get an optional int value associated with a key,
@@ -601,7 +567,6 @@ public class JSONObject implements JSONElement, Map {
         }
     }
 
-
     /**
      * Get an optional JSONArray associated with a key.
      * It returns null if there is no such key, or if its value is not a
@@ -614,7 +579,6 @@ public class JSONObject implements JSONElement, Map {
         Object o = opt(key);
         return o instanceof JSONArray ? (JSONArray) o : null;
     }
-
 
     /**
      * Get an optional JSONObject associated with a key.
@@ -629,7 +593,6 @@ public class JSONObject implements JSONElement, Map {
         return o instanceof JSONObject ? (JSONObject) o : null;
     }
 
-
     /**
      * Get an optional long value associated with a key,
      * or zero if there is no such key or if the value is not a number.
@@ -642,7 +605,6 @@ public class JSONObject implements JSONElement, Map {
     public long optLong(String key) {
         return optLong(key, 0);
     }
-
 
     /**
      * Get an optional long value associated with a key,
@@ -662,7 +624,6 @@ public class JSONObject implements JSONElement, Map {
         }
     }
 
-
     /**
      * Get an optional string associated with a key.
      * It returns an empty string if there is no such key. If the value is not
@@ -674,7 +635,6 @@ public class JSONObject implements JSONElement, Map {
     public String optString(String key) {
         return optString(key, "");
     }
-
 
     /**
      * Get an optional string associated with a key.
@@ -689,7 +649,6 @@ public class JSONObject implements JSONElement, Map {
         return o != null ? o.toString() : defaultValue;
     }
 
-
     /**
      * Put a key/boolean pair in the JSONObject.
      *
@@ -702,7 +661,6 @@ public class JSONObject implements JSONElement, Map {
         put(key, value ? Boolean.TRUE : Boolean.FALSE);
         return this;
     }
-
 
     /**
      * Put a key/double pair in the JSONObject.
@@ -717,7 +675,6 @@ public class JSONObject implements JSONElement, Map {
         return this;
     }
 
-
     /**
      * Put a key/int pair in the JSONObject.
      *
@@ -731,7 +688,6 @@ public class JSONObject implements JSONElement, Map {
         return this;
     }
 
-
     /**
      * Put a key/long pair in the JSONObject.
      *
@@ -744,7 +700,6 @@ public class JSONObject implements JSONElement, Map {
         put(key, Long.valueOf(value));
         return this;
     }
-
 
     /**
      * Put a key/value pair in the JSONObject. If the value is null,
@@ -771,7 +726,6 @@ public class JSONObject implements JSONElement, Map {
         return this;
     }
 
-
     /**
      * Put a key/value pair in the JSONObject, but only if the
      * key and the value are both non-null.
@@ -789,7 +743,6 @@ public class JSONObject implements JSONElement, Map {
         }
         return this;
     }
-
 
     /**
      * Produce a string in double quotes with backslash sequences in all the
@@ -889,7 +842,6 @@ public class JSONObject implements JSONElement, Map {
         }
     }
 
-
     /**
      * Produce a JSONArray containing the values of the members of this
      * JSONObject.
@@ -944,7 +896,6 @@ public class JSONObject implements JSONElement, Map {
         }
     }
 
-
     /**
      * Make a prettyprinted JSON text of this JSONObject.
      * <p>
@@ -961,7 +912,6 @@ public class JSONObject implements JSONElement, Map {
     public String toString(int indentFactor) throws JSONException {
         return toString(indentFactor, 0);
     }
-
 
     /**
      * Make a prettyprinted JSON text of this JSONObject.
@@ -1020,7 +970,6 @@ public class JSONObject implements JSONElement, Map {
         return sb.toString();
     }
 
-
     /**
      * Make a JSON text of an object value.
      * <p>
@@ -1062,7 +1011,7 @@ public class JSONObject implements JSONElement, Map {
         } else if (value instanceof Boolean) {
             writer.write(value.toString());
         } else if (value instanceof JSONElement) {
-            ((JSONElement)value).writeTo(writer);
+            ((JSONElement) value).writeTo(writer);
         } else {
             writeQuoted(writer, value);
         }
@@ -1072,13 +1021,13 @@ public class JSONObject implements JSONElement, Map {
         if (useStreamingJavascriptEncoder) {
             writer.write("\"");
             if (value.getClass() == String.class || value.getClass() == StringBuilder.class || value.getClass() == StringBuffer.class) {
-                encodeToWriter((CharSequence)value, writer);
-            } else if(value instanceof StreamingEncoderWritable) {
-                ((StreamingEncoderWritable)value).encodeTo(writer, javascriptEncoderStateless);
+                encodeToWriter((CharSequence) value, writer);
+            } else if (value instanceof StreamingEncoderWritable) {
+                ((StreamingEncoderWritable) value).encodeTo(writer, javascriptEncoderStateless);
             } else if (value instanceof Writable) {
-                ((Writable)value).writeTo(new StreamingEncoderWriter(writer, javascriptEncoder, null));
+                ((Writable) value).writeTo(new StreamingEncoderWriter(writer, javascriptEncoder, null));
             }
-            else{
+            else {
                 encodeToWriter(value.toString(), writer);
             }
             writer.write("\"");
@@ -1087,7 +1036,6 @@ public class JSONObject implements JSONElement, Map {
             writer.write(valueToString(value));
         }
     }
-
 
     protected static void encodeToWriter(CharSequence str, Writer writer) throws IOException {
         javascriptEncoderStateless.encodeToWriter(str, 0, str.length(), writer, null);
@@ -1141,7 +1089,6 @@ public class JSONObject implements JSONElement, Map {
         return quote(value.toString());
     }
 
-
     /**
      * Write the contents of the JSONObject as JSON text to a writer.
      * For compactness, no whitespace is added.
@@ -1155,8 +1102,8 @@ public class JSONObject implements JSONElement, Map {
         try {
             boolean notFirst = false;
             writer.write('{');
-            for(Iterator it = myHashMap.entrySet().iterator(); it.hasNext();) {
-                Map.Entry entry = (Entry)it.next();
+            for (Iterator it = myHashMap.entrySet().iterator(); it.hasNext();) {
+                Map.Entry entry = (Entry) it.next();
                 if (notFirst) {
                     writer.write(',');
                 }
@@ -1236,7 +1183,6 @@ public class JSONObject implements JSONElement, Map {
     public int hashCode() {
         return (myHashMap != null ? myHashMap.hashCode() : 0);
     }
-
 
     @Override
     public Writer writeTo(Writer out) throws IOException {

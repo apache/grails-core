@@ -34,7 +34,6 @@ dependencies {
     testImplementation project(':grails-test-suite-base')
     testImplementation project(':grails-domain-class')
     testImplementation project(':grails-datasource')
-    testImplementation project(':grails-i18n')
     testImplementation project(':grails-url-mappings')
     testImplementation project(':grails-databinding')
     testImplementation project(':grails-services')

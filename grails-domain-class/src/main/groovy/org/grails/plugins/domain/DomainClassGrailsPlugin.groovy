@@ -18,14 +18,8 @@
  */
 package org.grails.plugins.domain
 
-import grails.core.GrailsApplication
 import grails.plugins.Plugin
 import grails.util.GrailsUtil
-import grails.validation.ConstraintsEvaluator
-import org.grails.plugins.domain.support.ConstraintEvaluatorAdapter
-import org.grails.plugins.domain.support.DefaultConstraintEvaluatorFactoryBean
-import org.grails.plugins.domain.support.DefaultMappingContextFactoryBean
-import org.grails.plugins.domain.support.ValidatorRegistryFactoryBean
 
 /**
  * Configures the domain classes in the spring context.
@@ -35,26 +29,10 @@ import org.grails.plugins.domain.support.ValidatorRegistryFactoryBean
  */
 class DomainClassGrailsPlugin extends Plugin {
 
-    def watchedResources = ["file:./grails-app/domain/**/*.groovy",
-                            "file:./plugins/*/grails-app/domain/**/*.groovy"]
+    def watchedResources = ['file:./grails-app/domain/**/*.groovy',
+                            'file:./plugins/*/grails-app/domain/**/*.groovy']
 
     def version = GrailsUtil.getGrailsVersion()
-    def dependsOn = [i18n:version]
+    def dependsOn = [i18n: version]
     def loadAfter = ['controllers', 'dataSource']
-
-    Closure doWithSpring() {{->
-        GrailsApplication application = grailsApplication
-        validateableConstraintsEvaluator(DefaultConstraintEvaluatorFactoryBean) { bean ->
-            bean.lazyInit = true
-        }
-        "${ConstraintsEvaluator.BEAN_NAME}"(ConstraintEvaluatorAdapter, ref("validateableConstraintsEvaluator"))  { bean ->
-            bean.lazyInit = true
-        }
-        grailsDomainClassMappingContext(DefaultMappingContextFactoryBean, application, applicationContext)  { bean ->
-            bean.lazyInit = true
-        }
-        gormValidatorRegistry(ValidatorRegistryFactoryBean)  { bean ->
-            bean.lazyInit = true
-        }
-    }}
 }

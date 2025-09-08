@@ -30,6 +30,7 @@ import grails.async.decorator.PromiseDecoratorProvider
  */
 @CompileStatic
 class DelegateAsyncUtils {
+
     /**
      * Obtains all {@link PromiseDecorator} instances for the target and additional decorators supplied
      *
@@ -37,10 +38,10 @@ class DelegateAsyncUtils {
      * @param additional The additional
      * @return The additional promise decorators
      */
-    static Collection<PromiseDecorator> getPromiseDecorators(Object target, Collection<PromiseDecorator> additional ) {
+    static Collection<PromiseDecorator> getPromiseDecorators(Object target, Collection<PromiseDecorator> additional) {
         Collection<PromiseDecorator> decorators = []
         if (target instanceof PromiseDecoratorProvider) {
-            decorators.addAll(((PromiseDecoratorProvider)target).getDecorators())
+            decorators.addAll(((PromiseDecoratorProvider) target).getDecorators())
         }
         if (additional) {
             decorators.addAll(additional)

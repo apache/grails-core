@@ -19,7 +19,7 @@ under the License.
 
 === Quick Start with Grails Scaffolding
 
-To get started quickly with Grails it is often useful to use a feature called link:scaffolding.html[scaffolding] to generate the skeleton of an application. To do this use one of the `generate-*` commands such as link:../ref/Command%20Line/generate-all.html[generate-all], which will generate a link:theWebLayer.html#controllers[controller] (and its unit test) and the associated link:theWebLayer.html#gsp[views]:
+To get started quickly with Grails it is often useful to use a feature called link:scaffolding.html[scaffolding] to generate the skeleton of an application. To do this use one of the `generate-*` commands such as link:{commandLineRef}generate-all.html[generate-all], which will generate a link:theWebLayer.html#controllers[controller] (and its unit test) and the associated link:theWebLayer.html#gsp[views]:
 
 [source,groovy]
 ----

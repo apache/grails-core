@@ -16,10 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+
 package org.grails.web.pages;
+
+import java.io.IOException;
+import java.io.Writer;
+
+import jakarta.servlet.ServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import org.springframework.objenesis.ObjenesisStd;
+import org.springframework.objenesis.instantiator.ObjectInstantiator;
+
 import org.grails.buffer.GrailsRoutablePrintWriter;
 import org.grails.buffer.StreamCharBuffer;
 import org.grails.buffer.StreamCharBuffer.LazyInitializingWriter;
@@ -30,12 +40,7 @@ import org.grails.encoder.Encoder;
 import org.grails.encoder.EncoderAware;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.util.BoundedCharsAsEncodedBytesCounter;
-import org.springframework.objenesis.ObjenesisStd;
-import org.springframework.objenesis.instantiator.ObjectInstantiator;
-
-import jakarta.servlet.ServletResponse;
-import java.io.IOException;
-import java.io.Writer;
+import org.grails.web.util.WebUtils;
 
 /**
  * NOTE: Based on work done by on the GSP standalone project (https://gsp.dev.java.net/)
@@ -90,25 +95,29 @@ public class GSPResponseWriter extends GrailsRoutablePrintWriter implements Enco
 
         final StreamCharBuffer.LazyInitializingWriter lazyResponseWriter = response::getWriter;
 
-        streamBuffer.connectTo(new StreamCharBuffer.LazyInitializingMultipleWriter() {
-            public Writer getWriter() {
-                return null;
-            }
-
-            public LazyInitializingWriter[] initializeMultiple(StreamCharBuffer buffer, boolean autoFlush) {
-                final StreamCharBuffer.LazyInitializingWriter[] lazyWriters;
-                if (CONTENT_LENGTH_COUNTING_ENABLED) {
-                    lazyWriters = new StreamCharBuffer.LazyInitializingWriter[]{() -> {
-                        bytesCounter.setCapacity(max * 2);
-                        bytesCounter.setEncoding(response.getCharacterEncoding());
-                        return bytesCounter.getCountingWriter();
-                    }, lazyResponseWriter};
-                } else {
-                    lazyWriters = new StreamCharBuffer.LazyInitializingWriter[]{lazyResponseWriter};
+        if (!(response instanceof StreamCharBuffer.LazyInitializingWriter)) {
+            streamBuffer.connectTo(new StreamCharBuffer.LazyInitializingMultipleWriter() {
+                public Writer getWriter() {
+                    return null;
                 }
-                return lazyWriters;
-            }
-        }, AUTOFLUSH_ENABLED);
+
+                public LazyInitializingWriter[] initializeMultiple(StreamCharBuffer buffer, boolean autoFlush) {
+                    final StreamCharBuffer.LazyInitializingWriter[] lazyWriters;
+                    if (CONTENT_LENGTH_COUNTING_ENABLED) {
+                        lazyWriters = new StreamCharBuffer.LazyInitializingWriter[]{() -> {
+                            bytesCounter.setCapacity(max * 2);
+                            bytesCounter.setEncoding(response.getCharacterEncoding());
+                            return bytesCounter.getCountingWriter();
+                        }, lazyResponseWriter};
+                    } else {
+                        lazyWriters = new StreamCharBuffer.LazyInitializingWriter[]{lazyResponseWriter};
+                    }
+                    return lazyWriters;
+                }
+            }, AUTOFLUSH_ENABLED);
+        } else {
+            streamBuffer.connectTo(lazyResponseWriter);
+        }
 
         if (instantiator != null) {
             GSPResponseWriter instance = instantiator.newInstance();
@@ -206,6 +215,12 @@ public class GSPResponseWriter extends GrailsRoutablePrintWriter implements Enco
                 response.setContentLength(size);
             }
             flushResponse();
+        } else if (!isTrouble()) {
+            GrailsWebRequest webRequest = GrailsWebRequest.lookup();
+            if (webRequest != null && webRequest.getCurrentRequest().getAttribute(WebUtils.SITEMESH2_PAGE_ATTRIBUTE) != null) {
+                // flush the response if its a layout
+                flushResponse();
+            }
         }
     }
 

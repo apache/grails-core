@@ -26,16 +26,16 @@ description( "Generates a controller that performs CRUD operations" ) {
 }
 
 
-if(args) {
+if (args) {
   def classNames = args
-  if(args[0] == '*') {
+  if (args[0] == '*') {
     classNames = resources("file:grails-app/domain/**/*.groovy")
                     .collect { className(it) }
   }
   for(arg in classNames) {
     def sourceClass = source(arg)
     def overwrite = flag('force') ? true : false
-    if(sourceClass) {
+    if (sourceClass) {
       def model = model(sourceClass)
       render template: template('scaffolding/Controller.groovy'), 
              destination: file("grails-app/controllers/${model.packagePath}/${model.convention('Controller')}.groovy"),

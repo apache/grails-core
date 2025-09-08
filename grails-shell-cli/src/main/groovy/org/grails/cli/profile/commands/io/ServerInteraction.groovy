@@ -20,7 +20,6 @@ package org.grails.cli.profile.commands.io
 
 import groovy.transform.CompileStatic
 
-
 /**
  * Methods to aid interacting with the server from the CLI
  *
@@ -36,13 +35,13 @@ trait ServerInteraction {
      * @param host The host
      * @param port The port
      */
-    void waitForStartup(String host = "localhost", int port = 8080) {
-        while(!isServerAvailable(host, port)) {
-            sleep 100
+    void waitForStartup(String host = 'localhost', int port = 8080) {
+        while (!isServerAvailable(host, port)) {
+            sleep(100)
         }
         try {
             new URL("http://${host ?: 'localhost'}:${port ?: 8080}/is-tomcat-running").text
-        } catch(ignored) {
+        } catch (ignored) {
             // ignore
         }
     }
@@ -53,7 +52,7 @@ trait ServerInteraction {
      * @param host The host
      * @param port The port
      */
-    boolean isServerAvailable(String host = "localhost", int port = 8080) {
+    boolean isServerAvailable(String host = 'localhost', int port = 8080) {
         try {
             new Socket(host, port)
             return true

@@ -18,14 +18,15 @@
  */
 package org.grails.plugins.support;
 
-import grails.io.ResourceUtils;
-import grails.util.BuildSettings;
-import grails.util.GrailsStringUtils;
-import org.springframework.util.StringUtils;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.util.StringUtils;
+
+import grails.io.ResourceUtils;
+import grails.util.BuildSettings;
+import grails.util.GrailsStringUtils;
 
 /**
  * Parses a Grails plugin's watchedResources property value into a list of
@@ -38,7 +39,7 @@ public class WatchPatternParser {
     public static final String WILD_CARD = "*";
 
     public List<WatchPattern> getWatchPatterns(List<String> patterns) {
-       List<WatchPattern> watchPatterns = new ArrayList<WatchPattern>();
+        List<WatchPattern> watchPatterns = new ArrayList<>();
 
         for (String pattern : patterns) {
             WatchPattern watchPattern = new WatchPattern();
@@ -54,10 +55,10 @@ public class WatchPatternParser {
 
             if (pattern.contains(WILD_CARD)) {
                 String dirPath = pattern.substring(0, pattern.indexOf(WILD_CARD));
-                if(!GrailsStringUtils.isBlank(dirPath)) {
+                if (!GrailsStringUtils.isBlank(dirPath)) {
                     watchPattern.setDirectory(new File(dirPath));
                 }
-                else if(isClasspath && BuildSettings.BASE_DIR != null) {
+                else if (isClasspath && BuildSettings.BASE_DIR != null) {
                     watchPattern.setDirectory(new File(BuildSettings.BASE_DIR, "src/main/resources"));
                 }
 
@@ -71,7 +72,7 @@ public class WatchPatternParser {
             }
         }
 
-       return watchPatterns;
+        return watchPatterns;
     }
 
     private void setExtension(String pattern, WatchPattern watchPattern) {

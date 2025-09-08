@@ -18,17 +18,28 @@
 apply plugin: 'org.nosphere.apache.rat'
 
 tasks.named('rat') {
-    excludes = [
+    def allExcludes = [
             '.asf.yaml', // ASF metadata for github integration excluded from src zip
-            '**/build/**', // Gradle generated build directories
+            'CODE_OF_CONDUCT.md',
+            'BUILD_DATE', // build artifact for storing the build date / verifying
+            'CHECKSUMS', // build artifact for storing checksums for easy verification
+            'PUBLISHED_ARTIFACTS', // build artifact for storing published artifacts coordinates & paths
+            'licenses/**', // licenses directory excluded
+            '.git-blame-ignore-revs', // git configuration isn't code
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONObject.java',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONArray.java',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONTokener.java',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONElement.java',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONException.java',
+            'grails-web-common/src/main/groovy/org/grails/web/json/JSONWriter.java',
+            '**/.gitattributes', // git configuration isn't code
             '**/.gradle/**', '**/wrapper/**', 'gradlew*',  // gradle wrapper files excluded from src zip
             '**/*.html', // html files are only in test
             '**/resources/*', // exclude test artifacts
             'out/**', '*.ipr', '**/*.iml', '*.iws', '.idea/**', // Intellij generated files
             'src/*', // exclude build artifacts
-            'LICENSE',
-            'NOTICE',
             '**/.sdkmanrc', // tool selection files aren't code
+            '.github/**', // github configuration isn't shipped in the source distro
             '**/.gitignore', // git configuration isn't code
             '**/.gitkeep', // git configuration isn't code
             'etc/bin/results/**', // exclude build directories
@@ -38,8 +49,6 @@ tasks.named('rat') {
             'grails-fields/grails-app/views/layouts/_fields/*.gsp', // template files that people are expected to use in the end application
             'grails-fields/grails-app/views/templates/_fields/*.gsp', // template files that people are expected to use in the end application
             'grails-geb/src/main/templates/*.groovy', // template files that people are expected to use in the end application
-            'grails-test-suite-uber/test/test-projects/plugin-build-settings/plugins/hibernate-1.2-SNAPSHOT/**/*', // exclude example test data for test cases
-            'grails-test-suite-uber/test/test-projects/plugin-build-settings/plugins/webflow-1.2-SNAPSHOT/**/*', // exclude example test data for test cases
             'grails-doc/src/en/ref/Versions/Grails BOM.adoc', // exclude generated data
             'grails-profiles/**/templates/**', // template files that people are expected to use in the end application
             'grails-profiles/**/commands/**', // template files that people are expected to use in the end application
@@ -53,7 +62,18 @@ tasks.named('rat') {
             'grails-common/src/main/groovy/org/apache/grails/common/compiler/asm/ClassReader.java', // See license file, BSD licensed
             'grails-common/src/main/groovy/org/apache/grails/common/compiler/asm/Context.java', // See license file, BSD licensed
             'grails-common/src/main/groovy/org/apache/grails/common/compiler/asm/TypePath.java', // See license file, BSD licensed
-    ]
+            'grails-forge/**/src/main/resources/**', // src/main/resources are included in generated application and should not include a license
+            'grails-forge/**/src/test/resources/**', // src/test/resources are used in tests against files included in generated application and should not include a license
+            'grails-gradle/**/build/**', // grails-gradle does not have a build package name so exclude any build directories
+            'grails-forge/*/build/**', // grails-forge build directories
+            'grails-forge/build/**', // grails-forge build directories
+            'grails-forge/.idea/**', // grails-forge idea directories
+            'grails-gradle/.idea/**', // grails-gradle idea directories
+            'build/**', // build directories
+            'buildSrc/build/**', // build directories
+    ] + rootProject.subprojects.collect{"${rootProject.projectDir.relativePath(it.layout.buildDirectory.get().asFile).toString()}/**/*" }
+    // logger.lifecycle("Excludes for RAT task: ${allExcludes.join(', \n')}")
+    excludes = allExcludes
     // never cache license audits
     it.outputs.upToDateWhen { false }
 }

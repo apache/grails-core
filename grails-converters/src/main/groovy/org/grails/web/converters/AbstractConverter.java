@@ -18,16 +18,18 @@
  */
 package org.grails.web.converters;
 
-import groovy.lang.Writable;
-import org.grails.buffer.FastStringWriter;
-import org.springframework.beans.BeanWrapper;
-import org.springframework.beans.BeanWrapperImpl;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import groovy.lang.Writable;
+
+import org.springframework.beans.BeanWrapper;
+import org.springframework.beans.BeanWrapperImpl;
+
+import org.grails.buffer.FastStringWriter;
 
 /**
  * Abstract base implementation of the Converter interface that provides a default toString() implementation.
@@ -39,8 +41,8 @@ public abstract class AbstractConverter<W> implements ConfigurableConverter<W>, 
 
     protected String contentType;
     protected String encoding = "UTF-8";
-    protected Map<Class, List<String>> includes = new LinkedHashMap<Class, List<String>>();
-    protected Map<Class, List<String>> excludes = new LinkedHashMap<Class, List<String>>();
+    protected Map<Class, List<String>> includes = new LinkedHashMap<>();
+    protected Map<Class, List<String>> excludes = new LinkedHashMap<>();
 
     public abstract void setTarget(Object target);
 

@@ -25,26 +25,28 @@ import java.util.Collection;
 import java.util.List;
 
 import jakarta.persistence.FlushModeType;
+
+import org.hibernate.LockMode;
+import org.hibernate.SessionFactory;
+
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import org.grails.datastore.mapping.core.AbstractAttributeStoringSession;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.engine.Persister;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.query.api.QueryAliasAwareSession;
 import org.grails.datastore.mapping.transactions.Transaction;
-import org.hibernate.LockMode;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
- * Session implementation that wraps a Hibernate {@link Session}.
+ * Session implementation that wraps a Hibernate {@link org.hibernate.Session}.
  *
  * @author Graeme Rocher
  * @since 1.0
  */
 @SuppressWarnings("rawtypes")
-public abstract class AbstractHibernateSession extends AbstractAttributeStoringSession implements QueryAliasAwareSession{
+public abstract class AbstractHibernateSession extends AbstractAttributeStoringSession implements QueryAliasAwareSession {
 
     protected AbstractHibernateDatastore datastore;
     protected boolean connected = true;
@@ -123,7 +125,7 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
     }
 
     public List<Serializable> persist(Iterable objects) {
-        List<Serializable> identifiers = new ArrayList<Serializable>();
+        List<Serializable> identifiers = new ArrayList<>();
         for (Object object : objects) {
             identifiers.add(hibernateTemplate.save(object));
         }
@@ -151,7 +153,7 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
     protected Collection getIterableAsCollection(Iterable objects) {
         Collection list;
         if (objects instanceof Collection) {
-            list = (Collection)objects;
+            list = (Collection) objects;
         }
         else {
             list = new ArrayList();
@@ -201,7 +203,6 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
     public void setSynchronizedWithTransaction(boolean synchronizedWithTransaction) {
         // no-op
     }
-
 
     public abstract FlushModeType getFlushMode();
 }

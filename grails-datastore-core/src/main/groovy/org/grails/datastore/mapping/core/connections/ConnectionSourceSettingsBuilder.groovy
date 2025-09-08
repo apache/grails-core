@@ -20,9 +20,11 @@
 package org.grails.datastore.mapping.core.connections
 
 import groovy.transform.CompileStatic
+
+import org.springframework.core.env.PropertyResolver
+
 import org.grails.datastore.mapping.config.ConfigurationBuilder
 import org.grails.datastore.mapping.config.Settings
-import org.springframework.core.env.PropertyResolver
 
 /**
  * Builder for the default settings
@@ -32,6 +34,7 @@ import org.springframework.core.env.PropertyResolver
  */
 @CompileStatic
 class ConnectionSourceSettingsBuilder extends ConfigurationBuilder<ConnectionSourceSettings, ConnectionSourceSettings> {
+
     ConnectionSourceSettingsBuilder(PropertyResolver propertyResolver, String configurationPrefix = Settings.PREFIX) {
         super(propertyResolver, configurationPrefix)
     }

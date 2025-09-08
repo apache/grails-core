@@ -18,6 +18,13 @@
  */
 package grails.testing.web
 
+import groovy.text.Template
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
+
+import org.springframework.mock.web.MockHttpSession
+import org.springframework.mock.web.MockServletContext
+
 import grails.artefact.TagLibrary
 import grails.core.GrailsClass
 import grails.core.GrailsControllerClass
@@ -25,10 +32,6 @@ import grails.core.gsp.GrailsTagLibClass
 import grails.util.GrailsNameUtils
 import grails.web.mvc.FlashScope
 import grails.web.servlet.mvc.GrailsParameterMap
-import groovy.text.Template
-import groovy.transform.CompileDynamic
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 import org.grails.buffer.GrailsPrintWriter
 import org.grails.commons.CodecArtefactHandler
 import org.grails.commons.DefaultGrailsCodecClass
@@ -42,16 +45,20 @@ import org.grails.taglib.TagLibraryLookup
 import org.grails.testing.GrailsUnitTest
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
-import org.springframework.mock.web.MockHttpSession
-import org.springframework.mock.web.MockServletContext
 
 @CompileStatic
-@Slf4j
 trait GrailsWebUnitTest implements GrailsUnitTest {
 
     private Set<Class> loadedCodecs = new HashSet<Class>()
     static Map<String, String> groovyPages = [:]
     GrailsWebRequest webRequest
+
+    /**
+     * When mocking tag libs, the LazyTagLibraryLookup will not be cleared by default. True forces it to be cleared.
+     */
+    boolean getPurgeTagLibMetaClass() {
+        false
+    }
 
     GrailsMockHttpServletRequest getRequest() {
         return (GrailsMockHttpServletRequest) getWebRequest().getCurrentRequest()
@@ -62,7 +69,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
     }
 
     MockServletContext getServletContext() {
-        (MockServletContext)optionalServletContext
+        (MockServletContext) optionalServletContext
     }
 
     Map<String, String> getViews() {
@@ -103,7 +110,6 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         GrailsTagLibClass tagLib = grailsApplication.addArtefact(TagLibArtefactHandler.TYPE, tagLibClass)
         final tagLookup = applicationContext.getBean(TagLibraryLookup)
 
-
         defineBeans {
             "${tagLib.fullName}"(tagLibClass) { bean ->
                 bean.autowire = true
@@ -113,8 +119,8 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         tagLookup.registerTagLib(tagLib)
 
         def taglibObject = applicationContext.getBean(tagLib.fullName)
-        if(taglibObject instanceof TagLibrary) {
-            ((TagLibrary)taglibObject).setTagLibraryLookup(tagLookup)
+        if (taglibObject instanceof TagLibrary) {
+            ((TagLibrary) taglibObject).setTagLibraryLookup(tagLookup)
         }
         taglibObject
     }
@@ -132,7 +138,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         def controller = applicationContext.getBean(controllerClass.name)
 
         if (webRequest == null) {
-            throw new IllegalAccessException("Cannot access the controller outside of a request. Is the controller referenced in a where: block?")
+            throw new IllegalAccessException('Cannot access the controller outside of a request. Is the controller referenced in a where: block?')
         }
 
         webRequest.request.setAttribute(GrailsApplicationAttributes.CONTROLLER, controller)
@@ -147,10 +153,9 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         return controllerArtefact
     }
 
-
     void mockTagLibs(Class<?>... tagLibClasses) {
-        for(Class c : tagLibClasses) {
-            mockTagLib c
+        for (Class c : tagLibClasses) {
+            mockTagLib(c)
         }
     }
 
@@ -177,7 +182,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         String uri = null
         Map model
         if (args.containsKey('model')) {
-            model = (Map)args.model
+            model = (Map) args.model
         } else {
             model = [:]
         }
@@ -209,7 +214,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
      */
     String applyTemplate(String contents, Map model = [:]) {
         def sw = new StringWriter()
-        applyTemplate sw, contents, model
+        applyTemplate(sw, contents, model)
         return sw.toString()
     }
 
@@ -223,7 +228,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
     void applyTemplate(StringWriter sw, String template, Map params = [:]) {
         def engine = applicationContext.getBean(GroovyPagesTemplateEngine)
 
-        def t = engine.createTemplate(template, "test_" + System.currentTimeMillis())
+        def t = engine.createTemplate(template, 'test_' + System.currentTimeMillis())
         renderTemplateToStringWriter(sw, t, params)
     }
 

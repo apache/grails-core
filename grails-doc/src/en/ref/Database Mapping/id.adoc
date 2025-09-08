@@ -93,4 +93,4 @@ static mapping = {
 }
 ----
 
-See the section on  link:{hibernate5Guide}/manual/index.html#identity[Custom Database Identity] in the user guide for more information.
+See the section on  link:{hibernate5GuideFromRef}index.html#identity[Custom Database Identity] in the user guide for more information.

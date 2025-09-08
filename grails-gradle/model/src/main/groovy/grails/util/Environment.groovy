@@ -1,37 +1,37 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 package grails.util
-
-import grails.io.IOUtils
-import groovy.transform.CompileStatic
-import org.codehaus.groovy.control.MultipleCompilationErrorsException
-import org.codehaus.groovy.runtime.DefaultGroovyMethods
-import org.grails.io.support.Resource
-import org.grails.io.support.UrlResource
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 import java.lang.management.ManagementFactory
 import java.nio.file.Files
 import java.util.function.Supplier
 import java.util.jar.Attributes
 import java.util.jar.Manifest
+
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.control.MultipleCompilationErrorsException
+import org.codehaus.groovy.runtime.DefaultGroovyMethods
+
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
+import grails.io.IOUtils
+import org.grails.io.support.Resource
+import org.grails.io.support.UrlResource
 
 /**
  * Represents the current environment.
@@ -64,88 +64,84 @@ enum Environment {
      * Initialize the Logger lazily because:
      * https://github.com/apache/grails-core/issues/11476
      */
-    private static final Supplier<Logger> LOG = SupplierUtil.memoized(() -> LoggerFactory.getLogger(Environment.class))
+    private static final Supplier<Logger> LOG = SupplierUtil.memoized(() -> LoggerFactory.getLogger(Environment))
 
     /**
      * Constant used to resolve the environment via System.getProperty(Environment.KEY)
      */
-    public static String KEY = "grails.env"
+    public static String KEY = 'grails.env'
 
     /**
      * Constant used to resolve the environment via System.getenv(Environment.ENV_KEY).
      */
-    public static final String ENV_KEY = "GRAILS_ENV"
+    public static final String ENV_KEY = 'GRAILS_ENV'
 
-    /**
-     * The name of the GRAILS_HOME environment variable
-     */
-    public static String ENV_GRAILS_HOME = "GRAILS_HOME"
     /**
      * Specify whether reloading is enabled for this environment
      */
-    public static String RELOAD_ENABLED = "grails.reload.enabled"
+    public static String RELOAD_ENABLED = 'grails.reload.enabled'
 
     /**
      * Constant indicating whether run-app or test-app was executed
      */
-    public static String RUN_ACTIVE = "grails.run.active"
+    public static String RUN_ACTIVE = 'grails.run.active'
 
     /**
      * Whether the display of full stack traces is needed
      */
-    public static String FULL_STACKTRACE = "grails.full.stacktrace"
+    public static String FULL_STACKTRACE = 'grails.full.stacktrace'
 
     /**
      * The location where to reload resources from
      */
-    public static final String RELOAD_LOCATION = "grails.reload.location"
+    public static final String RELOAD_LOCATION = 'grails.reload.location'
 
     /**
      * Whether interactive mode is enabled
      */
-    public static final String INTERACTIVE_MODE_ENABLED = "grails.interactive.mode.enabled"
+    public static final String INTERACTIVE_MODE_ENABLED = 'grails.interactive.mode.enabled'
 
     /**
      * Constants that indicates whether this GrailsApplication is running in the default environment
      */
-    public static final String DEFAULT = "grails.env.default"
+    public static final String DEFAULT = 'grails.env.default'
 
     /**
      * Whether Grails is in the middle of bootstrapping or not
      */
-    public static final String INITIALIZING = "grails.env.initializing"
+    public static final String INITIALIZING = 'grails.env.initializing'
 
     /**
      * Whether Grails has been executed standalone via the static void main method and not loaded in via the container
      */
-    public static final String STANDALONE = "grails.env.standalone"
+    public static final String STANDALONE = 'grails.env.standalone'
 
-    private static final String PRODUCTION_ENV_SHORT_NAME = "prod"
+    private static final String PRODUCTION_ENV_SHORT_NAME = 'prod'
 
-    private static final String DEVELOPMENT_ENVIRONMENT_SHORT_NAME = "dev"
-    private static final String TEST_ENVIRONMENT_SHORT_NAME = "test"
+    private static final String DEVELOPMENT_ENVIRONMENT_SHORT_NAME = 'dev'
+    private static final String TEST_ENVIRONMENT_SHORT_NAME = 'test'
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings('unchecked')
     private static Map<String, String> envNameMappings = CollectionUtils.<String, String> newMap(
             DEVELOPMENT_ENVIRONMENT_SHORT_NAME, DEVELOPMENT.getName(),
             PRODUCTION_ENV_SHORT_NAME, PRODUCTION.getName(),
             TEST_ENVIRONMENT_SHORT_NAME, TEST.getName())
-    private static Holder<Environment> cachedCurrentEnvironment = new Holder<>("Environment")
+    private static Holder<Environment> cachedCurrentEnvironment = new Holder<>('Environment')
     private static final boolean DEVELOPMENT_MODE = getCurrent() == DEVELOPMENT && BuildSettings.GRAILS_APP_DIR_PRESENT
     private static Boolean RELOADING_AGENT_ENABLED = null
     private static boolean initializingState = false
 
-    private static final String GRAILS_IMPLEMENTATION_TITLE = "Grails"
+    private static final String GRAILS_IMPLEMENTATION_TITLE = 'Apache Grails'
     private static final String GRAILS_VERSION
     private static final boolean STANDALONE_DEPLOYED
     private static final boolean WAR_DEPLOYED
 
     static {
-        Package p = Environment.class.getPackage()
+        Package p = Environment.getPackage()
         String version = p != null ? p.getImplementationVersion() : null
         if (version == null || isBlank(version)) {
             try {
-                URL manifestURL = IOUtils.findResourceRelativeToClass(Environment.class, "/META-INF/MANIFEST.MF")
+                URL manifestURL = IOUtils.findResourceRelativeToClass(Environment, '/META-INF/MANIFEST.MF')
                 Manifest grailsManifest = null
                 if (manifestURL != null) {
                     Resource r = new UrlResource(manifestURL)
@@ -174,20 +170,20 @@ enum Environment {
                 }
 
                 if (isBlank(version)) {
-                    version = "Unknown"
+                    version = 'Unknown'
                 }
             }
             catch (Exception e) {
-                version = "Unknown"
+                version = 'Unknown'
             }
         }
         GRAILS_VERSION = version
 
-        URL url = Environment.class.getResource("")
+        URL url = Environment.getResource('')
         if (url != null) {
 
             String protocol = url.getProtocol()
-            if (protocol.equals("jar")) {
+            if (protocol.equals('jar')) {
                 String fullPath = url.toString()
                 if (fullPath.contains(IOUtils.RESOURCE_WAR_PREFIX)) {
                     STANDALONE_DEPLOYED = true
@@ -209,7 +205,7 @@ enum Environment {
             STANDALONE_DEPLOYED = false
         }
 
-        URL loadedLocation = Environment.class.getClassLoader().getResource(Metadata.FILE)
+        URL loadedLocation = Environment.getClassLoader().getResource(Metadata.FILE)
         if (loadedLocation != null) {
             String path = loadedLocation.getPath()
             WAR_DEPLOYED = isWebPath(path)
@@ -254,7 +250,7 @@ enum Environment {
     }
 
     static boolean isReloadInProgress() {
-        return Boolean.getBoolean("grails.reloading.in.progress")
+        return Boolean.getBoolean('grails.reloading.in.progress')
     }
 
     private void initialize() {
@@ -277,7 +273,6 @@ enum Environment {
                 return env
             }
         }
-
 
         Environment current = cachedCurrentEnvironment.get()
         if (current != null) {
@@ -371,29 +366,29 @@ enum Environment {
      * @return True if spring-dev-tools restart
      */
     static boolean isDevtoolsRestart() {
-        File pidFile = new File(BuildSettings.TARGET_DIR.toString() + File.separator + ".grailspid")
-        LOG.get().debug("Looking for pid file at: {}", pidFile)
+        File pidFile = new File(BuildSettings.TARGET_DIR.toString() + File.separator + '.grailspid')
+        LOG.get().debug('Looking for pid file at: {}', pidFile)
         boolean isDevToolsRestart = false
         try {
             if (isDevelopmentMode()) {
                 String pid = ManagementFactory.getRuntimeMXBean().getName()
                 if (pidFile.exists()) {
                     if (pid.equals(Files.readAllLines(pidFile.toPath()).get(0))) {
-                        LOG.get().debug("spring-dev-tools restart detected.")
+                        LOG.get().debug('spring-dev-tools restart detected.')
                         isDevToolsRestart = true
                     } else {
-                        LOG.get().debug("spring-dev-tools first app start - creating pid file.")
+                        LOG.get().debug('spring-dev-tools first app start - creating pid file.')
                         writeDevToolsPidFile(pidFile, pid)
                     }
                 } else {
-                    LOG.get().debug("spring-dev-tools pid file did not exist.")
+                    LOG.get().debug('spring-dev-tools pid file did not exist.')
                     writeDevToolsPidFile(pidFile, pid)
                 }
             }
         } catch (Exception ex) {
-            LOG.get().error("spring-dev-tools restart detection error: {}", ex)
+            LOG.get().error('spring-dev-tools restart detection error: {}', ex)
         }
-        LOG.get().debug("spring-dev-tools restart: {}", isDevToolsRestart)
+        LOG.get().debug('spring-dev-tools restart: {}', isDevToolsRestart)
         return isDevToolsRestart
     }
 
@@ -403,7 +398,7 @@ enum Environment {
             writer = new BufferedWriter(new FileWriter(pidFile))
             writer.write(content)
         } catch (Exception ex) {
-            LOG.get().error("spring-dev-tools restart unable to write pid file: {}", ex)
+            LOG.get().error('spring-dev-tools restart unable to write pid file: {}', ex)
         } finally {
             try {
                 if (writer != null) {
@@ -428,7 +423,7 @@ enum Environment {
 
     private static boolean isWebPath(String path) {
         // Workaround for weblogic who repacks files from 'classes' into a new jar under lib/
-        return path.contains("/WEB-INF/classes") || path.contains("_wl_cls_gen.jar!/")
+        return path.contains('/WEB-INF/classes') || path.contains('_wl_cls_gen.jar!/')
     }
 
     /**
@@ -460,7 +455,7 @@ enum Environment {
      * @return True if it is a fork
      */
     static boolean isFork() {
-        return Boolean.getBoolean("grails.fork.active")
+        return Boolean.getBoolean('grails.fork.active')
     }
 
     /**
@@ -468,7 +463,7 @@ enum Environment {
      * @return true if is
      */
     static boolean isWithinShell() {
-        return DefaultGroovyMethods.getRootLoader(Environment.class.getClassLoader()) != null
+        return DefaultGroovyMethods.getRootLoader(Environment.getClassLoader()) != null
     }
 
     /**
@@ -652,16 +647,16 @@ enum Environment {
             return RELOADING_AGENT_ENABLED
         }
         try {
-            Class.forName("org.springframework.boot.devtools.RemoteSpringApplication")
+            Class.forName('org.springframework.boot.devtools.RemoteSpringApplication')
             RELOADING_AGENT_ENABLED = getCurrent().isReloadEnabled()
-            LOG.get().debug("Found spring-dev-tools on the class path")
+            LOG.get().debug('Found spring-dev-tools on the class path')
         }
         catch (ClassNotFoundException e) {
             RELOADING_AGENT_ENABLED = false
             try {
-                Class.forName("org.springsource.loaded.TypeRegistry")
-                String jvmVersion = System.getProperty("java.specification.version")
-                LOG.get().debug("Found spring-loaded on the class path")
+                Class.forName('org.springsource.loaded.TypeRegistry')
+                String jvmVersion = System.getProperty('java.specification.version')
+                LOG.get().debug('Found spring-loaded on the class path')
                 RELOADING_AGENT_ENABLED = getCurrent().isReloadEnabled()
             }
             catch (ClassNotFoundException e1) {
@@ -683,7 +678,7 @@ enum Environment {
             reloadLocation = location
             return location
         }
-        return "." // default to the current directory
+        return '.' // default to the current directory
     }
 
     private boolean hasLocation(String location) {
@@ -704,11 +699,11 @@ enum Environment {
             location = System.getProperty(BuildSettings.APP_BASE_DIR)
         }
         if (!hasLocation(location)) {
-            File current = new File(".", "grails-app")
+            File current = new File('.', 'grails-app')
             if (current.exists()) {
                 location = current.getParentFile().getAbsolutePath()
             } else {
-                current = new File(".", "settings.gradle")
+                current = new File('.', 'settings.gradle')
                 if (current.exists()) {
                     // multi-project build
                     location = IOUtils.findApplicationDirectory()

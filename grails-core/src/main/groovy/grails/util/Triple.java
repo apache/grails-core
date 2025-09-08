@@ -60,7 +60,7 @@ public class Triple<A, B, C> {
             return false;
         if (getClass() != obj.getClass())
             return false;
-        Triple other = (Triple)obj;
+        Triple other = (Triple) obj;
         if (aValue == null) {
             if (other.aValue != null)
                 return false;

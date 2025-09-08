@@ -17,14 +17,14 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Grails has built-in support for handling duplicate form submissions using the "Synchronizer Token Pattern". To get started you define a token on the link:{gspdocs}/ref/Tags/form.html[form] tag:
+Grails has built-in support for handling duplicate form submissions using the "Synchronizer Token Pattern". To get started you define a token on the link:{gspTagsRef}form.html[form] tag:
 
 [source,xml]
 ----
 <g:form useToken="true" ...>
 ----
 
-Then in your controller code you can use the link:../ref/Controllers/withForm.html[withForm] method to handle valid and invalid requests:
+Then in your controller code you can use the link:{controllersRef}withForm.html[withForm] method to handle valid and invalid requests:
 
 [source,groovy]
 ----
@@ -35,7 +35,7 @@ withForm {
 }
 ----
 
-If you only provide the link:../ref/Controllers/withForm.html[withForm] method and not the chained `invalidToken` method then by default Grails will store the invalid token in a `flash.invalidToken` variable and redirect the request back to the original page. This can then be checked in the view:
+If you only provide the link:{controllersRef}withForm.html[withForm] method and not the chained `invalidToken` method then by default Grails will store the invalid token in a `flash.invalidToken` variable and redirect the request back to the original page. This can then be checked in the view:
 
 [source,xml]
 ----
@@ -44,4 +44,4 @@ If you only provide the link:../ref/Controllers/withForm.html[withForm] method a
 </g:if>
 ----
 
-WARNING: The link:../ref/Controllers/withForm.html[withForm] tag makes use of the link:../ref/Controllers/session.html[session] and hence requires session affinity or clustered sessions if used in a cluster.
+WARNING: The link:{controllersRef}withForm.html[withForm] tag makes use of the link:{controllersRef}session.html[session] and hence requires session affinity or clustered sessions if used in a cluster.

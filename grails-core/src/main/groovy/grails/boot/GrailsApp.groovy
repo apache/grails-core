@@ -19,27 +19,14 @@
 
 package grails.boot
 
-import grails.compiler.ast.ClassInjector
-import grails.core.GrailsApplication
-import grails.io.IOUtils
-import grails.plugins.GrailsPlugin
-import grails.plugins.GrailsPluginManager
-import grails.util.BuildSettings
-import grails.util.Environment
-import groovy.transform.CompileDynamic
+import java.util.concurrent.ConcurrentLinkedQueue
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
-import org.grails.boot.internal.JavaCompiler
-import org.grails.compiler.injection.AbstractGrailsArtefactTransformer
-import org.grails.compiler.injection.GrailsAwareInjectionOperation
-import org.grails.core.util.BeanCreationProfilingPostProcessor
-import org.grails.io.watch.DirectoryWatcher
-import org.grails.io.watch.FileExtensionFileChangeListener
-import org.grails.plugins.BinaryGrailsPlugin
-import org.grails.plugins.support.WatchPattern
+
 import org.springframework.boot.ResourceBanner
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.web.context.WebServerApplicationContext
@@ -48,7 +35,21 @@ import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.io.ClassPathResource
 import org.springframework.core.io.ResourceLoader
 
-import java.util.concurrent.ConcurrentLinkedQueue
+import grails.compiler.ast.ClassInjector
+import grails.core.GrailsApplication
+import grails.io.IOUtils
+import grails.plugins.GrailsPlugin
+import grails.plugins.GrailsPluginManager
+import grails.util.BuildSettings
+import grails.util.Environment
+import org.grails.boot.internal.JavaCompiler
+import org.grails.compiler.injection.AbstractGrailsArtefactTransformer
+import org.grails.compiler.injection.GrailsAwareInjectionOperation
+import org.grails.core.util.BeanCreationProfilingPostProcessor
+import org.grails.io.watch.DirectoryWatcher
+import org.grails.io.watch.FileExtensionFileChangeListener
+import org.grails.plugins.BinaryGrailsPlugin
+import org.grails.plugins.support.WatchPattern
 
 /**
  * Extends the {@link SpringApplication} with reloading behavior and other Grails features
@@ -101,12 +102,12 @@ class GrailsApp extends SpringApplication {
         ConfigurableApplicationContext applicationContext = super.run(args)
         Environment environment = Environment.getCurrent()
 
-        log.info("Application starting in environment: {}", environment.getName())
-        log.debug("Application directory discovered as: {}", IOUtils.findApplicationDirectory())
-        log.debug("Current base directory is [{}]. Reloading base directory is [{}]", new File("."), BuildSettings.BASE_DIR)
+        log.info('Application starting in environment: {}', environment.getName())
+        log.debug('Application directory discovered as: {}', IOUtils.findApplicationDirectory())
+        log.debug('Current base directory is [{}]. Reloading base directory is [{}]', new File('.'), BuildSettings.BASE_DIR)
 
         if (environment.isReloadEnabled()) {
-            log.debug("Reloading status: {}", environment.isReloadEnabled())
+            log.debug('Reloading status: {}', environment.isReloadEnabled())
             enableDevelopmentModeWatch(environment, applicationContext)
             environment.isDevtoolsRestart()
         }
@@ -143,7 +144,6 @@ class GrailsApp extends SpringApplication {
         configuredEnvironment = environment
     }
 
-    @CompileDynamic // TODO: Report Groovy VerifierError
     protected void enableDevelopmentModeWatch(Environment environment, ConfigurableApplicationContext applicationContext, String... args) {
         def location = environment.getReloadLocation()
 
@@ -164,7 +164,7 @@ class GrailsApp extends SpringApplication {
                     changedFiles << file.canonicalFile
                     // For some bizarre reason Windows fires onNew events even for files that have
                     // just been modified and not created
-                    if (System.getProperty("os.name").toLowerCase().indexOf("windows") != -1) {
+                    if (System.getProperty('os.name').toLowerCase().indexOf('windows') != -1) {
                         return
                     }
                     newFiles << file.canonicalFile
@@ -227,7 +227,6 @@ class GrailsApp extends SpringApplication {
                 }
             }
 
-
             developmentModeActive = true
             Thread.start {
                 CompilerConfiguration compilerConfig = new CompilerConfiguration()
@@ -235,8 +234,7 @@ class GrailsApp extends SpringApplication {
 
                 while (isDevelopmentModeActive()) {
                     // Workaround for some IDE / OS combos - 2 events (new + update) for the same file
-                    def uniqueChangedFiles = changedFiles as Set
-
+                    def uniqueChangedFiles = changedFiles as Set<File>
 
                     def i = uniqueChangedFiles.size()
                     try {
@@ -248,7 +246,7 @@ class GrailsApp extends SpringApplication {
                                     newFiles.remove(f)
                                 }
                                 pluginManager.informOfFileChange(f)
-                                sleep 1000
+                                sleep(1000)
                             }
                         } else if (i == 1) {
                             changedFiles.clear()
@@ -305,12 +303,12 @@ class GrailsApp extends SpringApplication {
         }
         def baseFileLocation = appDir?.absolutePath ?: location
         compilerConfig.setTargetDirectory(new File(baseFileLocation, BuildSettings.BUILD_CLASSES_PATH))
-        println "File $changedFile changed, recompiling..."
+        println("File $changedFile changed, recompiling...")
         if (changedFile.name.endsWith('.java')) {
             if (JavaCompiler.isAvailable()) {
                 JavaCompiler.recompile(compilerConfig, changedFile)
             } else {
-                log.error("Cannot recompile [$changedFile.name], the current JVM is not a JDK (recompilation will not work on a JRE missing the compiler APIs).")
+                log.error('Cannot recompile [{}], the current JVM is not a JDK (recompilation will not work on a JRE missing the compiler APIs).', changedFile.name)
             }
         } else {
             compileGroovyFile(compilerConfig, changedFile)
@@ -355,9 +353,9 @@ class GrailsApp extends SpringApplication {
     }
 
     protected void configureDirectoryWatcher(DirectoryWatcher directoryWatcher, String location) {
-        directoryWatcher.addWatchDirectory(new File(location, "grails-app"), ['groovy', 'java'])
-        directoryWatcher.addWatchDirectory(new File(location, "src/main/groovy"), ['groovy', 'java'])
-        directoryWatcher.addWatchDirectory(new File(location, "src/main/java"), ['groovy', 'java'])
+        directoryWatcher.addWatchDirectory(new File(location, 'grails-app'), ['groovy', 'java'])
+        directoryWatcher.addWatchDirectory(new File(location, 'src/main/groovy'), ['groovy', 'java'])
+        directoryWatcher.addWatchDirectory(new File(location, 'src/main/java'), ['groovy', 'java'])
     }
 
     protected printRunStatus(ConfigurableApplicationContext applicationContext) {

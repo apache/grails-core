@@ -8,10 +8,14 @@
 *.swp
 .DS_Store
 .classpath
+.assetcache
 .gradle
 .gradle/
 .idea
 .idea/
+!.idea/codeStyles/
+!.idea/codeStyles/Project.xml
+!.idea/codeStyles/codeStyleConfig.xml
 .project
 .settings
 /*/*.iml
@@ -54,3 +58,4 @@ tmp/
 !grails-fields/src/main/groovy/org/grails/scaffolding/registry/output
 !etc/bin
 etc/bin/results
+.vscode/

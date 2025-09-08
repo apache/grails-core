@@ -1,0 +1,55 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Spring Boot Developer Tools, JRebel, and Hotswap Agent are tools designed to improve developer productivity by enabling application reloading during development, reducing the need for full application restarts. Since Grails is built on Spring Boot, all three tools are compatible, but they differ in mechanisms, features, and trade-offs. Spring Boot Developer Tools is the default in Grails, replacing older agents like Spring Loaded (no longer maintained and lacking support for Java 17+). Hotswap Agent and JRebel offer more advanced "true" hot swapping capabilities.
+
+=== Spring Boot Developer Tools
+
+Spring Boot Developer Tools is a feature of Spring Boot that provides automatic restarts and live reload capabilities. It is enabled by default in generated Grails applications. When you make changes to your code, the application automatically restarts, allowing you to see the changes without manually stopping and starting the server.  Best developer reloading tool to start with.
+
+For larger applications, you may need to adjust the default settings for optimal performance.  This works well until your application becomes very large, at which point restarts may take longer or fail.
+
+Please see the Spring Boot documentation for more details: https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#using-boot-devtools[Spring Boot Developer Tools].
+
+NOTE: You can use Spring Developer Tools in combination with a browser extension to get automatic browser
+refresh when you change anything in your Grails application.
+
+*Reloading Mechanism:* Auto-restarts the application context on code changes using dual class loaders; supports live reload for static resources like views/templates.
+
+=== JRebel
+
+JRebel is a commercial tool that provides advanced hot swapping capabilities, allowing developers to make changes to their code without restarting the application. It supports a wide range of frameworks and libraries, including Grails. JRebel requires a license for use.
+
+Please see the JRebel documentation for more details: https://manuals.jrebel.com/jrebel/standalone/springboot.html[JRebel].
+
+*Reloading Mechanism:* True hot swapping via bytecode instrumentation; reloads classes, configurations, and resources without restarting the JVM, preserving application state.
+
+=== Hotswap Agent
+
+*Hotswap Agent support for Grails is considered experimental, and it may not work in all cases. Known limitations are documented https://github.com/apache/grails-core/issues/14967[here].*
+
+Hotswap Agent is an open-source tool that provides advanced hot swapping capabilities for Java applications. It allows developers to make changes to their code without restarting the application. Hotswap Agent supports a wide range of frameworks and libraries, including Spring Framework and Spring Boot.
+
+*Reloading Mechanism:* True hot swapping using DCEVM (Dynamic Code Evolution VM) to patch the JVM; reloads classes and resources, supporting structural changes.
+
+=== Running the Grails Application in Debug Mode
+
+Enables limited dynamic reloading via standard JVM hot swapping. This feature is built into the JVM and does not require additional configuration beyond starting the application with debugging enabled.  Supports automatic reloading of static content (such as CSS, JavaScript, or HTML templates) without restarting the application.  You can modify and reload Java code changes without a full restart, but this is limited to non-structural modifications.  Changes that affect class or method signatures (e.g., adding new methods, fields, or constructors; changing method parameters; or modifying class hierarchies) are not supported and will require a restart. This limitation stems from the JVM's hot swapping constraints.
+
+*Reloading Mechanism:* standard JVM hot swapping
