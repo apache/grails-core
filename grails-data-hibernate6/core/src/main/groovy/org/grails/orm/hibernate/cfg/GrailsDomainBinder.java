@@ -130,7 +130,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     public static final String CASCADE_NONE = "none";
     private static final String BACKTICK = "`";
 
-    public static final String ENUM_TYPE_CLASS = "org.hibernate.type.EnumType";
+    public static final String ENUM_TYPE_CLASS = org.grails.orm.hibernate.HibernateLegacyEnumType.class.getName();
     public static final String ENUM_CLASS_PROP = "enumClass";
     private static final String ENUM_TYPE_PROP = "type";
     public static final String DEFAULT_ENUM_TYPE = "default";

@@ -10,7 +10,7 @@ import org.hibernate.MappingException;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
-import org.hibernate.type.EnumType;
+import org.grails.orm.hibernate.HibernateLegacyEnumType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,13 +51,13 @@ public class EnumTypeBinder {
         } else {
             if (GrailsEnumType.DEFAULT.getType().equals(enumType) || GrailsEnumType.STRING.getType().equalsIgnoreCase(enumType)) {
                 simpleValue.setTypeName(ENUM_TYPE_CLASS);
-                enumProperties.put(EnumType.TYPE, String.valueOf(Types.VARCHAR));
-                enumProperties.put(EnumType.NAMED, Boolean.TRUE.toString());
+                enumProperties.put(HibernateLegacyEnumType.TYPE, String.valueOf(Types.VARCHAR));
+                enumProperties.put(HibernateLegacyEnumType.NAMED, Boolean.TRUE.toString());
             } else if (GrailsEnumType.ORDINAL.getType().equalsIgnoreCase(enumType)) {
                 simpleValue.setTypeName(ENUM_TYPE_CLASS);
-                enumProperties.put(EnumType.TYPE, String.valueOf(Types.INTEGER));
-                enumProperties.put(EnumType.NAMED, Boolean.FALSE.toString());
-            } else if (GrailsEnumType.ORDINAL.getType().equals(enumType)) {
+                enumProperties.put(HibernateLegacyEnumType.TYPE, String.valueOf(Types.INTEGER));
+                enumProperties.put(HibernateLegacyEnumType.NAMED, Boolean.FALSE.toString());
+            } else if (GrailsEnumType.IDENTITY.getType().equals(enumType)) {
                 simpleValue.setTypeName(IdentityEnumType.class.getName());
             } else {
                 throw new MappingException("Invalid enum type [" + enumType + "].");

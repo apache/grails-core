@@ -9,7 +9,7 @@ import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.Selectable
 import org.hibernate.mapping.Table
-import org.hibernate.type.EnumType
+import org.grails.orm.hibernate.HibernateLegacyEnumType
 import org.hibernate.usertype.UserType
 import spock.lang.Subject
 import spock.lang.Unroll
@@ -50,14 +50,14 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
 
         and: "the type parameters are configured correctly"
         def props = simpleValue.getTypeParameters()
-        (props.getProperty(EnumType.TYPE) == String.valueOf(expectedSqlType)) == typeExpected
-        (props.getProperty(EnumType.NAMED) == String.valueOf(namedExpected)) == namedIsExpected
+        (props.getProperty(HibernateLegacyEnumType.TYPE) == String.valueOf(expectedSqlType)) == typeExpected
+        (props.getProperty(HibernateLegacyEnumType.NAMED) == String.valueOf(namedExpected)) == namedIsExpected
 
         where:
         clazz | enumTypeMapping   | expectedHibernateType            | expectedSqlType   | typeExpected | namedExpected | namedIsExpected | nullable
-        Person01| "default"       | EnumType.class.getName()         | Types.VARCHAR     | true         | true          | true            | false
-        Person02|"string"         | EnumType.class.getName()         | Types.VARCHAR     | true         | true          | true            | true
-        Person03|"ordinal"        | EnumType.class.getName()         | Types.INTEGER     | true         | false         | true            | true
+        Person01| "default"       | HibernateLegacyEnumType.class.getName()         | Types.VARCHAR     | true         | true          | true            | false
+        Person02|"string"         | HibernateLegacyEnumType.class.getName()         | Types.VARCHAR     | true         | true          | true            | true
+        Person03|"ordinal"        | HibernateLegacyEnumType.class.getName()         | Types.INTEGER     | true         | false         | true            | true
         Person04|"identity"       | IdentityEnumType.class.getName() | null              | false        | null          | false           | false
         Person05|UserTypeEnumType | UserTypeEnumType.class.getName() | null              | false        | null          | false           | false
     }
