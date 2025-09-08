@@ -19,15 +19,11 @@
 package org.grails.databinding.xml
 
 import groovy.xml.XmlSlurper
-import spock.lang.PendingFeatureIf
+
 import spock.lang.Specification
 
 class GPathResultMapSpec extends Specification {
 
-    @PendingFeatureIf({
-        // groovy.lang.MissingFieldException: No such field: id for class: groovy.xml.slurpersupport.NodeChild
-        GroovySystem.version.startsWith('5')
-    })
     void 'Test nested elements'() {
         given:
         def xml = new XmlSlurper().parseText('''
@@ -64,10 +60,6 @@ class GPathResultMapSpec extends Specification {
         person.locations.location[1].billingAddress == 'bar2'
     }
 
-    @PendingFeatureIf({
-        // groovy.lang.MissingFieldException: No such field: id for class: groovy.xml.slurpersupport.NodeChild
-        GroovySystem.version.startsWith('5')
-    })
     void 'Test basic Map operations'() {
         given:
         def xml = new XmlSlurper().parseText('''
@@ -133,10 +125,6 @@ class GPathResultMapSpec extends Specification {
         'country' in keys
     }
 
-    @PendingFeatureIf({
-        // groovy.lang.MissingFieldException: No such field: id for class: groovy.xml.slurpersupport.NodeChild
-        GroovySystem.version.startsWith('5')
-    })
     void 'Test id element'() {
         given:
         def xml = new XmlSlurper().parseText('''
@@ -158,10 +146,6 @@ class GPathResultMapSpec extends Specification {
         map.name == 'Thin Lizzy'
     }
 
-    @PendingFeatureIf({
-        // groovy.lang.MissingFieldException: No such field: id for class: groovy.xml.slurpersupport.NodeChild
-        GroovySystem.version.startsWith('5')
-    })
     void 'Test id returns null when no id is present'() {
         given:
         def xml = new XmlSlurper().parseText('''
@@ -179,10 +163,6 @@ class GPathResultMapSpec extends Specification {
         map.band.id == null
     }
 
-    @PendingFeatureIf({
-        // groovy.lang.MissingFieldException: No such field: id for class: groovy.xml.slurpersupport.NodeChild
-        GroovySystem.version.startsWith('5')
-    })
     void 'Test id attributes'() {
         given:
         def xml = new XmlSlurper().parseText('''
@@ -275,10 +255,6 @@ class GPathResultMapSpec extends Specification {
         map.bar.id == '1'
     }
 
-    @PendingFeatureIf({
-        // groovy.lang.MissingFieldException: No such field: id for class: groovy.xml.slurpersupport.NodeChild
-        GroovySystem.version.startsWith('5')
-    })
     void 'Test empty Map'() {
         given:
         def xml = new XmlSlurper().parseText('''
