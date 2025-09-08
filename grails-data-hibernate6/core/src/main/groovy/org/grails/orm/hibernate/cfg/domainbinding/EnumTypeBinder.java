@@ -49,15 +49,15 @@ public class EnumTypeBinder {
         if (typeName != null) {
             simpleValue.setTypeName(typeName);
         } else {
-            if (DEFAULT_ENUM_TYPE.equals(enumType) || "string".equalsIgnoreCase(enumType)) {
+            if (GrailsEnumType.DEFAULT.getType().equals(enumType) || GrailsEnumType.STRING.getType().equalsIgnoreCase(enumType)) {
                 simpleValue.setTypeName(ENUM_TYPE_CLASS);
                 enumProperties.put(EnumType.TYPE, String.valueOf(Types.VARCHAR));
                 enumProperties.put(EnumType.NAMED, Boolean.TRUE.toString());
-            } else if ("ordinal".equalsIgnoreCase(enumType)) {
+            } else if (GrailsEnumType.ORDINAL.getType().equalsIgnoreCase(enumType)) {
                 simpleValue.setTypeName(ENUM_TYPE_CLASS);
                 enumProperties.put(EnumType.TYPE, String.valueOf(Types.INTEGER));
                 enumProperties.put(EnumType.NAMED, Boolean.FALSE.toString());
-            } else if ("identity".equals(enumType)) {
+            } else if (GrailsEnumType.ORDINAL.getType().equals(enumType)) {
                 simpleValue.setTypeName(IdentityEnumType.class.getName());
             } else {
                 throw new MappingException("Invalid enum type [" + enumType + "].");

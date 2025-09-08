@@ -59,52 +59,67 @@ class EnumSpec extends GrailsDataTckSpec {
         new EnumThing(name: 'e2', en: TestEnum.V1).save(failOnError: true)
         new EnumThing(name: 'e3', en: TestEnum.V2).save(failOnError: true)
 
-        EnumThing instance1
-        EnumThing instance2
-        EnumThing instance3
+        List instance1
+        List instance2
+        List instance3
 
         when:
-        instance1 = EnumThing.findByEnInList([TestEnum.V1])
-        instance2 = EnumThing.findByEnInList([TestEnum.V2])
-        instance3 = EnumThing.findByEnInList([TestEnum.V3])
+        instance1 = EnumThing.findAllByEn(TestEnum.V1)
+        instance2 = EnumThing.findAllByEn(TestEnum.V2)
+        instance3 = EnumThing.findAllByEn(TestEnum.V3)
 
         then:
-        instance1 != null
-        instance1.en == TestEnum.V1
+        instance1.size() == 2
+        instance1.every { it.en == TestEnum.V1 }
 
-        instance2 != null
-        instance2.en == TestEnum.V2
+        instance2.size() == 1
+        instance2.every { it.en == TestEnum.V2 }
 
-        instance3 == null
+        instance3.isEmpty()
+
+        when:
+        instance1 = EnumThing.findAllByEnInList([TestEnum.V1])
+        instance2 = EnumThing.findAllByEnInList([TestEnum.V2])
+        instance3 = EnumThing.findAllByEnInList([TestEnum.V3])
+
+        then:
+        instance1.size() == 2
+        instance1.every { it.en == TestEnum.V1 }
+
+        instance2.size() == 1
+        instance2.every { it.en == TestEnum.V2 }
+
+        instance3.isEmpty()
     }
 
-    void "Test findBy()"() {
+    void "Test findAllBy()"() {
         given:
 
         new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true)
         new EnumThing(name: 'e2', en: TestEnum.V1).save(failOnError: true)
         new EnumThing(name: 'e3', en: TestEnum.V2).save(failOnError: true)
 
-        EnumThing instance1
-        EnumThing instance2
-        EnumThing instance3
+        List instance1
+        List instance2
+        List instance3
 
         when:
-        instance1 = EnumThing.findByEn(TestEnum.V1)
-        instance2 = EnumThing.findByEn(TestEnum.V2)
-        instance3 = EnumThing.findByEn(TestEnum.V3)
+        instance1 = EnumThing.findAllByEn(TestEnum.V1)
+        instance2 = EnumThing.findAllByEn(TestEnum.V2)
+        instance3 = EnumThing.findAllByEn(TestEnum.V3)
 
         then:
-        instance1 != null
-        instance1.en == TestEnum.V1
+        instance1.size() == 2
+        instance1.every { it.en == TestEnum.V1 }
 
-        instance2 != null
-        instance2.en == TestEnum.V2
+        instance2.size() == 1
+        instance2.every { it.en == TestEnum.V2 }
 
-        instance3 == null
+        instance3.isEmpty()
+
     }
 
-    void "Test findBy() with clearing the session"() {
+    void "Test findAllBy() with clearing the session"() {
         given:
 
         new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true, flush: true)
@@ -112,23 +127,23 @@ class EnumSpec extends GrailsDataTckSpec {
         new EnumThing(name: 'e3', en: TestEnum.V2).save(failOnError: true, flush: true)
         manager.session.clear()
 
-        EnumThing instance1
-        EnumThing instance2
-        EnumThing instance3
+        List instance1
+        List instance2
+        List instance3
 
         when:
-        instance1 = EnumThing.findByEn(TestEnum.V1)
-        instance2 = EnumThing.findByEn(TestEnum.V2)
-        instance3 = EnumThing.findByEn(TestEnum.V3)
+        instance1 = EnumThing.findAllByEn(TestEnum.V1)
+        instance2 = EnumThing.findAllByEn(TestEnum.V2)
+        instance3 = EnumThing.findAllByEn(TestEnum.V3)
 
         then:
-        instance1 != null
-        instance1.en == TestEnum.V1
+        instance1.size() == 2
+        instance1.every { it.en == TestEnum.V1 }
 
-        instance2 != null
-        instance2.en == TestEnum.V2
+        instance2.size() == 1
+        instance2.every { it.en == TestEnum.V2 }
 
-        instance3 == null
+        instance3.isEmpty()
     }
 
     void "Test findAllBy()"() {
