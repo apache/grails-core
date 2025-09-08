@@ -16,14 +16,23 @@
  */
 package grails.init;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Assists in parsing grails versions and sorting them by priority
  */
 public class GrailsVersion implements Comparable<GrailsVersion> {
+
     private static final Pattern VERSION_PATTERN = Pattern.compile("^(\\d+)[.](\\d+)[.](\\d+)-?(.*)$");
 
     private static final Pattern RC = Pattern.compile("^RC(\\d+)$");
@@ -40,7 +49,7 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
     /**
      * @param version the grails version number
      */
-    GrailsVersion(String version) {
+    public GrailsVersion(String version) {
         this.version = version;
 
         Matcher matcher = VERSION_PATTERN.matcher(version);
@@ -62,27 +71,110 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
         if (candidateString.isEmpty()) {
             releaseType = GrailsReleaseType.RELEASE;
             candidate = null;
-        }
-        else if ((m = RC.matcher(candidateString)).matches()) {
+        } else if ((m = RC.matcher(candidateString)).matches()) {
             releaseType = GrailsReleaseType.RC;
             candidate = Integer.parseInt(m.group(1));
-        }
-        else if ((m = MILESTONE.matcher(candidateString)).matches()) {
+        } else if ((m = MILESTONE.matcher(candidateString)).matches()) {
             releaseType = GrailsReleaseType.MILESTONE;
             candidate = Integer.parseInt(m.group(1));
-        }
-        else if ((m = SNAPSHOT.matcher(candidateString)).matches()) {
+        } else if (SNAPSHOT.matcher(candidateString).matches()) {
             releaseType = GrailsReleaseType.SNAPSHOT;
             candidate = null;
-        }
-        else {
+        } else {
             throw new IllegalArgumentException("Invalid Candidate Version: " + candidateString);
         }
     }
 
+    public static LinkedHashSet<GrailsReleaseType> getAllowedReleaseTypes(GrailsVersion preferredVersion, GrailsWrapper wrapper) {
+        String raw = System.getenv("GRAILS_WRAPPER_ALLOWED_TYPES");
+        if (raw == null || raw.trim().isEmpty()) {
+            if (preferredVersion != null) {
+                //inside a grails project pull the equivalent version type or newer
+                return preferredVersion.releaseType.upTo();
+            } else {
+                String grailsVersion = wrapper.getVersion();
+                if (grailsVersion == null) {
+                    // the only time this version isn't defined is when it comes from a non-jar file, which should
+                    // only be in development of the wrapper
+                    System.out.println("Detected running from a non-jar file, assuming local grails-core development...");
+                    return new LinkedHashSet<>(List.of(GrailsReleaseType.SNAPSHOT));
+                }
+
+                GrailsVersion myVersion = new GrailsVersion(grailsVersion);
+                if (myVersion.releaseType != GrailsReleaseType.RELEASE) {
+                    return new LinkedHashSet<>(myVersion.releaseType.upTo());
+                }
+
+                // Only consider releases of this wrapper
+                return new LinkedHashSet<>(List.of(GrailsReleaseType.RELEASE));
+            }
+        }
+
+        return Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .map(input -> {
+                    try {
+                        return GrailsReleaseType.valueOf(input);
+                    } catch (Exception e) {
+                        throw new IllegalStateException("Invalid Value in GRAILS_WRAPPER_ALLOWED_TYPES: " + input);
+                    }
+                })
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    public static GrailsVersion getPreferredGrailsVersion() {
+        // Check for a properties file in case inside a grails project
+        File gradleProperties = new File("gradle.properties");
+        if (!gradleProperties.exists()) {
+            return null;
+        }
+
+        Properties properties = new Properties();
+        try (InputStream in = new FileInputStream(gradleProperties)) {
+            properties.load(in);
+        } catch (Exception e) {
+            System.err.println("Failed to load gradle.properties from " + gradleProperties);
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        if (!properties.containsKey("grailsVersion")) {
+            return null;
+        }
+
+        String grailsVersion = properties.getProperty("grailsVersion");
+        if (grailsVersion == null) {
+            String overrideGrailsVersion = System.getenv("PREFERRED_GRAILS_VERSION");
+            if (overrideGrailsVersion != null) {
+                try {
+                    return new GrailsVersion(overrideGrailsVersion);
+                } catch (Exception e) {
+                    System.out.println("An invalid Grails Version [" + overrideGrailsVersion + "] was specified in PREFERRED_GRAILS_VERSION");
+                    e.printStackTrace();
+                    System.exit(1);
+                }
+            }
+
+            System.out.println("gradle.properties does not contain grailsVersion; assuming latest Grails Version");
+            return null;
+        }
+
+        try {
+            return new GrailsVersion(grailsVersion);
+        } catch (Exception e) {
+            System.out.println("An invalid Grails Version [" + grailsVersion + "] was specified in gradle.properties");
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        return null;
+    }
+
     @Override
     public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         GrailsVersion that = (GrailsVersion) o;
         return Objects.equals(releaseType, that.releaseType) &&
                 Objects.equals(major, that.major) &&

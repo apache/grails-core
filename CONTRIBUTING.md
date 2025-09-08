@@ -94,7 +94,7 @@ A good bug report shouldn't leave others needing to chase you up for more inform
 
 > You must never report security related issues, vulnerabilities or bugs including sensitive information to the issue tracker, or elsewhere in public. Instead, sensitive bugs must be sent by email to security@grails.org.
 
-Grails uses GitHub to track issues in the [core framework](https://github.com/apache/grails-core/issues). Similarly, for its documentation there is a [separate tracker](https://github.com/apache/grails-doc/issues).  If you run into an issue with the project:
+Grails uses GitHub to track issues in the [core framework](https://github.com/apache/grails-core/issues) and documentation.  If you run into an issue with the project:
 
 - Open an [Issue](https://github.com/apache/grails-core/issues/new).
 - Explain the behavior you would expect and the actual behavior.

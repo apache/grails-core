@@ -62,12 +62,6 @@ gradlePlugin {
             id = 'org.apache.grails.gradle.grails-app'
             implementationClass = 'org.grails.gradle.plugin.core.GrailsGradlePlugin'
         }
-        grailsDoc {
-            displayName = 'Grails Doc Gradle Plugin'
-            description = 'Adds Grails doc publishing support'
-            id = 'org.apache.grails.gradle.grails-docs'
-            implementationClass = 'org.grails.gradle.plugin.doc.GrailsDocGradlePlugin'
-        }
         grailsGsp {
             displayName = 'Grails GSP Gradle Plugin'
             description = 'A plugin that adds support for compiling Groovy Server Pages (GSP)'

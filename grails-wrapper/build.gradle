@@ -46,6 +46,8 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.junit.platform:junit-platform-runner'
+    // for easier setting of environment variables in tests
+    testImplementation 'uk.org.webcompere:system-stubs-core:2.1.8'
 }
 
 apply {

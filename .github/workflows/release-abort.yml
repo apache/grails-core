@@ -21,11 +21,6 @@ on:
         description: 'Release tag (e.g., v7.0.0-M5)'
         required: true
         type: string
-      repository_name:
-        description: 'Repository Name'
-        required: true
-        default: 'grails-core'
-        type: string
 permissions:
   contents: write
   actions: write
@@ -38,6 +33,10 @@ jobs:
         run: curl -s https://api.ipify.org
       - name: "Setup SVN and Tools"
         run: sudo apt-get install -y subversion subversion-tools tree
+      - name: "Extract repository name"
+        id: extract_repository_name
+        run: |
+          echo "repository_name=${GITHUB_REPOSITORY##*/}" >> $GITHUB_OUTPUT
       - name: "Extract release version"
         id: release_version
         run: |
@@ -51,7 +50,7 @@ jobs:
           NEXUS_STAGE_DEPLOYER_USER: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
           NEXUS_STAGE_DEPLOYER_PW: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
         run: |
-          export REPO_DESCRIPTION="${{ github.event.inputs.repository_name }}:${{ steps.release_version.outputs.value }}"
+          export REPO_DESCRIPTION="${{ steps.extract_repository_name.outputs.repository_name }}:${{ steps.release_version.outputs.value }}"
           export STAGING_REPOSITORY_ID=$(curl -s -u "$NEXUS_STAGE_DEPLOYER_USER:$NEXUS_STAGE_DEPLOYER_PW" -H "Accept: application/json" \
             "https://repository.apache.org/service/local/staging/profile_repositories/${{ secrets.STAGING_PROFILE_ID }}" |
             jq -r '.data[] | select(.description=="'"$REPO_DESCRIPTION"'") | .repositoryId')
@@ -86,7 +85,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OWNER: ${{ github.repository_owner }}
-          REPO: ${{ github.event.inputs.repository_name }}
+          REPO: ${{ steps.extract_repository_name.outputs.repository_name }}
         run: |
           for status in queued in_progress; do
             curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -108,7 +107,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.event.inputs.release_tag }}
           OWNER: ${{ github.repository_owner }}
-          REPO: ${{ github.event.inputs.repository_name }}
+          REPO: ${{ steps.extract_repository_name.outputs.repository_name }}
         run: |
           set -euo pipefail
 

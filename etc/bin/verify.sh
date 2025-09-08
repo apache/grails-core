@@ -82,9 +82,20 @@ echo """
 """ > "${DOWNLOAD_LOCATION}/custom-repos.gradle"
 echo "✅ Custom repo script written"
 
+echo "Determining Gradle on PATH ..."
+if GRADLE_CMD="$(command -v gradlew 2>/dev/null)"; then
+    :   # found the wrapper on PATH
+elif GRADLE_CMD="$(command -v gradle 2>/dev/null)"; then
+    :   # fall back to system-wide Gradle
+else
+    echo "❌ ERROR: Neither gradlew nor gradle found on \$PATH." >&2
+    exit 1
+fi
+echo "✅ Using Gradle command: ${GRADLE_CMD}"
+
 echo "Bootstrap Gradle ..."
 cd "${DOWNLOAD_LOCATION}/grails/gradle-bootstrap"
-gradlew
+${GRADLE_CMD}
 echo "✅ Gradle Bootstrapped"
 
 echo "Applying License Audit ..."

@@ -93,7 +93,7 @@ abstract class CreateReleaseDropDownTask extends DefaultTask {
     CreateReleaseDropDownTask(ObjectFactory objects, Project project) {
         group = 'documentation'
         githubSlug = objects.property(String).convention(project.provider {
-            project.findProperty('githubSlug') as String ?: 'apache/grails-doc'
+            project.findProperty('githubSlug') as String ?: 'apache/grails-core'
         })
         sourceDocsDirectory = objects.directoryProperty().convention(project.layout.buildDirectory.dir('manual'))
         projectVersion = objects.property(String).convention(project.provider { project.version as String })
