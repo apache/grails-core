@@ -38,7 +38,7 @@ import org.grails.datastore.mapping.model.PersistentProperty
 trait GormEntityDirtyCheckable extends DirtyCheckable {
 
     @Override
-    @Generated
+    @Generated('org.grails.compiler.gorm.DirtyCheckingTransformer')
     boolean hasChanged(String propertyName) {
         PersistentEntity entity = currentGormInstanceApi().persistentEntity
 
@@ -57,7 +57,7 @@ trait GormEntityDirtyCheckable extends DirtyCheckable {
         return super.hasChanged(propertyName)
     }
 
-    @Generated
+    @Generated('org.grails.compiler.gorm.DirtyCheckingTransformer')
     private GormInstanceApi currentGormInstanceApi() {
         (GormInstanceApi) GormEnhancer.findInstanceApi(getClass())
     }
