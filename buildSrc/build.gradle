@@ -52,7 +52,7 @@ repositories {
     maven {
         url = 'https://repository.apache.org/content/groups/staging'
         content {
-            includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
+            includeModuleByRegex('org[.]apache[.]((grails[.]gradle)|groovy)', 'grails-publish|groovy.*')
         }
         mavenContent {
             releasesOnly()
