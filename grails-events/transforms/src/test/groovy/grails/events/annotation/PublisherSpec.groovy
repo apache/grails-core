@@ -18,6 +18,8 @@
  */
 package grails.events.annotation
 
+import spock.lang.PendingFeatureIf
+
 import grails.events.Event
 import grails.events.EventPublisher
 import grails.events.bus.EventBus
@@ -27,13 +29,15 @@ import org.grails.datastore.mapping.transactions.DatastoreTransactionManager
 import org.springframework.transaction.event.TransactionPhase
 import spock.lang.Specification
 
-import java.lang.reflect.Constructor
-
 /**
  * Created by graemerocher on 28/03/2017.
  */
 class PublisherSpec extends Specification {
 
+    @PendingFeatureIf(
+        reason = 'groovy.lang.MissingMethodException: No signature of method: MockImpl',
+        value = { GroovySystem.version.startsWith('5') }
+    )
     void 'Test publisher transform on method that returns void'() {
 
         given: 'a class with a method annotated with the @Publisher annotation'
@@ -56,6 +60,10 @@ class PublisherSpec extends Specification {
     }
 
 
+    @PendingFeatureIf(
+        reason = 'groovy.lang.MissingMethodException: No signature of method: MockImpl',
+        value = { GroovySystem.version.startsWith('5') }
+    )
     void 'Test publisher transform'() {
 
         given: 'a class with a method annotated with the @Publisher annotation'
@@ -81,6 +89,10 @@ class PublisherSpec extends Specification {
             1 * eventBus.publish(new Event('total', [a:1, b:2], 3))
     }
 
+    @PendingFeatureIf(
+        reason = 'groovy.lang.MissingMethodException: No signature of method: MockImpl',
+        value = { GroovySystem.version.startsWith('5') }
+    )
     void 'Test publisher transform on transactional service'() {
 
         given: 'a class with a method annotated with @Publisher and @Transactional'

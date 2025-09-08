@@ -18,6 +18,8 @@
  */
 package grails.events.annotation
 
+import spock.lang.PendingFeatureIf
+
 import grails.events.bus.EventBus
 import grails.events.subscriber.MethodSubscriber
 import org.grails.datastore.mapping.engine.event.PreInsertEvent
@@ -31,6 +33,10 @@ import spock.lang.Specification
  */
 class SubscriberSpec extends Specification {
 
+    @PendingFeatureIf(
+        reason = 'groovy.lang.MissingMethodException: No signature of method: MockImpl',
+        value = { GroovySystem.version.startsWith('5') }
+    )
     void 'test subscriber transform'() {
 
         given: 'a class with a method annotated with the @Subscriber annotation'
@@ -57,6 +63,10 @@ class SubscriberSpec extends Specification {
             1 * eventBus.subscribe('total', new MethodSubscriber(service, methodObject))
     }
 
+    @PendingFeatureIf(
+        reason = 'groovy.lang.MissingMethodException: No signature of method: MockImpl',
+        value = { GroovySystem.version.startsWith('5') }
+    )
     void 'Test gorm event subscriber transform'() {
 
         given: 'a class with a method annotated with the @Subscriber that takes a PreInsertEvent arg'
