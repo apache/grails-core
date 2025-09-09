@@ -160,7 +160,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
             return
         }
 
-        if ((classNode instanceof InnerClassNode) || classNode.isEnum()) {
+        if (classNode.isEnum() || classNode instanceof InnerClassNode) {
             // do not apply transform to enums or inner classes
             return
         }
