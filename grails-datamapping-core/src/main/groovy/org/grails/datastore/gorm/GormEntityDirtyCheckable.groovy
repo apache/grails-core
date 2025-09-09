@@ -27,7 +27,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 
 /**
- *
+ * TESTING PUSH ACCESS TO GRAILS-CORE
  * Special trait meant only for GORM entities to override default behaviour of DirtyCheckable.
  * Applied manually during GormEntity transformation
  *
