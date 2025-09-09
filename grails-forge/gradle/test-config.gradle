@@ -19,6 +19,14 @@
 
 // apply plugin: 'org.gradle.test-retry'
 
+tasks.named('compileTestGroovy') {
+    options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
+}
+
+tasks.named('compileGroovy') {
+    options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
+}
+
 tasks.withType(Test).configureEach {
     onlyIf {
         ![
