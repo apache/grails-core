@@ -25,6 +25,7 @@ import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
 import org.grails.datastore.mapping.query.event.PostQueryEvent
 import org.grails.datastore.mapping.query.event.PreQueryEvent
@@ -650,7 +651,12 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     def propertyMissing(String name) {
-        return GormEnhancer.findStaticApi(persistentClass, name)
+        if(datastore instanceof ConnectionSourcesProvider) {
+            return GormEnhancer.findStaticApi(persistentClass, name)
+        }
+        else {
+            throw new MissingPropertyException(name, persistentClass)
+        }
     }
 
     @Override

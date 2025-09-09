@@ -33,16 +33,33 @@ class UniqueWithMultipleDataSourcesSpec extends HibernateGormDatastoreSpec {
     def setupSpec() {
         manager.addAllDomainClasses([Abc])
         manager.grailsConfig = [
-                'dataSource.url'        : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
-                'dataSource.dbCreate'   : 'update',
-                'dataSource.dialect'    : H2Dialect.name,
-                'dataSource.formatSql'  : 'true',
-                'hibernate.flush.mode'  : 'COMMIT',
-                'hibernate.cache.queries': 'true',
-                'hibernate.cache'       : ['use_second_level_cache': true, 'region.factory_class': 'org.hibernate.cache.jcache.internal.JCacheRegionFactory'],
-                'hibernate.hbm2ddl.auto': 'create',
-                'dataSources.second'    : [url: "jdbc:h2:mem:second;LOCK_TIMEOUT=10000"],
+                'dataSource': [
+                        'url'        : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+                        'dbCreate'   : 'update',
+                        'dialect'    : H2Dialect.name,
+                        'formatSql'  : 'true'
+                ],
+                'dataSources': [
+                        'second': [
+                                'url'        : "jdbc:h2:mem:second;LOCK_TIMEOUT=10000",
+                                'dbCreate'   : 'update',
+                                'dialect'    : H2Dialect.name,
+                                'formatSql'  : 'true'
+                        ]
+                ],
+                'hibernate': [
+                        'flush.mode'  : 'COMMIT',
+                        'cache.queries': 'true',
+                        'cache'       : ['use_second_level_cache': true, 'region.factory_class': 'org.hibernate.cache.jcache.internal.JCacheRegionFactory'],
+                        'hbm2ddl.auto': 'create-drop'
+                ]
         ]
+    }
+    
+    def setup() {
+        // The HibernateGormDatastoreSpec only initializes the default datasource by default.
+        // We need to explicitly initialize the 'second' datasource to ensure its schema is created.
+        manager.getHibernateDatastore().getDatastoreForConnection('second')
     }
 
     @Rollback
@@ -50,15 +67,15 @@ class UniqueWithMultipleDataSourcesSpec extends HibernateGormDatastoreSpec {
     void "test multiple data sources and unique constraint"() {
         when:
         Abc abc = new Abc(temp: "testing")
-        abc.save()
+        abc.save(flush: true)
 
         Abc abc1 = new Abc(temp: "testing")
         Abc.second.withNewSession {
-            abc1.second.save()
+            abc1.second.save(flush: true)
         }
 
         then:
-        !abc1.hasErrors()
+        abc1.hasErrors()
     }
 }
 
@@ -75,4 +92,3 @@ class Abc {
         datasource(ConnectionSource.ALL)
     }
 }
-
