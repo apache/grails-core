@@ -508,11 +508,9 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     @CompileStatic
     protected List<File> resolveGrailsResourceDirs(Project project) {
-        List<File> grailsResourceDirs = [project.file('src/main/resources')]
-        for (String f in grailsAppResourceDirs) {
-            grailsResourceDirs.add(project.file("grails-app/${f}"))
-        }
-        grailsResourceDirs
+        (['src/main/resources'] + grailsAppResourceDirs.collect { 'grails-app/' + it })
+                .collect { project.file(it) }
+                .sort { it.name } // sort for build reproducibility
     }
 
     @CompileStatic
@@ -526,8 +524,10 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 }
             }
         }
-        grailsSourceDirs.add(project.file('src/main/groovy'))
+
         grailsSourceDirs
+                .tap { add(project.file('src/main/groovy')) }
+                .sort { it.name } // sort for build reproducibility
     }
 
     @CompileStatic
