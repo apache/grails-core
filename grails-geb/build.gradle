@@ -49,7 +49,7 @@ dependencies {
     testFixturesCompileOnly 'jakarta.servlet:jakarta.servlet-api'
     testFixturesCompileOnly 'org.slf4j:slf4j-simple' // Remove compilation warning about missing slf4j impl
 
-    testFixturesApi 'org.gebish:geb-spock'
+    testFixturesApi 'org.apache.groovy.geb:geb-spock'
     testFixturesApi project(':grails-testing-support-core')
     testFixturesApi project(':grails-datamapping-core')
     testFixturesApi "org.testcontainers:selenium"
@@ -59,7 +59,7 @@ dependencies {
     testFixturesImplementation "org.seleniumhq.selenium:selenium-support"
 
     // Added to be able to resolve the geb version from the BOM in the resolveVersions task
-    compileOnly 'org.gebish:geb-spock'
+    compileOnly 'org.apache.groovy.geb:geb-spock'
 }
 
 apply {
