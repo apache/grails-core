@@ -623,6 +623,7 @@ jobs:
       contents: write # required for gradle.properties revert
       issues: write # required for milestone closing
       pull-requests: write # to open PR
+      actions: write # in case there are pending changes to release.yml in the target branch
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
