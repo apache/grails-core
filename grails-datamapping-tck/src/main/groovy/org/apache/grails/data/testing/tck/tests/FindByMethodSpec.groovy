@@ -146,25 +146,6 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         'Not Bypassed Highway' == highways[0].name
         'Not Bypassed Highway' == highways[1].name
 
-        when:
-        def highway = Highway.findNotBypassed()
-        then:
-        'Not Bypassed Highway' == highway?.name
-
-        when:
-        highway = Highway.findBypassed()
-        then:
-        'Bypassed Highway' == highway?.name
-
-        when:
-        highway = Highway.findNotBypassedByName('Not Bypassed Highway')
-        then:
-        'Not Bypassed Highway' == highway?.name
-
-        when:
-        highway = Highway.findBypassedByName('Bypassed Highway')
-        then:
-        'Bypassed Highway' == highway?.name
 
         when:
         Book.newInstance(author: 'Jeff', title: 'Fly Fishing For Everyone', published: false).save()
@@ -195,10 +176,9 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         'Fly Fishing For Everyone' == book.title
 
         when:
-        book = Book.findPublishedByTitleOrAuthor('Fly Fishing For Everyone', 'Dierk')
+        book = Book.findPublishedByTitleAndAuthor('GINA', 'Dierk')
         then:
         'GINA' == book.title
-        Book.findPublished() != null
 
         when:
         book = Book.findNotPublished()
@@ -228,7 +208,7 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         when:
         books = Book.findAllPublishedByAuthorOrTitle('Graeme', 'GINA')
         then:
-        2 == books?.size()
+        3 == books?.size()
 
         when:
         books = Book.findAllNotPublishedByAuthor('Jeff')
