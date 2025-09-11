@@ -261,7 +261,7 @@ jobs:
               mkdir https://dist.apache.org/repos/dist/dev/incubator/grails \
               -m "Create 'grails' dev folder"
           fi
-      - name: "👀 Ensure grails publish folder exists"
+      - name: "👀 Ensure grails redis folder exists"
         run: |
           set -e
 
