@@ -14,3 +14,10 @@ github:
         - id: jdaugherty
           type: User
       wait_timer: 0
+    close:
+      required_reviewers:
+        - id: grails-committers
+          type: Team
+        - id: jdaugherty
+          type: User
+      wait_timer: 0

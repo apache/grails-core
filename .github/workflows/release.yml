@@ -32,12 +32,12 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       release_version: ${{ steps.release_version.outputs.value }}
-      extract_repository_name: ${{ steps.extract_repository_name.outputs.repository_name }}
       commit_hash: ${{ steps.commit_hash.outputs.value }}
+      extract_repository_name: ${{ steps.extract_repository_name.outputs.repository_name }}
     steps:
       - name: "📝 Store the current release version"
         id: release_version
-        run: | 
+        run: |
           export RELEASE_VERSION="${GITHUB_REF:11}"
           echo "Found Release Version: ${RELEASE_VERSION}"
           echo "value=${RELEASE_VERSION}" >> $GITHUB_OUTPUT
@@ -132,11 +132,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   source:
     # to ensure we never publish any build artifacts, run the source distribution as a separate build workflow
-    name: "Source Distribution"
+    name: "Create Source Distribution"
     needs: publish
     permissions:
       contents: write
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
@@ -151,28 +151,28 @@ jobs:
           rm -f ${{ needs.publish.outputs.extract_repository_name }}/gradlew
           rm -f ${{ needs.publish.outputs.extract_repository_name }}/gradlew.bat
           rm -f ${{ needs.publish.outputs.extract_repository_name }}/.asf.yaml
-      - name: "Download CHECKSUMS.txt and rename to CHECKSUMS"
+      - name: "📥 Download CHECKSUMS.txt and rename to CHECKSUMS"
+        working-directory: '${{ needs.publish.outputs.extract_repository_name }}'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd ${{ needs.publish.outputs.extract_repository_name }}
           release_url=$(gh release view v${{ needs.publish.outputs.release_version }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "CHECKSUMS.txt") | .url')
           curl -f -L -H "Authorization: token $GH_TOKEN" -o CHECKSUMS "$release_url"
-      - name: "Download PUBLISHED_ARTIFACTS.txt and rename to PUBLISHED_ARTIFACTS"
+      - name: "📥 Download PUBLISHED_ARTIFACTS.txt and rename to PUBLISHED_ARTIFACTS"
+        working-directory: '${{ needs.publish.outputs.extract_repository_name }}'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd ${{ needs.publish.outputs.extract_repository_name }}
           release_url=$(gh release view v${{ needs.publish.outputs.release_version }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "PUBLISHED_ARTIFACTS.txt") | .url')
           curl -f -L -H "Authorization: token $GH_TOKEN" -o PUBLISHED_ARTIFACTS "$release_url"
-      - name: "Download BUILD_DATE.txt and rename to BUILD_DATE"
+      - name: "📥 Download BUILD_DATE.txt and rename to BUILD_DATE"
+        working-directory: '${{ needs.publish.outputs.extract_repository_name }}'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd ${{ needs.publish.outputs.extract_repository_name }}
           release_url=$(gh release view v${{ needs.publish.outputs.release_version }} --json assets --repo ${{ github.repository }} --jq '.assets[] | select(.name == "BUILD_DATE.txt") | .url')
           curl -f -L -H "Authorization: token $GH_TOKEN" -o BUILD_DATE "$release_url"
-      - name: "Ensure source files use common date"
+      - name: "📅 Ensure source files use common date"
         run: |
           SOURCE_DATE_EPOCH=$(cat ${{ needs.publish.outputs.extract_repository_name }}/BUILD_DATE)
           find . -depth \( -type f -o -type d \) -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
@@ -202,28 +202,41 @@ jobs:
             apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip
             apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip.sha512
             apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip.asc
-      - name: "Remove CHECKSUMS.txt asset from release"
+      - name: "🗑️ Remove CHECKSUMS.txt asset from release"
+        working-directory: '${{ needs.publish.outputs.extract_repository_name }}'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          cd ${{ needs.publish.outputs.extract_repository_name }}
-          gh release --repo ${{ github.repository }} delete-asset v${{ needs.publish.outputs.release_version }} CHECKSUMS.txt --yes
-      - name: "Remove BUILD_DATE.txt asset from release"
+          gh release delete-asset \
+          v${{ needs.publish.outputs.release_version }} \
+          CHECKSUMS.txt \
+          --repo ${{ github.repository }} \
+          --yes
+      - name: "🗑️ Remove BUILD_DATE.txt asset from release"
+        working-directory: '${{ needs.publish.outputs.extract_repository_name }}'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          cd ${{ needs.publish.outputs.extract_repository_name }}
-          gh release --repo ${{ github.repository }} delete-asset v${{ needs.publish.outputs.release_version }} BUILD_DATE.txt --yes
-      - name: "Remove PUBLISHED_ARTIFACTS.txt asset from release"
+          gh release delete-asset \
+          v${{ needs.publish.outputs.release_version }} \
+          BUILD_DATE.txt \
+          --repo ${{ github.repository }} \
+          --yes
+      - name: "🗑️ Remove PUBLISHED_ARTIFACTS.txt asset from release"
+        working-directory: '${{ needs.publish.outputs.extract_repository_name }}'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          cd ${{ needs.publish.outputs.extract_repository_name }}
-          gh release --repo ${{ github.repository }} delete-asset v${{ needs.publish.outputs.release_version }} PUBLISHED_ARTIFACTS.txt --yes
+          gh release delete-asset \
+          v${{ needs.publish.outputs.release_version }} \
+          PUBLISHED_ARTIFACTS.txt \
+          --repo ${{ github.repository }} \
+          --yes
   upload:
+    name: "Upload Source Distribution"
     needs: [ publish, source ]
     runs-on: ubuntu-24.04
     permissions:
@@ -232,11 +245,11 @@ jobs:
       SVN_USERNAME: ${{ secrets.SVC_DIST_GRAILS_USERNAME }}
       SVN_PASSWORD: ${{ secrets.SVC_DIST_GRAILS_PASSWORD }}
     steps:
-      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+      - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
-      - name: "Setup SVN and Tools"
+      - name: "⚙️ Setup SVN and Tools"
         run: sudo apt-get install -y subversion subversion-tools tree gettext-base
-      - name: "Ensure grails dev folder exists"
+      - name: "👀 Ensure grails dev folder exists"
         run: |
           set -e
 
@@ -248,7 +261,7 @@ jobs:
               mkdir https://dist.apache.org/repos/dist/dev/incubator/grails \
               -m "Create 'grails' dev folder"
           fi
-      - name: "Ensure grails redis folder exists"
+      - name: "👀 Ensure grails publish folder exists"
         run: |
           set -e
 
@@ -260,10 +273,10 @@ jobs:
               mkdir https://dist.apache.org/repos/dist/dev/incubator/grails/redis \
               -m "Create 'grails redis' dev folder"
           fi
-      - name: "Checkout dev repo"
+      - name: "📥 Checkout dev repo"
         run: |
           svn checkout --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive https://dist.apache.org/repos/dist/dev/incubator/grails/redis dev-repo
-      - name: "Remove existing dev version"
+      - name: "🗑️ Remove existing dev version"
         run: |
           export VERSION="${{ needs.publish.outputs.release_version }}"
           cd dev-repo
@@ -273,7 +286,7 @@ jobs:
           else
             echo "No existing dev version $VERSION to remove"
           fi
-      - name: "Fetch source distributions"
+      - name: "📥 Fetch source distributions"
         run: |
           export TAG="v${{ needs.publish.outputs.release_version }}"
           export VERSION="${{ needs.publish.outputs.release_version }}"
@@ -295,12 +308,12 @@ jobs:
           svn add $VERSION --force
           svn commit -m "Upload grails distribution files for $VERSION" --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive
           pwd
-      - name: "Store Distribution SVN revision"
+      - name: "💾 Store Distribution SVN revision in a file"
         run: |
           export VERSION="${{ needs.publish.outputs.release_version }}"
           cd dev-repo
           svn info $VERSION > "DIST_SVN_REVISION.txt"
-      - name: "Upload Distribution SVN revision"
+      - name: "📤 Upload the Distribution SVN revision file"
         uses: softprops/action-gh-release@v2
         with:
           files: dev-repo/DIST_SVN_REVISION.txt
@@ -311,28 +324,31 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: v${{ needs.publish.outputs.release_version }}
-          path: "${{ needs.publish.outputs.extract_repository_name }}"
-      - name: 'Initial Vote Email'
+          path: ${{ needs.publish.outputs.extract_repository_name }}
+      - name: "📧 Print Grails Vote Email"
         env:
           VERSION: ${{ needs.publish.outputs.release_version }}
           VERSION_COMMIT_ID: ${{ needs.publish.outputs.commit_hash }}
         run: |
           export DIST_SVN_REVISION=$(awk '/Last Changed Rev:/ {print $4}' dev-repo/DIST_SVN_REVISION.txt)
-
+          
+          echo "::group::Grails PPMC Vote Email"
           echo "*************************************************"
           echo "Subject: [VOTE] Release Apache Grails (incubating) Redis Plugin ${VERSION}"
           echo "*************************************************"
           echo "Body:"
           echo "*************************************************"
           cat ${{ needs.publish.outputs.extract_repository_name }}/.github/vote_templates/staged.txt | envsubst
-          echo "*************************************************"
-      - name: 'Groovy Vote Email'
+          echo "*************************************************"          
+          echo "::endgroup::"
+      - name: '📧 Print Groovy Vote Email'
         env:
           VERSION: ${{ needs.publish.outputs.release_version }}
           VERSION_COMMIT_ID: ${{ needs.publish.outputs.commit_hash }}
         run: |
           export DIST_SVN_REVISION=$(awk '/Last Changed Rev:/ {print $4}' dev-repo/DIST_SVN_REVISION.txt)
-
+          
+          echo "::group::Grails PPMC Vote Email"
           echo "*************************************************"
           echo "Subject: [VOTE] Approval of Apache Grails (incubating) Redis Plugin ${VERSION} release by Groovy PMC"
           echo "*************************************************"
@@ -340,26 +356,49 @@ jobs:
           echo "*************************************************"
           cat ${{ needs.publish.outputs.extract_repository_name }}/.github/vote_templates/groovy_pmc.txt | envsubst
           echo "*************************************************"
-      - name: 'Announcement Email'
-        env:
-          VERSION: ${{ needs.publish.outputs.release_version }}
-          VERSION_COMMIT_ID: ${{ needs.publish.outputs.commit_hash }}
-          PREVIOUS_VERSION: 'TODO_PREVIOUS_VERSION'
+          echo "::endgroup::"
+  release:
+    environment: release
+    name: 'VOTE SUCCEEDED - Release Artifacts'
+    needs: [ publish, source, upload ]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "Setup SVN and Tools"
+        run: sudo apt-get install -y subversion subversion-tools tree gettext-base
+      - name: "🗳 Grails PPMC Vote Confirmation - MANUAL"
         run: |
-          export DIST_SVN_REVISION=$(awk '/Last Changed Rev:/ {print $4}' dev-repo/DIST_SVN_REVISION.txt)
-
-          echo "*************************************************"
-          echo "Subject: [ANNOUNCE] Apache Grails (incubating) Redis Plugin ${VERSION}"
-          echo "*************************************************"
-          echo "Body:"
-          echo "*************************************************"
-          cat ${{ needs.publish.outputs.extract_repository_name }}/.github/vote_templates/announce.txt | envsubst
-          echo "*************************************************"
+          echo "::group::Manual Confirmation"
+          echo "🔎 This step is a placeholder that the vote confirmation on dev@grails.apache.org completed successfully."
+          echo "::endgroup::"
+      - name: "🗳 Groovy PMC Vote Confirmation - MANUAL"
+        run: |
+          echo "::group::Manual Confirmation"
+          echo "🔎 This step is a placeholder that the vote confirmation on dev@grails.apache.org completed successfully."
+          echo "::endgroup::"
+      - name: "🚀 Release JAR files - MANUAL"
+        run: |
+          echo "::group::Manual Jar Promotion"
+          echo "Run .github/scripts/releaseJarFiles.sh 'v${{ needs.publish.outputs.release_version }}' '${{ needs.publish.outputs.extract_repository_name }}:${{ needs.publish.outputs.release_version }}' ASF_USER ASF_PASS"
+          echo "::endgroup::"
+      - name: "🚀 Release distribution artifacts - MANUAL"
+        run: |
+          echo "::group::Manual ASF Artifact Promotion"
+          echo "Run github/scripts/releaseDistributions.sh 'v${{ needs.publish.outputs.release_version }}' ASF_USER ASF_PASS"
+          echo "::endgroup::"
+      - name: "✅ Update ASF Reporter - MANUAL"
+        run: |
+          echo "::group::Manual ASF Reporter Update"
+          TODAY=$(date +"%Y-%m-%d")
+          echo "Check email & update https://reporter.apache.org to mark the release ${{ needs.publish.outputs.release_version }} as complete as of ${TODAY}"
+          echo "Note: this is a place holder; currently this is not possible since Groovy sponsors us instead of the incubator PMC"
+          echo "::endgroup::"
   docs:
     environment: docs
-    name: "Publish Documentation"
-    needs: [publish, source, upload]
-    runs-on: ubuntu-latest
+    name: "VOTE SUCCEEDED - Publish Documentation"
+    needs: [ publish, source, upload ] # TODO Once we have confirmed `release` won't fail, add it as a dependency here
+    runs-on: ubuntu-24.04
     permissions:
       contents: write # required for gradle.properties revert
       issues: write # required for milestone closing
@@ -379,7 +418,7 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔨 Build Documentation"
-        run: ./gradlew :grails-redis:groovydoc
+        run: ./gradlew docs
         env:
           GRAILS_PUBLISH_RELEASE: 'true'
       - name: "🚀 Publish to Github Pages"
@@ -389,11 +428,11 @@ jobs:
           GRADLE_PUBLISH_RELEASE: 'true'
           SOURCE_FOLDER: plugin/build/docs
           VERSION: ${{ needs.publish.outputs.release_version }}
-  release:
-    name: "Close Release"
+  close:
+    name: "VOTE SUCCEEDED - Close Release"
     environment: release
-    needs: [publish, source, upload, docs]
-    runs-on: ubuntu-latest
+    needs: [ publish, source, upload, docs ] # TODO Once we have confirmed `release` won't fail, add it as a dependency here
+    runs-on: ubuntu-24.04
     permissions:
       contents: write # required for gradle.properties revert
       issues: write # required for milestone closing
@@ -415,3 +454,25 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "⚙️ Run post-release"
         uses: apache/grails-github-actions/post-release@asf
+      - name: '🌎 Create Blog Post - MANUAL'
+        run: |
+          echo "::group::Blog Post Creation - MANUAL"
+          echo "Publish a blog post on https://grails.apache.org/blog/ about the new release ${{ needs.publish.outputs.release_version }} using the repo https://github.com/apache/grails-static-website"
+          echo "::endgroup::"
+      - name: 'Announcement Email'
+        env:
+          VERSION: ${{ needs.publish.outputs.release_version }}
+          VERSION_COMMIT_ID: ${{ needs.publish.outputs.commit_hash }}
+          PREVIOUS_VERSION: 'TODO_PREVIOUS_VERSION'
+        run: |
+          export DIST_SVN_REVISION=$(awk '/Last Changed Rev:/ {print $4}' dev-repo/DIST_SVN_REVISION.txt)
+
+          echo "::group::Announcement Email"
+          echo "*************************************************"
+          echo "Subject: [ANNOUNCE] Apache Grails (incubating) Redis Plugin ${VERSION}"
+          echo "*************************************************"
+          echo "Body:"
+          echo "*************************************************"
+          cat ${{ needs.publish.outputs.extract_repository_name }}/.github/vote_templates/announce.txt | envsubst
+          echo "*************************************************"
+          echo "::endgroup::"
