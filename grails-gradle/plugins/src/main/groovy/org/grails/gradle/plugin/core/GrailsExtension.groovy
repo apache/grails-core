@@ -68,6 +68,12 @@ class GrailsExtension {
     boolean springDependencyManagement = true
 
     /**
+     * Whether the micronaut dependencies should be auto added to the project on detection of micronaut & the platform
+     * version enforced
+     */
+    boolean micronautAutoSetup = true
+
+    /**
      * Configure the reloading agent
      */
     Agent agent = new Agent()

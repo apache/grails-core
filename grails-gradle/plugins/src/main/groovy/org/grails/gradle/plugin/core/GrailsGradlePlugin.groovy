@@ -390,6 +390,12 @@ class GrailsGradlePlugin extends GroovyPlugin {
             if (!micronautEnabled) {
                 return
             }
+
+            GrailsExtension ge = project.extensions.getByType(GrailsExtension)
+            if (!ge.micronautAutoSetup) {
+                return
+            }
+
             project.logger.lifecycle('Micronaut Support Detected for {}', project.name)
 
             final String micronautPlatformVersion = project.properties['micronautPlatformVersion']
