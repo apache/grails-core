@@ -5,10 +5,7 @@ Grails is a powerful Groovy-based web application framework for the JVM built on
 This Grails Redis Plugin release is another milestone on our journey to a final 7.0 release. Users are encouraged to try the milestone to provide early feedback. 
 
 The release notes are available here:
-https://github.com/apache/grails-core/compare/v${VERSION}
-
-For the complete list of changes:
-https://github.com/apache/grails-core/compare/v${PREVIOUS_VERSION}...v${VERSION}
+https://github.com/apache/grails-redis/releases/tag/v${VERSION}
 
 Apache Grails website: https://grails.apache.org/
 
