@@ -2,7 +2,7 @@ The Apache Grails (incubating) community is pleased to announce the release of A
 
 Grails is a powerful Groovy-based web application framework for the JVM built on top of Spring Boot that has many plugins to further extend its functionality.
 
-This Spring Security Plugin release another milestone on our journey to a final 7.0 release. Users are encouraged to try the milestone to provide early feedback. Detailed upgrade instructions are available here: https://docs.grails.org/${VERSION}/guide/upgrading.html.
+This Grails Spring Security Plugin release is another milestone on our journey to a final 7.0 release. Users are encouraged to try the milestone to provide early feedback. 
 
 The release notes are available here:
 https://github.com/apache/grails-spring-security/compare/v${VERSION}
