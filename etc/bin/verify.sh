@@ -37,6 +37,10 @@ cleanup() {
 }
 trap cleanup ERR
 
+echo "Verifying KEYS file ..."
+"${SCRIPT_DIR}/verify-keys.sh" "${DOWNLOAD_LOCATION}"
+echo "✅ KEYS Verified"
+
 echo "Downloading Artifacts ..."
 "${SCRIPT_DIR}/download-release-artifacts.sh" "${RELEASE_TAG}" "${DOWNLOAD_LOCATION}"
 echo "✅ Artifacts Downloaded"
