@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <withJansi>false</withJansi>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>${CONSOLE_LOG_THRESHOLD}</level>
+        </filter>
+        <encoder>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+            <charset>${CONSOLE_LOG_CHARSET}</charset>
+        </encoder>
+    </appender>
+
+    <root level="ERROR">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+    <springProfile name="development">
+        <logger name="StackTrace" level="ERROR" additivity="false" />
+
+<!--        <logger name="Test38" level="DEBUG"/>-->
+
+<!--        <logger name="org.hibernate.SQL" level="DEBUG"/>-->
+<!--        <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>-->
+<!--        <logger name="org.springframework.security" level="TRACE"/>-->
+
+<!--        <root level="WARN"/>-->
+    </springProfile>
+
+<!--    logging to a file-->
+<!--    <property name="LOG_FILE" value="${LOG_FILE:-${LOG_PATH:-${LOG_TEMP:-${java.io.tmpdir:-/tmp}}/}spring.log}"/>-->
+<!--    <include resource="org/springframework/boot/logging/logback/file-appender.xml" />-->
+<!--    <root level="ERROR">-->
+<!--        <appender-ref ref="FILE" />-->
+<!--    </root>-->
+<!--    add logging.file.name to application.yml-->
+</configuration>
