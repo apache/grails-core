@@ -270,24 +270,12 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     List<D> findAllWhere(Map queryMap, Map args) {
         if (!queryMap) return null
-        (List<D>)hibernateTemplate.execute { Session session ->
-            Map<String, Object> processedQueryMap = [:]
-            queryMap.each{ key, value -> processedQueryMap[key.toString()] = value }
-            Map<String,Object> queryArgs = filterQueryArgumentMap(processedQueryMap)
-            List<String> nullNames = removeNullNames(queryArgs)
-
-            CriteriaBuilder cb = session.getCriteriaBuilder()
-            CriteriaQuery cq = cb.createQuery(persistentEntity.javaClass)
-            def root = cq.from(persistentEntity.javaClass)
-            def listOfPredicates = queryArgs.collect { entry -> cb.equal(root.get(entry.key), entry.value) }
-            def nullPredicates = nullNames.collect { nullName -> cb.isNotNull(root.get(nullName)) }
-            def jpaPredicates = (listOfPredicates + nullPredicates).<JpaPredicate>toArray(new JpaPredicate[0])
-            cq.select(root).where(cb.and(jpaPredicates))
-            firePreQueryEvent()
-            List results = session.createQuery(cq).resultList
-            firePostQueryEvent(results)
-            return results
-        }
+        def hibernateQuery = new HibernateQuery(hibernateSession, persistentEntity)
+        queryMap.each {key,value -> hibernateQuery.eq(key.toString(),value)}
+        firePreQueryEvent()
+        def result = hibernateQuery.list()
+        firePostQueryEvent(result)
+        result as List<D>
     }
 
     @Override
@@ -454,23 +442,12 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     D findWhere(Map queryMap, Map args) {
         if (!queryMap) return null
-        (D)hibernateTemplate.execute { Session session ->
-            Map<String, Object> processedQueryMap = [:]
-            queryMap.each{ key, value -> processedQueryMap[key.toString()] = value }
-            Map<String,Object> queryArgs = filterQueryArgumentMap(processedQueryMap)
-            List<String> nullNames = removeNullNames(queryArgs)
-            CriteriaBuilder cb = session.getCriteriaBuilder()
-            CriteriaQuery cq = cb.createQuery(persistentEntity.javaClass)
-            def root = cq.from(persistentEntity.javaClass)
-            def listOfPredicates = queryArgs.collect { entry -> cb.equal(root.get(entry.key), entry.value) }
-            def nullPredicates = nullNames.collect { nullName -> cb.isNotNull(root.get(nullName)) }
-            JpaPredicate[] jpaPredicates = (listOfPredicates + nullPredicates).<JpaPredicate>toArray(new JpaPredicate[0])
-            cq.select(root).where(cb.and(jpaPredicates))
-            firePreQueryEvent()
-            Object result = session.createQuery(cq).singleResult
-            firePostQueryEvent(result)
-            result
-        }
+        def hibernateQuery = new HibernateQuery(hibernateSession, persistentEntity)
+        queryMap.each {key,value -> hibernateQuery.eq(key.toString(),value)}
+        firePreQueryEvent()
+        def result = hibernateQuery.singleResult()
+        firePostQueryEvent(result)
+        result as D
     }
 
     List<D> getAll(List ids) {

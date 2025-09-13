@@ -27,21 +27,31 @@ import spock.lang.Issue
 
 /**
  * Created by graemerocher on 20/02/2017.*/
-//TODO Multiple data sources not working
 class MultipleDataSourcesWithEventsSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
         manager.addAllDomainClasses([EventsBook, SecondaryBook])
         manager.grailsConfig = [
-                'dataSource.url'        : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
-                'dataSource.dbCreate'   : 'update',
-                'dataSource.dialect'    : H2Dialect.name,
-                'dataSource.formatSql'  : 'true',
-                'hibernate.flush.mode'  : 'COMMIT',
-                'hibernate.cache.queries': 'true',
-                'hibernate.cache'       : ['use_second_level_cache': true, 'region.factory_class': 'org.hibernate.cache.ehcache.EhCacheRegionFactory'],
-                'hibernate.hbm2ddl.auto': 'create',
-                'dataSources.books'     : [url: "jdbc:h2:mem:books;LOCK_TIMEOUT=10000"]
+                'dataSource': [
+                        'url'        : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+                        'dbCreate'   : 'update',
+                        'dialect'    : H2Dialect.name,
+                        'formatSql'  : 'true'
+                ],
+                'dataSources': [
+                        'books': [
+                                'url'        : "jdbc:h2:mem:books;LOCK_TIMEOUT=10000",
+                                'dbCreate'   : 'update',
+                                'dialect'    : H2Dialect.name,
+                                'formatSql'  : 'true'
+                        ]
+                ],
+                'hibernate': [
+                        'flush.mode'  : 'COMMIT',
+                        'cache.queries': 'true',
+                        'cache'       : ['use_second_level_cache': true, 'region.factory_class': 'org.hibernate.cache.jcache.internal.JCacheRegionFactory'],
+                        'hbm2ddl.auto': 'create-drop'
+                ]
         ]
     }
 
