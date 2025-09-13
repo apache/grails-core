@@ -54,9 +54,9 @@ This plugin configures the Grails `messageSource` bean and a couple of other bea
 ==== Customizing the Servlet Environment
 
 
-In previous versions of Grails it was possible to dynamically modify the generated `web.xml`. In Grails 3.x there is no `web.xml` file and it is not possible to programmatically modify the `web.xml` file anymore.
+In previous versions of Grails it was possible to dynamically modify the generated `web.xml`. From Grails 3.x+ there is no `web.xml` file and it is not possible to programmatically modify the `web.xml` file anymore.
 
-However, it is possible to perform the most commons tasks of modifying the Servlet environment in Grails 3.x.
+However, it is possible to perform the most commons tasks of modifying the Servlet environment in Grails 3.x and above.
 
 
 ==== Adding New Servlets

@@ -351,13 +351,17 @@ The asset pipeline has a new https://github.com/wondrify/asset-pipeline[home]. V
 
 Updated maven coordinates:
 
-```console
+[source,groovy]
+.build.gradle
+----
 cloud.wondrify:asset-pipeline-gradle
 cloud.wondrify:asset-pipeline-grails
-```
+----
 
 Gradle plugin:
-```console
+[source,groovy]
+.build.gradle
+----
 plugins {
     id "cloud.wondrify.asset-pipeline"
 }
@@ -365,7 +369,7 @@ plugins {
 or
 
 apply plugin: "cloud.wondrify.asset-pipeline"
-```
+----
 
 ===== 12.12 API Changes
 
@@ -383,9 +387,11 @@ If you decide to use the `grails-layout` plugin, several changes have occurred:
 
 Add the following dependency to your project:
 
-```console
+[source,groovy]
+.build.gradle
+----
 implementation "org.apache.grails:grails-layout"
-```
+----
 
 Package Changes:
 
@@ -421,12 +427,60 @@ https://docs.spring.io/spring-boot/appendix/application-properties/index.html#ap
 
 The `servletContext` is no longer included by default in the generated `Bootstrap` class. If you need access to the `servletContext`, you can inject it into your `Bootstrap` class using:
 
-```console
+[source,groovy]
+----
 ServletContext servletContext
-```
+----
 
 ===== 12.17 Development Reloading
 
 For Grails 7, as was the case with Grails 4 and 5 and shell-generated applications in 6, Spring Boot Developer Tools is used by default for development reloading within generated applications.
 
 To learn more about development reloading options, please see the link:gettingStarted.html#developmentReloading[Development Reloading] section of this guide.
+
+===== 12.18 grails-i18n plugin
+
+`org.apache.grails:grails-i18n` has been changed to `org.apache.grails.i18n:grails-i18n` and is provided transitively, remove `org.apache.grails:grails-i18n` and `org.grails:grails-plugin-i18n` from your dependency list
+
+===== 12.19 hibernate.cache.region.factory_class
+
+`org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory` is deprecated in Hibernate 5.6 and is not compatible with `org.hibernate:hibernate-core-jakarta:{hibernate5Version}`, which is used in Grails 7.
+
+[source,yml]
+.application.yml
+----
+    hibernate:
+        allow_update_outside_transaction: true
+    cache:
+        queries: false
+        use_second_level_cache: true
+        use_query_cache: false
+        region:
+        factory_class: 'org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory'
+----
+
+If your application sets `hibernate.cache.region.factory_class` to `org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory` it will add the `non-jakarta` version of `hibernate-core` to your classpath which will cause `NoClassDefFoundError` and `ClassNotFoundException` errors.
+
+You will need to change it to `jcache` and add the Ehcache dependency as follows:
+
+[source,yml]
+.application.yml
+----
+    hibernate:
+        allow_update_outside_transaction: true
+    cache:
+        queries: false
+        use_second_level_cache: true
+        use_query_cache: false
+        region:
+        factory_class: 'jcache'
+----
+
+[source,groovy]
+.build.gradle
+----
+    implementation 'org.ehcache:ehcache'
+----
+
+Alternatively, you can define the hibernate-ehcache dependency explicitly and adjust it to exclude `hibernate-core` and add the `jboss-transaction-api_1.3_spec` see link:upgrading.html#_12_5_hibernate_ehcache[Hibernate-ehcache]
+

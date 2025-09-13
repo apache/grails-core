@@ -23,7 +23,7 @@ under the License.
 
 Grails plugins let you register dynamic methods with any Grails-managed or other class at runtime. This work is done in a `doWithDynamicMethods` method.
 
-NOTE: Note that Grails 3.x features newer features such as traits that are usable from code compiled with `CompileStatic`. It is recommended that dynamic behavior is only added for cases that are not possible with traits.
+NOTE: Note that Grails 3.x and above features newer features such as traits that are usable from code compiled with `CompileStatic`. It is recommended that dynamic behavior is only added for cases that are not possible with traits.
 
 [source,groovy]
 ----

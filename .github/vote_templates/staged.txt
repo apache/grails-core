@@ -4,12 +4,7 @@ I am happy to start the VOTE thread for an Apache Grails (incubating) release of
 
 
 Please note the following build reproducibility issues for this release:
-1. grails-cli-7.0.0-RC1-all.jar # caused by extension module merge from the shadowJar (need to strip date from property file) & the plugin.xml signature is being included
-- Created https://github.com/apache/grails-core/issues/14951 to address this in a future release
-2. grails-converters-7.0.0-RC1.jar # contents identical on decompile
-3. grails-datamapping-core-test-7.0.0-RC1-tests.jar # contents identical on decompile
-4. grails-datamapping-tck-7.0.0-RC1.jar # contents identical on decompile
-5. grails-forge-core-7.0.0-RC1-javadoc.jar # due to groovy 3 in forge, we need to update to groovy 4 to fix this
+1. grails-forge-core-${VERSION}-javadoc.jar # due to groovy 3 in forge, we need to update to groovy 4 to fix this
 
 Given that these differences are known, explainable, and immaterial, we are moving forward with a release vote.
 
