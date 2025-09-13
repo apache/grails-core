@@ -18,7 +18,7 @@
     </root>
 
     <springProfile name="development">
-        <logger name="StackTrace" level="ERROR" additivity="false" />
+        <logger name="StackTrace" level="ERROR" />
 
 <!--        <logger name="Test38" level="DEBUG"/>-->
 
