@@ -29,7 +29,6 @@ group = "com.example"
 
 dependencies {
     console "org.apache.grails:grails-console"
-    developmentOnly "org.springframework.boot:spring-boot-devtools"
     implementation platform(project(':grails-bom'))
     implementation "org.springframework.boot:spring-boot-starter-logging"
     implementation "org.springframework.boot:spring-boot-starter-validation"
