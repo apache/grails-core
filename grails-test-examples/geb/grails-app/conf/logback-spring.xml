@@ -38,7 +38,7 @@
     </root>
 
     <springProfile name="development">
-        <logger name="StackTrace" level="ERROR" additivity="false" />
+        <logger name="StackTrace" level="ERROR" />
 
 <!--        <logger name="org.demo.spock" level="DEBUG"/>-->
 

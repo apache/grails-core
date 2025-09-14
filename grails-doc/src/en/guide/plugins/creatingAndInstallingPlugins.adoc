@@ -214,7 +214,7 @@ repositories {
 implementation "org.apache.grails:grails-quartz:0.1"
 ----
 
-NOTE: In Grails 2.x plugins were packaged as ZIP files, however in Grails 3.x plugins are simple JAR files that can be added to the classpath of the IDE.
+NOTE: In Grails 2.x plugins were packaged as ZIP files, however from Grails 3.x+ plugins are simple JAR files that can be added to the classpath of the IDE.
 
 
 
@@ -350,12 +350,12 @@ jar {
 
 
 
-==== Inline Plugins in Grails 3.0
+==== Inline Plugins in Grails
 
 
-In Grails 2.x it was possible to specify inline plugins in `BuildConfig`, in Grails 3.x this functionality has been replaced by Gradle's multi-project build feature.
+In Grails 2.x it was possible to specify inline plugins in `BuildConfig`, from Grails 3.x+ this functionality has been replaced by Gradle's multi-project build feature.
 
-To set up a multi project build create an appliation and a plugin in a parent directory:
+To set up a multi project build create an application and a plugin in a parent directory:
 
 [source,groovy]
 ----
@@ -392,7 +392,7 @@ grails create-plugin <<PLUGIN NAME>>
 
 This will create a web-plugin project for the name you specify. For example running `grails create-plugin example` would create a new web-plugin project called `example`.
 
-In Grails 3.0 you should consider whether the plugin you create requires a web environment or whether the plugin can be used with other profiles. If your plugin does not require a web environment then use the "plugin" profile instead of the default "web-plugin" profile:
+In Grails you should consider whether the plugin you create requires a web environment or whether the plugin can be used with other profiles. If your plugin does not require a web environment then use the "plugin" profile instead of the default "web-plugin" profile:
 
 [source,groovy]
 ----
@@ -554,7 +554,7 @@ repositories {
 implementation "org.apache.grails:grails-quartz:0.1"
 ----
 
-NOTE: In Grails 2.x plugins were packaged as ZIP files, however in Grails 3.x plugins are simple JAR files that can be added to the classpath of the IDE.
+NOTE: In Grails 2.x plugins were packaged as ZIP files, however from Grails 3.x+ plugins are simple JAR files that can be added to the classpath of the IDE.
 
 
 
@@ -689,10 +689,10 @@ jar {
 
 
 
-==== Inline Plugins in Grails 3.0
+==== Inline Plugins in Grails
 
 
-In Grails 2.x it was possible to specify inline plugins in `BuildConfig`, in Grails 3.x this functionality has been replaced by Gradle's multi-project build feature.
+In Grails 2.x it was possible to specify inline plugins in `BuildConfig`, from Grails 3.x+ this functionality has been replaced by Gradle's multi-project build feature.
 
 To set up a multi project build create an appliation and a plugin in a parent directory:
 

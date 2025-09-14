@@ -1,7 +1,8 @@
 Hi Everyone,
+
 The Apache Grails community has voted to approve the release of Apache Grails ${VERSION}.
 
-As the incubation host, we now kindly request the Groovy PMC to review & approve our initial ASF release.
+As the incubation host, we now kindly request the Groovy PMC to review & approve our ASF release.
 
 Grails vote thread:
 * <VOTE THREAD LINK>

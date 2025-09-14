@@ -18,6 +18,13 @@
 github:
   # deployment environments to delay releasing until the necessary steps have completed
   environments:
+    close:
+      required_reviewers:
+        - id: grails-committers
+          type: Team
+        - id: jdaugherty
+          type: User
+      wait_timer: 0
     docs:
       required_reviewers:
         - id: grails-committers
