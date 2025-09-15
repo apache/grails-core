@@ -17,17 +17,18 @@
  *  under the License.
  */
 
-assets {
-    excludes = [
-            'webjars/jquery/**',
-            'webjars/bootstrap/**',
-            'webjars/bootstrap-icons/**'
-    ]
-    includes = [
-            'webjars/jquery/*/dist/jquery.js',
-            'webjars/bootstrap/*/dist/js/bootstrap.bundle.js',
-            'webjars/bootstrap/*/dist/css/bootstrap.css',
-            'webjars/bootstrap-icons/*/font/bootstrap-icons.css',
-            'webjars/bootstrap-icons/*/font/fonts/*',
-    ]
+package com.example.pages
+
+import geb.Page
+
+class LogoutPage extends Page {
+
+    static url = 'logout'
+
+    static at = { title == 'Confirm Log Out?' }
+
+    static content = {
+        logoutForm { $('form') }
+        logoutButton { $('button', value: 'Log Out') }
+    }
 }

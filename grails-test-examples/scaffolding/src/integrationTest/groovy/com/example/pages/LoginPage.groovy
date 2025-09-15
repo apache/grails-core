@@ -17,17 +17,20 @@
  *  under the License.
  */
 
-assets {
-    excludes = [
-            'webjars/jquery/**',
-            'webjars/bootstrap/**',
-            'webjars/bootstrap-icons/**'
-    ]
-    includes = [
-            'webjars/jquery/*/dist/jquery.js',
-            'webjars/bootstrap/*/dist/js/bootstrap.bundle.js',
-            'webjars/bootstrap/*/dist/css/bootstrap.css',
-            'webjars/bootstrap-icons/*/font/bootstrap-icons.css',
-            'webjars/bootstrap-icons/*/font/fonts/*',
-    ]
+package com.example.pages
+
+import geb.Page
+
+class LoginPage extends Page {
+
+    static url = 'login'
+
+    static at = { title == 'Please sign in' }
+
+    static content = {
+        loginForm { $('form.login-form') }
+        username { $('input', name: 'username') }
+        password { $('input', name: 'password') }
+        loginButton { $('button.primary', type: 'submit') }
+    }
 }

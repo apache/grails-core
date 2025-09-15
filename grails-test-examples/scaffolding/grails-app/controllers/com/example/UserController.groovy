@@ -16,18 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package com.example
 
-assets {
-    excludes = [
-            'webjars/jquery/**',
-            'webjars/bootstrap/**',
-            'webjars/bootstrap-icons/**'
-    ]
-    includes = [
-            'webjars/jquery/*/dist/jquery.js',
-            'webjars/bootstrap/*/dist/js/bootstrap.bundle.js',
-            'webjars/bootstrap/*/dist/css/bootstrap.css',
-            'webjars/bootstrap-icons/*/font/bootstrap-icons.css',
-            'webjars/bootstrap-icons/*/font/fonts/*',
-    ]
+import grails.plugin.scaffolding.RestfulServiceController
+import grails.plugin.scaffolding.annotation.Scaffold
+
+@Scaffold(RestfulServiceController<User>)
+class UserController {
 }

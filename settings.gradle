@@ -370,6 +370,7 @@ include(
         'grails-test-examples-issue-11767',
         'grails-test-examples-plugins-issue-11767',
         'grails-test-examples-cache',
+        'grails-test-examples-scaffolding',
         'grails-test-examples-views-functional-tests',
         'grails-test-examples-views-functional-tests-plugin'
 )
@@ -399,6 +400,7 @@ project(':grails-test-examples-plugins-issue11005').projectDir = file('grails-te
 project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')
 project(':grails-test-examples-plugins-issue-11767').projectDir = file('grails-test-examples/plugins/issue-11767')
 project(':grails-test-examples-cache').projectDir = file('grails-test-examples/cache')
+project(':grails-test-examples-scaffolding').projectDir = file('grails-test-examples/scaffolding')
 project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')
 project(':grails-test-examples-views-functional-tests-plugin').projectDir = file('grails-test-examples/views-functional-tests-plugin')
 

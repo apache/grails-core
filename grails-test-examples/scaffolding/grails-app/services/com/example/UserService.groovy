@@ -16,18 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package com.example
 
-assets {
-    excludes = [
-            'webjars/jquery/**',
-            'webjars/bootstrap/**',
-            'webjars/bootstrap-icons/**'
-    ]
-    includes = [
-            'webjars/jquery/*/dist/jquery.js',
-            'webjars/bootstrap/*/dist/js/bootstrap.bundle.js',
-            'webjars/bootstrap/*/dist/css/bootstrap.css',
-            'webjars/bootstrap-icons/*/font/bootstrap-icons.css',
-            'webjars/bootstrap-icons/*/font/fonts/*',
-    ]
+import grails.gorm.transactions.Transactional
+import grails.plugin.scaffolding.GormService
+import grails.plugin.scaffolding.annotation.Scaffold
+import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.core.userdetails.UserDetailsService
+import org.springframework.security.core.userdetails.UsernameNotFoundException
+
+@Scaffold(GormService<User>)
+@Transactional
+class UserService implements UserDetailsService {
+    @Override
+    UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        def user = User.findByEmail(username)
+        if (!user) {
+            throw new UsernameNotFoundException("No user with email $username")
+        }
+        user
+    }
 }

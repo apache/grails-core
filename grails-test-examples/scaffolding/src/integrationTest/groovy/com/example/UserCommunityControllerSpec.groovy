@@ -17,17 +17,42 @@
  *  under the License.
  */
 
-assets {
-    excludes = [
-            'webjars/jquery/**',
-            'webjars/bootstrap/**',
-            'webjars/bootstrap-icons/**'
-    ]
-    includes = [
-            'webjars/jquery/*/dist/jquery.js',
-            'webjars/bootstrap/*/dist/js/bootstrap.bundle.js',
-            'webjars/bootstrap/*/dist/css/bootstrap.css',
-            'webjars/bootstrap-icons/*/font/bootstrap-icons.css',
-            'webjars/bootstrap-icons/*/font/fonts/*',
-    ]
+package com.example
+
+import com.example.pages.LoginPage
+
+import grails.plugin.geb.ContainerGebSpec
+import grails.testing.mixin.integration.Integration
+
+@Integration(applicationClass = Application)
+class UserCommunityControllerSpec extends ContainerGebSpec {
+
+    void setup() {
+        go '/'
+        to LoginPage
+        username = 'test@grails.org'
+        password = 'letmein'
+        loginButton.click()
+    }
+
+    void cleanup() {
+        try {
+            go 'logout'
+            $('input', value: 'Log Out').click()
+        }
+        catch (ignored) {
+            // ignored
+        }
+    }
+
+    void "User list"() {
+        when:
+        go 'community/user/index'
+
+        then:
+        title == 'User List'
+
+        and:
+        !$('table.scaffold')
+    }
 }
