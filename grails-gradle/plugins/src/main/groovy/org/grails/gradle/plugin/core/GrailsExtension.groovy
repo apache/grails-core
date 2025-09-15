@@ -68,8 +68,9 @@ class GrailsExtension {
     boolean springDependencyManagement = true
 
     /**
-     * Whether the micronaut dependencies should be auto added to the project on detection of micronaut & the platform
-     * version enforced
+     * Whether the Micronaut `annotationProcessor` dependencies should be auto-added to the project
+     * on detection of the `grails-micronaut` plugin, and the version defined by the `micronautPlatformVersion`
+     * Gradle property is enforced.
      */
     boolean micronautAutoSetup = true
 
