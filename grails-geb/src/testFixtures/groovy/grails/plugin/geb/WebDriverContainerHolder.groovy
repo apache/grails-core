@@ -162,18 +162,10 @@ class WebDriverContainerHolder {
             }
         }
 
-        // If `GebConfig` instantiates a `RemoteWebDriver` without using it's `remoteAddress` constructor,
-        // the `RemoteWebDriver` will be instantiated using the `webdriver.remote.server` system property.
-        String existingPropertyValue = System.getProperty('webdriver.remote.server')
+        // If a custom `GebConfig` instantiates a `RemoteWebDriver` without using it's `remoteAddress` constructor,
+        // the `RemoteWebDriver` will be instantiated using the `webdriver.remote.server` system property,
+        // so we need to set that value.
         System.setProperty('webdriver.remote.server', currentContainer.seleniumAddress.toString())
-        gebConfig.driver // This will implicitly call `createDriver()`
-
-        // Restore the `webdriver.remote.server` system property
-        if (existingPropertyValue == null) {
-            System.clearProperty('webdriver.remote.server')
-        } else {
-            System.setProperty('webdriver.remote.server', existingPropertyValue)
-        }
 
         currentBrowser = new Browser(gebConfig)
 
