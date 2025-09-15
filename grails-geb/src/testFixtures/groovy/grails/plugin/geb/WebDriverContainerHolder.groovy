@@ -147,7 +147,7 @@ class WebDriverContainerHolder {
                             'You need to wrap the driver instance in a closure.'
             )
         }
-        if (gebConfig.driverConf == null) {
+        if (!gebConfig.driverConf) {
             // If no driver was set in GebConfig.groovy, default to Chrome
             gebConfig.driverConf = { ->
                 log.info('Using default Chrome RemoteWebDriver for {}', currentContainer.seleniumAddress)

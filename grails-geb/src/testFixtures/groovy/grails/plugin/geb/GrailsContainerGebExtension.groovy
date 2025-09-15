@@ -136,7 +136,7 @@ class GrailsContainerGebExtension implements IGlobalExtension {
     }
 
     private static boolean validateContainerGebSpec(SpecInfo specInfo) {
-        if (!specInfo.annotations.find { it.annotationType() == Integration }) {
+        if (!specInfo.annotations.any { it.annotationType() == Integration }) {
             throw new IllegalArgumentException('ContainerGebSpec classes must be annotated with @Integration')
         }
 
@@ -145,8 +145,8 @@ class GrailsContainerGebExtension implements IGlobalExtension {
 
     private static void addGebExtensionOnFailureReporter(SpecInfo spec) {
         List<MethodInfo> methods = spec.allFeatures*.featureMethod + spec.allFixtureMethods.toList()
-        methods.each { MethodInfo method ->
-            method.addInterceptor(new GebOnFailureReporter())
+        methods.each {
+            it.addInterceptor(new GebOnFailureReporter())
         }
     }
 }
