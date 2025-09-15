@@ -25,8 +25,8 @@ import org.spockframework.runtime.extension.IMethodInterceptor
 import org.spockframework.runtime.extension.IMethodInvocation
 
 /**
- * This class is a direct clone of {@link geb.spock.OnFailureReporter OnFailureReporter}, except it works for the
- * {@link grails.plugin.geb.ContainerGebSpec ContainerGebSpec}.
+ * Adapts {@link geb.spock.OnFailureReporter} for use with
+ * {@link grails.plugin.geb.ContainerGebSpec}.
  */
 @CompileStatic
 class GebOnFailureReporter implements IMethodInterceptor {

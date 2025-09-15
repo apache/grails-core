@@ -127,7 +127,7 @@ class WebDriverContainerHolder {
         // Create a Geb Configuration the same way as an empty Browser constructor would do
         Configuration gebConfig = new ConfigurationLoader().conf
 
-        // Ensure driver points to re-initialized container with correct host
+        // Ensure the driver points to the re-initialized container with the correct host
         // Driver is explicitly quit by us in stop() method to fulfill our resulting responsibility
         gebConfig.cacheDriver = false
 
