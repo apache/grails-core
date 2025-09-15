@@ -25,7 +25,7 @@ import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 
 @Integration(applicationClass = Application)
-class UserControllerSpec extends ContainerGebSpec {
+class UserCommunityControllerSpec extends ContainerGebSpec {
 
     void setup() {
         go '/'
@@ -47,12 +47,12 @@ class UserControllerSpec extends ContainerGebSpec {
 
     void "User list"() {
         when:
-        go 'user/index'
+        go 'community/user/index'
 
         then:
         title == 'User List'
 
         and:
-        $('table.scaffold')
+        !$('table.scaffold')
     }
 }
