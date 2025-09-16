@@ -27,6 +27,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import org.codehaus.groovy.runtime.InvokerHelper
 
 import com.github.dockerjava.api.model.ContainerNetwork
 import geb.Browser
@@ -59,6 +60,7 @@ import grails.plugin.geb.serviceloader.ServiceRegistry
 class WebDriverContainerHolder {
 
     private static final String DEFAULT_HOSTNAME_FROM_HOST = 'localhost'
+    private static final String REMOTE_ADDRESS_PROPERTY = 'webdriver.remote.server'
 
     GrailsGebSettings grailsGebSettings
     GebTestManager testManager
@@ -162,10 +164,24 @@ class WebDriverContainerHolder {
             }
         }
 
-        // If a custom `GebConfig` instantiates a `RemoteWebDriver` without using it's `remoteAddress` constructor,
-        // the `RemoteWebDriver` will be instantiated using the `webdriver.remote.server` system property,
-        // so we need to set that value.
-        System.setProperty('webdriver.remote.server', currentContainer.seleniumAddress.toString())
+        gebConfig.driverConf = ClosureUtils.Intercept.around(
+                gebConfig.driverConf as Closure,
+                { String seleniumAddress, Map ctx, Object[] args ->
+                    // If a custom `GebConfig` instantiates a `RemoteWebDriver` without using it's `remoteAddress`
+                    // constructor, the `RemoteWebDriver` will be instantiated using the `webdriver.remote.server`
+                    // system property, so we need to set that value.
+                    ctx.existingPropertyValue = System.getProperty(REMOTE_ADDRESS_PROPERTY)
+                    System.setProperty(REMOTE_ADDRESS_PROPERTY, seleniumAddress)
+                }.curry(currentContainer.seleniumAddress.toString()),
+                { Map ctx, Object result, Throwable error, Object[] args ->
+                    // Restore the `webdriver.remote.server` system property
+                    if (!ctx.existingPropertyValue) {
+                        System.clearProperty(REMOTE_ADDRESS_PROPERTY)
+                    } else {
+                        System.setProperty(REMOTE_ADDRESS_PROPERTY, ctx.existingPropertyValue as String)
+                    }
+                }
+        )
 
         currentBrowser = new Browser(gebConfig)
 
@@ -314,6 +330,47 @@ class WebDriverContainerHolder {
         } catch (Exception e) {
             log.warn("Failed to restart VNC recording container: ${e.message}", e)
             // Don't throw the exception to avoid breaking the test execution
+        }
+    }
+
+    @CompileStatic
+    private static class ClosureUtils {
+
+        @CompileStatic
+        static class Intercept {
+            /**
+             * Wrap a target closure so that:
+             *  - before(ctx, args) runs first
+             *  - target(*args) runs
+             *  - after(ctx, result, error, args) runs in finally (even on exception)
+             *
+             * A mutable ctx Map lets before/after share data (timers, resources, etc).
+             */
+            static Closure around(
+                    Closure target,
+                    Closure before = { Map ctx, Object[] args -> },
+                    Closure after  = { Map ctx, Object result, Throwable error, Object[] args -> }
+            ) {
+                def wrapped = { Object... args ->
+                    Map ctx = [:]
+                    Object result = null
+                    Throwable error = null
+                    try {
+                        before(ctx, args)
+                        result = InvokerHelper.invokeClosure(target, args)
+                        return result
+                    } catch (Throwable t) {
+                        error = t
+                        throw t
+                    } finally {
+                        after(ctx, result, error, args)
+                    }
+                }
+                // Preserve caller semantics
+                wrapped = wrapped.rehydrate(target.delegate, target.owner, target.thisObject)
+                wrapped.resolveStrategy = target.resolveStrategy
+                return wrapped
+            }
         }
     }
 }
