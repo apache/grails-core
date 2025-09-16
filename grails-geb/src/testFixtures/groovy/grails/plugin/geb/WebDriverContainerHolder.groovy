@@ -164,23 +164,13 @@ class WebDriverContainerHolder {
             }
         }
 
-        gebConfig.driverConf = ClosureUtils.Intercept.around(
+        // If a custom `GebConfig` instantiates a `RemoteWebDriver` without using it's `remoteAddress`
+        // constructor, the `RemoteWebDriver` will be instantiated using the `webdriver.remote.server`
+        // system property, so we need to set that value.
+        gebConfig.driverConf = ClosureDecorators.withSystemProperty(
                 gebConfig.driverConf as Closure,
-                { String seleniumAddress, Map ctx, Object[] args ->
-                    // If a custom `GebConfig` instantiates a `RemoteWebDriver` without using it's `remoteAddress`
-                    // constructor, the `RemoteWebDriver` will be instantiated using the `webdriver.remote.server`
-                    // system property, so we need to set that value.
-                    ctx.existingPropertyValue = System.getProperty(REMOTE_ADDRESS_PROPERTY)
-                    System.setProperty(REMOTE_ADDRESS_PROPERTY, seleniumAddress)
-                }.curry(currentContainer.seleniumAddress.toString()),
-                { Map ctx, Object result, Throwable error, Object[] args ->
-                    // Restore the `webdriver.remote.server` system property
-                    if (!ctx.existingPropertyValue) {
-                        System.clearProperty(REMOTE_ADDRESS_PROPERTY)
-                    } else {
-                        System.setProperty(REMOTE_ADDRESS_PROPERTY, ctx.existingPropertyValue as String)
-                    }
-                }
+                REMOTE_ADDRESS_PROPERTY,
+                currentContainer.seleniumAddress.toString()
         )
 
         currentBrowser = new Browser(gebConfig)
@@ -334,42 +324,68 @@ class WebDriverContainerHolder {
     }
 
     @CompileStatic
-    private static class ClosureUtils {
+    private class ClosureDecorators {
+
+        /**
+         * Wraps a closure so that during its execution
+         * System.getProperty(key) returns value from valueProvider.
+         * valueProvider can depend on the call args.
+         */
+        static <R> Closure<R> withSystemProperty(
+                Closure<R> target,
+                String key,
+                Closure<String> valueProvider // e.g. { -> "http://fake:4444" } or { a, b -> compute(a, b) }
+        ) {
+            Closure<R> wrapped = { Object... args ->
+                String v = (String) InvokerHelper.invokeClosure(valueProvider, args)
+                SysPropScope.withProperty(key, v) {
+                    (R) InvokerHelper.invokeClosure(target, args)
+                }
+            } as Closure<R>
+
+            // keep original closure semantics
+            wrapped = (Closure<R>) wrapped.rehydrate(target.delegate, target.owner, target.thisObject)
+            wrapped.resolveStrategy = target.resolveStrategy
+            return wrapped
+        }
+
+        // Convenience overload for constant value
+        static <R> Closure<R> withSystemProperty(Closure<R> target, String key, String value) {
+            withSystemProperty(target, key, { -> value })
+        }
 
         @CompileStatic
-        static class Intercept {
-            /**
-             * Wrap a target closure so that:
-             *  - before(ctx, args) runs first
-             *  - target(*args) runs
-             *  - after(ctx, result, error, args) runs in finally (even on exception)
-             *
-             * A mutable ctx Map lets before/after share data (timers, resources, etc).
-             */
-            static Closure around(
-                    Closure target,
-                    Closure before = { Map ctx, Object[] args -> },
-                    Closure after  = { Map ctx, Object result, Throwable error, Object[] args -> }
-            ) {
-                def wrapped = { Object... args ->
-                    Map ctx = [:]
-                    Object result = null
-                    Throwable error = null
-                    try {
-                        before(ctx, args)
-                        result = InvokerHelper.invokeClosure(target, args)
-                        return result
-                    } catch (Throwable t) {
-                        error = t
-                        throw t
-                    } finally {
-                        after(ctx, result, error, args)
-                    }
+        private class SysPropScope {
+            private static final ThreadLocal<Map<String,String>> OVERRIDES =
+                    ThreadLocal.withInitial { [:] as Map<String,String> }
+            private static volatile boolean installed = false
+
+            static synchronized void installIfNeeded() {
+                if (installed) return
+                def wrapped = new InterceptingProperties()
+                wrapped.putAll(System.getProperties()) // copy current values
+                System.setProperties(wrapped) // swap in our wrapper
+                installed = true
+            }
+
+            static <T> T withProperty(String key, String value, Closure<T> body) {
+                installIfNeeded()
+                def map = OVERRIDES.get()
+                def prev = map.put(key, value)
+                try {
+                    return body.call()
+                } finally {
+                    if (prev == null) map.remove(key) else map[key] = prev
+                    if (map.isEmpty()) OVERRIDES.remove()
                 }
-                // Preserve caller semantics
-                wrapped = wrapped.rehydrate(target.delegate, target.owner, target.thisObject)
-                wrapped.resolveStrategy = target.resolveStrategy
-                return wrapped
+            }
+
+            static class InterceptingProperties extends Properties {
+                @Override
+                String getProperty(String key) {
+                    def v = OVERRIDES.get().get(key)
+                    v != null ? v : super.getProperty(key)
+                }
             }
         }
     }
