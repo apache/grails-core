@@ -130,7 +130,7 @@ class WebDriverContainerHolder {
         Configuration gebConfig = new ConfigurationLoader().conf
 
         // Ensure the driver points to the re-initialized container with the correct host
-        // Driver is explicitly quit by us in stop() method to fulfill our resulting responsibility
+        // The driver is explicitly quit by us in stop() method to fulfill our resulting responsibility
         gebConfig.cacheDriver = false
 
         // "If driver caching is disabled then this setting defaults to true" - we override to false
