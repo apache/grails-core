@@ -145,7 +145,10 @@ class WebDriverContainerHolder {
             start()
         }
         if (hostnameChanged) {
-            currentContainer.execInContainer('/bin/sh', '-c', "echo '$hostIp\t${currentConfiguration.hostName}' | sudo tee -a /etc/hosts")
+            currentContainer.execInContainer(
+                    '/bin/sh', '-c',
+                    "echo '$hostIp\t${currentConfiguration.hostName}' | sudo tee -a /etc/hosts"
+            )
         }
 
         if (gebConfigProcessed) {
