@@ -31,7 +31,6 @@ import org.codehaus.groovy.runtime.InvokerHelper
 
 import com.github.dockerjava.api.model.ContainerNetwork
 import geb.Browser
-import geb.Configuration
 import geb.ConfigurationLoader
 import geb.spock.SpockGebTestManagerBuilder
 import geb.test.GebTestManager
@@ -42,8 +41,10 @@ import org.spockframework.runtime.model.SpecInfo
 import org.testcontainers.Testcontainers
 import org.testcontainers.containers.BrowserWebDriverContainer
 import org.testcontainers.containers.PortForwardingContainer
+import org.testcontainers.containers.SeleniumUtils
 import org.testcontainers.containers.VncRecordingContainer
 import org.testcontainers.images.PullPolicy
+import org.testcontainers.utility.DockerImageName
 
 import grails.plugin.geb.serviceloader.ServiceRegistry
 
@@ -61,6 +62,8 @@ class WebDriverContainerHolder {
 
     private static final String DEFAULT_HOSTNAME_FROM_HOST = 'localhost'
     private static final String REMOTE_ADDRESS_PROPERTY = 'webdriver.remote.server'
+    private static final String[] SELENIUM_BROWSERS = ['chrome', 'edge', 'firefox']
+    private static final String DEFAULT_DOCKER_IMAGE_NAME = 'selenium/standalone-chrome'
 
     GrailsGebSettings grailsGebSettings
     GebTestManager testManager
@@ -85,14 +88,17 @@ class WebDriverContainerHolder {
     }
 
     boolean matchesCurrentContainerConfiguration(WebDriverContainerConfiguration specConfiguration) {
-        specConfiguration == currentConfiguration && grailsGebSettings.recordingMode == BrowserWebDriverContainer.VncRecordingMode.SKIP
+        specConfiguration == currentConfiguration &&
+                grailsGebSettings.recordingMode == BrowserWebDriverContainer.VncRecordingMode.SKIP
     }
 
     private static int getPort(IMethodInvocation invocation) {
         try {
             return (int) invocation.instance.metaClass.getProperty(invocation.instance, 'serverPort')
         } catch (ignored) {
-            throw new IllegalStateException('Test class must be annotated with @Integration for serverPort to be injected')
+            throw new IllegalStateException(
+                    'Test class must be annotated with @Integration for serverPort to be injected'
+            )
         }
     }
 
@@ -109,8 +115,24 @@ class WebDriverContainerHolder {
             stop()
         }
 
+        // Create a different container and gebConfig depending on if there is a
+        // GebConfig.groovy file or not.
+        def gebConfig = new ConfigurationLoader().conf
+        DockerImageName dockerImageName = defaultDockerImageName
+        def gebConfigProcessed = false
+        if (gebConfigExists) {
+            if (!gebConfig.driverConf instanceof Closure) {
+                // Similar to Browser#getDriverConf's Exception
+                throw new IllegalStateException(
+                        'The "driver" config value must be a Closure that returns an instance of RemoteWebDriver.'
+                )
+            }
+            dockerImageName = createDockerImageName(gebConfig.rawConfig.configuredBrowser as String)
+            gebConfigProcessed = true
+        }
+
         currentConfiguration = specConfiguration
-        currentContainer = new BrowserWebDriverContainer().withRecordingMode(
+        currentContainer = new BrowserWebDriverContainer(dockerImageName).withRecordingMode(
                 grailsGebSettings.recordingMode,
                 grailsGebSettings.recordingDirectory,
                 grailsGebSettings.recordingFormat
@@ -126,8 +148,16 @@ class WebDriverContainerHolder {
             currentContainer.execInContainer('/bin/sh', '-c', "echo '$hostIp\t${currentConfiguration.hostName}' | sudo tee -a /etc/hosts")
         }
 
-        // Create a Geb Configuration the same way as an empty Browser constructor would do
-        Configuration gebConfig = new ConfigurationLoader().conf
+        if (gebConfigProcessed) {
+            // If a custom `GebConfig` instantiates a `RemoteWebDriver` without using it's `remoteAddress`
+            // constructor, the `RemoteWebDriver` will be instantiated using the `webdriver.remote.server`
+            // system property, so we need to set that value.
+            gebConfig.driverConf = ClosureDecorators.withSystemProperty(
+                    gebConfig.driverConf as Closure,
+                    REMOTE_ADDRESS_PROPERTY,
+                    currentContainer.seleniumAddress.toString()
+            )
+        }
 
         // Ensure the driver points to the re-initialized container with the correct host
         // The driver is explicitly quit by us in stop() method to fulfill our resulting responsibility
@@ -142,13 +172,6 @@ class WebDriverContainerHolder {
             gebConfig.reporter = (invocation.sharedInstance as ContainerGebSpec).createReporter()
         }
 
-        if (gebConfig.driverConf instanceof RemoteWebDriver) {
-            // Similar to Browser#getDriverConf's Exception
-            throw new IllegalStateException(
-                    "The 'driver' config value is an instance of RemoteWebDriver. " +
-                            'You need to wrap the driver instance in a closure.'
-            )
-        }
         if (!gebConfig.driverConf) {
             // If no driver was set in GebConfig.groovy, default to Chrome
             gebConfig.driverConf = { ->
@@ -163,15 +186,6 @@ class WebDriverContainerHolder {
                 })
             }
         }
-
-        // If a custom `GebConfig` instantiates a `RemoteWebDriver` without using it's `remoteAddress`
-        // constructor, the `RemoteWebDriver` will be instantiated using the `webdriver.remote.server`
-        // system property, so we need to set that value.
-        gebConfig.driverConf = ClosureDecorators.withSystemProperty(
-                gebConfig.driverConf as Closure,
-                REMOTE_ADDRESS_PROPERTY,
-                currentContainer.seleniumAddress.toString()
-        )
 
         currentBrowser = new Browser(gebConfig)
 
@@ -256,6 +270,32 @@ class WebDriverContainerHolder {
 
     private boolean isHostNameChanged() {
         return currentContainer.host != ContainerGebConfiguration.DEFAULT_HOSTNAME_FROM_CONTAINER
+    }
+
+    private static DockerImageName getDefaultDockerImageName() {
+        DockerImageName.parse("$DEFAULT_DOCKER_IMAGE_NAME:$seleniumVersion")
+    }
+
+    private static DockerImageName createDockerImageName(String configuredBrowser) {
+        validateConfiguredBrowser(configuredBrowser)
+        DockerImageName.parse("selenium/standalone-$configuredBrowser:$seleniumVersion")
+    }
+
+    private static void validateConfiguredBrowser(String browser) {
+        if (!SELENIUM_BROWSERS.contains(browser)) {
+            throw new IllegalArgumentException(
+                    "Illegal 'configuredBrowser' property value in GebConfig.groovy: [$browser]. " +
+                    "Valid values are $SELENIUM_BROWSERS"
+            )
+        }
+    }
+
+    private static String getSeleniumVersion() {
+        SeleniumUtils.determineClasspathSeleniumVersion()
+    }
+
+    private static boolean getGebConfigExists() {
+        new ConfigurationLoader().specialClassLoader.getResource('GebConfig.groovy')
     }
 
     @CompileStatic

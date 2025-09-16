@@ -43,7 +43,7 @@ class GebConfigSpec extends ContainerGebSpec {
         capabilities.getCapability('grails:gebConfigUsed') == true
 
         and: 'the driver should have Chrome-specific capabilities'
-        capabilities.browserName == 'chrome'
+        capabilities.browserName == 'firefox'
 
         when: 'navigating to a page'
         to(HomePage)
