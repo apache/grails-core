@@ -54,7 +54,7 @@ class GormService<T extends GormEntity<T>> {
         resource.list(args)
     }
 
-    Long count() {
+    Long count(Map args) {
         resource.count()
     }
 

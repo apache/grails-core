@@ -19,6 +19,7 @@
 
 package grails.plugin.scaffolding
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import grails.artefact.Artefact
 import grails.gorm.transactions.ReadOnly
@@ -49,8 +50,9 @@ class RestfulServiceController<T extends GormEntity<T>> extends RestfulControlle
     }
 
     @Override
+    @CompileDynamic
     protected Integer countResources() {
-        getService().count()
+        getService().count(params)
     }
 
     @Override
