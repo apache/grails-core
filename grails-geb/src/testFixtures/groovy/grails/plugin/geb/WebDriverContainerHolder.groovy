@@ -105,7 +105,7 @@ class WebDriverContainerHolder {
     @PackageScope
     boolean reinitialize(IMethodInvocation invocation) {
         WebDriverContainerConfiguration specConfiguration = new WebDriverContainerConfiguration(
-                invocation.getSpec()
+                invocation.spec
         )
         if (matchesCurrentContainerConfiguration(specConfiguration)) {
             return false

@@ -37,13 +37,11 @@ class GebOnFailureReporter implements IMethodInterceptor {
         } catch (IncompleteExecutionException notACauseForReporting) {
             throw notACauseForReporting
         } catch (Throwable throwable) {
-            ContainerGebSpec spec = invocation.instance as ContainerGebSpec
+            def spec = invocation.instance as ContainerGebSpec
             if (spec.testManager.reportingEnabled) {
                 try {
                     spec.testManager.reportFailure()
-                } catch (ignored) {
-                    //ignore
-                }
+                } catch (ignored) {}
             }
             throw throwable
         }

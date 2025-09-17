@@ -86,18 +86,7 @@ class GrailsGebSettings {
         if (!recordingEnabled) {
             return null
         }
-
-        File recordingDirectory = new File("${recordingDirectoryName}${File.separator}${DateTimeFormatter.ofPattern('yyyyMMdd_HHmmss').format(startTime)}")
-        if (!recordingDirectory.exists()) {
-            if (!recordingDirectory.parentFile.exists()) {
-                log.info('Could not find `{}` Directory for recording. Creating...', recordingDirectoryName)
-            }
-            recordingDirectory.mkdirs()
-        } else if (!recordingDirectory.isDirectory()) {
-            throw new IllegalStateException("Configured recording directory '${recordingDirectory}' is expected to be a directory, but found file instead.")
-        }
-
-        return recordingDirectory
+        createDirectory(recordingDirectoryName, 'recording')
     }
 
     @Memoized
@@ -105,17 +94,23 @@ class GrailsGebSettings {
         if (!reportingDirectoryName) {
             return null
         }
+        createDirectory(reportingDirectoryName, 'reporting')
+    }
 
-        File reportingDirectory = new File("${reportingDirectoryName}${File.separator}${DateTimeFormatter.ofPattern('yyyyMMdd_HHmmss').format(startTime)}")
-        if (!reportingDirectory.exists()) {
-            if (!reportingDirectory.parentFile.exists()) {
-                log.info('Could not find `{}` Directory for reporting. Creating...', reportingDirectoryName)
+    private File createDirectory(String directoryName, String useCase) {
+        def dir = new File(
+                "$directoryName$File.separator${DateTimeFormatter.ofPattern('yyyyMMdd_HHmmss').format(startTime)}"
+        )
+        if (!dir.exists()) {
+            if (!dir.parentFile.exists()) {
+                log.info('Could not find [{}] directory for {}. Creating...', directoryName, useCase)
             }
-            reportingDirectory.mkdirs()
-        } else if (!reportingDirectory.isDirectory()) {
-            throw new IllegalStateException("Configured reporting directory '${reportingDirectory}' is expected to be a directory, but found file instead.")
+            dir.mkdirs()
+        } else if (!dir.isDirectory()) {
+            throw new IllegalStateException(
+                    "Configured $useCase directory [$dir] is expected to be a directory, but found file instead."
+            )
         }
-
-        return reportingDirectory
+        return dir
     }
 }

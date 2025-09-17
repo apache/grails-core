@@ -44,7 +44,7 @@ class ContainerGebTestDescription implements TestDescription {
                 testInfo.displayName != testInfo.feature.displayName ? testInfo.iterationIndex : null
         ].findAll(/* Remove nulls */).join(' ')
 
-        String safeName = testId.replaceAll('\\W+', '_')
+        def safeName = testId.replaceAll('\\W+', '_')
         filesystemFriendlyName = safeName
     }
 }

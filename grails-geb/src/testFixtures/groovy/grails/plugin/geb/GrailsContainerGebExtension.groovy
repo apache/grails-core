@@ -120,17 +120,14 @@ class GrailsContainerGebExtension implements IGlobalExtension {
 
             addGebExtensionOnFailureReporter(spec)
 
-            GebRecordingTestListener recordingListener = new GebRecordingTestListener(
-                holder
-            )
-            spec.addListener(recordingListener)
+            spec.addListener(new GebRecordingTestListener(holder))
         }
     }
 
     @TailRecursive
     private boolean isContainerGebSpec(SpecInfo spec) {
-        if (spec != null) {
-            if (spec.filename.startsWith("${ContainerGebSpec.simpleName}." as String)) {
+        if (spec) {
+            if (spec.filename.startsWith("${ContainerGebSpec.simpleName}.")) {
                 return true
             }
             return isContainerGebSpec(spec.superSpec)
