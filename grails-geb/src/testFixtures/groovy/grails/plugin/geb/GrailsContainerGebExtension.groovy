@@ -73,6 +73,7 @@ class GrailsContainerGebExtension implements IGlobalExtension {
     @Override
     void visitSpec(SpecInfo spec) {
         if (isContainerGebSpec(spec) && validateContainerGebSpec(spec)) {
+
             // Do not allow parallel execution since there's only 1 set of containers in testcontainers
             spec.addExclusiveResource(exclusiveResource)
 
@@ -96,7 +97,6 @@ class GrailsContainerGebExtension implements IGlobalExtension {
             spec.addSetupInterceptor { invocation ->
                 // Grails will be initialized by this point, so setup the browser url correctly
                 holder.setupBrowserUrl(invocation)
-
                 invocation.proceed()
             }
 
@@ -137,7 +137,9 @@ class GrailsContainerGebExtension implements IGlobalExtension {
 
     private static boolean validateContainerGebSpec(SpecInfo specInfo) {
         if (!specInfo.annotations.any { it.annotationType() == Integration }) {
-            throw new IllegalArgumentException('ContainerGebSpec classes must be annotated with @Integration')
+            throw new IllegalArgumentException(
+                    'ContainerGebSpec classes must be annotated with @Integration'
+            )
         }
         return true
     }
@@ -149,4 +151,3 @@ class GrailsContainerGebExtension implements IGlobalExtension {
         }
     }
 }
-

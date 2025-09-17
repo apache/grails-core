@@ -66,7 +66,9 @@ class GrailsGebSettings {
         recordingFormat = VncRecordingFormat.valueOf(
                 System.getProperty('grails.geb.recording.format', DEFAULT_RECORDING_FORMAT.name())
         )
-        restartRecordingContainerPerTest = Boolean.parseBoolean(System.getProperty('grails.geb.recording.restartRecordingContainerPerTest', 'true'))
+        restartRecordingContainerPerTest = Boolean.parseBoolean(
+                System.getProperty('grails.geb.recording.restartRecordingContainerPerTest', 'true')
+        )
         implicitlyWait = getIntProperty('grails.geb.timeouts.implicitlyWait', DEFAULT_TIMEOUT_IMPLICITLY_WAIT)
         pageLoadTimeout = getIntProperty('grails.geb.timeouts.pageLoad', DEFAULT_TIMEOUT_PAGE_LOAD)
         scriptTimeout = getIntProperty('grails.geb.timeouts.script', DEFAULT_TIMEOUT_SCRIPT)
