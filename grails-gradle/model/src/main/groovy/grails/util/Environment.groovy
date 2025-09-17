@@ -352,16 +352,6 @@ enum Environment {
     }
 
     /**
-     * This method will return true the application is run
-     *
-     * @return True if the development sources are present
-     */
-    static boolean isDevelopmentRun() {
-        Environment env = getCurrent()
-        return isDevelopmentEnvironmentAvailable() && Boolean.getBoolean(RUN_ACTIVE) && (env == Environment.DEVELOPMENT)
-    }
-
-    /**
      * Checks if the run of the app is due to spring dev-tools or not.
      * @return True if spring-dev-tools restart
      */

@@ -492,3 +492,28 @@ This scenario is not supported and can lead to unexpected behavior due to the AS
 
 Starting with Grails 7, a validation error will trigger if both a Grails Application Gradle Plugin & a Grails Plugin Gradle Plugin are configured in `build.gradle` for the same Gradle Project.
 
+===== 12.21 `exploded` is supported again to enable multi-project reloading
+
+Earlier versions of Grails supported an `exploded` Gradle configuration that forced defined plugins to use class and resource files, instead of jar files, on the Grails Application runtime classpath if several conditions were true:
+
+1. the property `grails.run.active` was set
+2. the plugin project had the property `exploded` set to `true` prior to the application of the `grails-plugin` Gradle plugin
+3. plugins were added to the Grails Application project via the `plugins` block inside of the `grails` extension in `build.gradle` instead of the `dependencies` block
+4. the property `exploded` was set on the `grails` extension in `build.gradle` of the Grails Application project
+
+The `exploded` setup facilitates better class reloading behavior.
+For Grails 7, it has been simplified to the following:
+
+1. In the plugin project, apply the gradle plugin `org.apache.grails.gradle.grails-exploded`
+2. In the application project, define plugins inside of the `plugins` block of the `grails` extension in `build.gradle`:
+
+[source,groovy]
+----
+grails {
+   plugins {
+        implementation project(":my-plugin")
+   }
+}
+----
+
+NOTE: Expanded class files & resource files will only be used over the jar file if the plugin applies the gradle plugin `org.apache.grails.gradle.grails-exploded` & the plugin is a subproject of your Gradle build.

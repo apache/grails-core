@@ -23,6 +23,8 @@ import javax.inject.Inject
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
+import org.gradle.api.attributes.AttributeMatchingStrategy
+
 import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
 import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
 import org.apache.tools.ant.filters.EscapeUnicode
@@ -69,6 +71,9 @@ import org.grails.build.parsing.CommandLineParser
 import org.grails.gradle.plugin.agent.AgentTasksEnhancer
 import org.grails.gradle.plugin.commands.ApplicationContextCommandTask
 import org.grails.gradle.plugin.commands.ApplicationContextScriptTask
+import org.grails.gradle.plugin.exploded.ExplodedCompatibilityRule
+import org.grails.gradle.plugin.exploded.ExplodedDisambiguationRule
+import org.grails.gradle.plugin.exploded.GrailsExplodedPlugin
 import org.grails.gradle.plugin.model.GrailsClasspathToolingModelBuilder
 import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
@@ -155,6 +160,21 @@ class GrailsGradlePlugin extends GroovyPlugin {
         configureRunCommand(project)
 
         configureGroovyCompiler(project)
+
+        configureMatchingExplodedRules(project)
+    }
+
+    private void configureMatchingExplodedRules(Project project) {
+        /**
+         * the exploded plugin may or may not be configured for the given project, these rules ensure tasks that are considered "development"
+         * running tasks (like bootRun) will prefer the exploded variant of a plugin if it is available but still match the non-exploded variant if not.
+         */
+        project.dependencies.attributesSchema { schema ->
+            schema.attribute(GrailsExplodedPlugin.EXPLODED_ATTRIBUTE).with { AttributeMatchingStrategy details ->
+                details.compatibilityRules.add(ExplodedCompatibilityRule)
+                details.disambiguationRules.add(ExplodedDisambiguationRule)
+            }
+        }
     }
 
     private static Provider<String> getMainClassProvider(Project project) {

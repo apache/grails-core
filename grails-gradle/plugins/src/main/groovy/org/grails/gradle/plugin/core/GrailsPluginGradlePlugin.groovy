@@ -25,16 +25,10 @@ import groovy.transform.CompileStatic
 
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.ConfigurationContainer
-import org.gradle.api.artifacts.PublishArtifact
 import org.gradle.api.file.DuplicatesStrategy
-import org.gradle.api.internal.tasks.DefaultTaskDependency
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSetContainer
-import org.gradle.api.tasks.TaskContainer
-import org.gradle.api.tasks.TaskDependency
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.language.jvm.tasks.ProcessResources
@@ -42,7 +36,6 @@ import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 
-import grails.util.Environment
 import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
 
@@ -55,6 +48,7 @@ import org.grails.gradle.plugin.util.SourceSets
  */
 @CompileStatic
 class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
+    public static final String PLUGIN_ID = "org.apache.grails.gradle.grails-plugin"
 
     @Inject
     GrailsPluginGradlePlugin(ToolingModelBuilderRegistry registry) {
@@ -99,41 +93,10 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
             }
             """ as String
         }
-
     }
 
     protected String getDefaultProfile() {
         'web-plugin'
-    }
-
-    /**
-     * Configures an exploded configuration that can be used to build the classpath of the application from subprojects that are plugins without contructing a JAR file
-     *
-     * @param project The project instance
-     */
-    protected void configureExplodedDirConfiguration(Project project) {
-        ConfigurationContainer allConfigurations = project.configurations
-        allConfigurations.register('exploded').configure {
-            Configuration runtimeConfiguration = allConfigurations.named('runtimeClasspath').get()
-            it.extendsFrom(runtimeConfiguration)
-
-            if (Environment.isDevelopmentRun() && isExploded(project)) {
-                runtimeConfiguration.artifacts.clear()
-                // add the subproject classes as outputs
-                TaskContainer allTasks = project.tasks
-
-                GroovyCompile groovyCompile = allTasks.named('compileGroovy', GroovyCompile).get()
-                ProcessResources processResources = allTasks.named('processResources', ProcessResources).get()
-
-                runtimeConfiguration.artifacts.add(new ExplodedDir(groovyCompile.destinationDir, groovyCompile, processResources))
-                it.artifacts.add(new ExplodedDir(processResources.destinationDir, groovyCompile, processResources))
-            }
-        }
-    }
-
-    @CompileDynamic
-    private boolean isExploded(Project project) {
-        Boolean.valueOf(project.properties.getOrDefault('exploded', 'false').toString())
     }
 
     @Override
@@ -308,30 +271,6 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         File groovyConfig = new File(project.projectDir, 'grails-app/conf/plugin.groovy')
         if (yamlConfig.exists() && groovyConfig.exists()) {
             throw new RuntimeException('A plugin may define a plugin.yml or a plugin.groovy, but not both')
-        }
-    }
-
-    static class ExplodedDir implements PublishArtifact {
-        final String extension = ''
-        final String type = 'dir'
-        final Date date = new Date()
-
-        final File file
-        final TaskDependency buildDependencies
-
-        ExplodedDir(File file, Object... tasks) {
-            this.file = file
-            this.buildDependencies = new DefaultTaskDependency().add(tasks)
-        }
-
-        @Override
-        String getName() {
-            file.name
-        }
-
-        @Override
-        String getClassifier() {
-            ''
         }
     }
 }
