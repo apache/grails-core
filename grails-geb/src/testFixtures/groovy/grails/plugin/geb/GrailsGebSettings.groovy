@@ -29,7 +29,8 @@ import static org.testcontainers.containers.BrowserWebDriverContainer.VncRecordi
 import static org.testcontainers.containers.VncRecordingContainer.VncRecordingFormat
 
 /**
- * Handles parsing various recording configuration used by {@link GrailsContainerGebExtension}
+ * Handles parsing various recording configuration
+ * used by {@link GrailsContainerGebExtension}.
  *
  * @author James Daugherty
  * @since 4.1

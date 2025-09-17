@@ -33,11 +33,14 @@ import grails.plugin.geb.support.LocalhostDownloadSupport
 import grails.testing.mixin.integration.Integration
 
 /**
- * A Spock Extension that manages the Testcontainers lifecycle for a {@link grails.plugin.geb.ContainerGebSpec}
+ * A Spock Extension that manages the Testcontainers
+ * lifecycle for a {@link grails.plugin.geb.ContainerGebSpec}.
  *
- * <p> ContainerGebSpec cannot be a {@link geb.test.ManagedGebTest ManagedGebTest} because it would cause the test manager
- * to be initialized out of sequence of the container management.  Instead, we initialize the same interceptors
- * as the {@link geb.spock.GebExtension GebExtension} does.
+ * <p>
+ * {@link grails.plugin.geb.ContainerGebSpec} cannot be a
+ * {@link geb.test.ManagedGebTest} because it would cause the test
+ * manager to be initialized out of sequence of the container management.
+ * Instead, we initialize the same interceptors as the {@link geb.spock.GebExtension} does.
  *
  * @author James Daugherty
  * @since 4.1

@@ -32,12 +32,14 @@ import grails.plugin.geb.support.delegate.DriverDelegate
 import grails.plugin.geb.support.delegate.PageDelegate
 
 /**
- * A {@link geb.spock.GebSpec GebSpec} that leverages Testcontainers to run the browser inside a container.
+ * A {@link geb.spock.GebSpec GebSpec} that leverages Testcontainers
+ * to run the browser inside a container.
  *
  * <p>Prerequisites:
  * <ul>
  *   <li>
- *       The test class must be annotated with {@link grails.testing.mixin.integration.Integration @Integration}.
+ *       The test class must be annotated with
+ *       {@link grails.testing.mixin.integration.Integration @Integration}.
  *   </li>
  *   <li>
  *       A <a href="https://java.testcontainers.org/supported_docker_environment/">compatible container runtime</a>

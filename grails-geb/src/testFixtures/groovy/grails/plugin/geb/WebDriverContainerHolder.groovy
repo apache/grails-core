@@ -49,8 +49,8 @@ import org.testcontainers.utility.DockerImageName
 import grails.plugin.geb.serviceloader.ServiceRegistry
 
 /**
- * Responsible for initializing a {@link org.testcontainers.containers.BrowserWebDriverContainer BrowserWebDriverContainer}
- * per the Spec's {@link grails.plugin.geb.ContainerGebConfiguration ContainerGebConfiguration}.  This class will try to
+ * Responsible for initializing a {@link org.testcontainers.containers.BrowserWebDriverContainer}
+ * per the Spec's {@link grails.plugin.geb.ContainerGebConfiguration}. This class will try to
  * reuse the same container if the configuration matches the current container.
  *
  * @author James Daugherty

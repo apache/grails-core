@@ -24,7 +24,8 @@ import org.spockframework.runtime.model.IterationInfo
 import org.testcontainers.lifecycle.TestDescription
 
 /**
- * Implements {@link org.testcontainers.lifecycle.TestDescription} to customize recording names.
+ * Implements {@link org.testcontainers.lifecycle.TestDescription}
+ * to customize recording names.
  *
  * @author James Daugherty
  * @since 4.1
