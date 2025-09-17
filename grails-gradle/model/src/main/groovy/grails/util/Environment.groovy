@@ -82,11 +82,6 @@ enum Environment {
     public static String RELOAD_ENABLED = 'grails.reload.enabled'
 
     /**
-     * Constant indicating whether run-app or test-app was executed
-     */
-    public static String RUN_ACTIVE = 'grails.run.active'
-
-    /**
      * Whether the display of full stack traces is needed
      */
     public static String FULL_STACKTRACE = 'grails.full.stacktrace'
