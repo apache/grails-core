@@ -82,10 +82,10 @@ class GrailsContainerGebExtension implements IGlobalExtension {
                 holder.reinitialize(invocation)
 
                 ContainerGebSpec gebSpec = invocation.sharedInstance as ContainerGebSpec
-                gebSpec.container = holder.currentContainer
+                gebSpec.container = holder.container
                 gebSpec.testManager = holder.testManager
                 gebSpec.downloadSupport = new LocalhostDownloadSupport(
-                        holder.currentBrowser,
+                        holder.browser,
                         holder.hostNameFromHost
                 )
 
