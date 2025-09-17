@@ -9,6 +9,7 @@ import org.gradle.api.attributes.CompatibilityCheckDetails
  * 2. attribute matches desired value
  */
 class ExplodedCompatibilityRule implements AttributeCompatibilityRule<Boolean> {
+
     @Override
     void execute(CompatibilityCheckDetails<Boolean> details) {
         if (details.getConsumerValue() == null) {

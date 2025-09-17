@@ -48,7 +48,8 @@ import org.grails.gradle.plugin.util.SourceSets
  */
 @CompileStatic
 class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
-    public static final String PLUGIN_ID = "org.apache.grails.gradle.grails-plugin"
+
+    public static final String PLUGIN_ID = 'org.apache.grails.gradle.grails-plugin'
 
     @Inject
     GrailsPluginGradlePlugin(ToolingModelBuilderRegistry registry) {

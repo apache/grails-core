@@ -24,6 +24,7 @@ import org.grails.gradle.plugin.core.GrailsPluginGradlePlugin
  */
 @CompileStatic
 class GrailsExplodedPlugin implements Plugin<Project> {
+
     public static final String PLUGIN_ID = 'org.apache.grails.gradle.grails-exploded'
     public static final String EXPLODED_VARIANT_NAME = 'exploded'
     public static final Attribute EXPLODED_ATTRIBUTE = Attribute.of('grails.plugin.exploded', Boolean)

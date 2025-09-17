@@ -102,11 +102,11 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     void apply(Project project) {
         // validate that only an app or a plugin is registered, and never both
-        OnlyOneGrailsPlugin marker = (OnlyOneGrailsPlugin) project.getExtensions().findByName(OnlyOneGrailsPlugin.class.name)
+        OnlyOneGrailsPlugin marker = (OnlyOneGrailsPlugin) project.getExtensions().findByName(OnlyOneGrailsPlugin.name)
         if (marker) {
             throw new GradleException("Project ${project.name} cannot be both a Grails application and a Grails plugin. Previously applied plugin: ${marker.pluginClassname}. Cannot apply: ${getClass().name}")
         }
-        project.getExtensions().add(OnlyOneGrailsPlugin.class.name, new OnlyOneGrailsPlugin(pluginClassname: getClass().name))
+        project.getExtensions().add(OnlyOneGrailsPlugin.name, new OnlyOneGrailsPlugin(pluginClassname: getClass().name))
 
         // reset the environment to ensure it is resolved again for each invocation
         Environment.reset()
