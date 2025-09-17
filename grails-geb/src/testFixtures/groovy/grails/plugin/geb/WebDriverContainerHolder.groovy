@@ -147,7 +147,7 @@ class WebDriverContainerHolder {
         if (hostnameChanged) {
             currentContainer.execInContainer(
                     '/bin/sh', '-c',
-                    "echo '$hostIp\t${currentConfiguration.hostName}' | sudo tee -a /etc/hosts"
+                    "echo '$hostIp\t$currentConfiguration.hostName' | sudo tee -a /etc/hosts"
             )
         }
 
@@ -225,7 +225,7 @@ class WebDriverContainerHolder {
         int port = getPort(invocation)
         Testcontainers.exposeHostPorts(port)
 
-        currentBrowser.baseUrl = "${currentConfiguration.protocol}://${currentConfiguration.hostName}:${port}"
+        currentBrowser.baseUrl = "$currentConfiguration.protocol://$currentConfiguration.hostName:$port"
     }
 
     private GebTestManager createTestManager() {
@@ -361,7 +361,7 @@ class WebDriverContainerHolder {
                 log.debug('Successfully restarted VNC recording container')
             }
         } catch (Exception e) {
-            log.warn("Failed to restart VNC recording container: ${e.message}", e)
+            log.warn("Failed to restart VNC recording container: $e.message", e)
             // Don't throw the exception to avoid breaking the test execution
         }
     }
