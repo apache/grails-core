@@ -20,6 +20,7 @@ package grails.plugin.geb
 
 import groovy.transform.CompileStatic
 
+import geb.Page
 import geb.test.GebTestManager
 import spock.lang.Shared
 import spock.lang.Specification
@@ -62,5 +63,11 @@ abstract class ContainerGebSpec extends Specification implements ContainerSuppor
 
     static void setTestManager(GebTestManager testManager) {
         this.testManager = testManager
+    }
+
+    @Override
+    Page getPage() {
+        // Be explicit which trait to use (PageDelegate vs BrowserDelegate)
+        PageDelegate.super.page
     }
 }
