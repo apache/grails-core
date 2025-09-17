@@ -370,63 +370,53 @@ class WebDriverContainerHolder {
     private class ClosureDecorators {
 
         /**
-         * Wraps a closure so that during its execution
-         * System.getProperty(key) returns value from valueProvider.
-         * valueProvider can depend on the call args.
+         * Wraps a closure so that during its execution, System.getProperty(key)
+         * returns the passed in value instead of what is actually in the system properties.
          */
-        static <R> Closure<R> withSystemProperty(
-                Closure<R> target,
-                String key,
-                Closure<String> valueProvider // e.g. { -> "http://fake:4444" } or { a, b -> compute(a, b) }
-        ) {
-            Closure<R> wrapped = { Object... args ->
-                String v = (String) InvokerHelper.invokeClosure(valueProvider, args)
-                SysPropScope.withProperty(key, v) {
-                    (R) InvokerHelper.invokeClosure(target, args)
+        static Closure withSystemProperty(Closure target, String key, String value) {
+            Closure wrapped = { Object... args ->
+                SysPropScope.withProperty(key, value) {
+                    InvokerHelper.invokeClosure(target, args)
                 }
-            } as Closure<R>
+            }
 
             // keep original closure semantics
-            wrapped = (Closure<R>) wrapped.rehydrate(target.delegate, target.owner, target.thisObject)
+            wrapped = wrapped.rehydrate(target.delegate, target.owner, target.thisObject)
             wrapped.resolveStrategy = target.resolveStrategy
             return wrapped
         }
 
-        // Convenience overload for constant value
-        static <R> Closure<R> withSystemProperty(Closure<R> target, String key, String value) {
-            withSystemProperty(target, key, { -> value })
-        }
-
         @CompileStatic
         private class SysPropScope {
-            private static final ThreadLocal<Map<String,String>> OVERRIDES =
-                    ThreadLocal.withInitial { [:] as Map<String,String> }
-            private static volatile boolean installed = false
 
-            static synchronized void installIfNeeded() {
-                if (installed) return
-                def wrapped = new InterceptingProperties()
-                wrapped.putAll(System.getProperties()) // copy current values
-                System.setProperties(wrapped) // swap in our wrapper
-                installed = true
+            private static final ThreadLocal<Map<String,String>> OVERRIDDEN_SYSTEM_PROPERTIES = ThreadLocal.withInitial {
+                [:] as Map<String,String>
             }
 
+            @Lazy // Thread-safe system properties wrapping
+            private static Properties propertiesWrappedOnFirstAccess = {
+                def props = new InterceptingProperties()
+                props.putAll(System.getProperties())
+                System.setProperties(props)
+                props
+            }()
+
             static <T> T withProperty(String key, String value, Closure<T> body) {
-                installIfNeeded()
-                def map = OVERRIDES.get()
+                propertiesWrappedOnFirstAccess // Access property to trigger property wrapping
+                def map = OVERRIDDEN_SYSTEM_PROPERTIES.get()
                 def prev = map.put(key, value)
                 try {
                     return body.call()
                 } finally {
                     if (prev == null) map.remove(key) else map[key] = prev
-                    if (map.isEmpty()) OVERRIDES.remove()
+                    if (map.isEmpty()) OVERRIDDEN_SYSTEM_PROPERTIES.remove()
                 }
             }
 
-            static class InterceptingProperties extends Properties {
+            private static class InterceptingProperties extends Properties {
                 @Override
                 String getProperty(String key) {
-                    def v = OVERRIDES.get().get(key)
+                    def v = OVERRIDDEN_SYSTEM_PROPERTIES.get().get(key)
                     v != null ? v : super.getProperty(key)
                 }
             }
