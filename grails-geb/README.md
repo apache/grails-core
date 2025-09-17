@@ -161,6 +161,28 @@ To enable tracing, set the following system property:
   
 This allows you to opt in to tracing when an OpenTelemetry collector is available.
 
+#### GebConfig.groovy and using non-default browser settings
+Provide a `GebConfig.groovy` on the test runtime classpath (commonly `src/integration-test/resources`, but any location on the test classpath works) to customize the browser.
+
+To make this work, ensure:
+1. The `driver` property in your `GebConfig` is a `Closure` that returns a `RemoteWebDriver` instance.
+2. You set a custom `configuredBrowser` property so that `ContainerGebSpec` can start a matching container (e.g. "chrome", "firefox", "edge").
+3. Your `build.gradle` includes the driver dependency for the chosen browser.
+
+Example `GebConfig.groovy`:
+```groovy
+driver = {
+  new RemoteWebDriver(new FireFoxOptions())
+}
+configuredBrowser = 'firefox'
+```
+Example `build.gradle`:
+```groovy
+dependencies {
+  integrationTestImplementation 'org.seleniumhq.selenium:selenium-firefox-driver'
+}
+```
+
 ### GebSpec
 
 If you choose to extend `GebSpec`, you will need to have a [Selenium WebDriver](https://www.selenium.dev/documentation/webdriver/browsers/) installed that matches a browser you have installed on your system.
