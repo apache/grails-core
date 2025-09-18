@@ -37,7 +37,9 @@ driver = {
     new RemoteWebDriver(firefoxOptions)
 }
 
-configuredBrowser = 'firefox'
+// The `containerBrowser` property is required to match the configured
+// driver in order to start up the matching Selenium browser container.
+containerBrowser = 'firefox'
 
 // Another proof that GebConfig.groovy is being utilized, next to GebConfigSpec
 reportingListener = new ReportingListener() {

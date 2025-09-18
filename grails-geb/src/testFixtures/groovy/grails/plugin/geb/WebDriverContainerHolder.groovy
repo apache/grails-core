@@ -135,8 +135,8 @@ class WebDriverContainerHolder {
 
             // Prepare for creating a suitable container matching the driver
             // configured in GebConfig.groovy, or more specifically,
-            // specified by the `configuredBrowser` property.
-            dockerImageName = createDockerImageName(gebConf.rawConfig.configuredBrowser)
+            // specified by the `containerBrowser` property.
+            dockerImageName = createDockerImageName(gebConf.rawConfig.containerBrowser)
         }
 
         containerConf = specConf
@@ -289,15 +289,15 @@ class WebDriverContainerHolder {
         DockerImageName.parse("$DEFAULT_DOCKER_IMAGE_NAME:$seleniumVersion")
     }
 
-    private static DockerImageName createDockerImageName(Object configuredBrowser) {
-        validateConfiguredBrowser(configuredBrowser)
-        DockerImageName.parse("selenium/standalone-$configuredBrowser:$seleniumVersion")
+    private static DockerImageName createDockerImageName(Object containerBrowser) {
+        validateContainerBrowserName(containerBrowser)
+        DockerImageName.parse("selenium/standalone-$containerBrowser:$seleniumVersion")
     }
 
-    private static void validateConfiguredBrowser(Object browser) {
+    private static void validateContainerBrowserName(Object browser) {
         if (!SELENIUM_BROWSERS.contains(browser)) {
             throw new IllegalArgumentException(
-                    "Illegal 'configuredBrowser' property value in GebConfig.groovy: [$browser]. " +
+                    "Illegal 'containerBrowser' property value in GebConfig.groovy: [$browser]. " +
                     "Valid values are $SELENIUM_BROWSERS"
             )
         }
