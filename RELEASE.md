@@ -49,16 +49,20 @@ During the staging step, we must create a source distribution & stage any binary
    * add the grails wrapper to the `grails-core` release
    * add the grails binary distribution (grails, grails-shell-cli, and grails-forge-cli) to the `grails-core` release
    * close the staging repository so the `grails-core` artifacts can be accessed
+   * generate project checksums & artifact lists to make verification easier
 4. (no approval required) The `source` job will: 
      * download the tagged grails source
      * generate a source distribution meeting the ASF requirements
      * upload the source distribution to the Github `grails-core` release
+   * remove any temporary artifacts needed for the source distribution creation
 5. (no approval required) The `upload` job will:
      * Download the source distribution
      * Download the binary distributions (wrapper & grails clis)
      * upload the source distribution to https://dist.apache.org/repos/dist/dev/incubator/grails/core/VERSION/sources
      * upload the grails-wrapper binary distribution to https://dist.apache.org/repos/dist/incubator/dev/grails/core/VERSION/distribution
      * upload the grails binary distribution to https://dist.apache.org/repos/dist/incubator/dev/grails/core/VERSION/distribution (note: this is the sdkman artifact)
+   * upload a file containing the SVN revision for the uploaded artifacts
+   * generate vote email templates for both the Grails PPMC and Groovy PMC
 
 ## 2. Verifying Artifacts are Authentic
 
@@ -73,7 +77,20 @@ For Example:
     verify.sh v7.0.0-M4 /tmp/grails-verify
 ```
 
-Otherwise, you may follow the subsequent steps in this section to verify each step individually.
+Please note that this script will perform steps that will require rebuilding the project & comparing the built artifacts
+to the staged artifacts. Due to OS differences, this can result in reproducibility issues. For this reason, it's advised
+to run these scripts from an environment similar to the GitHub actions environment. See the section
+`Appendix: Verification from a Container` for how to launch a container that closely resembles the GitHub actions
+environment.
+
+If manual verification is desired, the steps below can be followed.
+
+### Manual Verification: Verify the KEYS file matches the file checked into grails-core
+
+Use `etc/bin/verify-keys.sh` to verify the KEYS file. This script will download the KEYS file
+from https://dist.apache.org/repos/dist/release/grails/KEYS and compare it to the KEYS file in this repository. If
+verifying from a downloaded source distribution, and running the verification script from that distribution, it will
+verify the one inside of the source distribution.
 
 ### Manual Verification: Download the Staged Artifacts
 
@@ -129,6 +146,12 @@ If there are any jar file differences, confirm they are relevant by following th
 Please note that Grails is officially built on Linux so if there are differences they may be due to the OS platform.
 There is a dockerfile checked into to assist building in an environment like GitHub actions. Please see the section
 `Appendix: Verification from a Container` for more information.
+
+### Manual Verification: Running RAT
+
+The license audit can be triggered by running the gradle task `rat`. This will ensure that license requirements are met:
+
+    ./gradlew rat
 
 ### Manual Verification: Binary Distribution Verification
 
@@ -219,37 +242,61 @@ After all artifacts are uploaded, verified, and tested, we can vote on the relea
 
 ### Apache Grails Incubating PPMC
 
-The first vote is conducted on the [Grails dev mailing list](https://lists.apache.org/list.html?dev@grails.apache.org).  The only valid votes are those on the Apache Grails Incubating PPMC, but the community is welcome to participate to express their support. The vote template is generated as part of the release process.  See the source upload job for the generated email.
+The first vote is conducted on the [Grails dev mailing list](https://lists.apache.org/list.html?dev@grails.apache.org).
+The only valid votes are those on the Apache Grails Incubating PPMC, but the community is welcome to participate to
+express their support. The vote template is generated as part of the release process. See the `upload` job in the
+`Release` workflow for the generated email.
 
 ### Apache Groovy PMC
 
-As an incubating project under Apache Groovy, after a minimum of 72 hours and a successful Grails PPMC vote, the Groovy PMC must vote to approve the Apache Grails (incubating) release. This vote is held on the [Groovy dev mailing list](https://lists.apache.org/list.html?dev@groovy.apache.org). See the source upload job for the generated email.
+As an incubating project under Apache Groovy, after a minimum of 72 hours and a successful Grails PPMC vote, the Groovy
+PMC must vote to approve the Apache Grails (incubating) release. This vote is held on
+the [Groovy dev mailing list](https://lists.apache.org/list.html?dev@groovy.apache.org). See the `upload` job in the
+`Release` workflow for the generated email.
 
 ## 5. Releasing
 
-After voting has passed, several steps must be completed to finalize the release. Please complete these steps in teh order listed below.
+After voting has passed, several steps must be completed to finalize the release. To make it easier, each of these steps
+is encapsulated by the remaining jobs in the `Release` workflow. For reference, those steps are documented below. Either
+way, the `release` job should be approved & reviewed before proceeding.
 
-### Release the Staged Artifacts
+### Confirm Vote Passed
 
-In repository.apache.org, the staged artifacts must be released by opening the `grails-core` staging repository and clicking the `Release` button. It took almost 2 hours for the initial ASF release to publish these jars to Maven Central.
+Confirm the Grails PPMC & Groovy PMC votes passed with a +1 from at least 3 PPMC members. The `release` job in the
+`Release` workflow will remind you of these steps.
 
-### Publish `grails-core` documentation
+### Release the Staged Jar files
 
-Open the release workflow in `grails-core` and approve the `Publish Documentation` step.  Wait until finished, and a workflow should eventually kick off in `grails-doc` to publish the gh-pages branch that was updated.
+The `release` job in the `Release` workflow has a step entitled `🚀 Release JAR files - MANUAL`. You can release the jar
+files by one of 2 ways:
+
+1. In repository.apache.org, the staged artifacts must be released by opening the `grails-core` staging repository and
+   clicking the `Release` button. It took almost 2 hours for the initial ASF release to publish these jars to Maven
+   Central.
+2. Alternatively, the `release` job in the `Release` workflow will output an example command line to release the staging
+   repository via the scripts checked into grails-core. Execute the script & set the placeholder values to release the
+   jar files.
 
 ### Move the distributions from `dev` to `release`
 
-On dist.apache.org, the staged source distribution & binary distributions must be moved from `dev` to `release`. Per ASF infrastructure, this must be performed manually, and we are not allowed to automate it via a gated apprvoal workflow.
+On dist.apache.org, the staged source distribution & binary distributions must be moved from `dev` to `release`. Per ASF
+infrastructure, this must be performed manually, and we are not allowed to automate it via a gated approval workflow.
+Either move them via your SVN client or use the checked in script to perform these actions as your user.
 
-### Upon move, you will get an email from the ASF reporter
+The `release` job in the `Release` workflow has a step entitled `🚀 Move Distributions - MANUAL`. This step will output
+an example call to the checked in script to move the distributions.
 
-Click the link in this email and mark the release published. For example, if the release is out of core with version `7.0.0-M4`, then the release name with be `CORE-7.0.0-M4`.  Enter the date you moved the distribution artifacts and report the release.
+### Update ASF Reporter
 
-### Advertise the release via SDKMAN
+After moving the distributions, you will receive an email from the ASF reporter. Click the link in the email to mark the
+release as published. The `release` job in the `Release` workflow has a step to remind you of this.
 
-In `grails-core`, kick off the step `Release to SDKMAN!` in the release workflow.  This will cause SDKMAN to pull the new version from Maven Central.
+For example, if the release is out of core with version `7.0.0-M4`, then the release name with be `CORE-7.0.0-M4`. Enter
+the date you moved the distribution artifacts and report the release.
 
-### Deploy grails-forge-web-netty docker container to Google Cloud Run
+NOTE: Grails as a podling, cannot currently do this.
+
+### Deploy grails-forge so the release is accessible on start.grails.org
 
 On the `grails-core` repository, using the release tag, deploy the grails-forge-web-netty docker container to Google Cloud Run using one of the GCP Deploy actions.
 
@@ -264,6 +311,19 @@ SNAPSHOT - current or next version snapshot
 PREV - previous release version
 
 PREV-SNAPSHOT - previous version snapshot
+
+The `release` job in the `Release` workflow has a step entitled `🚀 Deploy grails-forge - MANUAL` that will remind you of
+this step.
+
+### Publish `grails-core` documentation
+
+Open the release workflow in `grails-core` and approve the `Publish Documentation` step. Wait until finished, and a
+workflow should eventually kick off in `grails-doc` to publish the gh-pages branch that was updated.
+
+### Advertise the release via SDKMAN
+
+In `grails-core`, kick off the step `Release to SDKMAN!` in the release workflow. This will cause SDKMAN to pull the new
+version from Maven Central.
 
 ### Close out the `grails-core` release
 
@@ -283,19 +343,23 @@ Update the release in `grails-core` to be flagged as 'latest'
 
 ### Announce the release
 
-Announcements should come from your apache email address (see https://infra.apache.org/committer-email.html) and have an expected format.  The announcement should be sent to `dev@grails.apache.org`, `dev@groovy.apache.org`, & `announce@apache.org`.  See the source upload job for the generated email.
+Announcements should come from your apache email address (see https://infra.apache.org/committer-email.html) and have an
+expected format. The announcement should be sent to `dev@grails.apache.org`, `dev@groovy.apache.org`, &
+`announce@apache.org`. See the `close` job for a generated email.
 
 # Rollback
 
 In the event a staged artifact needs rolled back, kick off the `Release - Abort Release` workflow. This can only be done for steps prior to the VOTE.
 
-## Rollback Nexus Artifacts (Jars)
+This rollback will perform the following:
 
-If another Grails repo needs to drop the staging jars, there exists a workflow `Release - Drop Nexus Staging` in `grails-core`.  The input of this workflow can be obtained by logging into [repository.apache.org](https://repository.apache.org/index.html#stagingRepositories) and finding the staging repository name. 
-
-## Manual Rollback Distribution
-
-To remove the staged distribution, use your SVN credentials to remove the version directory at [https://dist.apache.org/repos/dist/dev/incubator/grails/core](https://dist.apache.org/repos/dist/incubator/dev/grails/core)
+1. Drop the configured staging repository based on the release tag. (See `Appendix: Rollback a Nexus Artifacts (Jars)`
+   for how to do this separately from the abort workflow)
+2. Remove the staged artifacts
+   from [https://dist.apache.org/repos/dist/dev/incubator/grails/core](https://dist.apache.org/repos/dist/incubator/dev/grails/core)
+3. Cancel the GitHub Action `Release` (this may need to be manually cancelled depending on the workflow state)
+4. Remove the GitHub Release from GitHub
+5. Remove the Git tag
 
 # Appendix: GPG Configuration
 If you wish to verify any artifact manually, you must trust the key used to build Grails. To do so, it's best to download the KEYS file that was published to the official location:
@@ -365,3 +429,10 @@ Milestones are used for progress before the release is considered feature comple
 These release type definitions differ from the official [ASF definitions](https://apache.org/legal/release-policy.html#release-types) in that our Milestone and Release Candidates go through the same release process as the final release and are official project releases for public use.
 
 After an RC release has been vetted by the community, then a final release will follow without a modifier.
+
+## Appendix: Rollback a Nexus Artifacts (Jars)
+
+If a Nexus Repo needs to drop the staging jars, there exists a workflow `Release - Drop Nexus Staging` in `grails-core`.
+The input of this workflow can be obtained by logging
+into [repository.apache.org](https://repository.apache.org/index.html#stagingRepositories) and finding the staging
+repository name to drop. 
