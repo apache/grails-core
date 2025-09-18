@@ -23,25 +23,24 @@ import org.openqa.selenium.firefox.FirefoxOptions
 import org.openqa.selenium.remote.RemoteWebDriver
 import geb.report.ReportingListener
 
-// Configuration for container-based Geb testing
-// This driver configuration will be used by WebDriverContainerHolder
+// Configuration for container-based Geb testing.
+// This driver configuration will be used by WebDriverContainerHolder.
 driver = {
 
-    def firefoxOptions = new FirefoxOptions()
-
-    // Add a custom capability that we can test for to verify our configuration is being used
-    firefoxOptions.setCapability('grails:gebConfigUsed', true)
-
-    // The remote address will be set by WebDriverContainerHolder via system property
-    // webdriver.remote.server before this closure is called
-    new RemoteWebDriver(firefoxOptions)
+    // The remote address will be set by WebDriverContainerHolder via
+    // system property `webdriver.remote.server` before this closure is called.
+    new RemoteWebDriver(new FirefoxOptions().tap {
+        // Add a custom capability that we can test for
+        // to verify our configuration is being used.
+        setCapability('grails:gebConfigUsed', true)
+    })
 }
 
 // The `containerBrowser` property is required to match the configured
 // driver in order to start up the matching Selenium browser container.
 containerBrowser = 'firefox'
 
-// Another proof that GebConfig.groovy is being utilized, next to GebConfigSpec
+// Another proof that GebConfig.groovy is being utilized, next to GebConfigSpec.
 reportingListener = new ReportingListener() {
     void onReport(Reporter reporter, ReportState reportState, List<File> reportFiles) {
         reportFiles.each {
