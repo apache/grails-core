@@ -349,6 +349,7 @@ include(
         'grails-test-examples-app2',
         'grails-test-examples-app3',
         'grails-test-examples-external-configuration',
+        'grails-test-examples-exploded',
         'grails-test-examples-datasources',
         'grails-test-examples-namespaces',
         'grails-test-examples-geb',
@@ -368,6 +369,7 @@ include(
         'grails-test-examples-plugins-loadafter',
         'grails-test-examples-plugins-issue11005',
         'grails-test-examples-issue-11767',
+        'grails-test-examples-plugins-exploded',
         'grails-test-examples-plugins-issue-11767',
         'grails-test-examples-cache',
         'grails-test-examples-scaffolding',
@@ -379,6 +381,7 @@ project(':grails-test-examples-app1').projectDir = file('grails-test-examples/ap
 project(':grails-test-examples-app2').projectDir = file('grails-test-examples/app2')
 project(':grails-test-examples-app3').projectDir = file('grails-test-examples/app3')
 project(':grails-test-examples-external-configuration').projectDir = file('grails-test-examples/external-configuration')
+project(':grails-test-examples-exploded').projectDir = file('grails-test-examples/exploded')
 project(':grails-test-examples-datasources').projectDir = file('grails-test-examples/datasources')
 project(':grails-test-examples-geb').projectDir = file('grails-test-examples/geb')
 project(':grails-test-examples-geb-gebconfig').projectDir = file('grails-test-examples/geb-gebconfig')
@@ -398,6 +401,7 @@ project(':grails-test-examples-plugins-loadsecond').projectDir = file('grails-te
 project(':grails-test-examples-plugins-loadafter').projectDir = file('grails-test-examples/plugins/loadafter')
 project(':grails-test-examples-plugins-issue11005').projectDir = file('grails-test-examples/plugins/issue11005')
 project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')
+project(':grails-test-examples-plugins-exploded').projectDir = file('grails-test-examples/plugins/exploded')
 project(':grails-test-examples-plugins-issue-11767').projectDir = file('grails-test-examples/plugins/issue-11767')
 project(':grails-test-examples-cache').projectDir = file('grails-test-examples/cache')
 project(':grails-test-examples-scaffolding').projectDir = file('grails-test-examples/scaffolding')
