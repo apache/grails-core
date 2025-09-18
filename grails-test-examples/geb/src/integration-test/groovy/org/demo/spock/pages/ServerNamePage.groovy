@@ -17,21 +17,14 @@
  *  under the License.
  */
 
-package org.demo.spock
+package org.demo.spock.pages
 
-import org.demo.spock.pages.HomePage
+import geb.Page
 
-import grails.plugin.geb.ContainerGebSpec
-import grails.testing.mixin.integration.Integration
+class ServerNamePage extends Page {
 
-@Integration
-class DownloadSupportSpec extends ContainerGebSpec {
+    static url = '/serverName'
+    static at = { title == 'Server name test' }
+    static atCheckWaiting = true
 
-    void 'should be able to use download methods'() {
-        when:
-        to(HomePage)
-
-        then:
-        downloadText().contains('Welcome to Grails')
-    }
 }

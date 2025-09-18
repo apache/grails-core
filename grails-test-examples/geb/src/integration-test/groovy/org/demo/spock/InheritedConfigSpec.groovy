@@ -19,6 +19,8 @@
 
 package org.demo.spock
 
+import org.demo.spock.pages.ServerNamePage
+
 import grails.plugin.geb.ContainerGebConfiguration
 import grails.plugin.geb.IContainerGebConfiguration
 import grails.plugin.geb.ContainerGebSpec
@@ -31,7 +33,7 @@ import grails.testing.mixin.integration.Integration
 class SuperSpec extends ContainerGebSpec implements IContainerGebConfiguration {
     @Override
     String hostName() {
-        return 'super.example.com'
+        'super.example.com'
     }
 }
 
@@ -43,7 +45,7 @@ class NotSuperSpec extends ContainerGebSpec {}
 class InheritedConfigSpec extends SuperSpec {
     void 'should show the right server name when visiting /serverName'() {
         when: 'visiting the server name controller'
-        go('/serverName')
+        to(ServerNamePage)
 
         then: 'the emitted hostname is correct'
         pageSource.contains('Server name: super.example.com')
@@ -54,7 +56,7 @@ class InheritedConfigSpec extends SuperSpec {
 class NotInheritedConfigSpec extends NotSuperSpec {
     void 'should show the right server name when visiting /serverName'() {
         when: 'visiting the server name controller'
-        go('/serverName')
+        to(ServerNamePage)
 
         then: 'the emitted hostname is correct'
         !pageSource.contains('Server name: not.example.com')
@@ -65,12 +67,12 @@ class NotInheritedConfigSpec extends NotSuperSpec {
 class ChildPreferenceInheritedConfigSpec extends SuperSpec {
     @Override
     String hostName() {
-        return 'child.example.com'
+        'child.example.com'
     }
 
     void 'should show the right server name when visiting /serverName'() {
         when: 'visiting the server name controller'
-        go('/serverName')
+        to(ServerNamePage)
 
         then: 'the emitted hostname is correct'
         pageSource.contains('Server name: child.example.com')
@@ -90,7 +92,7 @@ class ChildPreferenceInheritedConfigSpec extends SuperSpec {
 class SuperSuperInheritedConfigSpec extends SuperSpec {
     @Override
     boolean reporting() {
-        return true
+        true
     }
 }
 
@@ -98,7 +100,7 @@ class SuperSuperInheritedConfigSpec extends SuperSpec {
 class MultipleInheritanceSpec extends SuperSuperInheritedConfigSpec {
     void 'should show the right server name when visiting /serverName'() {
         when: 'visiting the server name controller'
-        go('/serverName')
+        to(ServerNamePage)
 
         then: 'the emitted hostname is correct'
         pageSource.contains('Server name: super.example.com')

@@ -22,6 +22,8 @@ package org.demo.spock
 import geb.report.CompositeReporter
 import geb.report.PageSourceReporter
 import geb.report.Reporter
+import org.demo.spock.pages.HomePage
+
 import grails.plugin.geb.ContainerGebConfiguration
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
@@ -42,7 +44,7 @@ class RootPageSpec extends ContainerGebSpec {
 
     void 'should display the correct title on the home page'() {
         when: 'visiting the home page'
-        go('/')
+        to(HomePage)
 
         then: 'the page title is correct'
         report('root page report')

@@ -17,27 +17,12 @@
  *  under the License.
  */
 
-package org.demo.spock
+package org.demo.spock.pages
 
-import org.demo.spock.pages.ServerNamePage
+import geb.Page
 
-import grails.plugin.geb.ContainerGebConfiguration
-import grails.plugin.geb.ContainerGebSpec
-import grails.testing.mixin.integration.Integration
+class UploadSuccessPage extends Page {
 
-/**
- * See https://docs.grails.org/latest/guide/testing.html#functionalTesting and https://groovy.apache.org/geb/manual/current/
- * for more instructions on how to write functional tests with Grails and Geb.
- */
-@Integration
-@ContainerGebConfiguration(hostName = 'testing.example.com')
-class ServerNameControllerSpec extends ContainerGebSpec {
-
-    void 'should show the right server name when visiting /serverName'() {
-        when: 'visiting the server name controller'
-        to(ServerNamePage)
-
-        then: 'the emitted hostname is correct'
-        $('p').text() == 'Server name: testing.example.com'
-    }
+    static at = { title == 'File Uploaded' }
+    static atCheckWaiting = true
 }
