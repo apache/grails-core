@@ -32,7 +32,7 @@ dependencies {
     api project(':grails-events-core')
     api "org.codehaus.gpars:gpars:$gparsVersion", {
         exclude group: 'org.multiverse', module: 'multiverse-core' // Multiverse Software Transactional Memory (STM) Engine not used
-        exclude group: 'org.codehaus.groovy', module: 'groovy-all' // Gpars 1.2.1 pulls in Groovy 2.1.9
+        exclude group: 'org.apache.groovy', module: 'groovy-all' // Gpars 1.2.1 pulls in Groovy 2.1.9
     }
 
     implementation 'org.apache.groovy:groovy'

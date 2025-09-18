@@ -47,7 +47,7 @@ dependencies {
 
     testImplementation("org.apache.grails:grails-geb") {
         exclude group: 'org.gebish', module: 'geb-spock'
-        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
     testImplementation ("org.gebish:geb-spock:$gebVersion")
 

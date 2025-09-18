@@ -57,21 +57,21 @@ dependencies {
 
     compileOnly 'com.google.code.findbugs:jsr305'
 
-    testImplementation 'org.codehaus.groovy:groovy-yaml'
+    testImplementation 'org.apache.groovy:groovy-yaml'
 
     if (project.hasProperty('micronautVersion')) {
         testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
     }
 
-    testImplementation "org.codehaus.groovy:groovy:$groovyVersion"
+    testImplementation "org.apache.groovy:groovy:$groovyVersion"
     testImplementation "org.spockframework:spock-core:$spockVersion", {
-        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
 
     testImplementation "cglib:cglib-nodep:$cglibVersion"
     testImplementation "org.objenesis:objenesis:$objenesisVersion"
     testRuntimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
-    testImplementation "org.codehaus.groovy:groovy-test:$groovyVersion"
+    testImplementation "org.apache.groovy:groovy-test:$groovyVersion"
 }
 
 
@@ -134,7 +134,7 @@ nohttp {
 configurations.configureEach {
     resolutionStrategy {
         eachDependency { DependencyResolveDetails details ->
-            if (details.requested.group == 'org.codehaus.groovy') {
+            if (details.requested.group == 'org.apache.groovy') {
                 details.useVersion(groovyVersion)
             }
             if (details.requested.name == 'spock-core') {

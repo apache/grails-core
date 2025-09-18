@@ -29,7 +29,7 @@ ext {
             'byte-buddy.version'            : '1.17.7',
             'commons-text.version'          : '1.13.1',
             'directory-watcher.version'     : '0.19.1',
-            'gradle-spock.version'          : '2.3-groovy-3.0',
+            'gradle-spock.version': '2.3-groovy-4.0',
             'grails-publish-plugin.version' : '0.0.1',
             'grails-gdoc-engine.version'    : '1.0.1',
             'jansi.version'                 : '1.18',
@@ -38,7 +38,7 @@ ext {
             'jna.version'                   : '5.17.0',
             'jquery.version'                : '3.7.1',
             'objenesis.version'             : '3.4',
-            'gradle-spock.version'          : '2.3-groovy-3.0',
+            'gradle-spock.version': '2.3-groovy-4.0',
             'spring-boot.version'           : '3.5.6',
             'springloaded.version'          : '1.2.8.RELEASE',
     ]

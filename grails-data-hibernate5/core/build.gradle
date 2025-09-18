@@ -72,7 +72,7 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
     testImplementation "org.yakworks:hibernate-groovy-proxy:$yakworksHibernateGroovyProxyVersion", {
         // groovy proxy fixes bytebuddy to be a bit smarter when it comes to groovy metaClass
-        exclude group: 'org.codehaus.groovy', module: 'groovy'
+        exclude group: 'org.apache.groovy', module: 'groovy'
     }
 
     testRuntimeOnly "org.hibernate:hibernate-ehcache:$hibernate5Version", {

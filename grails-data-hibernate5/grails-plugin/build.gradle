@@ -52,7 +52,7 @@ dependencies {
         exclude group:'org.springframework', module:'spring-beans'
         exclude group:'org.springframework', module:'spring-tx'
         exclude group:'org.apache.grails', module:'grails-bootstrap'
-        exclude group:'org.codehaus.groovy', module:'groovy-all'
+        exclude group: 'org.apache.groovy', module: 'groovy-all'
         exclude group:'org.apache.grails', module:'grails-core'
         exclude group:'javax.transaction', module:'jta'
     }
@@ -62,7 +62,7 @@ dependencies {
 
     compileOnly 'org.spockframework:spock-core', {
         exclude group: 'junit', module: 'junit-dep'
-        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        exclude group: 'org.apache.groovy', module: 'groovy-all'
         exclude group: 'org.hamcrest', module: 'hamcrest-core'
     }
 

@@ -24,7 +24,7 @@ publishGuide {
 */
 
 dependencies {
-    documentation "org.codehaus.groovy:groovy-groovydoc"
+    documentation "org.apache.groovy:groovy-groovydoc"
 }
 
 

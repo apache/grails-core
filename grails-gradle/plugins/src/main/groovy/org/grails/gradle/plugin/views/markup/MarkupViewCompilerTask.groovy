@@ -27,6 +27,7 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.util.internal.PatternSetFactory
 import org.gradle.process.ExecOperations
 
 import org.grails.gradle.plugin.views.AbstractGroovyTemplateCompileTask
@@ -49,6 +50,9 @@ class MarkupViewCompilerTask extends AbstractGroovyTemplateCompileTask {
 
     @Input
     final Property<String> compilerName
+
+    @Inject
+    PatternSetFactory patternSetFactory
 
     @Inject
     MarkupViewCompilerTask(ExecOperations execOperations, ObjectFactory objectFactory) {

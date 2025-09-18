@@ -35,7 +35,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
 
     api 'org.apache.grails.gradle:grails-gradle-model', {
-        exclude group: 'org.codehaus.groovy'
+        exclude group: 'org.apache.groovy'
     }
 
     compileOnly 'org.apache.groovy:groovy'

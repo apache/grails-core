@@ -56,7 +56,7 @@ dependencies {
         // TODO: the shell cli is exporting groovy 3, while this project is expected to use groovy 4
         //       this plugin needs split into commands & the plugin itself so that different versions
         //       of groovy can be used
-        exclude group: 'org.codehaus.groovy'
+        exclude group: 'org.apache.groovy'
     }
 
     compileOnly 'org.springframework.boot:spring-boot-starter-logging'

@@ -18,9 +18,16 @@
  */
 package org.grails.gradle.plugin.commands
 
+import javax.inject.Inject
+
 import groovy.transform.CompileStatic
 
+import org.gradle.api.internal.provider.PropertyFactory
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.JavaExec
+import org.gradle.jvm.toolchain.JavaToolchainService
+import org.gradle.process.internal.ExecActionFactory
 
 /**
  *
@@ -30,6 +37,21 @@ import org.gradle.api.tasks.JavaExec
  */
 @CompileStatic
 class ApplicationContextCommandTask extends JavaExec {
+
+    @Inject
+    ExecActionFactory execActionFactory
+
+    @Inject
+    ObjectFactory objectFactory
+
+    @Inject
+    ProviderFactory providerFactory
+
+    @Inject
+    JavaToolchainService javaToolchainService
+
+    @Inject
+    PropertyFactory propertyFactory
 
     ApplicationContextCommandTask() {
         mainClass.set('grails.ui.command.GrailsApplicationContextCommandRunner')

@@ -50,6 +50,7 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.compile.AbstractCompile
+import org.gradle.api.tasks.util.internal.PatternSetFactory
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
@@ -115,6 +116,9 @@ class ProfileCompilerTask extends AbstractCompile {
     }
 
     // commands map to source property
+
+    @Inject
+    PatternSetFactory patternSetFactory
 
     @Inject
     ProfileCompilerTask(ObjectFactory objectFactory, Project project) {

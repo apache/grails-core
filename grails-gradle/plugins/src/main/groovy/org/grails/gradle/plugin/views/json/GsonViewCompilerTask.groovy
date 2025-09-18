@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.util.internal.PatternSetFactory
 import org.gradle.process.ExecOperations
 
 import org.grails.gradle.plugin.views.AbstractGroovyTemplateCompileTask
@@ -37,6 +38,9 @@ import org.grails.gradle.plugin.views.AbstractGroovyTemplateCompileTask
 @CompileStatic
 @CacheableTask
 class GsonViewCompilerTask extends AbstractGroovyTemplateCompileTask {
+
+    @Inject
+    PatternSetFactory patternSetFactory
 
     @Inject
     GsonViewCompilerTask(ExecOperations execOperations, ObjectFactory objectFactory) {

@@ -28,8 +28,8 @@ configurations.register('documentation') {
 }
 
 dependencies {
-    documentation "org.codehaus.groovy:groovy-templates:$groovyVersion"
-    documentation "org.codehaus.groovy:groovy-dateutil:$groovyVersion"
+    documentation "org.apache.groovy:groovy-templates:$groovyVersion"
+    documentation "org.apache.groovy:groovy-dateutil:$groovyVersion"
 }
 
 tasks.withType(Groovydoc).configureEach {

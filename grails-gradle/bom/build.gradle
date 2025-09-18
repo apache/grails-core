@@ -41,8 +41,8 @@ dependencies {
         exclude group: 'com.fasterxml.jackson'
     }
 
-    // Because gradle uses groovy 3, we must use groovy 3 compatible versions for the grails-gradle-bom
-    api platform("org.codehaus.groovy:groovy-bom:${GroovySystem.version}")
+    // Because gradle can use a different version of groovy, we compile with the gradle groovy version
+    api platform("org.apache.groovy:groovy-bom:${GroovySystem.version}")
     api platform(gradleBomPlatformDependencies['gradle-spock-bom'])
 
     constraints {

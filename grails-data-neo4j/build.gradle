@@ -23,7 +23,7 @@ buildscript {
         maven { url "https://plugins.gradle.org/m2/" }
     }
     dependencies {
-        classpath "org.codehaus.groovy.modules.http-builder:http-builder:0.7.2"
+        classpath "org.apache.groovy.modules.http-builder:http-builder:0.7.2"
         classpath "org.apache.grails:grails-gradle-plugins:$grailsGradlePluginVersion"
         classpath "org.asciidoctor:asciidoctor-gradle-jvm:4.0.2"
         classpath "com.github.erdi:webdriver-binaries-gradle-plugin:3.2"
@@ -127,7 +127,7 @@ subprojects { subproject ->
 
         dependencies {
             testImplementation "org.hibernate:hibernate-validator:$hibernateValidatorVersion"
-            testImplementation "org.codehaus.groovy:groovy-test-junit5"
+            testImplementation "org.apache.groovy:groovy-test-junit5"
             testImplementation "org.spockframework:spock-core:$spockVersion", { transitive = false }
             testImplementation "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion"
             testImplementation "org.junit.platform:junit-platform-runner:$junitPlatformVersion"
@@ -245,8 +245,8 @@ subprojects { subproject ->
 
 
     dependencies {
-        api "org.codehaus.groovy:groovy"
-        testImplementation "org.codehaus.groovy:groovy-test-junit5"
+        api "org.apache.groovy:groovy"
+        testImplementation "org.apache.groovy:groovy-test-junit5"
         testImplementation "org.spockframework:spock-core:$spockVersion", { transitive = false }
         testImplementation "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion"
         testImplementation "org.junit.platform:junit-platform-runner:$junitPlatformVersion"

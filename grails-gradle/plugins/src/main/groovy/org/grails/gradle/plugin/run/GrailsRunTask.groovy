@@ -18,9 +18,16 @@
  */
 package org.grails.gradle.plugin.run
 
+import javax.inject.Inject
+
 import groovy.transform.CompileStatic
 
+import org.gradle.api.internal.provider.PropertyFactory
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.JavaExec
+import org.gradle.jvm.toolchain.JavaToolchainService
+import org.gradle.process.internal.ExecActionFactory
 
 /**
  * Extension to the standard JavaExec task to run Grails applications
@@ -29,4 +36,20 @@ import org.gradle.api.tasks.JavaExec
  * @since 3.2
  */
 @CompileStatic
-class GrailsRunTask extends JavaExec {}
+class GrailsRunTask extends JavaExec {
+
+    @Inject
+    ExecActionFactory execActionFactory
+
+    @Inject
+    ObjectFactory objectFactory
+
+    @Inject
+    ProviderFactory providerFactory
+
+    @Inject
+    JavaToolchainService javaToolchainService
+
+    @Inject
+    PropertyFactory propertyFactory
+}
