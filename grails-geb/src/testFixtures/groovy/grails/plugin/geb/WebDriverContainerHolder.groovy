@@ -379,7 +379,7 @@ class WebDriverContainerHolder {
     }
 
     @CompileStatic
-    private class ClosureDecorators {
+    private static class ClosureDecorators {
 
         /**
          * Wraps a closure so that during its execution, System.getProperty(key)
@@ -399,7 +399,7 @@ class WebDriverContainerHolder {
         }
 
         @CompileStatic
-        private class SysPropScope {
+        private static class SysPropScope {
 
             private static final ThreadLocal<Map<String,String>> OVERRIDDEN_SYSTEM_PROPERTIES =
                     ThreadLocal.withInitial { [:] as Map<String,String> }
