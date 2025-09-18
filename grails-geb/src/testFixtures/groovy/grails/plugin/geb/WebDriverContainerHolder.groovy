@@ -295,6 +295,12 @@ class WebDriverContainerHolder {
     }
 
     private static void validateContainerBrowserName(Object browser) {
+        if (!browser) {
+            throw new IllegalArgumentException(
+                    'Missing \'containerBrowser\' property in GebConfig.groovy. ' +
+                    "Assign with one of $SELENIUM_BROWSERS, matching the configured driver."
+            )
+        }
         if (!SELENIUM_BROWSERS.contains(browser)) {
             throw new IllegalArgumentException(
                     "Illegal 'containerBrowser' property value in GebConfig.groovy: [$browser]. " +
