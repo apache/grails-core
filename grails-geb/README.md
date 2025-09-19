@@ -166,7 +166,7 @@ Provide a `GebConfig.groovy` on the test runtime classpath (commonly `src/integr
 
 To make this work, ensure:
 1. The `driver` property in your `GebConfig` is a `Closure` that returns a `RemoteWebDriver` instance.
-2. You set a custom `containerBrowser` property so that `ContainerGebSpec` can start a matching container (e.g. "chrome", "edge", "firefox").
+2. You set a custom `containerBrowser` property so that `ContainerGebSpec` can start a matching container (e.g. "chrome", "edge", "firefox"). For a list of supported browsers, see the [Testcontainers documentation](https://java.testcontainers.org/modules/webdriver_containers/#other-browsers).
 3. Your `build.gradle` includes the driver dependency for the chosen browser.
 
 Example `GebConfig.groovy`:
