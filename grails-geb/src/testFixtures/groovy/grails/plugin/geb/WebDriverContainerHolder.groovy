@@ -209,23 +209,8 @@ class WebDriverContainerHolder {
         }
 
         browser = new Browser(gebConf)
-
-        if (containerConf.fileDetector != NullContainerFileDetector) {
-            ServiceRegistry.setInstance(ContainerFileDetector, containerConf.fileDetector)
-        }
-        ((RemoteWebDriver) browser.driver).fileDetector = ServiceRegistry.getInstance(
-                ContainerFileDetector,
-                DefaultContainerFileDetector
-        )
-
-        // Overwrite `GebConfig` timeouts with values explicitly set in
-        // `GrailsGebSettings` (via system properties)
-        if (settings.implicitlyWait != DEFAULT_TIMEOUT_IMPLICITLY_WAIT)
-            browser.driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(settings.implicitlyWait))
-        if (settings.pageLoadTimeout != DEFAULT_TIMEOUT_PAGE_LOAD)
-            browser.driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(settings.pageLoadTimeout))
-        if (settings.scriptTimeout != DEFAULT_TIMEOUT_SCRIPT)
-            browser.driver.manage().timeouts().scriptTimeout(Duration.ofSeconds(settings.scriptTimeout))
+        applyFileDetector(browser, containerConf)
+        applyTimeouts(browser, settings)
 
         // There's a bit of a chicken and egg problem here: the container and browser are initialized
         // when the static/shared fields are initialized, which is before the grails server has started
@@ -237,6 +222,27 @@ class WebDriverContainerHolder {
         testManager = createTestManager()
 
         return true
+    }
+
+    private static void applyFileDetector(Browser browser, WebDriverContainerConfiguration conf) {
+        if (conf.fileDetector != NullContainerFileDetector) {
+            ServiceRegistry.setInstance(ContainerFileDetector, conf.fileDetector)
+        }
+        ((RemoteWebDriver) browser.driver).fileDetector = ServiceRegistry.getInstance(
+                ContainerFileDetector,
+                DefaultContainerFileDetector
+        )
+    }
+
+    private static void applyTimeouts(Browser browser, GrailsGebSettings settings) {
+        // Overwrite `GebConfig` timeouts with values explicitly set in
+        // `GrailsGebSettings` (via system properties)
+        if (settings.implicitlyWait != DEFAULT_TIMEOUT_IMPLICITLY_WAIT)
+            browser.driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(settings.implicitlyWait))
+        if (settings.pageLoadTimeout != DEFAULT_TIMEOUT_PAGE_LOAD)
+            browser.driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(settings.pageLoadTimeout))
+        if (settings.scriptTimeout != DEFAULT_TIMEOUT_SCRIPT)
+            browser.driver.manage().timeouts().scriptTimeout(Duration.ofSeconds(settings.scriptTimeout))
     }
 
     private static void startContainer(BrowserWebDriverContainer container, DockerImageName dockerImageName, boolean gebConfigFileActive) {
