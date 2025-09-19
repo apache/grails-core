@@ -25,6 +25,5 @@ class ServerNamePage extends Page {
 
     static url = '/serverName'
     static at = { title == 'Server name test' }
-    static atCheckWaiting = true
 
 }

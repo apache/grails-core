@@ -25,6 +25,5 @@ class HomePage extends Page {
 
     static url = '/'
     static at = { title == 'Welcome to Grails' }
-    static atCheckWaiting = true
 
 }

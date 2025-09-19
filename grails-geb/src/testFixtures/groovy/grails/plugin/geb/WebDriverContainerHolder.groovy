@@ -48,6 +48,7 @@ import org.testcontainers.utility.DockerImageName
 
 import grails.plugin.geb.serviceloader.ServiceRegistry
 
+import static GrailsGebSettings.DEFAULT_AT_CHECK_WAITING
 import static GrailsGebSettings.DEFAULT_TIMEOUT_IMPLICITLY_WAIT
 import static GrailsGebSettings.DEFAULT_TIMEOUT_PAGE_LOAD
 import static GrailsGebSettings.DEFAULT_TIMEOUT_SCRIPT
@@ -243,6 +244,9 @@ class WebDriverContainerHolder {
             browser.driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(settings.pageLoadTimeout))
         if (settings.scriptTimeout != DEFAULT_TIMEOUT_SCRIPT)
             browser.driver.manage().timeouts().scriptTimeout(Duration.ofSeconds(settings.scriptTimeout))
+        if (settings.atCheckWaiting != DEFAULT_AT_CHECK_WAITING) {
+            browser.config.atCheckWaiting = settings.atCheckWaiting
+        }
     }
 
     private static void startContainer(BrowserWebDriverContainer container, DockerImageName dockerImageName, boolean gebConfigFileActive) {

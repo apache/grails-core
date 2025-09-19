@@ -39,6 +39,7 @@ import static org.testcontainers.containers.VncRecordingContainer.VncRecordingFo
 @CompileStatic
 class GrailsGebSettings {
 
+    public static boolean DEFAULT_AT_CHECK_WAITING = false
     private static VncRecordingMode DEFAULT_RECORDING_MODE = VncRecordingMode.SKIP
     private static VncRecordingFormat DEFAULT_RECORDING_FORMAT = VncRecordingFormat.MP4
     public static int DEFAULT_TIMEOUT_IMPLICITLY_WAIT = 0
@@ -55,6 +56,7 @@ class GrailsGebSettings {
     int implicitlyWait
     int pageLoadTimeout
     int scriptTimeout
+    boolean atCheckWaiting
 
     GrailsGebSettings(LocalDateTime startTime) {
         tracingEnabled = System.getProperty('grails.geb.tracing.enabled', 'false')
@@ -66,13 +68,19 @@ class GrailsGebSettings {
         recordingFormat = VncRecordingFormat.valueOf(
                 System.getProperty('grails.geb.recording.format', DEFAULT_RECORDING_FORMAT.name())
         )
-        restartRecordingContainerPerTest = Boolean.parseBoolean(
-                System.getProperty('grails.geb.recording.restartRecordingContainerPerTest', 'true')
+        restartRecordingContainerPerTest = getBooleanProperty(
+                'grails.geb.recording.restartRecordingContainerPerTest',
+                true
         )
         implicitlyWait = getIntProperty('grails.geb.timeouts.implicitlyWait', DEFAULT_TIMEOUT_IMPLICITLY_WAIT)
         pageLoadTimeout = getIntProperty('grails.geb.timeouts.pageLoad', DEFAULT_TIMEOUT_PAGE_LOAD)
         scriptTimeout = getIntProperty('grails.geb.timeouts.script', DEFAULT_TIMEOUT_SCRIPT)
+        atCheckWaiting = getBooleanProperty('grails.geb.atCheckWaiting', DEFAULT_AT_CHECK_WAITING)
         this.startTime = startTime
+    }
+
+    private static boolean getBooleanProperty(String propertyName, boolean defaultValue) {
+        Boolean.parseBoolean(System.getProperty(propertyName, defaultValue.toString()))
     }
 
     private static int getIntProperty(String propertyName, int defaultValue) {

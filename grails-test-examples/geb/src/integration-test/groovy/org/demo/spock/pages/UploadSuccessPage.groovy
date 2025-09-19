@@ -24,5 +24,5 @@ import geb.Page
 class UploadSuccessPage extends Page {
 
     static at = { title == 'File Uploaded' }
-    static atCheckWaiting = true
+
 }
