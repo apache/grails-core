@@ -202,4 +202,5 @@ ext {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/sbom-config.gradle')
 }

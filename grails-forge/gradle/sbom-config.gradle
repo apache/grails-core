@@ -1,0 +1,143 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+import org.cyclonedx.gradle.CycloneDxTask
+import org.cyclonedx.model.ExternalReference
+import org.cyclonedx.model.LicenseChoice
+import org.cyclonedx.model.License
+import org.cyclonedx.model.OrganizationalContact
+import org.cyclonedx.model.OrganizationalEntity
+import org.cyclonedx.model.Component
+
+import java.nio.charset.StandardCharsets
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+
+apply plugin: 'org.cyclonedx.bom'
+
+project.ext.setProperty('sbomOutputLocation', project.layout.buildDirectory.file("${findProperty('pomArtifactId') ?: project.name}-${projectVersion}-sbom.json"))
+
+def sbomTask = tasks.named('cyclonedxBom', CycloneDxTask)
+sbomTask.configure { CycloneDxTask it ->
+    // the 2.x version of Cyclonedx uses a legacy syntax & helpers for setting inputs so the syntax below
+    // is required until the 3.x version is GA
+    it.setProjectType(findProperty('sbomProjectType') ?: Component.Type.FRAMEWORK.name())
+    it.@componentName.set(findProperty('pomArtifactId') ?: project.name)
+    it.@organizationalEntity.set(new OrganizationalEntity().tap {
+        name = 'Apache Software Foundation'
+        urls = ['https://www.apache.org/', 'https://security.apache.org/']
+        addContact(new OrganizationalContact().tap {
+            name = 'Apache Grails Development Team'
+            email = 'dev@grails.apache.org'
+        })
+    })
+    it.@licenseChoice.set(new LicenseChoice().tap {
+        addLicense(new License().tap {
+            name = 'Apache-2.0'
+            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+        })
+    })
+
+    it.@externalReferences.set([
+            new ExternalReference().tap {
+                url = 'https://grails.apache.org/'
+                type = ExternalReference.Type.WEBSITE
+            }
+    ])
+
+    // sboms are published for the purposes of vulnerability analysis so only include the runtime classpath
+    it.@includeConfigs.set(['runtimeClasspath'])
+    it.@skipConfigs.set(['compileClasspath', 'testRuntimeClasspath'])
+
+    // disable xml output
+    it.xmlOutput.unsetConvention()
+
+    def sbomOutputLocation = findProperty('sbomOutputLocation')
+    it.jsonOutput.set(sbomOutputLocation.get())
+    it.outputs.file(sbomOutputLocation)
+
+    // cyclonedx does not support "choosing" the license placed in the sbom
+    // see: https://github.com/CycloneDX/cyclonedx-gradle-plugin/issues/16
+    it.doLast {
+        def preferredLicenses = ['Apache-2.0', 'EPL-1.0', 'BSD-3-Clause', 'EPL-2.0', 'MIT', 'MIT-0']
+
+        def pickLicense = { List licenses ->
+            if (!(licenses instanceof List) || licenses.isEmpty()) {
+                return null
+            }
+
+            def licenseIds = licenses.findAll { it instanceof Map && it.license instanceof Map && it.license.id }
+            def foundLicense = preferredLicenses.find { p -> licenseIds.any { it.license.id == p } }
+            if (foundLicense) {
+                return licenseIds.find { it.license.id == foundLicense }
+            }
+
+            licenses[0] // pick the first one found
+        }
+
+        def rewriteSbom = { File f ->
+            def bom = new JsonSlurper().parse(f)
+
+            // timestamp is not reproducible: https://github.com/CycloneDX/cyclonedx-gradle-plugin/issues/292
+            bom.metadata.timestamp = DateTimeFormatter.ISO_INSTANT.format(buildDate.truncatedTo(ChronoUnit.SECONDS))
+
+            // components[*].licenses
+            def comps = (bom instanceof Map && bom.components instanceof List) ? bom.components : []
+            comps.each { c ->
+                if (c instanceof Map && c.licenses instanceof List && !c.licenses.isEmpty()) {
+                    def chosen = pickLicense(c.licenses as List)
+                    if (chosen != null) {
+                        c.licenses = [chosen]
+                    }
+                }
+            }
+
+            // force the serialNumber to be reproducible by removing it & recalculating
+            bom.serialNumber = ''
+            String withOutSerial = JsonOutput.prettyPrint(JsonOutput.toJson(bom))
+            def uuid = UUID.nameUUIDFromBytes(withOutSerial.getBytes(StandardCharsets.UTF_8.name()))
+            def urn = "urn:uuid:${uuid.toString()}" as String
+            bom.serialNumber = urn
+
+            f.setText(JsonOutput.prettyPrint(JsonOutput.toJson(bom)), StandardCharsets.UTF_8.name())
+
+            logger.info('Rewrote JSON SBOM ({}) to pick preferred license', project.relativePath(f))
+        }
+
+        sbomOutputLocation.get().with { rewriteSbom(it.asFile) }
+    }
+}
+
+// for now, we only publish the sbom inside of the binary jar (our bom projects won't have a jar file)
+pluginManager.withPlugin('java') {
+    if (!project.findProperty('skipJavaComponent')) {
+        tasks.named('jar', Jar).configure { Jar jar ->
+            jar.dependsOn tasks.named('cyclonedxBom')
+
+            jar.from(findProperty('sbomOutputLocation')) {
+                into('META-INF')
+                rename {
+                    'sbom.json'
+                }
+            }
+        }
+    }
+}

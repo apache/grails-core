@@ -33,6 +33,7 @@ configurations {
 
 ext {
     pomDescription = 'Support for Grails documentation generation in Gradle builds.'
+    sbomProjectType = org.cyclonedx.model.Component.Type.LIBRARY.name()
 }
 
 dependencies {
@@ -91,4 +92,5 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/sbom-config.gradle')
 }

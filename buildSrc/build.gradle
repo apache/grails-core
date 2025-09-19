@@ -73,5 +73,6 @@ dependencies {
     implementation 'org.asciidoctor:asciidoctor-gradle-jvm'
     implementation 'org.springframework.boot:spring-boot-gradle-plugin'
     implementation "org.nosphere.apache.rat:org.nosphere.apache.rat.gradle.plugin:${gradleProperties.apacheRatVersion}"
+    implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${gradleProperties.gradleCycloneDxPluginVersion}"
     implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${gradleProperties.gradleChecksumPluginVersion}"
 }
