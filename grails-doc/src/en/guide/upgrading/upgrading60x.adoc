@@ -528,6 +528,8 @@ NOTE: Expanded class files & resource files will only be used over the jar file 
 It is no longer necessary to add the `grails-app/migrations` directory to the `main` sourceSet in order for the Database Migration Plugin to find your changelogs.
 This is now done automatically by the `org.apache.grails.gradle.grails-plugin` Gradle plugin.
 
+The following code can be removed from your `build.gradle` file:
+
 [source,groovy]
 .build.gradle
 ----
