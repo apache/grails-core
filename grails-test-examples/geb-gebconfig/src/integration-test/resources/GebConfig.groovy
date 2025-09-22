@@ -36,8 +36,8 @@ driver = {
     })
 }
 
-// The `containerBrowser` property is required to match the configured
-// driver in order to start up the matching Selenium browser container.
+// The `containerBrowser` property must match the configured
+// driver in order to start up a matching Selenium browser container.
 containerBrowser = 'firefox'
 
 // Another proof that GebConfig.groovy is being utilized, next to GebConfigSpec.

@@ -33,6 +33,7 @@ import geb.Browser
 import geb.ConfigurationLoader
 import geb.spock.SpockGebTestManagerBuilder
 import geb.test.GebTestManager
+import org.openqa.selenium.SessionNotCreatedException
 import org.openqa.selenium.chrome.ChromeOptions
 import org.openqa.selenium.remote.RemoteWebDriver
 import org.spockframework.runtime.extension.IMethodInvocation
@@ -123,27 +124,20 @@ class WebDriverContainerHolder {
         }
 
         def gebConf = new ConfigurationLoader().conf
+        def gebConfigExists = gebConf.rawConfig.size() != 0
         def dockerImageName = createDockerImageName(DEFAULT_BROWSER)
+        def customBrowser = gebConf.rawConfig.containerBrowser as String
 
-        def gebConfigFileActive = false
-        if (gebConfigFileExists) {
-            if (gebConf.rawConfig.containerBrowser) {
-                if (!gebConf.driverConf instanceof Closure) {
-                    throw new IllegalStateException(
-                            'The \'driver\' property value in GebConfig.groovy ' +
-                            'must be a Closure that returns an instance of RemoteWebDriver.'
-                    )
-                }
-                gebConfigFileActive = true
-
-                // Prepare for creating a suitable container matching the driver
-                // configured in GebConfig.groovy, or more specifically,
-                // specified by the `containerBrowser` property.
-                dockerImageName = createDockerImageName(gebConf.rawConfig.containerBrowser)
+        if (gebConfigExists) {
+            validateDriverConf(gebConf)
+            if (customBrowser) {
+                // Prepare for creating a container matching
+                // the GebConfig `containerBrowser` property.
+                dockerImageName = createDockerImageName(customBrowser)
             } else {
                 log.info(
-                        'No \'containerBrowser\' property found in GebConfig.groovy. ' +
-                        "Using default browser: [$DEFAULT_BROWSER]"
+                        'No \'containerBrowser\' property found in GebConfig. ' +
+                        "Using default [$DEFAULT_BROWSER] container image."
                 )
             }
         }
@@ -160,8 +154,7 @@ class WebDriverContainerHolder {
             withAccessToHost(true)
             withImagePullPolicy(PullPolicy.ageBased(Duration.of(1, ChronoUnit.DAYS)))
         }
-
-        startContainer(container, dockerImageName, gebConfigFileActive)
+        startContainer(container, dockerImageName, customBrowser)
 
         if (hostnameChanged) {
             container.execInContainer(
@@ -170,16 +163,6 @@ class WebDriverContainerHolder {
             )
         }
 
-        if (gebConfigFileActive) {
-            // As a custom `GebConfig` cannot know the `remoteAddress` of the container beforehand,
-            // the `RemoteWebDriver` will be instantiated using the `webdriver.remote.server`
-            // system property. We set that property to inform the driver of the container address.
-            gebConf.driverConf = ClosureDecorators.withSystemProperty(
-                    gebConf.driverConf as Closure,
-                    REMOTE_ADDRESS_PROPERTY,
-                    container.seleniumAddress
-            )
-        }
 
         // Ensure that the driver points to the re-initialized container with the correct host.
         // The driver is explicitly quit by us in stop() method, to fulfill our resulting responsibility.
@@ -194,8 +177,17 @@ class WebDriverContainerHolder {
             gebConf.reporter = (methodInvocation.sharedInstance as ContainerGebSpec).createReporter()
         }
 
-        if (!gebConfigFileActive) {
-            // If no driver was set by a GebConfig.groovy file, create a Chrome driver
+        if (gebConf.driverConf) {
+            // As a custom `GebConfig` cannot know the `remoteAddress` of the container beforehand,
+            // the `RemoteWebDriver` will be instantiated using the `webdriver.remote.server`
+            // system property. We set that property to inform the driver of the container address.
+            gebConf.driverConf = ClosureDecorators.withSystemProperty(
+                    gebConf.driverConf as Closure,
+                    REMOTE_ADDRESS_PROPERTY,
+                    container.seleniumAddress
+            )
+        } else {
+            // If no driver was set in GebConfig, create a Chrome driver
             gebConf.driverConf = { ->
                 log.info('Using default Chrome RemoteWebDriver for {}', container.seleniumAddress)
                 new RemoteWebDriver(container.seleniumAddress, new ChromeOptions().tap {
@@ -209,7 +201,7 @@ class WebDriverContainerHolder {
             }
         }
 
-        browser = new Browser(gebConf)
+        browser = createBrowser(gebConf)
         applyFileDetector(browser, containerConf)
         applyTimeouts(browser, settings)
 
@@ -223,6 +215,22 @@ class WebDriverContainerHolder {
         testManager = createTestManager()
 
         return true
+    }
+
+    private static Browser createBrowser(Configuration gebConf) {
+        def browser = new Browser(gebConf)
+        try {
+            browser.driver
+        }
+        catch (SessionNotCreatedException e) {
+            throw new IllegalStateException(
+                    'Failed to create a remote browser session. ' +
+                    'Did you set a \'containerBrowser\' property ' +
+                    'corresponding to the \'driver\' in GebConfig?',
+                    e
+            )
+        }
+        browser
     }
 
     private static void applyFileDetector(Browser browser, WebDriverContainerConfiguration conf) {
@@ -249,16 +257,15 @@ class WebDriverContainerHolder {
         }
     }
 
-    private static void startContainer(BrowserWebDriverContainer container, DockerImageName dockerImageName, boolean gebConfigFileActive) {
+    private static void startContainer(BrowserWebDriverContainer container, DockerImageName dockerImageName, String customBrowser) {
         try {
             container.start()
         } catch (ContainerFetchException e) {
-            if (gebConfigFileActive) {
+            if (customBrowser) {
                 throw new IllegalStateException(
                         "Could not find the Docker image [$dockerImageName] " +
-                        'matching the browser name in the \'containerBrowser\' property ' +
-                        'specified in GebConfig.groovy. Make sure you set the correct ' +
-                        'browser name and that the docker image is available. ' +
+                        "with the browser name from the 'containerBrowser' [$customBrowser] " +
+                        'property specified in GebConfig. ' +
                         'See https://hub.docker.com/u/selenium for a list of available images.',
                         e
                 )
@@ -333,12 +340,17 @@ class WebDriverContainerHolder {
         )
     }
 
-    private static String getSeleniumVersion() {
-        SeleniumUtils.determineClasspathSeleniumVersion()
+    private static void validateDriverConf(Configuration gebConf) {
+        if (gebConf.driverConf && !(gebConf.driverConf instanceof Closure)) {
+            throw new IllegalStateException(
+                    'The \'driver\' property of GebConfig must be a ' +
+                    'Closure that returns an instance of RemoteWebDriver.'
+            )
+        }
     }
 
-    private static boolean getGebConfigFileExists() {
-        new ConfigurationLoader().specialClassLoader.getResource('GebConfig.groovy')
+    private static String getSeleniumVersion() {
+        SeleniumUtils.determineClasspathSeleniumVersion()
     }
 
     @CompileStatic
