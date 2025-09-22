@@ -30,9 +30,11 @@ import org.codehaus.groovy.runtime.InvokerHelper
 
 import com.github.dockerjava.api.model.ContainerNetwork
 import geb.Browser
+import geb.Configuration
 import geb.ConfigurationLoader
 import geb.spock.SpockGebTestManagerBuilder
 import geb.test.GebTestManager
+import geb.waiting.Wait
 import org.openqa.selenium.SessionNotCreatedException
 import org.openqa.selenium.chrome.ChromeOptions
 import org.openqa.selenium.remote.RemoteWebDriver
@@ -150,7 +152,7 @@ class WebDriverContainerHolder {
         )
 
         container.with {
-            withEnv('SE_ENABLE_TRACING', settings.tracingEnabled)
+            withEnv('SE_ENABLE_TRACING', settings.tracingEnabled.toString())
             withAccessToHost(true)
             withImagePullPolicy(PullPolicy.ageBased(Duration.of(1, ChronoUnit.DAYS)))
         }
@@ -252,9 +254,12 @@ class WebDriverContainerHolder {
             browser.driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(settings.pageLoadTimeout))
         if (settings.scriptTimeout != DEFAULT_TIMEOUT_SCRIPT)
             browser.driver.manage().timeouts().scriptTimeout(Duration.ofSeconds(settings.scriptTimeout))
-        if (settings.atCheckWaiting != DEFAULT_AT_CHECK_WAITING) {
+        if (settings.atCheckWaiting != DEFAULT_AT_CHECK_WAITING)
             browser.config.atCheckWaiting = settings.atCheckWaiting
-        }
+        if (settings.timeout != Wait.DEFAULT_TIMEOUT)
+            (browser.config.rawConfig.waiting as ConfigObject).timeout = settings.timeout
+        if (settings.retryInterval != Wait.DEFAULT_RETRY_INTERVAL)
+            (browser.config.rawConfig.waiting as ConfigObject).retryInterval = settings.retryInterval
     }
 
     private static void startContainer(BrowserWebDriverContainer container, DockerImageName dockerImageName, String customBrowser) {

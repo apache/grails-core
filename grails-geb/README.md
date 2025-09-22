@@ -135,18 +135,34 @@ the `container` from within your `ContainerGebSpec` to, for example, call `.copy
 An Example of this can be seen in [ContainerSupport#createFileInputSource utility method](./src/testFixtures/groovy/grails/plugin/geb/support/ContainerSupport.groovy).
 
 #### Timeouts
-
+The following system properties exist to configure timeouts:
+ 
+* `grails.geb.atCheckWaiting.enabled`
+  * purpose: if `at` checks should wait for the page to be in the expected state (uses configured waiting timeout values)
+  * type: boolean
+  * defaults to `false`
+* `grails.geb.timeouts.retryInterval`
+  * purpose: how often to retry waiting operations
+  * type: Number
+  * defaults to `0.1` seconds
+* `grails.geb.timeouts.waiting`
+  * purpose: amount of time to wait for waiting operations
+  * type: Number
+  * defaults to `5.0` seconds
 * `grails.geb.timeouts.implicitlyWait`
   * purpose: amount of time the driver should wait when searching for an element if it is not immediately present.
+  * type: int
   * defaults to `0` seconds, which means that if an element is not found, it will immediately return an error.
   * Warning: Do not mix implicit and explicit waits. Doing so can cause unpredictable wait times.
     Consult the [Geb](https://groovy.apache.org/geb/manual/current/#implicit-assertions-waiting) 
     and/or [Selenium](https://www.selenium.dev/documentation/webdriver/waits/) documentation for details.
 * `grails.geb.timeouts.pageLoad`
   * purpose: amount of time to wait for a page load to complete before throwing an error.
+  * type: int
   * defaults to `300` seconds
 * `grails.geb.timeouts.script`
   * purpose: amount of time to wait for an asynchronous script to finish execution before throwing an error.
+  * type: int
   * defaults to `30` seconds
 
 #### Observability and Tracing

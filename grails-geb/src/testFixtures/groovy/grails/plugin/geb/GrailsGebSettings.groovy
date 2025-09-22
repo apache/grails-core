@@ -25,6 +25,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 
+import geb.waiting.Wait
+
 import static org.testcontainers.containers.BrowserWebDriverContainer.VncRecordingMode
 import static org.testcontainers.containers.VncRecordingContainer.VncRecordingFormat
 
@@ -46,7 +48,7 @@ class GrailsGebSettings {
     public static int DEFAULT_TIMEOUT_PAGE_LOAD = 300
     public static int DEFAULT_TIMEOUT_SCRIPT = 30
 
-    String tracingEnabled
+    boolean tracingEnabled
     String recordingDirectoryName
     String reportingDirectoryName
     boolean restartRecordingContainerPerTest
@@ -56,10 +58,13 @@ class GrailsGebSettings {
     int implicitlyWait
     int pageLoadTimeout
     int scriptTimeout
+
     boolean atCheckWaiting
+    Number timeout
+    Number retryInterval
 
     GrailsGebSettings(LocalDateTime startTime) {
-        tracingEnabled = System.getProperty('grails.geb.tracing.enabled', 'false')
+        tracingEnabled = getBooleanProperty('grails.geb.tracing.enabled', false)
         recordingDirectoryName = System.getProperty('grails.geb.recording.directory', 'build/gebContainer/recordings')
         reportingDirectoryName = System.getProperty('grails.geb.reporting.directory', 'build/gebContainer/reports')
         recordingMode = VncRecordingMode.valueOf(
@@ -76,6 +81,8 @@ class GrailsGebSettings {
         pageLoadTimeout = getIntProperty('grails.geb.timeouts.pageLoad', DEFAULT_TIMEOUT_PAGE_LOAD)
         scriptTimeout = getIntProperty('grails.geb.timeouts.script', DEFAULT_TIMEOUT_SCRIPT)
         atCheckWaiting = getBooleanProperty('grails.geb.atCheckWaiting', DEFAULT_AT_CHECK_WAITING)
+        timeout = getNumberProperty('grails.geb.timeouts.timeout', Wait.DEFAULT_TIMEOUT)
+        retryInterval = getNumberProperty('grails.geb.timeouts.retryInterval', Wait.DEFAULT_RETRY_INTERVAL)
         this.startTime = startTime
     }
 
@@ -85,6 +92,27 @@ class GrailsGebSettings {
 
     private static int getIntProperty(String propertyName, int defaultValue) {
         Integer.getInteger(propertyName, defaultValue) ?: defaultValue
+    }
+
+    private static Number getNumberProperty(String propertyName, Number defaultValue) {
+        def propValue = System.getProperty(propertyName)
+        if (propValue) {
+            try {
+                if (propValue.contains('.')) {
+                    return Double.parseDouble(propValue)
+                } else {
+                    return Integer.parseInt(propValue)
+                }
+            } catch (NumberFormatException ignored) {
+                log.warn(
+                        "Could not parse property [{}] with value [{}] as a Number. Using default value [{}] instead.",
+                        propertyName,
+                        propValue,
+                        defaultValue
+                )
+            }
+        }
+        return defaultValue
     }
 
     boolean isRecordingEnabled() {
