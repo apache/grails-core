@@ -175,7 +175,7 @@ jobs:
       - name: "🏃 Run Functional Tests"
         env:
           # Make Geb tests more resilient in slow CI environments
-          JAVA_TOOL_OPTIONS: -Dgrails.geb.atCheckWaiting=true
+          JAVA_TOOL_OPTIONS: -Dgrails.geb.atCheckWaiting.enabled=true
         run: >
           ./gradlew bootJar check
           --continue
