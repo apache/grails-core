@@ -54,6 +54,7 @@ import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.process.JavaForkOptions
+import org.gradle.process.CommandLineArgumentProvider
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 
 import org.springframework.boot.gradle.dsl.SpringBootExtension
@@ -576,6 +577,24 @@ class GrailsGradlePlugin extends GroovyPlugin {
         String grailsEnvSystemProperty = System.getProperty(Environment.KEY)
         tasks.withType(Test).each(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.TEST.getName()))
         tasks.withType(JavaExec).each(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.DEVELOPMENT.getName()))
+
+        // Mitigate command line length issues when launching Java processes (e.g., assetCompile) using argfile approach
+        tasks.withType(JavaExec).configureEach { JavaExec execTask ->
+            execTask.doFirst {
+                try {
+                    String cp = execTask.classpath?.asPath ?: ''
+                    if (cp) {
+                        File argsFile = new File(project.layout.buildDirectory.get().asFile, "tmp${File.separator}javaexec-args${File.separator}${execTask.name}.args")
+                        argsFile.parentFile.mkdirs()
+                        argsFile.text = "-cp\n\"${cp}\""
+                        execTask.setClasspath(project.files())
+                        execTask.jvmArgumentProviders.add(new ClasspathArgfileProvider(argsFile))
+                    }
+                } catch (Throwable ignored) {
+                    // If anything goes wrong, continue without the argsFile
+                }
+            }
+        }
     }
 
     protected void configureConsoleTask(Project project) {
@@ -883,5 +902,15 @@ class GrailsGradlePlugin extends GroovyPlugin {
     @CompileStatic
     private static final class OnlyOneGrailsPlugin {
         String pluginClassname
+    }
+
+    @CompileStatic
+    static final class ClasspathArgfileProvider implements CommandLineArgumentProvider {
+        final File argsFile
+        ClasspathArgfileProvider(File file) { this.argsFile = file }
+        @Override
+        Iterable<String> asArguments() {
+            return ["@${argsFile.absolutePath}".toString()]
+        }
     }
 }
