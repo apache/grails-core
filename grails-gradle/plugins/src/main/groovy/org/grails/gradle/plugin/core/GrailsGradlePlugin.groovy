@@ -578,20 +578,22 @@ class GrailsGradlePlugin extends GroovyPlugin {
         tasks.withType(Test).each(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.TEST.getName()))
         tasks.withType(JavaExec).each(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.DEVELOPMENT.getName()))
 
-        // Mitigate command line length issues when launching Java processes (e.g., assetCompile) using argfile approach
+        // Mitigate command line length issues when launching Java processes (e.g., assetCompile) using argsfile approach
         tasks.withType(JavaExec).configureEach { JavaExec execTask ->
             execTask.doFirst {
-                try {
-                    String cp = execTask.classpath?.asPath ?: ''
-                    if (cp) {
-                        File argsFile = new File(project.layout.buildDirectory.get().asFile, "tmp${File.separator}javaexec-args${File.separator}${execTask.name}.args")
-                        argsFile.parentFile.mkdirs()
-                        argsFile.text = "-cp\n\"${cp}\""
-                        execTask.setClasspath(project.files())
-                        execTask.jvmArgumentProviders.add(new ClasspathArgfileProvider(argsFile))
+                if (execTask.name !in ['bootRun', 'bootTestRun']) { // Skip bootRun and bootTestRun tasks as they handle classpaths differently
+                    try {
+                        String cp = execTask.classpath?.asPath ?: ''
+                        if (cp) {
+                            File argsFile = new File(project.layout.buildDirectory.get().asFile, "tmp${File.separator}javaexec-args${File.separator}${execTask.name}.args")
+                            argsFile.parentFile.mkdirs()
+                            argsFile.text = "-cp\n\"${cp}\""
+                            execTask.setClasspath(project.files())
+                            execTask.jvmArgumentProviders.add(new ClasspathArgfileProvider(argsFile))
+                        }
+                    } catch (Throwable ignored) {
+                        // If anything goes wrong, continue without the argsFile
                     }
-                } catch (Throwable ignored) {
-                    // If anything goes wrong, continue without the argsFile
                 }
             }
         }
