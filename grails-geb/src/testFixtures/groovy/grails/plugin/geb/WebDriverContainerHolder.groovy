@@ -165,7 +165,6 @@ class WebDriverContainerHolder {
             )
         }
 
-
         // Ensure that the driver points to the re-initialized container with the correct host.
         // The driver is explicitly quit by us in stop() method, to fulfill our resulting responsibility.
         gebConf.cacheDriver = false

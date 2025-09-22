@@ -105,7 +105,7 @@ class GrailsGebSettings {
                 }
             } catch (NumberFormatException ignored) {
                 log.warn(
-                        "Could not parse property [{}] with value [{}] as a Number. Using default value [{}] instead.",
+                        'Could not parse property [{}] with value [{}] as a Number. Using default value [{}] instead.',
                         propertyName,
                         propValue,
                         defaultValue
