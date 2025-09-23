@@ -60,6 +60,7 @@ configurations {
 ext {
     cliProject = true
     startMainClass = 'org.grails.forge.cli.Application'
+    sbomProjectType = org.cyclonedx.model.Component.Type.APPLICATION.name()
 }
 
 dependencies {

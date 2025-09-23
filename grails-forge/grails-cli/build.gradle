@@ -34,6 +34,7 @@ ext {
     ]
     cliProject = true
     startMainClass = 'org.apache.grails.cli.DelegatingShellApplication'
+    sbomProjectType = org.cyclonedx.model.Component.Type.APPLICATION.name()
 }
 
 version = projectVersion

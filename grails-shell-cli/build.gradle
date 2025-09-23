@@ -31,6 +31,10 @@ configurations.register('shellCliDependencies').configure {
     configurations.runtimeClasspath.extendsFrom(it)
 }
 
+ext {
+    sbomProjectType = org.cyclonedx.model.Component.Type.APPLICATION.name()
+}
+
 dependencies {
 
     implementation platform(project(':grails-bom'))

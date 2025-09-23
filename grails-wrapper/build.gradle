@@ -35,6 +35,7 @@ ext {
     ]
     cliProject = true
     startMainClass = 'grails.init.Start'
+    sbomProjectType = org.cyclonedx.model.Component.Type.APPLICATION.name()
 }
 
 dependencies {
