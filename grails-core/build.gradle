@@ -36,7 +36,6 @@ dependencies {
     api 'jakarta.persistence:jakarta.persistence-api'
     api 'jakarta.annotation:jakarta.annotation-api'
 
-    implementation 'com.github.ben-manes.caffeine:caffeine'
     api 'org.apache.groovy:groovy'
     api 'org.springframework.boot:spring-boot'
     api 'org.springframework:spring-core'

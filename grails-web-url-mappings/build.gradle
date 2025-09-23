@@ -43,7 +43,9 @@ dependencies {
     testRuntimeOnly 'org.fusesource.jansi:jansi'
     compileOnly 'jline:jline'
 
-    implementation 'com.github.ben-manes.caffeine:caffeine'
+    implementation 'com.github.ben-manes.caffeine:caffeine', {
+        // impl: Cache, Caffeine, Weigher
+    }
 
     testImplementation project(':grails-test-suite-base')
 

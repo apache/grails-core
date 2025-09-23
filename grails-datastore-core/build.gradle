@@ -82,7 +82,6 @@ dependencies {
         // provided: Logger, LoggerFactory
     }
 
-
     testImplementation project(':grails-datamapping-core'), {
         // we only need the @grails.gorm.annotation.Entity annotation to test GORM syntax mapping
         transitive = false

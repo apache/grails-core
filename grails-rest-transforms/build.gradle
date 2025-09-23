@@ -39,7 +39,10 @@ dependencies {
     api project(':grails-converters')
     api 'org.apache.groovy:groovy'
 
-    implementation 'com.github.ben-manes.caffeine:caffeine'
+    implementation 'com.github.ben-manes.caffeine:caffeine', {
+        // impl: Cache, Caffeine
+    }
+
     testImplementation project(':grails-url-mappings')
     testImplementation project(':grails-test-suite-base')
 

@@ -83,9 +83,6 @@ dependencies {
         // api: PlatformTransactionManager
     }
 
-    // RemovalListener (caffeine)
-    implementation "com.github.ben-manes.caffeine:caffeine"
-
     compileOnly 'org.apache.groovy:groovy', {
         // comp: CompileStatic
     }
@@ -98,3 +95,10 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
 }
+
+// Without this, the the groovydoc task will fail:
+// | Execution failed for task ':grails-data-simple:groovydoc'.
+// | > A failure occurred while executing org.gradle.api.internal.tasks.GroovydocAntAction
+// |   > java.lang.NoClassDefFoundError: com/github/benmanes/caffeine/cache/RemovalListener
+// Caffeine is on the runtimeClasspath via grails-datastore-core
+dependencies.add('documentation', 'com.github.ben-manes.caffeine:caffeine')
