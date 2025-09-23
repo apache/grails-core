@@ -80,7 +80,7 @@ class GrailsGebSettings {
         implicitlyWait = getIntProperty('grails.geb.timeouts.implicitlyWait', DEFAULT_TIMEOUT_IMPLICITLY_WAIT)
         pageLoadTimeout = getIntProperty('grails.geb.timeouts.pageLoad', DEFAULT_TIMEOUT_PAGE_LOAD)
         scriptTimeout = getIntProperty('grails.geb.timeouts.script', DEFAULT_TIMEOUT_SCRIPT)
-        atCheckWaiting = getBooleanProperty('grails.geb.atCheckWaiting', DEFAULT_AT_CHECK_WAITING)
+        atCheckWaiting = getBooleanProperty('grails.geb.atCheckWaiting.enabled', DEFAULT_AT_CHECK_WAITING)
         timeout = getNumberProperty('grails.geb.timeouts.timeout', Wait.DEFAULT_TIMEOUT)
         retryInterval = getNumberProperty('grails.geb.timeouts.retryInterval', Wait.DEFAULT_RETRY_INTERVAL)
         this.startTime = startTime
