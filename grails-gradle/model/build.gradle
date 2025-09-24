@@ -37,12 +37,8 @@ ext {
 dependencies {
     implementation platform(project(':grails-gradle-bom'))
 
-    // compile grails-gradle-model with the Groovy version provided by Gradle
-    // to ensure build compatibility with Gradle, currently Groovy 3.0.x
-    // when used by grails-gradle-plugin
-    // see: https://docs.gradle.org/current/userguide/compatibility.html#groovy
-    compileOnly 'org.codehaus.groovy:groovy'
-    compileOnly 'org.codehaus.groovy:groovy-xml'
+    compileOnly 'org.apache.groovy:groovy'
+    compileOnly 'org.apache.groovy:groovy-xml'
 
     testImplementation 'org.codehaus.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'

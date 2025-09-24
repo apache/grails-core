@@ -41,10 +41,8 @@ dependencies {
 
     gradleConf gradleApi()
 
-    // grails-docs classes are used in Gradle builds,
-    // so we must compile with Groovy 3 until Gradle upgrades to Groovy 4.
-    compileOnly 'org.codehaus.groovy:groovy'
-    compileOnly 'org.codehaus.groovy:groovy-ant'
+    compileOnly 'org.apache.groovy:groovy'
+    compileOnly 'org.apache.groovy:groovy-ant'
 
     api 'org.apache.commons:commons-text'
     api 'org.slf4j:jcl-over-slf4j'
