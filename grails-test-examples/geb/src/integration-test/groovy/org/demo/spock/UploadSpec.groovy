@@ -19,6 +19,8 @@
 
 package org.demo.spock
 
+import org.demo.spock.pages.UploadSuccessPage
+
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 import org.demo.spock.pages.UploadPage
@@ -31,7 +33,7 @@ class UploadSpec extends ContainerGebSpec {
     @Requires({ os.windows })
     void 'should be able to upload files on a Windows host'() {
         given:
-        def uploadPage = to UploadPage
+        def uploadPage = to(UploadPage)
 
         when:
         uploadPage.fileInput.file = createFileInputSource(
@@ -43,14 +45,13 @@ class UploadSpec extends ContainerGebSpec {
         uploadPage.submitBtn.click()
 
         then:
-        title == 'File Uploaded'
-        pageSource.contains('File uploaded successfully')
+        at(UploadSuccessPage)
     }
 
     @IgnoreIf({ os.windows })
     void 'should be able to upload files on a non-Windows host'() {
         given:
-        def uploadPage = to UploadPage
+        def uploadPage = to(UploadPage)
 
         when:
         uploadPage.fileInput.file = createFileInputSource(
@@ -62,7 +63,6 @@ class UploadSpec extends ContainerGebSpec {
         uploadPage.submitBtn.click()
 
         then:
-        title == 'File Uploaded'
-        pageSource.contains('File uploaded successfully')
+        at(UploadSuccessPage)
     }
 }

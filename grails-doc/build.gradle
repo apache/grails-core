@@ -53,7 +53,7 @@ dependencies {
     implementation 'org.testcontainers:testcontainers'
     implementation 'org.springframework:spring-core'
     implementation 'org.springframework.boot:spring-boot'
-    implementation 'org.gebish:geb-spock'
+    implementation 'org.apache.groovy.geb:geb-spock'
 }
 
 // this task needs to be here instead of the root since bom resolution only occurs when the java / groovy plugins are applied

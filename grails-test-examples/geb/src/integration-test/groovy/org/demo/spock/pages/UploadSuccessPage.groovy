@@ -17,21 +17,12 @@
  *  under the License.
  */
 
-package org.demo.spock
+package org.demo.spock.pages
 
-import org.demo.spock.pages.HomePage
+import geb.Page
 
-import grails.plugin.geb.ContainerGebSpec
-import grails.testing.mixin.integration.Integration
+class UploadSuccessPage extends Page {
 
-@Integration
-class DownloadSupportSpec extends ContainerGebSpec {
+    static at = { title == 'File Uploaded' }
 
-    void 'should be able to use download methods'() {
-        when:
-        to(HomePage)
-
-        then:
-        downloadText().contains('Welcome to Grails')
-    }
 }

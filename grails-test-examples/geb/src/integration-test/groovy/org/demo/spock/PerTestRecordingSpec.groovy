@@ -33,7 +33,7 @@ class PerTestRecordingSpec extends ContainerGebSpec {
 
     void '(setup) running a test to create a recording'() {
         when: 'visiting the home page'
-        to HomePage
+        to(HomePage)
 
         then: 'the page loads correctly'
         title == 'Welcome to Grails'
@@ -41,7 +41,7 @@ class PerTestRecordingSpec extends ContainerGebSpec {
 
     void '(setup) running a second test to create another recording'() {
         when: 'visiting another page than the previous test'
-        to UploadPage
+        to(UploadPage)
         
         and: 'pausing to ensure the recorded file size is different'
         Thread.sleep(1000)
@@ -98,6 +98,6 @@ class PerTestRecordingSpec extends ContainerGebSpec {
     }
 
     private static boolean isVideoFile(File file) {
-        return file.isFile() && (file.name.endsWith('.mp4') || file.name.endsWith('.flv'))
+        file.isFile() && (file.name.endsWith('.mp4') || file.name.endsWith('.flv'))
     }
 }
