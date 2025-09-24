@@ -99,7 +99,7 @@ class GrailsGebSettings {
         if (propValue) {
             try {
                 if (propValue.contains('.')) {
-                    return Double.parseDouble(propValue)
+                    return new BigDecimal(propValue)
                 } else {
                     return Integer.parseInt(propValue)
                 }
