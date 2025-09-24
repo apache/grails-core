@@ -38,7 +38,7 @@ class SpringBootVirtualThreadsSpec extends BeanContextSpec implements CommandOut
 
     void "test spring boot virtual threads enabled for JDK 24+, when optional feature selected"() {
         when:
-        GeneratorContext commandContext = buildGeneratorContext(['spring-boot-virtual-threads'], new Options(TestFramework.DEFAULT_OPTION, JdkVersion.JDK_24))
+        GeneratorContext commandContext = buildGeneratorContext(['spring-boot-virtual-threads'], new Options(TestFramework.DEFAULT_OPTION, JdkVersion.JDK_25))
 
         then:
         commandContext.configuration.get('spring.threads.virtual.enabled'.toString()) == true
