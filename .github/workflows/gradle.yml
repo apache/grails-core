@@ -173,14 +173,12 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🏃 Run Functional Tests"
-        env:
-          # Make Geb tests more resilient in slow CI environments
-          JAVA_TOOL_OPTIONS: -Dgrails.geb.atCheckWaiting.enabled=true
         run: >
           ./gradlew bootJar check
           --continue
           --rerun-tasks
           --stacktrace
+          -PgebAtCheckWaiting
           -PonlyFunctionalTests
           -PskipCodeStyle
           -PskipHibernate5Tests
