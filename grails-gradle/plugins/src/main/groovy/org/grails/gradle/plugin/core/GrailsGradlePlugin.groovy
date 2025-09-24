@@ -68,7 +68,6 @@ import grails.util.GrailsNameUtils
 import grails.util.Metadata
 import org.apache.grails.gradle.common.PropertyFileUtils
 import org.grails.build.parsing.CommandLineParser
-import org.grails.gradle.plugin.agent.AgentTasksEnhancer
 import org.grails.gradle.plugin.commands.ApplicationContextCommandTask
 import org.grails.gradle.plugin.commands.ApplicationContextScriptTask
 import org.grails.gradle.plugin.exploded.ExplodedCompatibilityRule
@@ -134,8 +133,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
         registerFindMainClassTask(project)
 
         configureGrailsBuildSettings(project)
-
-        configureFileWatch(project)
 
         String grailsVersion = resolveGrailsVersion(project)
 
@@ -427,12 +424,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
     }
 
     @CompileStatic
-    protected void configureFileWatch(Project project) {
-        def environment = Environment.getCurrent()
-        enableFileWatch(environment, project)
-    }
-
-    @CompileStatic
     protected String configureGrailsBuildSettings(Project project) {
         System.setProperty(BuildSettings.APP_BASE_DIR, project.projectDir.absolutePath)
     }
@@ -629,16 +620,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
             }
         }
         shellTask
-    }
-
-    @CompileDynamic
-    protected void enableFileWatch(Environment environment, Project project) {
-        if (environment.isReloadEnabled()) {
-            project.configurations {
-                agent
-            }
-            project.afterEvaluate(new AgentTasksEnhancer())
-        }
     }
 
     @CompileDynamic

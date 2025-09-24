@@ -638,15 +638,6 @@ enum Environment {
         }
         catch (ClassNotFoundException e) {
             RELOADING_AGENT_ENABLED = false
-            try {
-                Class.forName('org.springsource.loaded.TypeRegistry')
-                String jvmVersion = System.getProperty('java.specification.version')
-                LOG.get().debug('Found spring-loaded on the class path')
-                RELOADING_AGENT_ENABLED = getCurrent().isReloadEnabled()
-            }
-            catch (ClassNotFoundException e1) {
-                RELOADING_AGENT_ENABLED = false
-            }
         }
         return RELOADING_AGENT_ENABLED
     }
