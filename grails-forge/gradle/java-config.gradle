@@ -48,6 +48,11 @@ tasks.withType(GroovyCompile).configureEach {
 // Grails determines the grails version via the META-INF/MANIFEST.MF file
 // Note: we exclude attributes such as Built-By, Build-Jdk, Created-By to ensure the build is reproducible.
 tasks.withType(Jar).configureEach {
+    if (project.findProperty('skipJavaComponent')) {
+        it.enabled = false
+        return
+    }
+
     manifest.attributes(
             'Implementation-Title': 'Apache Grails',
             'Implementation-Version': projectVersion,

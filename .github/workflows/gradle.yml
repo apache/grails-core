@@ -178,6 +178,7 @@ jobs:
           --continue
           --rerun-tasks
           --stacktrace
+          -PgebAtCheckWaiting
           -PonlyFunctionalTests
           -PskipCodeStyle
           -PskipHibernate5Tests

@@ -19,6 +19,8 @@
 
 package org.demo.spock
 
+import org.demo.spock.pages.HomePage
+
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 
@@ -27,7 +29,7 @@ class DownloadSupportSpec extends ContainerGebSpec {
 
     void 'should be able to use download methods'() {
         when:
-        go('/')
+        to(HomePage)
 
         then:
         downloadText().contains('Welcome to Grails')

@@ -29,6 +29,7 @@ group = 'org.apache.grails'
 ext {
     pomTitle = 'Grails Gradle Tasks'
     pomDescription = 'Various bundled Gradle tasks for Grails projects'
+    sbomProjectType = org.cyclonedx.model.Component.Type.LIBRARY.name()
 }
 
 dependencies {
@@ -52,4 +53,5 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('../gradle/sbom-config.gradle')
 }

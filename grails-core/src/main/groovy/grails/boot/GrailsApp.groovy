@@ -81,6 +81,7 @@ class GrailsApp extends SpringApplication {
      */
     GrailsApp(Class<?>... sources) {
         super(sources)
+        banner = new ResourceBanner(new ClassPathResource(GRAILS_BANNER))
     }
 
     /**
@@ -95,6 +96,7 @@ class GrailsApp extends SpringApplication {
      */
     GrailsApp(ResourceLoader resourceLoader, Class<?>... sources) {
         super(resourceLoader, sources)
+        banner = new ResourceBanner(new ClassPathResource(GRAILS_BANNER))
     }
 
     @Override
@@ -394,7 +396,6 @@ class GrailsApp extends SpringApplication {
      */
     static ConfigurableApplicationContext run(Class<?>[] sources, String[] args) {
         GrailsApp grailsApp = new GrailsApp(sources)
-        grailsApp.banner = new ResourceBanner(new ClassPathResource(GRAILS_BANNER))
         return grailsApp.run(args)
     }
 }

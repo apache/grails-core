@@ -60,6 +60,7 @@ configurations {
 ext {
     cliProject = true
     startMainClass = 'org.grails.forge.cli.Application'
+    sbomProjectType = org.cyclonedx.model.Component.Type.APPLICATION.name()
 }
 
 dependencies {
@@ -111,6 +112,7 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('../gradle/sbom-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')
 }

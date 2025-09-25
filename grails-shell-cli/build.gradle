@@ -31,6 +31,10 @@ configurations.register('shellCliDependencies').configure {
     configurations.runtimeClasspath.extendsFrom(it)
 }
 
+ext {
+    sbomProjectType = org.cyclonedx.model.Component.Type.APPLICATION.name()
+}
+
 dependencies {
 
     implementation platform(project(':grails-bom'))
@@ -127,6 +131,7 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/sbom-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }
 

@@ -57,6 +57,7 @@ apply {
     // java-configuration must be applied first since tasks are now lazy registered
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/sbom-config.gradle')
 }
 
 // these must be after the above applies because they opt out of the defaults created in those files

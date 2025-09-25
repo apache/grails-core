@@ -104,6 +104,12 @@ gradlePlugin {
             id = 'org.apache.grails.gradle.grails-publish-profile'
             implementationClass = 'org.grails.gradle.plugin.profiles.GrailsProfilePublishGradlePlugin'
         }
+        grailsExploded {
+            displayName = 'Grails Exploded Plugin'
+            description = 'A plugin that configures a Grails Plugin so that its classes and resources are exploded when running bootRun from a dependent Application'
+            id = 'org.apache.grails.gradle.grails-exploded'
+            implementationClass = 'org.grails.gradle.plugin.exploded.GrailsExplodedPlugin'
+        }
     }
 }
 
@@ -118,4 +124,5 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('../gradle/sbom-config.gradle')
 }

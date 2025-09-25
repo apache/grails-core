@@ -17,14 +17,12 @@
  *  under the License.
  */
 
-apply plugin: 'com.github.hierynomus.license-report'
+package org.demo.spock.pages
 
-List<String> licenseExclusions = rootProject.subprojects.collect {
-    "${it.group}:${it.findProperty('pomArtifactId') ?: it.name}:${rootProject.projectVersion}" as String
-}
+import geb.Page
 
-downloadLicenses {
-    includeProjectDependencies = true
-    dependencyConfiguration = 'runtimeClasspath'
-    excludeDependencies = licenseExclusions
+class UploadSuccessPage extends Page {
+
+    static at = { title == 'File Uploaded' }
+
 }

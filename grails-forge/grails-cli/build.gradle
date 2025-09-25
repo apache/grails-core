@@ -34,6 +34,7 @@ ext {
     ]
     cliProject = true
     startMainClass = 'org.apache.grails.cli.DelegatingShellApplication'
+    sbomProjectType = org.cyclonedx.model.Component.Type.APPLICATION.name()
 }
 
 version = projectVersion
@@ -79,6 +80,7 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('../gradle/sbom-config.gradle')
 }
 
 // It's surprisingly hard to generate start scripts and *not* have them nested into a bin / lib directory

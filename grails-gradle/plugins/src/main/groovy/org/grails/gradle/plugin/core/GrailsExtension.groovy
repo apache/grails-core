@@ -22,6 +22,10 @@ import groovy.transform.CompileStatic
 
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.Project
+import org.gradle.api.artifacts.dsl.DependencyHandler
+import org.gradle.util.internal.ConfigureUtil
+
+import grails.util.Environment
 
 /**
  * A extension to the Gradle plugin to configure Grails settings
@@ -33,10 +37,13 @@ import org.gradle.api.Project
 class GrailsExtension {
 
     Project project
+    PluginDefiner pluginDefiner
 
     GrailsExtension(Project project) {
         this.project = project
+        this.pluginDefiner = new PluginDefiner(project)
     }
+
     /**
      * Whether to invoke native2ascii on resource bundles
      */
@@ -53,11 +60,6 @@ class GrailsExtension {
     boolean packageAssets = true
 
     /**
-     * Whether to include subproject dependencies as directories directly on the classpath, instead of as JAR files
-     */
-    boolean exploded = true
-
-    /**
      * Whether java.time.* package should be a default import package
      */
     boolean importJavaTime = false
@@ -66,6 +68,13 @@ class GrailsExtension {
      * Whether the spring dependency management plugin should be applied by default
      */
     boolean springDependencyManagement = true
+
+    /**
+     * Whether the Micronaut `annotationProcessor` dependencies should be auto-added to the project
+     * on detection of the `grails-micronaut` plugin, and the version defined by the `micronautPlatformVersion`
+     * Gradle property is enforced.
+     */
+    boolean micronautAutoSetup = true
 
     /**
      * Configure the reloading agent
@@ -82,15 +91,25 @@ class GrailsExtension {
         return agent
     }
 
+    DependencyHandler getPlugins() {
+        if (pluginDefiner == null) {
+            pluginDefiner = new PluginDefiner(project)
+        }
+
+        pluginDefiner
+    }
+
     /**
      * Allows defining plugins in the available scopes
      */
-    void plugins(Closure pluginDefinitions) {
-        PluginDefiner definer = new PluginDefiner(project, exploded)
-        pluginDefinitions.delegate = definer
-        pluginDefinitions.resolveStrategy = Closure.DELEGATE_FIRST
-        pluginDefinitions.call()
+    void plugins(@DelegatesTo(DependencyHandler) Closure configureClosure) {
+        if (pluginDefiner == null) {
+            pluginDefiner = new PluginDefiner(project)
+        }
+        pluginDefiner.grailsRun = developmentRun
+        ConfigureUtil.configure(configureClosure, plugins)
     }
+
     /**
      * Configuration for the reloading agent
      */
@@ -108,4 +127,12 @@ class GrailsExtension {
         List<String> jvmArgs = ['-Xverify:none']
     }
 
+    boolean isDevelopmentRun() {
+        boolean devMode = Environment.developmentEnvironmentAvailable && Environment.developmentMode
+        if (!devMode) {
+            return false
+        }
+
+        project.gradle.startParameter.taskNames.any { String taskName -> taskName in ['bootRun', 'console'] } || project.hasProperty('force.grails.exploded')
+    }
 }

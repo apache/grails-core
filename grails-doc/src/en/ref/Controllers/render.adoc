@@ -63,9 +63,13 @@ render {
 }
 
 // render some XML markup to the response
+def bookList = [
+    new Book(title: 'The Shining', author: 'Stephen King'),
+    new Book(title: 'The Great Gatsby', author: 'F. Scott Fitzgerald')
+]
 render(contentType: "text/xml") {
     books {
-         for (b in books) {
+         for (b in bookList) {
              book(title: b.title, author: b.author)
          }
     }

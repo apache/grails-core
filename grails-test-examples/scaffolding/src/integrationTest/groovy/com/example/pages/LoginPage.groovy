@@ -17,14 +17,20 @@
  *  under the License.
  */
 
-apply plugin: 'com.github.hierynomus.license-report'
+package com.example.pages
 
-List<String> licenseExclusions = rootProject.subprojects.collect {
-    "${it.group}:${it.findProperty('pomArtifactId') ?: it.name}:${rootProject.projectVersion}" as String
-}
+import geb.Page
 
-downloadLicenses {
-    includeProjectDependencies = true
-    dependencyConfiguration = 'runtimeClasspath'
-    excludeDependencies = licenseExclusions
+class LoginPage extends Page {
+
+    static url = 'login'
+
+    static at = { title == 'Please sign in' }
+
+    static content = {
+        loginForm { $('form.login-form') }
+        username { $('input', name: 'username') }
+        password { $('input', name: 'password') }
+        loginButton { $('button.primary', type: 'submit') }
+    }
 }

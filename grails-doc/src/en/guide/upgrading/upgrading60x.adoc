@@ -33,14 +33,19 @@ Doing so will ensure a seamless transition to the latest version of Grails and e
 ==== 2. Groovy {groovyVersion} as a baseline:
 
 Grails {version} adopts Groovy {groovyVersion} as it's baseline requirement.
-Several changes in Groovy 4 can affect your application.
-Notable changes include:
+Several changes in https://groovy-lang.org/releasenotes/groovy-4.0.html[Groovy 4] can affect your application.
+Changes that may affect a Grails Application or Plugin include:
 
 1. https://issues.apache.org/jira/browse/GROOVY-10621[GROOVY-10621] - Primitive booleans will no longer generate the form of isProperty & getProperty.
 They will only generate isProperty().
 For Grails Domain objects, grails sometimes generates these properties.
 It is advisable to switch to the new form of the property.
 2. https://issues.apache.org/jira/browse/GROOVY-5169[GROOVY-5169] & https://issues.apache.org/jira/browse/GROOVY-10449[GROOVY-10449] - Fields with a public modifier were not returned with MetaClassImpl#getProperties() in groovy 3, but are now.
+3. Closures using the DELEGATE_FIRST strategy now behave differently.
+The resolution order in Groovy 3 used to be Delegate's invokeMethod, Owner's invokeMethod, Delegate's invokeMissingMethod, Owner's invokeMissingMethod.
+In Groovy 4, the order is now Delegate's invokeMethod, Delegate's invokeMissingMethod, Owner's invokeMethod, Owner's invokeMissingMethod.
+4. Closures defined in a parent class that reference its private properties or methods may no longer have access to them in subclasses.
+See https://issues.apache.org/jira/browse/GROOVY-11568[GROOVY-11568] for more details.
 
 Some older libraries may include an older version of groovy, but still be compatible with Groovy 4. One example is GPars.
 In your gradle file, you can force a dependency upgrade via this code:
@@ -484,3 +489,55 @@ You will need to change it to `jcache` and add the Ehcache dependency as follows
 
 Alternatively, you can define the hibernate-ehcache dependency explicitly and adjust it to exclude `hibernate-core` and add the `jboss-transaction-api_1.3_spec` see link:upgrading.html#_12_5_hibernate_ehcache[Hibernate-ehcache]
 
+===== 12.20 A Grails project cannot be both a plugin & an Application
+
+In previous versions of Grails, it was possible to apply both the `grails-plugin` and `grails-web` Gradle plugins in `build.gradle`.
+This would force the project to be both a Grails Plugin and a Grails Application.
+This scenario is not supported and can lead to unexpected behavior due to the AST transforms.
+
+Starting with Grails 7, a validation error will trigger if both a Grails Application Gradle Plugin & a Grails Plugin Gradle Plugin are configured in `build.gradle` for the same Gradle Project.
+
+===== 12.21 `exploded` is supported again to enable multi-project reloading
+
+Earlier versions of Grails supported an `exploded` Gradle configuration that forced defined plugins to use class and resource files, instead of jar files, on the Grails Application runtime classpath if several conditions were true:
+
+1. the property `grails.run.active` was set
+2. the plugin project had the property `exploded` set to `true` prior to the application of the `grails-plugin` Gradle plugin
+3. plugins were added to the Grails Application project via the `plugins` block inside of the `grails` extension in `build.gradle` instead of the `dependencies` block
+4. the property `exploded` was set on the `grails` extension in `build.gradle` of the Grails Application project
+
+The `exploded` setup facilitates better class reloading behavior.
+For Grails 7, it has been simplified to the following:
+
+1. In the plugin project, apply the gradle plugin `org.apache.grails.gradle.grails-exploded`
+2. In the application project, define plugins inside of the `plugins` block of the `grails` extension in `build.gradle`:
+
+[source,groovy]
+----
+grails {
+   plugins {
+        implementation project(":my-plugin")
+   }
+}
+----
+
+NOTE: Expanded class files & resource files will only be used over the jar file if the plugin applies the gradle plugin `org.apache.grails.gradle.grails-exploded` & the plugin is a subproject of your Gradle build.
+
+===== 12.22 Database Migration Plugin migrations directory in the main sourceSet
+
+It is no longer necessary to add the `grails-app/migrations` directory to the `main` sourceSet in order for the Database Migration Plugin to find your changelogs.
+This is now done automatically by the `org.apache.grails.gradle.grails-plugin` Gradle plugin.
+
+The following code can be removed from your `build.gradle` file:
+
+[source,groovy]
+.build.gradle
+----
+sourceSets {
+    main {
+        resources {
+            srcDir 'grails-app/migrations'
+        }
+    }
+}
+----

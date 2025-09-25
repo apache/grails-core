@@ -32,9 +32,9 @@ extensions.configure(GrailsPublishExtension) {
     it.developers = findProperty('pomDevelopers') as Map<String, String> ?: [graemerocher: 'Graeme Rocher', jeffscottbrown: 'Jeff Scott Brown', puneetbehl: 'Puneet Behl']
     it.pomCustomization = findProperty('pomCustomization') as Closure
     it.publishTestSources = findProperty('pomPublishTestSources') ?: false
-    it.testRepositoryPath = rootProject.layout.projectDirectory.dir('../build/local-maven')
+    it.testRepositoryPath = findProperty('skipJavaComponent') ? null : rootProject.layout.projectDirectory.dir('../build/local-maven')
     it.publicationName = findProperty('pomMavenPublicationName') ?: 'maven'
-    it.addComponents = project.name != 'grails-gradle-plugins'
+    it.addComponents = project.name != 'grails-gradle-plugins' && !findProperty('skipJavaComponent')
 }
 
 afterEvaluate {

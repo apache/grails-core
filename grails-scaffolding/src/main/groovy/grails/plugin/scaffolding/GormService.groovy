@@ -46,19 +46,15 @@ class GormService<T extends GormEntity<T>> {
         resourceName = GrailsNameUtils.getPropertyName(resource)
     }
 
-    protected T queryForResource(Serializable id) {
-        resource.get(id)
-    }
-
     T get(Serializable id) {
-        queryForResource(id)
+        resource.get(id)
     }
 
     List<T> list(Map args) {
         resource.list(args)
     }
 
-    Long count() {
+    Long count(Map args) {
         resource.count()
     }
 
@@ -67,7 +63,7 @@ class GormService<T extends GormEntity<T>> {
         if (readOnly) {
             return
         }
-        ((GormEntityApi) queryForResource(id)).delete(flush: true)
+        ((GormEntityApi) get(id)).delete(flush: true)
     }
 
     @Transactional
