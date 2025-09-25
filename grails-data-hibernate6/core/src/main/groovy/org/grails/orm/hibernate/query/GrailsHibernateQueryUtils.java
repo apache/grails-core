@@ -13,13 +13,21 @@ import org.hibernate.FetchMode;
 import org.hibernate.FlushMode;
 import org.hibernate.LockMode;
 import org.hibernate.query.Query;
+import org.hibernate.query.sqm.tree.domain.SqmBasicValuedSimplePath;
+import org.hibernate.query.sqm.tree.expression.SqmFunction;
+
 import org.springframework.core.convert.ConversionService;
 import org.springframework.util.ReflectionUtils;
 
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.criteria.*;
 import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 
 /**
@@ -200,7 +208,47 @@ public class GrailsHibernateQueryUtils {
                                  From queryRoot,
                                  CriteriaBuilder criteriaBuilder,
                                  String sort, String order, boolean ignoreCase) {
-        if (sort.equalsIgnoreCase(entity.getIdentity().getName())) {
+        var compositeIdSortOptional = Optional.ofNullable(entity.getCompositeIdentity())
+                .stream()
+                .flatMap(Arrays::stream)
+                .filter(Objects::nonNull)
+                .filter(id -> sort.equalsIgnoreCase(id.getName()))
+                .findFirst();
+
+        if (compositeIdSortOptional.isPresent()) {
+            Comparator<Order> orderComparator = new Comparator<Order>() {
+                @Override
+                public int compare(Order o1, Order o2) {
+                    String name1 = getOrderName(o1);
+                    String name2 = getOrderName(o2);
+
+                    boolean name1IsSort = name1.equalsIgnoreCase(sort);
+                    boolean name2IsSort = name2.equalsIgnoreCase(sort);
+
+                    if (name1IsSort && !name2IsSort) {
+                        return -1; // o1 (the sort property) comes first
+                    }
+                    if (!name1IsSort && name2IsSort) {
+                        return 1; // o2 (the sort property) comes first
+                    }
+                    return 0; // Maintain original order for other properties
+                }
+
+                private static String getOrderName(Order o1) {
+                    return ((SqmBasicValuedSimplePath) ((SqmFunction) o1.getExpression()).getArguments().get(0)).getNavigablePath().getLocalName();
+                }
+            };
+            Order[] orders = Arrays.stream(entity.getCompositeIdentity())
+                    .map(PersistentProperty::getName)
+                    .map(name ->
+                            ignoreCase ? criteriaBuilder.upper(queryRoot.get(name)) : queryRoot.get(name)
+                    )
+                    .map(path -> DynamicFinder.ORDER_DESC.equals(order) ? criteriaBuilder.desc(path) : criteriaBuilder.asc(path))
+                    .sorted(orderComparator)
+                    .toArray(Order[]::new);
+            query.orderBy(orders);
+
+        } else if (entity.getIdentity() != null && sort.equalsIgnoreCase(entity.getIdentity().getName())) {
             Expression path = queryRoot;
 
             if (ignoreCase) {
