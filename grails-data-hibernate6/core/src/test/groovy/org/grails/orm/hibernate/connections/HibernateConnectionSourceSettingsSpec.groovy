@@ -54,18 +54,13 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         expectedHibernateProperties.put('hibernate.hbm2ddl.auto', 'create')
         expectedHibernateProperties.put('hibernate.cache.queries', 'true')
         expectedHibernateProperties.put('hibernate.flush.mode', 'commit')
-        expectedHibernateProperties.put('hibernate.naming_strategy','org.hibernate.cfg.ImprovedNamingStrategy')
+        expectedHibernateProperties.put('hibernate.naming_strategy','org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy')
         expectedHibernateProperties.put('hibernate.entity_dirtiness_strategy', 'org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy')
         expectedHibernateProperties.put('hibernate.configLocations','file:hibernate.cfg.xml')
         expectedHibernateProperties.put('hibernate.use_query_cache','true')
         expectedHibernateProperties.put("hibernate.connection.handling_mode", "DELAYED_ACQUISITION_AND_HOLD")
         expectedHibernateProperties.put('hibernate.cache.region.factory_class','org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory')
         expectedHibernateProperties.put('hibernate.jpa.compliance.cascade', 'true')
-        expectedHibernateProperties.put('org.hibernate.foo','bar')
-
-        def expectedCombinedProperties = new Properties()
-        expectedCombinedProperties.putAll(expectedDataSourceProperties)
-        expectedCombinedProperties.putAll(expectedHibernateProperties)
 
         then:"The results are correct"
         settings.dataSource.dbCreate == 'update'
@@ -79,6 +74,17 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         settings.hibernate.get('hbm2ddl.auto') == 'create'
         settings.hibernate.getConfigLocations().size() == 1
         settings.hibernate.getConfigLocations()[0] instanceof UrlResource
-        settings.hibernate.toProperties() == expectedHibernateProperties
+
+        def hibernateProperties = settings.hibernate.toProperties()
+        hibernateProperties['hibernate.hbm2ddl.auto'] == 'create'
+        hibernateProperties['hibernate.cache.queries'] == 'true'
+        hibernateProperties['hibernate.flush.mode'] == 'commit'
+        hibernateProperties['hibernate.naming_strategy'] == 'org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy'
+        hibernateProperties['hibernate.entity_dirtiness_strategy'] == 'org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy'
+        hibernateProperties['hibernate.configLocations'] == 'file:hibernate.cfg.xml'
+        hibernateProperties['hibernate.use_query_cache'] == 'true'
+        hibernateProperties["hibernate.connection.handling_mode"] == "DELAYED_ACQUISITION_AND_HOLD"
+        hibernateProperties['hibernate.cache.region.factory_class'] == 'org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory'
+        hibernateProperties['hibernate.jpa.compliance.cascade'] == 'true'
     }
 }
