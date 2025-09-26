@@ -112,23 +112,8 @@ dependencies {
         // api: ApplicationEventPublisher
     }
 
-    implementation project(':grails-core'), {
+    implementation project(':grails-common'), {
         // impl: GrailsMessageSourceUtils
-        if (excludeUnusedTransDeps) {
-            // API dependencies in grails-core
-            exclude group: 'jakarta.annotation', module: 'jakarta.annotation-api'
-            exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
-            //exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api' // FetchType
-            //exclude group: 'org.apache.grails.data', module: 'grails-bootstrap' // Resource
-            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
-            exclude group: 'org.apache.grails', module: 'grails-spring'
-            exclude group: 'org.springframework', module: 'spring-beans'
-            exclude group: 'org.springframework', module: 'spring-context'
-            exclude group: 'org.springframework', module: 'spring-core'
-            exclude group: 'org.springframework', module: 'spring-tx'
-            exclude group: 'org.springframework.boot', module: 'spring-boot'
-            exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
-        }
     }
     implementation 'org.springframework:spring-tx', {
         // impl: InvalidDataAccessResourceUsageException, TransactionSynchronizationManager
