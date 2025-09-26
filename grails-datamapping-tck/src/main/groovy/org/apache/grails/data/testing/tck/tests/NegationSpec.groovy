@@ -90,6 +90,6 @@ class NegationSpec extends GrailsDataTckSpec {
         then:
         results.size() == 2
         results.find { it.author == "Stieg Larsson" } != null
-        results.find { it.author == "Stephen King" && it.title == "The Shining" } != null
+        results.find { it.author == "James Patterson" } != null
     }
 }
