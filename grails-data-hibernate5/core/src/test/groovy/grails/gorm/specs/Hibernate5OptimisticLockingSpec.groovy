@@ -20,46 +20,14 @@ package grails.gorm.specs
 
 import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
 import org.apache.grails.data.testing.tck.domains.OptLockVersioned
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.springframework.orm.hibernate5.HibernateOptimisticLockingFailureException
 
 /**
  * @author Burt Beckwith
  */
-class OptimisticLockingSpec extends HibernateGormDatastoreSpec {
-
-    def setupSpec() {
-        manager.addAllDomainClasses([OptLockVersioned, OptLockNotVersioned])
-    }
-
-    void "Test versioning"() {
-        given:
-        def o = new OptLockVersioned(name: 'locked')
-
-        when:
-        o.save flush: true
-
-        then:
-        o.version == 0
-
-        when:
-        manager.session.clear()
-        o = OptLockVersioned.get(o.id)
-        o.name = 'Fred'
-        o.save flush: true
-
-        then:
-        o.version == 1
-
-        when:
-        manager.session.clear()
-        o = OptLockVersioned.get(o.id)
-
-        then:
-        o.name == 'Fred'
-        o.version == 1
-    }
+class Hibernate5OptimisticLockingSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void "Test optimistic locking"() {
 
