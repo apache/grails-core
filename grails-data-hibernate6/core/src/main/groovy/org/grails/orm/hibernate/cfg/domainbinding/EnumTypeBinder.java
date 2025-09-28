@@ -41,7 +41,7 @@ public class EnumTypeBinder {
 
     public void bindEnumType(PersistentProperty property, Class<?> propertyType, SimpleValue simpleValue, String columnName) {
         PropertyConfig pc = new PersistentPropertyToPropertyConfig().apply(property);
-        Mapping ownerMapping = new HibernateEntityWrapper(property.getOwner()).getMappedForm();
+        Mapping ownerMapping = new HibernateEntityWrapper().getMappedForm(property.getOwner());
         String enumType = pc.getEnumType();
         Properties enumProperties = new Properties();
         enumProperties.put(ENUM_CLASS_PROP, propertyType.getName());

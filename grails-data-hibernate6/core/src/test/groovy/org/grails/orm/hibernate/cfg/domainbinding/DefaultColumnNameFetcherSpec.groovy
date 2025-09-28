@@ -1,6 +1,5 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
@@ -12,7 +11,7 @@ class DefaultColumnNameFetcherSpec extends HibernateGormDatastoreSpec {
     @Unroll
     void "Test getDefaultColumnName for #description"() {
         given:
-        def namingStrategy =grailsDomainBinder.getNamingStrategyWrapper()
+        def namingStrategy =grailsDomainBinder.getNamingStrategy()
         def backticksRemover = new BackticksRemover()
         def fetcher = new DefaultColumnNameFetcher(namingStrategy, backticksRemover)
 

@@ -17,7 +17,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         // Ensure all related entities are processed by the mapping context
         createPersistentEntity(Author, binder)
         def entity = createPersistentEntity(domainClass, binder)
-        def mapping = new HibernateEntityWrapper(entity).getMappedForm()
+        def mapping = new HibernateEntityWrapper().getMappedForm(entity)
         def property = entity.getPropertyByName(propertyName)
 
         when: "The method is called on the mapping object"

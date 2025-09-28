@@ -84,8 +84,7 @@ public class CascadeBehaviorFetcher {
     }
 
     private  Mapping getOwnersWrappedForm(Association<?> association) {
-        return new HibernateEntityWrapper(association.getOwner())
-                .getMappedForm();
+        return new HibernateEntityWrapper().getMappedForm(association.getOwner());
     }
 
 

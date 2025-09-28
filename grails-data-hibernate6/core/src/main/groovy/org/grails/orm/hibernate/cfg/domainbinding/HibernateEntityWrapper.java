@@ -9,35 +9,23 @@ import org.hibernate.MappingException;
 
 import java.util.Optional;
 
+import jakarta.annotation.Nonnull;
+
 /**
  * This class exists because Embedded Entities do not inherit
  * from HibernatePersistentEntity but have similar functionality.
  */
 public class HibernateEntityWrapper {
 
-    private HibernatePersistentEntity hibernatePersistentEntity;
-    private HibernateMappingContext.HibernateEmbeddedPersistentEntity  hibernateEmbeddedPersistentEntity;
-
-    public HibernateEntityWrapper(PersistentEntity hibernatePersistentEntity) {
-        if (hibernatePersistentEntity instanceof HibernatePersistentEntity) {
-            this.hibernatePersistentEntity = (HibernatePersistentEntity) hibernatePersistentEntity;
-        } else if (hibernatePersistentEntity instanceof HibernateMappingContext.HibernateEmbeddedPersistentEntity) {
-            this.hibernateEmbeddedPersistentEntity = (HibernateMappingContext.HibernateEmbeddedPersistentEntity) hibernatePersistentEntity;
+    @Nonnull
+    public Mapping getMappedForm(PersistentEntity persistentEntity) {
+        if (persistentEntity instanceof HibernatePersistentEntity _hibernatePersistentEntity) {
+            return _hibernatePersistentEntity.getMappedForm();
+        } else if (persistentEntity instanceof HibernateMappingContext.HibernateEmbeddedPersistentEntity embedded) {
+            return embedded.getMappedForm();
         } else {
-            throw new MappingException("Not correct Persistent Entity "+  hibernatePersistentEntity.getClass());
+            throw new MappingException("Not correct Persistent Entity");
         }
     }
-
-
-    public Mapping getMappedForm() {
-       if (hibernatePersistentEntity != null) {
-           return hibernatePersistentEntity.getMappedForm();
-       } else if (hibernateEmbeddedPersistentEntity != null) {
-           return hibernateEmbeddedPersistentEntity.getMappedForm();
-       } else {
-           throw new MappingException("Not correct Persistent Entity");
-       }
-    }
-
 
 }

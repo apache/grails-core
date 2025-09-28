@@ -51,7 +51,7 @@ class NamingStrategyWrapperSpec extends HibernateGormDatastoreSpec {
         "jdbcEnv"       | Mock(PhysicalNamingStrategy)  | null
     }
 
-    def "should delegate getColumnName to the wrapped strategy"() {
+    def 'should delegate resolveColumnName to the wrapped strategy'() {
         given: "A logical column name and a captured argument"
         def logicalName = "firstName"
         def expectedPhysicalName = "first_name"
@@ -64,7 +64,7 @@ class NamingStrategyWrapperSpec extends HibernateGormDatastoreSpec {
         }
 
         when: "The wrapper's getColumnName method is called"
-        def actualResult = wrapper.getColumnName(logicalName)
+        def actualResult = wrapper.resolveColumnName(logicalName)
 
         then: "The result from the wrapped strategy is returned"
         actualResult == expectedPhysicalName
@@ -81,13 +81,13 @@ class NamingStrategyWrapperSpec extends HibernateGormDatastoreSpec {
         mockStrategy.toPhysicalColumnName(_, mockJdbcEnv) >> null
 
         when: "The wrapper's getColumnName method is called"
-        def actualResult = wrapper.getColumnName(logicalName)
+        def actualResult = wrapper.resolveColumnName(logicalName)
 
         then: "The original logical name is returned, fulfilling the contract"
         actualResult == logicalName
     }
 
-    def "should delegate getTableName to the wrapped strategy"() {
+    def 'should delegate resolveTableName to the wrapped strategy'() {
         given: "A logical table name and a captured argument"
         def logicalName = "MyTable"
         def expectedPhysicalName = "my_table"
@@ -100,7 +100,7 @@ class NamingStrategyWrapperSpec extends HibernateGormDatastoreSpec {
         }
 
         when: "The wrapper's getTableName method is called"
-        def actualResult = wrapper.getTableName(logicalName)
+        def actualResult = wrapper.resolveTableName(logicalName)
 
         then: "The result from the wrapped strategy is returned"
         actualResult == expectedPhysicalName
@@ -124,7 +124,7 @@ class NamingStrategyWrapperSpec extends HibernateGormDatastoreSpec {
         }
 
         when: "getForeignKeyForPropertyDomainClass is called"
-        def actualFkName = wrapper.getForeignKeyForPropertyDomainClass(property)
+        def actualFkName = wrapper.resolveForeignKeyForPropertyDomainClass(property)
 
         then: "The final name is the physical column name plus the standard suffix"
         actualFkName == physicalColumnName + FOREIGN_KEY_SUFFIX

@@ -1,6 +1,7 @@
 package org.grails.orm.hibernate.cfg;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
 
 /**
  * Allows plugging into to custom naming strategies
@@ -10,6 +11,13 @@ import org.grails.datastore.mapping.model.PersistentEntity;
  */
 public interface PersistentEntityNamingStrategy {
 
-    String resolveTableName(PersistentEntity entity);
+    String resolveColumnName(String logicalName);
 
+    default String resolveTableName(PersistentEntity entity){
+        return resolveTableName(entity.getJavaClass().getSimpleName());
+    }
+
+    String resolveTableName(String logicalName);
+
+    String resolveForeignKeyForPropertyDomainClass(PersistentProperty property);
 }
