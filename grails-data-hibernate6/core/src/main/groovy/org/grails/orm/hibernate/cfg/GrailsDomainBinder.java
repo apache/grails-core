@@ -79,7 +79,6 @@ import org.hibernate.mapping.SingleTableSubclass;
 import org.hibernate.mapping.Subclass;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.UnionSubclass;
-import org.hibernate.mapping.UniqueKey;
 import org.hibernate.mapping.Value;
 import org.hibernate.metamodel.mapping.JdbcMapping;
 import org.hibernate.persister.entity.UnionSubclassEntityPersister;
@@ -124,7 +123,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     public static final String FOREIGN_KEY_SUFFIX = "_id";
     private static final String STRING_TYPE = "string";
     private static final String EMPTY_PATH = "";
-    private static final char UNDERSCORE = '_';
+    public static final char UNDERSCORE = '_';
     public static final String CASCADE_ALL = "all";
     public static final String CASCADE_SAVE_UPDATE = "save-update";
     public static final String CASCADE_NONE = "none";
@@ -567,7 +566,8 @@ public class GrailsDomainBinder implements MetadataContributor {
     private String getMultiTenantFilterCondition(String sessionFactoryBeanName, PersistentEntity referenced) {
         TenantId tenantId = referenced.getTenantId();
         if(tenantId != null) {
-            String defaultColumnName = getDefaultColumnName(tenantId, sessionFactoryBeanName);
+
+            String defaultColumnName = new DefaultColumnNameFetcher(getNamingStrategyWrapper()).getDefaultColumnName(tenantId);
             return ":tenantId = " + defaultColumnName;
         }
         else {
@@ -1213,7 +1213,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         return tableName;
     }
 
-    private PhysicalNamingStrategy getPhysicalNamingStrategy(String sessionFactoryBeanName) {
+    public PhysicalNamingStrategy getPhysicalNamingStrategy(String sessionFactoryBeanName) {
         return NAMING_STRATEGY_PROVIDER.getPhysicalNamingStrategy(sessionFactoryBeanName);
     }
 
@@ -1312,9 +1312,7 @@ public class GrailsDomainBinder implements MetadataContributor {
      * @param sessionFactoryBeanName  the session factory bean name
      */
     protected void bindRoot(HibernatePersistentEntity entity, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
-        this.namingStrategyWrapper = new NamingStrategyWrapper(
-                getPhysicalNamingStrategy(sessionFactoryBeanName)
-                ,getJdbcEnvironment());
+        this.namingStrategyWrapper = getNamingStrategyWrapper();
         if (mappings.getEntityBinding(entity.getName()) != null) {
             LOG.info("[GrailsDomainBinder] Class [" + entity.getName() + "] is already mapped, skipping.. ");
             return;
@@ -1345,6 +1343,10 @@ public class GrailsDomainBinder implements MetadataContributor {
         addMultiTenantFilterIfNecessary(entity, root, mappings, sessionFactoryBeanName);
 
         mappings.addEntityBinding(root);
+    }
+
+    public NamingStrategyWrapper getNamingStrategyWrapper() {
+        return new NamingStrategyWrapper(getPhysicalNamingStrategy(sessionFactoryName), getJdbcEnvironment());
     }
 
     /**
@@ -1932,10 +1934,6 @@ public class GrailsDomainBinder implements MetadataContributor {
         return userType;
     }
 
-    private boolean isBidirectionalManyToOne(PersistentProperty currentGrailsProp) {
-        return ((currentGrailsProp instanceof org.grails.datastore.mapping.model.types.ManyToOne) && ((Association)currentGrailsProp).isBidirectional());
-    }
-
     /**
      * Binds a Hibernate component type using the given GrailsDomainClassProperty instance
      *
@@ -2161,7 +2159,8 @@ public class GrailsDomainBinder implements MetadataContributor {
                                 // for each property of a composite id by default we use the table name and the property name as a prefix
                                 String string = namingStrategyWrapper.getColumnName(referencedProperty.getName());
                                 String compositeIdPrefix = new BackticksRemover().apply(prefix) + UNDERSCORE + new BackticksRemover().apply(string);
-                                String suffix = getDefaultColumnName(cip, sessionFactoryBeanName);
+
+                                String suffix = new DefaultColumnNameFetcher(getNamingStrategyWrapper()).getDefaultColumnName(cip);
                                 String finalColumnName = new BackticksRemover().apply(compositeIdPrefix) + UNDERSCORE + new BackticksRemover().apply(suffix);
                                 cc = new ColumnConfig();
                                 cc.setName(finalColumnName);
@@ -2171,7 +2170,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                         }
                     }
 
-                    String suffix = getDefaultColumnName(referencedProperty, sessionFactoryBeanName);
+                    String suffix = new DefaultColumnNameFetcher(getNamingStrategyWrapper()).getDefaultColumnName(referencedProperty);
                     String finalColumnName = new BackticksRemover().apply(prefix) + UNDERSCORE + new BackticksRemover().apply(suffix);
                     cc.setName(finalColumnName);
                     columns.add(cc);
@@ -2553,24 +2552,10 @@ public class GrailsDomainBinder implements MetadataContributor {
             String otherColumnName = getColumnNameForPropertyAndPath(otherProp, path, null, sessionFactoryBeanName);
             keyList.add(new Column(otherColumnName));
         }
-        createUniqueKeyForColumns(table, columnName, keyList);
+
+        new UniqueKeyForColumnsCreator().createUniqueKeyForColumns(table, keyList);
     }
 
-    private void createUniqueKeyForColumns(Table table, String columnName, List<Column> columns) {
-        Collections.reverse(columns);
-
-        UniqueKey uk = new UniqueKey();
-        uk.setTable(table);
-        for(Column column : columns) {
-            uk.addColumn(column);
-        }
-
-        if(LOG.isDebugEnabled()) {
-            LOG.debug("create unique key for " + table.getName() + " columns = " + columns);
-        }
-        new UniqueNameGenerator().setGeneratedUniqueName(uk);
-        table.addUniqueKey(uk);
-    }
 
     private String getColumnNameForPropertyAndPath(PersistentProperty grailsProp,
                                                      String path, ColumnConfig cc, String sessionFactoryBeanName) {
@@ -2609,10 +2594,12 @@ public class GrailsDomainBinder implements MetadataContributor {
         if (columnName == null) {
             if (isNotEmpty(path)) {
                 String s1 = namingStrategyWrapper.getColumnName(path);
-                String s2 = getDefaultColumnName(grailsProp, sessionFactoryBeanName);
+
+                String s2 = new DefaultColumnNameFetcher(getNamingStrategyWrapper()).getDefaultColumnName(grailsProp);
                 columnName = new BackticksRemover().apply(s1) + UNDERSCORE + new BackticksRemover().apply(s2);
             } else {
-                columnName = getDefaultColumnName(grailsProp, sessionFactoryBeanName);
+
+                columnName = new DefaultColumnNameFetcher(getNamingStrategyWrapper()).getDefaultColumnName(grailsProp);
             }
         }
         return columnName;
@@ -2624,40 +2611,6 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     private boolean supportsJoinColumnMapping(PersistentProperty grailsProp) {
         return grailsProp instanceof ManyToMany || ofNullable(grailsProp).map(PersistentProperty::isUnidirectionalOneToMany).orElse(false) || grailsProp instanceof Basic;
-    }
-
-    private String getDefaultColumnName(PersistentProperty property, String sessionFactoryBeanName) {
-
-        String columnName = namingStrategyWrapper.getColumnName(property.getName());
-        if (property instanceof Association) {
-            Association association = (Association) property;
-            boolean isBasic = property instanceof Basic;
-            if (isBasic && (new PersistentPropertyToPropertyConfig().apply(property)).getType() != null) {
-                return columnName;
-            }
-
-            if (isBasic) {
-                return namingStrategyWrapper.getForeignKeyForPropertyDomainClass(property);
-            }
-
-            if (property instanceof ManyToMany) {
-                return namingStrategyWrapper.getForeignKeyForPropertyDomainClass(property);
-            }
-
-            if (!association.isBidirectional() && association instanceof org.grails.datastore.mapping.model.types.OneToMany) {
-                String prefix = namingStrategyWrapper.getTableName(property.getOwner().getName());
-                return new BackticksRemover().apply(prefix) + UNDERSCORE + new BackticksRemover().apply(columnName) + FOREIGN_KEY_SUFFIX;
-            }
-
-            if (property.isInherited() && isBidirectionalManyToOne(property)) {
-                return namingStrategyWrapper.getColumnName(property.getOwner().getName()) + '_'+ columnName + FOREIGN_KEY_SUFFIX;
-            }
-
-            return columnName + FOREIGN_KEY_SUFFIX;
-        }
-
-
-        return columnName;
     }
 
     private String getIndexColumnName(PersistentProperty property, String sessionFactoryBeanName) {
