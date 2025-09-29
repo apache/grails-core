@@ -21,13 +21,17 @@ package org.grails.datastore.mapping.model;
 
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.datastore.mapping.model.types.ManyToOne;
 import org.grails.datastore.mapping.model.types.OneToMany;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.EntityReflector;
 
 import java.util.Optional;
+
+import static java.util.Optional.ofNullable;
 
 /**
  * @author Graeme Rocher
@@ -110,6 +114,10 @@ public interface PersistentProperty<T extends Property> {
             return manyToOne.isBidirectional();
         }
         return false;
+    }
+
+    default boolean supportsJoinColumnMapping() {
+        return this instanceof ManyToMany || isUnidirectionalOneToMany()|| this instanceof Basic;
     }
 
 }

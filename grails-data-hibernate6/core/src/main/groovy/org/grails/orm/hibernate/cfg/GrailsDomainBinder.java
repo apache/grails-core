@@ -1085,7 +1085,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     }
 
     private String getNameForPropertyAndPath(PersistentProperty property, String path) {
-        if (isNotEmpty(path)) {
+        if (GrailsHibernateUtil.isNotEmpty(path)) {
             return qualify(path, property.getName());
         }
         return property.getName();
@@ -1533,7 +1533,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         SimpleValue key = new DependantValue(metadataBuildingContext, mytable, joinedSubclass.getIdentifier());
         joinedSubclass.setKey(key);
         final PersistentProperty identifier = sub.getIdentity();
-        String columnName = getColumnNameForPropertyAndPath(identifier, EMPTY_PATH, null, sessionFactoryBeanName);
+        String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(identifier, EMPTY_PATH, null);
         new SimpleValueColumnBinder().bindSimpleValue(key, identifier.getType().getName(), columnName, false);
 
         joinedSubclass.createPrimaryKey();
@@ -1800,7 +1800,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 if ("serializable".equals(typeName)) {
                     value = new BasicValue(metadataBuildingContext, table);
                     boolean nullable = currentGrailsProp.isNullable();
-                    String columnName = getColumnNameForPropertyAndPath(currentGrailsProp, EMPTY_PATH, null, sessionFactoryBeanName);
+                    String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, EMPTY_PATH, null);
                     new SimpleValueColumnBinder().bindSimpleValue((SimpleValue) value, typeName, columnName, nullable);
                 }
                 else {
@@ -1885,7 +1885,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     private void bindEnumType(PersistentProperty property, SimpleValue simpleValue,
                                 String path, String sessionFactoryBeanName) {
         Class<?> propertyType = property.getType();
-        String columnName = getColumnNameForPropertyAndPath(property, path, null, sessionFactoryBeanName);
+        String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(property, path, null);
         new EnumTypeBinder().bindEnumType(property, propertyType, simpleValue, columnName);
     }
 
@@ -2411,13 +2411,14 @@ public class GrailsDomainBinder implements MetadataContributor {
             // in which case we still need to create a Hibernate column for
             // this value.
             var columnConfigToColumnBinder = new ColumnConfigToColumnBinder();
+            var columnBinder = new ColumnBinder(namingStrategy);
             Optional.ofNullable(propertyConfig.getColumns()).
                     filter(list-> !list.isEmpty())
                     .orElse(Arrays.asList(new ColumnConfig[] { null }))
                     .forEach( cc -> {
                         Column column = new Column();
                         columnConfigToColumnBinder.bindColumnConfigToColumn(column,cc,propertyConfig);
-                        bindColumn(property, parentProperty, column, cc, path, table, sessionFactoryBeanName);
+                        columnBinder.bindColumn(property, parentProperty, column, cc, path, table);
                         if (table != null) {
                             table.addColumn(column);
                         }
@@ -2426,169 +2427,8 @@ public class GrailsDomainBinder implements MetadataContributor {
         }
     }
 
-    /**
-     * Binds a Column instance to the Hibernate meta model
-     *
-     * @param property The Grails domain class property
-     * @param parentProperty
-     * @param column     The column to bind
-     * @param path
-     * @param table      The table name
-     * @param sessionFactoryBeanName  the session factory bean name
-     */
-    private void bindColumn(PersistentProperty property, PersistentProperty parentProperty,
-                              Column column, ColumnConfig cc, String path, Table table, String sessionFactoryBeanName) {
-
-        if (cc != null) {
-            column.setComment(cc.getComment());
-            column.setDefaultValue(cc.getDefaultValue());
-            column.setCustomRead(cc.getRead());
-            column.setCustomWrite(cc.getWrite());
-        }
-
-        Class<?> userType = getUserType(property);
-        String columnName = getColumnNameForPropertyAndPath(property, path, cc, sessionFactoryBeanName);
-        if ((property instanceof Association) && userType == null) {
-            Association association = (Association) property;
-            // Only use conventional naming when the column has not been explicitly mapped.
-            if (column.getName() == null) {
-                column.setName(columnName);
-            }
-            if (property instanceof ManyToMany) {
-                column.setNullable(false);
-            }
-            else if (property instanceof org.grails.datastore.mapping.model.types.OneToOne && association.isBidirectional() && !association.isOwningSide()) {
-                if (((Association) property).getInverseSide().isHasOne()) {
-                    column.setNullable(false);
-                }
-                else {
-                    column.setNullable(true);
-                }
-            }
-            else if ((property instanceof ToOne) && association.isCircular()) {
-                column.setNullable(true);
-            }
-            else {
-                column.setNullable(property.isNullable());
-            }
-        }
-        else {
-            column.setName(columnName);
-            column.setNullable(property.isNullable() || (parentProperty != null && parentProperty.isNullable()));
-            PropertyConfig propertyConfig = new PersistentPropertyToPropertyConfig().apply(property);
-            // Use the constraints for this property to more accurately define
-            // the column's length, precision, and scale
-            if (String.class.isAssignableFrom(property.getType()) || byte[].class.isAssignableFrom(property.getType())) {
-                new StringColumnConstraintsBinder().bindStringColumnConstraints(column, propertyConfig);
-            }
-
-            if (Number.class.isAssignableFrom(property.getType())) {
-
-                new NumericColumnConstraintsBinder().bindNumericColumnConstraints(column, cc, propertyConfig);
-            }
-        }
-
-        final PropertyConfig mappedForm = new PersistentPropertyToPropertyConfig().apply(property);
-        if (mappedForm.isUnique()) {
-            if (!mappedForm.isUniqueWithinGroup()) {
-                column.setUnique(true);
-            }
-            else {
-                createKeyForProps(property, path, table, columnName, mappedForm.getUniquenessGroup(), sessionFactoryBeanName);
-            }
-        }
-
-        new IndexBinder().bindIndex(columnName, column, cc, table);
-
-        final PersistentEntity owner = property.getOwner();
-        if (!owner.isRoot()) {
-            Mapping mapping = new HibernateEntityWrapper().getMappedForm(owner);
-            if (mapping == null || mapping.getTablePerHierarchy()) {
-                if (LOG.isDebugEnabled())
-                    LOG.debug("[GrailsDomainBinder] Sub class property [" + property.getName() + "] for column name ["+column.getName()+"] set to nullable");
-                column.setNullable(true);
-            } else {
-                column.setNullable(property.isNullable());
-            }
-        }
-
-        if (LOG.isDebugEnabled())
-            LOG.debug("[GrailsDomainBinder] bound property [" + property.getName() + "] to column name ["+column.getName()+"] in table ["+table.getName()+"]");
-    }
-
-
-    private void createKeyForProps(PersistentProperty grailsProp, String path, Table table,
-                                     String columnName, List<?> propertyNames, String sessionFactoryBeanName) {
-        List<Column> keyList = new ArrayList<>();
-        keyList.add(new Column(columnName));
-        for (Iterator<?> i = propertyNames.iterator(); i.hasNext();) {
-            String propertyName = (String) i.next();
-            PersistentProperty otherProp = grailsProp.getOwner().getPropertyByName(propertyName);
-            if (otherProp == null) {
-                throw new MappingException(grailsProp.getOwner().getJavaClass().getName() + " references an unknown property " + propertyName);
-            }
-            String otherColumnName = getColumnNameForPropertyAndPath(otherProp, path, null, sessionFactoryBeanName);
-            keyList.add(new Column(otherColumnName));
-        }
-
-        new UniqueKeyForColumnsCreator().createUniqueKeyForColumns(table, keyList);
-    }
-
-
-    private String getColumnNameForPropertyAndPath(PersistentProperty grailsProp,
-                                                     String path, ColumnConfig cc, String sessionFactoryBeanName) {
-        // First try the column config.
-        String columnName = null;
-        if (cc == null) {
-            // No column config given, so try to fetch it from the mapping
-            PersistentEntity domainClass =  grailsProp.getOwner();
-            Mapping m = new HibernateEntityWrapper().getMappedForm(domainClass);
-            if (m != null) {
-                PropertyConfig c = m.getPropertyConfig(grailsProp.getName());
-
-                if (supportsJoinColumnMapping(grailsProp) && hasJoinKeyMapping(c)) {
-                    columnName = c.getJoinTable().getKey().getName();
-                }
-                else if (c != null && c.getColumn() != null) {
-                    columnName = c.getColumn();
-                }
-            }
-        }
-        else {
-            if (supportsJoinColumnMapping(grailsProp)) {
-                PropertyConfig pc = new PersistentPropertyToPropertyConfig().apply(grailsProp);
-                if (hasJoinKeyMapping(pc)) {
-                    columnName = pc.getJoinTable().getKey().getName();
-                }
-                else {
-                    columnName = cc.getName();
-                }
-            }
-            else {
-                columnName = cc.getName();
-            }
-        }
-
-        if (columnName == null) {
-            if (isNotEmpty(path)) {
-                String s1 = getNamingStrategy().resolveColumnName(path);
-
-                String s2 = new DefaultColumnNameFetcher(getNamingStrategy()).getDefaultColumnName(grailsProp);
-                columnName = new BackticksRemover().apply(s1) + UNDERSCORE + new BackticksRemover().apply(s2);
-            } else {
-
-                columnName = new DefaultColumnNameFetcher(getNamingStrategy()).getDefaultColumnName(grailsProp);
-            }
-        }
-        return columnName;
-    }
-
     private boolean hasJoinKeyMapping(PropertyConfig c) {
-        return c != null && c.getJoinTable() != null && c.getJoinTable().getKey() != null;
-    }
-
-    private boolean supportsJoinColumnMapping(PersistentProperty grailsProp) {
-        return grailsProp instanceof ManyToMany || ofNullable(grailsProp).map(PersistentProperty::isUnidirectionalOneToMany).orElse(false) || grailsProp instanceof Basic;
+        return c.hasJoinKeyMapping();
     }
 
     private String getIndexColumnName(PersistentProperty property, String sessionFactoryBeanName) {
@@ -2621,10 +2461,6 @@ public class GrailsDomainBinder implements MetadataContributor {
         return pc != null && pc.getJoinTable() != null && pc.getJoinTable().getColumn() != null && pc.getJoinTable().getColumn().getName() != null;
     }
 
-
-    private boolean isNotEmpty(String s) {
-        return GrailsHibernateUtil.isNotEmpty(s);
-    }
 
     private String qualify(String prefix, String name) {
         return GrailsHibernateUtil.qualify(prefix, name);

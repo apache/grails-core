@@ -473,4 +473,9 @@ class PropertyConfig extends Property {
         }
         return pc
     }
+
+    public boolean hasJoinKeyMapping() {
+        return  Optional.ofNullable(getJoinTable()).map(JoinTable::getKey).isPresent();
+    }
+
 }
