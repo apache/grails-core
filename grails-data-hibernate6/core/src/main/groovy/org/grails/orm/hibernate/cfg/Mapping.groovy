@@ -596,4 +596,8 @@ class Mapping extends Entity<PropertyConfig> {
         }
         cloned
     }
+
+    boolean hasCompositeIdentifier() {
+       return identity instanceof CompositeIdentity
+   }
 }
