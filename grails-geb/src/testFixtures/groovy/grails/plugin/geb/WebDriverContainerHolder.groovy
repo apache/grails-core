@@ -106,8 +106,11 @@ class WebDriverContainerHolder {
                     'serverPort'
             )
         } catch (ignored) {
+            // Test class is annotated with @Integration.
+            // This has been verified in GrailsContainerGebExtension.visitSpec().
             throw new IllegalStateException(
-                    'Test class must be annotated with @Integration for serverPort to be injected'
+                    'The `serverPort` property that should have been ' +
+                    'injected by the @Integration annotation was not found.'
             )
         }
     }
@@ -138,8 +141,9 @@ class WebDriverContainerHolder {
                 dockerImageName = createDockerImageName(customBrowser)
             } else {
                 log.info(
-                        'No \'containerBrowser\' property found in GebConfig. ' +
-                        "Using default [$DEFAULT_BROWSER] container image."
+                        'No `containerBrowser` property found in GebConfig. ' +
+                        'Using default [{}] container image.',
+                        DEFAULT_BROWSER
                 )
             }
         }
@@ -226,8 +230,8 @@ class WebDriverContainerHolder {
         catch (SessionNotCreatedException e) {
             throw new IllegalStateException(
                     'Failed to create a remote browser session. ' +
-                    'Did you set a \'containerBrowser\' property ' +
-                    'corresponding to the \'driver\' in GebConfig?',
+                    'Did you set a `containerBrowser` property ' +
+                    'corresponding to the `driver` in GebConfig?',
                     e
             )
         }
@@ -338,7 +342,7 @@ class WebDriverContainerHolder {
         container.host != ContainerGebConfiguration.DEFAULT_HOSTNAME_FROM_CONTAINER
     }
 
-    private static DockerImageName createDockerImageName(Object browserName) {
+    private static DockerImageName createDockerImageName(String browserName) {
         DockerImageName.parse(
                 "selenium/standalone-$browserName:$seleniumVersion"
         )
@@ -347,7 +351,7 @@ class WebDriverContainerHolder {
     private static void validateDriverConf(Configuration gebConf) {
         if (gebConf.driverConf && !(gebConf.driverConf instanceof Closure)) {
             throw new IllegalStateException(
-                    'The \'driver\' property of GebConfig must be a ' +
+                    'The `driver` property of GebConfig must be a ' +
                     'Closure that returns an instance of RemoteWebDriver.'
             )
         }
