@@ -11,7 +11,6 @@ import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.UNDERSCORE;
 
@@ -57,7 +56,7 @@ public class CompositeIdentifierToManyToOneBinder {
                                                     String path) {
         String[] propertyNames = compositeId.getPropertyNames();
 
-        List<ColumnConfig> columns = persistentPropertyToPropertyConfig.apply(property).getColumns();
+        List<ColumnConfig> columns = persistentPropertyToPropertyConfig.toPropertyConfig(property).getColumns();
         int i = columns.size();
         int expectedForeignKeyColumnLength = foreignKeyColumnCountCalculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames);
         if (i != expectedForeignKeyColumnLength) {

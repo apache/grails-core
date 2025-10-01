@@ -66,7 +66,7 @@ public class SimpleValueBinder {
             , SimpleValue simpleValue
             , String path
     ) {
-        PropertyConfig propertyConfig = persistentPropertyToPropertyConfig.apply(property);
+        PropertyConfig propertyConfig = persistentPropertyToPropertyConfig.toPropertyConfig(property);
         Mapping mapping = hibernateEntityWrapper.getMappedForm(property.getOwner());
         final String typeName = typeNameProvider.getTypeName(property, mapping);
         if (typeName == null) {

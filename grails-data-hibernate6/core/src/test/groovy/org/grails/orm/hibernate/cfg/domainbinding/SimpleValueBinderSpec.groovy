@@ -10,7 +10,6 @@ import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.id.enhanced.SequenceStyleGenerator
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.SimpleValue
-import org.hibernate.mapping.Table
 import spock.lang.Specification
 
 class SimpleValueBinderSpec extends Specification {
@@ -39,7 +38,7 @@ class SimpleValueBinderSpec extends Specification {
         def props = new Properties(); props.setProperty('p1','v1')
 
         // stubs
-        persistentPropertyToPropertyConfig.apply(prop) >> pc
+        persistentPropertyToPropertyConfig.toPropertyConfig(prop) >> pc
         prop.getOwner() >> owner
         hibernateEntityWrapper.getMappedForm(owner) >> mapping
         typeNameProvider.getTypeName(prop, mapping) >> "custom.Type"
@@ -68,7 +67,7 @@ class SimpleValueBinderSpec extends Specification {
         def sv = Mock(SimpleValue)
         sv.getTable() >> null
 
-        persistentPropertyToPropertyConfig.apply(prop) >> pc
+        persistentPropertyToPropertyConfig.toPropertyConfig(prop) >> pc
         prop.getOwner() >> owner
         hibernateEntityWrapper.getMappedForm(owner) >> mapping
         typeNameProvider.getTypeName(prop, mapping) >> null
@@ -96,8 +95,8 @@ class SimpleValueBinderSpec extends Specification {
         def sv = Mock(SimpleValue)
         def sv2 = Mock(SimpleValue)
 
-        persistentPropertyToPropertyConfig.apply(prop) >> pc
-        persistentPropertyToPropertyConfig.apply(tenantProp) >> tenantPc
+        persistentPropertyToPropertyConfig.toPropertyConfig(prop) >> pc
+        persistentPropertyToPropertyConfig.toPropertyConfig(tenantProp) >> tenantPc
         prop.getOwner() >> owner
         tenantProp.getOwner() >> owner
         hibernateEntityWrapper.getMappedForm(owner) >> mapping
@@ -133,7 +132,7 @@ class SimpleValueBinderSpec extends Specification {
         sv.getTable() >> null
         def genProps = new Properties(); genProps.setProperty('sequence','seq_name'); genProps.setProperty('foo','bar')
 
-        persistentPropertyToPropertyConfig.apply(prop) >> pc
+        persistentPropertyToPropertyConfig.toPropertyConfig(prop) >> pc
         prop.getOwner() >> owner
         hibernateEntityWrapper.getMappedForm(owner) >> mapping
         typeNameProvider.getTypeName(prop, mapping) >> 'Y'
@@ -162,7 +161,7 @@ class SimpleValueBinderSpec extends Specification {
         def sv = Mock(SimpleValue)
         sv.getTable() >> null
 
-        persistentPropertyToPropertyConfig.apply(prop) >> pc
+        persistentPropertyToPropertyConfig.toPropertyConfig(prop) >> pc
         prop.getOwner() >> owner
         hibernateEntityWrapper.getMappedForm(owner) >> mapping
         typeNameProvider.getTypeName(prop, mapping) >> 'Z'

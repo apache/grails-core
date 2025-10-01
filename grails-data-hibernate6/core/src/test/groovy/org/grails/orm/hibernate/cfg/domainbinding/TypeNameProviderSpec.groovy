@@ -54,7 +54,7 @@ class TypeNameProviderSpec extends HibernateGormDatastoreSpec {
         def property = persistentEntity.getPersistentProperties()[0]
         Mapping mapping = new Mapping()
         mapping.setUserTypes([(Salary): SalaryType])
-        PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(property)
+        PropertyConfig config = new PersistentPropertyToPropertyConfig().toPropertyConfig(property)
         def name = new TypeNameProvider().getTypeName(property, mapping)
 
         then:

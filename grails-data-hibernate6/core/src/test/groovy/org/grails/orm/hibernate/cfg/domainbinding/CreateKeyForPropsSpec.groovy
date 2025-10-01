@@ -25,7 +25,7 @@ class CreateKeyForPropsSpec extends Specification {
             isUniqueWithinGroup() >> true
             getUniquenessGroup() >> ["p1", "p2"]
         }
-        propToConfig.apply(grailsProp) >> mappedForm
+        propToConfig.toPropertyConfig(grailsProp) >> mappedForm
 
         def otherProp1 = Mock(PersistentProperty)
         def otherProp2 = Mock(PersistentProperty)
@@ -43,7 +43,7 @@ class CreateKeyForPropsSpec extends Specification {
         subject.createKeyForProps(grailsProp, path, table, baseColumnName)
 
         then:
-        1 * propToConfig.apply(grailsProp) >> mappedForm
+        1 * propToConfig.toPropertyConfig(grailsProp) >> mappedForm
         1 * grailsProp.getOwner() >> owner
         1 * mappedForm.isUnique() >> true
         1 * mappedForm.isUniqueWithinGroup() >> true
@@ -70,13 +70,13 @@ class CreateKeyForPropsSpec extends Specification {
             isUniqueWithinGroup() >> true
             getUniquenessGroup() >> ["p1"]
         }
-        propToConfig.apply(grailsProp) >> mappedForm
+        propToConfig.toPropertyConfig(grailsProp) >> mappedForm
 
         when:
         subject.createKeyForProps(grailsProp, null, new Table("t"), "base")
 
         then:
-        1 * propToConfig.apply(grailsProp) >> mappedForm
+        1 * propToConfig.toPropertyConfig(grailsProp) >> mappedForm
         0 * grailsProp.getOwner() >> owner
         1 * mappedForm.isUnique() >> false
         0 * uniqueKeyCreator._
@@ -100,7 +100,7 @@ class CreateKeyForPropsSpec extends Specification {
             isUniqueWithinGroup() >> true
             getUniquenessGroup() >> ["missingProp"]
         }
-        propToConfig.apply(grailsProp) >> mappedForm
+        propToConfig.toPropertyConfig(grailsProp) >> mappedForm
 
         owner.getPropertyByName("missingProp") >> null
 
@@ -109,7 +109,7 @@ class CreateKeyForPropsSpec extends Specification {
 
         then:
         thrown(MappingException)
-        1 * propToConfig.apply(grailsProp) >> mappedForm
+        1 * propToConfig.toPropertyConfig(grailsProp) >> mappedForm
         1 * grailsProp.getOwner() >> owner
         1 * mappedForm.isUnique() >> true
         1 * mappedForm.isUniqueWithinGroup() >> true

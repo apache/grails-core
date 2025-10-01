@@ -1,10 +1,8 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
-import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
@@ -49,7 +47,7 @@ public class ColumnNameForPropertyAndPathFetcher {
             // No column config given, attempt to obtain the property config directly from the property
             PropertyConfig c = null;
             try {
-                c = persistentPropertyToPropertyConfig.apply(grailsProp);
+                c = persistentPropertyToPropertyConfig.toPropertyConfig(grailsProp);
             } catch (Exception ignore) {
                 // If we cannot resolve a PropertyConfig, treat as absent and fall back later
             }
@@ -63,7 +61,7 @@ public class ColumnNameForPropertyAndPathFetcher {
         }
         else {
             if (grailsProp.supportsJoinColumnMapping()) {
-                PropertyConfig pc = persistentPropertyToPropertyConfig.apply(grailsProp);
+                PropertyConfig pc = persistentPropertyToPropertyConfig.toPropertyConfig(grailsProp);
                 if (pc.hasJoinKeyMapping()) {
                     columnName = pc.getJoinTable().getKey().getName();
                 }

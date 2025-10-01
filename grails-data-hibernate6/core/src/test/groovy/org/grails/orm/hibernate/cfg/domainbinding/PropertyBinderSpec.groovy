@@ -29,7 +29,7 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         def config = Mock(PropertyConfig)
 
         when:
-        persistentPropertyToPropertyConfig.apply(persistentProperty) >> config
+        persistentPropertyToPropertyConfig.toPropertyConfig(persistentProperty) >> config
         bidirectionalManyToOneWithListMapping.isBidirectionalManyToOneWithListMapping(persistentProperty, property) >> isBidirectional
         config.getInsertable() >> insertable
         config.getUpdatable() >> updateable
@@ -73,7 +73,7 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         def config = Mock(PropertyConfig)
 
         when:
-        persistentPropertyToPropertyConfig.apply(association) >> config
+        persistentPropertyToPropertyConfig.toPropertyConfig(association) >> config
         config.getAccessType() >> AccessType.PROPERTY
         cascadeBehaviorFetcher.getCascadeBehaviour(association) >> "all-delete-orphan"
         binder.bindProperty(association, property)
@@ -94,7 +94,7 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         def config = Mock(PropertyConfig)
 
         when:
-        persistentPropertyToPropertyConfig.apply(persistentProperty) >> config
+        persistentPropertyToPropertyConfig.toPropertyConfig(persistentProperty) >> config
         config.getAccessType() >> AccessType.PROPERTY
         binder.bindProperty(persistentProperty, property)
 

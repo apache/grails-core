@@ -2,7 +2,6 @@ package org.grails.orm.hibernate.cfg.domainbinding;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.IdentityEnumType;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -17,7 +16,6 @@ import org.slf4j.LoggerFactory;
 import java.sql.Types;
 import java.util.Properties;
 
-import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.DEFAULT_ENUM_TYPE;
 import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.ENUM_CLASS_PROP;
 import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.ENUM_TYPE_CLASS;
 
@@ -40,7 +38,7 @@ public class EnumTypeBinder {
     private static final Logger LOG = LoggerFactory.getLogger(EnumTypeBinder.class);
 
     public void bindEnumType(PersistentProperty property, Class<?> propertyType, SimpleValue simpleValue, String columnName) {
-        PropertyConfig pc = new PersistentPropertyToPropertyConfig().apply(property);
+        PropertyConfig pc = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
         Mapping ownerMapping = new HibernateEntityWrapper().getMappedForm(property.getOwner());
         String enumType = pc.getEnumType();
         Properties enumProperties = new Properties();

@@ -49,7 +49,7 @@ class ColumnBinderSpec extends Specification {
         prop.isNullable() >> false
         prop.getOwner() >> owner
         owner.isRoot() >> true // skip subclass nullable logic
-        propToConfig.apply(prop) >> mappedForm
+        propToConfig.toPropertyConfig(prop) >> mappedForm
         mappedForm.isUnique() >> false
         mappedForm.isUniqueWithinGroup() >> false
 
@@ -108,7 +108,7 @@ class ColumnBinderSpec extends Specification {
         owner.isRoot() >> false
         hibernateWrapper.getMappedForm(owner) >> mapping
         mapping.getTablePerHierarchy() >> true // forces nullable true for subclass
-        propToConfig.apply(prop) >>> [propertyConfig, propertyConfig] // called twice in code
+        propToConfig.toPropertyConfig(prop) >>> [propertyConfig, propertyConfig] // called twice in code
         // numeric constraints applied
         // unique settings
         propertyConfig.isUnique() >> true
@@ -172,7 +172,7 @@ class ColumnBinderSpec extends Specification {
         inverse.isHasOne() >> true
         prop.getOwner() >> owner
         owner.isRoot() >> true
-        propToConfig.apply(prop) >> mappedForm
+        propToConfig.toPropertyConfig(prop) >> mappedForm
         mappedForm.isUnique() >> false
         mappedForm.isUniqueWithinGroup() >> false
 
@@ -224,7 +224,7 @@ class ColumnBinderSpec extends Specification {
         prop.isNullable() >> true
         prop.getOwner() >> owner
         owner.isRoot() >> true
-        propToConfig.apply(prop) >>> [propertyConfig, propertyConfig]
+        propToConfig.toPropertyConfig(prop) >>> [propertyConfig, propertyConfig]
         propertyConfig.isUnique() >> false
         propertyConfig.isUniqueWithinGroup() >> false
 
@@ -280,7 +280,7 @@ class ColumnBinderSpec extends Specification {
         inverse.isHasOne() >> false
         prop.getOwner() >> owner
         owner.isRoot() >> true
-        propToConfig.apply(prop) >> mappedForm
+        propToConfig.toPropertyConfig(prop) >> mappedForm
         mappedForm.isUnique() >> false
         mappedForm.isUniqueWithinGroup() >> false
 
@@ -332,7 +332,7 @@ class ColumnBinderSpec extends Specification {
         prop.isNullable() >> false
         prop.getOwner() >> owner
         owner.isRoot() >> true
-        propToConfig.apply(prop) >> mappedForm
+        propToConfig.toPropertyConfig(prop) >> mappedForm
         mappedForm.isUnique() >> false
         mappedForm.isUniqueWithinGroup() >> false
 
@@ -385,7 +385,7 @@ class ColumnBinderSpec extends Specification {
         owner.isRoot() >> true
         // ensure we don't hit special branches
         // Spock will not have methods isBidirectional, isOwningSide on Association base; not needed since code checks only if OneToOne or ToOne/circular
-        propToConfig.apply(prop) >> mappedForm
+        propToConfig.toPropertyConfig(prop) >> mappedForm
         mappedForm.isUnique() >> false
         mappedForm.isUniqueWithinGroup() >> false
 
@@ -438,7 +438,7 @@ class ColumnBinderSpec extends Specification {
         parentProp.isNullable() >> false
         prop.getOwner() >> owner
         owner.isRoot() >> true
-        propToConfig.apply(prop) >>> [propertyConfig, propertyConfig]
+        propToConfig.toPropertyConfig(prop) >>> [propertyConfig, propertyConfig]
         propertyConfig.isUnique() >> false
         propertyConfig.isUniqueWithinGroup() >> false
 
@@ -491,7 +491,7 @@ class ColumnBinderSpec extends Specification {
         parentProp.isNullable() >> true
         prop.getOwner() >> owner
         owner.isRoot() >> true
-        propToConfig.apply(prop) >>> [propertyConfig, propertyConfig]
+        propToConfig.toPropertyConfig(prop) >>> [propertyConfig, propertyConfig]
         propertyConfig.isUnique() >> false
         propertyConfig.isUniqueWithinGroup() >> false
 
@@ -542,7 +542,7 @@ class ColumnBinderSpec extends Specification {
         parentProp.isNullable() >> false
         prop.getOwner() >> owner
         owner.isRoot() >> true
-        propToConfig.apply(prop) >>> [propertyConfig, propertyConfig]
+        propToConfig.toPropertyConfig(prop) >>> [propertyConfig, propertyConfig]
         propertyConfig.isUnique() >> false
         propertyConfig.isUniqueWithinGroup() >> false
 
@@ -595,7 +595,7 @@ class ColumnBinderSpec extends Specification {
         when:
         // Unique true, withinGroup false => unique true
         def pc1 = Mock(PropertyConfig)
-        propToConfig.apply(prop) >>> [pc1, pc1]
+        propToConfig.toPropertyConfig(prop) >>> [pc1, pc1]
         pc1.isUnique() >> true
         pc1.isUniqueWithinGroup() >> false
         binder.bindColumn(prop, null, column, null, null, table)
@@ -646,7 +646,7 @@ class ColumnBinderSpec extends Specification {
         // Unique true, withinGroup true => unique false
         def column2 = new Column()
         def pc2 = Mock(PropertyConfig)
-        propToConfig.apply(prop) >> pc2
+        propToConfig.toPropertyConfig(prop) >> pc2
         pc2.isUnique() >> true
         pc2.isUniqueWithinGroup() >> true
         binder.bindColumn(prop, null, column2, null, null, table)
@@ -697,7 +697,7 @@ class ColumnBinderSpec extends Specification {
         // Unique false => unique false
         def column3 = new Column()
         def pc3 = Mock(PropertyConfig)
-        propToConfig.apply(prop) >>> [pc3, pc3]
+        propToConfig.toPropertyConfig(prop) >>> [pc3, pc3]
         pc3.isUnique() >> false
         pc3.isUniqueWithinGroup() >> false
         binder.bindColumn(prop, null, column3, null, null, table)
@@ -745,7 +745,7 @@ class ColumnBinderSpec extends Specification {
         owner.isRoot() >> false
         hibernateWrapper.getMappedForm(owner) >> mapping
         mapping.getTablePerHierarchy() >> false
-        propToConfig.apply(prop) >>> [propertyConfig, propertyConfig]
+        propToConfig.toPropertyConfig(prop) >>> [propertyConfig, propertyConfig]
         propertyConfig.isUnique() >> false
         propertyConfig.isUniqueWithinGroup() >> false
 

@@ -1,0 +1,28 @@
+ByteBuddyProxySpec. Test that accessing id on a proxy does not initialize it
+CompositeIdWithManyToOneAndSequenceSpec. Test composite id many to one and sequence
+DataServiceSpec. test findBy dynamic finder with @Join doesn't return proxies
+DataServiceSpec. test list products
+DetachCriteriaSubquerySpec. test detached associated criteria in subquery
+DetachCriteriaSubquerySpec. test that detached criteria subquery should create implicit alias instead of using this_
+DetachedCriteriaProjectionAliasSpec. test aliased projection in detached criteria subquery
+DirtyCheckingSpec. test relationships not marked dirty when domain objects are used
+EnumMappingSpec. Test enum mapping
+ExecuteQueryWithinValidatorSpec. test executeQuery method executed during validation
+GroovyProxySpec. Test creation and behavior of Groovy proxies
+HibernateDirtyCheckingSpec. test dirty checking on embedded
+HibernateEntityTransformationSpec. test hibernate entity transformation
+HibernateGormStaticApiSpec. Test executeUpdate
+HibernateGormStaticApiSpec. Test executeUpdate with named params
+HibernateGormStaticApiSpec. Test executeUpdate with positional params
+HibernateGormStaticApiSpec. test simple sql query
+HibernateGormStaticApiSpec. Test withNewSession
+IdentityEnumTypeSpec. test identity enum type
+IdentityEnumTypeSpec. test identity enum type 2
+JoinPerfSpec. test read performance with join query
+MultipleDataSourceMetadataSpec. test metadata retrieval for multiple dataSources
+MultiTenancyBidirectionalManyToManySpec. test hasMany and 'in' query with multi-tenancy
+MultiTenancyUnidirectionalOneToManySpec. test multi-tenancy with unidirectional one-to-many
+SubqueryAliasSpec. Test subquery with root alias
+TwoUnidirectionalHasManySpec. test two undirectional one to many references
+UpdateWithProxyPresentSpec. Test update unidirectional oneToMany with proxy
+WhereQueryWithAssociationSortSpec. Test sort with where query that queries association

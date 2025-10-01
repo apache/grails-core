@@ -33,7 +33,7 @@ public class CreateKeyForProps {
 
     public void createKeyForProps(PersistentProperty grailsProp, String path, Table table,
                                    String columnName) {
-        PropertyConfig mappedForm = persistentPropertyToPropertyConfig.apply(grailsProp);
+        PropertyConfig mappedForm = persistentPropertyToPropertyConfig.toPropertyConfig(grailsProp);
 
         if (mappedForm.isUnique() && mappedForm.isUniqueWithinGroup()) {
 

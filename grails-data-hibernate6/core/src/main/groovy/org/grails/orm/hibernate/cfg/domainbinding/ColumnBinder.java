@@ -109,10 +109,10 @@ public class ColumnBinder {
             // the column's length, precision, and scale
             Class<?> type = property.getType();
             if (type != null && (String.class.isAssignableFrom(type) || byte[].class.isAssignableFrom(type))) {
-                if (mappedForm == null) mappedForm = persistentPropertyToPropertyConfig.apply(property);
+                mappedForm = persistentPropertyToPropertyConfig.toPropertyConfig(property);
                 stringColumnConstraintsBinder.bindStringColumnConstraints(column, mappedForm);
             } else if (type != null && Number.class.isAssignableFrom(type)) {
-                if (mappedForm == null) mappedForm = persistentPropertyToPropertyConfig.apply(property);
+                mappedForm = persistentPropertyToPropertyConfig.toPropertyConfig(property);
                 numericColumnConstraintsBinder.bindNumericColumnConstraints(column, cc, mappedForm);
             }
         }
@@ -133,7 +133,7 @@ public class ColumnBinder {
         }
 
         // Apply uniqueness last to ensure it isn't overridden by downstream binders
-        PropertyConfig mappedFormFinal = persistentPropertyToPropertyConfig.apply(property);
+        PropertyConfig mappedFormFinal = persistentPropertyToPropertyConfig.toPropertyConfig(property);
         column.setUnique(mappedFormFinal.isUnique() && !mappedFormFinal.isUniqueWithinGroup());
 
         if (LOG.isDebugEnabled())

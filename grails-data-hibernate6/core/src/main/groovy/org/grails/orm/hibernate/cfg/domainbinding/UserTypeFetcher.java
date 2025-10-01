@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 public class UserTypeFetcher {
@@ -23,8 +22,8 @@ public class UserTypeFetcher {
     }
     public Class<?> getUserType(PersistentProperty currentGrailsProp) {
         Class<?> userType = null;
-        PropertyConfig config = persistentPropertyToPropertyConfig.apply(currentGrailsProp);
-        Object typeObj = config == null ? null : config.getType();
+        PropertyConfig config = persistentPropertyToPropertyConfig.toPropertyConfig(currentGrailsProp);
+        Object typeObj = config.getType();
         if (typeObj instanceof Class<?>) {
             userType = (Class<?>)typeObj;
         } else if (typeObj != null) {

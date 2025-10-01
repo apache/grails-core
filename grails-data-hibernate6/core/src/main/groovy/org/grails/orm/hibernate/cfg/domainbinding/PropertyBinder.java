@@ -41,7 +41,7 @@ public class PropertyBinder {
     public void bindProperty(PersistentProperty<?> persistentProperty, Property prop) {
         // set the property name
         prop.setName(persistentProperty.getName());
-        var config = persistentPropertyToPropertyConfig.apply(persistentProperty);
+        var config = persistentPropertyToPropertyConfig.toPropertyConfig(persistentProperty);
 
         if (bidirectionalManyToOneWithListMapping.isBidirectionalManyToOneWithListMapping(persistentProperty, prop)) {
             prop.setInsertable(false);

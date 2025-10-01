@@ -33,7 +33,7 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
         def pc = Mock(PropertyConfig)
 
         grailsProp.supportsJoinColumnMapping() >> false
-        propToConfig.apply(grailsProp) >> pc
+        propToConfig.toPropertyConfig(grailsProp) >> pc
         pc.getColumn() >> "explicit_col"
 
         when:
@@ -64,7 +64,7 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
         def key = new ColumnConfig(name: "join_key_name")
 
         grailsProp.supportsJoinColumnMapping() >> true
-        propToConfig.apply(grailsProp) >> pc
+        propToConfig.toPropertyConfig(grailsProp) >> pc
         pc.hasJoinKeyMapping() >> true
         pc.getJoinTable() >> joinTable
         joinTable.getKey() >> key

@@ -30,7 +30,7 @@ public class DefaultColumnNameFetcher {
         if (property instanceof Association) {
             Association association = (Association) property;
             boolean isBasic = property instanceof Basic;
-            if (isBasic && (new PersistentPropertyToPropertyConfig().apply(property)).getType() != null) {
+            if (isBasic && (new PersistentPropertyToPropertyConfig().toPropertyConfig(property)).getType() != null) {
                 return columnName;
             }
 

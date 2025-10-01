@@ -37,7 +37,7 @@ public class CascadeBehaviorFetcher {
     }
 
     private Optional<CascadeBehavior> getDefinedBehavior(PersistentProperty<?> grailsProperty) {
-        return Optional.ofNullable(new PersistentPropertyToPropertyConfig().apply(grailsProperty))
+        return Optional.ofNullable(new PersistentPropertyToPropertyConfig().toPropertyConfig(grailsProperty))
                 .map(PropertyConfig::getCascade)
                 .map(CascadeBehavior::fromString);
     }

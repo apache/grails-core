@@ -5,13 +5,11 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.hibernate.MappingException;
 
 import java.util.Optional;
-import java.util.function.Function;
 
 import jakarta.annotation.Nonnull;
 
-public class PersistentPropertyToPropertyConfig implements Function<PersistentProperty, PropertyConfig> {
-    @Override
-    @Nonnull public PropertyConfig apply(PersistentProperty persistentProperty) {
+public class PersistentPropertyToPropertyConfig  {
+    @Nonnull public PropertyConfig toPropertyConfig(PersistentProperty persistentProperty) {
         return Optional.ofNullable(persistentProperty)
                 .map(PersistentProperty::getMappedForm)
                 .map(PropertyConfig.class::cast)
