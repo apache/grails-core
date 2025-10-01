@@ -23,6 +23,7 @@ import javax.inject.Inject
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
+import org.gradle.api.DefaultTask
 import org.gradle.api.attributes.AttributeMatchingStrategy
 
 import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
@@ -534,9 +535,8 @@ class GrailsGradlePlugin extends GroovyPlugin {
         }
     }
 
-    protected void configureForkSettings(Project project, String grailsVersion) {
-
-        def systemPropertyConfigurer = { String defaultGrailsEnv, JavaForkOptions task ->
+    protected <T extends JavaForkOptions & DefaultTask> void configureForkSettings(Project project, String grailsVersion) {
+        def systemPropertyConfigurer = { String defaultGrailsEnv, T task ->
             def map = System.properties.findAll { entry ->
                 entry.key?.toString()?.startsWith('grails.')
             }
@@ -559,7 +559,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
             if (task.maxHeapSize == null) {
                 task.maxHeapSize = '768m'
             }
-            task.jvmArgs('-XX:+TieredCompilation', '-XX:TieredStopAtLevel=1', '-XX:CICompilerCount=3')
 
             // Copy GRAILS_FORK_OPTS into the fork. Or use GRAILS_OPTS if no fork options provided
             // This allows run-app etc. to run using appropriate settings and allows users to provided
@@ -574,8 +573,8 @@ class GrailsGradlePlugin extends GroovyPlugin {
         TaskContainer tasks = project.tasks
 
         String grailsEnvSystemProperty = System.getProperty(Environment.KEY)
-        tasks.withType(Test).each(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.TEST.getName()))
-        tasks.withType(JavaExec).each(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.DEVELOPMENT.getName()))
+        tasks.withType(Test).configureEach(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.TEST.getName()))
+        tasks.withType(JavaExec).configureEach(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.DEVELOPMENT.getName()))
     }
 
     protected void configureConsoleTask(Project project) {

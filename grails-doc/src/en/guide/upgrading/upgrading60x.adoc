@@ -541,3 +541,18 @@ sourceSets {
     }
 }
 ----
+
+===== 12.23 Test & JavaExec JVM Args no longer set by default
+
+Previously tasks of type `Test` & `JavaExec` had several JVM args set by default to facilitate faster startup times in larger projects.
+These settings are removed by default in Grails 7. To restore the old behavior, configure the `Test` & `JavaExec` tasks as follows:
+
+[source,groovy]
+----
+tasks.withType(Test).configureEach {
+   jvmArgs('-XX:+TieredCompilation', '-XX:TieredStopAtLevel=1', '-XX:CICompilerCount=3')
+}
+tasks.withType(JavaExec).configureEach {
+   jvmArgs('-XX:+TieredCompilation', '-XX:TieredStopAtLevel=1', '-XX:CICompilerCount=3')
+}
+----
