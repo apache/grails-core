@@ -7,9 +7,11 @@ import org.hibernate.MappingException;
 import java.util.Optional;
 import java.util.function.Function;
 
+import jakarta.annotation.Nonnull;
+
 public class PersistentPropertyToPropertyConfig implements Function<PersistentProperty, PropertyConfig> {
     @Override
-    public PropertyConfig apply(PersistentProperty persistentProperty) {
+    @Nonnull public PropertyConfig apply(PersistentProperty persistentProperty) {
         return Optional.ofNullable(persistentProperty)
                 .map(PersistentProperty::getMappedForm)
                 .map(PropertyConfig.class::cast)

@@ -28,7 +28,6 @@ import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.model.types.ToMany;
-import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.orm.hibernate.cfg.domainbinding.ClassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesConsumer;
@@ -778,8 +777,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             Mapping m = new HibernateEntityWrapper().getMappedForm(domainClass);
             if (m.hasCompositeIdentifier()) {
                 CompositeIdentity ci = (CompositeIdentity) m.getIdentity();
-                bindCompositeIdentifierToManyToOne(property, element, ci, domainClass,
-                        EMPTY_PATH, sessionFactoryBeanName);
+                new CompositeIdentifierToManyToOneBinder(namingStrategy).bindCompositeIdentifierToManyToOne(property, element, ci, domainClass, EMPTY_PATH);
             }
             else {
                 if (joinColumnMappingOptional.isPresent()) {
@@ -856,7 +854,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         if ((shouldCollectionBindWithJoinColumn((ToMany) property) && hasCompositeIdentifier) ||
                 (hasCompositeIdentifier && ( property instanceof ManyToMany))) {
             CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
-            bindCompositeIdentifierToManyToOne((Association) property, key, ci, refDomainClass, EMPTY_PATH, sessionFactoryBeanName);
+            new CompositeIdentifierToManyToOneBinder(namingStrategy).bindCompositeIdentifierToManyToOne((Association) property, key, ci, refDomainClass, EMPTY_PATH);
         }
         else {
             // set type
@@ -2054,7 +2052,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         boolean isComposite = mapping.hasCompositeIdentifier();
         if (isComposite) {
             CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
-            bindCompositeIdentifierToManyToOne(property, manyToOne, ci, refDomainClass, path, sessionFactoryBeanName);
+            new CompositeIdentifierToManyToOneBinder(namingStrategy).bindCompositeIdentifierToManyToOne(property, manyToOne, ci, refDomainClass, path);
         }
         else {
             //TODO NOT TESTED
@@ -2095,66 +2093,6 @@ public class GrailsDomainBinder implements MetadataContributor {
                 }
             }
         }
-    }
-
-    private void bindCompositeIdentifierToManyToOne(Association property,
-                                                      SimpleValue value, CompositeIdentity compositeId, PersistentEntity refDomainClass,
-                                                      String path, String sessionFactoryBeanName) {
-        String[] propertyNames = compositeId.getPropertyNames();
-        PropertyConfig config = new PersistentPropertyToPropertyConfig().apply(property);
-
-        List<ColumnConfig> columns = config.getColumns();
-        int i = columns.size();
-        int expectedForeignKeyColumnLength = new ForeignKeyColumnCountCalculator().calculateForeignKeyColumnCount(refDomainClass, propertyNames);
-        if (i != expectedForeignKeyColumnLength) {
-            int j = 0;
-            for (String propertyName : propertyNames) {
-                ColumnConfig cc;
-                // if a column configuration exists in the mapping use it
-                if(j < i) {
-                    cc = columns.get(j++);
-                }
-                // otherwise create a new one to represent the composite column
-                else {
-                    cc = new ColumnConfig();
-                }
-                // if the name is null then configure the name by convention
-                if(cc.getName() == null) {
-                    // use the referenced table name as a prefix
-                    String prefix = new TableNameFetcher(getNamingStrategy()).getTableName(refDomainClass);
-                    PersistentProperty referencedProperty = refDomainClass.getPropertyByName(propertyName);
-
-                    // if the referenced property is a ToOne and it has a composite id
-                    // then a column is needed for each property that forms the composite id
-                    if(referencedProperty instanceof ToOne) {
-                        ToOne toOne = (ToOne) referencedProperty;
-                        PersistentProperty[] compositeIdentity = toOne.getAssociatedEntity().getCompositeIdentity();
-                        if(compositeIdentity != null) {
-                            for (PersistentProperty cip : compositeIdentity) {
-                                // for each property of a composite id by default we use the table name and the property name as a prefix
-                                String string = getNamingStrategy().resolveColumnName(referencedProperty.getName());
-                                String compositeIdPrefix = new BackticksRemover().apply(prefix) + UNDERSCORE + new BackticksRemover().apply(string);
-
-                                String suffix = new DefaultColumnNameFetcher(getNamingStrategy()).getDefaultColumnName(cip);
-                                String finalColumnName = new BackticksRemover().apply(compositeIdPrefix) + UNDERSCORE + new BackticksRemover().apply(suffix);
-                                cc = new ColumnConfig();
-                                cc.setName(finalColumnName);
-                                columns.add(cc);
-                            }
-                            continue;
-                        }
-                    }
-
-                    String suffix = new DefaultColumnNameFetcher(getNamingStrategy()).getDefaultColumnName(referencedProperty);
-                    String finalColumnName = new BackticksRemover().apply(prefix) + UNDERSCORE + new BackticksRemover().apply(suffix);
-                    cc.setName(finalColumnName);
-                    columns.add(cc);
-                }
-            }
-        }
-        new PersistentPropertyToPropertyConfig().apply(property);
-        // set type
-        new SimpleValueBinder(namingStrategy).bindSimpleValue(property, null, value, path);
     }
 
     // each property may consist of one or many columns (due to composite ids) so in order to get the
