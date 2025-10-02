@@ -23,9 +23,9 @@ import groovy.transform.CompileStatic
 
 /**
  * Creates a persistent token domain class for the Spring Security Core plugin.
- * Usage: <code>./gradlew runCommand "-Pargs=s2-create-persistent-token [DOMAIN CLASS NAME]"</code>
+ * Usage: <code>./grailsw s2-create-persistent-token [DOMAIN CLASS NAME]</code>
 *
- * For example: <code>./gradlew runCommand "-Pargs=s2-create-persistent-token com.yourapp.PersistentLogin"</code>
+ * For example: <code>./grailsw s2-create-persistent-token com.yourapp.PersistentLogin</code>
  *
  * @author Puneet Behl
  * @since 6.0.0
@@ -37,9 +37,9 @@ class S2CreatePersistentTokenCommand implements GrailsApplicationCommand, Comman
     ConsoleLogger consoleLogger = GrailsConsole.getInstance()
 
     private final static USAGE_MESSAGE = '''
-./gradlew runCommand "-Pargs=s2-create-persistent-token [DOMAIN CLASS NAME]"
+./grailsw s2-create-persistent-token [DOMAIN CLASS NAME]
 
-For example: ./gradlew runCommand "-Pargs=s2-create-persistent-token com.yourapp.PersistentLogin"
+For example: ./grailsw s2-create-persistent-token com.yourapp.PersistentLogin
 '''
 
     @Override

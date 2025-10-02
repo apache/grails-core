@@ -32,7 +32,7 @@ One of the notable improvements is the seamless transition to Grails 6. The plug
 
 [source,shell]
 ----
-./gradlew runCommand "-Pargs=s2-quickstart com.yourapp User Role"
+./grailsw s2-quickstart s2-quickstart com.yourapp User Role
 ----
 
 This aligns perfectly with Grails 6's development landscape, making your application's migration smoother than ever before.

@@ -30,29 +30,29 @@ The general format is:
 
 [source,bash]
 ----
-./gradlew runCommand "-Pargs=s2-quickstart DOMAIN_CLASS_PACKAGE USER_CLASS_NAME ROLE_CLASS_NAME [REQUESTMAP_CLASS_NAME] [--groupClassName=GROUP_CLASS_NAME]"
+./grailsw s2-quickstart DOMAIN_CLASS_PACKAGE USER_CLASS_NAME ROLE_CLASS_NAME [REQUESTMAP_CLASS_NAME] [--groupClassName=GROUP_CLASS_NAME]
 ----
 
 .Examples
 
 [source,bash]
 ----
-./gradlew runCommand "-Pargs=s2-quickstart com.yourapp User Role"
+./grailsw s2-quickstart s2-quickstart com.yourapp User Role
 ----
 
 [source,bash]
 ----
-./gradlew runCommand "-Pargs=s2-quickstart com.yourapp User Role --groupClassName=RoleGroup"
+./grailsw s2-quickstart com.yourapp User Role --groupClassName=RoleGroup
 ----
 
 [source,bash]
 ----
-./gradlew runCommand "-Pargs=s2-quickstart com.yourapp Person Authority Requestmap"
+./grailsw s2-quickstart com.yourapp Person Authority Requestmap
 ----
 
 [source,bash]
 ----
-./gradlew runCommand "-Pargs=s2-quickstart --uiOnly"
+./grailsw s2-quickstart --uiOnly
 ----
 
 .Description

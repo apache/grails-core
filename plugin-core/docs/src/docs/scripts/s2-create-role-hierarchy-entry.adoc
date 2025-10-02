@@ -26,14 +26,14 @@ Creates a persistent role hierarchy entry domain class for storing role hierarch
 
 [source,bash]
 ----
-./gradlew runCommand "-Pargs=s2-create-role-hierarchy-entry <classname>"
+./grailsw s2-create-role-hierarchy-entry <classname>
 ----
 
 .Example
 
 [source,bash]
 ----
-./gradlew runCommand "-Pargs=s2-create-role-hierarchy-entry com.yourapp.RoleHierarchyEntry"
+./grailsw s2-create-role-hierarchy-entry com.yourapp.RoleHierarchyEntry
 ----
 
 .Description

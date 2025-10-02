@@ -23,8 +23,8 @@ import groovy.transform.CompileStatic
 
 /**
  * Creates a domain class for a persistent role hierarchy for the Spring Security Core plugin
- * Usage: <code>./gradlew runCommand "-Pargs=s2-create-role-hierarchy-entry [DOMAIN CLASS NAME]"
- * For example: <code>./gradlew runCommand "-Pargs=s2-create-role-hierarchy-entry com.yourapp.RoleHierarchyEntry"</code>
+ * Usage: <code>./grailsw s2-create-role-hierarchy-entry [DOMAIN CLASS NAME]
+ * For example: <code>./grailsw s2-create-role-hierarchy-entry com.yourapp.RoleHierarchyEntry</code>
  *
  * @author Puneet Behl
  * @since 6.0.0
@@ -33,9 +33,9 @@ import groovy.transform.CompileStatic
 class S2CreateRoleHierarchyEntryCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
 
     private static final String USAGE_MESSAGE = '''
-./gradlew runCommand "-Pargs=s2-create-role-hierarchy-entry [DOMAIN CLASS NAME]" 
+./grailsw s2-create-role-hierarchy-entry [DOMAIN CLASS NAME] 
  
- For example: ./gradlew runCommand "-Pargs=s2-create-role-hierarchy-entry com.yourapp.RoleHierarchyEntry"
+ For example: ./grailsw s2-create-role-hierarchy-entry com.yourapp.RoleHierarchyEntry
 '''
 
     @Delegate

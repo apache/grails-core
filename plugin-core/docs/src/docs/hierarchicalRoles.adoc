@@ -90,7 +90,7 @@ For example, running
 
 [source,bash]
 ----
-./gradlew runCommand "-Pargs=s2-create-role-hierarchy-entry com.yourapp.RoleHierarchyEntry"
+./grailsw s2-create-role-hierarchy-entry com.yourapp.RoleHierarchyEntry
 ----
 
 will generate this class in `grails-app/domain/com/yourapp/RoleHierarchyEntry.groovy`:

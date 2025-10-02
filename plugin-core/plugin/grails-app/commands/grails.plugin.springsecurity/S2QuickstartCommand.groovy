@@ -23,14 +23,14 @@ import groovy.transform.CompileStatic
 
 /**
  * Creates domain classes and updates config settings for the Spring Security plugin.
- * Usage: <code>./gradlew runCommand "-Pargs=s2-quickstart [DOMAIN_CLASS_PACKAGE] [USER_CLASS_NAME] [ROLE_CLASS_NAME] [REQUEST_MAP_CLASS_NAME] --groupClassName=[GROUP_CLASS_NAME]"</code> or
+ * Usage: <code>./grailsw s2-quickstart [DOMAIN_CLASS_PACKAGE] [USER_CLASS_NAME] [ROLE_CLASS_NAME] [REQUEST_MAP_CLASS_NAME] --groupClassName=[GROUP_CLASS_NAME]</code> or
  * <code>s2-quickstart --ui-only</code>
  *
  * For Example:
- * 1. <code>./gradlew runCommand "-Pargs=s2-quickstart com.yourapp User Role --groupClassName=RoleGroup"</code>
- * 2. <code>./gradlew runCommand "-Pargs=s2-quickstart com.yourapp Person Authority Requestmap"</code>
- * 3. <code>./gradlew runCommand "-Pargs=s2-quickstart --uiOnly"</code>
- * 4. <code>./gradlew runCommand "-Pargs=s2-quickstart com.yourapp User Role"</code>
+ * 1. <code>./grailsw s2-quickstart com.yourapp User Role --groupClassName=RoleGroup</code>
+ * 2. <code>./grailsw s2-quickstart com.yourapp Person Authority Requestmap</code>
+ * 3. <code>./grailsw s2-quickstart --uiOnly</code>
+ * 4. <code>./grailsw s2-quickstart s2-quickstart com.yourapp User Role</code>
  *
  * @author Puneet Behl
  * @since 6.0.0
@@ -51,13 +51,13 @@ class S2QuickstartCommand implements GrailsApplicationCommand, CommandLineHelper
     String description = 'Creates domain classes and updates config settings for the Spring Security plugin.'
 
     private final static String USAGE_MESSAGE = '''
-   ./gradlew runCommand "-Pargs=s2-quickstart [DOMAIN-CLASS-PACKAGE] [USER-CLASS-NAME] [ROLE-CLASS-NAME] [REQUESTMAP-CLASS-NAME] --groupClassName=GROUP-CLASS-NAME"
-or ./gradlew runCommand "-Pargs=s2-quickstart --uiOnly"
+   ./grailsw s2-quickstart [DOMAIN-CLASS-PACKAGE] [USER-CLASS-NAME] [ROLE-CLASS-NAME] [REQUESTMAP-CLASS-NAME] --groupClassName=GROUP-CLASS-NAME
+or ./grailsw s2-quickstart --uiOnly
 
-Example: ./gradlew runCommand "-Pargs=s2-quickstart com.yourapp User Role"
-Example: ./gradlew runCommand "-Pargs=s2-quickstart com.yourapp User Role --groupClassName=RoleGroup"
-Example: ./gradlew runCommand "-Pargs=s2-quickstart com.yourapp Person Authority Requestmap"
-Example: ./gradlew runCommand "-Pargs=s2-quickstart --uiOnly"
+Example: ./grailsw s2-quickstart s2-quickstart com.yourapp User Role
+Example: ./grailsw s2-quickstart com.yourapp User Role --groupClassName=RoleGroup
+Example: ./grailsw s2-quickstart com.yourapp Person Authority Requestmap
+Example: ./grailsw s2-quickstart --uiOnly
 '''
 
     @Delegate

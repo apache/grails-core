@@ -26,14 +26,14 @@ Creates a persistent token domain class for storing remember-me cookie informati
 
 [source,bash]
 ----
-./gradlew runCommand "-Pargs=s2-create-persistent-token <classname>"
+./grailsw s2-create-persistent-token <classname>
 ----
 
 .Example
 
 [source,bash]
 ----
-./gradlew runCommand "-Pargs=s2-create-persistent-token com.yourapp.PersistentLogin"
+./grailsw s2-create-persistent-token com.yourapp.PersistentLogin
 ----
 
 .Description
