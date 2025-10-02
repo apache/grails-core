@@ -18,9 +18,9 @@
  */
 package grails.web.pages;
 
-import org.springframework.web.servlet.View;
-
 import java.util.Locale;
+
+import org.springframework.web.servlet.View;
 
 /**
  * Interface to customize the view when rendering

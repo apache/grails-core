@@ -34,6 +34,6 @@ class ClassRelativeClassLoaderSpec extends Specification {
         classLoader.getResource('org/grails/core/support/internal/tools/ClassRelativeClassLoaderSpec.class')
 
         and:"other classpath resources are not found"
-        !classLoader.getResource('springloaded.properties')
+        !classLoader.getResource('NOTICE')
     }
 }

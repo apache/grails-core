@@ -26,5 +26,4 @@ package grails.core
  */
 trait GrailsApplicationClass implements GrailsApplicationLifeCycle {
 
-
 }

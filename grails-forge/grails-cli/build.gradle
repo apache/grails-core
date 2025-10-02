@@ -15,8 +15,9 @@
  *  limitations under the License.
  */
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import com.github.jengelman.gradle.plugins.shadow.transformers.ApacheLicenseResourceTransformer
-import com.github.jengelman.gradle.plugins.shadow.transformers.ApacheNoticeResourceTransformer
+import org.apache.grails.forge.buildlogic.shadowjar.GrailsGroovyExtensionTransformer
+import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowLicenseTransform
+import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowNoticeTransform
 
 plugins {
     id 'groovy'
@@ -33,13 +34,20 @@ ext {
     ]
     cliProject = true
     startMainClass = 'org.apache.grails.cli.DelegatingShellApplication'
+    sbomProjectType = org.cyclonedx.model.Component.Type.APPLICATION.name()
 }
 
 version = projectVersion
 group = 'org.apache.grails'
 
+configurations {
+    shadowCombined
+}
+
+evaluationDependsOn(':grails-cli-shadow')
 dependencies {
     implementation platform("org.apache.grails:grails-bom:$projectVersion")
+    implementation 'org.apache.groovy:groovy'
 
     // shell-cli dependencies
     implementation 'org.apache.grails:grails-shell-cli'
@@ -56,13 +64,23 @@ dependencies {
 
     // forge dependencies
     implementation project(':grails-forge-cli'), {
+        // exclude the slf4j-nop dependency because the simple slf4j implementation is already included
+        // which will cause a duplicate warning message
         exclude group: 'org.slf4j', module: 'slf4j-nop'
     }
+
+    // for the shadow jar, configure forge & shell-cli dependencies to be pulled from a file to ensure the shadow
+    // transforms are applied to both dependencies and our own projects
+    shadowCombined platform("org.apache.grails:grails-bom:$projectVersion")
+    shadowCombined 'org.apache.groovy:groovy'
+    shadowCombined files(project(':grails-cli-shadow').tasks.named('shadowJar'))
 }
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('../gradle/sbom-config.gradle')
 }
 
 // It's surprisingly hard to generate start scripts and *not* have them nested into a bin / lib directory
@@ -77,16 +95,37 @@ jarTask.configure { Jar it ->
 
 TaskProvider<Jar> shadowJarTask = tasks.named('shadowJar', ShadowJar)
 shadowJarTask.configure { ShadowJar it ->
-    it.archiveClassifier.set('all')
+    it.archiveClassifier = 'all'
 
-    // TODO: This needs reworked so we have one consistent license view, for now the disclaimer is shipped so this should suffice until this is fixed.
-    it.transform(ApacheLicenseResourceTransformer)
-    it.transform(ApacheNoticeResourceTransformer)
-    it.exclude('DISCLAIMER', 'license.header', 'licenses/**', 'META-INF/NOTICE.md', 'META-INF/NOTICE', 'META-INF/NOTICE.md', 'META-INF/licenses/**', 'META-INF/LICENSE.md')
+    // use a separate configuration path so we can still publish the cli project with a non-shadow jar
+    it.configurations = [project.configurations.shadowCombined]
 
     // services & custom grails.factories have to be merged since commands can be created from both sources
     it.mergeServiceFiles()
     it.mergeServiceFiles('META-INF/grails.factories')
+
+    // groovy extensions are shipped with grails-core, use our own transformer instead of mergeGroovyExtensionModules()
+    // for property file reproducibility
+    it.transform(GrailsGroovyExtensionTransformer)
+
+    // combines all NOTICE files
+    it.transform(GrailsShadowNoticeTransform) {
+        it.projectName = 'Apache Grails'
+        it.inceptionYear = '2005'
+    }
+
+    // combines all LICENSE files
+    it.transform(GrailsShadowLicenseTransform) {
+        it.licenseText = rootProject.layout.projectDirectory.file('../licenses/LICENSE-Apache-2.0.txt').getAsFile().text
+    }
+
+    it.exclude(
+            'DISCLAIMER', // because we include our own jars, we need to exclude any files that we include
+            'META-INF/DEPENDENCIES', // until we publish our own SBOM, this won't be correct so exclude
+            'META-INF/grails-plugin.xml', // we do not start or compile a grails application so these files are not needed (grails-core, url mappings, etc plugins)
+            'META-INF/grails-plugin.xml.asc', // avoid signing artifacts
+            'about.html' // restatement of the Eclipse Distribution License - Version 1.0 for jakarta
+    )
 }
 // publish shadow jar separately from the regular library
 artifacts           { archives shadowJarTask }

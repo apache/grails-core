@@ -25,6 +25,7 @@ class WriteFilteringMap implements Map<String, Object> {
 
     String keyPrefix
     private Map<String, Object> proxied // source map
+
     @Delegate
     private Map<String, Object> overlap  // written values, flattened -- shared
     private Map<String, Object> nestedDestinationMap // written keys at this level

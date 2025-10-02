@@ -27,10 +27,10 @@ class Patient implements Serializable {
     ContactDetails contactDetails
 
     static constraints = {
-        contactDetails nullable: false
+        contactDetails(nullable: false)
     }
 
     static mapping = {
-        contactDetails lazy: true
+        contactDetails(lazy: true)
     }
 }

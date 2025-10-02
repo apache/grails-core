@@ -21,7 +21,7 @@ under the License.
 === Per Environment Configuration
 
 
-Grails supports the concept of per environment configuration. The `application.yml` and `application.groovy` files in the `grails-app/conf` directory can use per-environment configuration using either YAML or the syntax provided by https://docs.groovy-lang.org/latest/html/documentation/#_configslurper[ConfigSlurper]. As an example consider the following default `application.yml` definition provided by Grails:
+Grails supports the concept of per environment configuration. The `application.yml` and `application.groovy` files in the `grails-app/conf` directory can use per-environment configuration using either YAML or the syntax provided by {groovydocumentation}#_configslurper[ConfigSlurper]. As an example consider the following default `application.yml` definition provided by Grails:
 
 [source,yaml]
 ----
@@ -116,7 +116,7 @@ grails -Dgrails.env=UAT run-app
 === Programmatic Environment Detection
 
 
-Within your code, such as in a Gant script or a bootstrap class you can detect the environment using the {apiDocs}grails/util/Environment.html[Environment] class:
+Within your code, such as in a Gant script or a bootstrap class you can detect the environment using the link:{api}grails/util/Environment.html[Environment] class:
 
 [source,groovy]
 ----

@@ -18,13 +18,13 @@
  */
 package grails.boot.config.tools
 
-import grails.boot.config.GrailsApplicationPostProcessor
-import grails.core.GrailsApplicationLifeCycle
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.config.BeanPostProcessor
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 
+import grails.boot.config.GrailsApplicationPostProcessor
+import grails.core.GrailsApplicationLifeCycle
 
 /**
  * Profiles bean creation outputting data to the console
@@ -34,12 +34,11 @@ import org.springframework.context.ConfigurableApplicationContext
  */
 class ProfilingGrailsApplicationPostProcessor extends GrailsApplicationPostProcessor implements BeanPostProcessor {
 
-
     long startTime
 
     ProfilingGrailsApplicationPostProcessor(GrailsApplicationLifeCycle lifeCycle, ApplicationContext applicationContext, Class... classes) {
         super(lifeCycle, applicationContext, classes)
-        ((ConfigurableApplicationContext)applicationContext).beanFactory.addBeanPostProcessor(this)
+        ((ConfigurableApplicationContext) applicationContext).beanFactory.addBeanPostProcessor(this)
     }
 
     @Override
@@ -51,8 +50,8 @@ class ProfilingGrailsApplicationPostProcessor extends GrailsApplicationPostProce
     @Override
     Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         def totalTime = System.currentTimeMillis() - startTime
-        if(totalTime > 10) {
-            println "Creating bean $beanName of type ${bean.getClass()} took ${totalTime}ms"
+        if (totalTime > 10) {
+            println("Creating bean $beanName of type ${bean.getClass()} took ${totalTime}ms")
         }
         return bean
     }

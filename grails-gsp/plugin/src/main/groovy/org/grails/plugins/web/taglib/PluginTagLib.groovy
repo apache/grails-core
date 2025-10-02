@@ -31,7 +31,7 @@ import grails.plugins.GrailsPluginManager
 @TagLib
 class PluginTagLib implements TagLibrary {
 
-    static String namespace = "plugin"
+    static String namespace = 'plugin'
 
     GrailsPluginManager pluginManager
 

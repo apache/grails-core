@@ -44,13 +44,13 @@ public class Hamcrest  implements Feature {
     }
 
     @Override
-    public boolean supports(ApplicationType applicationType) {
-        return true;
+    public String getCategory() {
+        return Category.TESTING;
     }
 
     @Override
-    public String getCategory() {
-        return Category.DEV_TOOLS;
+    public boolean supports(ApplicationType applicationType) {
+        return true;
     }
 
     @Override

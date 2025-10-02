@@ -33,6 +33,7 @@ gettingStarted:
   supportedJakartaEEContainers: Supported Jakarta EE Containers
   creatingArtefacts: Creating Artefacts
   generatingAnApplication: Generating an Application
+  developmentReloading: Development Reloading
 upgrading:
   title: Upgrading from the previous versions
   upgrading60x: Upgrading from Grails 6 to Grails 7
@@ -82,6 +83,14 @@ commandLine:
     gradlePlugins: Grails plugins for Gradle
 profiles:
   title: Application Profiles
+  standardProfiles:
+    title: Standard Profiles
+    webProfile: Web Profile
+    restAPIProfile: REST API Profile
+    pluginProfile: Plugin Profile
+    webPluginProfile: Web Plugin Profile
+    restAPIPluginProfile: REST API Plugin Profile
+    profileProfile: Profile Profile
   creatingProfiles: Creating Profiles
   profileInheritance: Profile Inheritance
   publishingProfiles: Publishing Profiles

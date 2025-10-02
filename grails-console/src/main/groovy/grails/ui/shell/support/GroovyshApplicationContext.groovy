@@ -18,10 +18,12 @@
  */
 package grails.ui.shell.support
 
-import grails.core.GrailsApplication
 import org.apache.groovy.groovysh.Groovysh
 import org.codehaus.groovy.tools.shell.IO
+
 import org.springframework.context.support.GenericApplicationContext
+
+import grails.core.GrailsApplication
 
 /**
  * @author Graeme Rocher
@@ -37,11 +39,11 @@ class GroovyshApplicationContext extends GenericApplicationContext {
 
     protected void startConsole() {
         Binding binding = new Binding()
-        binding.setVariable("ctx", this)
-        binding.setVariable(GrailsApplication.APPLICATION_ID, getBean(GrailsApplication.class))
+        binding.setVariable('ctx', this)
+        binding.setVariable(GrailsApplication.APPLICATION_ID, getBean(GrailsApplication))
 
         final GroovyshWebApplicationContext self = this
 
-        new Groovysh(binding, new IO()).run("")
+        new Groovysh(binding, new IO()).run('')
     }
 }

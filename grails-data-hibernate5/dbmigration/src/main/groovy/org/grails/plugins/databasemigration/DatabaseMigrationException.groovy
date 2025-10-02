@@ -21,5 +21,4 @@ package org.grails.plugins.databasemigration
 import groovy.transform.InheritConstructors
 
 @InheritConstructors
-class DatabaseMigrationException extends RuntimeException {
-}
+class DatabaseMigrationException extends RuntimeException {}

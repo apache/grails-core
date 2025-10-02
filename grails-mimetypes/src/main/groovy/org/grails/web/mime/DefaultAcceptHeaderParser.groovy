@@ -18,11 +18,13 @@
  */
 package org.grails.web.mime
 
-import grails.web.mime.AcceptHeaderParser
-import grails.web.mime.MimeType
 import groovy.transform.CompileStatic
+
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
+
+import grails.web.mime.AcceptHeaderParser
+import grails.web.mime.MimeType
 
 /**
  * Parsed the HTTP accept header into a a list of MimeType instances in the order of priority.
@@ -50,7 +52,7 @@ class DefaultAcceptHeaderParser implements AcceptHeaderParser {
         MimeType[] mimeConfig = configuredMimeTypes
         if (!mimeConfig) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug "No mime types configured, defaulting to 'text/html'"
+                LOG.debug("No mime types configured, defaulting to 'text/html'")
             }
             mimeConfig = MimeType.createDefaults()
         }
@@ -65,27 +67,27 @@ class DefaultAcceptHeaderParser implements AcceptHeaderParser {
                 List tokenWithArgs = t.split(';').toList()
                 Map<String, String> params = [:]
                 final paramsList = tokenWithArgs.size() > 1 ? tokenWithArgs[1..-1] : []
-                paramsList.each{ it ->
+                paramsList.each { it ->
                     String theString = it as String
                     def i = theString.indexOf('=')
                     if (i > -1) {
-                        params[theString[0..i-1].trim()] = theString[i+1..-1].trim()
+                        params[theString[0..i - 1].trim()] = theString[i + 1.. - 1].trim()
                     }
                 }
                 if (params) {
-                    createMimeTypeAndAddToList(tokenWithArgs[0].trim(),mimeConfig, mimes, params)
+                    createMimeTypeAndAddToList(tokenWithArgs[0].trim(), mimeConfig, mimes, params)
                 }
                 else {
-                    createMimeTypeAndAddToList(tokenWithArgs[0].trim(),mimeConfig, mimes)
+                    createMimeTypeAndAddToList(tokenWithArgs[0].trim(), mimeConfig, mimes)
                 }
             }
             else {
-                createMimeTypeAndAddToList(t.trim(),mimeConfig, mimes)
+                createMimeTypeAndAddToList(t.trim(), mimeConfig, mimes)
             }
         }
 
         if (!mimes) {
-            LOG.debug "No configured mime types found for Accept header: $header"
+            LOG.debug("No configured mime types found for Accept header: $header")
             return fallbackMimeType ? [fallbackMimeType] as MimeType[] : MimeType.createDefaults()
         }
 
@@ -121,7 +123,6 @@ class DefaultAcceptHeaderParser implements AcceptHeaderParser {
         mimes as MimeType[]
     }
 
-
     protected void createMimeTypeAndAddToList(String name, MimeType[] mimeConfig, List<MimeType> mimes, Map<String,String> params = null) {
         def mime = params ? new MimeType(name, params) : new MimeType(name)
         //First try to find the exact match for the mime type using name and version. If version is not set,  consider
@@ -130,7 +131,7 @@ class DefaultAcceptHeaderParser implements AcceptHeaderParser {
             mt.name == name && (!mime.version || mt.version == mime.version)
         }
         //Fallback: Try to find match using the name (if version match is not found).
-        foundMime = foundMime?: mimeConfig.find { MimeType mt -> mt.name == name }
+        foundMime = foundMime ?: mimeConfig.find { MimeType mt -> mt.name == name }
         if (foundMime) {
             mime.extension = foundMime.extension
             mimes << mime

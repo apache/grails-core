@@ -18,8 +18,6 @@
  */
 package org.grails.buffer;
 
-import grails.util.GrailsArrayUtils;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -33,6 +31,7 @@ import java.nio.charset.CodingErrorAction;
 import java.util.Iterator;
 import java.util.LinkedList;
 
+import grails.util.GrailsArrayUtils;
 
 /**
  * An in-memory buffer that provides OutputStream and InputStream interfaces.
@@ -47,7 +46,7 @@ public class StreamByteBuffer {
 
     private static final int DEFAULT_CHUNK_SIZE = 8192;
 
-    private LinkedList<StreamByteBufferChunk> chunks = new LinkedList<StreamByteBufferChunk>();
+    private LinkedList<StreamByteBufferChunk> chunks = new LinkedList<>();
     private StreamByteBufferChunk currentWriteChunk;
     private StreamByteBufferChunk currentReadChunk = null;
     private int chunkSize;
@@ -135,7 +134,7 @@ public class StreamByteBuffer {
                 int len = charbuffer.remaining();
                 char[] ch = charbuffer.array();
                 if (len != ch.length) {
-                    ch = (char[])GrailsArrayUtils.subarray(ch, 0, len);
+                    ch = (char[]) GrailsArrayUtils.subarray(ch, 0, len);
                 }
                 str = StringCharArrayAccessor.createString(ch);
             }
@@ -411,7 +410,7 @@ public class StreamByteBuffer {
 
         @Override
         public synchronized void reset() throws IOException {
-            if (readMode==ReadMode.RETAIN_AFTER_READING) {
+            if (readMode == ReadMode.RETAIN_AFTER_READING) {
                 StreamByteBuffer.this.reset();
             }
             else {

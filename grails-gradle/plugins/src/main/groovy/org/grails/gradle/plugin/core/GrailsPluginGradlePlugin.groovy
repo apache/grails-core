@@ -18,26 +18,26 @@
  */
 package org.grails.gradle.plugin.core
 
-import grails.util.Environment
+import javax.inject.Inject
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.ConfigurationContainer
-import org.gradle.api.artifacts.PublishArtifact
 import org.gradle.api.file.DuplicatesStrategy
-import org.gradle.api.internal.tasks.DefaultTaskDependency
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.Copy
+import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
-import org.grails.gradle.plugin.run.FindMainClassTask
-import org.grails.gradle.plugin.util.SourceSets
+
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 
-import javax.inject.Inject
+import org.grails.gradle.plugin.run.FindMainClassTask
+import org.grails.gradle.plugin.util.SourceSets
 
 /**
  * A Gradle plugin for Grails plugins
@@ -48,6 +48,8 @@ import javax.inject.Inject
  */
 @CompileStatic
 class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
+
+    public static final String PLUGIN_ID = 'org.apache.grails.gradle.grails-plugin'
 
     @Inject
     GrailsPluginGradlePlugin(ToolingModelBuilderRegistry registry) {
@@ -62,21 +64,6 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
 
         configureAstSources(project)
 
-        addGroovyCompilerScript('GrailsPlugin', project) {
-            """
-                withConfig(configuration) {
-                    inline(phase: 'CONVERSION') { source, context, classNode ->
-                        classNode.putNodeMetaData('projectVersion', '${project.version}')
-                        classNode.putNodeMetaData('projectName', '${project.name}')
-                        classNode.putNodeMetaData('isPlugin', 'true')
-                    }
-                }
-            """.stripIndent(16)
-        }.configure { Task task ->
-            task.inputs.property('version', project.provider { project.version.toString() })
-            task.inputs.property('name', project.provider { project.name })
-        }
-
         configureAssembleTask(project)
 
         configurePluginResources(project)
@@ -84,42 +71,33 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         configureJarTask(project)
 
         configureSourcesJarTask(project)
+    }
 
-        configureExplodedDirConfiguration(project)
+    @Override
+    protected Closure<String> getGroovyCompilerScript(GroovyCompile compile, Project project) {
+        def versionProvider = project.provider { project.version.toString() }
+        compile.inputs.property('version', versionProvider)
+
+        def projectNameProvider = project.provider { project.name }
+        compile.inputs.property('name', projectNameProvider)
+
+        Closure<String> parent = super.getGroovyCompilerScript(compile, project)
+        return { ->
+            """${parent?.call() ?: ''}
+
+            withConfig(configuration) {
+                inline(phase: 'CONVERSION') { source, context, classNode ->
+                    classNode.putNodeMetaData('projectVersion', '${versionProvider.get()}')
+                    classNode.putNodeMetaData('projectName', '${projectNameProvider.get()}')
+                    classNode.putNodeMetaData('isPlugin', 'true')
+                }
+            }
+            """ as String
+        }
     }
 
     protected String getDefaultProfile() {
         'web-plugin'
-    }
-
-    /**
-     * Configures an exploded configuration that can be used to build the classpath of the application from subprojects that are plugins without contructing a JAR file
-     *
-     * @param project The project instance
-     */
-    protected void configureExplodedDirConfiguration(Project project) {
-        ConfigurationContainer allConfigurations = project.configurations
-        allConfigurations.register('exploded').configure {
-            Configuration runtimeConfiguration = allConfigurations.named('runtimeClasspath').get()
-            it.extendsFrom(runtimeConfiguration)
-
-            if (Environment.isDevelopmentRun() && isExploded(project)) {
-                runtimeConfiguration.artifacts.clear()
-                // add the subproject classes as outputs
-                TaskContainer allTasks = project.tasks
-
-                GroovyCompile groovyCompile = allTasks.named('compileGroovy', GroovyCompile).get()
-                ProcessResources processResources = allTasks.named("processResources", ProcessResources).get()
-
-                runtimeConfiguration.artifacts.add(new ExplodedDir(groovyCompile.destinationDir, groovyCompile, processResources))
-                it.artifacts.add(new ExplodedDir(processResources.destinationDir, groovyCompile, processResources))
-            }
-        }
-    }
-
-    @CompileDynamic
-    private boolean isExploded(Project project) {
-        Boolean.valueOf(project.properties.getOrDefault('exploded', 'false').toString())
     }
 
     @Override
@@ -129,10 +107,11 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
 
     @CompileStatic
     protected void configureSourcesJarTask(Project project) {
-        if(!project.tasks.names.contains('sourcesJar')) {
+        if (!project.tasks.names.contains('sourcesJar')) {
+            project.logger.lifecycle('A sourcesJar task was not found, creating one.', project.name)
             project.tasks.register('sourcesJar', Jar).configure { Jar jarTask ->
                 jarTask.archiveClassifier.set('sources')
-                jarTask.from SourceSets.findMainSourceSet(project).allSource
+                jarTask.from(SourceSets.findMainSourceSet(project).allSource)
             }
         }
     }
@@ -163,8 +142,8 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         }
 
         def copyAstClasses = project.tasks.register('copyAstClasses', Copy) {
-            it.from sourceSets.ast.output
-            it.into project.layout.buildDirectory.dir("classes/groovy/main")
+            it.from(sourceSets.ast.output)
+            it.into(project.layout.buildDirectory.dir('classes/groovy/main'))
         }
 
         project.tasks.named('findMainClass', FindMainClassTask).configure {
@@ -179,7 +158,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         }
 
         taskContainer.whenTaskAdded {
-            if(it.name == 'compileWebappGroovyPages') {
+            if (it.name == 'compileWebappGroovyPages') {
                 it.configure {
                     it.dependsOn(copyAstClasses)
                 }
@@ -192,7 +171,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                 project.rootProject.logger.info('Found sources jar task')
                 sourcesJarTask.configure {
                     project.rootProject.logger.info('Including ast in sources jar')
-                    from sourceSets.ast.allSource
+                    from(sourceSets.ast.allSource)
                 }
             } else {
                 project.rootProject.logger.info('No sources jar task found')
@@ -210,9 +189,9 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
             Task groovydocTask = taskContainer.findByName('groovydoc')
             if (groovydocTask) {
                 if (taskContainer.findByName('javadocJar') == null) {
-                    taskContainer.create("javadocJar", Jar) {
+                    taskContainer.create('javadocJar', Jar) {
                         archiveClassifier.set('javadoc')
-                        from groovydocTask.outputs
+                        from(groovydocTask.outputs)
                         outputs.cacheIf { true }
                     }.dependsOn(javadocTask)
                 }
@@ -270,53 +249,29 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
 
             def processResourcesDependencies = []
 
-            processResourcesDependencies << project.task(type: Copy, "copyCommands") {
-                from "${project.projectDir}/src/main/scripts"
-                into "${processResources.destinationDir}/META-INF/commands"
+            processResourcesDependencies << project.task(type: Copy, 'copyCommands') {
+                from("${project.projectDir}/src/main/scripts")
+                into("${processResources.destinationDir}/META-INF/commands")
             }
 
-            processResourcesDependencies << project.task(type: Copy, "copyTemplates") {
-                from "${project.projectDir}/src/main/templates"
-                into "${processResources.destinationDir}/META-INF/templates"
+            processResourcesDependencies << project.task(type: Copy, 'copyTemplates') {
+                from("${project.projectDir}/src/main/templates")
+                into("${processResources.destinationDir}/META-INF/templates")
             }
             processResources.setDuplicatesStrategy(DuplicatesStrategy.INCLUDE)
             processResources.dependsOn(*processResourcesDependencies)
             project.processResources {
-                exclude "spring/resources.groovy"
-                exclude "**/*.gsp"
+                exclude('spring/resources.groovy')
+                exclude('**/*.gsp')
             }
         }
     }
 
     protected void checkForConfigurationClash(Project project) {
-        File yamlConfig = new File(project.projectDir, "grails-app/conf/plugin.yml")
-        File groovyConfig = new File(project.projectDir, "grails-app/conf/plugin.groovy")
+        File yamlConfig = new File(project.projectDir, 'grails-app/conf/plugin.yml')
+        File groovyConfig = new File(project.projectDir, 'grails-app/conf/plugin.groovy')
         if (yamlConfig.exists() && groovyConfig.exists()) {
-            throw new RuntimeException("A plugin may define a plugin.yml or a plugin.groovy, but not both")
-        }
-    }
-
-    static class ExplodedDir implements PublishArtifact {
-        final String extension = ""
-        final String type = "dir"
-        final Date date = new Date()
-
-        final File file
-        final TaskDependency buildDependencies
-
-        ExplodedDir(File file, Object... tasks) {
-            this.file = file
-            this.buildDependencies = new DefaultTaskDependency().add(tasks)
-        }
-
-        @Override
-        String getName() {
-            file.name
-        }
-
-        @Override
-        String getClassifier() {
-            ""
+            throw new RuntimeException('A plugin may define a plugin.yml or a plugin.groovy, but not both')
         }
     }
 }

@@ -18,18 +18,20 @@
  */
 package org.grails.web.mapping;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+
 import grails.util.GrailsMetaClassUtils;
 import grails.util.GrailsStringUtils;
 import grails.web.mapping.LinkGenerator;
 import grails.web.mapping.UrlMapping;
 import grails.web.servlet.mvc.GrailsParameterMap;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * A link generator that uses a LRU cache to cache generated links.
@@ -79,7 +81,7 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
     }
 
     protected boolean isCacheable(Map attrs) {
-        if(attrs.get(LinkGenerator.ATTRIBUTE_PARAMS) instanceof GrailsParameterMap) {
+        if (attrs.get(LinkGenerator.ATTRIBUTE_PARAMS) instanceof GrailsParameterMap) {
             return false;
         }
         Object urlAttr = attrs.get(ATTRIBUTE_URL);
@@ -95,7 +97,7 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
 
     // Based on DGM toMapString, but with StringBuilder instead of StringBuffer
     protected void appendMapKey(StringBuilder buffer, Map<String, Object> params) {
-        if (params==null || params.isEmpty()) {
+        if (params == null || params.isEmpty()) {
             buffer.append(EMPTY_MAP_STRING);
             buffer.append(OPENING_BRACKET);
         } else {
@@ -128,12 +130,12 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
         }
         buffer.append(CLOSING_BRACKET);
     }
-    
+
     protected String getCacheKeyValueForResource(Object o) {
         StringBuilder builder = new StringBuilder(o.getClass().getName());
         builder.append("->");
         Object idValue = GrailsMetaClassUtils.invokeMethodIfExists(o, "ident", new Object[0]);
-        if(idValue != null) {
+        if (idValue != null) {
             builder.append(idValue.toString());
         } else {
             builder.append(o);
@@ -172,14 +174,14 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
     }
 
     protected String makeKey(String prefix, Map attrs) {
-        StringBuilder sb=new StringBuilder();
+        StringBuilder sb = new StringBuilder();
         sb.append(prefix);
-        if (getConfiguredServerBaseURL()==null && isAbsolute(attrs)) {
+        if (getConfiguredServerBaseURL() == null && isAbsolute(attrs)) {
             if (attrs.get(ATTRIBUTE_BASE) != null) {
                 sb.append(attrs.get(ATTRIBUTE_BASE));
             } else {
                 GrailsWebRequest webRequest = GrailsWebRequest.lookup();
-            if(webRequest != null) {
+                if (webRequest != null) {
                     sb.append(webRequest.getBaseUrl());
                 }
             }

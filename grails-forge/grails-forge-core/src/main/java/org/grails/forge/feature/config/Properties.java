@@ -43,7 +43,7 @@ public class Properties implements ConfigurationFeature {
 
     @Override
     public String getDescription() {
-        return "Creates a properties configuration file";
+        return "Use Java properties for configuration instead of YAML.";
     }
 
     @Override

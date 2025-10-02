@@ -33,7 +33,7 @@ Grails uses the convention of placing an underscore before the name of a view to
 </div>
 ----
 
-Use the xref:../../ref/Tags%20-%20GSP/render.adoc[render] tag to render this template from one of the views in `grails-app/views/book`:
+Use the link:{gspTagsRef}render.html[render] tag to render this template from one of the views in `grails-app/views/book`:
 
 [source,xml]
 ----
@@ -89,7 +89,7 @@ This can be expressed with the `tmpl` namespace as follows:
 ==== Templates in Controllers and Tag Libraries
 
 
-You can also render templates from controllers using the xref:../../../ref/Controllers/render.adoc[render] controller method. This is useful for JavaScript heavy applications where you generate small HTML or data responses to partially update the current page instead of performing new request:
+You can also render templates from controllers using the link:{controllersRef}render.html[render] controller method. This is useful for JavaScript heavy applications where you generate small HTML or data responses to partially update the current page instead of performing new request:
 
 [source,groovy]
 ----
@@ -99,7 +99,7 @@ def bookData() {
 }
 ----
 
-The link:xref:../ref/Controllers/render.adoc[render] controller method writes directly to the response, which is the most common behaviour. To instead obtain the result of template as a String you can use the xref:../ref/Tags%20-%20GSP/render.adoc[render] tag:
+The link:{controllersRef}render.html[render] controller method writes directly to the response, which is the most common behaviour. To instead obtain the result of template as a String you can use the link:{gspTagsRef}render.html[render] tag:
 
 [source,groovy]
 ----
@@ -110,4 +110,4 @@ def bookData() {
 }
 ----
 
-Notice the usage of the `g` namespace which tells Grails we want to use the xref:tags/tagsAsMethodCalls.adoc[tag as method call] instead of the xref:../../../ref/Controllers/render.adoc[render] method.
+Notice the usage of the `g` namespace which tells Grails we want to use the link:#tagsAsMethodCalls[tag as method call] instead of the link:{controllersRef}render.html[render] method.

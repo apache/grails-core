@@ -18,21 +18,23 @@
  */
 package grails.validation
 
-import grails.gorm.validation.ConstrainedProperty
-import grails.util.Holders
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
-import org.grails.datastore.gorm.support.BeforeValidateHelper
-import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
-import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
-import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
-import org.grails.validation.ConstraintEvalUtils
+
 import org.springframework.context.ApplicationContext
 import org.springframework.context.MessageSource
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
+
+import grails.gorm.validation.ConstrainedProperty
+import grails.util.Holders
+import org.grails.datastore.gorm.support.BeforeValidateHelper
+import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
+import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
+import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
+import org.grails.validation.ConstraintEvalUtils
 
 /**
  * A trait that can be applied to make any object Validateable
@@ -44,6 +46,7 @@ import org.springframework.validation.FieldError
  */
 @CompileStatic
 trait Validateable {
+
     private BeforeValidateHelper beforeValidateHelper = new BeforeValidateHelper()
     private static Map<String, Constrained> constraintsMapInternal
 
@@ -91,7 +94,7 @@ trait Validateable {
             Map<String, ConstrainedProperty> evaluatedConstraints = evaluator.evaluate(this, this.defaultNullable())
 
             Map<String, Constrained> finalConstraints = [:]
-            for(entry in evaluatedConstraints) {
+            for (entry in evaluatedConstraints) {
                 finalConstraints.put(entry.key, new ConstrainedDelegate(entry.value))
             }
 
@@ -107,7 +110,7 @@ trait Validateable {
      */
     @Generated
     boolean validate() {
-        validate null, null, null
+        validate(null, null, null)
     }
 
     /**
@@ -127,7 +130,7 @@ trait Validateable {
      */
     @Generated
     boolean validate(Map<String, Object> params) {
-        validate params, null
+        validate(params, null)
     }
 
     /**
@@ -147,7 +150,7 @@ trait Validateable {
      */
     @Generated
     boolean validate(List fieldsToValidate) {
-        validate fieldsToValidate, null, null
+        validate(fieldsToValidate, null, null)
     }
 
     /**
@@ -167,7 +170,7 @@ trait Validateable {
      */
     @Generated
     boolean validate(List fieldsToValidate, Map<String, Object> params) {
-        validate fieldsToValidate, params, null
+        validate(fieldsToValidate, params, null)
     }
 
     /**
@@ -202,11 +205,11 @@ trait Validateable {
             Errors originalErrors = getErrors()
             for (originalError in originalErrors.allErrors) {
                 if (originalError instanceof FieldError) {
-                    if (originalErrors.getFieldError(((FieldError)originalError).field)?.bindingFailure) {
-                        localErrors.addError originalError
+                    if (originalErrors.getFieldError(((FieldError) originalError).field)?.bindingFailure) {
+                        localErrors.addError(originalError)
                     }
                 } else {
-                    localErrors.addError originalError
+                    localErrors.addError(originalError)
                 }
             }
             for (prop in constraints.values()) {
@@ -237,7 +240,7 @@ trait Validateable {
                     ConstraintEvalUtils.getDefaultConstraints(Holders.grailsApplication.config) : Collections.<String, Object>emptyMap()
             return new DefaultConstraintEvaluator(
                     new DefaultConstraintRegistry(messageSource),
-                    new KeyValueMappingContext(""),
+                    new KeyValueMappingContext(''),
                     defaultConstraints
             )
         }

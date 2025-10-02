@@ -26,6 +26,12 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails'
 
+ext {
+    pomTitle = 'Grails Gradle Plugins'
+    pomDescription = 'Various bundled Gradle plugins for Grails'
+    pomMavenPublicationName = 'pluginMaven'
+}
+
 dependencies {
     implementation platform(project(':grails-gradle-bom'))
 
@@ -34,6 +40,7 @@ dependencies {
     // see: https://docs.gradle.org/current/userguide/compatibility.html#groovy
     compileOnly "org.codehaus.groovy:groovy"
 
+    implementation project(':grails-gradle-common')
     implementation project(':grails-gradle-tasks')
 
     // spock is leaking from the grails-gradle-bom through grails-gradle-model
@@ -41,7 +48,7 @@ dependencies {
         exclude group: 'org.spockframework'
     }
 
-    implementation 'io.github.gradle-nexus:publish-plugin'
+    implementation "${gradleBomDependencies['grails-publish-plugin']}"
     implementation 'org.springframework.boot:spring-boot-gradle-plugin'
     implementation 'org.springframework.boot:spring-boot-loader-tools'
     implementation 'io.spring.gradle:dependency-management-plugin'
@@ -54,12 +61,6 @@ gradlePlugin {
             description = 'The main Grails gradle plugin implementation'
             id = 'org.apache.grails.gradle.grails-app'
             implementationClass = 'org.grails.gradle.plugin.core.GrailsGradlePlugin'
-        }
-        grailsDoc {
-            displayName = 'Grails Doc Gradle Plugin'
-            description = 'Adds Grails doc publishing support'
-            id = 'org.apache.grails.gradle.grails-docs'
-            implementationClass = 'org.grails.gradle.plugin.doc.GrailsDocGradlePlugin'
         }
         grailsGsp {
             displayName = 'Grails GSP Gradle Plugin'
@@ -97,17 +98,17 @@ gradlePlugin {
             id = 'org.apache.grails.gradle.grails-web'
             implementationClass = 'org.grails.gradle.plugin.web.GrailsWebGradlePlugin'
         }
-        grailsPublish {
-            displayName = 'Grails Publish Gradle Plugin'
-            description = 'A plugin to assist in publishing Grails related artifacts'
-            id = 'org.apache.grails.gradle.grails-publish'
-            implementationClass = 'org.grails.gradle.plugin.publishing.GrailsPublishGradlePlugin'
-        }
         grailsProfilePublish {
             displayName = 'Grails Profile Publish Plugin'
             description = 'A plugin for publishing profiles'
             id = 'org.apache.grails.gradle.grails-publish-profile'
             implementationClass = 'org.grails.gradle.plugin.profiles.GrailsProfilePublishGradlePlugin'
+        }
+        grailsExploded {
+            displayName = 'Grails Exploded Plugin'
+            description = 'A plugin that configures a Grails Plugin so that its classes and resources are exploded when running bootRun from a dependent Application'
+            id = 'org.apache.grails.gradle.grails-exploded'
+            implementationClass = 'org.grails.gradle.plugin.exploded.GrailsExplodedPlugin'
         }
     }
 }
@@ -118,73 +119,10 @@ tasks.withType(Copy) {
     }
 }
 
-publishing {
-    if (!isReleaseVersion) {
-        repositories {
-            maven {
-                credentials {
-                    username = System.getenv('MAVEN_PUBLISH_USERNAME')
-                    password = System.getenv('MAVEN_PUBLISH_PASSWORD')
-                }
-                url = System.getenv('MAVEN_PUBLISH_URL') ?: 'https://repository.apache.org/content/repositories/snapshots'
-            }
-        }
-    }
-
-    // used for e2e testing
-    // publishAllPublicationsToTestCaseMavenRepoRepository
-    repositories {
-        maven {
-            name = 'TestCaseMavenRepo'
-            url = rootProject.layout.projectDirectory.dir('../build/local-maven')
-        }
-    }
-
-    publications {
-        pluginMaven(MavenPublication) {
-            pom {
-                name = 'Grails Gradle Plugin'
-                description = 'A Gradle plugin for Grails which provides a bunch of useful plugins'
-
-                url = 'https://github.com/apache/grails-core'
-
-                licenses {
-                    license {
-                        name = 'The Apache Software License, Version 2.0'
-                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-                        distribution = 'repo'
-                    }
-                }
-
-                scm {
-                    url = 'scm:git@github.com:apache/grails-core.git'
-                    connection = 'scm:git@github.com:apache/grails-core.git'
-                    developerConnection = 'scm:git@github.com:apache/grails-core.git'
-                }
-
-                developers {
-                    developer {
-                        id = 'graemerocher'
-                        name = 'Graeme Rocher'
-                    }
-                    developer {
-                        id = 'jeffscottbrown'
-                        name = 'Jeff Brown'
-                    }
-                    developer {
-                        id = 'puneetbehl'
-                        name = 'Puneet Behl'
-                    }
-                }
-            }
-        }
-    }
-}
-
 apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/e2eTest.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/checksum-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/signing-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('../gradle/sbom-config.gradle')
 }

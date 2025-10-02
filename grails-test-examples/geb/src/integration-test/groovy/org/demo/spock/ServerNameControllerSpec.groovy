@@ -19,12 +19,14 @@
 
 package org.demo.spock
 
+import org.demo.spock.pages.ServerNamePage
+
 import grails.plugin.geb.ContainerGebConfiguration
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 
 /**
- * See https://docs.grails.org/latest/guide/testing.html#functionalTesting and https://www.gebish.org/manual/current/
+ * See https://docs.grails.org/latest/guide/testing.html#functionalTesting and https://groovy.apache.org/geb/manual/current/
  * for more instructions on how to write functional tests with Grails and Geb.
  */
 @Integration
@@ -33,7 +35,7 @@ class ServerNameControllerSpec extends ContainerGebSpec {
 
     void 'should show the right server name when visiting /serverName'() {
         when: 'visiting the server name controller'
-        go('/serverName')
+        to(ServerNamePage)
 
         then: 'the emitted hostname is correct'
         $('p').text() == 'Server name: testing.example.com'

@@ -20,6 +20,7 @@ package org.grails.cli.boot
 
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
+
 import org.springframework.boot.cli.command.CommandFactory
 import org.springframework.boot.cli.command.CommandRunner
 
@@ -33,7 +34,7 @@ import org.springframework.boot.cli.command.CommandRunner
 @CompileStatic
 class SpringInvoker {
 
-    CommandRunner runner = new CommandRunner("spring");
+    CommandRunner runner = new CommandRunner('spring')
 
     private SpringInvoker() {
         addServiceLoaderCommands(runner)
@@ -41,18 +42,18 @@ class SpringInvoker {
 
     private static void addServiceLoaderCommands(CommandRunner runner) {
         ServiceLoader<CommandFactory> factories = ServiceLoader.load(
-                CommandFactory.class, Thread.currentThread().contextClassLoader)
+                CommandFactory, Thread.currentThread().contextClassLoader)
         factories.each { CommandFactory factory ->
-            runner.addCommands factory.getCommands()
+            runner.addCommands(factory.getCommands())
         }
     }
 
     @Override
     Object invokeMethod(String name, Object args) {
-        if(args instanceof Object[]) {
+        if (args instanceof Object[]) {
 
             List<String> argList = [name]
-            argList.addAll( ((Object[])args).collect() { it.toString() } )
+            argList.addAll(((Object[]) args).collect() { it.toString() })
 
             def currentThread = Thread.currentThread()
             def existing = currentThread.contextClassLoader
@@ -70,10 +71,10 @@ class SpringInvoker {
     static class Slf4jBindingAwareClassLoader extends URLClassLoader {
         @Override
         Enumeration<URL> getResources(String name) throws IOException {
-            if("org/slf4j/impl/StaticLoggerBinder.class" == name) {
+            if ('org/slf4j/impl/StaticLoggerBinder.class' == name) {
                 def resources = super.getResources(name)
-                def oneRes = (URL)resources.find() { URL url -> !url.toString().contains('slf4j-simple') }
-                if(oneRes) {
+                def oneRes = (URL) resources.find() { URL url -> !url.toString().contains('slf4j-simple') }
+                if (oneRes) {
 
                     return new Enumeration<URL>() {
                         URL current = oneRes

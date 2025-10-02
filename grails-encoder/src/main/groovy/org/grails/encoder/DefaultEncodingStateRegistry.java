@@ -18,17 +18,18 @@
  */
 package org.grails.encoder;
 
-import org.grails.encoder.impl.BasicCodecLookup;
-import org.grails.encoder.impl.NoneEncoder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.grails.encoder.impl.BasicCodecLookup;
+import org.grails.encoder.impl.NoneEncoder;
 
 /**
  * default implementation of {@link EncodingStateRegistry}
@@ -70,7 +71,7 @@ public final class DefaultEncodingStateRegistry implements EncodingStateRegistry
                     result = Collections.singleton(entry.getKey());
                 } else {
                     if (result.size() == 1) {
-                        result = new HashSet<Encoder>(result);
+                        result = new HashSet<>(result);
                     }
                     result.add(entry.getKey());
                 }
@@ -136,7 +137,7 @@ public final class DefaultEncodingStateRegistry implements EncodingStateRegistry
      * @return true, if previous encoder is already "safe", equal or equivalent
      */
     public static boolean isPreviousEncoderSafeOrEqual(Encoder encoderToApply, Encoder previousEncoder) {
-        return previousEncoder == encoderToApply || !encoderToApply.isApplyToSafelyEncoded() && previousEncoder.isSafe() && encoderToApply.isSafe()
-                || previousEncoder.getCodecIdentifier().isEquivalent(encoderToApply.getCodecIdentifier());
+        return previousEncoder == encoderToApply || !encoderToApply.isApplyToSafelyEncoded() && previousEncoder.isSafe() && encoderToApply.isSafe() ||
+                previousEncoder.getCodecIdentifier().isEquivalent(encoderToApply.getCodecIdentifier());
     }
 }

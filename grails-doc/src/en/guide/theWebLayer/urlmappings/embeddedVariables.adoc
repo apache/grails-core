@@ -30,7 +30,7 @@ static mappings = {
 }
 ----
 
-In this case by embedding a $id variable as the second token Grails will automatically map the second token into a parameter (available via the link:../ref/Controllers/params.html[params] object) called `id`. For example given the URL `/product/MacBook`, the following code will render "MacBook" to the response:
+In this case by embedding a $id variable as the second token Grails will automatically map the second token into a parameter (available via the link:{controllersRef}params.html[params] object) called `id`. For example given the URL `/product/MacBook`, the following code will render "MacBook" to the response:
 
 [source,groovy]
 ----
@@ -55,7 +55,7 @@ The above mapping would let you do things like:
 /graemerocher/2007/01/10/my_funky_blog_entry
 ----
 
-The individual tokens in the URL would again be mapped into the link:../ref/Controllers/params.html[params] object with values available for `year`, `month`, `day`, `id` and so on.
+The individual tokens in the URL would again be mapped into the link:{controllersRef}params.html[params] object with values available for `year`, `month`, `day`, `id` and so on.
 
 
 ==== Dynamic Controller and Action Names
@@ -96,7 +96,7 @@ static mappings = {
 }
 ----
 
-With this mapping all of these URLs would match with only the relevant parameters being populated in the link:../ref/Controllers/params.html[params] object:
+With this mapping all of these URLs would match with only the relevant parameters being populated in the link:{controllersRef}params.html[params] object:
 
 ----
 /graemerocher/2007/01/10/my_funky_blog_entry
@@ -140,7 +140,7 @@ You can also pass arbitrary parameters from the URL mapping into the controller 
 }
 ----
 
-This variables will be available within the link:../ref/Controllers/params.html[params] object passed to the controller.
+This variables will be available within the link:{controllersRef}params.html[params] object passed to the controller.
 
 
 ==== Dynamically Resolved Variables

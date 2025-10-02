@@ -18,8 +18,9 @@
  */
 package grails.core.support;
 
-import grails.core.GrailsApplication;
 import org.springframework.beans.factory.Aware;
+
+import grails.core.GrailsApplication;
 
 /**
  * <p>Convenience interface that can be implemented by classes that are

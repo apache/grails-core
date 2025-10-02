@@ -109,9 +109,9 @@ grailsApplication.config.getProperty("hola", String.class)
 
 ### Deprecated Classes
 
-* {apiDocs}org/grails/config/NavigableMap.html[org.grails.config.NavigableMap]
-* {apiDocs}org/grails/config/NavigableMapConfig.html[org.grails.config.NavigableMapConfig]
-* {apiDocs}org/grails/config/NavigableMapPropertySource.html[org.grails.config.NavigableMapPropertySource]
+* link:{api}org/grails/config/NavigableMap.html[org.grails.config.NavigableMap]
+* link:{api}org/grails/config/NavigableMapConfig.html[org.grails.config.NavigableMapConfig]
+* link:{api}org/grails/config/NavigableMapPropertySource.html[org.grails.config.NavigableMapPropertySource]
 
 ### Spring 5.3
 
@@ -123,7 +123,7 @@ Grails 5.1.1 updates to Spring Boot 2.6. Please check https://github.com/spring-
 
 ### Micronaut 3.2.0
 
-Grails 5.1.1 is shipped with Micronaut 3.2.0. Please check the https://docs.micronaut.io/3.2.0/guide/index.html#upgrading[Upgrading to Micronaut 3.x] if you are using a specific feature.
+Grails 5.1.1 is shipped with Micronaut 3.2.0. Please check the https://micronaut-projects.github.io/micronaut-docs-mn3/3.2.0/guide/#upgrading[Upgrading to Micronaut 3.x] if you are using a specific feature.
 
 ### Micronaut for Spring 4.0.1
 

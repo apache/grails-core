@@ -18,13 +18,14 @@
  */
 package scaffolding
 
+import groovy.transform.CompileStatic
+
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import grails.dev.commands.GrailsApplicationCommand
 import grails.plugin.scaffolding.CommandLineHelper
 import grails.plugin.scaffolding.SkipBootstrap
-import groovy.transform.CompileStatic
 import org.grails.io.support.Resource
 
 /**
@@ -44,12 +45,12 @@ class GenerateServiceCommand implements GrailsApplicationCommand, CommandLineHel
     @Override
     boolean handle() {
         if (!args) {
-            error "No domain-class specified"
+            error('No domain-class specified')
         }
         final String domainClassName = args[0]
         final Resource sourceClass = source(domainClassName)
         if (!sourceClass) {
-            error "No domain-class found for name: ${domainClassName}"
+            error("No domain-class found for name: ${domainClassName}")
         }
 
         boolean overwrite = isFlagPresent('force')

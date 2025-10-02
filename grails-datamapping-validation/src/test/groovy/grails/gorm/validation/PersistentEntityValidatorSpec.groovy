@@ -54,7 +54,7 @@ class PersistentEntityValidatorSpec extends Specification {
     }
 
     // beforeValidate on the initial save is part of the GormValidationApi doValidate() call
-    @Issue('https://github.com/grails/grails-data-mapping/issues/1102')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/1102')
     def "validation of root object does NOT trigger beforeValidate here"() {
         Author author = new Author()
         Errors errors = new ValidationErrors(author)
@@ -67,7 +67,7 @@ class PersistentEntityValidatorSpec extends Specification {
         errors.getFieldErrors('name')
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/1102')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/1102')
     def "cascading validation triggers beforeValidate callback on to-many association"() {
         Author author = new Author(name: 'Author', books: [new Book()])
         Errors errors = new ValidationErrors(author)
@@ -81,7 +81,7 @@ class PersistentEntityValidatorSpec extends Specification {
         author.books.first().name == "name"
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/1102')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/1102')
     def "cascading validation triggers beforeValidate callback on to-one association"() {
         Author author = new Author(name: 'Author', publisher: new Publisher())
         Errors errors = new ValidationErrors(author)
@@ -94,7 +94,7 @@ class PersistentEntityValidatorSpec extends Specification {
         author.publisher.name == "name"
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/1106')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/1106')
     def "validation cascades by default if association is owned or has cascade options of PERSIST or MERGE"() {
         Author author = new Author(name: 'Author', publisher: new Publisher())
         Errors errors = new ValidationErrors(author)
@@ -106,7 +106,7 @@ class PersistentEntityValidatorSpec extends Specification {
         author.publisher.validateCalled
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/1106')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/1106')
     def "toMany validation cascades when isOwningSide is true if cascadeValidate option is set to owned or default"() {
         Author author = new Author(name: 'Author', books: [new Book()], defaultBooks: [new Book()], noneBooks: [new Book()])
         Errors errors = new ValidationErrors(author)
@@ -128,7 +128,7 @@ class PersistentEntityValidatorSpec extends Specification {
         author.noneBooks.first().name == null
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/1106')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/1106')
     def "toMany validation does not cascade when cascadeValidate option is set to none"() {
         Author author = new Author(name: 'Author', noneBooks: [new Book()])
         Errors errors = new ValidationErrors(author)
@@ -142,7 +142,7 @@ class PersistentEntityValidatorSpec extends Specification {
         author.noneBooks.first().name == null
     }
 
-    @Issue('https://github.com/grails/grails-data-mapping/issues/1106')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/1106')
     def "toOne validation does not cascade if cascadeValidate option is none"() {
         Author author = new Author(name: 'Author', nonePublisher: new Publisher())
         Errors errors = new ValidationErrors(author)

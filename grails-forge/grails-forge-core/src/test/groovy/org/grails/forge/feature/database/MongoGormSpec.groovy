@@ -37,20 +37,10 @@ class MongoGormSpec extends ApplicationContextSpec implements CommandOutputFixtu
 
     void "test Mongo gorm with Embedded MongoDB features "() {
         when:
-        Features features = getFeatures(['gorm-mongodb', 'embedded-mongodb'])
+        Features features = getFeatures(['gorm-mongodb'])
 
         then:
         features.contains("gorm-mongodb")
-        features.contains("embedded-mongodb")
-    }
-
-    void "test there can only be one of either MongoDB or Neo4j feature"() {
-        when:
-        getFeatures(beanContext.getBeansOfType(GormOneOfFeature)*.name)
-
-        then:
-        def ex = thrown(IllegalArgumentException)
-        ex.message.contains("There can only be one of the following features selected")
     }
 
     void "test dependencies are present for gradle"() {
@@ -61,17 +51,6 @@ class MongoGormSpec extends ApplicationContextSpec implements CommandOutputFixtu
 
         then:
         template.contains("implementation \"org.apache.grails:grails-data-mongodb\"")
-    }
-
-    void "test gorm mongodb with embedded-mongodb feature"() {
-        when:
-        String template = new BuildBuilder(beanContext)
-                .features(["gorm-mongodb", "embedded-mongodb"])
-                .render()
-
-        then:
-        template.contains("implementation \"org.apache.grails:grails-data-mongodb\"")
-        template.contains("testRuntimeOnly \"org.grails.plugins:embedded-mongodb:2.0.1\"")
     }
 
     void "test config"() {

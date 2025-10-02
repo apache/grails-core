@@ -36,7 +36,7 @@ class UrlInputRenderer implements DomainInputRenderer {
 
     @Override
     Closure renderInput(Map defaultAttributes, DomainProperty property) {
-        defaultAttributes.type = "url"
+        defaultAttributes.type = 'url'
         return { ->
             input(defaultAttributes)
         }

@@ -161,3 +161,4 @@ jobs:
         run: >
           ./gradlew build
           -x groovydoc
+          -PskipCodeStyle

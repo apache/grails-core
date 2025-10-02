@@ -107,6 +107,11 @@ include::gettingStarted/creatingArtefacts.adoc[]
 
 include::gettingStarted/generatingAnApplication.adoc[]
 
+[[developmentReloading]]
+=== Development Reloading
+
+include::gettingStarted/developmentReloading.adoc[]
+
 [[upgrading]]
 == Upgrading from previous versions of Grails
 
@@ -195,6 +200,11 @@ include::conf/applicationClass/applicationLifeCycle.adoc[]
 
 include::conf/environments.adoc[]
 
+[[micronaut]]
+=== Micronaut
+
+include::conf/micronaut.adoc[]
+
 [[dataSource]]
 === The DataSource
 
@@ -264,6 +274,41 @@ include::commandLine/creatingCustomCommands.adoc[]
 == Application Profiles
 
 include::profiles.adoc[]
+
+[[standardProfiles]]
+=== Standard Grails Profiles
+
+include::profiles/standardProfiles.adoc[]
+
+[[webProfile]]
+==== Web Profile
+
+include::profiles/webProfile.adoc[]
+
+[[restAPIProfile]]
+==== REST API Profile
+
+include::profiles/restAPIProfile.adoc[]
+
+[[pluginProfile]]
+==== Plugin Profile
+
+include::profiles/pluginProfile.adoc[]
+
+[[webPluginProfile]]
+==== Web Plugin Profile
+
+include::profiles/webPluginProfile.adoc[]
+
+[[restAPIPluginProfile]]
+==== REST API Plugin Profile
+
+include::profiles/restAPIPluginProfile.adoc[]
+
+[[profileProfile]]
+==== Profile Profile
+
+include::profiles/profileProfile.adoc[]
 
 [[creatingProfiles]]
 === Creating Profiles

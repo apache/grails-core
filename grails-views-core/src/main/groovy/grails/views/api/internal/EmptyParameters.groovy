@@ -19,8 +19,9 @@
 
 package grails.views.api.internal
 
-import grails.views.api.http.Parameters
 import groovy.transform.CompileStatic
+
+import grails.views.api.http.Parameters
 
 /**
  * An empty parameters implementation
@@ -30,6 +31,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class EmptyParameters implements Parameters {
+
     @Override
     Set<String> keySet() {
         return Collections.emptySet()
@@ -79,7 +81,6 @@ class EmptyParameters implements Parameters {
     Character "char"(String name, Character defaultValue) {
         return defaultValue
     }
-
 
     @Override
     Integer "int"(String name) {

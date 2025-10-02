@@ -146,7 +146,7 @@ public interface Feature extends Named, Ordered, Described {
 
     /**
      *
-     * @return Returns a link to documentation about the feature. e.g. https://grails.github.io/grails-cache/latest/guide/index.html
+     * @return Returns a link to documentation about the feature. e.g. https://apache.github.io/grails-cache/latest/guide/index.html
      */
     @Nullable
     default String getDocumentation() {

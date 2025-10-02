@@ -21,14 +21,14 @@ under the License.
 ==== Displaying Errors
 
 
-Typically if you get a validation error you redirect back to the view for rendering. Once there you need some way of displaying errors. Grails supports a rich set of tags for dealing with errors. To render the errors as a list you can use link:{gspdocs}/ref/Tags/renderErrors.html[renderErrors]:
+Typically if you get a validation error you redirect back to the view for rendering. Once there you need some way of displaying errors. Grails supports a rich set of tags for dealing with errors. To render the errors as a list you can use link:{gspTagsRef}renderErrors.html[renderErrors]:
 
 [source,xml]
 ----
 <g:renderErrors bean="${user}" />
 ----
 
-If you need more control you can use link:{gspdocs}/ref/Tags/hasErrors.html[hasErrors] and link:{gspdocs}/ref/Tags/eachError.html[eachError]:
+If you need more control you can use link:{gspTagsRef}hasErrors.html[hasErrors] and link:{gspTagsRef}eachError.html[eachError]:
 
 [source,xml]
 ----
@@ -45,7 +45,7 @@ If you need more control you can use link:{gspdocs}/ref/Tags/hasErrors.html[hasE
 ==== Highlighting Errors
 
 
-It is often useful to highlight using a red box or some indicator when a field has been incorrectly input. This can also be done with the link:{gspdocs}/ref/Tags/hasErrors.html[hasErrors] by invoking it as a method. For example:
+It is often useful to highlight using a red box or some indicator when a field has been incorrectly input. This can also be done with the link:{gspTagsRef}hasErrors.html[hasErrors] by invoking it as a method. For example:
 
 [source,xml]
 ----
@@ -60,7 +60,7 @@ This code checks if the `login` field of the `user` bean has any errors and if s
 ==== Retrieving Input Values
 
 
-Each error is actually an instance of the {springapi}org/springframework/validation/FieldError.html[FieldError] class in Spring, which retains the original input value within it. This is useful as you can use the error object to restore the value input by the user using the link:../ref/Tags/fieldValue.html[fieldValue] tag:
+Each error is actually an instance of the {springapi}org/springframework/validation/FieldError.html[FieldError] class in Spring, which retains the original input value within it. This is useful as you can use the error object to restore the value input by the user using the link:{gspTagsRef}fieldValue.html[fieldValue] tag:
 
 [source,xml]
 ----

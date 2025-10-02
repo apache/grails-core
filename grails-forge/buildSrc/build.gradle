@@ -56,6 +56,18 @@ repositories {
         content {
             includeGroupByRegex('org[.]apache[.]grails.*')
         }
+        mavenContent {
+            releasesOnly()
+        }
+    }
+    maven {
+        url = 'https://central.sonatype.com/repository/maven-snapshots'
+        content {
+            includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+        }
+        mavenContent {
+            snapshotsOnly()
+        }
     }
 }
 
@@ -64,6 +76,7 @@ configurations.configureEach {
 }
 
 dependencies {
+    implementation "org.apache.grails.gradle:grails-publish:$grailsPublishGradleVersion"
     implementation "io.micronaut.build.internal:micronaut-gradle-plugins:$micronautGradlePlugins"
     implementation "com.fizzed:rocker-compiler:$rockerVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
@@ -80,6 +93,9 @@ dependencies {
     }
     implementation "org.antlr:antlr4-runtime:$antlr4Version"
     implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:$gradleChecksumPluginVersion"
+    implementation "org.apache.ant:ant:$antVersion"
+    implementation "org.apache.grails.gradle:grails-gradle-common:$projectVersion"
+    implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${rootProperties.gradleCycloneDxPluginVersion}"
 }
 
 gradlePlugin {

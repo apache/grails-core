@@ -140,6 +140,7 @@ if [ -s diff.txt ]; then
       fi
 
   done < diff.txt
+  : > diff_purged.txt  # Ensure the file exists and is empty
   mv diff_purged.txt diff.txt
   rm -rf firstArtifact secondArtifact firstSource secondSource || true
 
@@ -149,6 +150,7 @@ if [ -s diff.txt ]; then
   echo "❌ Differences Found ❌"
   else
     echo "✅ Differences were resolved via decompilation. ✅"
+    exit 0
   fi
 else
   echo "✅ No Differences Found. ✅"

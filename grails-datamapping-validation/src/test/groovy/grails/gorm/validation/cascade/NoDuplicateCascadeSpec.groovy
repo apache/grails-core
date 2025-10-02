@@ -52,7 +52,7 @@ class NoDuplicateCascadeSpec extends Specification {
         validator = registry.getValidator(chapterEntity)
     }
 
-    @Issue("https://github.com/grails/grails-data-mapping/issues/1064")
+    @Issue("https://github.com/apache/grails-data-mapping/issues/1064")
     def "cascading validation should not validate objects more than once"() {
 
         Author a1 = new Author()

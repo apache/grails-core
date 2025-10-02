@@ -18,8 +18,6 @@
  */
 package org.grails.web.converters.configuration;
 
-import grails.util.Environment;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import grails.core.support.proxy.DefaultProxyHandler;
 import grails.core.support.proxy.ProxyHandler;
-
+import grails.util.Environment;
 import org.grails.web.converters.Converter;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
@@ -54,10 +52,11 @@ public class ChainedConverterConfiguration<C extends Converter> implements Conve
     private final boolean cacheObjectMarshallerByClass;
     private Map<Integer, ObjectMarshaller<C>> objectMarshallerForClassCache;
     private final boolean developmentMode = Environment.isDevelopmentMode();
-    private final ObjectMarshaller<C> NULL_HOLDER=new ObjectMarshaller<C>() {
+    private final ObjectMarshaller<C> NULL_HOLDER = new ObjectMarshaller<>() {
         public boolean supports(Object object) {
             return false;
         }
+
         public void marshalObject(Object object, C converter) throws ConverterException {
         }
     };
@@ -74,15 +73,15 @@ public class ChainedConverterConfiguration<C extends Converter> implements Conve
         prettyPrint = cfg.isPrettyPrint();
         cacheObjectMarshallerByClass = cfg.isCacheObjectMarshallerByClass();
         if (cacheObjectMarshallerByClass) {
-            objectMarshallerForClassCache = new ConcurrentHashMap<Integer, ObjectMarshaller<C>>();
+            objectMarshallerForClassCache = new ConcurrentHashMap<>();
         }
         circularReferenceBehaviour = cfg.getCircularReferenceBehaviour();
 
-        List<ObjectMarshaller<C>> oms = new ArrayList<ObjectMarshaller<C>>(marshallerList);
+        List<ObjectMarshaller<C>> oms = new ArrayList<>(marshallerList);
         Collections.reverse(oms);
         ChainedObjectMarshaller<C> prev = null;
         for (ObjectMarshaller<C> om : oms) {
-            prev = new ChainedObjectMarshaller<C>(om, prev);
+            prev = new ChainedObjectMarshaller<>(om, prev);
         }
         root = prev;
     }

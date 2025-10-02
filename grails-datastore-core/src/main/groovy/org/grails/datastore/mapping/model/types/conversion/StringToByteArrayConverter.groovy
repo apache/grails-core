@@ -19,6 +19,7 @@
 package org.grails.datastore.mapping.model.types.conversion
 
 import groovy.transform.CompileStatic
+
 import org.springframework.core.convert.converter.Converter
 
 /**
@@ -26,6 +27,7 @@ import org.springframework.core.convert.converter.Converter
  */
 @CompileStatic
 class StringToByteArrayConverter implements Converter<String, byte[]> {
+
     @Override
     byte[] convert(String source) {
         source.decodeBase64()

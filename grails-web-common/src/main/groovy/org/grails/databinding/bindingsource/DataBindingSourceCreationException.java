@@ -18,8 +18,6 @@
  */
 package org.grails.databinding.bindingsource;
 
-
-
 /**
  * Thrown if an unrecoverable problem occurs creating a DataBindingSource.
  *

@@ -16,20 +16,22 @@
  */
 package grails.boot.config.tools
 
-import grails.config.Settings
-import grails.io.IOUtils
+import java.lang.annotation.Annotation
+
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import org.apache.grails.common.compiler.asm.AnnotationMetadataReader
+
 import org.springframework.core.io.DefaultResourceLoader
 import org.springframework.core.io.Resource
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 import org.springframework.core.io.support.ResourcePatternResolver
+import org.springframework.core.type.classreading.SimpleMetadataReaderFactory
 import org.springframework.util.ClassUtils
 
-import java.lang.annotation.Annotation
+import grails.config.Settings
+import grails.io.IOUtils
 
 /**
  * Used to scan for classes on the classpath in the most efficient manner possible.
@@ -42,8 +44,8 @@ import java.lang.annotation.Annotation
 @Slf4j
 @CompileStatic
 class ClassPathScanner {
-    private static final List DEFAULT_IGNORED_ROOT_PACKAGES = ['com', 'org', 'net', 'co', 'java', 'javax', 'jakarta', 'groovy']
 
+    private static final List DEFAULT_IGNORED_ROOT_PACKAGES = ['com', 'org', 'net', 'co', 'java', 'javax', 'jakarta', 'groovy']
 
     /**
      * Scans for classes relative to the given class
@@ -53,7 +55,7 @@ class ClassPathScanner {
      * @return A set of classes
      */
     Set<Class> scan(Class applicationClass) {
-        return scan(applicationClass,[applicationClass.package.name])
+        return scan(applicationClass, [applicationClass.package.name])
     }
 
     /**
@@ -65,7 +67,7 @@ class ClassPathScanner {
      * @return A set of classes
      */
     Set<Class> scan(Class applicationClass, Class<? extends Annotation> annotationFilter) {
-        return scan(applicationClass,[applicationClass.package.name], annotationFilter)
+        return scan(applicationClass, [applicationClass.package.name], annotationFilter)
     }
 
     /**
@@ -76,8 +78,8 @@ class ClassPathScanner {
      *
      * @return A set of classes
      */
-    Set<Class> scan(Class applicationClass, Closure<Boolean> annotationFilter ) {
-        return scan(applicationClass,[applicationClass.package.name], annotationFilter)
+    Set<Class> scan(Class applicationClass, Closure<Boolean> annotationFilter) {
+        return scan(applicationClass, [applicationClass.package.name], annotationFilter)
     }
     /**
      * Scans for classes relative to the given class
@@ -105,7 +107,7 @@ class ClassPathScanner {
      */
     Set<Class> scan(Class applicationClass, Collection<String> packageNames, Closure<Boolean> annotationFilter = { String annotation -> annotation.startsWith('grails.') }) {
         ResourcePatternResolver resourcePatternResolver = new GrailsClasspathIgnoringResourceResolver(applicationClass)
-        return scan(applicationClass.getClassLoader(), resourcePatternResolver,packageNames, annotationFilter)
+        return scan(applicationClass.getClassLoader(), resourcePatternResolver, packageNames, annotationFilter)
     }
 
     /**
@@ -137,15 +139,15 @@ class ClassPathScanner {
                 continue
             }
 
-            if(pkg == "") {
+            if (pkg == '') {
                 // try the default package in case of a script without recursing into subpackages
-                log.warn("The application defines a Groovy source using the default package. Please move all Groovy sources into a package.")
-                String pattern = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +  "*.class"
+                log.warn('The application defines a Groovy source using the default package. Please move all Groovy sources into a package.')
+                String pattern = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + '*.class'
                 scanUsingPattern(resourcePatternResolver, pattern, classLoader, annotationFilter, classes)
             }
             else {
                 String pattern = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
-                        ClassUtils.convertClassNameToResourcePath(pkg) + Settings.CLASS_RESOURCE_PATTERN;
+                        ClassUtils.convertClassNameToResourcePath(pkg) + Settings.CLASS_RESOURCE_PATTERN
 
                 scanUsingPattern(resourcePatternResolver, pattern, classLoader, annotationFilter, classes)
             }
@@ -161,7 +163,7 @@ class ClassPathScanner {
      */
     protected boolean isExcluded(Resource res) {
         String filename = res.filename
-        return filename.contains('$') || filename.startsWith("gsp_") || filename.endsWith("_gson.class")
+        return filename.contains('$') || filename.startsWith('gsp_') || filename.endsWith('_gson.class')
     }
 
     /**
@@ -173,10 +175,12 @@ class ClassPathScanner {
 
     private void scanUsingPattern(ResourcePatternResolver resourcePatternResolver, String pattern, ClassLoader classLoader, Closure<Boolean> annotationFilter, Set<Class> classes) {
         def resources = resourcePatternResolver.getResources(pattern)
+
+        def factory = new SimpleMetadataReaderFactory(classLoader)
         for (Resource res in resources) {
             // ignore closures / inner classes
             if (!isExcluded(res)) {
-                def reader = new AnnotationMetadataReader(res, classLoader)
+                def reader = factory.getMetadataReader(res)
                 def metadata = reader.annotationMetadata
                 if (metadata.annotationTypes.any(annotationFilter)) {
                     classes << classLoader.loadClass(reader.classMetadata.className)
@@ -184,7 +188,6 @@ class ClassPathScanner {
             }
         }
     }
-
 
     @CompileStatic
     @InheritConstructors
@@ -204,7 +207,7 @@ class ClassPathScanner {
 
                 URL url = resourceUrls.nextElement()
                 // if the path is from a JAR file ignore, plugins inside JAR files will have their own mechanism for loading
-                if(!url.path.contains('jar!/grails/')) {
+                if (!url.path.contains('jar!/grails/')) {
                     result.add(convertClassLoaderURL(url))
                 }
 
@@ -236,7 +239,7 @@ class ClassPathScanner {
             this.rootResource = getURLs()[0]
             this.applicationClass = applicationClass
             String urlStr = rootResource.toString()
-            jarDeployed = urlStr.startsWith("jar:")
+            jarDeployed = urlStr.startsWith('jar:')
             try {
                 URL withoutBang = new URL("${urlStr.substring(0, urlStr.length() - 2)}/")
                 addURL(withoutBang)
@@ -248,7 +251,7 @@ class ClassPathScanner {
 
         @Override
         Enumeration<URL> getResources(String name) throws IOException {
-            if(jarDeployed && name == '') {
+            if (jarDeployed && name == '') {
                 return applicationClass.getClassLoader().getResources(name)
             }
             else {

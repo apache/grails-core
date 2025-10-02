@@ -23,6 +23,7 @@ import org.grails.forge.feature.Category;
 import org.grails.forge.feature.FeatureContext;
 import org.grails.forge.feature.OneOfFeature;
 import org.grails.forge.feature.web.GrailsWeb;
+import org.grails.forge.util.VersionInfo;
 
 public abstract class GrailsViews implements OneOfFeature {
 
@@ -49,7 +50,7 @@ public abstract class GrailsViews implements OneOfFeature {
 
     @Override
     public String getDocumentation() {
-        return "https://views.grails.org/";
+        return "https://docs.grails.org/" + VersionInfo.getDocumentationVersion() + "/guide/theWebLayer.html";
     }
 
     public GrailsWeb getGrailsWeb() {

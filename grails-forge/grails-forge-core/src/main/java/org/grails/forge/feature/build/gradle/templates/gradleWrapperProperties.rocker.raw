@@ -37,7 +37,7 @@ distributionPath=wrapper/dists
 # geb-with-webdriver-binaries is limited to Gradle 8.6
 distributionUrl=https\://services.gradle.org/distributions/gradle-8.6-bin.zip
 } else {
-distributionUrl=https\://services.gradle.org/distributions/gradle-8.14.2-bin.zip
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.14.3-bin.zip
 }
 networkTimeout=10000
 validateDistributionUrl=true

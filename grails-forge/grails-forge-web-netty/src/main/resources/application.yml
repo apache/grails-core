@@ -28,12 +28,12 @@ micronaut:
         url: https://api.github.com
 grails:
   forge:
-      redirect-url: ${GITHUB_REDIRECT_URL:'https://grails.github.io/grails-forge-ui/'}
+      redirect-url: ${GITHUB_REDIRECT_URL:'https://start.grails.org/'}
       github:
         client-id: ${GITHUB_OAUTH_APP_CLIENT_ID}
         client-secret: ${GITHUB_OAUTH_APP_CLIENT_SECRET}
         token-permissions: public_repo,read:user,workflow
-        user-agent: ${GITHUB_USER_AGENT:'https://grails.github.io/grails-forge-ui/'}
+        user-agent: ${GITHUB_USER_AGENT:'https://start.grails.org/'}
 gcp:
   http:
     client:

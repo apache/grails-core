@@ -21,7 +21,7 @@ under the License.
 ==== Add Command Line Commands
 
 
-A plugin can add new commands to the Grails 3.0 interactive shell in one of two ways. First, using the link:../ref/Command%20Line/create-script.html[create-script] you can create a code generation script which will become available to the application. The `create-script` command will create the script in the `src/main/scripts` directory:
+A plugin can add new commands to the Grails interactive shell in one of two ways. First, using the link:{commandLineRef}create-script.html[create-script] you can create a code generation script which will become available to the application. The `create-script` command will create the script in the `src/main/scripts` directory:
 
 [source,groovy]
 ----
@@ -41,7 +41,7 @@ If you want to create a new shell command that interacts with a loaded Grails ap
 $ grails create-command MyExampleCommand
 ----
 
-This will create a file called `grails-app/commands/PACKAGE_PATH/MyExampleCommand.groovy` that extends {apiDocs}grails/dev/commands/ApplicationCommand.html[ApplicationCommand]:
+This will create a file called `grails-app/commands/PACKAGE_PATH/MyExampleCommand.groovy` that extends link:{api}grails/dev/commands/ApplicationCommand.html[ApplicationCommand]:
 
 [source,groovy]
 ----
@@ -90,7 +90,7 @@ The Grails version is all lower case hyphen separated and excludes the "Command"
 
 The main difference between code generation scripts and `ApplicationCommand` instances is that the latter has full access to the Grails application state and hence can be used to perform tasks that interactive with the database, call into GORM etc.
 
-In Grails 2.x Gant scripts could be used to perform both these tasks, in Grails 3.x code generation and interacting with runtime application state has been cleanly separated.
+In Grails 2.x Gant scripts could be used to perform both these tasks, from Grails 3.x+ code generation and interacting with runtime application state has been cleanly separated.
 
 
 ==== Adding a new grails-app artifact (Controller, Tag Library, Service, etc.)

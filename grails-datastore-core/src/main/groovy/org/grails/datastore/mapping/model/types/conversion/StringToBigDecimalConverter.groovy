@@ -27,6 +27,7 @@ import org.springframework.core.convert.converter.Converter
  */
 @CompileStatic
 class StringToBigDecimalConverter implements Converter<String, BigDecimal> {
+
     BigDecimal convert(String source) {
         new BigDecimal(source)
     }

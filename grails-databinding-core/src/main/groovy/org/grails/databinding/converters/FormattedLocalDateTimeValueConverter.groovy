@@ -18,10 +18,11 @@
  */
 package org.grails.databinding.converters
 
-import grails.databinding.converters.FormattedValueConverter;
+import java.time.LocalDateTime
+
 import groovy.transform.CompileStatic
 
-import java.time.LocalDateTime
+import grails.databinding.converters.FormattedValueConverter
 
 /**
  * @author Emma Richardson
@@ -31,12 +32,12 @@ import java.time.LocalDateTime
 class FormattedLocalDateTimeValueConverter implements FormattedValueConverter {
 
     def convert(value, String format) {
-        if(value instanceof LocalDateTime) {
+        if (value instanceof LocalDateTime) {
             return value
         }
-        else if(value instanceof CharSequence) {
+        else if (value instanceof CharSequence) {
             String dateStr = value.toString()
-            if(!dateStr) {
+            if (!dateStr) {
                 return null
             }
             else {

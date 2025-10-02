@@ -18,65 +18,50 @@
  */
 package org.grails.gradle.plugin.core
 
-import grails.util.BuildSettings
-import grails.util.Environment
-import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.artifacts.dsl.DependencyHandler
+import org.gradle.api.attributes.AttributeContainer
+
+import org.grails.gradle.plugin.exploded.GrailsExplodedPlugin
 
 /**
- * Makes it easier to define Grails plugins and also makes them aware of the development environment so that they can be run inline without creating a JAR
- *
- * @author Graeme Rocher
- * @since 3.2
+ * Tracks Grails Plugins & handles prioritizing using the exploded variants for easier class reloading during development
  */
 @PackageScope
-class PluginDefiner {
-    final Project project
-    final exploded
+class PluginDefiner implements DependencyHandler, GroovyInterceptable {
 
-    PluginDefiner(Project project, boolean exploded = true) {
+    @Delegate
+    DependencyHandler target  // IDE/types; not used for the actual calls due to interception
+
+    private final Project project
+    boolean grailsRun
+
+    List<ProjectDependency> dependencies = []
+
+    PluginDefiner(Project project) {
         this.project = project
-        this.exploded = exploded
+        this.target = project.dependencies
     }
 
-    void methodMissing(String name, args) {
-        Object[] argArray = (Object[])args
+    def invokeMethod(String name, Object objArgs) {
+        def argArray = (objArgs instanceof Object[]) ? objArgs : [objArgs] as Object[]
 
-        if(!argArray) {
-            throw new MissingMethodException(name, GrailsExtension, args)
-        }
-        else {
-            if(argArray[0] instanceof Map) {
-                Map notation = (Map)argArray[0]
-                if(!notation.containsKey('group')) {
-                    notation.put('group','org.grails.plugins')
+        def methodMethod = target.metaClass.getMetaMethod(name, argArray)
+        def result = (methodMethod ? methodMethod.invoke(target, argArray) : target.invokeMethod(name, argArray))
+
+        if (result instanceof ProjectDependency) {
+            ProjectDependency dependency = (ProjectDependency) result
+            if (grailsRun) {
+                dependency.attributes { AttributeContainer ac ->
+                    ac.attribute(GrailsExplodedPlugin.EXPLODED_ATTRIBUTE, true)
                 }
             }
-            else if(argArray[0] instanceof CharSequence) {
-                String str = argArray[0].toString()
+            dependencies << dependency
+        }
 
-                if (str.startsWith(':')) {
-                    argArray[0] = "org.grails.plugins$str".toString()
-                }
-            }
-            else if(Environment.isDevelopmentRun()&& (argArray[0] instanceof ProjectDependency)) {
-                ProjectDependency pd = argArray[0]
-                project.dependencies.add(name, project.files(new File(pd.dependencyProject.projectDir, BuildSettings.BUILD_RESOURCES_PATH)))
-            }
-            project.dependencies.add(name, *argArray )
-        }
-    }
-
-    @CompileStatic
-    Dependency project(String path) {
-        if(Environment.isDevelopmentRun()) {
-            project.dependencies.project(path:path, configuration:'exploded')
-        }
-        else {
-            project.dependencies.project(path:path)
-        }
+        return result
     }
 }

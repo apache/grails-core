@@ -19,13 +19,14 @@
 
 package grails.dev.commands.template
 
-import grails.codegen.model.Model
-import grails.dev.commands.io.FileSystemInteraction
-import grails.dev.commands.io.FileSystemInteractionImpl
 import groovy.text.GStringTemplateEngine
 import groovy.text.Template
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
+import grails.codegen.model.Model
+import grails.dev.commands.io.FileSystemInteraction
+import grails.dev.commands.io.FileSystemInteractionImpl
 import org.grails.io.support.DefaultResourceLoader
 import org.grails.io.support.Resource
 import org.grails.io.support.ResourceLoader
@@ -58,7 +59,7 @@ class TemplateRendererImpl implements TemplateRenderer {
             def templateArg = namedArguments.template
             Resource template = templateArg instanceof Resource ? templateArg : template(templateArg)
             boolean overwrite = namedArguments.overwrite as Boolean ?: false
-            render template, file(namedArguments.destination), namedArguments.model ?: [:], overwrite
+            render(template, file(namedArguments.destination), namedArguments.model ?: [:], overwrite)
         }
     }
 
@@ -169,7 +170,7 @@ class TemplateRendererImpl implements TemplateRenderer {
 
                     try {
                         def templateEngine = new GStringTemplateEngine()
-                        def reader = new InputStreamReader(template.inputStream, "UTF-8")
+                        def reader = new InputStreamReader(template.inputStream, 'UTF-8')
                         try {
                             t = templateEngine.createTemplate(reader)
                         } finally {
@@ -218,11 +219,10 @@ class TemplateRendererImpl implements TemplateRenderer {
     Resource template(Object location) {
         Resource f = resource(file("src/main/templates/$location"))
         if (!f?.exists()) {
-            return resource("classpath*:META-INF/templates/" + location)
+            return resource('classpath*:META-INF/templates/' + location)
         }
         return resource(f)
     }
-
 
     protected static void writeTemplateToDestination(Template template, Map model, File destination) {
         destination.parentFile.mkdirs()

@@ -18,8 +18,15 @@
  */
 package org.grails.gradle.plugin.views.gsp
 
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+
+import javax.inject.Inject
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
 import org.gradle.api.Action
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.Directory
@@ -27,17 +34,23 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileTree
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.LocalState
+import org.gradle.api.tasks.Nested
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.compile.AbstractCompile
 import org.gradle.process.ExecOperations
 import org.gradle.process.ExecResult
 import org.gradle.process.JavaExecSpec
-import org.grails.gradle.plugin.views.ViewCompileOptions
 
-import javax.inject.Inject
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
+import org.grails.gradle.plugin.views.ViewCompileOptions
 
 /**
  * Abstract Gradle task for compiling templates, using GroovyPageForkedCompiler
@@ -83,7 +96,7 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
         this.execOperations = execOperations
         packageName = objectFactory.property(String).convention(project.name ?: project.projectDir.canonicalFile.name)
         srcDir = objectFactory.directoryProperty()
-        compileOptions = objectFactory.newInstance(ViewCompileOptions.class)
+        compileOptions = objectFactory.newInstance(ViewCompileOptions)
         serverpath = objectFactory.property(String)
         grailsConfigurationPaths = objectFactory.fileCollection()
         grailsConfigurationPaths.from(
@@ -93,7 +106,6 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
         destinationDirectory = objectFactory.directoryProperty().convention(project.layout.buildDirectory.dir('gsp-classes/main'))
     }
 
-
     @Override
     @PathSensitive(PathSensitivity.RELATIVE)
     FileTree getSource() {
@@ -102,16 +114,16 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
 
     @Override
     void setSource(Object source) {
-        if(Directory.isAssignableFrom(source.class)) {
+        if (Directory.isAssignableFrom(source.class)) {
             this.srcDir.set(source as Directory)
         }
-        else if(File.isAssignableFrom(source.class)) {
+        else if (File.isAssignableFrom(source.class)) {
             this.srcDir.set(source as File)
             if (!srcDir.getAsFile().get().isDirectory()) {
                 throw new IllegalArgumentException("The source for ${getFileExtension().toUpperCase()} compilation must be a single directory, but was $source")
             }
         }
-        else if(DirectoryProperty.isAssignableFrom(source.class)) {
+        else if (DirectoryProperty.isAssignableFrom(source.class)) {
             this.srcDir.set(source as DirectoryProperty)
         }
         else {
@@ -141,7 +153,7 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
                         javaExecSpec.setMaxHeapSize(compileOptions.forkOptions.memoryMaximumSize)
                         javaExecSpec.setMinHeapSize(compileOptions.forkOptions.memoryInitialSize)
 
-                        String configFiles = grailsConfigurationPaths.files.collect { it.canonicalPath }.join(",")
+                        String configFiles = grailsConfigurationPaths.files.collect { it.canonicalPath }.join(',')
 
                         Path path = Paths.get(tmpDirPath)
                         File tmp = Files.exists(path) ? path.toFile() : Files.createDirectories(path).toFile()

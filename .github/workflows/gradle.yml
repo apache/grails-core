@@ -17,12 +17,8 @@ name: "CI"
 on:
   push:
     branches:
-      - '[4-9]+.[0-9]+.x'
-      - '[3-9]+.[3-9]+.x'
+      - '[0-9]+.[0-9]+.x'
   pull_request:
-    branches:
-      - '[4-9]+.[0-9]+.x'
-      - '[3-9]+.[3-9]+.x'
   workflow_dispatch:
 # queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
 concurrency:
@@ -55,14 +51,19 @@ jobs:
         working-directory: 'grails-gradle'
         run: >
           ./gradlew build
-          --continue --stacktrace -PskipTests
+          --continue
+          --stacktrace
+          -PskipCodeStyle
+          -PskipTests
       - name: "🔨 Build project with tests"
         if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
         working-directory: 'grails-gradle'
         run: >
           ./gradlew build
-          --continue --stacktrace
+          --continue
+          --stacktrace
           --rerun-tasks
+          -PskipCodeStyle
   build:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: 'Build Grails-Core'
@@ -89,8 +90,11 @@ jobs:
       - name: "🔨 Build project"
         run: >
           ./gradlew build :grails-shell-cli:installDist groovydoc
-          --continue --stacktrace -PonlyCoreTests
+          --continue
           --rerun-tasks
+          --stacktrace
+          -PonlyCoreTests
+          -PskipCodeStyle
   buildForge:
     name: "Build Grails Forge"
     strategy:
@@ -117,21 +121,19 @@ jobs:
         working-directory: 'grails-forge'
         run: >
           ./gradlew build
-          --continue --stacktrace -PskipTests
+          --continue
+          --stacktrace
+          -PskipCodeStyle
+          -PskipTests
       - name: "🔨 Build project with tests"
         if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
         working-directory: 'grails-forge'
         run: >
           ./gradlew build
-          --continue --stacktrace
+          --continue
           --rerun-tasks
-      - name: "✅ Verify Forge CLI"
-        run: |
-          cd grails-forge
-          cp grails-forge-cli/build/distributions/apache-grails-forge-cli-*.zip forge-cli.zip
-          unzip forge-cli -d tmp
-          mv tmp/apache-grails-forge-cli-* tmp/forge-cli
-          ./tmp/forge-cli/bin/grails-forge-cli --version
+          --stacktrace
+          -PskipCodeStyle
       - name: "✅ Verify combined CLI"
         run: |
           cd grails-forge
@@ -173,11 +175,14 @@ jobs:
       - name: "🏃 Run Functional Tests"
         run: >
           ./gradlew bootJar check
-          --continue --stacktrace
+          --continue
+          --rerun-tasks
+          --stacktrace
+          -PgebAtCheckWaiting
           -PonlyFunctionalTests
+          -PskipCodeStyle
           -PskipHibernate5Tests
           -PskipMongodbTests
-          --rerun-tasks
   mongodbFunctional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Mongodb Functional Tests"
@@ -206,10 +211,12 @@ jobs:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: >
           ./gradlew bootJar cleanTest check
-          --continue --stacktrace
+          --continue
+          --rerun-tasks
+          --stacktrace
           -PonlyMongodbTests
           -PmongodbContainerVersion=${{ matrix.mongodb-version }}
-          --rerun-tasks
+          -PskipCodeStyle
   hibernate5Functional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Hibernate5 Functional Tests"
@@ -237,9 +244,11 @@ jobs:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: >
           ./gradlew bootJar cleanTest check
-          --continue --stacktrace
-          -PonlyHibernate5Tests
+          --continue
           --rerun-tasks
+          --stacktrace
+          -PonlyHibernate5Tests
+          -PskipCodeStyle
   publishGradle:
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [ buildGradle ]
@@ -267,7 +276,8 @@ jobs:
         working-directory: 'grails-gradle'
         run: >
           ./gradlew publish aggregateChecksums aggregatePublishedArtifacts
-          -Dorg.gradle.internal.publish.checksums.insecure=true --no-build-cache --rerun-tasks
+          --no-build-cache
+          --rerun-tasks
       - name: "📤 Upload grails-gradle checksums"
         uses: actions/upload-artifact@v4
         with:
@@ -371,7 +381,8 @@ jobs:
         working-directory: 'grails-forge'
         run: >
           ./gradlew publish aggregateChecksums aggregatePublishedArtifacts
-          -Dorg.gradle.internal.publish.checksums.insecure=true --no-build-cache --rerun-tasks
+          --no-build-cache
+          --rerun-tasks
       - name: "📤 Upload grails-forge checksums"
         uses: actions/upload-artifact@v4
         with:

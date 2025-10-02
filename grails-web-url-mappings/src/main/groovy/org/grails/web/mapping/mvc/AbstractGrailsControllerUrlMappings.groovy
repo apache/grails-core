@@ -18,19 +18,25 @@
  */
 package org.grails.web.mapping.mvc
 
+import java.util.concurrent.ConcurrentHashMap
+
+import groovy.transform.Canonical
+import groovy.transform.CompileStatic
+
+import org.springframework.http.HttpMethod
+
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
 import grails.core.GrailsControllerClass
 import grails.util.GrailsNameUtils
 import grails.web.UrlConverter
-import grails.web.mapping.*
-import groovy.transform.Canonical
-import groovy.transform.CompileStatic
+import grails.web.mapping.UrlCreator
+import grails.web.mapping.UrlMapping
+import grails.web.mapping.UrlMappingInfo
+import grails.web.mapping.UrlMappings
+import grails.web.mapping.UrlMappingsHolder
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.springframework.http.HttpMethod
-
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A {@link UrlMappingsHolder} implementation that matches URLs directly onto controller instances
@@ -50,8 +56,8 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
         this.urlMappingsHolderDelegate = urlMappingsHolderDelegate
         this.urlConverter = urlConverter
         def controllerArtefacts = grailsApplication.getArtefacts(ControllerArtefactHandler.TYPE)
-        for(GrailsClass gc in controllerArtefacts) {
-            registerController((GrailsControllerClass)gc)
+        for (GrailsClass gc in controllerArtefacts) {
+            registerController((GrailsControllerClass) gc)
         }
 
         for (Map.Entry<ControllerKey, GrailsControllerClass> entry: deferredMappings.entrySet()) {
@@ -120,30 +126,28 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
 
     @Override
     UrlMappingInfo matchStatusCode(int responseCode) {
-        return collectControllerMapping( urlMappingsHolderDelegate.matchStatusCode(responseCode) )
+        return collectControllerMapping(urlMappingsHolderDelegate.matchStatusCode(responseCode))
     }
 
     @Override
     UrlMappingInfo matchStatusCode(int responseCode, Throwable e) {
-        return collectControllerMapping( urlMappingsHolderDelegate.matchStatusCode(responseCode, e) )
+        return collectControllerMapping(urlMappingsHolderDelegate.matchStatusCode(responseCode, e))
     }
-
 
     void registerController(GrailsControllerClass controller) {
         boolean hasUrlConverter = urlConverter != null
-        if(hasUrlConverter) {
+        if (hasUrlConverter) {
             controller.registerUrlConverter(urlConverter)
         }
-        def namespace = hasUrlConverter ? urlConverter.toUrlElement( controller.namespace ) : controller.namespace
-        def plugin = hasUrlConverter ? urlConverter.toUrlElement( controller.pluginName ) : controller.pluginName
+        def namespace = hasUrlConverter ? urlConverter.toUrlElement(controller.namespace) : controller.namespace
+        def plugin = hasUrlConverter ? urlConverter.toUrlElement(controller.pluginName) : controller.pluginName
         final boolean hasNamespace = namespace != null
         final boolean hasPlugin = plugin != null
 
-        def controllerName = hasUrlConverter ? urlConverter.toUrlElement( controller.logicalPropertyName ) : controller.logicalPropertyName
+        def controllerName = hasUrlConverter ? urlConverter.toUrlElement(controller.logicalPropertyName) : controller.logicalPropertyName
         String pluginNameToRegister = hasPlugin ? GrailsNameUtils.getPropertyNameForLowerCaseHyphenSeparatedName(plugin) : null
 
         def defaultActionKey = new ControllerKey(namespace, controllerName, null, pluginNameToRegister)
-
 
         mappingsToGrailsControllerMap.put(defaultActionKey, controller)
 

@@ -78,7 +78,6 @@ public interface Settings {
      */
     String SETTING_DATASOURCES = "dataSources";
 
-
     /**
      * The data source setting
      */

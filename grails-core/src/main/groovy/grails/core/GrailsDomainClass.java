@@ -19,7 +19,6 @@
 package grails.core;
 
 import java.util.Map;
-import java.util.Set;
 
 import org.springframework.validation.Validator;
 
@@ -45,6 +44,7 @@ public interface GrailsDomainClass extends GrailsClass {
      * @return Whether to autowire
      */
     boolean isAutowire();
+
     /**
      * @param domainClass
      * @return true if the specifying domain class is on the owning side of a relationship

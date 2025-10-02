@@ -45,7 +45,7 @@ Includes JavaScript libraries and scripts as well as providing a shorthand for i
 
 If you do not include a "src" attribute but instead provide a body, the result is an inline script.
 
-If you use this tag to render inline JavaScript code, it is recommended that you use the Resources plugin's `<r:script>` tag to produce inline script that is included at the end of the body, or in the head if necessary - rather than inline. For more control use the Resources plugin's <r:script> tag directly.
+If you are doing more advanced JavaScript and asset management we recommend checking out the Asset Pipeline plugin.
 
 Attributes
 

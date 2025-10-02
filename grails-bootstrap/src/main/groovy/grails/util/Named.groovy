@@ -25,6 +25,7 @@ package grails.util
  * @since 3.0
  */
 interface Named {
+
     /**
      * @return The name of the object
      */

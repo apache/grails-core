@@ -35,15 +35,15 @@ class SimpleMapDataBindingSource implements DataBindingSource {
     }
 
     Object getPropertyValue(String propertyName) {
-        map.get propertyName
+        map.get(propertyName)
     }
 
     Object getAt(String propertyName) {
-        getPropertyValue propertyName
+        getPropertyValue(propertyName)
     }
 
     boolean containsProperty(String propertyName) {
-        map.containsKey propertyName
+        map.containsKey(propertyName)
     }
 
     boolean hasIdentifier() {

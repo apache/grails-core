@@ -17,9 +17,11 @@
  *  under the License.
  */
 package org.grails.gsp
+
+import groovy.transform.CompileStatic
+
 import grails.util.Environment
 import grails.util.GrailsMetaClassUtils
-import groovy.transform.CompileStatic
 import org.grails.taglib.TagLibraryLookup
 import org.grails.taglib.TagLibraryMetaUtils
 
@@ -31,18 +33,17 @@ class GroovyPagesMetaUtils {
     }
 
     static void registerMethodMissingForGSP(final MetaClass emc, final TagLibraryLookup gspTagLibraryLookup) {
-        if(gspTagLibraryLookup==null) return
+        if (gspTagLibraryLookup == null) return
         final boolean addMethodsToMetaClass = !Environment.isDevelopmentMode()
 
-        GroovyObject mc = (GroovyObject)emc
+        GroovyObject mc = (GroovyObject) emc
         synchronized(emc) {
-            mc.setProperty("methodMissing", { String name, Object args ->
+            mc.setProperty('methodMissing', { String name, Object args ->
                 TagLibraryMetaUtils.methodMissingForTagLib(emc, emc.getTheClass(), gspTagLibraryLookup, GroovyPage.DEFAULT_NAMESPACE, name, args, addMethodsToMetaClass)
             })
         }
         TagLibraryMetaUtils.registerTagMetaMethods(emc, gspTagLibraryLookup, GroovyPage.DEFAULT_NAMESPACE)
         TagLibraryMetaUtils.registerNamespaceMetaProperties(emc, gspTagLibraryLookup)
     }
-
 
 }

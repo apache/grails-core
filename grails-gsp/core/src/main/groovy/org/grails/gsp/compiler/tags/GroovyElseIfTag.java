@@ -24,7 +24,7 @@ public class GroovyElseIfTag extends GroovyConditionalTag {
 
     @Override
     protected void outputStartTag(String env, String test) {
-        out.print("else if(");
+        out.print("else if (");
         out.print(env);
         out.print(" && ");
         out.print(test);

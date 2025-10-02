@@ -19,9 +19,9 @@
 
 package org.apache.grails.web.layout;
 
-import grails.util.Holder;
-
 import com.opensymphony.module.sitemesh.Factory;
+
+import grails.util.Holder;
 
 /**
  * Holds a reference to the Grails Layout Factory object.
@@ -31,7 +31,7 @@ import com.opensymphony.module.sitemesh.Factory;
  */
 public class FactoryHolder {
 
-    private static Holder<Factory> holder = new Holder<Factory>("factory");
+    private static Holder<Factory> holder = new Holder<>("factory");
 
     private FactoryHolder() {
         // static only

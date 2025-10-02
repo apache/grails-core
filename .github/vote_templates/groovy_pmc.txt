@@ -1,7 +1,8 @@
 Hi Everyone,
+
 The Apache Grails community has voted to approve the release of Apache Grails ${VERSION}.
 
-As the incubation host, we now kindly request the Groovy PMC to review & approve our initial ASF release.
+As the incubation host, we now kindly request the Groovy PMC to review & approve our ASF release.
 
 Grails vote thread:
 * <VOTE THREAD LINK>
@@ -26,7 +27,7 @@ https://www.apache.org/info/verification.html
 
 Our release process, including verification steps, are documented here: https://github.com/apache/grails-core/blob/HEAD/RELEASE.md The last section of this document `Appendix: Verification from a Container` is likely relevant.  For the differing artifacts, we have compared the decompiled classes to ensure they are as we expect to meet the ASF security team's requirements.
 
-The vote for this release is open for the next 72 hours.
+The vote for this release is open for a minimum of 72 hours.
 [ ] +1 Release Apache Grails (incubating) ${VERSION}
 [ ]  0 I don't have a strong opinion about this, but I assume it's ok
 [ ] -1 Do not release Apache Grails (incubating) ${VERSION} because...

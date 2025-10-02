@@ -19,12 +19,12 @@
 package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.validation.ValidationErrors
-import org.springframework.validation.Errors
-import org.springframework.validation.annotation.Validated
 
 import jakarta.persistence.Transient
 
+import org.springframework.validation.Errors
+
+import org.grails.datastore.mapping.validation.ValidationErrors
 
 /**
  * A trait that adds GORM validation behavior to any class
@@ -61,8 +61,6 @@ trait GormValidateable {
         return this.skipValidate
     }
 
-
-
     /**
      * Validates an instance for the given arguments
      *
@@ -70,7 +68,7 @@ trait GormValidateable {
      * @return True if the instance is valid
      */
     boolean validate(Map arguments) {
-        currentGormValidationApi().validate this, arguments
+        currentGormValidationApi().validate(this, arguments)
     }
 
     /**
@@ -80,7 +78,7 @@ trait GormValidateable {
      * @return True if the instance is valid
      */
     boolean validate(List fields) {
-        currentGormValidationApi().validate this, fields
+        currentGormValidationApi().validate(this, fields)
     }
 
     /**
@@ -89,7 +87,7 @@ trait GormValidateable {
      * @return True if the instance is valid
      */
     boolean validate() {
-        currentGormValidationApi().validate this
+        currentGormValidationApi().validate(this)
     }
 
     /**
@@ -98,7 +96,7 @@ trait GormValidateable {
      */
     @Transient
     Errors getErrors() {
-        if(errors == null) {
+        if (errors == null) {
             errors = new ValidationErrors(this)
         }
         errors

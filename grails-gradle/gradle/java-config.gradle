@@ -48,7 +48,7 @@ tasks.named('sourcesJar', Jar).configure { Jar jar ->
 
 tasks.withType(GroovyCompile).configureEach {
     groovyOptions.encoding = 'UTF-8' // encoding needs to be the same since it's different across platforms
-    // Preserve method parameter names in Groovy classes for IDE parameter hints.
+    // Preserve method parameter names in Groovy/Java classes for IDE parameter hints & bean reflection metadata.
     groovyOptions.parameters = true
     options.encoding = 'UTF-8' // encoding needs to be the same since it's different across platforms
     options.fork = true
@@ -58,6 +58,11 @@ tasks.withType(GroovyCompile).configureEach {
 // Grails determines the grails version via the META-INF/MANIFEST.MF file
 // Note: we exclude attributes such as Built-By, Build-Jdk, Created-By to ensure the build is reproducible.
 tasks.withType(Jar).configureEach {
+    if (project.findProperty('skipJavaComponent')) {
+        it.enabled = false
+        return
+    }
+
     manifest.attributes(
             'Implementation-Title': 'Apache Grails',
             'Implementation-Version': projectVersion,

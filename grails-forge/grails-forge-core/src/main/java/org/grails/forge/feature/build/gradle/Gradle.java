@@ -70,7 +70,6 @@ public class Gradle implements BuildFeature {
 
         generatorContext.addBuildPlugin(GradlePlugin.builder().id("eclipse").build());
         generatorContext.addBuildPlugin(GradlePlugin.builder().id("idea").build());
-        generatorContext.addBuildPlugin(GradlePlugin.builder().id("groovy").build());
 
         BuildTool buildTool = BuildTool.DEFAULT_OPTION;
         GradleBuild build = dependencyResolver.create(generatorContext);

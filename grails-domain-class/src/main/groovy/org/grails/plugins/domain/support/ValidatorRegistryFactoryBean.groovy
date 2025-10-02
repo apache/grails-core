@@ -20,11 +20,13 @@
 package org.grails.plugins.domain.support
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.model.MappingContext
-import org.grails.datastore.mapping.validation.ValidatorRegistry
+
 import org.springframework.beans.factory.FactoryBean
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
+
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.validation.ValidatorRegistry
 
 /**
  * A factory bean for the validator registry

@@ -19,45 +19,52 @@
 
 package grails.plugin.scaffolding
 
+import groovy.transform.CompileStatic
 import grails.artefact.Artefact
 import grails.gorm.transactions.ReadOnly
 import grails.rest.RestfulController
-import grails.util.Holders
-import org.grails.datastore.gorm.GormEntityApi
+import org.grails.datastore.gorm.GormEntity
 
-@Artefact("Controller")
+@Artefact('Controller')
 @ReadOnly
-class RestfulServiceController<T> extends RestfulController<T> {
+@CompileStatic
+class RestfulServiceController<T extends GormEntity<T>> extends RestfulController<T> {
 
     RestfulServiceController(Class<T> resource, boolean readOnly) {
         super(resource, readOnly)
     }
 
-    protected def getService() {
-        Holders.grailsApplication.getMainContext().getBean(resourceName + 'Service')
+    protected GormService<T> getService() {
+        DomainServiceLocator.<T>resolve(resource)
     }
 
+    @Override
     protected T queryForResource(Serializable id) {
         getService().get(id)
     }
 
+    @Override
     protected List<T> listAllResources(Map params) {
         getService().list(params)
     }
 
+    @Override
     protected Integer countResources() {
-        getService().count()
+        getService().count(params)
     }
 
+    @Override
     protected T saveResource(T resource) {
         getService().save(resource)
     }
 
+    @Override
     protected T updateResource(T resource) {
         getService().save(resource)
     }
 
+    @Override
     protected void deleteResource(T resource) {
-        getService().delete(((GormEntityApi) resource).ident())
+        getService().delete(resource.ident())
     }
 }

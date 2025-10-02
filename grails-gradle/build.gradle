@@ -36,6 +36,24 @@ allprojects {
                 includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*SNAPSHOT')
             }
         }
+        maven {
+            url = 'https://central.sonatype.com/repository/maven-snapshots'
+            content {
+                includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+            }
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+        maven {
+            url = 'https://repository.apache.org/content/groups/staging'
+            content {
+                includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
+            }
+            mavenContent {
+                releasesOnly()
+            }
+        }
     }
 
     props.forEach { k, v -> project.ext.set(k as String, v) }
@@ -55,9 +73,6 @@ ext {
     buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
 
     isReleaseVersion = Boolean.parseBoolean(System.getenv('GRAILS_PUBLISH_RELEASE'))
-    ext.'signing.keyId' = project.findProperty('signing.keyId') ?: System.getenv('SIGNING_KEY')
-    ext.'signing.password' = project.findProperty('signing.password') ?: System.getenv('SIGNING_PASSPHRASE')
-    ext.'signing.secretKeyRingFile' = project.findProperty('signing.secretKeyRingFile') ?: "${System.properties['user.home']}${File.separator}.gnupg${File.separator}secring.gpg"
     isCiBuild = System.getenv().containsKey('CI')
     configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 3 : Runtime.runtime.availableProcessors() * 3/4 as int ?: 1)
 }

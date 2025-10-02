@@ -44,7 +44,7 @@ include::{functionalSourceDir}/demo33/src/test/groovy/demo/DemoControllerSpec.gr
 <2> The `status` property will contain the value of the response status
 <3> The `response` property will be a reference to the HTTP response object
 
-See the link:../api/grails/testing/web/controllers/ControllerUnitTest.html[`ControllerUnitTest`]
+See the link:{api}grails/testing/web/controllers/ControllerUnitTest.html[`ControllerUnitTest`]
 docs for information on all of the available properties.
 
 NOTE: In an effort to make testing controllers that render JSON views easy, a change was made that required the controller variable used in the test code to be a proxy that delegates to the real controller instance. If for some reason that causes an issue with your test, it is possible to disable the creation of a proxy by overriding a method.

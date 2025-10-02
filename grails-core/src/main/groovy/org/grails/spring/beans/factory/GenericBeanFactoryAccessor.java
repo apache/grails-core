@@ -94,7 +94,7 @@ public class GenericBeanFactoryAccessor {
      * keys and the corresponding bean instances as values
      */
     public Map<String, Object> getBeansWithAnnotation(Class<? extends Annotation> annotationType) {
-        Map<String, Object> results = new LinkedHashMap<String, Object>();
+        Map<String, Object> results = new LinkedHashMap<>();
         for (String beanName : beanFactory.getBeanNamesForType(Object.class)) {
             if (findAnnotationOnBean(beanName, annotationType) != null) {
                 results.put(beanName, beanFactory.getBean(beanName));

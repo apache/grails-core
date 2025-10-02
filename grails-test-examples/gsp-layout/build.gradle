@@ -45,7 +45,6 @@ dependencies {
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
-    runtimeOnly 'org.apache.grails:grails-i18n'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'

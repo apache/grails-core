@@ -18,12 +18,13 @@
  */
 package org.grails.core.artefact
 
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.ast.ClassNode
+
 import grails.boot.config.GrailsAutoConfiguration
 import grails.core.ArtefactHandlerAdapter
 import grails.core.DefaultGrailsClass
 import grails.core.GrailsClass
-import groovy.transform.CompileStatic
-import org.codehaus.groovy.ast.ClassNode
 import org.grails.compiler.injection.GrailsASTUtils
 
 /**
@@ -36,7 +37,7 @@ import org.grails.compiler.injection.GrailsASTUtils
 class ApplicationArtefactHandler extends ArtefactHandlerAdapter {
 
     public static final ClassNode AUTO_CONFIGURATION_CLASS_NODE = new ClassNode(GrailsAutoConfiguration)
-    public static final String TYPE = "Application"
+    public static final String TYPE = 'Application'
 
     ApplicationArtefactHandler() {
         super(TYPE, GrailsClass, DefaultGrailsClass, null, false)
@@ -48,7 +49,7 @@ class ApplicationArtefactHandler extends ArtefactHandlerAdapter {
     }
 
     @Override
-    boolean isArtefactClass(@SuppressWarnings("rawtypes") Class clazz) {
+    boolean isArtefactClass(@SuppressWarnings('rawtypes') Class clazz) {
         GrailsAutoConfiguration.isAssignableFrom(clazz) && clazz.simpleName.endsWith('Application')
     }
 }

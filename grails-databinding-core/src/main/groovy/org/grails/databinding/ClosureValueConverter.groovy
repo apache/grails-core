@@ -18,8 +18,9 @@
  */
 package org.grails.databinding
 
-import grails.databinding.converters.ValueConverter;
 import groovy.transform.CompileStatic
+
+import grails.databinding.converters.ValueConverter
 
 /**
  * @author Jeff Brown
@@ -32,7 +33,7 @@ class ClosureValueConverter implements ValueConverter {
     Class targetType
 
     Object convert(value) {
-        converterClosure value
+        converterClosure(value)
     }
 
     Class<?> getTargetType() {

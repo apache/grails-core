@@ -20,16 +20,17 @@ package org.grails.datastore.mapping.model;
 
 import java.util.Collection;
 
-import org.grails.datastore.mapping.engine.EntityAccess;
-import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
-import org.grails.datastore.mapping.proxy.ProxyHandler;
-import org.grails.datastore.mapping.reflect.EntityReflector;
-import org.grails.datastore.mapping.validation.ValidatorRegistry;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.converter.ConverterRegistry;
-import org.grails.datastore.mapping.proxy.ProxyFactory;
 import org.springframework.validation.Validator;
+
+import org.grails.datastore.mapping.engine.EntityAccess;
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
+import org.grails.datastore.mapping.proxy.ProxyFactory;
+import org.grails.datastore.mapping.proxy.ProxyHandler;
+import org.grails.datastore.mapping.reflect.EntityReflector;
+import org.grails.datastore.mapping.validation.ValidatorRegistry;
 
 /**
  * <p>Defines the overall context including all known
@@ -76,6 +77,7 @@ public interface MappingContext {
      * @return True if it is
      */
     boolean isInInheritanceHierarchy(PersistentEntity entity);
+
     /**
      * Obtains a child of the given root entity using the given discriminator
      * @param root The root entity
@@ -106,7 +108,8 @@ public interface MappingContext {
      * @param javaClasses The Java class representing the entity
      * @return The PersistentEntity instance
      */
-    Collection<PersistentEntity> addPersistentEntities(Class...javaClasses);
+    Collection<PersistentEntity> addPersistentEntities(Class... javaClasses);
+
     /**
      * Adds a PersistentEntity instance
      *
@@ -242,7 +245,6 @@ public interface MappingContext {
      * @return The class data
      */
     EntityReflector getEntityReflector(PersistentEntity entity);
-
 
     /**
      * Creates an {@link EntityAccess} instance for the given entity and instance of said entity

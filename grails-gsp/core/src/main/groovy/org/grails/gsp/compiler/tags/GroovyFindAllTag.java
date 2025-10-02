@@ -51,10 +51,10 @@ public class GroovyFindAllTag extends GroovySyntaxTag {
     }
 
     public void doStartTag() {
-      String in = attributes.get(ATTRIBUTE_IN);
-      if (GrailsStringUtils.isBlank(in)) {
-          throw new GrailsTagException("Tag [" + TAG_NAME + "] missing required attribute [" + ATTRIBUTE_IN + "]", parser.getPageName(), parser.getCurrentOutputLineNumber());
-      }
+        String in = attributes.get(ATTRIBUTE_IN);
+        if (GrailsStringUtils.isBlank(in)) {
+            throw new GrailsTagException("Tag [" + TAG_NAME + "] missing required attribute [" + ATTRIBUTE_IN + "]", parser.getPageName(), parser.getCurrentOutputLineNumber());
+        }
 
         String expr = attributes.get(ATTRIBUTE_EXPR);
         if (GrailsStringUtils.isBlank(expr)) {

@@ -18,15 +18,13 @@
  */
 package grails.test.mongodb
 
-import com.mongodb.client.MongoClient
-import grails.config.Config
 import groovy.transform.CompileStatic
-import org.grails.config.PropertySourcesConfig
-import org.grails.datastore.mapping.core.DatastoreUtils
-import org.grails.datastore.mapping.core.Session
-import org.grails.datastore.mapping.core.exceptions.ConfigurationException
-import org.grails.datastore.mapping.model.MappingContext
-import org.grails.datastore.mapping.mongo.MongoDatastore
+
+import com.mongodb.client.MongoClient
+import spock.lang.AutoCleanup
+import spock.lang.Shared
+import spock.lang.Specification
+
 import org.springframework.boot.env.PropertySourceLoader
 import org.springframework.core.env.PropertyResolver
 import org.springframework.core.env.PropertySource
@@ -35,9 +33,14 @@ import org.springframework.core.io.Resource
 import org.springframework.core.io.ResourceLoader
 import org.springframework.core.io.support.SpringFactoriesLoader
 import org.springframework.transaction.support.TransactionSynchronizationManager
-import spock.lang.AutoCleanup
-import spock.lang.Shared
-import spock.lang.Specification
+
+import grails.config.Config
+import org.grails.config.PropertySourcesConfig
+import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.mongo.MongoDatastore
 
 /**
  * Base class for MongoDB tests
@@ -75,18 +78,18 @@ abstract class MongoSpec extends Specification {
     protected List<Class> getDomainClasses() { [] }
 
     void setupSpec() {
-        List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader.class, getClass().getClassLoader());
+        List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader, getClass().getClassLoader())
         ResourceLoader resourceLoader = new DefaultResourceLoader()
 
         List<PropertySource> propertySources = []
 
-        PropertySourceLoader ymlLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains("yml") }
+        PropertySourceLoader ymlLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains('yml') }
         if (ymlLoader) {
-            propertySources.addAll(load(resourceLoader, ymlLoader, "application.yml"))
+            propertySources.addAll(load(resourceLoader, ymlLoader, 'application.yml'))
         }
-        PropertySourceLoader groovyLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains("groovy") }
+        PropertySourceLoader groovyLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains('groovy') }
         if (groovyLoader) {
-            propertySources.addAll(load(resourceLoader, groovyLoader, "application.groovy"))
+            propertySources.addAll(load(resourceLoader, groovyLoader, 'application.groovy'))
         }
 
         Map<String, Object> mapPropertySource = propertySources

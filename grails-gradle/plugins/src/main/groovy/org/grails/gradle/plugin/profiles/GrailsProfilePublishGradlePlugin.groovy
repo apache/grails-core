@@ -18,16 +18,18 @@
  */
 package org.grails.gradle.plugin.profiles
 
+import javax.inject.Inject
+
 import groovy.transform.CompileStatic
+
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.tasks.GenerateMavenPom
 import org.gradle.api.tasks.bundling.Jar
-import org.grails.gradle.plugin.publishing.GrailsPublishGradlePlugin
 
-import javax.inject.Inject
+import org.apache.grails.gradle.publish.GrailsPublishGradlePlugin
 
 /**
  * A plugin for publishing profiles
@@ -62,9 +64,11 @@ class GrailsProfilePublishGradlePlugin extends GrailsPublishGradlePlugin {
 
     @Override
     protected Map<String, String> getDefaultExtraArtifact(Project project) {
-        [source    : project.layout.buildDirectory.file('classes/profile/META-INF/grails-profile/profile.yml').get().asFile.toString(),
-         classifier: defaultClassifier,
-         extension : 'yml']
+        [
+            source: project.layout.buildDirectory.file('classes/profile/META-INF/grails-profile/profile.yml').get().asFile.toString(),
+            classifier: defaultClassifier,
+            extension: 'yml'
+        ]
     }
 
     @Override
@@ -74,6 +78,6 @@ class GrailsProfilePublishGradlePlugin extends GrailsPublishGradlePlugin {
 
     @Override
     protected void doAddArtefact(Project project, MavenPublication publication) {
-        publication.from project.components.named('java').get()
+        publication.from(project.components.named('java').get())
     }
 }

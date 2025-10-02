@@ -22,7 +22,7 @@ To create a Grails application you first need to familiarize yourself with the u
 [source,console]
 $ grails <<command name>>
 
-Run link:../ref/Command%20Line/create-app.html[create-app] to create an application:
+Run link:{commandLineRef}create-app.html[create-app] to create an application:
 
 NOTE: The `create-app` command is supported by both the Grails Shell CLI and the Grails Forge CLI.
 

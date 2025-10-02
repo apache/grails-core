@@ -19,27 +19,57 @@
 
 package org.grails.plugin.cache.compiler
 
-import grails.gorm.multitenancy.Tenants
-import grails.plugin.cache.GrailsCacheKeyGenerator
 import groovy.transform.CompileStatic
-import org.codehaus.groovy.ast.*
-import org.codehaus.groovy.ast.expr.*
+import org.codehaus.groovy.ast.AnnotationNode
+import org.codehaus.groovy.ast.ClassCodeExpressionTransformer
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.DynamicVariable
+import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.Parameter
+import org.codehaus.groovy.ast.Variable
+import org.codehaus.groovy.ast.VariableScope
+import org.codehaus.groovy.ast.expr.ArgumentListExpression
+import org.codehaus.groovy.ast.expr.ClosureExpression
+import org.codehaus.groovy.ast.expr.ConstantExpression
+import org.codehaus.groovy.ast.expr.Expression
+import org.codehaus.groovy.ast.expr.MapExpression
+import org.codehaus.groovy.ast.expr.MethodCallExpression
+import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.trait.TraitComposer
+
+import org.springframework.cache.Cache
+import org.springframework.cache.CacheManager
+
+import grails.gorm.multitenancy.Tenants
+import grails.plugin.cache.GrailsCacheKeyGenerator
 import org.grails.datastore.gorm.multitenancy.transform.TenantTransform
 import org.grails.datastore.gorm.transform.AbstractMethodDecoratingTransformation
 import org.grails.datastore.gorm.transform.AbstractTraitApplyingGormASTTransformation
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.plugin.cache.GrailsCacheManagerAware
-import org.springframework.cache.Cache
-import org.springframework.cache.CacheManager
 
-import static org.codehaus.groovy.ast.ClassHelper.*
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
-import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.*
+import static org.codehaus.groovy.ast.ClassHelper.CLOSURE_TYPE
+import static org.codehaus.groovy.ast.ClassHelper.MAP_TYPE
+import static org.codehaus.groovy.ast.ClassHelper.OBJECT_TYPE
+import static org.codehaus.groovy.ast.ClassHelper.STRING_TYPE
+import static org.codehaus.groovy.ast.ClassHelper.int_TYPE
+import static org.codehaus.groovy.ast.ClassHelper.make
+import static org.codehaus.groovy.ast.tools.GeneralUtils.args
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.notX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.param
+import static org.codehaus.groovy.ast.tools.GeneralUtils.params
+import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
+import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 
 /**
  * Abstract implementation for implementers of cache annotations
@@ -82,7 +112,7 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
 
     @Override
     protected void enhanceClassNode(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode) {
-        if(!classNode.getAllInterfaces().contains(make(GrailsCacheManagerAware))) {
+        if (!classNode.getAllInterfaces().contains(make(GrailsCacheManagerAware))) {
             AbstractTraitApplyingGormASTTransformation.weaveTraitWithGenerics(classNode, GrailsCacheManagerAware)
             if (compilationUnit != null) {
                 TraitComposer.doExtendTraits(classNode, sourceUnit, compilationUnit)
@@ -91,7 +121,7 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
     }
 
     protected VariableExpression declareAndInitializeParameterValueMap(AnnotationNode annotationNode, MethodNode methodToCache, BlockStatement codeBlock) {
-        if(annotationNode.getMember("key") instanceof ClosureExpression) {
+        if (annotationNode.getMember('key') instanceof ClosureExpression) {
             // if a key generator is specified don't do anything
             return null
         }
@@ -115,10 +145,10 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
                 codeBlock.addStatement(new ExpressionStatement(mce))
             }
 
-            if(TenantTransform.hasTenantAnnotation(methodToCache)) {
+            if (TenantTransform.hasTenantAnnotation(methodToCache)) {
                 ArgumentListExpression putArgs = args(
                         constX(GormProperties.TENANT_IDENTITY),
-                        callD(classX(Tenants), "currentId")
+                        callD(classX(Tenants), 'currentId')
                 )
                 MethodCallExpression mce = callX(parameterMapVar, 'put', putArgs)
                 mce.methodTarget = mapPutMethod
@@ -175,7 +205,6 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
         return cacheKeyVariableExpression
     }
 
-
     @Override
     protected Object getAppliedMarker() {
         return APPLIED_MARKER
@@ -227,7 +256,7 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
             //    return originalMethodCall.call()
 
             Statement ifShouldCacheMethodCallStatement = ifS(
-                    notX(callX(conditionMember, "call")),
+                    notX(callX(conditionMember, 'call')),
                     returnS(originalMethodCallExpr)
             )
             newMethodBody.addStatement(ifShouldCacheMethodCallStatement)

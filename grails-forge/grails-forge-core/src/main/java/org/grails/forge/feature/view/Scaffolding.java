@@ -51,22 +51,19 @@ public class Scaffolding implements DefaultFeature {
 
     @Override
     public String getTitle() {
-        return "Grails Scaffolding Plugin";
+        return "Scaffolding";
     }
 
     @Override
     public String getDescription() {
-        return "The Grails® framework Scaffolding plugin replicates much of the functionality from Grails 2, but uses the fields plugin instead.";
+        return "The Scaffolding Plugin simplifies generating CRUD interfaces for domain classes. " +
+               "It is useful for rapid prototyping and creates basic data management user interfaces " +
+                "with minimal manual code.";
     }
 
     @Override
     public String getDocumentation() {
-        return "https://docs.grails.org/" + VersionInfo.getGrailsVersion() + "/guide/scaffolding.html";
-    }
-
-    @Override
-    public String getThirdPartyDocumentation() {
-        return "https://github.com/gpc/fields#readme";
+        return "https://docs.grails.org/" + VersionInfo.getDocumentationVersion() + "/guide/scaffolding.html";
     }
 
     @Override

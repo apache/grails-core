@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-The xref:../ref/Servlet%20API/servletContext.adoc[servletContext] object is an instance of the Servlet API's {javaee}javax/servlet/ServletContext.html[ServletContext] class.
+The link:{servletApiRefFromRef}servletContext.html[servletContext] object is an instance of the Servlet API's {javaee}javax/servlet/ServletContext.html[ServletContext] class.
 
 
 === Examples
@@ -54,4 +54,4 @@ class BookController {
 
 The Servlet API's {javaee}javax/servlet/ServletContext.html[ServletContext] is useful for, amongst other things, storing global application attributes, reading local server resources and establishing information about the servlet container.
 
-NOTE: Grails adds additional methods to the standard Servlet API's xref:../ref/Servlet%20API/servletContext.adoc[servletContext] object. See link for details.
+NOTE: Grails adds additional methods to the standard Servlet API's link:{servletApiRefFromRef}servletContext.html[servletContext] object. See link for details.

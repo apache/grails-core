@@ -17,9 +17,9 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-As mention in the previous section, by default an interceptor will match only requests to the associated controller by convention. However you can configure the interceptor to match any request using the `match` or `matchAll` methods defined in the {apiDocs}grails/artefact/Interceptor.html[Interceptor API].
+As mention in the previous section, by default an interceptor will match only requests to the associated controller by convention. However you can configure the interceptor to match any request using the `match` or `matchAll` methods defined in the link:{api}grails/artefact/Interceptor.html[Interceptor API].
 
-The matching methods return a {apiDocs}grails/interceptors/Matcher.html[Matcher] instance which can be used to configure how the interceptor matches the request.
+The matching methods return a link:{api}grails/interceptors/Matcher.html[Matcher] instance which can be used to configure how the interceptor matches the request.
 
 For example the following interceptor will match all requests except those to the `login` controller:
 

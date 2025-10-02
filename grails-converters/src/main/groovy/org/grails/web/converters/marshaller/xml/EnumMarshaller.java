@@ -18,13 +18,13 @@
  */
 package org.grails.web.converters.marshaller.xml;
 
-import grails.converters.XML;
-
 import java.lang.reflect.Method;
 
+import org.springframework.beans.BeanUtils;
+
+import grails.converters.XML;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
-import org.springframework.beans.BeanUtils;
 
 /**
  * @author Siegfried Puchbauer

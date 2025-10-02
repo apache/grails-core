@@ -28,6 +28,7 @@ file('../gradle.properties').withInputStream {
 }
 
 ext {
+    isReproducibleBuild = System.getenv("SOURCE_DATE_EPOCH") != null
     buildInstant = java.util.Optional.ofNullable(System.getenv('SOURCE_DATE_EPOCH'))
             .map(Long::parseLong)
             .map(Instant::ofEpochSecond)
@@ -41,7 +42,7 @@ ext {
 
 allprojects {
     props.forEach { k, v ->
-        if(!project.hasProperty(k as String)) {
+        if (!project.hasProperty(k as String)) {
             project.ext.set(k as String, v)
         }
     }
@@ -62,6 +63,24 @@ allprojects {
                 includeGroupByRegex('org[.]apache[.]grails.*')
             }
         }
+        maven {
+            url = 'https://central.sonatype.com/repository/maven-snapshots'
+            content {
+                includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+            }
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+        maven {
+            url = 'https://repository.apache.org/content/groups/staging'
+            content {
+                includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
+            }
+            mavenContent {
+                releasesOnly()
+            }
+        }
     }
 
     tasks.withType(Test).configureEach { Task testTask ->
@@ -72,9 +91,18 @@ allprojects {
     }
 }
 
+subprojects {
+    configurations.configureEach {
+        resolutionStrategy {
+            def cacheHours = isCiBuild || isReproducibleBuild ? 0 : 24
+            cacheDynamicVersionsFor(cacheHours, 'hours')
+            cacheChangingModulesFor(cacheHours, 'hours')
+        }
+    }
+}
+
 apply {
     // we must apply the publish configuration first or the docs config will not work
     from layout.projectDirectory.file('gradle/publish-root-config.gradle')
     from layout.projectDirectory.file('gradle/gradle-wrapper-root-config.gradle')
-    from layout.projectDirectory.file('gradle/doc-root-config.gradle')
 }

@@ -60,7 +60,7 @@ Person p = Person.find { firstName == "Bart" }
 === Description
 
 
-The `find` method allows querying with Hibernate's query language  link:{hibernate5Guide}/manual/index.html#hql[HQL] and querying by example. The basic syntax is:
+The `find` method allows querying with Hibernate's query language  link:{hibernate5GuideFromRef}index.html#hql[HQL] and querying by example. The basic syntax is:
 
 [source,groovy]
 ----

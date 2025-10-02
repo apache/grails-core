@@ -44,7 +44,7 @@ class TwoUnidirectionalHasManySpec extends Specification {
 
 
     @Rollback
-    @Issue('https://github.com/grails/grails-core/issues/10811')
+    @Issue('https://github.com/apache/grails-core/issues/10811')
     @Ignore
     void "test two undirectional one to many references"() {
         when:
@@ -63,7 +63,7 @@ class TwoUnidirectionalHasManySpec extends Specification {
     }
 
     @Rollback
-    @Issue('https://github.com/grails/grails-core/issues/10811')
+    @Issue('https://github.com/apache/grails-core/issues/10811')
     @Ignore
     void "test two JPA undirectional one to many references"() {
 

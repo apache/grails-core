@@ -19,29 +19,29 @@
 package grails.plugin.geb
 
 import groovy.transform.CompileStatic
+
 import org.opentest4j.IncompleteExecutionException
 import org.spockframework.runtime.extension.IMethodInterceptor
 import org.spockframework.runtime.extension.IMethodInvocation
 
 /**
- * This class is a direct clone of {@link geb.spock.OnFailureReporter OnFailureReporter}, except it works for the
- * {@link grails.plugin.geb.ContainerGebSpec ContainerGebSpec}.
+ * Adapts {@link geb.spock.OnFailureReporter} for use with
+ * {@link grails.plugin.geb.ContainerGebSpec}.
  */
 @CompileStatic
 class GebOnFailureReporter implements IMethodInterceptor {
+
     void intercept(IMethodInvocation invocation) throws Throwable {
         try {
             invocation.proceed()
         } catch (IncompleteExecutionException notACauseForReporting) {
             throw notACauseForReporting
         } catch (Throwable throwable) {
-            ContainerGebSpec spec = invocation.instance as ContainerGebSpec
+            def spec = invocation.instance as ContainerGebSpec
             if (spec.testManager.reportingEnabled) {
                 try {
                     spec.testManager.reportFailure()
-                } catch (ignored) {
-                    //ignore
-                }
+                } catch (ignored) {}
             }
             throw throwable
         }

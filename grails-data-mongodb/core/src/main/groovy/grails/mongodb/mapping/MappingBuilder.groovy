@@ -20,6 +20,7 @@
 package grails.mongodb.mapping
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.mapping.config.MappingDefinition
 import org.grails.datastore.mapping.mongo.config.MongoAttribute
 import org.grails.datastore.mapping.mongo.config.MongoCollection
@@ -59,7 +60,7 @@ class MappingBuilder {
 
         @Override
         MongoCollection build() {
-            if(mapping == null) {
+            if (mapping == null) {
                 MongoCollection nc = new MongoCollection()
                 mapping = MongoCollection.configureExisting(nc, definition)
             }

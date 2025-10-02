@@ -18,16 +18,17 @@
  */
 package org.grails.plugins.web.controllers.api;
 
+import java.util.Map;
+
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
+import org.springframework.context.ApplicationContext;
+
 import grails.core.GrailsApplication;
 import grails.util.Environment;
 import grails.util.Holders;
 import grails.web.databinding.DataBindingUtils;
 import org.grails.core.exceptions.GrailsConfigurationException;
 import org.grails.datastore.mapping.model.PersistentEntity;
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
-import org.springframework.context.ApplicationContext;
-
-import java.util.Map;
 
 /**
  * Enhancements made to domain classes for data binding.
@@ -39,7 +40,6 @@ import java.util.Map;
 public class ControllersDomainBindingApi {
 
     public static final String AUTOWIRE_DOMAIN_METHOD = "autowireDomain";
-
 
     /**
      * Autowires the instance
@@ -70,7 +70,7 @@ public class ControllersDomainBindingApi {
 
     private static PersistentEntity getDomainClass(Object instance) {
         PersistentEntity domainClass = null;
-        if(!Environment.isInitializing()) {
+        if (!Environment.isInitializing()) {
             final GrailsApplication grailsApplication = Holders.findApplication();
             if (grailsApplication != null) {
                 try {
@@ -85,14 +85,14 @@ public class ControllersDomainBindingApi {
     }
 
     private static void autowire(Object instance) {
-        if(!Environment.isInitializing()) {
+        if (!Environment.isInitializing()) {
 
             GrailsApplication application = Holders.findApplication();
-            if(application != null) {
+            if (application != null) {
 
                 try {
                     PersistentEntity domainClass = application.getMappingContext().getPersistentEntity(instance.getClass().getName());
-                    if(domainClass != null) {
+                    if (domainClass != null) {
 
                         if (domainClass.getMapping().getMappedForm().isAutowire()) {
                             final ApplicationContext applicationContext = Holders.findApplicationContext();

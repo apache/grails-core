@@ -24,11 +24,12 @@ import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.springframework.web.servlet.View;
-
 import com.opensymphony.sitemesh.ContentProcessor;
 import com.opensymphony.sitemesh.webapp.SiteMeshWebAppContext;
+
+import org.springframework.web.servlet.View;
+
+import org.grails.web.servlet.mvc.GrailsWebRequest;
 
 public class GrailsLayoutView extends EmbeddedGrailsLayoutView {
 

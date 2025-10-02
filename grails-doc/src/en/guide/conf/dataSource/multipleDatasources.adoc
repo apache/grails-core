@@ -211,7 +211,7 @@ For example if the `Book` class is in the default datasource, you would register
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE hibernate-configuration PUBLIC
           '-//Hibernate/Hibernate Configuration DTD 3.0//EN'
-          'http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd'>
+          'https://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd'>
 <hibernate-configuration>
    <session-factory>
       <mapping class='org.example.Book'/>
@@ -226,7 +226,7 @@ and if the `Library` class is in the "ds2" datasource, you would register that i
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE hibernate-configuration PUBLIC
           '-//Hibernate/Hibernate Configuration DTD 3.0//EN'
-          'http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd'>
+          'https://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd'>
 <hibernate-configuration>
    <session-factory>
       <mapping class='org.example.Library'/>
@@ -274,7 +274,7 @@ grails:
       enabled: true
 ----
 
-The https://www.javaworld.com/article/2077963/open-source-tools/distributed-transactions-in-spring-with-and-without-xa.html[Best Efforts 1PC pattern] is fairly general but can fail in some circumstances that the developer must be aware of.
+The https://www.infoworld.com/article/2177690/distributed-transactions-in-spring-with-and-without-xa.html[Best Efforts 1PC pattern] is fairly general but can fail in some circumstances that the developer must be aware of.
 
 This is a non-XA pattern that involves a synchronized single-phase commit of a number of resources. Because the <<ref-orgwiki-twophasecommit-2PC,2PC>> is not used, it can never be as safe as an <<ref-orgwiki-x-open-xa-XA,XA>> transaction, but is often good enough if the participants are aware of the compromises.
 
@@ -304,4 +304,4 @@ The exclude matching is done on the name of the transaction manager bean. The tr
 
 When the Best Efforts 1PC pattern isn't suitable for handling transactions across multiple transactional resources (not only datasources), there are several options available for adding XA/2PC support to Grails applications.
 
-The link:{springdocs}/transaction.html#transaction-application-server-integration[Spring transactions documentation] contains information about integrating the JTA/XA transaction manager of different application servers. In this case, you can configure a bean with the name `transactionManager` manually in `resources.groovy` or `resources.xml` file.
+The link:{springreference}data-access/transaction.html[Spring transactions documentation] contains information about integrating the JTA/XA transaction manager of different application servers. In this case, you can configure a bean with the name `transactionManager` manually in `resources.groovy` or `resources.xml` file.

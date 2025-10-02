@@ -18,15 +18,15 @@
  */
 package grails.plugin.geb
 
-import org.testcontainers.containers.GenericContainer
-
 import java.lang.annotation.ElementType
 import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
 
+import org.testcontainers.containers.GenericContainer
+
 /**
- * Can be used to configure the protocol and hostname that the container's browser will use
+ * Can be used to configure the protocol and hostname that the container's browser will use.
  *
  * @author James Daugherty
  * @since 4.1
@@ -53,7 +53,8 @@ import java.lang.annotation.Target
     String hostName() default DEFAULT_HOSTNAME_FROM_CONTAINER
 
     /**
-     * Whether reporting should be enabled for this test. Add a `GebConfig.groovy` to customize the reporter configuration.
+     * Whether reporting should be enabled for this test.
+     * Add a `GebConfig.groovy` to customize the reporter configuration.
      */
     boolean reporting() default false
 
@@ -70,7 +71,7 @@ import java.lang.annotation.Target
 }
 
 /**
- * Inheritable version of {@link ContainerGebConfiguration}
+ * Inheritable version of {@link ContainerGebConfiguration}.
  *
  * @since 4.2
  */

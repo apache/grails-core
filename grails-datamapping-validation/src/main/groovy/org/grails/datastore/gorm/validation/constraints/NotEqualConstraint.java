@@ -19,12 +19,12 @@
 
 package org.grails.datastore.gorm.validation.constraints;
 
+import org.springframework.context.MessageSource;
+import org.springframework.validation.Errors;
 
 import grails.gorm.validation.ConstrainedProperty;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import org.grails.datastore.mapping.reflect.ClassUtils;
-import org.springframework.context.MessageSource;
-import org.springframework.validation.Errors;
 
 /**
  * Validates not equal to something.
@@ -56,7 +56,7 @@ public class NotEqualConstraint extends AbstractConstraint {
         }
 
         Class<?> propertyClass = ClassPropertyFetcher.getPropertyType(constraintOwningClass, constraintPropertyName);
-        if (!ClassUtils.isAssignableOrConvertibleFrom(constraintParameter.getClass(),propertyClass)  && propertyClass != null) {
+        if (!ClassUtils.isAssignableOrConvertibleFrom(constraintParameter.getClass(), propertyClass) && propertyClass != null) {
             throw new IllegalArgumentException("Parameter for constraint [" +
                     ConstrainedProperty.NOT_EQUAL_CONSTRAINT + "] of property [" +
                     constraintPropertyName + "] of class [" + constraintOwningClass +
@@ -64,7 +64,6 @@ public class NotEqualConstraint extends AbstractConstraint {
         }
         return constraintParameter;
     }
-
 
     /**
      * @return Returns the notEqualTo.

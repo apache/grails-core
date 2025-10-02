@@ -18,12 +18,12 @@
  */
 package grails.artefact;
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass;
-
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+
+import org.codehaus.groovy.transform.GroovyASTTransformationClass;
 
 /**
  * Similar to Groovy's @Delegate AST transform but instead assumes the first

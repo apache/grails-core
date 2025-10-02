@@ -26,28 +26,31 @@ import java.lang.reflect.Constructor;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.codehaus.groovy.control.MultipleCompilationErrorsException;
+import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
+
 import jakarta.servlet.ServletContext;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.codehaus.groovy.control.MultipleCompilationErrorsException;
-import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
-import org.grails.core.artefact.ControllerArtefactHandler;
-import grails.core.GrailsApplication;
-import grails.util.GrailsStringUtils;
-import org.grails.core.artefact.ServiceArtefactHandler;
-import org.grails.core.io.support.GrailsFactoriesLoader;
-import org.grails.core.exceptions.GrailsException;
-import org.grails.exceptions.reporting.SourceCodeAware;
-import org.grails.gsp.ResourceAwareTemplateEngine;
-import org.grails.buffer.FastStringPrintWriter;
-import org.grails.web.util.GrailsApplicationAttributes;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
+
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.context.support.WebApplicationContextUtils;
+
+import grails.core.GrailsApplication;
+import grails.util.GrailsStringUtils;
+import org.grails.buffer.FastStringPrintWriter;
+import org.grails.core.artefact.ControllerArtefactHandler;
+import org.grails.core.artefact.ServiceArtefactHandler;
+import org.grails.core.exceptions.GrailsException;
+import org.grails.core.io.support.GrailsFactoriesLoader;
+import org.grails.exceptions.reporting.SourceCodeAware;
+import org.grails.gsp.ResourceAwareTemplateEngine;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.util.GrailsApplicationAttributes;
 
 /**
  * Wraps a Grails RuntimeException and attempts to extract more relevent diagnostic messages
@@ -66,9 +69,9 @@ public class GrailsWrappedRuntimeException extends GrailsException {
     private static final Pattern PARSE_DETAILS_STEP2 = Pattern.compile("at\\s{1}(\\w+)\\$_closure\\d+\\.doCall\\(\\1:(\\d+)\\)");
     private static final Pattern PARSE_GSP_DETAILS_STEP1 = Pattern.compile("_gsp\\.run\\(((\\w+?)_.*?):(\\d+)\\)");
     public static final String URL_PREFIX = "/WEB-INF/grails-app/";
-    private static final Log LOG  = LogFactory.getLog(GrailsWrappedRuntimeException.class);
+    private static final Log LOG = LogFactory.getLog(GrailsWrappedRuntimeException.class);
     private String className = UNKNOWN;
-    private int lineNumber = - 1;
+    private int lineNumber = -1;
     private String stackTrace;
     private String[] codeSnippet = new String[0];
     private String gspFile;
@@ -101,10 +104,10 @@ public class GrailsWrappedRuntimeException extends GrailsException {
         stackTraceLines = stackTrace.split("\\n");
 
         if (cause instanceof MultipleCompilationErrorsException) {
-            MultipleCompilationErrorsException mcee = (MultipleCompilationErrorsException)cause;
+            MultipleCompilationErrorsException mcee = (MultipleCompilationErrorsException) cause;
             Object message = mcee.getErrorCollector().getErrors().iterator().next();
             if (message instanceof SyntaxErrorMessage) {
-                SyntaxErrorMessage sem = (SyntaxErrorMessage)message;
+                SyntaxErrorMessage sem = (SyntaxErrorMessage) message;
                 lineNumber = sem.getCause().getLine();
                 className = sem.getCause().getSourceLocator();
                 sem.write(pw);
@@ -119,7 +122,7 @@ public class GrailsWrappedRuntimeException extends GrailsException {
                     System.out.println(gsp.group(1) + " " + gsp.group(2) + " " + gsp.group(3));
                     className = gsp.group(1);
                     lineNumber = Integer.parseInt(gsp.group(3));
-                    gspFile = URL_PREFIX + "views/" + gsp.group(2)  + '/' + className;
+                    gspFile = URL_PREFIX + "views/" + gsp.group(2) + '/' + className;
                 }
                 else {
                     if (m1.find()) {
@@ -220,14 +223,14 @@ public class GrailsWrappedRuntimeException extends GrailsException {
                         if ((lineNumber > 0 && currentLineNumber == lineNumber - 1) ||
                                 (currentLineNumber == lineNumber)) {
                             buf.append(currentLineNumber)
-                               .append(": ")
-                               .append(currentLine)
-                               .append("\n");
+                                .append(": ")
+                                .append(currentLine)
+                                .append("\n");
                         }
                         else if (currentLineNumber == lineNumber + 1) {
                             buf.append(currentLineNumber)
-                               .append(": ")
-                               .append(currentLine);
+                                .append(": ")
+                                .append(currentLine);
                             break;
                         }
                         currentLine = reader.readLine();

@@ -54,13 +54,6 @@ configurations.configureEach {
     }
 }
 
-// work around for parallel builds due to https://github.com/wondrify/asset-pipeline/issues/177
-if ('assetCompile' in tasks.names) {
-    tasks.named('assetCompile').configure { Task task ->
-        task.outputs.dir rootProject.layout.buildDirectory.dir('asset-serialize')
-    }
-}
-
 List<String> debugArguments = [
         '-Xmx2g', '-Xdebug', '-Xnoagent', '-Djava.compiler=NONE',
         '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
@@ -119,6 +112,11 @@ tasks.withType(Test).configureEach { Test task ->
     }
     if (System.getProperty('debug.tests')) {
         task.jvmArgs += debugArguments
+    }
+
+    // Make Geb tests more resilient in slow CI environments
+    if (project.hasProperty('gebAtCheckWaiting')) {
+        systemProperty('grails.geb.atCheckWaiting.enabled', 'true')
     }
 }
 

@@ -21,7 +21,7 @@ package functionaltests
 
 class AfterInterceptor {
 
-    public AfterInterceptor() {
+    AfterInterceptor() {
         match controller: 'demo', action: 'show'
     }
 

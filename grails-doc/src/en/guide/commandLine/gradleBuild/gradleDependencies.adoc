@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Dependencies for your project are defined in the `dependencies` block. In general, you can follow the http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html[Gradle documentation on dependency management] to understand how to configure additional dependencies.
+Dependencies for your project are defined in the `dependencies` block. In general, you can follow the https://docs.gradle.org/current/userguide/dependency_management_for_java_projects.html[Gradle documentation on dependency management] to understand how to configure additional dependencies.
 
 The default dependencies for the Grails Web application can be seen below:
 
@@ -32,7 +32,6 @@ dependencies {
     implementation "org.apache.grails:grails-core"
     implementation "org.apache.grails:grails-logging"
     implementation "org.apache.grails:grails-databinding"
-    implementation "org.apache.grails:grails-i18n"
     implementation "org.apache.grails:grails-interceptors"
     implementation "org.apache.grails:grails-rest-transforms"
     implementation "org.apache.grails:grails-services"

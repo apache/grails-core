@@ -18,11 +18,11 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.mongodb.MongoEntity
 import groovy.transform.CompileStatic
+
+import grails.mongodb.MongoEntity
 import org.grails.compiler.gorm.GormEntityTraitProvider
 import org.grails.datastore.mapping.reflect.ClassUtils
-
 
 /**
  * Tells GORM to use the {@link MongoEntity} trait for Mongo entities
@@ -32,7 +32,8 @@ import org.grails.datastore.mapping.reflect.ClassUtils
  */
 @CompileStatic
 class MongoEntityTraitProvider implements GormEntityTraitProvider {
+
     final Class entityTrait = MongoEntity
 
-    final boolean available = ClassUtils.isPresent("com.mongodb.client.MongoClient")
+    final boolean available = ClassUtils.isPresent('com.mongodb.client.MongoClient')
 }

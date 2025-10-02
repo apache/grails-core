@@ -27,7 +27,7 @@ import org.grails.datastore.mapping.reflect.FieldEntityAccess;
  * @since 1.0
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
-public class EmbeddedPersistentEntity extends AbstractPersistentEntity{
+public class EmbeddedPersistentEntity extends AbstractPersistentEntity {
     public EmbeddedPersistentEntity(Class type, MappingContext ctx) {
         super(type, ctx);
     }

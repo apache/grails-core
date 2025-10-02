@@ -26,16 +26,16 @@ description( "Generates GSP views for the specified domain class" ) {
     flag name:'force', description:"Whether to overwrite existing files"
 }
 
-if(args) {
+if (args) {
     def classNames = args
-    if(args[0] == '*') {
+    if (args[0] == '*') {
         classNames = resources("file:grails-app/domain/**/*.groovy").collect { className(it) }
     }
     def viewNames = resources("file:src/main/templates/scaffolding/*.gsp")
                 .collect {
         it.filename
     }
-    if(!viewNames) {
+    if (!viewNames) {
        viewNames = resources("classpath*:META-INF/templates/scaffolding/*.gsp")
                    .collect {
             it.filename
@@ -45,7 +45,7 @@ if(args) {
     for(arg in classNames) {
         def sourceClass = source(arg)
         def overwrite = flag('force') ? true : false
-        if(sourceClass) {
+        if (sourceClass) {
             def model = model(sourceClass)
             viewNames.each {
                 render template: template('scaffolding/'+it),

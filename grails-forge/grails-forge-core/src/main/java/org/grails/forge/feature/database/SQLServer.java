@@ -43,7 +43,7 @@ public class SQLServer extends DatabaseDriverFeature {
 
     @Override
     public String getDescription() {
-        return "Adds the SQL Server driver and default config";
+        return "Add Microsoft SQL Server driver and default configuration.";
     }
 
     @Override

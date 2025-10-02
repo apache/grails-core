@@ -23,7 +23,7 @@ import grails.testing.web.taglib.TagLibUnitTest
 import spock.lang.Issue
 import grails.plugin.formfields.*
 
-@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/30')
+@Issue('https://github.com/grails/fields/issues/30')
 class EmbeddedPropertiesSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<FormFieldsTagLib> {
 
     def mockFormFieldsTemplateService = Mock(FormFieldsTemplateService)

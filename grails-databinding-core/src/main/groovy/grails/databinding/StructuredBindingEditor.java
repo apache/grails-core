@@ -18,7 +18,6 @@
  */
 package grails.databinding;
 
-
 /**
  * StructuredBindingEditors convert structured data in a Map
  * into an object.  Typically a structured editor will pull

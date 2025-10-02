@@ -18,13 +18,31 @@
  */
 package org.grails.web.gsp;
 
+import java.io.IOException;
+import java.io.Writer;
+import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import groovy.text.Template;
+import org.codehaus.groovy.runtime.InvokerHelper;
+
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.util.Assert;
+import org.springframework.util.ReflectionUtils;
+
 import grails.core.GrailsDomainClass;
 import grails.util.CacheEntry;
 import grails.util.Environment;
 import grails.util.GrailsNameUtils;
 import grails.util.GrailsStringUtils;
-import groovy.text.Template;
-import org.codehaus.groovy.runtime.InvokerHelper;
 import org.grails.buffer.CodecPrintWriter;
 import org.grails.buffer.FastStringWriter;
 import org.grails.encoder.EncodedAppenderWriterFactory;
@@ -44,22 +62,6 @@ import org.grails.taglib.encoder.WithCodecHelper;
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.util.GrailsApplicationAttributes;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.util.Assert;
-import org.springframework.util.ReflectionUtils;
-
-import java.io.IOException;
-import java.io.Writer;
-import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Service that provides the actual implementation to RenderTagLib's render tag.
@@ -75,7 +77,7 @@ import java.util.concurrent.ConcurrentMap;
 public class GroovyPagesTemplateRenderer implements InitializingBean {
     private GrailsConventionGroovyPageLocator groovyPageLocator;
     private GroovyPagesTemplateEngine groovyPagesTemplateEngine;
-    private ConcurrentMap<String,CacheEntry<Template>> templateCache = new ConcurrentHashMap<String,CacheEntry<Template>>();
+    private ConcurrentMap<String, CacheEntry<Template>> templateCache = new ConcurrentHashMap<>();
     private Object scaffoldingTemplateGenerator;
     private Map<String, Collection<String>> scaffoldedActionMap;
     private Map<String, GrailsDomainClass> controllerToScaffoldedDomainClassMap;
@@ -140,7 +142,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         final GroovyPageScriptSource scriptSource;
         if (pluginName == null) {
             scriptSource = groovyPageLocator.findTemplateInBinding(controller, templatePath, pageScope);
-        }  else {
+        } else {
             scriptSource = groovyPageLocator.findTemplateInBinding(controller, pluginName, templatePath, pageScope);
         }
 
@@ -148,7 +150,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         if (scriptSource == null) {
             cacheKey = contextPath + pluginName + uri;
         } else {
-            if(pluginName != null) {
+            if (pluginName != null) {
                 cacheKey = contextPath + pluginName + scriptSource.getURI();
             }
             else {
@@ -159,7 +161,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         return CacheEntry.getValue(templateCache, cacheKey, reloadEnabled ? GroovyPageMetaInfo.LASTMODIFIED_CHECK_INTERVAL : -1, null,
                 new Callable<CacheEntry<Template>>() {
                     public CacheEntry<Template> call() {
-                        return new CacheEntry<Template>() {
+                        return new CacheEntry<>() {
                             boolean allowCaching = cacheEnabled;
                             boolean neverExpire = false;
 
@@ -167,15 +169,15 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
                             protected boolean hasExpired(long timeout, Object cacheRequestObject) {
                                 return neverExpire ? false : (allowCaching ? super.hasExpired(timeout, cacheRequestObject) : true);
                             }
-                            
+
                             @Override
                             public boolean isInitialized() {
                                 return allowCaching ? super.isInitialized() : false;
                             }
-                            
+
                             @Override
                             public void setValue(Template val) {
-                                if(allowCaching) {
+                                if (allowCaching) {
                                     super.setValue(val);
                                 }
                             }
@@ -213,7 +215,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         Map b = new LinkedHashMap<String, Object>();
         b.put("body", body);
         if (attrs.get("model") instanceof Map) {
-            b.putAll((Map)attrs.get("model"));
+            b.putAll((Map) attrs.get("model"));
         }
         if (attrs.containsKey("bean")) {
             if (GrailsStringUtils.isNotBlank(var)) {
@@ -254,14 +256,14 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
     private Writer wrapWriterWithEncoder(GrailsWebRequest webRequest, Map<String, Object> attrs, Writer out) {
         Object encodeAs = attrs.get(GroovyPage.ENCODE_AS_ATTRIBUTE_NAME);
         if (encodeAs != null) {
-            Map<String, Object> codecSettings= WithCodecHelper.makeSettingsCanonical(encodeAs);
-            String codecForTaglibs = (String)codecSettings.get(OutputEncodingSettings.TAGLIB_CODEC_NAME);
+            Map<String, Object> codecSettings = WithCodecHelper.makeSettingsCanonical(encodeAs);
+            String codecForTaglibs = (String) codecSettings.get(OutputEncodingSettings.TAGLIB_CODEC_NAME);
             if (codecForTaglibs != null) {
                 Encoder encoder = WithCodecHelper.lookupEncoder(webRequest.getAttributes().getGrailsApplication(), codecForTaglibs);
                 if (out instanceof EncodedAppenderWriterFactory) {
-                    out = ((EncodedAppenderWriterFactory)out).getWriterForEncoder(encoder, webRequest.getEncodingStateRegistry());
+                    out = ((EncodedAppenderWriterFactory) out).getWriterForEncoder(encoder, webRequest.getEncodingStateRegistry());
                 } else if (encoder instanceof StreamingEncoder) {
-                    out=new StreamingEncoderWriter(out, (StreamingEncoder)encoder, webRequest.getEncodingStateRegistry());
+                    out = new StreamingEncoderWriter(out, (StreamingEncoder) encoder, webRequest.getEncodingStateRegistry());
                 } else {
                     out = new CodecPrintWriter(out, encoder, webRequest.getEncodingStateRegistry());
                 }

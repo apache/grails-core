@@ -1,7 +1,7 @@
 description: Adds LESS Transpiler Asset Pipeline to a Grails project
 build:
     plugins:
-        - asset-pipeline
+        - cloud.wondrify.asset-pipeline
 dependencies:
     - scope: build
       coords: "cloud.wondrify:asset-pipeline-gradle"

@@ -19,14 +19,16 @@
 
 package grails.plugin.json.view.test
 
+import groovy.transform.CompileStatic
+
+import org.springframework.http.HttpMethod
+
 import grails.config.Config
 import grails.plugin.json.view.api.JsonView
 import grails.util.TypeConvertingMap
 import grails.views.api.HttpView
 import grails.views.api.http.Request
 import grails.views.mvc.http.DelegatingParameters
-import groovy.transform.CompileStatic
-import org.springframework.http.HttpMethod
 
 /**
  * Allows configuring the JSON view rendering for request state
@@ -40,7 +42,7 @@ class TestRequestConfigurer implements Request {
     final JsonView jsonView
 
     String contextPath
-    String method = "GET"
+    String method = 'GET'
     String uri
     String contentType = 'application/json'
     String characterEncoding = 'UTF-8'
@@ -51,8 +53,8 @@ class TestRequestConfigurer implements Request {
 
     TestRequestConfigurer(JsonView jsonView) {
         this.jsonView = jsonView
-        if(jsonView instanceof HttpView) {
-            ((HttpView)jsonView).setRequest(this)
+        if (jsonView instanceof HttpView) {
+            ((HttpView) jsonView).setRequest(this)
         }
     }
 
@@ -71,7 +73,6 @@ class TestRequestConfigurer implements Request {
     void setConfig(Config config) {
         jsonView.setConfig(config)
     }
-
 
     TestRequestConfigurer actionName(String actionName) {
         this.actionName = actionName
@@ -109,7 +110,7 @@ class TestRequestConfigurer implements Request {
     }
 
     TestRequestConfigurer params(Map parameters) {
-        this.jsonView.setParams( new DelegatingParameters(new TypeConvertingMap(parameters)))
+        this.jsonView.setParams(new DelegatingParameters(new TypeConvertingMap(parameters)))
         return this
     }
 
@@ -126,7 +127,7 @@ class TestRequestConfigurer implements Request {
     @Override
     String getHeader(String name) {
         def headerValues = headers.get(name)
-        if(headerValues) {
+        if (headerValues) {
             return headerValues.get(0)
         }
         return null

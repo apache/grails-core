@@ -31,7 +31,7 @@ Output is defined as a means for a user to view data. How this is represented is
 
 === Context
 
-Context is defined as the markup that surrounds or is rendered alongside domain properties. There are several different contexts this module defines. All contexts are rendered by the link:api/org/grails/scaffolding/markup/ContextMarkupRenderer.html[ContextMarkupRenderer].
+Context is defined as the markup that surrounds or is rendered alongside domain properties. There are several different contexts this module defines. All contexts are rendered by the link:{api}org/grails/scaffolding/markup/ContextMarkupRenderer.html[ContextMarkupRenderer].
 
 ==== List Output Context
 

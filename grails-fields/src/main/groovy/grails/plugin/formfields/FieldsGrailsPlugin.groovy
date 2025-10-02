@@ -42,8 +42,7 @@ class FieldsGrailsPlugin extends Plugin {
             formFieldsTemplateService(FormFieldsTemplateService)
             fieldsDomainPropertyFactory(DomainPropertyFactoryImpl)
             domainModelService(DomainModelServiceImpl) {
-                domainPropertyFactory:
-                ref(fieldsDomainPropertyFactory)
+                domainPropertyFactory = ref('fieldsDomainPropertyFactory')
             }
         }
     }

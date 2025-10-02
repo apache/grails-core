@@ -19,16 +19,15 @@
 
 package org.grails.core.support.internal.tools;
 
-import grails.io.IOUtils;
-import grails.util.BuildSettings;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Enumeration;
+
+import org.springframework.core.io.FileSystemResource;
+
+import grails.io.IOUtils;
+import grails.util.BuildSettings;
 
 /**
  * A classloader that only finds resources and classes that are in the same jar as the given class
@@ -45,7 +44,7 @@ class ClassRelativeClassLoader extends URLClassLoader {
 
     private static URL[] createClassLoaderUrls(Class targetClass) {
         URL root = IOUtils.findRootResource(targetClass);
-        if(BuildSettings.RESOURCES_DIR != null && BuildSettings.RESOURCES_DIR.exists()) {
+        if (BuildSettings.RESOURCES_DIR != null && BuildSettings.RESOURCES_DIR.exists()) {
             try {
                 return new URL[] {root, new FileSystemResource(BuildSettings.RESOURCES_DIR.getCanonicalFile()).getURL() };
             } catch (IOException e) {
@@ -64,11 +63,12 @@ class ClassRelativeClassLoader extends URLClassLoader {
 
     @Override
     public Enumeration<URL> getResources(String name) throws IOException {
-        if("".equals(name)) {
+        if ("".equals(name)) {
             final URL[] urls = getURLs();
             final int l = urls.length;
-            return new Enumeration<URL>() {
+            return new Enumeration<>() {
                 int i = 0;
+
                 @Override
                 public boolean hasMoreElements() {
                     return i < l;
@@ -84,6 +84,4 @@ class ClassRelativeClassLoader extends URLClassLoader {
             return findResources(name);
         }
     }
-
-
 }

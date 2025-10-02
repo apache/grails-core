@@ -40,16 +40,22 @@ dependencies:
     - scope: implementation
       coords: "org.apache.grails:grails-databinding"
     - scope: implementation
-      coords: "org.apache.grails:grails-i18n"
-    - scope: implementation
       coords: "org.apache.grails:grails-services"
     - scope: implementation
       coords: "org.apache.grails:grails-url-mappings"
+    - scope: implementation
+      coords: "org.apache.grails:grails-layout"
     - scope: implementation
       coords: "org.apache.grails:grails-interceptors"
     - scope: implementation
       coords: "org.apache.grails:grails-scaffolding"
     - scope: testImplementation
       coords: "org.apache.grails:grails-testing-support-web"
-    - scope: testImplementation
-      coords: "org.spockframework:spock-core"
+    - scope: testAndDevelopmentOnly
+      coords: "org.webjars.npm:bootstrap"
+    - scope: testAndDevelopmentOnly
+      coords: "org.webjars.npm:bootstrap-icons"
+    - scope: testAndDevelopmentOnly
+      coords: "org.webjars.npm:jquery"
+    - scope: integrationTestImplementation
+      coords: 'testFixtures("org.apache.grails:grails-geb")'

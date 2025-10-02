@@ -19,27 +19,34 @@
 
 package org.grails.orm.hibernate.query;
 
-import org.grails.datastore.mapping.config.Property;
-import org.grails.datastore.mapping.reflect.ClassUtils;
-import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder;
-import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.datastore.gorm.finders.DynamicFinder;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.Embedded;
+import java.util.Map;
+
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Root;
+
 import org.hibernate.Criteria;
 import org.hibernate.FetchMode;
 import org.hibernate.FlushMode;
 import org.hibernate.LockMode;
 import org.hibernate.criterion.Order;
 import org.hibernate.query.Query;
+
 import org.springframework.core.convert.ConversionService;
 
-import jakarta.persistence.LockModeType;
-import jakarta.persistence.criteria.*;
-import java.util.Map;
-
+import org.grails.datastore.gorm.finders.DynamicFinder;
+import org.grails.datastore.mapping.config.Property;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.reflect.ClassUtils;
+import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.Mapping;
 
 /**
  * Utility methods for configuring Hibernate queries
@@ -179,12 +186,12 @@ public class GrailsHibernateQueryUtils {
                 Map sortMap = (Map) sortObj;
                 for (Object sort : sortMap.keySet()) {
                     final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(query,queryRoot, criteriaBuilder, entity, (String) sort, order, ignoreCase);
+                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, order, ignoreCase);
                 }
             } else {
                 final String sort = (String) sortObj;
                 final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase(orderParam) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                addOrderPossiblyNested(query, queryRoot, criteriaBuilder,entity, sort, order, ignoreCase);
+                addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, sort, order, ignoreCase);
             }
         } else if (useDefaultMapping) {
             Mapping m = AbstractGrailsDomainBinder.getMapping(entity.getJavaClass());
@@ -192,7 +199,7 @@ public class GrailsHibernateQueryUtils {
                 Map sortMap = m.getSort().getNamesAndDirections();
                 for (Object sort : sortMap.keySet()) {
                     final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(query,queryRoot, criteriaBuilder, entity, (String) sort, order, true);
+                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, order, true);
                 }
             }
         }
@@ -278,7 +285,6 @@ public class GrailsHibernateQueryUtils {
             }
         }
     }
-
 
     /**
      * Add order to criteria, creating necessary subCriteria if nested sort property (ie. sort:'nested.property').

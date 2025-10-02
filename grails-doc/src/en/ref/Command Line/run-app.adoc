@@ -65,4 +65,4 @@ This command starts Grails in an embedded servlet container that can serve HTTP 
 runtime "org.springframework.boot:spring-boot-starter-jetty"
 ----
 
-For more information see the Spring Boot documentation on {springBootReference}/html/howto-embedded-web-servers.html[Embedded Containers].
+For more information see the Spring Boot documentation on {springBootHowTo}webserver.html#page-title[Embedded Containers].

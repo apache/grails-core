@@ -18,13 +18,14 @@
  */
 package org.grails.plugins.web.taglib
 
-import grails.artefact.TagLibrary
-import grails.gsp.TagLib
-import grails.plugins.GrailsPluginManager
+import jakarta.annotation.PostConstruct
+
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 
-import jakarta.annotation.PostConstruct
+import grails.artefact.TagLibrary
+import grails.gsp.TagLib
+import grails.plugins.GrailsPluginManager
 
 /**
  * Javascript tags.
@@ -33,14 +34,15 @@ import jakarta.annotation.PostConstruct
  */
 @TagLib
 class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
+
     ApplicationContext applicationContext
 
     GrailsPluginManager pluginManager
 
     boolean hasResourceProcessor = false
 
-    static encodeAsForTags = [escapeJavascript: 'JavaScript', 
-                              javascript: [expressionCodec:"JavaScript", scriptletCodec:"JavaScript", replaceOnly:true]]
+    static encodeAsForTags = [escapeJavascript: 'JavaScript',
+                              javascript: [expressionCodec: 'JavaScript', scriptletCodec: 'JavaScript', replaceOnly: true]]
 
     @PostConstruct
     private void initHasResourceProcessor() {
@@ -76,10 +78,10 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
             if (hasResourceProcessor) {
                 out << r.script(Collections.EMPTY_MAP, body)
             } else {
-                out.println '<script type="text/javascript">'
+                out.println('<script type="text/javascript">')
                 out << body()
                 out.println()
-                out.println '</script>'
+                out.println('</script>')
             }
         }
     }
@@ -107,9 +109,9 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
             }
             def reqResCtx = ''
             if (requestPluginContext) {
-                reqResCtx = (requestPluginContext.startsWith("/") ? requestPluginContext.substring(1) : requestPluginContext) + '/'
+                reqResCtx = (requestPluginContext.startsWith('/') ? requestPluginContext.substring(1) : requestPluginContext) + '/'
             }
-            attrs.uri = appBase + reqResCtx + 'js/'+attrs.remove('src')
+            attrs.uri = appBase + reqResCtx + 'js/' + attrs.remove('src')
         }
         out << g.external(attrs)
     }

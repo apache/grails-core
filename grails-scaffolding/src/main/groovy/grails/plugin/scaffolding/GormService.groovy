@@ -19,16 +19,17 @@
 
 package grails.plugin.scaffolding
 
+import groovy.transform.CompileStatic
+
 import grails.artefact.Artefact
 import grails.gorm.api.GormAllOperations
 import grails.gorm.transactions.ReadOnly
 import grails.gorm.transactions.Transactional
 import grails.util.GrailsNameUtils
-import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.GormEntityApi
 
-@Artefact("Service")
+@Artefact('Service')
 @ReadOnly
 @CompileStatic
 class GormService<T extends GormEntity<T>> {
@@ -45,19 +46,15 @@ class GormService<T extends GormEntity<T>> {
         resourceName = GrailsNameUtils.getPropertyName(resource)
     }
 
-    protected T queryForResource(Serializable id) {
-        resource.get(id)
-    }
-
     T get(Serializable id) {
-        queryForResource(id)
+        resource.get(id)
     }
 
     List<T> list(Map args) {
         resource.list(args)
     }
 
-    Long count() {
+    Long count(Map args) {
         resource.count()
     }
 
@@ -66,7 +63,7 @@ class GormService<T extends GormEntity<T>> {
         if (readOnly) {
             return
         }
-        ((GormEntityApi) queryForResource(id)).delete flush: true
+        ((GormEntityApi) get(id)).delete(flush: true)
     }
 
     @Transactional

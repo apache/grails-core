@@ -58,7 +58,7 @@ public class AssertJ implements Feature {
 
     @Override
     public String getCategory() {
-        return Category.DEV_TOOLS;
+        return Category.TESTING;
     }
 
     @Override

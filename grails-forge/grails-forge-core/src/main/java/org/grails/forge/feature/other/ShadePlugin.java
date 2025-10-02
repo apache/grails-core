@@ -68,7 +68,7 @@ public class ShadePlugin implements Feature {
         generatorContext.addHelpLink("Shadow Gradle Plugin", "https://plugins.gradle.org/plugin/com.gradleup.shadow");
         GradlePlugin.Builder builder = GradlePlugin.builder()
                 .id("com.gradleup.shadow")
-                .lookupArtifactId("shadow");
+                .lookupArtifactId("shadow-gradle-plugin");
         generatorContext.addBuildPlugin(builder.build());
 
     }

@@ -18,14 +18,6 @@
  */
 package org.grails.datastore.mapping.model;
 
-import groovy.lang.MetaProperty;
-import org.grails.datastore.mapping.config.Entity;
-import org.grails.datastore.mapping.config.Property;
-import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
-import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.datastore.mapping.model.types.*;
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
-
 import java.beans.PropertyDescriptor;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -36,9 +28,40 @@ import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.Time;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.GregorianCalendar;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+
+import groovy.lang.MetaProperty;
+
+import org.grails.datastore.mapping.config.Entity;
+import org.grails.datastore.mapping.config.Property;
+import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
+import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Custom;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.EmbeddedCollection;
+import org.grails.datastore.mapping.model.types.Identity;
+import org.grails.datastore.mapping.model.types.ManyToMany;
+import org.grails.datastore.mapping.model.types.ManyToOne;
+import org.grails.datastore.mapping.model.types.OneToMany;
+import org.grails.datastore.mapping.model.types.OneToOne;
+import org.grails.datastore.mapping.model.types.Simple;
+import org.grails.datastore.mapping.model.types.TenantId;
+import org.grails.datastore.mapping.model.types.ToOne;
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 
 /**
  * <p>An abstract factory for creating persistent property instances.</p>
@@ -61,68 +84,68 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * @since 1.0
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
-public abstract class MappingFactory<R extends Entity,T extends Property> {
+public abstract class MappingFactory<R extends Entity, T extends Property> {
 
     public static final String IDENTITY_PROPERTY = GormProperties.IDENTITY;
     public static final Set<String> SIMPLE_TYPES;
 
     static {
-        SIMPLE_TYPES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            boolean.class.getName(),
-            long.class.getName(),
-            short.class.getName(),
-            int.class.getName(),
-            byte.class.getName(),
-            float.class.getName(),
-            double.class.getName(),
-            char.class.getName(),
-            Boolean.class.getName(),
-            Long.class.getName(),
-            Short.class.getName(),
-            Integer.class.getName(),
-            Byte.class.getName(),
-            Float.class.getName(),
-            Double.class.getName(),
-            Character.class.getName(),
-            String.class.getName(),
-            java.util.Date.class.getName(),
-            Time.class.getName(),
-            Timestamp.class.getName(),
-            java.sql.Date.class.getName(),
-            BigDecimal.class.getName(),
-            BigInteger.class.getName(),
-            Locale.class.getName(),
-            Calendar.class.getName(),
-            GregorianCalendar.class.getName(),
-            java.util.Currency.class.getName(),
-            TimeZone.class.getName(),
-            Object.class.getName(),
-            Class.class.getName(),
-            byte[].class.getName(),
-            Byte[].class.getName(),
-            char[].class.getName(),
-            Character[].class.getName(),
-            Blob.class.getName(),
-            Clob.class.getName(),
-            Serializable.class.getName(),
-            URI.class.getName(),
-            URL.class.getName(),
-            UUID.class.getName(),
-            "org.bson.types.ObjectId",
-            "java.time.Instant",
-            "java.time.LocalDateTime",
-            "java.time.LocalDate",
-            "java.time.LocalTime",
-            "java.time.OffsetDateTime",
-            "java.time.OffsetTime",
-            "java.time.ZonedDateTime")));
+        SIMPLE_TYPES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+                boolean.class.getName(),
+                long.class.getName(),
+                short.class.getName(),
+                int.class.getName(),
+                byte.class.getName(),
+                float.class.getName(),
+                double.class.getName(),
+                char.class.getName(),
+                Boolean.class.getName(),
+                Long.class.getName(),
+                Short.class.getName(),
+                Integer.class.getName(),
+                Byte.class.getName(),
+                Float.class.getName(),
+                Double.class.getName(),
+                Character.class.getName(),
+                String.class.getName(),
+                java.util.Date.class.getName(),
+                Time.class.getName(),
+                Timestamp.class.getName(),
+                java.sql.Date.class.getName(),
+                BigDecimal.class.getName(),
+                BigInteger.class.getName(),
+                Locale.class.getName(),
+                Calendar.class.getName(),
+                GregorianCalendar.class.getName(),
+                java.util.Currency.class.getName(),
+                TimeZone.class.getName(),
+                Object.class.getName(),
+                Class.class.getName(),
+                byte[].class.getName(),
+                Byte[].class.getName(),
+                char[].class.getName(),
+                Character[].class.getName(),
+                Blob.class.getName(),
+                Clob.class.getName(),
+                Serializable.class.getName(),
+                URI.class.getName(),
+                URL.class.getName(),
+                UUID.class.getName(),
+                "org.bson.types.ObjectId",
+                "java.time.Instant",
+                "java.time.LocalDateTime",
+                "java.time.LocalDate",
+                "java.time.LocalTime",
+                "java.time.OffsetDateTime",
+                "java.time.OffsetTime",
+                "java.time.ZonedDateTime")));
     }
 
     private Map<Class, Collection<CustomTypeMarshaller>> typeConverterMap = new ConcurrentHashMap<>();
 
     public void registerCustomType(CustomTypeMarshaller marshallerCustom) {
         Collection<CustomTypeMarshaller> marshallers = typeConverterMap.get(marshallerCustom.getTargetType());
-        if(marshallers == null) {
+        if (marshallers == null) {
             marshallers = new ConcurrentLinkedQueue<>();
             typeConverterMap.put(marshallerCustom.getTargetType(), marshallers);
         }
@@ -173,8 +196,9 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
      * @return An Identity instance
      */
     public Identity<T> createIdentity(PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
-        return new Identity<T>(owner, context, pd) {
+        return new Identity<>(owner, context, pd) {
             PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
+
             public PropertyMapping<T> getMapping() {
                 return propertyMapping;
             }
@@ -190,8 +214,9 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
      * @return An Identity instance
      */
     public TenantId<T> createTenantId(PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
-        return new TenantId<T>(owner, context, pd) {
+        return new TenantId<>(owner, context, pd) {
             PropertyMapping<T> propertyMapping = createDerivedPropertyMapping(this, owner);
+
             public PropertyMapping<T> getMapping() {
                 return propertyMapping;
             }
@@ -226,8 +251,9 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
         if (customTypeMarshaller == null && !allowArbitraryCustomTypes()) {
             throw new IllegalStateException("Cannot create a custom type without a type converter for type " + propertyType);
         }
-        return new Custom<T>(owner, context, pd, customTypeMarshaller) {
+        return new Custom<>(owner, context, pd, customTypeMarshaller) {
             PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
+
             public PropertyMapping<T> getMapping() {
                 return propertyMapping;
             }
@@ -240,9 +266,9 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
 
     protected CustomTypeMarshaller findCustomType(MappingContext context, Class<?> propertyType) {
         final Collection<CustomTypeMarshaller> allMarshallers = typeConverterMap.get(propertyType);
-        if(allMarshallers != null) {
+        if (allMarshallers != null) {
             for (CustomTypeMarshaller marshaller : allMarshallers) {
-                if(marshaller.supports(context)) {
+                if (marshaller.supports(context)) {
                     return marshaller;
                 }
             }
@@ -269,8 +295,9 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
      * @return A Simple property type
      */
     public Simple<T> createSimple(PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
-        return new Simple<T>(owner, context, pd) {
+        return new Simple<>(owner, context, pd) {
             PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
+
             public PropertyMapping<T> getMapping() {
                 return propertyMapping;
             }
@@ -278,11 +305,13 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
     }
 
     protected PropertyMapping<T> createPropertyMapping(final PersistentProperty<T> property, final PersistentEntity owner) {
-        return new PropertyMapping<T>() {
+        return new PropertyMapping<>() {
             private T mappedForm = createMappedForm(property);
+
             public ClassMapping getClassMapping() {
                 return owner.getMapping();
             }
+
             public T getMappedForm() {
                 return mappedForm;
             }
@@ -292,17 +321,18 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
     private PropertyMapping<T> createDerivedPropertyMapping(final PersistentProperty<T> property, final PersistentEntity owner) {
         final T mappedFormObject = createMappedForm(property);
         mappedFormObject.setDerived(true);
-        return new PropertyMapping<T>() {
+        return new PropertyMapping<>() {
             private T mappedForm = mappedFormObject;
+
             public ClassMapping getClassMapping() {
                 return owner.getMapping();
             }
+
             public T getMappedForm() {
                 return mappedForm;
             }
         };
     }
-
 
     /**
      * Creates a one-to-one association type used for mapping a one-to-one association between entities
@@ -385,9 +415,11 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
     public ManyToMany createManyToMany(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         return new ManyToMany<T>(entity, context, property) {
             PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
+
             public PropertyMapping getMapping() {
                 return propertyMapping;
             }
+
             @Override
             public String toString() {
                 return associationtoString("many-to-many: ", this);
@@ -407,9 +439,11 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
             MappingContext context, PropertyDescriptor property) {
         return new Embedded<T>(entity, context, property) {
             PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
+
             public PropertyMapping getMapping() {
                 return propertyMapping;
             }
+
             @Override
             public String toString() {
                 return associationtoString("embedded: ", this);
@@ -429,9 +463,11 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
             MappingContext context, PropertyDescriptor property) {
         return new EmbeddedCollection<T>(entity, context, property) {
             PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
+
             public PropertyMapping getMapping() {
                 return propertyMapping;
             }
+
             @Override
             public String toString() {
                 return associationtoString("embedded: ", this);
@@ -461,16 +497,16 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
 
         // This is to allow using custom marshaller for list of enum.
         // If no custom type marshaller for current enum.
-        if(collectionType != null && collectionType.isEnum()) {
+        if (collectionType != null && collectionType.isEnum()) {
             // First look custom marshaller for related type of collection.
             customTypeMarshaller = findCustomType(context, collectionType);
-            if(customTypeMarshaller == null) {
+            if (customTypeMarshaller == null) {
                 // If null, look for enum class itself.
                 customTypeMarshaller = findCustomType(context, Enum.class);
             }
         }
 
-        if(customTypeMarshaller != null) {
+        if (customTypeMarshaller != null) {
             basic.setCustomTypeMarshaller(customTypeMarshaller);
         }
 
@@ -482,10 +518,10 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
     }
 
     public boolean isCustomType(Class<?> propertyType) {
-        if(typeConverterMap.containsKey(propertyType)) {
+        if (typeConverterMap.containsKey(propertyType)) {
             return true;
         }
-        if(propertyType.isEnum()) {
+        if (propertyType.isEnum()) {
             // Check if enum itself supports custom type.
             return typeConverterMap.containsKey(Enum.class);
         }
@@ -502,7 +538,7 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
             public String[] getIdentifierName() {
                 PersistentProperty identity = classMapping.getEntity().getIdentity();
                 String propertyName = identity != null ? identity.getMapping().getMappedForm().getName() : null;
-                if(propertyName != null) {
+                if (propertyName != null) {
                     return new String[] { propertyName };
                 }
                 else {
@@ -531,7 +567,7 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
         return new IdentityMapping() {
 
             public String[] getIdentifierName() {
-                if(targetName != null) {
+                if (targetName != null) {
                     return new String[] { targetName };
                 }
                 else {
@@ -554,10 +590,7 @@ public abstract class MappingFactory<R extends Entity,T extends Property> {
         };
     }
 
-
     public static String associationtoString(String desc, Association a) {
         return desc + a.getOwner().getName() + "-> " + a.getName() + " ->" + a.getAssociatedEntity().getName();
     }
-
-
 }

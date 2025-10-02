@@ -18,8 +18,13 @@
  */
 package org.grails.compiler.injection;
 
-import grails.compiler.ast.SupportsClassNode;
-import grails.compiler.traits.TraitInjector;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.GenericsType;
@@ -27,9 +32,10 @@ import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.trait.TraitComposer;
-import org.grails.core.io.support.GrailsFactoriesLoader;
 
-import java.util.*;
+import grails.compiler.ast.SupportsClassNode;
+import grails.compiler.traits.TraitInjector;
+import org.grails.core.io.support.GrailsFactoriesLoader;
 
 /**
  *
@@ -45,7 +51,7 @@ public class TraitInjectionUtils {
     }
 
     private static void extendTraits(CompilationUnit unit, SourceUnit source, ClassNode classNode) {
-        if(unit.getPhase() != CompilePhase.SEMANTIC_ANALYSIS.getPhaseNumber()) {
+        if (unit.getPhase() != CompilePhase.SEMANTIC_ANALYSIS.getPhaseNumber()) {
             TraitComposer.doExtendTraits(classNode, source, unit);
         }
     }
@@ -63,9 +69,9 @@ public class TraitInjectionUtils {
         }
         if (!implementsTrait && !traitNotLoaded) {
             final GenericsType[] genericsTypes = traitClassNode.getGenericsTypes();
-            final Map<String, ClassNode> parameterNameToParameterValue = new LinkedHashMap<String, ClassNode>();
-            if(genericsTypes != null) {
-                for(GenericsType gt : genericsTypes) {
+            final Map<String, ClassNode> parameterNameToParameterValue = new LinkedHashMap<>();
+            if (genericsTypes != null) {
+                for (GenericsType gt : genericsTypes) {
                     parameterNameToParameterValue.put(gt.getName(), classNode);
                 }
             }
@@ -77,7 +83,7 @@ public class TraitInjectionUtils {
 
     public static void injectTrait(CompilationUnit unit, SourceUnit source, ClassNode classNode, Class trait) {
         boolean traitsAdded = addTrait(classNode, trait);
-        if(traitsAdded) {
+        if (traitsAdded) {
             extendTraits(unit, source, classNode);
         }
     }
@@ -92,38 +98,38 @@ public class TraitInjectionUtils {
                 traitsAdded = true;
             }
         }
-        if(traitsAdded) {
+        if (traitsAdded) {
             extendTraits(unit, source, classNode);
         }
     }
 
     private static List<TraitInjector> getTraitInjectors() {
-        if(traitInjectors == null) {
+        if (traitInjectors == null) {
             traitInjectors = GrailsFactoriesLoader.loadFactories(TraitInjector.class);
 
             traitInjectors = TraitInjectionSupport.resolveTraitInjectors(traitInjectors);
         }
-        if(traitInjectors != null) {
+        if (traitInjectors != null) {
             return Collections.unmodifiableList(traitInjectors);
         }
         else {
             return Collections.emptyList();
         }
     }
-    
-    public static void processTraitsForNode(final SourceUnit sourceUnit, 
+
+    public static void processTraitsForNode(final SourceUnit sourceUnit,
                                             final ClassNode cNode,
-                                            final String artefactType, 
+                                            final String artefactType,
                                             final CompilationUnit compilationUnit) {
         final List<TraitInjector> traitInjectors = getTraitInjectors();
-        final List<TraitInjector> injectorsToUse = new ArrayList<TraitInjector>();
+        final List<TraitInjector> injectorsToUse = new ArrayList<>();
         for (final TraitInjector injector : traitInjectors) {
             final List<String> artefactTypes = Arrays.asList(injector.getArtefactTypes());
 
             boolean supportsClassNode = true;
 
             if (injector instanceof SupportsClassNode) {
-                supportsClassNode = ((SupportsClassNode)injector).supports(cNode);
+                supportsClassNode = ((SupportsClassNode) injector).supports(cNode);
             }
 
             if (artefactTypes.contains(artefactType) && supportsClassNode) {
@@ -131,13 +137,13 @@ public class TraitInjectionUtils {
             }
         }
         try {
-            if(injectorsToUse.size() > 0) {
+            if (injectorsToUse.size() > 0) {
                 doInjectionInternal(compilationUnit, sourceUnit, cNode, injectorsToUse);
             }
         } catch (RuntimeException e) {
             try {
-                System.err.println("Error occurred calling Trait injector ["+TraitInjectionUtils.class.getName()+"]: "
-                        + e.getMessage());
+                System.err.println("Error occurred calling Trait injector [" + TraitInjectionUtils.class.getName() + "]: " +
+                        e.getMessage());
                 e.printStackTrace();
             } catch (Throwable t) {
                 // ignore it

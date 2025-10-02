@@ -47,4 +47,4 @@ class BookController {
 
 The Servlet API's `HttpServletResponse` class can be used within Grails to perform all typical activities such as writing out binary data, writing directly to the response and sending error response codes to name but a few. Refer to the documentation on the {javaee}javax/servlet/http/HttpServletResponse.html[HttpServletResponse] class in the Servlet API for more information.
 
-NOTE: The additional methods added to the xref:../ref/Servlet%20API/response.adoc[response] object are documented in the Grails Servlet API reference guide
+NOTE: The additional methods added to the link:{servletApiRefFromRef}response.html[response] object are documented in the Grails Servlet API reference guide

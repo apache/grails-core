@@ -37,7 +37,6 @@ dependencies {
     implementation "org.apache.grails:grails-spring-security-rest:$grailsSpringSecurityVersion"
     implementation 'org.apache.grails:grails-views-gson'
 
-    runtimeOnly 'org.apache.grails:grails-i18n'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.apache.grails:grails-events'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'

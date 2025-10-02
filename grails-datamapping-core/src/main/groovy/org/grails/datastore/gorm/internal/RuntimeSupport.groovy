@@ -20,6 +20,7 @@
 package org.grails.datastore.gorm.internal
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
@@ -41,17 +42,17 @@ class RuntimeSupport {
      * @return
      */
     static Datastore findDefaultDatastore(Datastore[] datastores) {
-        for(Datastore d in datastores) {
-            if( d instanceof ConnectionSourcesProvider) {
-                ConnectionSourcesProvider provider = (ConnectionSourcesProvider)d
-                if(ConnectionSource.DEFAULT == provider.getConnectionSources().defaultConnectionSource.name) {
+        for (Datastore d in datastores) {
+            if (d instanceof ConnectionSourcesProvider) {
+                ConnectionSourcesProvider provider = (ConnectionSourcesProvider) d
+                if (ConnectionSource.DEFAULT == provider.getConnectionSources().defaultConnectionSource.name) {
                     return d
                 }
             }
         }
-        if(datastores) {
+        if (datastores) {
             return datastores[0]
         }
-        throw new DatastoreConfigurationException("No default datastore configured")
+        throw new DatastoreConfigurationException('No default datastore configured')
     }
 }

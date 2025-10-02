@@ -18,7 +18,6 @@
  */
 package org.grails.core.io;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,7 +32,7 @@ import org.springframework.core.io.Resource;
  */
 public class MockStringResourceLoader extends MockResourceLoader {
 
-    private Map<String, Resource> mockResources = new HashMap<String, Resource>();
+    private Map<String, Resource> mockResources = new HashMap<>();
 
     @Override
     public Resource getResource(String location) {
@@ -54,6 +53,7 @@ public class MockStringResourceLoader extends MockResourceLoader {
     public void registerMockResource(String location, Resource res) {
         mockResources.put(location, res);
     }
+
     /**
      * Registers a mock resource with the first argument as the location and the second as the contents
      * of the resource.

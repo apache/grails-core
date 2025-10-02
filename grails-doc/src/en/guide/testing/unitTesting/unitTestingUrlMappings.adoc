@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Use the link:../api/grails/testing/web/UrlMappingsUnitTest.html[`UrlMappingsUnitTest`] trait to unit test url mappings. Testing url mappings also requires controllers to be mocked to match the mappings to.
+Use the link:{api}grails/testing/web/UrlMappingsUnitTest.html[`UrlMappingsUnitTest`] trait to unit test url mappings. Testing url mappings also requires controllers to be mocked to match the mappings to.
 
 NOTE: Controllers can not be mocked in `setupSpec` due to the nature of the request being created and reset for each test. The request is not available until the `setup` method, therefore controllers can not be mocked until then.
 

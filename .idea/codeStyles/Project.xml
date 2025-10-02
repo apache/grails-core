@@ -1,0 +1,91 @@
+<!--
+
+     Licensed to the Apache Software Foundation (ASF) under one
+     or more contributor license agreements.  See the NOTICE file
+     distributed with this work for additional information
+     regarding copyright ownership.  The ASF licenses this file
+     to you under the Apache License, Version 2.0 (the
+     "License"); you may not use this file except in compliance
+     with the License.  You may obtain a copy of the License at
+
+       https://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing,
+     software distributed under the License is distributed on an
+     "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     KIND, either express or implied.  See the License for the
+     specific language governing permissions and limitations
+     under the License.
+
+-->
+<component name="ProjectCodeStyleConfiguration">
+  <code_scheme name="Project" version="173">
+    <GroovyCodeStyleSettings>
+      <option name="ENABLE_GROOVYDOC_FORMATTING" value="false" />
+      <option name="CLASS_COUNT_TO_USE_IMPORT_ON_DEMAND" value="999" />
+      <option name="NAMES_COUNT_TO_USE_IMPORT_ON_DEMAND" value="999" />
+      <option name="PACKAGES_TO_USE_IMPORT_ON_DEMAND">
+        <value />
+      </option>
+      <option name="IMPORT_LAYOUT_TABLE">
+        <value>
+          <package name="java" withSubpackages="true" static="false" />
+          <emptyLine />
+          <package name="javax" withSubpackages="true" static="false" />
+          <emptyLine />
+          <package name="groovy" withSubpackages="true" static="false" />
+          <package name="org.apache.groovy" withSubpackages="true" static="false" />
+          <package name="org.codehaus.groovy" withSubpackages="true" static="false" />
+          <emptyLine />
+          <package name="jakarta" withSubpackages="true" static="false" />
+          <emptyLine />
+          <package name="" withSubpackages="true" static="false" />
+          <emptyLine />
+          <package name="io.spring" withSubpackages="true" static="false" />
+          <package name="org.springframework" withSubpackages="true" static="false" />
+          <emptyLine />
+          <package name="grails" withSubpackages="true" static="false" />
+          <package name="org.apache.grails" withSubpackages="true" static="false" />
+          <package name="org.grails" withSubpackages="true" static="false" />
+          <emptyLine />
+          <package name="" withSubpackages="true" static="true" />
+        </value>
+      </option>
+    </GroovyCodeStyleSettings>
+    <JavaCodeStyleSettings>
+      <option name="CLASS_COUNT_TO_USE_IMPORT_ON_DEMAND" value="999" />
+      <option name="NAMES_COUNT_TO_USE_IMPORT_ON_DEMAND" value="999" />
+      <option name="PACKAGES_TO_USE_IMPORT_ON_DEMAND">
+        <value />
+      </option>
+      <option name="IMPORT_LAYOUT_TABLE">
+        <value>
+          <package name="java" withSubpackages="true" static="false" />
+          <emptyLine />
+          <package name="javax" withSubpackages="true" static="false" />
+          <emptyLine />
+          <package name="groovy" withSubpackages="true" static="false" />
+          <package name="org.apache.groovy" withSubpackages="true" static="false" />
+          <package name="org.codehaus.groovy" withSubpackages="true" static="false" />
+          <emptyLine />
+          <package name="jakarta" withSubpackages="true" static="false" />
+          <emptyLine />
+          <package name="" withSubpackages="true" static="false" />
+          <emptyLine />
+          <package name="io.spring" withSubpackages="true" static="false" />
+          <package name="org.springframework" withSubpackages="true" static="false" />
+          <emptyLine />
+          <package name="grails" withSubpackages="true" static="false" />
+          <package name="org.apache.grails" withSubpackages="true" static="false" />
+          <package name="org.grails" withSubpackages="true" static="false" />
+          <emptyLine />
+          <package name="" withSubpackages="true" static="true" />
+        </value>
+      </option>
+      <option name="ENABLE_JAVADOC_FORMATTING" value="false" />
+    </JavaCodeStyleSettings>
+    <editorconfig>
+      <option name="ENABLED" value="false" />
+    </editorconfig>
+  </code_scheme>
+</component>

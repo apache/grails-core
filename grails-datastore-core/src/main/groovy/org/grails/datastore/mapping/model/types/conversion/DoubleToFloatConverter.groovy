@@ -27,6 +27,7 @@ import org.springframework.core.convert.converter.Converter
  */
 @CompileStatic
 class DoubleToFloatConverter implements Converter<Double, Float> {
+
     @Override
     Float convert(Double source) {
         source as Float

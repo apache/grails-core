@@ -18,8 +18,6 @@
  */
 package org.grails.datastore.gorm.query
 
-
-
 /**
  * Interface defining all typical query GORM operations on class
  *

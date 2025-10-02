@@ -52,13 +52,18 @@ public class GebWithWebDriverBinaries implements Feature {
 
     @Override
     public String getTitle() {
-        return "Geb Functional Testing for Grails with WebDriver binaries Gradle plugin";
+        return "Geb Functional Testing for Grails with WebDriver binaries Gradle plugin - no longer maintained";
     }
 
     @NonNull
     @Override
     public String getDescription() {
-        return "This plugins configure Geb for Grails framework to write automation tests with WebDriver binaries Gradle plugin.";
+        return "This plugins configure Geb for Grails framework to write automation tests with WebDriver binaries Gradle plugin.  No longer maintained and limited to Gradle 8.6 and JDK 21.  geb-with-testcontainers is the replacement and default starting with Grails 7.";
+    }
+
+    @Override
+    public String getCategory() {
+        return Category.TESTING;
     }
 
     @Override
@@ -78,7 +83,7 @@ public class GebWithWebDriverBinaries implements Feature {
 
     @Override
     public String getThirdPartyDocumentation() {
-        return "https://www.gebish.org/manual/current/";
+        return "https://groovy.apache.org/geb/manual/current/";
     }
 
     @Override

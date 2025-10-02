@@ -19,23 +19,29 @@
 
 package grails.plugin.scaffolding
 
+import java.util.concurrent.ConcurrentHashMap
+
+import groovy.text.GStringTemplateEngine
+import groovy.text.Template
+import groovy.transform.CompileStatic
+
+import org.springframework.context.ResourceLoaderAware
+import org.springframework.core.io.ByteArrayResource
+import org.springframework.core.io.FileSystemResource
+import org.springframework.core.io.Resource
+import org.springframework.core.io.ResourceLoader
+import org.springframework.core.io.UrlResource
+import org.springframework.web.servlet.View
+
 import grails.codegen.model.ModelBuilder
 import grails.io.IOUtils
 import grails.plugin.scaffolding.annotation.Scaffold
 import grails.util.BuildSettings
 import grails.util.Environment
-import groovy.text.GStringTemplateEngine
-import groovy.text.Template
-import groovy.transform.CompileStatic
 import org.grails.buffer.FastStringWriter
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.servlet.view.GroovyPageView
 import org.grails.web.servlet.view.GroovyPageViewResolver
-import org.springframework.context.ResourceLoaderAware
-import org.springframework.core.io.*
-import org.springframework.web.servlet.View
-
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * @author Graeme Rocher
@@ -43,9 +49,10 @@ import java.util.concurrent.ConcurrentHashMap
  */
 @CompileStatic
 class ScaffoldingViewResolver extends GroovyPageViewResolver implements ResourceLoaderAware, ModelBuilder {
+
     final Class templateOverridePluginDescriptor
 
-    public ScaffoldingViewResolver() {
+    ScaffoldingViewResolver() {
         this.templateOverridePluginDescriptor = null
     }
 
@@ -73,7 +80,7 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
      *
      * @param templateOverridePluginDescriptor
      */
-    public ScaffoldingViewResolver(Class templateOverridePluginDescriptor) {
+    ScaffoldingViewResolver(Class templateOverridePluginDescriptor) {
         this.templateOverridePluginDescriptor = templateOverridePluginDescriptor
     }
 
@@ -86,7 +93,7 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
 
     protected String buildCacheKey(String viewName) {
         String viewCacheKey = groovyPageLocator.resolveViewFormat(viewName)
-        String currentControllerKeyPrefix = resolveCurrentControllerKeyPrefixes(viewName.startsWith("/"))
+        String currentControllerKeyPrefix = resolveCurrentControllerKeyPrefixes(viewName.startsWith('/'))
         if (currentControllerKeyPrefix != null) {
             viewCacheKey = currentControllerKeyPrefix + ':' + viewCacheKey
         }
@@ -103,14 +110,14 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
         }
 
         def url = IOUtils.findResourceRelativeToClass(controllerClass, "/META-INF/templates/scaffolding/${shortViewName}.gsp")
-        resource = url? new UrlResource(url) : null
+        resource = url ? new UrlResource(url) : null
         if (resource?.exists()) {
             return resource
         }
 
         if (templateOverridePluginDescriptor) {
             url = IOUtils.findResourceRelativeToClass(templateOverridePluginDescriptor, "/META-INF/templates/scaffolding/${shortViewName}.gsp")
-            resource = url? new UrlResource(url) : null
+            resource = url ? new UrlResource(url) : null
             if (resource?.exists()) {
                 return resource
             }
@@ -123,14 +130,14 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
         def view = super.loadView(viewName, locale)
         if (view == null) {
             String cacheKey = buildCacheKey(viewName)
-            view = enableReload? null : generatedViewCache.get(cacheKey)
+            view = enableReload ? null : generatedViewCache.get(cacheKey)
             if (view != null) {
                 return view
             } else {
                 def webR = GrailsWebRequest.lookup()
                 def controllerClass = webR.controllerClass
 
-                def scaffoldValue = controllerClass?.getPropertyValue("scaffold")
+                def scaffoldValue = controllerClass?.getPropertyValue('scaffold')
                 if (!scaffoldValue) {
                     Scaffold scaffoldAnnotation = controllerClass?.clazz?.getAnnotation(Scaffold)
                     scaffoldValue = scaffoldAnnotation?.domain()
@@ -141,7 +148,7 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
 
                 if (scaffoldValue instanceof Class) {
                     def shortViewName = viewName.substring(viewName.lastIndexOf('/') + 1)
-                    Resource res = controllerClass.namespace? resolveResource(controllerClass.clazz, "${controllerClass.namespace}/${shortViewName}") : null
+                    Resource res = controllerClass.namespace ? resolveResource(controllerClass.clazz, "${controllerClass.namespace}/${shortViewName}") : null
                     if (!res?.exists()) {
                         res = resolveResource(controllerClass.clazz, shortViewName)
                     }

@@ -18,20 +18,22 @@
  */
 package grails.util;
 
-import grails.config.Config;
-import grails.core.GrailsApplication;
-import grails.plugins.GrailsPluginManager;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.grails.core.io.support.GrailsFactoriesLoader;
-import org.grails.core.support.GrailsApplicationDiscoveryStrategy;
+
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.Lifecycle;
 import org.springframework.util.Assert;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import grails.config.Config;
+import grails.core.GrailsApplication;
+import grails.plugins.GrailsPluginManager;
+import org.grails.core.io.support.GrailsFactoriesLoader;
+import org.grails.core.support.GrailsApplicationDiscoveryStrategy;
 
 /**
  * Allows looking up key classes in a static context
@@ -45,13 +47,14 @@ import java.util.Map;
 public class Holders {
 
     private static final Log LOG = LogFactory.getLog(Holders.class);
-    private static Holder<GrailsPluginManager> pluginManagers = new Holder<GrailsPluginManager>("PluginManager");
-    private static Holder<Boolean> pluginManagersInCreation = new Holder<Boolean>("PluginManagers in creation");
-    private static Holder<Config> configs = new Holder<Config>("config");
-    private static Holder<Map<?, ?>> flatConfigs = new Holder<Map<?, ?>>("flat config");
+    private static Holder<GrailsPluginManager> pluginManagers = new Holder<>("PluginManager");
+    private static Holder<Boolean> pluginManagersInCreation = new Holder<>("PluginManagers in creation");
+    private static Holder<Config> configs = new Holder<>("config");
+    private static Holder<Map<?, ?>> flatConfigs = new Holder<>("flat config");
 
     private static List<GrailsApplicationDiscoveryStrategy> applicationDiscoveryStrategies = GrailsFactoriesLoader.loadFactories(GrailsApplicationDiscoveryStrategy.class, Holders.class.getClassLoader());
     private static Holder servletContexts;
+
     static {
 
         createServletContextsHolder();
@@ -88,11 +91,11 @@ public class Holders {
     }
 
     public static ApplicationContext getApplicationContext() {
-        for(GrailsApplicationDiscoveryStrategy strategy : applicationDiscoveryStrategies) {
+        for (GrailsApplicationDiscoveryStrategy strategy : applicationDiscoveryStrategies) {
             ApplicationContext applicationContext = strategy.findApplicationContext();
-            if(applicationContext != null ) {
+            if (applicationContext != null) {
                 boolean running = ((Lifecycle) applicationContext).isRunning();
-                if(running) {
+                if (running) {
                     return applicationContext;
                 }
             }
@@ -105,22 +108,23 @@ public class Holders {
      * @return The ApplicationContext or null if it doesn't exist
      */
     public static ApplicationContext findApplicationContext() {
-        for(GrailsApplicationDiscoveryStrategy strategy : applicationDiscoveryStrategies) {
+        for (GrailsApplicationDiscoveryStrategy strategy : applicationDiscoveryStrategies) {
             ApplicationContext applicationContext = strategy.findApplicationContext();
-            if(applicationContext != null) {
+            if (applicationContext != null) {
                 return applicationContext;
             }
         }
         return null;
     }
+
     /**
      *
      * @return The ApplicationContext or null if it doesn't exist
      */
     public static GrailsApplication findApplication() {
-        for(GrailsApplicationDiscoveryStrategy strategy : applicationDiscoveryStrategies) {
+        for (GrailsApplicationDiscoveryStrategy strategy : applicationDiscoveryStrategies) {
             GrailsApplication grailsApplication = strategy.findGrailsApplication();
-            if(grailsApplication != null) {
+            if (grailsApplication != null) {
                 return grailsApplication;
             }
         }
@@ -216,7 +220,7 @@ public class Holders {
     private static void createServletContextsHolder() {
         try {
             Class<?> clazz = Holders.class.getClassLoader().loadClass("grails.web.context.WebRequestServletHolder");
-            servletContexts = (Holder)clazz.newInstance();
+            servletContexts = (Holder) clazz.newInstance();
         }
         catch (ClassNotFoundException e) {
             // shouldn't happen

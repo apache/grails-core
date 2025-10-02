@@ -18,12 +18,21 @@
  */
 package grails.build.support;
 
-import groovy.lang.*;
-import org.codehaus.groovy.runtime.metaclass.MetaClassRegistryImpl;
-
 import java.lang.ref.WeakReference;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import groovy.lang.ExpandoMetaClass;
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaClass;
+import groovy.lang.MetaClassRegistry;
+import groovy.lang.MetaClassRegistryChangeEvent;
+import groovy.lang.MetaClassRegistryChangeEventListener;
+import org.codehaus.groovy.runtime.metaclass.MetaClassRegistryImpl;
 
 /**
  * Allows clean-up of changes made to the MetaClassRegistry.
@@ -34,8 +43,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @SuppressWarnings("rawtypes")
 public class MetaClassRegistryCleaner implements MetaClassRegistryChangeEventListener {
 
-    private Map<Class, Object> alteredClasses = new ConcurrentHashMap<Class, Object> ();
-    private Map<IdentityWeakReference, Object> alteredInstances = new ConcurrentHashMap<IdentityWeakReference, Object>();
+    private Map<Class, Object> alteredClasses = new ConcurrentHashMap<>();
+    private Map<IdentityWeakReference, Object> alteredInstances = new ConcurrentHashMap<>();
     private static final Object NO_CUSTOM_METACLASS = new Object();
     private static boolean cleaning;
     private static final MetaClassRegistryCleaner INSTANCE = new MetaClassRegistryCleaner();
@@ -50,7 +59,7 @@ public class MetaClassRegistryCleaner implements MetaClassRegistryChangeEventLis
         boolean registered = false;
         for (MetaClassRegistryChangeEventListener listener : listeners) {
             if (listener == INSTANCE) {
-                registered = true;break;
+                registered = true; break;
             }
         }
         if (!registered) {
@@ -96,7 +105,7 @@ public class MetaClassRegistryCleaner implements MetaClassRegistryChangeEventLis
     private void updateMetaClassOfClass(MetaClass oldMetaClass, Class classToUpdate) {
         if (oldMetaClass != null && !(oldMetaClass.getClass().getName().equals("groovy.mock.interceptor.MockProxyMetaClass"))) {
             Object current = alteredClasses.get(classToUpdate);
-            if (current == null ) {
+            if (current == null) {
                 alteredClasses.put(classToUpdate, oldMetaClass);
             }
         }
@@ -117,7 +126,7 @@ public class MetaClassRegistryCleaner implements MetaClassRegistryChangeEventLis
     }
 
     private void cleanMetaClassOfInstance(MetaClassRegistryImpl registry) {
-        List<IdentityWeakReference> keys = new ArrayList<IdentityWeakReference>(alteredInstances.keySet());
+        List<IdentityWeakReference> keys = new ArrayList<>(alteredInstances.keySet());
         for (IdentityWeakReference key : keys) {
             Object instance = key.get();
             if (instance != null) {
@@ -132,7 +141,7 @@ public class MetaClassRegistryCleaner implements MetaClassRegistryChangeEventLis
     }
 
     private void cleanMetaClassOfClass(MetaClassRegistryImpl registry) {
-        Set<Class> classes = new HashSet<Class>(alteredClasses.keySet());
+        Set<Class> classes = new HashSet<>(alteredClasses.keySet());
         for (Class aClass : classes) {
             Object alteredMetaClass = alteredClasses.get(aClass);
             if (alteredMetaClass == NO_CUSTOM_METACLASS) {
@@ -164,7 +173,7 @@ public class MetaClassRegistryCleaner implements MetaClassRegistryChangeEventLis
             if (this == obj) {
                 return true;
             }
-            return get() == ((IdentityWeakReference)obj).get();
+            return get() == ((IdentityWeakReference) obj).get();
         }
     }
 }

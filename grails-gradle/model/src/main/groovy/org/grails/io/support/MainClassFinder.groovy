@@ -19,16 +19,18 @@
 
 package org.grails.io.support
 
-import grails.util.BuildSettings
+import java.nio.file.Paths
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.CompileStatic
+
 import groovyjarjarasm.asm.ClassReader
 import groovyjarjarasm.asm.ClassVisitor
 import groovyjarjarasm.asm.MethodVisitor
 import groovyjarjarasm.asm.Opcodes
 import groovyjarjarasm.asm.Type
 
-import java.nio.file.Paths
-import java.util.concurrent.ConcurrentHashMap
+import grails.util.BuildSettings
 
 /**
  * @author Graeme Rocher
@@ -41,11 +43,11 @@ class MainClassFinder {
 
     private static final Type MAIN_METHOD_TYPE = Type.getMethodType(Type.VOID_TYPE, STRING_ARRAY_TYPE)
 
-    private static final String MAIN_METHOD_NAME = "main"
+    private static final String MAIN_METHOD_NAME = 'main'
 
     static final Map<String, MainClassHolder> mainClasses = new ConcurrentHashMap<>()
 
-    public static final String ROOT_FOLDER_PATH = "build/classes/main"
+    public static final String ROOT_FOLDER_PATH = 'build/classes/main'
 
     /**
      * Searches for the main class relative to the give path that is within the project tree
@@ -62,7 +64,7 @@ class MainClassFinder {
         def pathStr = path.toString()
         if (supportCaching && mainClasses.containsKey(pathStr)) {
             def holder = mainClasses.get(pathStr)
-            if(holder.classFile.exists()) {
+            if (holder.classFile.exists()) {
                 return holder.className
             }
             else {
@@ -88,7 +90,7 @@ class MainClassFinder {
                     searchDirs << rootClassesDir
                 }
 
-                rootClassesDir = new File(rootDir, "build/classes/groovy/main")
+                rootClassesDir = new File(rootDir, 'build/classes/groovy/main')
                 if (rootClassesDir.exists()) {
                     searchDirs << rootClassesDir
                 }
@@ -115,7 +117,7 @@ class MainClassFinder {
             def parent = file.parentFile
 
             while (parent != null) {
-                if (new File(parent, "build.gradle").exists() || new File(parent, "grails-app").exists()) {
+                if (new File(parent, 'build.gradle').exists() || new File(parent, 'grails-app').exists()) {
                     return parent
                 } else {
                     parent = parent.parentFile
@@ -142,12 +144,12 @@ class MainClassFinder {
         final String rootFolderCanonicalPath = rootFolder.canonicalPath
         if (supportCaching && mainClasses.containsKey(rootFolderCanonicalPath)) {
             def holder = mainClasses.get(rootFolderCanonicalPath)
-            if(holder.classFile.exists()) {
+            if (holder.classFile.exists()) {
                 return holder
             }
         }
         ArrayDeque<File> stack = new ArrayDeque<>()
-        stack.push rootFolder
+        stack.push(rootFolder)
 
         while (!stack.empty) {
             final File file = stack.pop()
@@ -160,7 +162,7 @@ class MainClassFinder {
                         holder.className = classReader.getClassName().replace('/', '.').replace('\\', '.')
                         holder.classFile = file
 
-                        if(supportCaching) {
+                        if (supportCaching) {
                             mainClasses.put(rootFolderCanonicalPath, holder)
                         }
 
@@ -183,7 +185,6 @@ class MainClassFinder {
         (f.isDirectory() && !f.name.startsWith('.') && !f.hidden) ||
                 (f.isFile() && f.name.endsWith(GrailsResourceUtils.CLASS_EXTENSION))
     }
-
 
     protected static boolean isMainClass(ClassReader classReader) {
         if (classReader.superName?.startsWith('grails/boot/config/')) {
@@ -210,13 +211,11 @@ class MainClassFinder {
                         && MAIN_METHOD_NAME.equals(name)
                         && MAIN_METHOD_TYPE.getDescriptor().equals(desc)) {
 
-
                     this.found = true
                 }
             }
             return null
         }
-
 
         private boolean isAccess(int access, int ... requiredOpsCodes) {
             return !requiredOpsCodes.any { int requiredOpsCode -> (access & requiredOpsCode) == 0 }

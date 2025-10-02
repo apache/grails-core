@@ -19,7 +19,17 @@
 
 package grails.doc.dropdown
 
+import java.nio.file.FileVisitResult
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.BasicFileAttributes
+
+import javax.inject.Inject
+
 import groovy.transform.CompileStatic
+
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Project
@@ -28,11 +38,15 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.*
-
-import javax.inject.Inject
-import java.nio.file.*
-import java.nio.file.attribute.BasicFileAttributes
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 
 /**
  * Duplicates the documentation and modifies source files to add a release dropdown to the documentation
@@ -42,7 +56,8 @@ import java.nio.file.attribute.BasicFileAttributes
 @CacheableTask
 abstract class CreateReleaseDropDownTask extends DefaultTask {
 
-    private static final String GRAILS_DOC_BASE_URL = "https://docs.grails.org"
+    @Input
+    final Property<String> docBaseUrl
 
     @Input
     final Property<String> githubSlug
@@ -68,18 +83,27 @@ abstract class CreateReleaseDropDownTask extends DefaultTask {
     @OutputDirectory
     final DirectoryProperty modifiedPagesDirectory
 
+    @Input
+    final Property<String> versionHtml
+
+    @Input
+    final Property<String> additionalPath
+
     @Inject
     CreateReleaseDropDownTask(ObjectFactory objects, Project project) {
         group = 'documentation'
         githubSlug = objects.property(String).convention(project.provider {
-            project.findProperty('githubSlug') as String ?: 'apache/grails-doc'
+            project.findProperty('githubSlug') as String ?: 'apache/grails-core'
         })
         sourceDocsDirectory = objects.directoryProperty().convention(project.layout.buildDirectory.dir('manual'))
         projectVersion = objects.property(String).convention(project.provider { project.version as String })
         filesToAddDropdowns = objects.fileCollection()
-        modifiedPagesDirectory = objects.directoryProperty().convention(project.layout.buildDirectory.dir("modified-pages"))
+        modifiedPagesDirectory = objects.directoryProperty().convention(project.layout.buildDirectory.dir('modified-pages'))
         gitTags = objects.fileProperty().convention(project.layout.buildDirectory.file('git-tags.txt'))
         minimumVersion = objects.property(SoftwareVersion).convention(new SoftwareVersion(major: 5))
+        docBaseUrl = objects.property(String).convention('https://docs.grails.org')
+        versionHtml = objects.property(String).convention(project.provider { '<p><strong>Version:</strong> ' + projectVersion.get() + '</p>' })
+        additionalPath = objects.property(String).convention('')
     }
 
     /**
@@ -98,7 +122,6 @@ abstract class CreateReleaseDropDownTask extends DefaultTask {
         List<SoftwareVersion> softwareVersions = parseSoftwareVersions(projectVersion, result)
         logger.lifecycle("Detected Project Version: ${projectVersion} and Software Versions: ${softwareVersions*.versionText.join(',')}")
 
-        final String versionHtml = "<p><strong>Version:</strong> ${projectVersion}</p>"
         Path guideDirectory = sourceDocsDirectory.get().asFile.toPath()
 
         Map<String, Path> filesToAddDropdown = filesToAddDropdowns.collectEntries { [it.absolutePath, it.toPath()] }
@@ -121,8 +144,8 @@ abstract class CreateReleaseDropDownTask extends DefaultTask {
                     String pageRelativePath = guideDirectory.toFile().relativePath(file.toFile())
                     String selectHtml = select(options(projectVersion, pageRelativePath, softwareVersions))
 
-                    final String versionWithSelectHtml = "<p><strong>Version:</strong>&nbsp;<span style='width:100px;display:inline-block;'>${selectHtml}</span></p>"
-                    targetFile.toFile().text = file.text.replace(versionHtml, versionWithSelectHtml)
+                    final String versionWithSelectHtml = "<p><strong>Version:</strong>&nbsp;<span style='display:inline-block;'>${selectHtml}</span></p>"
+                    targetFile.toFile().text = file.text.replace(versionHtml.get(), versionWithSelectHtml)
 
                     filesToAddDropdown.remove(absolutePath)
                 } else {
@@ -148,13 +171,14 @@ abstract class CreateReleaseDropDownTask extends DefaultTask {
      */
     private List<String> options(String version, String pageRelativePath, List<SoftwareVersion> softwareVersions) {
         List<String> options = []
-        final String snapshotHref = GRAILS_DOC_BASE_URL + "/snapshot/" + pageRelativePath
-        options << option(snapshotHref, "SNAPSHOT", version.endsWith("-SNAPSHOT"))
+
+        final String snapshotHref = docBaseUrl.get() + '/snapshot/' + additionalPath.get() + pageRelativePath
+        options << option(snapshotHref, 'SNAPSHOT', version.endsWith('-SNAPSHOT'))
 
         softwareVersions
                 .forEach { softwareVersion ->
                     final String versionName = softwareVersion?.versionText
-                    final String href = GRAILS_DOC_BASE_URL + "/" + (versionName?.endsWith("-SNAPSHOT") ? 'snapshot' : versionName) + "/" + pageRelativePath
+                    final String href = docBaseUrl.get() + '/' + (versionName?.endsWith('-SNAPSHOT') ? 'snapshot' : versionName) + '/' + additionalPath.get() + pageRelativePath
                     options << option(href, versionName, version == versionName)
                 }
 
@@ -168,7 +192,7 @@ abstract class CreateReleaseDropDownTask extends DefaultTask {
      * @return The select tag with the options
      */
     private String select(List<String> options) {
-        String selectHtml = "<select onChange='window.document.location.href=this.options[this.selectedIndex].value;'>"
+        String selectHtml = /<select onChange='window.document.location.href=this.options[this.selectedIndex].value;'>/
         options.each { option -> selectHtml += option
         }
         selectHtml += '</select>'

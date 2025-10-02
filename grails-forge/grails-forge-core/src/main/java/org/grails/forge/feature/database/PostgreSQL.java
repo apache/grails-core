@@ -43,7 +43,7 @@ public class PostgreSQL extends DatabaseDriverFeature {
 
     @Override
     public String getDescription() {
-        return "Adds the PostgresSQL driver and default config";
+        return "Add PostgresSQL driver and default configuration.";
     }
 
     @Override

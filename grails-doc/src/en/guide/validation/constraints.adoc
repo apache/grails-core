@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Within a domain class link:../ref/Domain%20Classes/constraints.html[constraints] are defined with the constraints property that is assigned a code block:
+Within a domain class link:{domainClassesRef}constraints.html[constraints] are defined with the constraints property that is assigned a code block:
 
 [source,groovy]
 ----
@@ -88,7 +88,7 @@ class Response {
 }
 ----
 
-See how the `inList` constraint references the instance property `survey`? That won't work. Instead, use a custom link:../ref/Constraints/validator.html[validator]:
+See how the `inList` constraint references the instance property `survey`? That won't work. Instead, use a custom link:{constraintsRef}validator.html[validator]:
 
 [source,groovy]
 ----

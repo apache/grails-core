@@ -18,11 +18,13 @@
  */
 package org.grails.plugins.databasemigration.command
 
-import grails.dev.commands.ApplicationCommand
 import groovy.transform.CompileStatic
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
+
 import liquibase.Liquibase
+
+import grails.dev.commands.ApplicationCommand
 
 @CompileStatic
 class DbmListLocksCommand implements ApplicationCommand, ApplicationContextDatabaseMigrationCommand {
@@ -39,7 +41,7 @@ class DbmListLocksCommand implements ApplicationCommand, ApplicationContextDatab
         }
     }
 
-    private static void withFilePrintStreamOrSystemOut(String filename, @ClosureParams(value = SimpleType, options = "java.io.PrintStream") Closure closure) {
+    private static void withFilePrintStreamOrSystemOut(String filename, @ClosureParams(value = SimpleType, options = 'java.io.PrintStream') Closure closure) {
         if (!filename) {
             closure.call(System.out)
             return

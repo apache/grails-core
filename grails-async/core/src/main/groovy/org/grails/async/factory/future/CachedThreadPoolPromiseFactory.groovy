@@ -19,15 +19,22 @@
 
 package org.grails.async.factory.future
 
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.RunnableFuture
+import java.util.concurrent.SynchronousQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
+
+import groovy.transform.AutoFinal
+import groovy.transform.CompileStatic
+
+import jakarta.annotation.PreDestroy
+
 import grails.async.Promise
 import grails.async.PromiseList
 import grails.async.factory.AbstractPromiseFactory
-import groovy.transform.AutoFinal
-import groovy.transform.CompileStatic
 import org.grails.async.factory.BoundPromise
-
-import jakarta.annotation.PreDestroy
-import java.util.concurrent.*
 
 /**
  * A promise factory that uses an ExecutorService by default

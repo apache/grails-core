@@ -57,6 +57,25 @@ allprojects {
                 includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
             }
         }
+        maven {
+            url = 'https://central.sonatype.com/repository/maven-snapshots'
+            content {
+                includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+            }
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+        maven {
+            url = 'https://repository.apache.org/content/groups/staging'
+            content {
+                includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
+                includeModuleByRegex('org[.]apache[.]groovy[.]geb', 'geb-.*')
+            }
+            mavenContent {
+                releasesOnly()
+            }
+        }
     }
 }
 
@@ -87,8 +106,6 @@ subprojects {
             cacheChangingModulesFor(cacheHours, 'hours')
         }
     }
-
-    apply from: rootProject.layout.projectDirectory.file('gradle/dependency-licenses.gradle')
 }
 
 apply {

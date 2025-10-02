@@ -24,7 +24,7 @@ import grails.plugins.*
 class Issue11005GrailsPlugin extends Plugin {
 
     // the version or versions of Grails the plugin is designed for
-    def grailsVersion = "3.3.6 > *"
+    def grailsVersion = '7.0.0-SNAPSHOT > *'
     // resources that are excluded from plugin packaging
     def pluginExcludes = [
         "grails-app/views/error.gsp"
@@ -40,7 +40,7 @@ Brief summary/description of the plugin.
     def profiles = ['web']
 
     // URL to the plugin's documentation
-    def documentation = "http://grails.org/plugin/issue11005"
+    def documentation = "https://grails.apache.org/plugins.html"
 
     // Extra (optional) plugin metadata
 

@@ -83,13 +83,13 @@ class Link implements Serializable {
 
         final rel = arguments.rel ? arguments.rel.toString() : null
         final href = arguments.href ? arguments.href.toString() : null
-        def link = (Link)Link.newInstance(rel, href)
+        def link = (Link) Link.newInstance(rel, href)
 
         final remaining = arguments.subMap(['hreflang', 'contentType', 'title', 'deprecated', 'templated'])
-        for(entry in remaining.entrySet()) {
+        for (entry in remaining.entrySet()) {
             final value = entry.value
             if (value) {
-                ((GroovyObject)link).setProperty(entry.key, value)
+                ((GroovyObject) link).setProperty(entry.key, value)
             }
         }
         return link

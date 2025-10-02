@@ -21,7 +21,7 @@ under the License.
 === Declarative Transactions
 
 
-Services are typically involved with coordinating logic between link:GORM.html[domain classes], and hence often involved with persistence that spans large operations. Given the nature of services, they frequently require transactional behaviour. You can use programmatic transactions with the link:../ref/Domain%20Classes/withTransaction.html[withTransaction] method, however this is repetitive and doesn't fully leverage the power of Spring's underlying transaction abstraction.
+Services are typically involved with coordinating logic between link:GORM.html[domain classes], and hence often involved with persistence that spans large operations. Given the nature of services, they frequently require transactional behaviour. You can use programmatic transactions with the link:{domainClassesRef}withTransaction.html[withTransaction] method, however this is repetitive and doesn't fully leverage the power of Spring's underlying transaction abstraction.
 
 Services enable transaction demarcation, which is a declarative way of defining which methods are to be made transactional. To enable transactions on a service use the `Transactional` transform:
 
@@ -134,7 +134,7 @@ class BookService {
 
 Although `updateBook` and `deleteBook` aren't annotated in this example, they inherit the configuration from the class-level annotation.
 
-For more information refer to the section of the Spring user guide on http://docs.spring.io/spring/docs/current/spring-framework-reference/html/transaction.html#transaction-declarative-annotations[Using @Transactional].
+For more information refer to the section of the Spring user guide on {springreference}data-access/transaction.html[Using @Transactional].
 
 Unlike Spring you do not need any prior configuration to use `Transactional`; just specify the annotation as needed and Grails will detect them up automatically.
 

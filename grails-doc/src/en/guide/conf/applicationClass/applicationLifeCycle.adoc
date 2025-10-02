@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-The `Application` class also implements the {apiDocs}grails/core/GrailsApplicationLifeCycle.html[GrailsApplicationLifeCycle] interface which all plugins implement.
+The `Application` class also implements the link:{api}grails/core/GrailsApplicationLifeCycle.html[GrailsApplicationLifeCycle] interface which all plugins implement.
 
 This means that the `Application` class can be used to perform the same functions as a plugin. You can override the link:plugins.html#hookingIntoRuntimeConfiguration[regular plugins hooks] such as `doWithSpring`, `doWithApplicationContext` and so on by overriding the appropriate method:
 

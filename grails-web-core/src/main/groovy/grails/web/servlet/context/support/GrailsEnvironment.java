@@ -18,14 +18,15 @@
  */
 package grails.web.servlet.context.support;
 
-import grails.core.GrailsApplication;
-import grails.util.Environment;
+import java.util.Set;
+
 import org.springframework.core.env.PropertiesPropertySource;
 import org.springframework.core.env.PropertySource;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.support.StandardServletEnvironment;
 
-import java.util.Set;
+import grails.core.GrailsApplication;
+import grails.util.Environment;
 
 /**
  * Bridges Grails' existing environment API with the new Spring 3.1 environment profiles API.

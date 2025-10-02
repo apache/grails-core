@@ -21,13 +21,12 @@ package org.apache.grails.web.layout
 
 import grails.config.Config
 import grails.config.Settings
-import grails.util.Environment
-import grails.util.Metadata
-import org.grails.plugins.web.taglib.RenderGrailsLayoutTagLib
-import org.grails.plugins.web.taglib.GrailsLayoutTagLib
-
 import grails.plugins.Plugin
+import grails.util.Environment
 import grails.util.GrailsUtil
+import grails.util.Metadata
+import org.grails.plugins.web.taglib.GrailsLayoutTagLib
+import org.grails.plugins.web.taglib.RenderGrailsLayoutTagLib
 
 /**
  * Plugin responsible for Grails Layout specific configuration.
@@ -38,7 +37,7 @@ class LayoutGrailsPlugin extends Plugin {
     public static final String DEFAULT_LAYOUT = 'grails.views.layout.default'
     public static final String GRAILS_LAYOUT_ENABLE_NONGSP = 'grails.views.layout.enable.nongsp'
 
-    def title = "Layout"
+    def title = 'Layout'
     def grailsVersion = '7.0.0-SNAPSHOT > *'
     def dependsOn = [core: GrailsUtil.getGrailsVersion(), i18n: GrailsUtil.getGrailsVersion()]
     def observe = ['controllers']

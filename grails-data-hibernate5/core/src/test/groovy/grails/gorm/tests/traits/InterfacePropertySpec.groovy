@@ -31,7 +31,7 @@ class InterfacePropertySpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMan
         manager.domainClasses.addAll([TestDomain])
     }
 
-    @Issue('https://github.com/grails/gorm-hibernate5/issues/38')
+    @Issue('https://github.com/grails/grails-data-hibernate5/issues/38')
     void "test interface that exposes id"() {
         when:
         TestDomain td = new TestDomain(name: "Fred").save(flush: true)

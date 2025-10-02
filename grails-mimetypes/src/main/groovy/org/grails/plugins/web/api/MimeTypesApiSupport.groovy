@@ -20,15 +20,15 @@ package org.grails.plugins.web.api
 
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
-import grails.web.mime.MimeType
 
 import jakarta.servlet.ServletRequest
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
+import grails.web.mime.MimeType
 import org.grails.plugins.web.mime.FormatInterceptor
-import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.GrailsApplicationAttributes
 
 /**
  * Support class for dealing with calls to withFormat.
@@ -40,11 +40,11 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 class MimeTypesApiSupport {
 
     def <T> T withFormat(HttpServletRequest request, Closure<T> callable) {
-        return (T)withFormatInternal(request, getDefinedFormats(callable))
+        return (T) withFormatInternal(request, getDefinedFormats(callable))
     }
 
     def <T> T withFormat(HttpServletResponse response, Closure<T> callable) {
-        return (T)withFormatInternal(response, getDefinedFormats(callable))
+        return (T) withFormatInternal(response, getDefinedFormats(callable))
     }
 
     protected Object withFormatInternal(formatProvider, LinkedHashMap<String, Object> formats) {
@@ -87,7 +87,7 @@ class MimeTypesApiSupport {
 
     /**
      * implementation for resolving "all" format
-     * 
+     *
      * @param formatProvider
      * @param formats
      * @return
@@ -95,7 +95,7 @@ class MimeTypesApiSupport {
     protected Object resolveAllFormat(formatProvider, LinkedHashMap<String, Object> formats) {
         def formatKey
         def format
-        if(formats.containsKey('*')) {
+        if (formats.containsKey('*')) {
             formatKey = '*'
             format = 'all'
         } else {

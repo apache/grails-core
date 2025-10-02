@@ -136,5 +136,6 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/sbom-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')
 }

@@ -96,4 +96,4 @@ buildscript {
 
 In order to separate the code generation and build layer, in Grails 3.x scripts created with `create-script` do not have access to the running application instance.
 
-Instead, Grails 3.x features a new concept called an {apiDocs}grails/dev/commands/ApplicationCommand.html[ApplicationCommand] that is invoked via Gradle to perform tasks such as interact with classes in the runtime.
+Instead, Grails 3.x features a new concept called an link:{apiFromRef}grails/dev/commands/ApplicationCommand.html[ApplicationCommand] that is invoked via Gradle to perform tasks such as interact with classes in the runtime.

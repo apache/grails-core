@@ -58,7 +58,6 @@ interface Model {
      */
     String getPropertyName()
 
-
     /**
      * A property name version of the class name. For example 'FooBar' becomes 'fooBar'
      *

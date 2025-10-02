@@ -20,12 +20,18 @@ package org.grails.forge.feature.database;
 
 import io.micronaut.context.annotation.Primary;
 import jakarta.inject.Singleton;
+import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
+import org.grails.forge.feature.DefaultFeature;
+import org.grails.forge.feature.Feature;
+import org.grails.forge.options.Options;
+
+import java.util.Set;
 
 @Singleton
 @Primary
-public class H2 extends DatabaseDriverFeature {
+public class H2 extends DatabaseDriverFeature implements DefaultFeature {
 
     @Override
     public String getName() {
@@ -39,7 +45,8 @@ public class H2 extends DatabaseDriverFeature {
 
     @Override
     public String getDescription() {
-        return "Adds the H2 driver and default config";
+        return "Add the H2 database with default configuration. " +
+                "H2 is a lightweight in-memory database, perfect for development and testing.";
     }
 
     @Override
@@ -88,5 +95,11 @@ public class H2 extends DatabaseDriverFeature {
                 .groupId("com.h2database")
                 .artifactId("h2")
                 .runtimeOnly());
+    }
+
+    @Override
+    public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
+        return options.getGormImpl().getName().equals("gorm-hibernate5") &&
+                selectedFeatures.stream().noneMatch(f -> f instanceof DatabaseDriverFeature);
     }
 }

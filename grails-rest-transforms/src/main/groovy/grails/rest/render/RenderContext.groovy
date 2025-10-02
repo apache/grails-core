@@ -18,9 +18,10 @@
  */
 package grails.rest.render
 
-import grails.web.mime.MimeType
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
+
+import grails.web.mime.MimeType
 
 /**
  * Passed to a renderer to provide context information
@@ -28,7 +29,7 @@ import org.springframework.http.HttpStatus
  * @author Graeme Rocher
  * @since 2.3
  */
-public interface RenderContext {
+interface RenderContext {
 
     /**
      * Which properties should be included in rendering
@@ -41,7 +42,6 @@ public interface RenderContext {
      * @return A list of excludes
      */
     List<String> getExcludes()
-
 
     /**
      * @return Arguments passed by the user
@@ -68,7 +68,7 @@ public interface RenderContext {
     /**
      * @return The HTTP method
      */
-    HttpMethod getHttpMethod();
+    HttpMethod getHttpMethod()
 
     /**
      * @param status The status to set

@@ -19,9 +19,9 @@
 
 package org.grails.scaffolding.registry.input
 
-import org.grails.scaffolding.model.property.DomainProperty
-import org.grails.scaffolding.registry.DomainInputRenderer
 import groovy.transform.CompileStatic
+
+import org.grails.scaffolding.model.property.DomainProperty
 
 /**
  * The default renderer for rendering {@link Currency} properties

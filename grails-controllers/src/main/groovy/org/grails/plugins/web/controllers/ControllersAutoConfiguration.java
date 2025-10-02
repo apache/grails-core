@@ -19,15 +19,12 @@
 
 package org.grails.plugins.web.controllers;
 
-import grails.config.Settings;
-import grails.core.GrailsApplication;
+import java.util.EnumSet;
+
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.Filter;
 import jakarta.servlet.MultipartConfigElement;
-import org.grails.web.config.http.GrailsFilters;
-import org.grails.web.filters.HiddenHttpMethodFilter;
-import org.grails.web.servlet.mvc.GrailsDispatcherServlet;
-import org.grails.web.servlet.mvc.GrailsWebRequestFilter;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -45,9 +42,18 @@ import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import java.util.EnumSet;
+import grails.config.Settings;
+import grails.core.GrailsApplication;
+import org.grails.plugins.domain.GrailsDomainClassAutoConfiguration;
+import org.grails.web.config.http.GrailsFilters;
+import org.grails.web.filters.HiddenHttpMethodFilter;
+import org.grails.web.servlet.mvc.GrailsDispatcherServlet;
+import org.grails.web.servlet.mvc.GrailsWebRequestFilter;
 
-@AutoConfiguration(before = { HttpEncodingAutoConfiguration.class, WebMvcAutoConfiguration.class })
+@AutoConfiguration(
+        before = {HttpEncodingAutoConfiguration.class, WebMvcAutoConfiguration.class},
+        after = {GrailsDomainClassAutoConfiguration.class}
+)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class ControllersAutoConfiguration {
 
@@ -155,15 +161,15 @@ public class ControllersAutoConfiguration {
         private static final String[] SERVLET_RESOURCE_LOCATIONS = new String[] { "/" };
 
         private static final String[] CLASSPATH_RESOURCE_LOCATIONS = new String[] {
-                "classpath:/META-INF/resources/", "classpath:/resources/",
-                "classpath:/static/", "classpath:/public/"
+            "classpath:/META-INF/resources/", "classpath:/resources/",
+            "classpath:/static/", "classpath:/public/"
         };
 
         private static final String[] RESOURCE_LOCATIONS;
 
         static {
-            RESOURCE_LOCATIONS = new String[CLASSPATH_RESOURCE_LOCATIONS.length
-                    + SERVLET_RESOURCE_LOCATIONS.length];
+            RESOURCE_LOCATIONS = new String[CLASSPATH_RESOURCE_LOCATIONS.length +
+                    SERVLET_RESOURCE_LOCATIONS.length];
             System.arraycopy(SERVLET_RESOURCE_LOCATIONS, 0, RESOURCE_LOCATIONS, 0,
                     SERVLET_RESOURCE_LOCATIONS.length);
             System.arraycopy(CLASSPATH_RESOURCE_LOCATIONS, 0, RESOURCE_LOCATIONS,

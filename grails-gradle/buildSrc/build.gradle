@@ -29,6 +29,30 @@ repositories {
     // mavenLocal()
     mavenCentral()
     gradlePluginPortal()
+    maven {
+        url = 'https://repository.apache.org/content/groups/snapshots'
+        content {
+            includeVersionByRegex('org[.]apache[.]grails[.]gradle.*', '.*', '.*-SNAPSHOT')
+        }
+    }
+    maven {
+        url = 'https://central.sonatype.com/repository/maven-snapshots'
+        content {
+            includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+        }
+        mavenContent {
+            snapshotsOnly()
+        }
+    }
+    maven {
+        url = 'https://repository.apache.org/content/groups/staging'
+        content {
+            includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
+        }
+        mavenContent {
+            releasesOnly()
+        }
+    }
 }
 
 file('../../gradle.properties').withInputStream {
@@ -38,6 +62,7 @@ file('../../gradle.properties').withInputStream {
 }
 
 dependencies {
-    implementation "${gradleBomDependencies['gradle-nexus-publish-plugin']}"
+    implementation "${gradleBomDependencies['grails-publish-plugin']}"
     implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${gradleProperties.gradleChecksumPluginVersion}"
+    implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${gradleProperties.gradleCycloneDxPluginVersion}"
 }

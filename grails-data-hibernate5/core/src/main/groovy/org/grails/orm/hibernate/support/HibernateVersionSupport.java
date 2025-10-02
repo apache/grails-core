@@ -18,13 +18,12 @@
  */
 package org.grails.orm.hibernate.support;
 
-import org.grails.datastore.mapping.core.grailsversion.GrailsVersion;
-import org.grails.datastore.mapping.reflect.ClassUtils;
-import org.hibernate.*;
-import org.springframework.util.Assert;
-import org.springframework.util.ReflectionUtils;
+import org.hibernate.FlushMode;
+import org.hibernate.Hibernate;
+import org.hibernate.Query;
+import org.hibernate.Session;
 
-import java.lang.reflect.Method;
+import org.grails.datastore.mapping.core.grailsversion.GrailsVersion;
 
 /**
  *
@@ -37,7 +36,6 @@ import java.lang.reflect.Method;
  *
  */
 public class HibernateVersionSupport {
-
 
     /**
      * Get the native Hibernate FlushMode, adapting between Hibernate 5.0/5.1 and 5.2+.

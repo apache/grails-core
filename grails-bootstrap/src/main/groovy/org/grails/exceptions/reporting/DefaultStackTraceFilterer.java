@@ -18,12 +18,12 @@
  */
 package org.grails.exceptions.reporting;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Default implementation of StackTraceFilterer.
@@ -55,7 +55,7 @@ public class DefaultStackTraceFilterer implements StackTraceFilterer {
         "jakarta.servlet."
     };
 
-    private List<String> packagesToFilter = new ArrayList<String>();
+    private List<String> packagesToFilter = new ArrayList<>();
     private boolean shouldFilter;
     private String cutOffPackage = null;
 
@@ -112,7 +112,7 @@ public class DefaultStackTraceFilterer implements StackTraceFilterer {
     }
 
     private List<StackTraceElement> filterTraceWithCutOff(StackTraceElement[] trace, String endPackage) {
-        List<StackTraceElement> newTrace = new ArrayList<StackTraceElement>();
+        List<StackTraceElement> newTrace = new ArrayList<>();
         boolean foundGroovy = false;
         for (StackTraceElement stackTraceElement : trace) {
             String className = stackTraceElement.getClassName();

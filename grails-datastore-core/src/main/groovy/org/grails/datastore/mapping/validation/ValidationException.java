@@ -16,6 +16,7 @@
 package org.grails.datastore.mapping.validation;
 
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.util.ClassUtils;
 import org.springframework.validation.Errors;
@@ -34,7 +35,7 @@ public class ValidationException extends DataIntegrityViolationException {
 
     static {
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
-        if(ClassUtils.isPresent("grails.validation.ValidationException", cl)) {
+        if (ClassUtils.isPresent("grails.validation.ValidationException", cl)) {
             Class<? extends RuntimeException> validationExceptionType;
             try {
                 validationExceptionType = (Class<? extends RuntimeException>) ClassUtils.forName("grails.validation.ValidationException", cl);
@@ -48,7 +49,6 @@ public class ValidationException extends DataIntegrityViolationException {
             VALIDATION_EXCEPTION_TYPE = ValidationException.class;
         }
     }
-
 
     private final String fullMessage;
     private final Errors errors;
@@ -72,7 +72,7 @@ public class ValidationException extends DataIntegrityViolationException {
         return fullMessage;
     }
 
-    public static String formatErrors(Errors errors, String msg ) {
+    public static String formatErrors(Errors errors, String msg) {
         String ls = System.getProperty("line.separator");
         StringBuilder b = new StringBuilder();
         if (msg != null) {
@@ -81,9 +81,9 @@ public class ValidationException extends DataIntegrityViolationException {
 
         for (ObjectError error : errors.getAllErrors()) {
             b.append(ls)
-             .append(" - ")
-             .append(error)
-             .append(ls);
+                .append(" - ")
+                .append(error)
+                .append(ls);
         }
         return b.toString();
     }

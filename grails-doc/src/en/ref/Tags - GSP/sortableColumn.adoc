@@ -61,5 +61,5 @@ Attributes
 * `titleKey` (optional) - title key to use for the column, resolved against the message source
 * `params` (optional) - a Map containing request parameters
 * `action` (optional) - the name of the action to use in the link; if not specified the `list` action will be used
-* `mapping` (optional) - The xref:../guide/theWebLayer/urlmappings/namedMappings.adoc[named URL mapping] to use to rewrite the link
+* `mapping` (optional) - The link:{guidePath}/theWebLayer.html#namedMappings[named URL mapping] to use to rewrite the link
 

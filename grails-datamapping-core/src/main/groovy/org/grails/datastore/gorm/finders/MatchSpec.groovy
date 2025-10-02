@@ -20,7 +20,6 @@
 package org.grails.datastore.gorm.finders
 
 import groovy.transform.CompileStatic
-import org.codehaus.groovy.ast.expr.MethodCallExpression
 
 /**
  * A match spec details a matched finder
@@ -30,6 +29,7 @@ import org.codehaus.groovy.ast.expr.MethodCallExpression
  */
 @CompileStatic
 class MatchSpec {
+
     /**
      * The full method name
      */

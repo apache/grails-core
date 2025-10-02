@@ -36,7 +36,6 @@ class GrailsDefaultPluginsSpec extends ApplicationContextSpec implements Command
         expect:
         buildGradle.contains("implementation \"org.apache.grails:grails-rest-transforms\"")
         buildGradle.contains("implementation \"org.apache.grails:grails-databinding\"")
-        buildGradle.contains("implementation \"org.apache.grails:grails-i18n\"")
         buildGradle.contains("implementation \"org.apache.grails:grails-services\"")
         buildGradle.contains("implementation \"org.apache.grails:grails-interceptors\"")
     }

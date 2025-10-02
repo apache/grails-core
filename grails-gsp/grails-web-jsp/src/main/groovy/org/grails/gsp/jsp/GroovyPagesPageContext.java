@@ -18,22 +18,42 @@
  */
 package org.grails.gsp.jsp;
 
+import java.io.IOException;
+import java.io.Writer;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.NoSuchElementException;
+
 import groovy.lang.Binding;
+
 import jakarta.el.ELContext;
-import jakarta.servlet.*;
+import jakarta.servlet.GenericServlet;
+import jakarta.servlet.Servlet;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import jakarta.servlet.jsp.*;
+import jakarta.servlet.jsp.JspApplicationContext;
+import jakarta.servlet.jsp.JspContext;
+import jakarta.servlet.jsp.JspFactory;
+import jakarta.servlet.jsp.JspWriter;
+import jakarta.servlet.jsp.PageContext;
 import jakarta.servlet.jsp.tagext.BodyContent;
-import org.grails.gsp.GroovyPage;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
+
 import org.springframework.util.Assert;
 import org.springframework.web.context.request.RequestContextHolder;
 
-import java.io.IOException;
-import java.io.Writer;
-import java.util.*;
+import org.grails.gsp.GroovyPage;
+import org.grails.web.servlet.mvc.GrailsWebRequest;
 
 /**
  * A JSP PageContext implementation for use with GSP.
@@ -145,6 +165,7 @@ public class GroovyPagesPageContext extends PageContext {
             public ServletConfig getServletConfig() {
                 return this;
             }
+
             @Override
             public void service(ServletRequest servletRequest, ServletResponse servletResponse) {
                 // do nothing;
@@ -242,7 +263,7 @@ public class GroovyPagesPageContext extends PageContext {
                 setAttribute(name, value);
                 break;
             case REQUEST_SCOPE:
-                request.setAttribute(name,value);
+                request.setAttribute(name, value);
                 break;
             case SESSION_SCOPE:
                 request.getSession(true).setAttribute(name, value);
@@ -271,11 +292,11 @@ public class GroovyPagesPageContext extends PageContext {
         Assert.notNull(name, "Attribute name cannot be null");
 
         switch (scope) {
-            case PAGE_SCOPE:        return getAttribute(name);
-            case REQUEST_SCOPE:     return request.getAttribute(name);
-            case SESSION_SCOPE:     return request.getSession(true).getAttribute(name);
+            case PAGE_SCOPE: return getAttribute(name);
+            case REQUEST_SCOPE: return request.getAttribute(name);
+            case SESSION_SCOPE: return request.getSession(true).getAttribute(name);
             case APPLICATION_SCOPE: return servletContext.getAttribute(name);
-            default:                return getAttribute(name);
+            default: return getAttribute(name);
         }
     }
 
@@ -339,7 +360,7 @@ public class GroovyPagesPageContext extends PageContext {
             return SESSION_SCOPE;
         }
 
-        if (servletContext.getAttribute(name) !=null) {
+        if (servletContext.getAttribute(name) != null) {
             return APPLICATION_SCOPE;
         }
 
@@ -350,7 +371,7 @@ public class GroovyPagesPageContext extends PageContext {
     public Enumeration<String> getAttributeNamesInScope(int scope) {
         switch (scope) {
             case PAGE_SCOPE:
-                final var i = ((Map<String,Object>) pageScope.getVariables()).keySet().iterator();
+                final var i = ((Map<String, Object>) pageScope.getVariables()).keySet().iterator();
                 return new Enumeration<>() {
                     @Override
                     public boolean hasMoreElements() {
@@ -382,35 +403,37 @@ public class GroovyPagesPageContext extends PageContext {
     public JspWriter getOut() {
         Writer out = webRequest.getOut();
         if (out instanceof JspWriter) {
-            return (JspWriter)out;
+            return (JspWriter) out;
         }
 
         out = new JspWriterDelegate(out);
         webRequest.setOut(out);
-        return (JspWriter)out;
+        return (JspWriter) out;
     }
 
-//    public ExpressionFactory getExpressionEvaluator() {
-//        try {
-//            Class<?> type = AccessController.doPrivileged((PrivilegedAction<ClassLoader>) () -> Thread.currentThread().getContextClassLoader()).loadClass("jakarta.el.ExpressionFactory");
-//            return (ExpressionFactory) type.getDeclaredConstructor().newInstance();
-//        }
-//        catch (Exception e) {
-//            throw new UnsupportedOperationException("In order for the getExpressionEvaluator() " +
-//                    "method to work, you must have downloaded the apache commons-el jar and " +
-//                    "made it available in the classpath.");
-//        }
-//    }
+    /*
+    public ExpressionFactory getExpressionEvaluator() {
+        try {
+            Class<?> type = AccessController.doPrivileged((PrivilegedAction<ClassLoader>) () -> Thread.currentThread().getContextClassLoader()).loadClass("jakarta.el.ExpressionFactory");
+            return (ExpressionFactory) type.getDeclaredConstructor().newInstance();
+        }
+        catch (Exception e) {
+            throw new UnsupportedOperationException("In order for the getExpressionEvaluator() " +
+                    "method to work, you must have downloaded the apache commons-el jar and " +
+                    "made it available in the classpath.");
+        }
+    }
 
-//    @Override
-//    public VariableResolver getVariableResolver() {
-//        final PageContext ctx = this;
-//        return new VariableResolver() {
-//            public Object resolveVariable(String name) throws ELException {
-//                return ctx.findAttribute(name);
-//            }
-//        };
-//    }
+    @Override
+    public VariableResolver getVariableResolver() {
+        final PageContext ctx = this;
+        return new VariableResolver() {
+            public Object resolveVariable(String name) throws ELException {
+                return ctx.findAttribute(name);
+            }
+        };
+    }
+    */
 
     static {
         if (JspFactory.getDefaultFactory() == null) {
@@ -424,9 +447,9 @@ public class GroovyPagesPageContext extends PageContext {
     public ELContext getELContext() {
         if (elContext == null) {
             JspApplicationContext jspContext = JspFactory.getDefaultFactory().getJspApplicationContext(getServletContext());
-            if  (jspContext instanceof GroovyPagesJspApplicationContext) {
-                elContext = ((GroovyPagesJspApplicationContext)jspContext).createELContext(this);
-                elContext.putContext( JspContext.class, this );
+            if (jspContext instanceof GroovyPagesJspApplicationContext) {
+                elContext = ((GroovyPagesJspApplicationContext) jspContext).createELContext(this);
+                elContext.putContext(JspContext.class, this);
             }
             else {
                 throw new IllegalStateException("Unable to create ELContext for a JspApplicationContext. It must be an instance of [GroovyPagesJspApplicationContext] do not override JspFactory.setDefaultFactory()!");

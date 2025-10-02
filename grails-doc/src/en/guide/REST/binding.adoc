@@ -90,7 +90,7 @@ class BookController {
 }
 ----
 
-The data binding depends on an instance of the {apiDocs}grails/databinding/DataBindingSource.html[DataBindingSource] interface created by an instance of the {apiDocs}org/grails/databinding/bindingsource/DataBindingSourceCreator.html[DataBindingSourceCreator] interface.  The specific implementation of `DataBindingSourceCreator` will be selected based on the `contentType` of the request.  Several implementations are provided to handle common content types.  The default implementations will be fine for most use cases.  The following table lists the content types which are supported by the core framework and which `DataBindingSourceCreator` implementations are used for each. All of the implementation classes are in the `org.grails.databinding.bindingsource` package.
+The data binding depends on an instance of the link:{api}grails/databinding/DataBindingSource.html[DataBindingSource] interface created by an instance of the link:{api}org/grails/databinding/bindingsource/DataBindingSourceCreator.html[DataBindingSourceCreator] interface.  The specific implementation of `DataBindingSourceCreator` will be selected based on the `contentType` of the request.  Several implementations are provided to handle common content types.  The default implementations will be fine for most use cases.  The following table lists the content types which are supported by the core framework and which `DataBindingSourceCreator` implementations are used for each. All of the implementation classes are in the `org.grails.databinding.bindingsource` package.
 
 [format="csv", options="header"]
 |===
@@ -144,7 +144,7 @@ interface DataBindingSourceCreator {
 }
 ----
 
-{apiDocs}org/grails/web/databinding/bindingsource/AbstractRequestBodyDataBindingSourceCreator.html[AbstractRequestBodyDataBindingSourceCreator]
+link:{api}org/grails/web/databinding/bindingsource/AbstractRequestBodyDataBindingSourceCreator.html[AbstractRequestBodyDataBindingSourceCreator]
 is an abstract class designed to be extended to simplify writing custom `DataBindingSourceCreator` classes.  Classes which
 extend `AbstractRequestbodyDatabindingSourceCreator` need to implement a method named `createBindingSource`
 which accepts an `InputStream` as an argument and returns a `DataBindingSource` as well as implementing the `getMimeTypes`

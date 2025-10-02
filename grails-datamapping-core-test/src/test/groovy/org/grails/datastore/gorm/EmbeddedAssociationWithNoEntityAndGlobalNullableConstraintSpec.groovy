@@ -38,7 +38,7 @@ class EmbeddedAssociationWithNoEntityAndGlobalNullableConstraintSpec extends Spe
     )
 
     @Transactional
-    @Issue('https://github.com/grails/grails-core/issues/10867')
+    @Issue('https://github.com/apache/grails-core/issues/10867')
     void "global constraints are applied to embedded properties defined as POGO"() {
         given: 'a user with only a few properties set'
         def user = new User2()

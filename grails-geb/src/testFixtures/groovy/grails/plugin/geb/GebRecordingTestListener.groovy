@@ -19,19 +19,24 @@
 package grails.plugin.geb
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+
+import com.github.dockerjava.api.exception.NotFoundException
 import org.spockframework.runtime.AbstractRunListener
 import org.spockframework.runtime.model.ErrorInfo
 import org.spockframework.runtime.model.IterationInfo
 
 /**
- * A test listener that reports the test result to {@link org.testcontainers.containers.BrowserWebDriverContainer} so
- * that recordings may be saved.
+ * A test listener that reports the test result to
+ * {@link org.testcontainers.containers.BrowserWebDriverContainer}
+ * so that recordings may be saved.
  *
  * @see org.testcontainers.containers.BrowserWebDriverContainer#afterTest
  *
  * @author James Daugherty
  * @since 4.1
  */
+@Slf4j
 @CompileStatic
 class GebRecordingTestListener extends AbstractRunListener {
 
@@ -44,10 +49,25 @@ class GebRecordingTestListener extends AbstractRunListener {
 
     @Override
     void afterIteration(IterationInfo iteration) {
-        containerHolder.currentContainer.afterTest(
-                new ContainerGebTestDescription(iteration),
-                Optional.ofNullable(errorInfo?.exception)
-        )
+        try {
+            containerHolder.container.afterTest(
+                    new ContainerGebTestDescription(iteration),
+                    Optional.ofNullable(errorInfo?.exception)
+            )
+        } catch (NotFoundException e) {
+            // Handle the case where VNC recording container doesn't have a recording file.
+            // This can happen when per-test recording is enabled and a test doesn't use the browser.
+            if (containerHolder.settings.restartRecordingContainerPerTest &&
+                e.message?.contains('/newScreen.mp4')) {
+                log.debug(
+                        'No VNC recording found for test [{}] - this is expected for tests that do not use a browser',
+                        iteration.displayName
+                )
+            } else {
+                // Re-throw if it's a different type of NotFoundException
+                throw e
+            }
+        }
         errorInfo = null
     }
 

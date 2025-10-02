@@ -18,11 +18,13 @@
  */
 package org.grails.cli.profile.steps
 
-import grails.build.logging.GrailsConsole
-import grails.util.GrailsNameUtils
+import java.nio.charset.StandardCharsets
+
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
-import org.grails.build.parsing.CommandLine
+
+import grails.build.logging.GrailsConsole
+import grails.util.GrailsNameUtils
 import org.grails.cli.interactive.completers.ClassNameCompleter
 import org.grails.cli.profile.AbstractStep
 import org.grails.cli.profile.ExecutionContext
@@ -30,8 +32,6 @@ import org.grails.cli.profile.Profile
 import org.grails.cli.profile.commands.templates.SimpleTemplate
 import org.grails.cli.profile.support.ArtefactVariableResolver
 import org.grails.io.support.Resource
-
-import java.nio.charset.StandardCharsets
 
 /**
  * A {@link org.grails.cli.profile.Step} that renders a template
@@ -45,15 +45,15 @@ import java.nio.charset.StandardCharsets
 @CompileStatic
 class RenderStep extends AbstractStep {
 
-    public static final String NAME = "render"
-    public static final String TEMPLATES_DIR = "templates/"
+    public static final String NAME = 'render'
+    public static final String TEMPLATES_DIR = 'templates/'
 
     @Override
     @CompileStatic
     String getName() { NAME }
 
     @Override
-    public boolean handle(ExecutionContext context) {
+    boolean handle(ExecutionContext context) {
         def commandLine = context.getCommandLine()
         String nameAsArgument = commandLine.getRemainingArgs()[0]
         String artifactName
@@ -61,13 +61,13 @@ class RenderStep extends AbstractStep {
         def nameAndPackage = resolveNameAndPackage(context, nameAsArgument)
         artifactName = nameAndPackage[0]
         artifactPackage = nameAndPackage[1]
-        def variableResolver = new ArtefactVariableResolver(artifactName, (String) parameters.convention,artifactPackage)
+        def variableResolver = new ArtefactVariableResolver(artifactName, (String) parameters.convention, artifactPackage)
         File destination = variableResolver.resolveFile(parameters.destination.toString(), context)
 
         try {
 
             String relPath = relativePath(context.baseDir, destination)
-            if(destination.exists() && !flag(commandLine, 'force')) {
+            if (destination.exists() && !flag(commandLine, 'force')) {
                 context.console.error("${relPath} already exists.")
                 return false
             }
@@ -83,16 +83,16 @@ class RenderStep extends AbstractStep {
     }
 
     protected Resource searchTemplateDepthFirst(Profile profile, String template) {
-        if(template.startsWith(TEMPLATES_DIR)) {
+        if (template.startsWith(TEMPLATES_DIR)) {
             return searchTemplateDepthFirst(profile, template.substring(TEMPLATES_DIR.length()))
         }
         Resource templateFile = profile.getTemplate(template)
-        if(templateFile.exists()) {
+        if (templateFile.exists()) {
             return templateFile
         } else {
-            for(parent in profile.extends) {
+            for (parent in profile.extends) {
                 templateFile = searchTemplateDepthFirst(parent, template)
-                if(templateFile) {
+                if (templateFile) {
                     return templateFile
                 }
             }
@@ -103,8 +103,8 @@ class RenderStep extends AbstractStep {
     protected void renderToDestination(File destination, Map variables) {
         Profile profile = command.profile
         Resource templateFile = searchTemplateDepthFirst(profile, parameters.template.toString())
-        if(!templateFile) {
-            throw new IOException("cannot find template " + parameters.template)
+        if (!templateFile) {
+            throw new IOException('cannot find template ' + parameters.template)
         }
         destination.setText(new SimpleTemplate(templateFile.inputStream.getText(StandardCharsets.UTF_8.name())).render(variables), StandardCharsets.UTF_8.name())
         ClassNameCompleter.refreshAll()
@@ -116,9 +116,9 @@ class RenderStep extends AbstractStep {
         String artifactName
         String artifactPackage
 
-        if(parts.size() == 1) {
+        if (parts.size() == 1) {
             artifactName = parts[0]
-            artifactPackage = context.navigateConfig('grails', 'codegen', 'defaultPackage')?:''
+            artifactPackage = context.navigateConfig('grails', 'codegen', 'defaultPackage') ?: ''
         } else {
             artifactName = parts[-1]
             artifactPackage = parts[0..-2].join('.')
@@ -126,7 +126,7 @@ class RenderStep extends AbstractStep {
 
         [GrailsNameUtils.getClassName(artifactName), artifactPackage]
     }
-    
+
     protected String relativePath(File relbase, File file) {
         def pathParts = []
         def currentFile = file
@@ -136,6 +136,5 @@ class RenderStep extends AbstractStep {
         }
         pathParts.reverse().join('/')
     }
-    
 
 }

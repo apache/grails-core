@@ -23,7 +23,7 @@ import grails.testing.web.taglib.TagLibUnitTest
 import spock.lang.Issue
 import grails.plugin.formfields.mock.User
 
-@Issue('https://github.com/grails-fields-plugin/grails-fields/issues/87')
+@Issue('https://github.com/grails/fields/issues/87')
 class TransientPropertySpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<FormFieldsTagLib> {
 
     FormFieldsTemplateService mockFormFieldsTemplateService = Mock(FormFieldsTemplateService)

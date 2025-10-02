@@ -257,7 +257,7 @@ The `f:field` and `f:widget` tags will pass the following parameters to your tem
 |The constraints for the property if the bean is a domain or command object.
 
 |*persistentProperty*
-|link:http://grails.github.io/scaffolding/latest/api/org/grails/scaffolding/model/property/DomainProperty.html[DomainProperty]
+|link:{api}org/grails/scaffolding/model/property/DomainProperty.html[DomainProperty]
 |The persistent property object if the bean is a domain object.
 
 |*errors*

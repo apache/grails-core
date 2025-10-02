@@ -27,6 +27,7 @@ import org.springframework.core.convert.converter.Converter
  */
 @CompileStatic
 class LongArrayToLongArrayConverter implements Converter<long[], Long[]> {
+
     Long[] convert(long[] source) {
         source as Long[]
     }

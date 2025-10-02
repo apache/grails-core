@@ -21,7 +21,7 @@ under the License.
 ==== GrailsTypeChecked
 
 
-The {apiDocs}grails/compiler/GrailsTypeChecked.html[grails.compiler.GrailsTypeChecked] annotation works a lot like the `GrailsCompileStatic` annotation except that it only enables static type checking, not static compilation.  This affords compile time feedback for expressions which cannot be validated statically at compile time while still leaving dynamic dispatch in place for the class.
+The link:{api}grails/compiler/GrailsTypeChecked.html[grails.compiler.GrailsTypeChecked] annotation works a lot like the `GrailsCompileStatic` annotation except that it only enables static type checking, not static compilation.  This affords compile time feedback for expressions which cannot be validated statically at compile time while still leaving dynamic dispatch in place for the class.
 
 [source,groovy]
 ----

@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl"?>
+<rdf:RDF xml:lang="en"
+         xmlns="http://usefulinc.com/ns/doap#"
+         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:asfext="http://projects.apache.org/ns/asfext#"
+         xmlns:foaf="http://xmlns.com/foaf/0.1/">
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version 2.0
+    (the "License"); you may not use this file except in compliance with
+    the License.  You may obtain a copy of the License at
+
+         https://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+  <Project rdf:about="https://grails.apache.org">
+    <created>2025-01-25</created>
+    <license rdf:resource="https://spdx.org/licenses/Apache-2.0" />
+    <name>Apache Grails</name>
+    <homepage rdf:resource="https://grails.apache.org" />
+    <asfext:pmc rdf:resource="https://grails.apache.org" />
+    <shortdesc>Grails - the Groovy Web Application Framework</shortdesc>
+    <description>Grails is a powerful Groovy-based web application framework for the JVM built on top of Spring Boot that has many plugins to further extend its functionality.</description>
+    <bug-database rdf:resource="https://github.com/apache/grails-core/issues" />
+    <mailing-list rdf:resource="https://grails.apache.org/community.html" />
+    <download-page rdf:resource="https://grails.apache.org/download.html" />
+    <programming-language>Groovy</programming-language>
+    <category rdf:resource="https://projects.apache.org/category/web-framework" />
+    <repository>
+      <GitRepository>
+        <location rdf:resource="https://gitbox.apache.org/repos/asf/grails-core.git"/>
+        <browse rdf:resource="http://github.com/apache/grails-core"/>
+      </GitRepository>
+    </repository>
+  </Project>
+</rdf:RDF>

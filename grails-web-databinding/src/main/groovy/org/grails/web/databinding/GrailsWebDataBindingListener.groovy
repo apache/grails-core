@@ -18,9 +18,6 @@
  */
 package org.grails.web.databinding
 
-import grails.databinding.errors.BindingError;
-import grails.databinding.events.DataBindingListenerAdapter;
-import grails.util.GrailsNameUtils
 import groovy.transform.CompileStatic
 
 import org.springframework.context.MessageSource
@@ -28,8 +25,13 @@ import org.springframework.context.i18n.LocaleContextHolder
 import org.springframework.validation.BindingResult
 import org.springframework.validation.FieldError
 
+import grails.databinding.errors.BindingError
+import grails.databinding.events.DataBindingListenerAdapter
+import grails.util.GrailsNameUtils
+
 @CompileStatic
 class GrailsWebDataBindingListener extends DataBindingListenerAdapter {
+
     private final MessageSource messageSource
 
     GrailsWebDataBindingListener(MessageSource messageSource) {
@@ -38,7 +40,7 @@ class GrailsWebDataBindingListener extends DataBindingListenerAdapter {
 
     @Override
     void bindingError(BindingError error, errors) {
-        BindingResult bindingResult = (BindingResult)errors
+        BindingResult bindingResult = (BindingResult) errors
         String className = error.object?.getClass()?.getName()
         String classAsPropertyName = GrailsNameUtils.getPropertyNameRepresentation(className)
         String propertyName = error.getPropertyName()
@@ -59,10 +61,10 @@ class GrailsWebDataBindingListener extends DataBindingListenerAdapter {
         if (!messageSource) return propertyName
 
         final Locale locale = LocaleContextHolder.getLocale()
-        String propertyNameCode = className + '.' + propertyName + ".label"
+        String propertyNameCode = className + '.' + propertyName + '.label'
         String resolvedPropertyName = messageSource.getMessage(propertyNameCode, null, propertyName, locale)
         if (resolvedPropertyName.equals(propertyName)) {
-            propertyNameCode = classAsPropertyName + '.' + propertyName + ".label"
+            propertyNameCode = classAsPropertyName + '.' + propertyName + '.label'
             resolvedPropertyName = messageSource.getMessage(propertyNameCode, null, propertyName, locale)
         }
         return resolvedPropertyName

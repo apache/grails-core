@@ -26,6 +26,7 @@ package grails.plugin.cache
  * @author Graeme Rocher
  */
 interface GrailsCacheKeyGenerator {
+
     /**
      *
      * @param className The name of the class

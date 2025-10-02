@@ -40,7 +40,7 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
                 "type": "photos",
                 "attributes": {
                     "title": "Ember Hamster",
-                    "src": "http://example.com/images/productivity.png"
+                    "src": "https://example.com/images/productivity.png"
                 },
                 "relationships": {
                     "photographer": {
@@ -60,7 +60,7 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
         then:
         source.containsProperty("data")
         source.getPropertyValue("title") == "Ember Hamster"
-        source.getPropertyValue("src") == "http://example.com/images/productivity.png"
+        source.getPropertyValue("src") == "https://example.com/images/productivity.png"
         source.getPropertyValue("photographer") == "9"
 
     }
@@ -72,7 +72,7 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
                 "type": "photos",
                 "attributes": {
                     "title": "Ember Hamster",
-                    "src": "http://example.com/images/productivity.png"
+                    "src": "https://example.com/images/productivity.png"
                 },
                 "relationships": {
                     "photographer": {
@@ -98,7 +98,7 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
         then:
         source.containsProperty("data")
         source.getPropertyValue("title") == "Ember Hamster"
-        source.getPropertyValue("src") == "http://example.com/images/productivity.png"
+        source.getPropertyValue("src") == "https://example.com/images/productivity.png"
         source.getPropertyValue("photographer") == ["9", "10"]
 
     }
@@ -110,7 +110,7 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
                 "type": "photos",
                 "attributes": {
                     "title": "Ember Hamster",
-                    "src": "http://example.com/images/productivity.png"
+                    "src": "https://example.com/images/productivity.png"
                 },
                 "relationships": {
                 }
@@ -124,7 +124,7 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
         then:
         source.containsProperty("data")
         source.getPropertyValue("title") == "Ember Hamster"
-        source.getPropertyValue("src") == "http://example.com/images/productivity.png"
+        source.getPropertyValue("src") == "https://example.com/images/productivity.png"
     }
 
     void "test create no relationships - without key"() {
@@ -134,7 +134,7 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
                 "type": "photos",
                 "attributes": {
                     "title": "Ember Hamster",
-                    "src": "http://example.com/images/productivity.png"
+                    "src": "https://example.com/images/productivity.png"
                 }
             }
         }'''
@@ -146,7 +146,7 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
         then:
         source.containsProperty("data")
         source.getPropertyValue("title") == "Ember Hamster"
-        source.getPropertyValue("src") == "http://example.com/images/productivity.png"
+        source.getPropertyValue("src") == "https://example.com/images/productivity.png"
     }
 
     void "test create no attributes - with key"() {

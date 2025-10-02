@@ -19,13 +19,15 @@
 
 package org.grails.datastore.gorm.validation.constraints;
 
-import grails.gorm.validation.ConstrainedProperty;
+import java.util.List;
+
 import org.apache.commons.validator.routines.RegexValidator;
 import org.apache.commons.validator.routines.UrlValidator;
+
 import org.springframework.context.MessageSource;
 import org.springframework.validation.Errors;
 
-import java.util.List;
+import grails.gorm.validation.ConstrainedProperty;
 
 /**
  * Validates a url.
@@ -55,7 +57,7 @@ public class UrlConstraint extends AbstractConstraint {
         RegexValidator domainValidator;
 
         if (constraintParameter instanceof Boolean || constraintParameter instanceof UrlValidator) {
-            // See https://github.com/grails/grails-core/issues/10993
+            // See https://github.com/apache/grails-core/issues/10993
             // When using "importFrom" the constraintParameter is the UrlValidator even if it was defined as
             // url: true, so we want the same behavior.
             domainValidator = null;
@@ -75,7 +77,6 @@ public class UrlConstraint extends AbstractConstraint {
 
         UrlValidator validator = new UrlValidator(domainValidator,
                 UrlValidator.ALLOW_ALL_SCHEMES + UrlValidator.ALLOW_2_SLASHES);
-
 
         return validator;
     }

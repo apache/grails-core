@@ -40,7 +40,7 @@ This new approach is now the recommended way to write functional tests in Grails
 
 ==== Key Features
 
-By extending your test classes with `ContainerGebSpec`, your tests will automatically leverage a containerized browser provided by https://www.testcontainers.org[Testcontainers]. This setup eliminates the need for managing browser versions and ensures consistent test environments.
+By extending your test classes with `ContainerGebSpec`, your tests will automatically leverage a containerized browser provided by https://java.testcontainers.org/[Testcontainers]. This setup eliminates the need for managing browser versions and ensures consistent test environments.
 
 ==== Requirements
 

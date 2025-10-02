@@ -222,7 +222,7 @@ assert album.players.drums.name == 'Phil Collins'
 ==== Binding Request Data to the Model
 
 
-The link:../ref/Controllers/params.html[params] object that is available in a controller has special behavior that helps convert dotted request parameter names into nested Maps that the data binder can work with.  For example, if a request includes request parameters named `person.homeAddress.country` and `person.homeAddress.city` with values 'USA' and 'St. Louis' respectively, `params` would include entries like these:
+The link:{controllersRef}params.html[params] object that is available in a controller has special behavior that helps convert dotted request parameter names into nested Maps that the data binder can work with.  For example, if a request includes request parameters named `person.homeAddress.country` and `person.homeAddress.city` with values 'USA' and 'St. Louis' respectively, `params` would include entries like these:
 
 [source,groovy]
 ----
@@ -239,14 +239,14 @@ def save() {
 }
 ----
 
-The data binding happens within the code `new Book(params)`. By passing the link:../ref/Controllers/params.html[params] object to the domain class constructor Grails automatically recognizes that you are trying to bind from request parameters. So if we had an incoming request like:
+The data binding happens within the code `new Book(params)`. By passing the link:{controllersRef}params.html[params] object to the domain class constructor Grails automatically recognizes that you are trying to bind from request parameters. So if we had an incoming request like:
 
 [source]
 ----
 /book/save?title=The%20Stand&author=Stephen%20King
 ----
 
-Then the `title` and `author` request parameters would automatically be set on the domain class. You can use the link:../ref/Domain%20Classes/properties.html[properties] property to perform data binding onto an existing instance:
+Then the `title` and `author` request parameters would automatically be set on the domain class. You can use the link:{domainClassesRef}properties.html[properties] property to perform data binding onto an existing instance:
 
 [source,groovy]
 ----
@@ -408,7 +408,7 @@ grails.databinding.autoGrowCollectionLimit = 128
 ==== Data binding with Multiple domain classes
 
 
-It is possible to bind data to multiple domain objects from the link:../ref/Controllers/params.html[params] object.
+It is possible to bind data to multiple domain objects from the link:{controllersRef}params.html[params] object.
 
 For example so you have an incoming request to:
 
@@ -479,7 +479,7 @@ class AccountingController {
 ==== Data binding and type conversion errors
 
 
-Sometimes when performing data binding it is not possible to convert a particular String into a particular target type. This results in a type conversion error. Grails will retain type conversion errors inside the link:../ref/Domain%20Classes/errors.html[errors] property of a Grails domain class. For example:
+Sometimes when performing data binding it is not possible to convert a particular String into a particular target type. This results in a type conversion error. Grails will retain type conversion errors inside the link:{domainClassesRef}errors.html[errors] property of a Grails domain class. For example:
 
 [source,groovy]
 ----
@@ -526,7 +526,7 @@ typeMismatch.Book.publisherURL=The publisher URL you specified is not a valid UR
 ==== The BindUsing Annotation
 
 
-The {apiDocs}grails/databinding/BindUsing.html[BindUsing] annotation may be used to define a custom binding mechanism for a particular field in a class.  Any time data binding is being applied to the field the closure value of the annotation will be invoked with 2 arguments.  The first argument is the object that data binding is being applied to and the second argument is {apiDocs}grails/databinding/DataBindingSource.html[DataBindingSource] which is the data source for the data binding.  The value returned from the closure will be bound to the property.  The following example would result in the upper case version of the `name` value in the source being applied to the `name` field during data binding.
+The link:{api}grails/databinding/BindUsing.html[BindUsing] annotation may be used to define a custom binding mechanism for a particular field in a class.  Any time data binding is being applied to the field the closure value of the annotation will be invoked with 2 arguments.  The first argument is the object that data binding is being applied to and the second argument is link:{api}grails/databinding/DataBindingSource.html[DataBindingSource] which is the data source for the data binding.  The value returned from the closure will be bound to the property.  The following example would result in the upper case version of the `name` value in the source being applied to the `name` field during data binding.
 
 [source,groovy]
 ----
@@ -548,7 +548,7 @@ class SomeClass {
 NOTE: Note that data binding is only possible when the name of the request parameter matches with the field name in the class.
 Here, `name` from request parameters matches with `name` from `SomeClass`.
 
-The {apiDocs}grails/databinding/BindUsing.html[BindUsing] annotation may be used to define a custom binding mechanism for all of the fields on a particular class. When the annotation is applied to a class, the value assigned to the annotation should be a class which implements the {apiDocs}grails/databinding/BindingHelper.html[BindingHelper] interface.  An instance of that class will be used any time a value is bound to a property in the class that this annotation has been applied to.
+The link:{api}grails/databinding/BindUsing.html[BindUsing] annotation may be used to define a custom binding mechanism for all of the fields on a particular class. When the annotation is applied to a class, the value assigned to the annotation should be a class which implements the link:{api}grails/databinding/BindingHelper.html[BindingHelper] interface.  An instance of that class will be used any time a value is bound to a property in the class that this annotation has been applied to.
 
 [source,groovy]
 ----
@@ -562,8 +562,8 @@ class SomeClass {
 
 ==== The BindInitializer Annotation
 
-The {apiDocs}grails/databinding/BindInitializer.html[BindInitializer] annotation may be used to initialize an associated field in a class if it is undefined.  
-Unlike the {apiDocs}grails/databinding/BindUsing.html[BindUsing] annotation, databinding will continue binding all nested properties on this association. 
+The link:{api}grails/databinding/BindInitializer.html[BindInitializer] annotation may be used to initialize an associated field in a class if it is undefined.
+Unlike the link:{api}grails/databinding/BindUsing.html[BindUsing] annotation, databinding will continue binding all nested properties on this association.
 
 [source,groovy]
 ----
@@ -592,7 +592,7 @@ NOTE: @BindInitializer only makes sense for associated entities, as per this use
 ==== Custom Data Converters
 
 
-The binder will do a lot of type conversion automatically.  Some applications may want to define their own mechanism for converting values and a simple way to do this is to write a class which implements {apiDocs}grails/databinding/converters/ValueConverter.html[ValueConverter] and register an instance of that class as a bean in the Spring application context.
+The binder will do a lot of type conversion automatically.  Some applications may want to define their own mechanism for converting values and a simple way to do this is to write a class which implements link:{api}grails/databinding/converters/ValueConverter.html[ValueConverter] and register an instance of that class as a bean in the Spring application context.
 
 [source,groovy]
 ----
@@ -655,7 +655,7 @@ assert person.homeAddress.state = 'Missouri'
 ==== Date Formats For Data Binding
 
 
-A custom date format may be specified to be used when binding a String to a Date value by applying the {apiDocs}grails/databinding/BindingFormat.html[BindingFormat] annotation to a Date field.
+A custom date format may be specified to be used when binding a String to a Date value by applying the link:{api}grails/databinding/BindingFormat.html[BindingFormat] annotation to a Date field.
 
 [source,groovy]
 ----
@@ -688,7 +688,7 @@ The formats configured by default are:
 ==== Custom Formatted Converters
 
 
-You may supply your own handler for the {apiDocs}grails/databinding/BindingFormat.html[BindingFormat] annotation by writing a class which implements the {apiDocs}grails/databinding/converters/FormattedValueConverter.html[FormattedValueConverter] interface and registering an instance of that class as a bean in the Spring application context.  Below is an example of a trivial custom String formatter that might convert the case of a String based on the value assigned to the BindingFormat annotation.
+You may supply your own handler for the link:{api}grails/databinding/BindingFormat.html[BindingFormat] annotation by writing a class which implements the link:{api}grails/databinding/converters/FormattedValueConverter.html[FormattedValueConverter] interface and registering an instance of that class as a bean in the Spring application context.  Below is an example of a trivial custom String formatter that might convert the case of a String based on the value assigned to the BindingFormat annotation.
 
 [source,groovy]
 ----
@@ -802,7 +802,7 @@ class Shape {
 
 A `Gadget` has 2 `Shape` fields.  A `Shape` has an `area` property.  It may be that the application wants to accept request parameters like `width` and `height` and use those to calculate the `area` of a `Shape` at binding time.  A structured binding editor is well suited for that.
 
-The way to register a structured editor with the data binding process is to add an instance of the {apiDocs}grails/databinding/TypedStructuredBindingEditor.html[grails.databinding.TypedStructuredBindingEditor] interface to the Spring application context.  The easiest way to implement the `TypedStructuredBindingEditor` interface is to extend the {apiDocs}org/grails/databinding/converters/AbstractStructuredDateBindingEditor.html[org.grails.databinding.converters.AbstractStructuredBindingEditor] abstract class and override the `getPropertyValue` method as shown below:
+The way to register a structured editor with the data binding process is to add an instance of the link:{api}grails/databinding/TypedStructuredBindingEditor.html[grails.databinding.TypedStructuredBindingEditor] interface to the Spring application context.  The easiest way to implement the `TypedStructuredBindingEditor` interface is to extend the link:{api}org/grails/databinding/converters/AbstractStructuredDateBindingEditor.html[org.grails.databinding.converters.AbstractStructuredBindingEditor] abstract class and override the `getPropertyValue` method as shown below:
 
 [source,groovy]
 .src/main/groovy/databinding/converters/StructuredShapeEditor.groovy
@@ -867,7 +867,7 @@ Typically the request parameters with "struct" as their value would be represent
 ==== Data Binding Event Listeners
 
 
-The {apiDocs}grails/databinding/events/DataBindingListener.html[DataBindingListener] interface provides a mechanism for listeners to be notified of data binding events.  The interface looks like this:
+The link:{api}grails/databinding/events/DataBindingListener.html[DataBindingListener] interface provides a mechanism for listeners to be notified of data binding events.  The interface looks like this:
 
 [source,groovy]
 ----
@@ -936,7 +936,7 @@ public interface DataBindingListener {
 }
 ----
 
-Any bean in the Spring application context which implements that interface will automatically be registered with the data binder.  The {apiDocs}grails/databinding/events/DataBindingListenerAdapter.html[DataBindingListenerAdapter] class implements the `DataBindingListener` interface and provides default implementations for all of the methods in the interface so this class is well suited for subclassing so your listener class only needs to provide implementations for the methods your listener is interested in.
+Any bean in the Spring application context which implements that interface will automatically be registered with the data binder.  The link:{api}grails/databinding/events/DataBindingListenerAdapter.html[DataBindingListenerAdapter] class implements the `DataBindingListener` interface and provides default implementations for all of the methods in the interface so this class is well suited for subclassing so your listener class only needs to provide implementations for the methods your listener is interested in.
 
 
 ==== Using The Data Binder Directly
@@ -970,7 +970,7 @@ class WidgetService {
 }
 ----
 
-An instance of the data binder is in the Spring application context with a bean name of `grailsWebDataBinder`.  That bean implements the {apiDocs}grails/databinding/DataBinder.html[DataBinder] interface.  The following code demonstrates using the data binder directly.
+An instance of the data binder is in the Spring application context with a bean name of `grailsWebDataBinder`.  That bean implements the link:{api}grails/databinding/DataBinder.html[DataBinder] interface.  The following code demonstrates using the data binder directly.
 
 [source,groovy]
 .grails-app/services/bindingdmeo/WidgetService
@@ -991,7 +991,7 @@ class WidgetService {
 }
 ----
 
-See the {apiDocs}grails/databinding/DataBinder.html[DataBinder] documentation for more information about overloaded versions
+See the link:{api}grails/databinding/DataBinder.html[DataBinder] documentation for more information about overloaded versions
 of the `bind` method.
 
 
@@ -1009,7 +1009,7 @@ p.properties['firstName','lastName'] = params
 
 In this case only the `firstName` and `lastName` properties will be bound.
 
-Another way to do this is is to use link:theWebLayer.html#commandObjects[Command Objects] as the target of data binding instead of domain classes. Alternatively there is also the flexible link:../ref/Controllers/bindData.html[bindData] method.
+Another way to do this is is to use link:theWebLayer.html#commandObjects[Command Objects] as the target of data binding instead of domain classes. Alternatively there is also the flexible link:{controllersRef}bindData.html[bindData] method.
 
 The `bindData` method allows the same data binding capability, but to arbitrary objects:
 
@@ -1037,4 +1037,4 @@ bindData(p, params, [include: ['firstName', 'lastName']])
 
 NOTE: If an empty List is provided as a value for the `include` parameter then all fields will be subject to binding if they are not explicitly excluded.
 
-The link:../ref/Constraints/bindable.html[bindable] constraint can be used to globally prevent data binding for certain properties.
+The link:{constraintsRef}bindable.html[bindable] constraint can be used to globally prevent data binding for certain properties.

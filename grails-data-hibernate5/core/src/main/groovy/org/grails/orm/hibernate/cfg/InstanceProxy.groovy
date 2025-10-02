@@ -25,6 +25,7 @@ import org.grails.orm.hibernate.AbstractHibernateGormValidationApi
 
 @CompileStatic
 class InstanceProxy {
+
     protected instance
     protected AbstractHibernateGormValidationApi validateApi
     protected AbstractHibernateGormInstanceApi instanceApi
@@ -36,27 +37,27 @@ class InstanceProxy {
         this.instanceApi = instanceApi
         this.validateApi = validateApi
         validateMethods = validateApi.methods*.name as Set<String>
-        validateMethods.remove 'getValidator'
-        validateMethods.remove 'setValidator'
-        validateMethods.remove 'getBeforeValidateHelper'
-        validateMethods.remove 'setBeforeValidateHelper'
-        validateMethods.remove 'getValidateMethod'
-        validateMethods.remove 'setValidateMethod'
+        validateMethods.remove('getValidator')
+        validateMethods.remove('setValidator')
+        validateMethods.remove('getBeforeValidateHelper')
+        validateMethods.remove('setBeforeValidateHelper')
+        validateMethods.remove('getValidateMethod')
+        validateMethods.remove('setValidateMethod')
     }
 
     def invokeMethod(String name, args) {
         if (validateMethods.contains(name)) {
-            validateApi.invokeMethod(name, prependToArray(instance, (Object[])args))
+            validateApi.invokeMethod(name, prependToArray(instance, (Object[]) args))
         }
         else {
-            instanceApi.invokeMethod(name, prependToArray(instance, (Object[])args))
+            instanceApi.invokeMethod(name, prependToArray(instance, (Object[]) args))
         }
     }
 
     private final static Object[] prependToArray(Object item, Object[] array) {
         def list = new ArrayList(array.length + 1)
-        list.add item
-        list.addAll array
+        list.add(item)
+        list.addAll(array)
         list as Object[]
     }
 
