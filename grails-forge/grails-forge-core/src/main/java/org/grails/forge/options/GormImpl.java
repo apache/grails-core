@@ -23,7 +23,8 @@ import io.micronaut.core.annotation.NonNull;
 public enum GormImpl {
 
     HIBERNATE("gorm-hibernate5"),
-    MONGODB("gorm-mongodb");
+    MONGODB("gorm-mongodb"),
+    NEO4J("gorm-neo4j");
 
     public static final GormImpl DEFAULT_OPTION = HIBERNATE;
     private final String featureName;

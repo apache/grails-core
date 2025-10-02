@@ -25,22 +25,14 @@ import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.Features
 import org.grails.forge.fixture.CommandOutputFixture
 
-class MongoGormSpec extends ApplicationContextSpec implements CommandOutputFixture {
+class Neo4JGormSpec extends ApplicationContextSpec implements CommandOutputFixture {
 
     void "test Mongo gorm features"() {
         when:
-        Features features = getFeatures(['gorm-mongodb'])
+        Features features = getFeatures(['gorm-neo4j'])
 
         then:
-        features.contains("gorm-mongodb")
-    }
-
-    void "test Mongo gorm with Embedded MongoDB features "() {
-        when:
-        Features features = getFeatures(['gorm-mongodb'])
-
-        then:
-        features.contains("gorm-mongodb")
+        features.contains("gorm-neo4j")
     }
 
     void "test there can only be one of either MongoDB or Neo4j feature"() {
@@ -55,19 +47,20 @@ class MongoGormSpec extends ApplicationContextSpec implements CommandOutputFixtu
     void "test dependencies are present for gradle"() {
         when:
         String template = new BuildBuilder(beanContext)
-                .features(["gorm-mongodb"])
+                .features(["gorm-neo4j"])
                 .render()
 
         then:
-        template.contains("implementation \"org.apache.grails:grails-data-mongodb\"")
+        template.contains("implementation \"org.grails.plugins:neo4j\"")
     }
 
     void "test config"() {
         when:
-        GeneratorContext ctx = buildGeneratorContext(['gorm-mongodb'])
+        GeneratorContext ctx = buildGeneratorContext(['gorm-neo4j'])
 
         then:
-        ctx.configuration.containsKey("grails.mongodb.url")
+        ctx.configuration.containsKey("grails.neo4j.type")
+        ctx.configuration.containsKey("grails.neo4j.location")
     }
 
 
