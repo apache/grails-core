@@ -38,10 +38,10 @@ import groovy.transform.CompileStatic
 @if(applicationType.equals(ApplicationType.PLUGIN) || applicationType.equals(ApplicationType.WEB_PLUGIN)) {
 @@PluginSource
 }
+@@CompileStatic
 @if(features.contains("grails-micronaut")) {
 @@EnableMicronaut
 }
-@@CompileStatic
 class Application extends GrailsAutoConfiguration {
     static void main(String[] args) {
         GrailsApp.run(Application, args)
