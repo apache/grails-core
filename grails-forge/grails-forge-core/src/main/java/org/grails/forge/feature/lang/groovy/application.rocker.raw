@@ -37,6 +37,7 @@ import grails.boot.config.GrailsAutoConfiguration
 import grails.plugins.metadata.PluginSource
 }
 
+
 @if(applicationType.equals(ApplicationType.PLUGIN) || applicationType.equals(ApplicationType.WEB_PLUGIN)) {
 @@PluginSource
 }
