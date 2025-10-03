@@ -30,14 +30,9 @@ import groovy.transform.CompileStatic
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.Phases
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.commons.logging.LogFactory
+import org.slf4j.LoggerFactory
 import org.slf4j.Logger
-
 import org.springframework.core.CollectionFactory
-
 import grails.config.ConfigMap
 import org.apache.grails.gradle.common.PropertyFileUtils
 import org.grails.config.CodeGenConfig

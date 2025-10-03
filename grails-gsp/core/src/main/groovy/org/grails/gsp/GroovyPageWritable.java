@@ -44,7 +44,6 @@ import org.grails.taglib.encoder.OutputContextLookup;
  * @since 0.5
  */
 public class GroovyPageWritable implements Writable {
-    //get SLF4J logger instead
     private static final Logger LOG = LoggerFactory.getLogger(GroovyPageWritable.class);
     private static final String GSP_NONE_CODEC_NAME = "none";
     private GroovyPageMetaInfo metaInfo;
