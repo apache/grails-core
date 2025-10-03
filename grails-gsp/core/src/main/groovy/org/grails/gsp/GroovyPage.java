@@ -130,14 +130,19 @@ public abstract class GroovyPage extends Script {
         throw new IllegalStateException("Setting out in page isn't allowed.");
     }
 
-    public void initRun(Writer target, OutputContext outputContext, GroovyPageMetaInfo metaInfo) {
-        OutputEncodingStackAttributes.Builder attributesBuilder = new OutputEncodingStackAttributes.Builder();
+    public void initCommonRun(GroovyPageMetaInfo metaInfo) {
         if (metaInfo != null) {
+            setHtmlParts(metaInfo.getHtmlParts());
+            setHtmlPartsSet(metaInfo.getHtmlPartsSet());
             setJspTags(metaInfo.getJspTags());
             setJspTagLibraryResolver(metaInfo.getJspTagLibraryResolver());
             setGspTagLibraryLookup(metaInfo.getTagLibraryLookup());
-            setHtmlParts(metaInfo.getHtmlParts());
             setPluginContextPath(metaInfo.getPluginPath());
+        }
+    }
+    public void initRun(Writer target, OutputContext outputContext, GroovyPageMetaInfo metaInfo) {
+        OutputEncodingStackAttributes.Builder attributesBuilder = new OutputEncodingStackAttributes.Builder();
+        if (metaInfo != null) {
             attributesBuilder.outEncoder(metaInfo.getOutEncoder());
             attributesBuilder.staticEncoder(metaInfo.getStaticEncoder());
             attributesBuilder.expressionEncoder(metaInfo.getExpressionEncoder());
@@ -508,6 +513,14 @@ public abstract class GroovyPage extends Script {
     }
 
     /**
+     * Shorthand for printHtmlPart to reduce class size
+     * @param partNumber
+     */
+    public final void h(final int partNumber) {
+        staticOut.write(htmlParts[partNumber]);
+    }
+
+    /**
      * Sets the JSP tags used by this GroovyPage instance
      *
      * @param jspTags The JSP tags used
@@ -527,14 +540,10 @@ public abstract class GroovyPage extends Script {
 
     public void setHtmlParts(String[] htmlParts) {
         this.htmlParts = htmlParts;
-        this.htmlPartsSet = new HashSet<>();
-        if (htmlParts != null) {
-            for (String htmlPart : htmlParts) {
-                if (htmlPart != null) {
-                    htmlPartsSet.add(System.identityHashCode(htmlPart));
-                }
-            }
-        }
+    }
+
+    public void setHtmlPartsSet(Set<Integer> htmlPartsSet) {
+        this.htmlPartsSet = htmlPartsSet;
     }
 
     public final OutputEncodingStack getOutputStack() {

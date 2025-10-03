@@ -26,13 +26,10 @@ import java.io.Reader;
 import java.io.Writer;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
 import groovy.lang.Binding;
 import groovy.lang.Writable;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import grails.util.Environment;
 import org.grails.taglib.AbstractTemplateVariableBinding;
 import org.grails.taglib.TemplateVariableBinding;
@@ -47,7 +44,8 @@ import org.grails.taglib.encoder.OutputContextLookup;
  * @since 0.5
  */
 public class GroovyPageWritable implements Writable {
-    private static final Log LOG = LogFactory.getLog(GroovyPageWritable.class);
+    //get SLF4J logger instead
+    private static final Logger LOG = LoggerFactory.getLogger(GroovyPageWritable.class);
     private static final String GSP_NONE_CODEC_NAME = "none";
     private GroovyPageMetaInfo metaInfo;
     private OutputContextLookup outputContextLookup;
@@ -125,9 +123,7 @@ public class GroovyPageWritable implements Writable {
                 // only try to set content type when evaluating top level GSP
                 boolean contentTypeAlreadySet = outputContext.isContentTypeAlreadySet();
                 if (!contentTypeAlreadySet) {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("Writing output with content type: " + metaInfo.getContentType());
-                    }
+                    LOG.debug("Writing output with content type: {}", metaInfo.getContentType());
                     outputContext.setContentType(metaInfo.getContentType()); // must come before response.getWriter()
                 }
             }
@@ -139,7 +135,9 @@ public class GroovyPageWritable implements Writable {
 
             GroovyPage page = null;
             try {
-                page = (GroovyPage) metaInfo.getPageClass().newInstance();
+
+                page = metaInfo.getPageClassInstance();
+
             } catch (Exception e) {
                 throw new GroovyPagesException("Problem instantiating page class", e);
             }
@@ -294,4 +292,6 @@ public class GroovyPageWritable implements Writable {
             in.close();
         }
     }
+
+
 }

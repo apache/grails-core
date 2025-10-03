@@ -31,8 +31,10 @@ import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.Phases
 
-import org.apache.commons.logging.Log
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.logging.LogFactory
+import org.slf4j.Logger
 
 import org.springframework.core.CollectionFactory
 
@@ -42,9 +44,12 @@ import org.grails.config.CodeGenConfig
 import org.grails.gsp.GroovyPageMetaInfo
 import org.grails.gsp.compiler.transform.GroovyPageInjectionOperation
 import org.grails.taglib.encoder.OutputEncodingSettings
-
+import org.grails.gsp.GroovyPage
 /**
- * Used to compile GSP files into a specified target directory.
+ * Used to compile GSP files into a specified target directory. The compiler creates 3 files per page.
+ * Firstly, it generates a {@link GroovyPage} derived class which is then compiled to a .class file.
+ * It also will generate a "_html.data" and a "_linenumbers.data" file which contain the static HTML parts of the page.
+ * These are read at runtime by the {@link org.grails.gsp.GroovyPagesTemplateEngine} class.
  *
  * @author Graeme Rocher
  * @since 1.2
@@ -52,7 +57,7 @@ import org.grails.taglib.encoder.OutputEncodingSettings
 @CompileStatic
 class GroovyPageCompiler {
 
-    private static final Log LOG = LogFactory.getLog(GroovyPageCompiler)
+    private static final Logger LOG = LoggerFactory.getLogger(GroovyPageCompiler)
 
     private Map compileGSPRegistry = [:]
     private Object mutexObject = new Object()
@@ -238,7 +243,6 @@ class GroovyPageCompiler {
                 CompilationUnit unit = new CompilationUnit(compilerConfig, null, classLoader)
                 unit.addPhaseOperation(operation, Phases.CANONICALIZATION)
                 unit.addSource(gspgroovyfile.name, gsptarget.toString())
-                // unit.addSource(gspgroovyfile)
                 unit.compile()
             }
         }
