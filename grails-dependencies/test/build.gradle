@@ -26,7 +26,7 @@ version = projectVersion
 group = 'org.apache.grails'
 
 ext {
-    skipJavaComponent = true
+    skipJavaComponent = false
     pomDescription = 'A meta-project that aggregates all non-data test dependencies that will be commonly used in Grails applications.'
 }
 
