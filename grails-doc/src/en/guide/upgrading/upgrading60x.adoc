@@ -409,11 +409,13 @@ Notable Class Moves:
 * org.grails.web.servlet.view.SitemeshLayoutViewResolver -> org.apache.grails.web.layout.GrailsLayoutViewResolver
 * org.grails.web.sitemesh.GrailsLayoutView -> org.apache.grails.web.layout.EmbeddedGrailsLayoutView
 * org.grails.web.sitemesh.SitemeshLayoutView -> org.apache.grails.web.layout.GrailsLayoutView
+* org.grails.web.sitemesh.GSPSitemeshPage -> org.apache.grails.web.layout.GSPGrailsLayoutPage
 
 Property Changes:
 
 * grails.sitemesh.default.layout -> grails.views.layout.default
 * grails.sitemesh.enable.nongsp -> grails.views.layout.enable.nongsp
+* org.grails.web.sitemesh.GrailsLayoutView.GSP_SITEMESH_PAGE -> org.apache.grails.web.layout.EmbeddedGrailsLayoutView.GSP_GRAILS_LAYOUT_PAGE
 
 Tag namespace changes:
 
