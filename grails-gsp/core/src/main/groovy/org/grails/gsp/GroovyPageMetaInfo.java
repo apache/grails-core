@@ -308,11 +308,13 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
 
     public void setPageClass(Class<?> pageClass) {
         this.pageClass = pageClass;
+
         try {
             this.pageClassConstructor = pageClass.getConstructor();
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
+        pageInstance.set(null);
         initializePluginPath();
     }
 

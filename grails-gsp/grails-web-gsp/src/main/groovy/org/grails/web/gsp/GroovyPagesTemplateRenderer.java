@@ -233,7 +233,8 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
                 if (key == null && GrailsStringUtils.isBlank(var) && it != null) {
                     key = GrailsNameUtils.getPropertyName(it.getClass());
                 }
-                Map itmap = (Map) b.clone();
+                Map itmap = new LinkedHashMap<String,Object>();
+                itmap.putAll(b);
 
                 if (GrailsStringUtils.isNotBlank(var)) {
                     itmap.put(var, it);
