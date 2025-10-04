@@ -204,19 +204,13 @@ class PublishPlugin implements Plugin<Project> {
                 return
             }
 
-            def jarHasFiles = project.providers.provider {
-                !jar.source.asFileTree.matching {
-                    exclude('META-INF/LICENSE', 'META-INF/NOTICE')
-                }.isEmpty()
-            }
-
             def licenseInProject = project.layout.projectDirectory.file('src/main/resources/META-INF/LICENSE')
             def needsLicense = project.providers.provider { !licenseInProject.asFile.exists() }
             def fallbackLicense = grailsCoreRoot.file('licenses/LICENSE-Apache-2.0.txt')
             jar.from(fallbackLicense) { CopySpec spec ->
                 spec.into 'META-INF'
                 spec.rename { 'LICENSE' }
-                spec.include { needsLicense.get() && jarHasFiles.get() }
+                spec.include { needsLicense.get() }
             }
 
             def noticeInProject  = project.layout.projectDirectory.file('src/main/resources/META-INF/NOTICE')
@@ -224,7 +218,7 @@ class PublishPlugin implements Plugin<Project> {
             def fallbackNotice  = grailsCoreRoot.file('grails-core/src/main/resources/META-INF/NOTICE')
             jar.from(fallbackNotice) { CopySpec spec ->
                 spec.into 'META-INF'
-                spec.include { needsNotice.get() && jarHasFiles.get() }
+                spec.include { needsNotice.get() }
             }
 
             jar.doFirst {
