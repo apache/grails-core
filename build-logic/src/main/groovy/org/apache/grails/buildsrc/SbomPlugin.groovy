@@ -250,7 +250,8 @@ class SbomPlugin implements Plugin<Project> {
 
     private void ensureLicensesValidated(Project project) {
         boolean initialized = false
-        for (String plugin : ['java', 'java-platform', 'java-library']) {
+        // platforms only have constraints, so validate is not performed at this time
+        for (String plugin : ['java', 'java-library']) {
             project.pluginManager.withPlugin(plugin) {
                 if (initialized) {
                     return
