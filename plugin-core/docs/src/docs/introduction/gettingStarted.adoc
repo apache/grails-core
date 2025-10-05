@@ -40,6 +40,9 @@ After installation, execute the `s2-quickstart` initialization script. This sets
 ./gradlew runCommand -Pargs="s2-quickstart com.yourapp User Role"
 ----
 
+If you are installing into a Grails plugin instead of an application, you must make sure you are using  the `web-plugin` profile. Otherwise dependncies will not be met.
+Running the same command will inject the spring beans into  your `GrailsPlugin` classes `doWithSpring` method.
+
 === Plugin Configuration and Setup
 
 The Spring Security plugin streamlines configuration and setup through a combination of steps:

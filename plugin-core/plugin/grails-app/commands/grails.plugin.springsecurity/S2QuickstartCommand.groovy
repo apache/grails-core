@@ -205,7 +205,16 @@ Example: ./grailsw s2-quickstart --uiOnly
         List<Map<String, String>> beans = []
         beans.add([import    : "import ${userModel.packageName}.${userModel.simpleName}PasswordEncoderListener".toString(),
                    definition: "${userModel.propertyName}PasswordEncoderListener(${userModel.simpleName}PasswordEncoderListener)".toString()])
-        addBeans(beans, 'grails-app/conf/spring/resources.groovy')
+
+        if(new File('grails-app/conf/spring/resources.groovy').exists()) {
+            addBeans(beans, 'grails-app/conf/spring/resources.groovy')
+        } else {
+            //we could be generating this in a plugin... we should look for a Plugin class
+            File pluginClassFile = findPluginClass()
+            if(pluginClassFile  != null) {
+                 addBeansToPlugin(beans, pluginClassFile)
+            }
+          }
 
 
         generateFile('Authority', roleModel.packagePath, roleModel.simpleName)
@@ -299,6 +308,40 @@ Example: ./grailsw s2-quickstart --uiOnly
                 writer.write "${line}${System.lineSeparator()}"
             }
         }
+    }
+
+    private void addBeansToPlugin(List<Map<String, String>> beans, File pluginClassFile) {
+        List<String> lines = []
+        if (pluginClassFile.exists()) {
+            pluginClassFile.eachLine { line, nb ->
+                lines << line
+                if(line.contains('package')) {
+                     beans.forEach(bean -> lines.add(bean.import))
+                }
+                if (line.contains('doWithSpring()')) {
+                    beans.each { Map bean ->
+                        lines << '        ' + bean.definition
+                    }
+                }
+            }
+        } 
+
+        pluginClassFile.withWriter('UTF-8') { writer ->
+            lines.each { String line ->
+                writer.write "${line}${System.lineSeparator()}"
+            }
+        }
+    }
+
+
+    private File findPluginClass() {
+        File pluginClass = null
+        new File("src/main/groovy").eachFileRecurse { fl ->
+            if (fl.isFile() && fl.name.endsWith("GrailsPlugin.groovy")) {
+                pluginClass = fl
+            }
+        }
+        return pluginClass
     }
 
 }
