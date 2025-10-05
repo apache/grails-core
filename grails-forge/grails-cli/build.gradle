@@ -25,6 +25,7 @@ plugins {
     id 'com.gradleup.shadow'
     id 'io.sdkman.vendors'
     id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
 }
 
 ext {
@@ -80,7 +81,6 @@ dependencies {
 apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
-    from rootProject.layout.projectDirectory.file('../gradle/sbom-config.gradle')
 }
 
 // It's surprisingly hard to generate start scripts and *not* have them nested into a bin / lib directory

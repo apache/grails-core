@@ -24,6 +24,7 @@ plugins {
     id 'java-library'
     id 'org.grails.forge.rocker'
     id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
 }
 
 version = projectVersion
@@ -117,7 +118,6 @@ copyGrailsWrapper.configure { Sync it ->
 apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
-    from rootProject.layout.projectDirectory.file('../gradle/sbom-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')
 }

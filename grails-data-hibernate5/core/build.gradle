@@ -21,6 +21,7 @@ plugins {
     id 'groovy'
     id 'java-library'
     id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
 }
 
 version = projectVersion
@@ -92,7 +93,6 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/hibernate5-test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/sbom-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
 }

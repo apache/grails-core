@@ -67,13 +67,18 @@ group = 'org.apache.grails.buildsrc'
 dependencies {
     implementation "${gradleBomDependencies['grails-publish-plugin']}"
     implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${gradleProperties.gradleChecksumPluginVersion}"
+    implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${gradleProperties.gradleCycloneDxPluginVersion}"
 }
 
 gradlePlugin {
     plugins {
         publishPlugin {
             id = 'org.apache.grails.buildsrc.publish'
-            implementationClass = 'org.apache.grails.buildsrc.publish.PublishPlugin'
+            implementationClass = 'org.apache.grails.buildsrc.PublishPlugin'
+        }
+        sbomPlugin {
+            id = 'org.apache.grails.buildsrc.sbom'
+            implementationClass = 'org.apache.grails.buildsrc.SbomPlugin'
         }
     }
 }

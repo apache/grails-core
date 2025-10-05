@@ -22,6 +22,7 @@ plugins {
     id 'java-library'
     id 'project-report'
     id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
 }
 
 version = projectVersion
@@ -70,5 +71,4 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/sbom-config.gradle')
 }

@@ -17,7 +17,7 @@
  *  under the License.
  */
 
-package org.apache.grails.buildsrc.publish
+package org.apache.grails.buildsrc
 
 import groovy.transform.CompileStatic
 import org.apache.grails.gradle.publish.GrailsPublishExtension
@@ -35,6 +35,9 @@ import org.gradle.api.tasks.bundling.Jar
 import org.gradle.crypto.checksum.Checksum
 import org.gradle.crypto.checksum.ChecksumPlugin
 import org.gradle.plugins.signing.Sign
+
+import static org.apache.grails.buildsrc.GradleUtils.lookupProperty
+import static org.apache.grails.buildsrc.GradleUtils.findRootGrailsCoreDir
 
 /**
  * Handles generating the checksum file, published artifact list, and grails-publish configuration
@@ -161,10 +164,6 @@ class PublishPlugin implements Plugin<Project> {
         }
     }
 
-    private static <T> T lookupProperty(Project project, String name, T defaultValue = null) {
-        project.findProperty(name) as T ?: defaultValue
-    }
-
     private void configureGrailsPublish(Project project) {
         project.extensions.configure(GrailsPublishExtension) {
             // Explicit `it` is required here
@@ -182,15 +181,6 @@ class PublishPlugin implements Plugin<Project> {
         }
     }
 
-    private static Directory findRootGrailsCoreDir(Project project) {
-        def rootLayout = project.rootProject.layout
-        if (rootLayout.projectDirectory.dir('.github').asFile.exists()) {
-            return rootLayout.projectDirectory
-        }
-
-        // we currently only nest 1 project level deep
-        rootLayout.projectDirectory.dir('../')
-    }
 
     private void ensureJarContainsASFFiles(Project project) {
         if (skipJavaComponent) {
