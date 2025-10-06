@@ -1,6 +1,6 @@
 Hi Everyone,
 
-I am happy to start the VOTE thread for an Apache Grails (incubating) Redis Plugin release of version ${VERSION}!
+I am happy to start the VOTE thread for an Apache Grails Redis Plugin release of version ${VERSION}!
 
 Release notes for the release are here:
 https://github.com/apache/grails-redis/releases/tag/v${VERSION}
@@ -10,25 +10,25 @@ https://github.com/apache/grails-redis/releases/tag/v${VERSION}
 Tag commit id: ${VERSION_COMMIT_ID}
 
 The artifacts to be voted on are located as follows (r${DIST_SVN_REVISION}):
-Source release: https://dist.apache.org/repos/dist/dev/incubator/grails/redis/${VERSION}/sources
+Source release: https://dist.apache.org/repos/dist/dev/grails/redis/${VERSION}/sources
 
 Release artifacts are signed with a key from the following file:
-https://dist.apache.org/repos/dist/release/incubator/grails/KEYS
+https://dist.apache.org/repos/dist/release/grails/KEYS
 
-Please vote on releasing this package as: Apache Grails (incubating) Redis Plugin ${VERSION}.
+Please vote on releasing this package as: Apache Grails Redis Plugin ${VERSION}.
 
-Reminder on ASF release approval requirements for PPMC members:
+Reminder on ASF release approval requirements for PMC members:
 https://www.apache.org/legal/release-policy.html#release-approval
 
 Hints on validating checksums/signatures (but replace md5sum with sha512sum):
 https://www.apache.org/info/verification.html
 
 The vote is open for a minimum of 72 hours and passes if a majority of at least
-three +1 PPMC votes are cast.
+three +1 PMC votes are cast.
 
-[ ] +1 Release Apache Grails (incubating) Redis Plugin ${VERSION}
+[ ] +1 Release Apache Grails Redis Plugin ${VERSION}
 [ ]  0 I don't have a strong opinion about this, but I assume it's ok
-[ ] -1 Do not release Apache Grails (incubating) Redis Plugin ${VERSION} because...
+[ ] -1 Do not release Apache Grails Redis Plugin ${VERSION} because...
 
 Here is my vote:
 

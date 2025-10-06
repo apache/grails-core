@@ -32,10 +32,10 @@ fi
 VERSION=${RELEASE_TAG#v}
 
 cd "${DOWNLOAD_LOCATION}"
-ZIP_FILE=$(ls "apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip" 2>/dev/null | head -n 1)
+ZIP_FILE=$(ls "apache-${PROJECT_NAME}-${VERSION}-src.zip" 2>/dev/null | head -n 1)
 
 if [ -z "${ZIP_FILE}" ]; then
-  echo "Error: Could not find apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip in ${DOWNLOAD_LOCATION}"
+  echo "Error: Could not find apache-${PROJECT_NAME}-${VERSION}-src.zip in ${DOWNLOAD_LOCATION}"
   exit 1
 fi
 
@@ -46,7 +46,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "Verifying checksum..."
-shasum -a 512 -c "apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512"
+shasum -a 512 -c "apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512"
 echo "✅ Checksum Verified"
 
 echo "Importing GPG key to independent GPG home ..."
@@ -54,7 +54,7 @@ gpg --homedir "${GRAILS_GPG_HOME}" --import "${DOWNLOAD_LOCATION}/KEYS"
 echo "✅ GPG Key Imported"
 
 echo "Verifying GPG signature..."
-gpg --homedir "${GRAILS_GPG_HOME}" --verify "apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.asc" "apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip"
+gpg --homedir "${GRAILS_GPG_HOME}" --verify "apache-${PROJECT_NAME}-${VERSION}-src.zip.asc" "apache-${PROJECT_NAME}-${VERSION}-src.zip"
 echo "✅ GPG Verified"
 
 SRC_DIR="${PROJECT_NAME}"
@@ -70,7 +70,7 @@ if [ -d "${SRC_DIR}" ]; then
   cd "${DOWNLOAD_LOCATION}"
 fi
 echo "Extracting zip file..."
-unzip -q "apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip"
+unzip -q "apache-${PROJECT_NAME}-${VERSION}-src.zip"
 
 if [ ! -d "${SRC_DIR}" ]; then
   echo "Error: Expected extracted folder '${SRC_DIR}' not found."
@@ -78,7 +78,7 @@ if [ ! -d "${SRC_DIR}" ]; then
 fi
 
 echo "Checking for required files existence..."
-REQUIRED_FILES=("LICENSE" "NOTICE" "README.md" "PUBLISHED_ARTIFACTS" "CHECKSUMS" "BUILD_DATE" "DISCLAIMER")
+REQUIRED_FILES=("LICENSE" "NOTICE" "README.md" "PUBLISHED_ARTIFACTS" "CHECKSUMS" "BUILD_DATE")
 
 for FILE in "${REQUIRED_FILES[@]}"; do
   if [ ! -f "${SRC_DIR}/$FILE" ]; then
