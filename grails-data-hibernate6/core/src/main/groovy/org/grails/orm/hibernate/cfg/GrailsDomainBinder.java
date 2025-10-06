@@ -151,7 +151,6 @@ public class GrailsDomainBinder implements MetadataContributor {
     private Closure defaultMapping;
     private PersistentEntityNamingStrategy namingStrategy;
     private MetadataBuildingContext metadataBuildingContext;
-    private NamingStrategyWrapper namingStrategyWrapper;
 
 
     public JdbcEnvironment getJdbcEnvironment() {
@@ -271,7 +270,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         new SimpleValueColumnBinder().bindSimpleValue(value, type, columnName1, true);
         PropertyConfig mappedForm = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
         if (mappedForm.getIndexColumn() != null) {
-            Column column = getColumnForSimpleValue(value);
+            Column column = new SimpleValueColumnFetcher().getColumnForSimpleValue(value);
             ColumnConfig columnConfig = getSingleColumnConfig(mappedForm.getIndexColumn());
             new ColumnConfigToColumnBinder().bindColumnConfigToColumn(column, columnConfig, mappedForm);
         }
@@ -765,7 +764,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
                 new SimpleValueColumnBinder().bindSimpleValue(element, typeName, columnName, true);
                 if (joinColumnMappingOptional.isPresent()) {
-                    Column column = getColumnForSimpleValue(element);
+                    Column column = new SimpleValueColumnFetcher().getColumnForSimpleValue(element);
                     ColumnConfig columnConfig = joinColumnMappingOptional.get();
                     final PropertyConfig mappedForm = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
                     new ColumnConfigToColumnBinder().bindColumnConfigToColumn(column, columnConfig, mappedForm);
@@ -795,10 +794,6 @@ public class GrailsDomainBinder implements MetadataContributor {
         collection.setElement(element);
 
         new CollectionForPropertyConfigBinder().bindCollectionForPropertyConfig(collection, config);
-    }
-
-    private Column getColumnForSimpleValue(SimpleValue element) {
-        return element.getColumns().iterator().next();
     }
 
     private boolean shouldCollectionBindWithJoinColumn(ToMany property) {
@@ -982,7 +977,7 @@ public class GrailsDomainBinder implements MetadataContributor {
      */
     private void bindManyToMany(Association property, ManyToOne element,
                                   InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
-        bindManyToOne(property, element, EMPTY_PATH, mappings, sessionFactoryBeanName);
+        new ManyToOneBinder(namingStrategy).bindManyToOne(property, element, EMPTY_PATH);
         element.setReferencedEntityName(property.getOwner().getName());
     }
 
@@ -1812,7 +1807,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                         LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as ManyToOne");
 
                     value = new ManyToOne(metadataBuildingContext, table);
-                    bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, EMPTY_PATH, mappings, sessionFactoryBeanName);
+                    new ManyToOneBinder(namingStrategy).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, EMPTY_PATH);
                 }
                 else if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.OneToOne && userType == null) {
                     if (LOG.isDebugEnabled()) {
@@ -1835,7 +1830,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                         }
                         else {
                             value = new ManyToOne(metadataBuildingContext, table);
-                            bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, EMPTY_PATH, mappings, sessionFactoryBeanName);
+                            new ManyToOneBinder(namingStrategy).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, EMPTY_PATH);
                         }
                     }
                 }
@@ -1960,7 +1955,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as ManyToOne");
 
             value = new ManyToOne(metadataBuildingContext, table);
-            bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path, mappings, sessionFactoryBeanName);
+            new ManyToOneBinder(namingStrategy).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
         } else if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.OneToOne) {
             if (LOG.isDebugEnabled())
                 LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
@@ -1971,7 +1966,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             }
             else {
                 value = new ManyToOne(metadataBuildingContext, table);
-                bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path, mappings, sessionFactoryBeanName);
+                new ManyToOneBinder(namingStrategy).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
             }
         }
         else if (currentGrailsProp instanceof Embedded) {
@@ -2034,62 +2029,6 @@ public class GrailsDomainBinder implements MetadataContributor {
         one.setIgnoreNotFound(true);
     }
 
-    /**
-     * Binds a many-to-one relationship to the
-     *
-     */
-    @SuppressWarnings("unchecked")
-    private void bindManyToOne(Association property, ManyToOne manyToOne,
-                                 String path, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
-        bindManyToOneValues(property, manyToOne);
-        PersistentEntity refDomainClass = property instanceof ManyToMany ? property.getOwner() : property.getAssociatedEntity();
-        Mapping mapping = new HibernateEntityWrapper().getMappedForm(refDomainClass);
-
-        boolean isComposite = mapping.hasCompositeIdentifier();
-        if (isComposite) {
-            CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
-            new CompositeIdentifierToManyToOneBinder(namingStrategy).bindCompositeIdentifierToManyToOne(property, manyToOne, ci, refDomainClass, path);
-        }
-        else {
-            //TODO NOT TESTED
-            if (property.isCircular() && (property instanceof ManyToMany)) {
-                PropertyConfig pc = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
-
-                if (pc.getColumns().isEmpty()) {
-                    mapping.getColumns().put(property.getName(), pc);
-                }
-                if (!pc.hasJoinKeyMapping()) {
-                    JoinTable jt = new JoinTable();
-                    final ColumnConfig columnConfig = new ColumnConfig();
-                    columnConfig.setName(getNamingStrategy().resolveColumnName(property.getName()) + UNDERSCORE + FOREIGN_KEY_SUFFIX);
-                    jt.setKey(columnConfig);
-                    pc.setJoinTable(jt);
-                }
-                // set type
-                new SimpleValueBinder(namingStrategy).bindSimpleValue(property, null, manyToOne, path);
-            }
-            else {
-                // bind column
-                // set type
-                new SimpleValueBinder(namingStrategy).bindSimpleValue(property, null, manyToOne, path);
-            }
-        }
-
-        PropertyConfig config = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
-        if ((property instanceof org.grails.datastore.mapping.model.types.OneToOne) && !isComposite) {
-            manyToOne.setAlternateUniqueKey(true);
-            Column c = getColumnForSimpleValue(manyToOne);
-            if (!config.isUniqueWithinGroup()) {
-                c.setUnique(config.isUnique());
-            }
-            else {
-                if (property.isBidirectional() && property.getInverseSide().isHasOne()) {
-                    c.setUnique(true);
-                }
-            }
-        }
-    }
-
     // each property may consist of one or many columns (due to composite ids) so in order to get the
     // number of columns required for a column key we have to perform the calculation here
 
@@ -2116,7 +2055,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         oneToOne.setPropertyName(property.getName());
         oneToOne.setReferenceToPrimaryKey(false);
 
-        bindOneToOneInternal(property, oneToOne, path);
+        //no-op, for subclasses to extend
 
         if (hasOne) {
             //TODO NOT TESTED
@@ -2126,35 +2065,6 @@ public class GrailsDomainBinder implements MetadataContributor {
         else {
             oneToOne.setReferencedPropertyName(otherSide.getName());
         }
-    }
-
-    private void bindOneToOneInternal(org.grails.datastore.mapping.model.types.OneToOne property, OneToOne oneToOne, String path) {
-        //no-op, for subclasses to extend
-    }
-
-    /**
-     */
-    private void bindManyToOneValues(org.grails.datastore.mapping.model.types.Association property, ManyToOne manyToOne) {
-        PropertyConfig config = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
-
-        if (config.getFetchMode() != null) {
-            manyToOne.setFetchMode(config.getFetchMode());
-        }
-        else {
-            manyToOne.setFetchMode(FetchMode.DEFAULT);
-        }
-
-
-        manyToOne.setLazy(Optional.ofNullable(config)
-                .map(org.grails.datastore.mapping.config.Property::getLazy)
-                .orElse(property != null));
-
-        if (config != null) {
-            manyToOne.setIgnoreNotFound(config.getIgnoreNotFound());
-        }
-
-        // set referenced entity
-        manyToOne.setReferencedEntityName(property.getAssociatedEntity().getName());
     }
 
     private void bindVersion(PersistentProperty version, RootClass entity,
