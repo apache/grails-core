@@ -79,7 +79,7 @@ jobs:
           export VERSION="${{ steps.release_version.outputs.value }}"
           svnmucc --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive \
                       -m "Remove grails dev version $VERSION" \
-                      rm "https://dist.apache.org/repos/dist/dev/incubator/grails/redis/$VERSION"
+                      rm "https://dist.apache.org/repos/dist/dev/grails/redis/$VERSION"
       - name: "Cancel GitHub Actions"
         continue-on-error: true
         env:

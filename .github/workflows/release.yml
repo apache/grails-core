@@ -178,7 +178,7 @@ jobs:
           find . -depth \( -type f -o -type d \) -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
       - name: "📦 Create source distribution ZIP"
         run: |
-          zip -r "apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip" ${{ needs.publish.outputs.extract_repository_name }} -x '${{ needs.publish.outputs.extract_repository_name }}/.git/*' -x '${{ needs.publish.outputs.extract_repository_name }}/.github/*'
+          zip -r "apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-src.zip" ${{ needs.publish.outputs.extract_repository_name }} -x '${{ needs.publish.outputs.extract_repository_name }}/.git/*' -x '${{ needs.publish.outputs.extract_repository_name }}/.github/*'
       - name: '🔐 Set up GPG'
         run: |
           echo "${{ secrets.GRAILS_GPG_KEY }}" | gpg --batch --import
@@ -189,19 +189,19 @@ jobs:
         env:
           GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
         run: |
-          gpg --default-key "${GPG_KEY_ID}" --batch --yes --pinentry-mode loopback --armor --detach-sign ./apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip
+          gpg --default-key "${GPG_KEY_ID}" --batch --yes --pinentry-mode loopback --armor --detach-sign ./apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-src.zip
       - name: "📦 Create source distribution checksum"
         run: |
-          sha512sum ./apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip > "apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip.sha512"
-          cat ./apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip.sha512
+          sha512sum ./apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-src.zip > "apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-src.zip.sha512"
+          cat ./apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-src.zip.sha512
       - name: "🚀 Upload ZIP and Signature to GitHub Release"
         uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
         with:
           tag_name: v${{ needs.publish.outputs.release_version }}
           files: |
-            apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip
-            apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip.sha512
-            apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-incubating-src.zip.asc
+            apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-src.zip
+            apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-src.zip.sha512
+            apache-${{ needs.publish.outputs.extract_repository_name }}-${{ needs.publish.outputs.release_version }}-src.zip.asc
       - name: "🗑️ Remove CHECKSUMS.txt asset from release"
         working-directory: '${{ needs.publish.outputs.extract_repository_name }}'
         env:
@@ -253,29 +253,29 @@ jobs:
         run: |
           set -e
 
-          if svn ls https://dist.apache.org/repos/dist/dev/incubator/grails --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive; then
+          if svn ls https://dist.apache.org/repos/dist/dev/grails --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive; then
             echo "Dev Folder 'grails' already exists — skipping creation"
           else
             echo "Dev Folder 'grails' does not exist, creating"
             svnmucc --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive \
-              mkdir https://dist.apache.org/repos/dist/dev/incubator/grails \
+              mkdir https://dist.apache.org/repos/dist/dev/grails \
               -m "Create 'grails' dev folder"
           fi
       - name: "👀 Ensure grails redis folder exists"
         run: |
           set -e
 
-          if svn ls https://dist.apache.org/repos/dist/dev/incubator/grails/redis --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive; then
+          if svn ls https://dist.apache.org/repos/dist/dev/grails/redis --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive; then
             echo "Dev Folder 'grails/redis' already exists — skipping creation"
           else
             echo "Dev Folder 'grails/redis' does not exist, creating"
             svnmucc --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive \
-              mkdir https://dist.apache.org/repos/dist/dev/incubator/grails/redis \
+              mkdir https://dist.apache.org/repos/dist/dev/grails/redis \
               -m "Create 'grails redis' dev folder"
           fi
       - name: "📥 Checkout dev repo"
         run: |
-          svn checkout --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive https://dist.apache.org/repos/dist/dev/incubator/grails/redis dev-repo
+          svn checkout --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive https://dist.apache.org/repos/dist/dev/grails/redis dev-repo
       - name: "🗑️ Remove existing dev version"
         run: |
           export VERSION="${{ needs.publish.outputs.release_version }}"
@@ -293,9 +293,9 @@ jobs:
           cd dev-repo
           mkdir -p $VERSION/sources          
           cd $VERSION/sources
-          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-${{ needs.publish.outputs.extract_repository_name }}-$VERSION-incubating-src.zip
-          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-${{ needs.publish.outputs.extract_repository_name }}-$VERSION-incubating-src.zip.sha512
-          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-${{ needs.publish.outputs.extract_repository_name }}-$VERSION-incubating-src.zip.asc
+          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-${{ needs.publish.outputs.extract_repository_name }}-$VERSION-src.zip
+          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-${{ needs.publish.outputs.extract_repository_name }}-$VERSION-src.zip.sha512
+          curl -f -LO https://github.com/apache/${{ needs.publish.outputs.extract_repository_name }}/releases/download/$TAG/apache-${{ needs.publish.outputs.extract_repository_name }}-$VERSION-src.zip.asc
           echo "Downloaded the following files:"
           ls -l
       - name: "Upload distributions"
@@ -332,30 +332,14 @@ jobs:
         run: |
           export DIST_SVN_REVISION=$(awk '/Last Changed Rev:/ {print $4}' dev-repo/DIST_SVN_REVISION.txt)
           
-          echo "::group::Grails PPMC Vote Email"
+          echo "::group::Grails PMC Vote Email"
           echo "*************************************************"
-          echo "Subject: [VOTE] Release Apache Grails (incubating) Redis Plugin ${VERSION}"
+          echo "Subject: [VOTE] Release Apache Grails Redis Plugin ${VERSION}"
           echo "*************************************************"
           echo "Body:"
           echo "*************************************************"
           cat ${{ needs.publish.outputs.extract_repository_name }}/.github/vote_templates/staged.txt | envsubst
           echo "*************************************************"          
-          echo "::endgroup::"
-      - name: '📧 Print Groovy Vote Email'
-        env:
-          VERSION: ${{ needs.publish.outputs.release_version }}
-          VERSION_COMMIT_ID: ${{ needs.publish.outputs.commit_hash }}
-        run: |
-          export DIST_SVN_REVISION=$(awk '/Last Changed Rev:/ {print $4}' dev-repo/DIST_SVN_REVISION.txt)
-          
-          echo "::group::Grails PPMC Vote Email"
-          echo "*************************************************"
-          echo "Subject: [VOTE] Approval of Apache Grails (incubating) Redis Plugin ${VERSION} release by Groovy PMC"
-          echo "*************************************************"
-          echo "Body:"
-          echo "*************************************************"
-          cat ${{ needs.publish.outputs.extract_repository_name }}/.github/vote_templates/groovy_pmc.txt | envsubst
-          echo "*************************************************"
           echo "::endgroup::"
   release:
     environment: release
@@ -367,12 +351,7 @@ jobs:
         run: curl -s https://api.ipify.org
       - name: "Setup SVN and Tools"
         run: sudo apt-get install -y subversion subversion-tools tree gettext-base
-      - name: "🗳 Grails PPMC Vote Confirmation - MANUAL"
-        run: |
-          echo "::group::Manual Confirmation"
-          echo "🔎 This step is a placeholder that the vote confirmation on dev@grails.apache.org completed successfully."
-          echo "::endgroup::"
-      - name: "🗳 Groovy PMC Vote Confirmation - MANUAL"
+      - name: "🗳 Grails PMC Vote Confirmation - MANUAL"
         run: |
           echo "::group::Manual Confirmation"
           echo "🔎 This step is a placeholder that the vote confirmation on dev@grails.apache.org completed successfully."
@@ -392,7 +371,6 @@ jobs:
           echo "::group::Manual ASF Reporter Update"
           TODAY=$(date +"%Y-%m-%d")
           echo "Check email & update https://reporter.apache.org to mark the release ${{ needs.publish.outputs.release_version }} as complete as of ${TODAY}"
-          echo "Note: this is a place holder; currently this is not possible since Groovy sponsors us instead of the incubator PMC"
           echo "::endgroup::"
   docs:
     environment: docs
@@ -470,7 +448,7 @@ jobs:
 
           echo "::group::Announcement Email"
           echo "*************************************************"
-          echo "Subject: [ANNOUNCE] Apache Grails (incubating) Redis Plugin ${VERSION}"
+          echo "Subject: [ANNOUNCE] Apache Grails Redis Plugin ${VERSION}"
           echo "*************************************************"
           echo "Body:"
           echo "*************************************************"

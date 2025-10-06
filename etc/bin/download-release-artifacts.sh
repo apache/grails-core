@@ -37,37 +37,37 @@ VERSION=${RELEASE_TAG#v}
 
 # Source distro
 echo "Downloading GitHub Release files"
-curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip"
-curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.asc" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.asc"
-curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512"
+curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-src.zip" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-src.zip"
+curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-src.zip.asc" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-src.zip.asc"
+curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512"
 
 echo "Downloading SVN Release files"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip" "https://dist.apache.org/repos/dist/dev/incubator/grails/${SVN_FOLDER}/${VERSION}/sources/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.asc" "https://dist.apache.org/repos/dist/dev/incubator/grails/${SVN_FOLDER}/${VERSION}/sources/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.asc"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512" "https://dist.apache.org/repos/dist/dev/incubator/grails/${SVN_FOLDER}/${VERSION}/sources/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/sources/apache-${PROJECT_NAME}-${VERSION}-src.zip"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip.asc" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/sources/apache-${PROJECT_NAME}-${VERSION}-src.zip.asc"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/sources/apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512"
 
 echo "Comparing SVN vs GitHub Release files"
 set +e
 
-cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.asc" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.asc"
+cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip.asc" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-src.zip.asc"
 if [ $? -eq 0 ]; then
-  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.asc"
+  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-src.zip.asc"
 else
-  echo "❌Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.asc"
+  echo "❌Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-src.zip.asc"
   exit 1
 fi
 
 set +e
-cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512"
+cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512"
 if [ $? -eq 0 ]; then
-  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512"
+  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512"
 else
-  echo "❌ Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512"
+  echo "❌ Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512"
   exit 1
 fi
 
-ZIP_SVN_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip" | awk '{print $1}')
-ZIP_GITHUB_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip" | awk '{print $1}')
+ZIP_SVN_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip" | awk '{print $1}')
+ZIP_GITHUB_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-src.zip" | awk '{print $1}')
 if [ "${ZIP_SVN_CHECKSUM}" != "${ZIP_GITHUB_CHECKSUM}" ]; then
     echo "❌ Checksum mismatch between SVN and GitHub source zip files"
     exit 1
