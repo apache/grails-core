@@ -120,7 +120,6 @@ shadowJarTask.configure { ShadowJar it ->
     }
 
     it.exclude(
-            'DISCLAIMER', // because we include our own jars, we need to exclude any files that we include
             'META-INF/DEPENDENCIES', // until we publish our own SBOM, this won't be correct so exclude
             'META-INF/grails-plugin.xml', // we do not start or compile a grails application so these files are not needed (grails-core, url mappings, etc plugins)
             'META-INF/grails-plugin.xml.asc', // avoid signing artifacts
@@ -196,7 +195,6 @@ project.extensions.getByType(DistributionContainer).configureEach {
         from(rootProject.layout.projectDirectory.file('../LICENSE')) { it.into '' }
         from(rootProject.layout.projectDirectory.file('../NOTICE')) { it.into '' }
         from(rootProject.layout.projectDirectory.file('../INSTALL')) { it.into '' }
-        from(rootProject.layout.projectDirectory.file('../DISCLAIMER')) { it.into '' }
     }
 }
 
