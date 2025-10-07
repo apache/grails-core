@@ -7,14 +7,12 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import spock.lang.Ignore
 
 @SuppressWarnings("GrMethodMayBeStatic")
-//TODO Closure alias not working
 class DetachCriteriaSubquerySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
         manager.addAllDomainClasses([User, Group, GroupAssignment, Organisation])
     }
 
-//    @Ignore("Exists Query broken")
     void "test detached associated criteria in subquery"() {
 
         setup:
@@ -31,11 +29,9 @@ class DetachCriteriaSubquerySpec extends HibernateGormDatastoreSpec {
         when:
         String supervisorEmail = 'supervisor@company.com'
         DetachedCriteria<User> criteria = User.where {
-            def u = User
             exists(
                     GroupAssignment.where {
-                        def ga0 = GroupAssignment
-                        user.id == u.id && group.supervisor.email == supervisorEmail
+                        user.id == id && group.supervisor.email == supervisorEmail
                     }.id()
             )
         }
@@ -70,7 +66,6 @@ class DetachCriteriaSubquerySpec extends HibernateGormDatastoreSpec {
         result.size() == 5
     }
 
-//    @Ignore("Explore is currently broken")
     void "test that detached criteria subquery should create implicit alias instead of using this_"() {
 
         setup:
@@ -87,10 +82,9 @@ class DetachCriteriaSubquerySpec extends HibernateGormDatastoreSpec {
         when:
         String supervisorEmail = 'supervisor@company.com'
         DetachedCriteria<User> criteria = User.where {
-            def u = User
             exists(
                     GroupAssignment.where {
-                        user.id == u.id && group.supervisor.email == supervisorEmail
+                        user.id == id && group.supervisor.email == supervisorEmail
                     }.id()
             )
         }
