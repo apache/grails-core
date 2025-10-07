@@ -37,15 +37,22 @@ class CompositeIdWithManyToOneAndSequenceSpec extends HibernateGormDatastoreSpec
 
     @Rollback
     @Issue('https://github.com/grails/grails-data-mapping/issues/835')
-    void "Test composite id many to one and sequence"() {
+    void "Test composite id one to many and sequence"() {
 
-        when:"a many to one association is created"
-        ToothDisease td = new ToothDisease(nrVersion: 1).save()
-        new Tooth(toothDisease: td).save(flush:true)
+        when:"a one to many association is created"
+        def tooth = new Tooth()
+        def td = new ToothDisease(idColumn: 1, nrVersion: 1)
+        tooth.addToToothDiseases(td)
+        tooth.save(flush: true, failOnError: true)
 
-        then:"The object was saved"
+        and:"the session is cleared to ensure we are checking persisted state"
+        manager.session.clear()
+
+        then:"The object was saved and the association is correct"
         Tooth.count() == 1
-        Tooth.list().first().toothDisease != null
+        ToothDisease.count() == 1
+        def reloadedTooth = Tooth.list().first()
+        reloadedTooth.toothDiseases.size() == 1
     }
 
 }
@@ -54,25 +61,59 @@ class CompositeIdWithManyToOneAndSequenceSpec extends HibernateGormDatastoreSpec
 @Entity
 class Tooth {
     Integer id
-    ToothDisease toothDisease
+    SortedSet<ToothDisease> toothDiseases
+
+    static hasMany = [toothDiseases: ToothDisease]
+    static mappedBy = [toothDiseases: 'tooth']
+
     static mapping = {
         table name: 'AK_TOOTH'
         id generator: 'sequence', params: [sequence: 'SEQ_AK_TOOTH']
-        toothDisease {
-            column name: 'FK_AK_TOOTH_ID'
-            column name: 'FK_AK_TOOTH_NR_VERSION'
-        }
     }
 }
 
 @Entity
-class ToothDisease implements Serializable {
+class ToothDisease implements Serializable, Comparable<ToothDisease> {
     Integer idColumn
     Integer nrVersion
+
+    static belongsTo = [tooth: Tooth]
+
     static mapping = {
         table name: 'AK_TOOTH_DISEASE'
-        idColumn column: 'ID', generator: 'sequence', params: [sequence: 'SEQ_AK_TOOTH_DISEASE']
-        nrVersion column: 'NR_VERSION'
+        idColumn column: 'ID', type: 'integer'
+        nrVersion column: 'NR_VERSION', type: 'integer'
         id composite: ['idColumn', 'nrVersion']
+        tooth column: 'tooth_id'
+    }
+
+    @Override
+    int compareTo(ToothDisease other) {
+        def idCmp = this.idColumn <=> other.idColumn
+        if (idCmp != 0) {
+            return idCmp
+        }
+        return this.nrVersion <=> other.nrVersion
+    }
+
+    @Override
+    boolean equals(Object o) {
+        if (this.is(o)) return true
+        if (getClass() != o.getClass()) return false
+
+        ToothDisease that = (ToothDisease) o
+
+        if (idColumn != that.idColumn) return false
+        if (nrVersion != that.nrVersion) return false
+
+        return true
+    }
+
+    @Override
+    int hashCode() {
+        int result
+        result = idColumn.hashCode()
+        result = 31 * result + nrVersion.hashCode()
+        return result
     }
 }
