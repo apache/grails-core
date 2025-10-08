@@ -38,32 +38,10 @@ dependencies {
         // api: Gson(transform)
     }
 
-    compileOnly 'org.apache.grails.data:grails-datamapping-core', { // Provided
-        // impl: @Transactional(runtime)
-    }
-    compileOnly 'org.apache.grails.views:grails-web-taglib', { // Provided
-        // Project has a taglib
-    }
-    compileOnly 'org.apache.grails.bootstrap:grails-bootstrap', { // Provided
-        // comp: @PluginSource(source)
-    }
-    compileOnly 'org.apache.grails:grails-core', { // Provided
-        // api GrailsApplication, Holders(transform)
-        // impl: GrailsApp, GrailsAutoConfiguration, Plugin
-    }
-    compileOnly 'org.apache.groovy:groovy' // Provided
-    compileOnly 'org.springframework:spring-beans', { // Provided
-        // api: @Autowired(transform)
-    }
-    compileOnly 'org.springframework:spring-core', { // Provided
-        // api: Opcodes(transform)
-    }
+    compileOnly 'org.apache.grails:grails-dependencies-starter-web'
 
-    testImplementation 'org.apache.grails:grails-testing-support-web'
-    testImplementation 'org.springframework.boot:spring-boot-test', {
-        // impl: @SpringBootTest(runtime)
-    }
-    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.apache.grails:grails-dependencies-test'
+
 }
 
 grails {
