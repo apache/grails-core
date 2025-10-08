@@ -440,4 +440,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GRAILS_GHTOKEN }}
           GRADLE_PUBLISH_RELEASE: 'false'
           SOURCE_FOLDER: grails-doc/build/docs
-          TARGET_REPOSITORY: 'apache/grails-doc'
+          TARGET_REPOSITORY: 'apache/grails-website'
+          TARGET_FOLDER: 'docs'
+          DOCUMENTATION_BRANCH: 'asf-site-production'
