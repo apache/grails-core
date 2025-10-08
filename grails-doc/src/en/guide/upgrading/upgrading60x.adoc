@@ -570,3 +570,53 @@ db.Example.updateMany(
   [ { $set: { created: { $toDate: "$created" } } } ]
 );
 ----
+
+===== 12.25 JSON Rendering of Java 8 Date/Time Types
+
+JSON rendering of `java.time.Instant` and `java.time.LocalDateTime` has been updated for consistency across both standard JSON converters (`render ... as JSON`) and JSON views (`.gson` files).
+
+====== Changes to JSON Output
+
+*Instant*: Previously rendered as either epoch milliseconds (standard converters) or a complex object structure (JSON views). Now consistently renders as ISO-8601 format with Z suffix:
+
+[source,json]
+----
+// Before (standard converters)
+{"timestamp": 1759869218602}
+
+// Before (JSON views)
+{"timestamp": {"epochSecond": 1759869218, "nano": 602000000}}
+
+// After (both)
+{"timestamp": "2025-10-07T21:14:31.602Z"}
+----
+
+*LocalDateTime*: Previously rendered without timezone information. Now consistently renders as ISO-8601 format with Z suffix (assuming UTC):
+
+[source,json]
+----
+// Before
+{"dateTime": "2025-10-07T21:14:31"}
+
+// After
+{"dateTime": "2025-10-07T21:14:31Z"}
+----
+
+*java.util.Date*: Continues to render as ISO-8601 with Z suffix (unchanged):
+
+[source,json]
+----
+{"created": "2025-10-07T21:14:31Z"}
+----
+
+====== Migration Impact
+
+If your application or API consumers depend on the previous JSON format for `Instant` or `LocalDateTime` fields:
+
+1. **API Responses**: Client applications may need updates to parse the new ISO-8601 string format instead of epoch milliseconds or object structures.
+
+2. **Date Parsing**: The new format is a standard ISO-8601 string that can be parsed using `Instant.parse()` or `LocalDateTime.parse()` with appropriate formatters.
+
+3. **Consistency**: All temporal types now render consistently, making it easier to handle dates uniformly across your application.
+
+This change applies to both the `grails-converters` module (standard JSON rendering) and the `grails-views-gson` module (JSON views).
