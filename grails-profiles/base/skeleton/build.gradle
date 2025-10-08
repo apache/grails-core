@@ -3,10 +3,14 @@ buildscript {
         mavenCentral()
 @buildRepositories@
         maven {
-           url = 'https://repository.apache.org/content/groups/snapshots'
-           content {
-              includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
-           }
+            url = 'https://repository.apache.org/content/groups/snapshots'
+            content {
+              includeVersionByRegex('org[.]apache[.]grails.*', '.*', '.*-SNAPSHOT')
+              includeVersionByRegex('org[.]apache[.]groovy.*', '.*', '.*-SNAPSHOT')
+            }
+            mavenContent {
+                snapshotsOnly()
+            }
         }
     }
     dependencies {
