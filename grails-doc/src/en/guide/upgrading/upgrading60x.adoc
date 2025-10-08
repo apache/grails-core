@@ -558,3 +558,15 @@ tasks.withType(JavaExec).configureEach {
    jvmArgs('-XX:+TieredCompilation', '-XX:TieredStopAtLevel=1', '-XX:CICompilerCount=3')
 }
 ----
+
+===== 12.24 MongoDB
+
+`Instant` persistence switched from epoch milliseconds (BSON int64) to BSON DateTime (same BSON type as `java.util.Date`); `LocalDateTime` continues to be converted to BSON DateTime using the configured zone. If you currently using domain objects with property type `Instant`, you will need to convert them prior to upgrading. For more info, see https://github.com/apache/grails-core/pull/15111[#15111].
+
+[source,javascript]
+----
+db.Example.updateMany(
+  { created: { $type: "long" } },
+  [ { $set: { created: { $toDate: "$created" } } } ]
+);
+----
