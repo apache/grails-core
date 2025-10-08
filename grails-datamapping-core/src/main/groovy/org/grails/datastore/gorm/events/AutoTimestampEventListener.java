@@ -32,6 +32,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEvent;
+import org.springframework.util.ReflectionUtils;
 
 import grails.gorm.annotation.AutoTimestamp;
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
@@ -39,6 +40,7 @@ import org.grails.datastore.gorm.timestamp.TimestampProvider;
 import org.grails.datastore.mapping.config.Entity;
 import org.grails.datastore.mapping.config.Settings;
 import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
 import org.grails.datastore.mapping.engine.EntityAccess;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener;
@@ -148,10 +150,25 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
     public boolean beforeUpdate(PersistentEntity entity, EntityAccess ea) {
         Set<String> props = getLastUpdatedPropertyNames(entity.getName());
         if (props != null) {
+            Object entityObject = ea.getEntity();
+            boolean isDirtyCheckable = entityObject instanceof DirtyCheckable;
+
+            // For dirty-checking datastores (e.g., MongoDB), only set autotimestamp if entity has dirty properties
+            if (isDirtyCheckable) {
+                List<String> dirtyPropertyNames = ((DirtyCheckable) entityObject).listDirtyPropertyNames();
+                if (dirtyPropertyNames.isEmpty()) {
+                    return true;
+                }
+            }
+
             for (String prop : props) {
                 Class<?> lastUpdateType = ea.getPropertyType(prop);
                 Object timestamp = timestampProvider.createTimestamp(lastUpdateType);
                 ea.setProperty(prop, timestamp);
+                // Mark property as dirty for datastores that use dirty checking (e.g., MongoDB)
+                if (isDirtyCheckable) {
+                    ((DirtyCheckable) entityObject).markDirty(prop);
+                }
             }
         }
         return true;
@@ -167,18 +184,6 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
         return properties == null ? null : properties.orElse(null);
     }
 
-    private static Field getFieldFromHierarchy(Class<?> entity, String fieldName) {
-        Class<?> clazz = entity;
-        while (clazz != null) {
-            try {
-                return clazz.getDeclaredField(fieldName);
-            } catch (NoSuchFieldException e) {
-                clazz = clazz.getSuperclass();
-            }
-        }
-        return null;
-    }
-
     protected void storeDateCreatedAndLastUpdatedInfo(PersistentEntity persistentEntity) {
         if (persistentEntity.isInitialized()) {
             ClassMapping<?> classMapping = persistentEntity.getMapping();
@@ -190,13 +195,15 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
                     } else if (property.getName().equals(DATE_CREATED_PROPERTY)) {
                         storeTimestampAvailability(entitiesWithDateCreated, persistentEntity, property);
                     } else {
-                        Field field = getFieldFromHierarchy(persistentEntity.getJavaClass(), property.getName());
-                        if (field != null && field.isAnnotationPresent(AutoTimestamp.class)) {
-                            AutoTimestamp autoTimestamp = field.getAnnotation(AutoTimestamp.class);
-                            if (autoTimestamp.value() == AutoTimestamp.EventType.UPDATED) {
-                                storeTimestampAvailability(entitiesWithLastUpdated, persistentEntity, property);
-                            } else {
-                                storeTimestampAvailability(entitiesWithDateCreated, persistentEntity, property);
+                        Field field = ReflectionUtils.findField(persistentEntity.getJavaClass(), property.getName());
+                        if (field != null) {
+                            if (field.isAnnotationPresent(AutoTimestamp.class)) {
+                                AutoTimestamp autoTimestamp = field.getAnnotation(AutoTimestamp.class);
+                                if (autoTimestamp.value() == AutoTimestamp.EventType.UPDATED) {
+                                    storeTimestampAvailability(entitiesWithLastUpdated, persistentEntity, property);
+                                } else {
+                                    storeTimestampAvailability(entitiesWithDateCreated, persistentEntity, property);
+                                }
                             }
                         }
                     }
