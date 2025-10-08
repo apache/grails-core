@@ -19,6 +19,8 @@
 
 package org.apache.grails.buildsrc
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.CompileDynamic
@@ -51,9 +53,11 @@ import static org.apache.grails.buildsrc.GradleUtils.lookupProperty
 class SbomPlugin implements Plugin<Project> {
 
     // ordered so that first value is the most preferred, this list is from https://www.apache.org/legal/resolved.html
-    private static List<String> PREFERRED_LICENSES = ['Apache-2.0', 'EPL-1.0', 'BSD-3-Clause', 'EPL-2.0', 'MIT', 'MIT-0', '0BSD', 'UPL-1.0',
-                                                      'CC0-1.0', 'ICU', 'Xnet', 'NCSA', 'W3C', 'Zlib', 'AFL-3.0', 'MS-PL', 'PSF-2.0', 'APAFML',
-                                                      'BSL-1.0', 'WTFPL', 'Unlicense', 'HPND', 'EPICS', 'TCL']
+    private static List<String> PREFERRED_LICENSES = [
+            'Apache-2.0', 'EPL-1.0', 'BSD-3-Clause', 'EPL-2.0', 'MIT', 'MIT-0', '0BSD', 'UPL-1.0',
+            'CC0-1.0', 'ICU', 'Xnet', 'NCSA', 'W3C', 'Zlib', 'AFL-3.0', 'MS-PL', 'PSF-2.0', 'APAFML',
+            'BSL-1.0', 'WTFPL', 'Unlicense', 'HPND', 'EPICS', 'TCL'
+    ]
 
     // licenses are standardized @ https://spdx.org/licenses/
     private static Map<String, LinkedHashMap<String, String>> LICENSES = [
@@ -126,14 +130,13 @@ class SbomPlugin implements Plugin<Project> {
         )
 
         configureSbomTask(project, sbomOutputLocation)
-
         ensureLicensesValidated(project)
 
         // sboms are only published to Grails jar files at this time
         publishSbomForJarProjects(project, sbomOutputLocation)
     }
 
-    private void configureSbomTask(Project project, Provider<RegularFile> sbomOutputLocation) {
+    private static void configureSbomTask(Project project, Provider<RegularFile> sbomOutputLocation) {
         project.tasks.withType(CycloneDxTask).configureEach { CycloneDxTask task ->
             task.with {
                 // the 2.x version of Cyclonedx uses a legacy syntax & helpers for setting inputs so the syntax below
@@ -204,7 +207,7 @@ class SbomPlugin implements Plugin<Project> {
 
                         // force the serialNumber to be reproducible by removing it & recalculating
                         bom['serialNumber'] = ''
-                        String withOutSerial = JsonOutput.prettyPrint(JsonOutput.toJson(bom))
+                        def withOutSerial = JsonOutput.prettyPrint(JsonOutput.toJson(bom))
                         def uuid = UUID.nameUUIDFromBytes(withOutSerial.getBytes(StandardCharsets.UTF_8.name()))
                         bom['serialNumber'] = "urn:uuid:$uuid".toString()
 
@@ -221,7 +224,7 @@ class SbomPlugin implements Plugin<Project> {
     }
 
     @CompileDynamic
-    private Object pickLicense(CycloneDxTask task, String bomRef, List licenseChoices) {
+    private static Object pickLicense(CycloneDxTask task, String bomRef, List licenseChoices) {
         if (!bomRef) {
             throw new GradleException("No bomRef found for a dependency of ${task.project.name}, cannot pick license")
         }
@@ -242,7 +245,7 @@ class SbomPlugin implements Plugin<Project> {
         }
 
         if (!(licenseChoices instanceof List) || licenseChoices.isEmpty()) {
-            throw new GradleException("No License was found for dependency: ${bomRef} in project ${project.name}")
+            throw new GradleException("No License was found for dependency: ${bomRef} in project ${task.project.name}")
         }
 
         def licenseIds = licenseChoices.findAll { it instanceof Map && it.license instanceof Map && it.license.id }
@@ -267,46 +270,38 @@ class SbomPlugin implements Plugin<Project> {
         return defaultLicense
     }
 
-    private void ensureLicensesValidated(Project project) {
-        boolean initialized = false
+    private static void ensureLicensesValidated(Project project) {
+        def initialized = new AtomicBoolean(false)
         // platforms only have constraints, so validate is not performed at this time
-        for (String plugin : ['java', 'java-library']) {
-            project.pluginManager.withPlugin(plugin) {
-                if (initialized) {
-                    return
-                }
-                initialized = true
-
-                project.tasks.named('build').configure {
-                    it.dependsOn('cyclonedxBom')
+        ['java', 'java-library'].each {
+            project.plugins.withId(it) {
+                if (initialized.compareAndSet(false, true)) {
+                    project.tasks.named('build').configure {
+                        it.dependsOn('cyclonedxBom')
+                    }
                 }
             }
         }
     }
 
-    private void publishSbomForJarProjects(Project project, Provider<RegularFile> sbomOutputLocation) {
-        boolean initialized = false
-        for (String plugin : ['java', 'java-library']) {
-            project.pluginManager.withPlugin(plugin) {
-                if(initialized) {
-                    return
-                }
-                initialized = true
-
-                if (!project.findProperty('skipJavaComponent')) {
-                    project.tasks.named('jar', Jar).configure { Jar jar ->
-                        jar.dependsOn('cyclonedxBom')
-
-                        jar.from(sbomOutputLocation) { CopySpec spec ->
-                            spec.into('META-INF')
-                            spec.rename {
-                                'sbom.json'
+    private static void publishSbomForJarProjects(Project project, Provider<RegularFile> sbomOutputLocation) {
+        def initialized = new AtomicBoolean(false)
+        ['java', 'java-library'].each {
+            project.plugins.withId(it) {
+                if (initialized.compareAndSet(false, true)) {
+                    if (!project.findProperty('skipJavaComponent')) {
+                        project.tasks.named('jar', Jar).configure { Jar jar ->
+                            jar.dependsOn('cyclonedxBom')
+                            jar.from(sbomOutputLocation) { CopySpec spec ->
+                                spec.into('META-INF')
+                                spec.rename {
+                                    'sbom.json'
+                                }
                             }
-                        }
-
-                        jar.manifest { Manifest manifest ->
-                            manifest.attributes('Sbom-Location': 'META-INF/sbom.json')
-                            manifest.attributes('Sbom-Format': 'CycloneDX')
+                            jar.manifest { Manifest manifest ->
+                                manifest.attributes('Sbom-Location': 'META-INF/sbom.json')
+                                manifest.attributes('Sbom-Format': 'CycloneDX')
+                            }
                         }
                     }
                 }

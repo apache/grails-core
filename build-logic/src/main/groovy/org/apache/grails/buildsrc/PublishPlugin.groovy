@@ -19,13 +19,14 @@
 
 package org.apache.grails.buildsrc
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import groovy.transform.CompileStatic
 import org.apache.grails.gradle.publish.GrailsPublishExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.CopySpec
-import org.gradle.api.file.Directory
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenArtifact
 import org.gradle.api.publish.maven.MavenPublication
@@ -45,37 +46,33 @@ import static org.apache.grails.buildsrc.GradleUtils.findRootGrailsCoreDir
 @CompileStatic
 class PublishPlugin implements Plugin<Project> {
 
-    private Boolean skipJavaComponent
-    private Directory grailsCoreRoot
-    private boolean initialized
-
     @Override
     void apply(Project project) {
+        def initialized = new AtomicBoolean(false)
         ['java', 'java-library', 'java-platform', 'org.apache.grails.gradle.grails-profile'].each {
             project.plugins.withId(it) {
-                publish(project)
+                if (initialized.compareAndSet(false, true)) {
+                    publish(project)
+                }
             }
         }
     }
 
-    private void publish(Project project) {
-        if(initialized) {
-            return
-        }
+    private static boolean shouldSkipJavaComponent(Project project) {
+        lookupProperty(project, 'skipJavaComponent', false)
+    }
 
-        project.logger.info('Applying plugin to project: {}', project.name)
-        skipJavaComponent = lookupProperty(project, 'skipJavaComponent', false)
-        grailsCoreRoot = findRootGrailsCoreDir(project)
+    private static void publish(Project project) {
+        project.logger.info('Configuring the Grails Publish Plugin for [{}].', project.name)
 
         configureGrailsPublish(project)
 
-        if (skipJavaComponent) {
-            // since the publish plugin won't register and this task needs to exist
+        if (shouldSkipJavaComponent(project)) {
+            // since the grails-publish plugin won't register, add this task to ensure it exists due to the forge dependency
             project.tasks.register('publishAllPublicationsToTestCaseMavenRepoRepository')
         }
 
         ensureJarContainsASFFiles(project)
-
         disableSigningWhenTesting(project)
 
         project.plugins.withId('maven-publish') {
@@ -85,7 +82,7 @@ class PublishPlugin implements Plugin<Project> {
         }
     }
 
-    private TaskProvider<Task> configurePublishedArtifacts(Project project) {
+    private static TaskProvider<Task> configurePublishedArtifacts(Project project) {
         def artifactsDir = project.layout.buildDirectory.dir('artifacts')
         def artifactsTask = project.tasks.register('savePublishedArtifacts')
         artifactsTask.configure { Task task ->
@@ -100,23 +97,31 @@ class PublishPlugin implements Plugin<Project> {
                             return
                         }
                         if (artifact.classifier) {
-                            artifacts[artifact.file.name] = "$publication.groupId:$publication.artifactId:$publication.version:$artifact.classifier" as String
+                            artifacts.put(
+                                    artifact.file.name,
+                                    "$publication.groupId:$publication.artifactId:$publication.version:$artifact.classifier" as String
+                            )
                         } else {
-                            artifacts[artifact.file.name] = "$publication.groupId:$publication.artifactId:$publication.version" as String
+                            artifacts.put(
+                                    artifact.file.name,
+                                    "$publication.groupId:$publication.artifactId:$publication.version" as String
+                            )
                         }
                     }
                 }
-                File artifactsFile = artifactsDir.get().asFile
-                artifactsFile.mkdirs()
-                artifacts.each { key, value ->
-                    new File(artifactsFile, "${key}.txt").text = value
+
+                artifactsDir.get().asFile.with { dir ->
+                    dir.mkdirs()
+                    artifacts.each { key, value ->
+                        new File(dir, "${key}.txt").text = value
+                    }
                 }
             }
         }
         artifactsTask
     }
 
-    private void configureChecksums(Project project, TaskProvider<Task> artifactsTask) {
+    private static void configureChecksums(Project project, TaskProvider<Task> artifactsTask) {
         project.pluginManager.apply(ChecksumPlugin)
 
         def checksumTask = project.tasks.register('publishedChecksums', Checksum)
@@ -149,11 +154,9 @@ class PublishPlugin implements Plugin<Project> {
         project.tasks.withType(AbstractPublishToMaven).configureEach {
             it.finalizedBy(checksumTask)
         }
-
-        initialized = true
     }
 
-    private void disableSigningWhenTesting(Project project) {
+    private static void disableSigningWhenTesting(Project project) {
         project.pluginManager.withPlugin('signing') {
             if (System.getenv('TEST_BUILD_REPRODUCIBLE')) {
                 project.logger.lifecycle('Signing is disabled for this build to test build reproducibility.')
@@ -164,65 +167,72 @@ class PublishPlugin implements Plugin<Project> {
         }
     }
 
-    private void configureGrailsPublish(Project project) {
+    private static void configureGrailsPublish(Project project) {
         project.extensions.configure(GrailsPublishExtension) {
             // Explicit `it` is required here
             it.artifactId.set(lookupProperty(project, 'pomArtifactId', project.name))
             it.githubSlug.set(lookupProperty(project, 'githubSlug', 'apache/grails-core'))
             it.license.name = 'Apache-2.0'
-            it.title.set(lookupProperty(project, 'pomTitle', project.rootProject.name == 'grails-forge' ? 'Apache Grails® Application Forge' : 'Grails® framework'))
-            it.desc.set(lookupProperty(project, 'pomDescription', project.rootProject.name == 'grails-forge' ? 'Generates Apache Grails applications' : 'Grails Web Application Framework'))
+            it.title.set(lookupProperty(project, 'pomTitle', project.rootProject.name == 'grails-forge' ? 'Apache Grails Application Forge' : 'Grails® framework'))
+            it.desc.set(lookupProperty(project, 'pomDescription', project.rootProject.name == 'grails-forge' ? 'Generates Apache Grails applications' : 'Grails® Web Application Framework'))
             it.developers.set(lookupProperty(project, 'pomDevelopers', determineDevelopers(project)))
             it.pomCustomization = lookupProperty(project, 'pomCustomization') as Closure
             it.publishTestSources.set(lookupProperty(project, 'pomPublishTestSources', false))
-            it.testRepositoryPath.set(skipJavaComponent ? null : grailsCoreRoot.dir('build/local-maven'))
+            it.testRepositoryPath.set(shouldSkipJavaComponent(project) ? null : findRootGrailsCoreDir(project).dir('build/local-maven'))
             it.publicationName.set(lookupProperty(project, 'pomMavenPublicationName', 'maven'))
-            it.addComponents.set(!skipJavaComponent && !project.pluginManager.hasPlugin('java-gradle-plugin'))
+            it.addComponents.set(!shouldSkipJavaComponent(project) && !project.pluginManager.hasPlugin('java-gradle-plugin'))
         }
     }
 
-
-    private void ensureJarContainsASFFiles(Project project) {
-        if (skipJavaComponent) {
+    private static void ensureJarContainsASFFiles(Project project) {
+        if (shouldSkipJavaComponent(project)) {
             // no jar to configure, do not accidentally create one
             return
         }
 
         project.tasks.withType(Jar).configureEach { Jar jar ->
-            if (jar.archiveClassifier.getOrNull() == 'javadoc') {
+            if (jar.archiveClassifier.orNull == 'javadoc') {
                 // only the source jar & the binary jar have the license files
                 return
             }
 
             def licenseInProject = project.layout.projectDirectory.file('src/main/resources/META-INF/LICENSE')
             def needsLicense = project.providers.provider { !licenseInProject.asFile.exists() }
-            def fallbackLicense = grailsCoreRoot.file('licenses/LICENSE-Apache-2.0.txt')
+            def fallbackLicense = findRootGrailsCoreDir(project).file('licenses/LICENSE-Apache-2.0.txt')
             jar.from(fallbackLicense) { CopySpec spec ->
-                spec.into 'META-INF'
+                spec.into('META-INF')
                 spec.rename { 'LICENSE' }
                 spec.include { needsLicense.get() }
             }
 
-            def noticeInProject  = project.layout.projectDirectory.file('src/main/resources/META-INF/NOTICE')
-            def needsNotice  = project.providers.provider { !noticeInProject.asFile.exists() }
-            def fallbackNotice  = grailsCoreRoot.file('grails-core/src/main/resources/META-INF/NOTICE')
+            def noticeInProject = project.layout.projectDirectory.file('src/main/resources/META-INF/NOTICE')
+            def needsNotice = project.providers.provider { !noticeInProject.asFile.exists() }
+            def fallbackNotice = findRootGrailsCoreDir(project).file('grails-core/src/main/resources/META-INF/NOTICE')
             jar.from(fallbackNotice) { CopySpec spec ->
-                spec.into 'META-INF'
+                spec.into('META-INF')
                 spec.include { needsNotice.get() }
             }
 
             jar.doFirst {
                 if (needsLicense.get()) {
-                    jar.logger.info('Did not find license file for project {} for jar file {}, using fallback license', project.name, jar.archiveFileName.getOrNull())
+                    jar.logger.info(
+                            'Project specific LICENSE file not found in {}, adding fallback license to {}.',
+                            project.name,
+                            jar.archiveFileName.orNull
+                    )
                 }
                 if (needsNotice.get()) {
-                    jar.logger.info('Did not find notice file for project {} for jar file {}, using notice license', project.name, jar.archiveFileName.getOrNull())
+                    jar.logger.info(
+                            'Project specific NOTICE file not found in [{}], adding default NOTICE to [{}].',
+                            project.name,
+                            jar.archiveFileName.orNull
+                    )
                 }
             }
         }
     }
 
-    private Map determineDevelopers(Project project) {
+    private static Map determineDevelopers(Project project) {
         //TODO: This needs changed so any past contributor is listed as a developer per ASF policy
         if (project.name == 'grails-gradle') {
             return [graemerocher: 'Graeme Rocher', jeffscottbrown: 'Jeff Scott Brown', puneetbehl: 'Puneet Behl']

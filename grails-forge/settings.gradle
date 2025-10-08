@@ -33,6 +33,9 @@ pluginManagement {
             content {
                 includeVersionByRegex('org[.]apache[.]grails[.]gradle.*', '.*', '.*-SNAPSHOT')
             }
+            mavenContent {
+                snapshotsOnly()
+            }
         }
         maven {
             url = 'https://central.sonatype.com/repository/maven-snapshots'
