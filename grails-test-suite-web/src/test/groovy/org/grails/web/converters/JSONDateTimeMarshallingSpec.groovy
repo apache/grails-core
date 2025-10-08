@@ -33,7 +33,7 @@ import java.time.ZoneOffset
  */
 class JSONDateTimeMarshallingSpec extends Specification implements GrailsWebUnitTest {
 
-    void "test Date, Calendar, LocalDateTime, and Instant render consistently in ISO-8601 format with Z"() {
+    void "test Date, Calendar, and Instant render with Z suffix, LocalDateTime without"() {
         given: "All four date types representing the same point in time"
         def instant = Instant.parse("2025-10-07T21:14:31Z")
         def date = Date.from(instant)
@@ -49,11 +49,13 @@ class JSONDateTimeMarshallingSpec extends Specification implements GrailsWebUnit
             createdInstant: instant
         ] as JSON).toString()
 
-        then: "All four date types render as ISO-8601 format with Z suffix"
+        then: "Date, Calendar, and Instant render with Z suffix"
         json.contains('"createdDate":"2025-10-07T21:14:31Z"')
         json.contains('"createdCalendar":"2025-10-07T21:14:31Z"')
-        json.contains('"createdLocalDateTime":"2025-10-07T21:14:31Z"')
         json.contains('"createdInstant":"2025-10-07T21:14:31Z"')
+
+        and: "LocalDateTime renders without timezone (ISO_LOCAL_DATE_TIME)"
+        json.contains('"createdLocalDateTime":"2025-10-07T21:14:31"')
     }
 
     void "test Instant renders with ISO-8601 format instead of object structure"() {
@@ -69,15 +71,16 @@ class JSONDateTimeMarshallingSpec extends Specification implements GrailsWebUnit
         !json.contains('nano')
     }
 
-    void "test LocalDateTime renders with Z suffix in UTC timezone"() {
+    void "test LocalDateTime renders without timezone suffix"() {
         given: "A LocalDateTime value"
         def localDateTime = LocalDateTime.of(2025, 10, 7, 21, 14, 31, 456000000)
 
         when: "The LocalDateTime is converted to JSON"
         def json = ([dateTime: localDateTime] as JSON).toString()
 
-        then: "LocalDateTime renders as ISO-8601 with Z suffix (assuming UTC)"
-        json == '{"dateTime":"2025-10-07T21:14:31.456Z"}'
+        then: "LocalDateTime renders as ISO-8601 without Z suffix (local time, no timezone)"
+        json == '{"dateTime":"2025-10-07T21:14:31.456"}'
+        !json.contains('Z')
         !json.contains('year')
         !json.contains('month')
         !json.contains('dayOfMonth')

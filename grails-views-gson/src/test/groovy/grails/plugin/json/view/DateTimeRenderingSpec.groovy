@@ -27,7 +27,7 @@ import java.time.ZoneOffset
 
 class DateTimeRenderingSpec extends Specification implements JsonViewTest {
 
-    void "Test Date, LocalDateTime, and Instant render consistently in ISO-8601 format with Z"() {
+    void "Test Date and Instant render with Z, LocalDateTime without"() {
         given: "A view that renders date/time types"
         String source = '''
 import java.time.Instant
@@ -59,10 +59,12 @@ json {
             createdInstant: instant
         ])
 
-        then: "All three date types render as ISO-8601 format with Z suffix"
+        then: "Date and Instant render with Z suffix"
         result.json.createdDate == "2025-10-07T21:14:31Z"
-        result.json.createdLocalDateTime == "2025-10-07T21:14:31Z"
         result.json.createdInstant == "2025-10-07T21:14:31Z"
+
+        and: "LocalDateTime renders without timezone (local time)"
+        result.json.createdLocalDateTime == "2025-10-07T21:14:31"
     }
 
     void "Test Instant renders with ISO-8601 format instead of epoch milliseconds"() {
@@ -90,7 +92,7 @@ json {
         result.json.timestamp instanceof String
     }
 
-    void "Test LocalDateTime renders with Z suffix in UTC timezone"() {
+    void "Test LocalDateTime renders without timezone suffix"() {
         given: "A view that renders a LocalDateTime"
         String source = '''
 import java.time.LocalDateTime
@@ -110,8 +112,8 @@ json {
         when: "The view is rendered"
         def result = render(source, [dateTime: localDateTime])
 
-        then: "LocalDateTime renders as ISO-8601 with Z suffix (assuming UTC)"
-        result.json.dateTime == "2025-10-07T21:14:31.456Z"
+        then: "LocalDateTime renders as ISO-8601 without timezone (local time)"
+        result.json.dateTime == "2025-10-07T21:14:31.456"
         result.json.dateTime instanceof String
     }
 }

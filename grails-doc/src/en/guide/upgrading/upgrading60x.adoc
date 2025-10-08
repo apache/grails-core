@@ -602,16 +602,18 @@ JSON rendering of `java.util.Calendar`, `java.time.Instant`, and `java.time.Loca
 {"timestamp": "2025-10-07T21:14:31.602Z"}
 ----
 
-*LocalDateTime*: Previously rendered without timezone information. Now consistently renders as ISO-8601 format with Z suffix (assuming UTC):
+*LocalDateTime*: Previously rendered as a complex object structure (JSON views) or inconsistently. Now consistently renders as ISO-8601 format without timezone (matching Spring Boot behavior):
 
 [source,json]
 ----
-// Before
-{"dateTime": "2025-10-07T21:14:31"}
+// Before (JSON views)
+{"dateTime": {"year": 2025, "month": "OCTOBER", "dayOfMonth": 7, ...}}
 
-// After
-{"dateTime": "2025-10-07T21:14:31Z"}
+// After (both)
+{"dateTime": "2025-10-07T21:14:31"}
 ----
+
+NOTE: `LocalDateTime` does not include timezone information, so it renders without the Z suffix, unlike `Date`, `Calendar`, and `Instant` which represent specific points in time.
 
 *java.util.Date*: Continues to render as ISO-8601 with Z suffix (unchanged):
 
@@ -628,6 +630,6 @@ If your application or API consumers depend on the previous JSON format for `Cal
 
 2. **Date Parsing**: The new format is a standard ISO-8601 string that can be parsed using `Instant.parse()` or `LocalDateTime.parse()` with appropriate formatters.
 
-3. **Consistency**: All temporal types (`Date`, `Calendar`, `Instant`, `LocalDateTime`) now render consistently, making it easier to handle dates uniformly across your application.
+3. **Consistency**: Temporal types with timezone information (`Date`, `Calendar`, `Instant`) render with Z suffix, while `LocalDateTime` (which has no timezone) renders without it, matching Spring Boot's behavior.
 
 This change applies to both the `grails-converters` module (standard JSON rendering) and the `grails-views-gson` module (JSON views).

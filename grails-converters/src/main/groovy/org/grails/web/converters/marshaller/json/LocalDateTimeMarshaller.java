@@ -19,7 +19,6 @@
 package org.grails.web.converters.marshaller.json;
 
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 
 import grails.converters.JSON;
@@ -28,7 +27,7 @@ import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.json.JSONException;
 
 /**
- * JSON ObjectMarshaller which converts a LocalDateTime to ISO-8601 format with Z suffix (UTC).
+ * JSON ObjectMarshaller which converts a LocalDateTime to ISO-8601 format (without timezone).
  *
  * @since 7.0
  */
@@ -41,7 +40,7 @@ public class LocalDateTimeMarshaller implements ObjectMarshaller<JSON> {
     public void marshalObject(Object object, JSON converter) throws ConverterException {
         try {
             LocalDateTime localDateTime = (LocalDateTime) object;
-            converter.getWriter().value(localDateTime.atZone(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+            converter.getWriter().value(DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(localDateTime));
         }
         catch (JSONException e) {
             throw new ConverterException(e);
