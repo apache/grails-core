@@ -176,8 +176,8 @@ class PublishPlugin implements Plugin<Project> {
             it.artifactId.set(project.provider { lookupProperty(project, 'pomArtifactId', project.name) })
             it.githubSlug.set(project.provider { lookupProperty(project, 'githubSlug', 'apache/grails-core')})
             it.license.name = 'Apache-2.0'
-            it.title.set(project.provider { lookupProperty(project, 'pomTitle', project.rootProject.name == 'grails-forge' ? 'Apache Grails Application Forge' : 'Grails® framework')})
-            it.desc.set(project.provider { lookupProperty(project, 'pomDescription', project.rootProject.name == 'grails-forge' ? 'Generates Apache Grails applications' : 'Grails® Web Application Framework')})
+            it.title.set(project.provider { lookupProperty(project, 'pomTitle', project.rootProject.name == 'grails-forge' ? 'Apache Grails® Application Forge' : 'Apache Grails® framework')})
+            it.desc.set(project.provider { lookupProperty(project, 'pomDescription', project.rootProject.name == 'grails-forge' ? 'Generates Apache Grails® applications' : 'Apache Grails® Web Application Framework')})
             it.developers.set(project.provider { lookupProperty(project, 'pomDevelopers', determineDevelopers(project))})
             it.pomCustomization = lookupProperty(project, 'pomCustomization') as Closure
             it.publishTestSources.set(project.provider { lookupProperty(project, 'pomPublishTestSources', false)})
