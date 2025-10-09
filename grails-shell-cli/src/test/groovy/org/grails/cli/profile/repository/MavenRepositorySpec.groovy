@@ -20,8 +20,6 @@ package org.grails.cli.profile.repository
 
 import spock.lang.Specification
 
-
-
 /**
  * @author graemerocher
  */
