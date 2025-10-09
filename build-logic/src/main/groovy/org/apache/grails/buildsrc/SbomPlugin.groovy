@@ -289,18 +289,20 @@ class SbomPlugin implements Plugin<Project> {
         ['java', 'java-library'].each {
             project.plugins.withId(it) {
                 if (initialized.compareAndSet(false, true)) {
-                    if (!project.findProperty('skipJavaComponent')) {
-                        project.tasks.named('jar', Jar).configure { Jar jar ->
-                            jar.dependsOn('cyclonedxBom')
-                            jar.from(sbomOutputLocation) { CopySpec spec ->
-                                spec.into('META-INF')
-                                spec.rename {
-                                    'sbom.json'
+                    project.afterEvaluate {
+                        if (!project.findProperty('skipJavaComponent')) {
+                            project.tasks.named('jar', Jar).configure { Jar jar ->
+                                jar.dependsOn('cyclonedxBom')
+                                jar.from(sbomOutputLocation) { CopySpec spec ->
+                                    spec.into('META-INF')
+                                    spec.rename {
+                                        'sbom.json'
+                                    }
                                 }
-                            }
-                            jar.manifest { Manifest manifest ->
-                                manifest.attributes('Sbom-Location': 'META-INF/sbom.json')
-                                manifest.attributes('Sbom-Format': 'CycloneDX')
+                                jar.manifest { Manifest manifest ->
+                                    manifest.attributes('Sbom-Location': 'META-INF/sbom.json')
+                                    manifest.attributes('Sbom-Format': 'CycloneDX')
+                                }
                             }
                         }
                     }
