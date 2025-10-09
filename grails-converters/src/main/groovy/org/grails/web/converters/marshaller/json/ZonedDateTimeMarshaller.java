@@ -18,12 +18,8 @@
  */
 package org.grails.web.converters.marshaller.json;
 
-import java.text.Format;
-import java.util.Date;
-import java.util.Locale;
-import java.util.TimeZone;
-
-import org.apache.commons.lang3.time.FastDateFormat;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
 import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
@@ -31,38 +27,20 @@ import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.json.JSONException;
 
 /**
- * JSON ObjectMarshaller which converts a Date Object, conforming to the ECMA-Script-Specification
- * Draft, to a String value.
+ * JSON ObjectMarshaller which converts a ZonedDateTime to ISO-8601 format with timezone offset.
  *
- * @author Siegfried Puchbauer
- * @since 1.1
+ * @since 7.0
  */
-public class DateMarshaller implements ObjectMarshaller<JSON> {
-
-    private final Format formatter;
-
-    /**
-     * Constructor with a custom formatter.
-     * @param formatter the formatter
-     */
-    public DateMarshaller(Format formatter) {
-        this.formatter = formatter;
-    }
-
-    /**
-     * Default constructor.
-     */
-    public DateMarshaller() {
-        this(FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone("GMT"), Locale.US));
-    }
+public class ZonedDateTimeMarshaller implements ObjectMarshaller<JSON> {
 
     public boolean supports(Object object) {
-        return object instanceof Date;
+        return object instanceof ZonedDateTime;
     }
 
     public void marshalObject(Object object, JSON converter) throws ConverterException {
         try {
-            converter.getWriter().value(formatter.format(object));
+            ZonedDateTime zonedDateTime = (ZonedDateTime) object;
+            converter.getWriter().value(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(zonedDateTime));
         }
         catch (JSONException e) {
             throw new ConverterException(e);

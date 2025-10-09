@@ -18,12 +18,8 @@
  */
 package org.grails.web.converters.marshaller.json;
 
-import java.text.Format;
-import java.util.Date;
-import java.util.Locale;
-import java.util.TimeZone;
-
-import org.apache.commons.lang3.time.FastDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
@@ -31,38 +27,20 @@ import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.json.JSONException;
 
 /**
- * JSON ObjectMarshaller which converts a Date Object, conforming to the ECMA-Script-Specification
- * Draft, to a String value.
+ * JSON ObjectMarshaller which converts a LocalDateTime to ISO-8601 format (without timezone).
  *
- * @author Siegfried Puchbauer
- * @since 1.1
+ * @since 7.0
  */
-public class DateMarshaller implements ObjectMarshaller<JSON> {
-
-    private final Format formatter;
-
-    /**
-     * Constructor with a custom formatter.
-     * @param formatter the formatter
-     */
-    public DateMarshaller(Format formatter) {
-        this.formatter = formatter;
-    }
-
-    /**
-     * Default constructor.
-     */
-    public DateMarshaller() {
-        this(FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone("GMT"), Locale.US));
-    }
+public class LocalDateTimeMarshaller implements ObjectMarshaller<JSON> {
 
     public boolean supports(Object object) {
-        return object instanceof Date;
+        return object instanceof LocalDateTime;
     }
 
     public void marshalObject(Object object, JSON converter) throws ConverterException {
         try {
-            converter.getWriter().value(formatter.format(object));
+            LocalDateTime localDateTime = (LocalDateTime) object;
+            converter.getWriter().value(DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(localDateTime));
         }
         catch (JSONException e) {
             throw new ConverterException(e);

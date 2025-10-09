@@ -19,7 +19,7 @@
 package org.grails.web.converters.marshaller.json;
 
 import java.text.Format;
-import java.util.Date;
+import java.util.Calendar;
 import java.util.Locale;
 import java.util.TimeZone;
 
@@ -31,13 +31,11 @@ import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.json.JSONException;
 
 /**
- * JSON ObjectMarshaller which converts a Date Object, conforming to the ECMA-Script-Specification
- * Draft, to a String value.
+ * JSON ObjectMarshaller which converts a Calendar Object to ISO-8601 format with Z suffix.
  *
- * @author Siegfried Puchbauer
- * @since 1.1
+ * @since 7.0
  */
-public class DateMarshaller implements ObjectMarshaller<JSON> {
+public class CalendarMarshaller implements ObjectMarshaller<JSON> {
 
     private final Format formatter;
 
@@ -45,24 +43,25 @@ public class DateMarshaller implements ObjectMarshaller<JSON> {
      * Constructor with a custom formatter.
      * @param formatter the formatter
      */
-    public DateMarshaller(Format formatter) {
+    public CalendarMarshaller(Format formatter) {
         this.formatter = formatter;
     }
 
     /**
      * Default constructor.
      */
-    public DateMarshaller() {
+    public CalendarMarshaller() {
         this(FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone("GMT"), Locale.US));
     }
 
     public boolean supports(Object object) {
-        return object instanceof Date;
+        return object instanceof Calendar;
     }
 
     public void marshalObject(Object object, JSON converter) throws ConverterException {
         try {
-            converter.getWriter().value(formatter.format(object));
+            Calendar calendar = (Calendar) object;
+            converter.getWriter().value(formatter.format(calendar.getTime()));
         }
         catch (JSONException e) {
             throw new ConverterException(e);
