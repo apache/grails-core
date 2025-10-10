@@ -60,11 +60,11 @@
 
     </div>
     <div class="col">
-        <a href="http://docs.grails.org" target="_blank">
+        <a href="https://grails.apache.org/docs/" target="_blank">
             <asset:image src="documentation.svg" alt="Grails Documentation" class="float-left"/>
         </a>
-        <strong class="centered"><a href="http://docs.grails.org" target="_blank">Documentation</a></strong>
-        <p>Ready to dig in? You can find in-depth documentation for all the features of Grails in the <a href="http://docs.grails.org" target="_blank">User Guide</a>.</p>
+        <strong class="centered"><a href="https://grails.apache.org/docs/" target="_blank">Documentation</a></strong>
+        <p>Ready to dig in? You can find in-depth documentation for all the features of Grails in the <a href="https://grails.apache.org/docs/" target="_blank">User Guide</a>.</p>
 
     </div>
 
