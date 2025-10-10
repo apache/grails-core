@@ -2,7 +2,7 @@ The Apache Grails community is pleased to announce the release of Apache Grails 
 
 Grails is a powerful Groovy-based web application framework for the JVM built on top of Spring Boot that has many plugins to further extend its functionality.
 
-This release another milestone on our journey to a final 7.0 release. Users are encouraged to try the milestone to provide early feedback. Detailed upgrade instructions are available here: https://docs.grails.org/${VERSION}/guide/upgrading.html
+This release another milestone on our journey to a final 7.0 release. Users are encouraged to try the milestone to provide early feedback. Detailed upgrade instructions are available here: https://grails.apache.org/docs/${VERSION}/guide/upgrading.html
 
 The release notes are available here:
 <blog post link>

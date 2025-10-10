@@ -47,11 +47,11 @@
             <div class="card border-0 col-12 col-md">
                 <div class="card-body">
                     <h6 class="card-title">
-                        <a class="link-underline link-underline-opacity-0" href="https://docs.grails.org" target="_blank">
+                        <a class="link-underline link-underline-opacity-0" href="https://grails.apache.org/docs/" target="_blank">
                             <asset:image src="documentation.svg" alt="Grails Documentation" class="me-2" width="34" />Documentation
                         </a>
                     </h6>
-                    <p class="card-text">Ready to dig in? You can find in-depth documentation for all the features of Grails in the <a href="https://docs.grails.org" target="_blank">User Guide</a>.</p>
+                    <p class="card-text">Ready to dig in? You can find in-depth documentation for all the features of Grails in the <a href="https://grails.apache.org/docs/" target="_blank">User Guide</a>.</p>
                 </div>
             </div>
             <div class="card border-0 col-12 col-md">

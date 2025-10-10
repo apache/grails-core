@@ -112,7 +112,7 @@ class Book {
 }
 ----
 
-WARNING: Since Grails 3.2.8 this is not enabled by default. If you want to enable it again, take a look at https://docs.grails.org/latest/ref/Domain%20Classes/Usage.html#_spring_autowiring_of_domain_instances[Spring Autowiring of Domain Instance]
+WARNING: Since Grails 3.2.8 this is not enabled by default. If you want to enable it again, take a look at https://grails.apache.org/docs/latest/ref/Domain%20Classes/Usage.html#_spring_autowiring_of_domain_instances[Spring Autowiring of Domain Instance]
 
 ==== Service Bean Names
 

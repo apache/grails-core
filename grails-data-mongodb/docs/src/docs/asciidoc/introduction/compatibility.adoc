@@ -18,7 +18,7 @@ under the License.
 ////
 
 === Compatibility with GORM for Hibernate
-This implementation tries to be as compatible as possible with GORM for Hibernate. In general you can refer to the https://docs.grails.org/latest/grails-data/[GORM documentation] and the "Domain Classes" section of the https://docs.grails.org/latest/[reference guide] (see the right nav) for usage information.
+This implementation tries to be as compatible as possible with GORM for Hibernate. In general you can refer to the https://grails.apache.org/docs/latest/grails-data/[GORM documentation] and the "Domain Classes" section of the https://grails.apache.org/docs/latest/[reference guide] (see the right nav) for usage information.
 
 The following key features are supported by GORM for Mongo:
 

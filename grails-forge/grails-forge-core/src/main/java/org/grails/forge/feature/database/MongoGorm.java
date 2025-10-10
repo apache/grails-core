@@ -82,6 +82,6 @@ public class MongoGorm extends GormOneOfFeature {
     @Nullable
     @Override
     public String getThirdPartyDocumentation() {
-        return "https://docs.grails.org/latest/grails-data/mongodb/manual/";
+        return "https://grails.apache.org/docs/latest/grails-data/mongodb/manual/";
     }
 }
