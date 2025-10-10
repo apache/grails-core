@@ -62,8 +62,8 @@ json {
             createdInstant: instant
         ])
 
-        then: "Date and Instant render with Z suffix"
-        result.json.createdDate == "2025-10-07T21:14:31Z"
+        then: "Date and Instant render with Z suffix and millisecond precision"
+        result.json.createdDate == "2025-10-07T21:14:31.000Z"
         result.json.createdInstant == "2025-10-07T21:14:31Z"
 
         and: "LocalDateTime renders without timezone (local time)"
@@ -193,5 +193,38 @@ json {
         then: "LocalDate renders as date only (no time)"
         result.json.date == "2025-10-08"
         result.json.date instanceof String
+    }
+
+    void "Test Date and Calendar render with millisecond precision"() {
+        given: "A view that renders Date and Calendar"
+        String source = '''
+model {
+    Date date
+    Calendar calendar
+}
+
+json {
+    date date
+    calendar calendar
+}
+'''
+
+        and: "Date and Calendar with millisecond precision"
+        // Create a date with 407 milliseconds: 2025-10-08T07:48:46.407Z
+        def calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"))
+        calendar.set(2025, Calendar.OCTOBER, 8, 7, 48, 46)
+        calendar.set(Calendar.MILLISECOND, 407)
+        def date = calendar.getTime()
+
+        when: "The view is rendered"
+        def result = render(source, [date: date, calendar: calendar])
+
+        then: "Date renders with millisecond precision"
+        result.json.date == "2025-10-08T07:48:46.407Z"
+        result.json.date instanceof String
+
+        and: "Calendar renders with millisecond precision"
+        result.json.calendar == "2025-10-08T07:48:46.407Z"
+        result.json.calendar instanceof String
     }
 }
