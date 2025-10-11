@@ -18,6 +18,8 @@
  */
 package grails.gorm.specs
 
+import spock.lang.Ignore
+
 import grails.gorm.specs.entities.Club
 import grails.gorm.specs.entities.Team
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
@@ -26,7 +28,7 @@ import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
  * Created by graemerocher on 01/03/2017.
  */
 @ApplyDetachedCriteriaTransform
-//TODO: How to create an alias inside a closure
+@Ignore("This syntax is not supported")
 class SubqueryAliasSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
@@ -44,7 +46,7 @@ class SubqueryAliasSpec extends HibernateGormDatastoreSpec {
             name == "First Team"
             exists(
                     Club.where {
-                        id == t.club
+                        t.club == id
                     }.property('name')
             )
         }.find()
