@@ -22,12 +22,22 @@ import io.micronaut.core.annotation.NonNull;
 import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
+import org.grails.forge.build.dependencies.Coordinate;
 import org.grails.forge.build.dependencies.Dependency;
+import org.grails.forge.build.dependencies.PomDependencyVersionResolver;
 import org.grails.forge.feature.Category;
 import org.grails.forge.feature.Feature;
 
+import java.util.Optional;
+
 @Singleton
 public class MicronautHttpClient implements Feature {
+
+    private final PomDependencyVersionResolver versionResolver;
+
+    public MicronautHttpClient(PomDependencyVersionResolver versionResolver) {
+        this.versionResolver = versionResolver;
+    }
 
     @Override
     @NonNull
@@ -62,16 +72,32 @@ public class MicronautHttpClient implements Feature {
 
     @Override
     public void apply(GeneratorContext generatorContext) {
+        Optional<Coordinate> micronautPlatformVersion =
+            versionResolver.resolve("micronaut-platform");
+        micronautPlatformVersion.ifPresent(coordinate ->
+            generatorContext.getBuildProperties().put(
+                "micronautPlatformVersion",
+                coordinate.getVersion()
+            )
+        );
+
+        generatorContext.addDependency(Dependency.builder()
+                .groupId("io.micronaut.platform")
+                .artifactId("micronaut-platform")
+                .pom(true)
+                .version("$micronautPlatformVersion")
+                .implementation()
+            .build());
+
         generatorContext.addDependency(Dependency.builder()
                 .groupId("io.micronaut")
-                .lookupArtifactId("micronaut-http-client")
+                .artifactId("micronaut-http-client")
                 .implementation());
-
 
         // micronaut-http-client no longer provides the jackson implementation
         generatorContext.addDependency(Dependency.builder()
                 .groupId("io.micronaut.serde")
-                .lookupArtifactId("micronaut-serde-jackson")
+                .artifactId("micronaut-serde-jackson")
                 .implementation());
     }
 }

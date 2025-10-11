@@ -20,6 +20,8 @@
 plugins {
     id 'groovy'
     id 'java-library'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
 }
 
 version = projectVersion
@@ -41,6 +43,9 @@ dependencies {
     api 'org.springframework:spring-context' // MessageSource is used in public API
 
     implementation project(':grails-bootstrap')
+    implementation project(':grails-common'), {
+        // impl: GrailsMessageSourceUtils
+    }
     implementation project(':grails-core')
     implementation project(':grails-datamapping-support')
     implementation 'org.slf4j:slf4j-api'
@@ -55,7 +60,5 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/sbom-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

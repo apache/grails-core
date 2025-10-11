@@ -46,7 +46,7 @@ class MongodbGrailsPlugin extends Plugin {
     def loadAfter = ['domainClass', 'hibernate', 'hibernate5', 'hibernate6', 'services']
     def title = 'GORM MongoDB'
     def description = 'A plugin that integrates the MongoDB document datastore into the Grails framework, providing a GORM API onto it'
-    def documentation = 'https://docs.grails.org/latest/grails-data/mongodb/manual/'
+    def documentation = 'https://grails.apache.org/docs/latest/grails-data/mongodb/manual/'
 
     @Override
     @CompileStatic

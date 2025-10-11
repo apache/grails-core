@@ -52,7 +52,7 @@ class HibernateGrailsPlugin extends Plugin {
     def author = 'Grails Core Team'
     def title = 'Hibernate 5 for Grails'
     def description = 'Provides integration between Grails and Hibernate 5 through GORM'
-    def documentation = 'https://docs.grails.org/latest/grails-data/'
+    def documentation = 'https://grails.apache.org/docs/latest/grails-data/'
 
     def observe = ['domainClass']
     def loadAfter = ['controllers', 'domainClass']

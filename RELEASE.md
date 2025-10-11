@@ -61,11 +61,11 @@ During the staging step, we must create a source distribution & stage any binary
 5. (no approval required) The `upload` job will:
      * Download the source distribution
      * Download the binary distributions (wrapper & grails clis)
-     * upload the source distribution to https://dist.apache.org/repos/dist/dev/incubator/grails/core/VERSION/sources
-     * upload the grails-wrapper binary distribution to https://dist.apache.org/repos/dist/incubator/dev/grails/core/VERSION/distribution
-     * upload the grails binary distribution to https://dist.apache.org/repos/dist/incubator/dev/grails/core/VERSION/distribution (note: this is the sdkman artifact)
+     * upload the source distribution to https://dist.apache.org/repos/dist/dev/grails/core/VERSION/sources
+     * upload the grails-wrapper binary distribution to https://dist.apache.org/repos/dist/dev/grails/core/VERSION/distribution
+     * upload the grails binary distribution to https://dist.apache.org/repos/dist/dev/grails/core/VERSION/distribution (note: this is the sdkman artifact)
    * upload a file containing the SVN revision for the uploaded artifacts
-   * generate vote email templates for both the Grails PPMC and Groovy PMC
+   * generate vote email template for the Grails PMC
 
 ## 2. Verifying Artifacts are Authentic
 
@@ -97,25 +97,25 @@ verify the one inside of the source distribution.
 
 ### Manual Verification: Download the Staged Artifacts
 
-Use `etc/bin/download-release-artifacts.sh` to download the staged artifacts. This script will download the source distribution, wrapper binary distribution, and sdkman binary distribution. The distribution should come from [https://dist.apache.org/repos/dist/dev/incubator/grails/core/version](https://dist.apache.org/repos/dist/dev/incubator/grails/core).
+Use `etc/bin/download-release-artifacts.sh` to download the staged artifacts. This script will download the source distribution, wrapper binary distribution, and sdkman binary distribution. The distribution should come from [https://dist.apache.org/repos/dist/dev/grails/core/version](https://dist.apache.org/repos/dist/dev/grails/core).
 
 ### Manual Verification: Source Distribution Verification
 
 The following are the source distribution artifacts:
-   * `apache-grails-<version>-incubating-src.zip` - the source distribution
-   * `apache-grails-<version>-incubating-src.zip.asc` - the generated signature of the source distribution
-   * `apache-grails-<version>-incubating-src.zip.sha512` - the checksum to verify the source distribution
+   * `apache-grails-<version>-src.zip` - the source distribution
+   * `apache-grails-<version>-src.zip.asc` - the generated signature of the source distribution
+   * `apache-grails-<version>-src.zip.sha512` - the checksum to verify the source distribution
 
 Use `etc/bin/verify-source-distribution.sh` to verify the source distribution. This script performs the following:
 
 Verifies the source distribution checksum via the command:
    ```bash
-   shasum -a 512 -c apache-grails-<version>-incubating-src.zip.sha512
+   shasum -a 512 -c apache-grails-<version>-src.zip.sha512
    ```
 
 Verifies the source distribution signature via the command:
    ```bash
-    gpg --verify apache-grails-<version>-incubating-src.zip.asc apache-grails-<version>-incubating-src.zip
+    gpg --verify apache-grails-<version>-src.zip.asc apache-grails-<version>-src.zip
    ```
 
 Extracts the zip file and verifies the contents:
@@ -165,20 +165,20 @@ Grails has 2 binary distributions:
 #### Manual Verification: Verify Grails Wrapper Binary Distribution
 
 The following are the Grails Wrapper distribution artifacts:
-* `apache-grails-wrapper-<version>-incubating-bin.zip` - the wrapper distribution
-* `apache-grails-wrapper-<version>-incubating-bin.zip.asc` - the generated signature of the wrapper distribution
-* `apache-grails-wrapper-<version>-incubating-bin.zip.sha512` - the checksum to verify the wrapper distribution
+* `apache-grails-wrapper-<version>-bin.zip` - the wrapper distribution
+* `apache-grails-wrapper-<version>-bin.zip.asc` - the generated signature of the wrapper distribution
+* `apache-grails-wrapper-<version>-bin.zip.sha512` - the checksum to verify the wrapper distribution
 
 Use `etc/bin/verify-wrapper-distribution.sh` to verify the wrapper distribution. This script performs the following:
 
 Verifies the wrapper distribution checksum via the command:
    ```bash
-   shasum -a 512 -c apache-grails-wrapper-<version>-incubating-bin.zip.sha512
+   shasum -a 512 -c apache-grails-wrapper-<version>-bin.zip.sha512
    ```
 
 Verifies the wrapper distribution signature via the command:
    ```bash
-    gpg --verify apache-grails-wrapper-<version>-incubating-bin.zip.asc apache-grails-wrapper-<version>-incubating-bin.zip
+    gpg --verify apache-grails-wrapper-<version>-bin.zip.asc apache-grails-wrapper-<version>-bin.zip
    ```
 
 Extracts the zip file and verifies the contents:
@@ -187,20 +187,20 @@ Extracts the zip file and verifies the contents:
 #### Manual Verification: Verify Grails Delegating CLI Binary Distribution
 
 The following are the Grails distribution artifacts:
-* `apache-grails-<version>-incubating-bin.zip` - the cli distribution that will be uploaded to sdkman
-* `apache-grails-<version>-incubating-bin.zip.asc` - the generated signature of the cli distribution
-* `apache-grails-<version>-incubating-bin.zip.sha512` - the checksum to verify the cli distribution
+* `apache-grails-<version>-bin.zip` - the cli distribution that will be uploaded to sdkman
+* `apache-grails-<version>-bin.zip.asc` - the generated signature of the cli distribution
+* `apache-grails-<version>-bin.zip.sha512` - the checksum to verify the cli distribution
 
 Use `etc/bin/verify-cli-distribution.sh` to verify the cli distribution. This script performs the following:
 
 Verifies the cli distribution checksum via the command:
    ```bash
-   shasum -a 512 -c apache-grails-<version>-incubating-bin.zip.sha512
+   shasum -a 512 -c apache-grails-<version>-bin.zip.sha512
    ```
 
 Verifies the cli distribution signature via the command:
    ```bash
-    gpg --verify apache-grails-<version>-incubating-bin.zip.asc apache-grails-<version>-incubating-bin.zip
+    gpg --verify apache-grails-<version>-bin.zip.asc apache-grails-<version>-bin.zip
    ```
 
 Extracts the zip file and verifies the contents:
@@ -241,21 +241,15 @@ example commands to perform this verification. However, it if manually verifying
 
 ## 4. Voting
 
-After all artifacts are uploaded, verified, and tested, we can vote on the release.  As an ASF project, we follow the voting guidelines set forth by the [Apache Voting Process](https://www.apache.org/foundation/voting.html). We are also an incubating ASF software project, so there are 2 votes.  Details for each follow: 
+After all artifacts are uploaded, verified, and tested, we can vote on the release.  As an ASF project, we follow the voting guidelines set forth by the [Apache Voting Process](https://www.apache.org/foundation/voting.html).  
 
-### Apache Grails Incubating PPMC
+### Apache Grails PMC
 
-The first vote is conducted on the [Grails dev mailing list](https://lists.apache.org/list.html?dev@grails.apache.org).
-The only valid votes are those on the Apache Grails Incubating PPMC, but the community is welcome to participate to
-express their support. The vote template is generated as part of the release process. See the `upload` job in the
-`Release` workflow for the generated email.
+The release vote is conducted on the [Grails dev mailing list](https://lists.apache.org/list.html?dev@grails.apache.org). Only votes from members of the Apache Grails PMC are binding, but the community is welcome to participate to express their support.
 
-### Apache Groovy PMC
-
-As an incubating project under Apache Groovy, after a minimum of 72 hours and a successful Grails PPMC vote, the Groovy
-PMC must vote to approve the Apache Grails (incubating) release. This vote is held on
-the [Groovy dev mailing list](https://lists.apache.org/list.html?dev@groovy.apache.org). See the `upload` job in the
-`Release` workflow for the generated email.
+The vote runs for a minimum of 72 hours.  
+The vote email is automatically generated as part of the release process — see the `upload` job in the `Release`
+workflow for details.
 
 ## 5. Releasing
 
@@ -265,7 +259,7 @@ way, the `release` job should be approved & reviewed before proceeding.
 
 ### Confirm Vote Passed
 
-Confirm the Grails PPMC & Groovy PMC votes passed with a +1 from at least 3 PPMC members. The `release` job in the
+Confirm the Grails PMC votes passed with a +1 from at least 3 PMC members. The `release` job in the
 `Release` workflow will remind you of these steps.
 
 ### Release the Staged Jar files
@@ -359,7 +353,7 @@ This rollback will perform the following:
 1. Drop the configured staging repository based on the release tag. (See `Appendix: Rollback a Nexus Artifacts (Jars)`
    for how to do this separately from the abort workflow)
 2. Remove the staged artifacts
-   from [https://dist.apache.org/repos/dist/dev/incubator/grails/core](https://dist.apache.org/repos/dist/incubator/dev/grails/core)
+   from [https://dist.apache.org/repos/dist/dev/grails/core](https://dist.apache.org/repos/dist/dev/grails/core)
 3. Cancel the GitHub Action `Release` (this may need to be manually cancelled depending on the workflow state)
 4. Remove the GitHub Release from GitHub
 5. Remove the Git tag

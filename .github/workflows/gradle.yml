@@ -146,7 +146,7 @@ jobs:
         if: ${{ matrix.java == '17' }}
         uses: actions/upload-artifact@v4
         with:
-          name: 'apache-grails-SNAPSHOT-incubating-bin.zip'
+          name: 'apache-grails-SNAPSHOT-bin.zip'
           include-hidden-files: true
           path: grails-forge/tmp1/cli/**/*
           if-no-files-found: 'error'
@@ -352,7 +352,7 @@ jobs:
       - name: "📤 Upload Wrapper Zip to Workflow Summary Page"
         uses: actions/upload-artifact@v4
         with:
-          name: apache-grails-wrapper-SNAPSHOT-incubating-bin
+          name: apache-grails-wrapper-SNAPSHOT-bin
           path: tmp/wrapper
   publishForge:
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
@@ -398,6 +398,16 @@ jobs:
     needs: [ publish ]
     runs-on: ubuntu-24.04
     steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@c28619d8999a147d5e09c1199f84ff6af6ad5794
+        with:
+          root-reserve-mb: 3072  # Leave ~3 GB on root FS
+          swap-size-mb: 2048     # Allocate 2 GB swap (default: 4 GB; reduce if not needed)
+          remove-dotnet: 'true'  # Remove .NET SDK (~3-4 GB savings)
+          remove-android: 'true' # Remove Android tools (~2 GB savings)
+          remove-haskell: 'true' # Remove Haskell (~1 GB savings)
+          remove-codeql: 'true'  # Remove CodeQL (~500 MB savings)
+          remove-docker-images: 'false'  # Prune Docker if used (~1-2 GB savings)
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout the repository"
@@ -440,4 +450,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GRAILS_GHTOKEN }}
           GRADLE_PUBLISH_RELEASE: 'false'
           SOURCE_FOLDER: grails-doc/build/docs
-          TARGET_REPOSITORY: 'apache/grails-doc'
+          TARGET_REPOSITORY: 'apache/grails-website'
+          TARGET_FOLDER: 'docs'
+          DOCUMENTATION_BRANCH: 'asf-site-production'

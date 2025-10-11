@@ -19,37 +19,41 @@ plugins {
     id 'groovy'
     id 'java-library'
     id 'project-report'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
 }
 
 version = projectVersion
 group = 'org.apache.grails.common'
 
 dependencies {
+    // WARNING: This project is not to depend on grails-core.
+    // It is meant to be a shared library that can be used
+    // independently of Grails.
+    // Mainly to share data between Grails & GORM
+
     implementation platform(project(':grails-bom'))
 
     api 'org.apache.grails.gradle:grails-gradle-common'
-
-    // WARNING: this file is not to depend on grails-core; it is meant to be a shared library that can be used
-    // independently of Grails.  Mainly to share data between Grails & GORM
+    api 'org.apache.groovy:groovy'
+    api 'org.slf4j:jcl-over-slf4j'
+    api 'org.slf4j:slf4j-api'
+    api 'org.springframework:spring-context', {
+        // api: MessageSource
+    }
 
     // the annotation metadata readers are used by both GORM & grails-core so it can be placed in a shared build
     implementation 'org.springframework:spring-core'
 
-    api 'org.apache.groovy:groovy'
-
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.junit.platform:junit-platform-runner'
+    testImplementation 'org.slf4j:slf4j-simple'
+    testImplementation 'org.spockframework:spock-core', {
+        transitive = false
+    }
 
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
-
-    // Logging
-    api 'org.slf4j:slf4j-api'
-    api 'org.slf4j:jcl-over-slf4j'
-
-    // Testing
-    testImplementation 'org.slf4j:slf4j-simple'
-    testImplementation('org.spockframework:spock-core') { transitive = false }
 }
 
 apply {
@@ -57,7 +61,5 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/sbom-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

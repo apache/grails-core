@@ -16,6 +16,8 @@
  */
 plugins {
 	id 'org.apache.grails.gradle.grails-profile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
 }
 
 group = 'org.apache.grails.profiles'
@@ -31,9 +33,4 @@ ext {
 dependencies {
 	profileRuntimeApi project(':grails-profiles-plugin')
 	profileRuntimeApi project(':grails-profiles-rest-api')
-}
-
-apply {
-	from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
-	from rootProject.layout.projectDirectory.file('gradle/sbom-config.gradle')
 }

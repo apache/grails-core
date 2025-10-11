@@ -54,19 +54,6 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         out.toString().contains("Application created")
     }
 
-    void "test creating project with logbackGroovy"() {
-        given:
-        ByteArrayOutputStream out = new ByteArrayOutputStream()
-        System.setOut(new PrintStream(out))
-
-        when:
-        PicocliRunner.run(CreateAppCommand, ctx, "-flogbackGroovy", "foobar")
-
-        then:
-        noExceptionThrown()
-        out.toString().contains("Application created")
-    }
-
     void "test creating a project with an invalid gorm implementation"() {
         given:
         ByteArrayOutputStream baos = new ByteArrayOutputStream()

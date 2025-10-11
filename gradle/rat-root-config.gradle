@@ -67,8 +67,10 @@ tasks.named('rat') {
             'grails-gradle/**/build/**', // grails-gradle does not have a build package name so exclude any build directories
             'grails-forge/*/build/**', // grails-forge build directories
             'grails-forge/build/**', // grails-forge build directories
+            'build-logic/build/**', // grails-forge build directories
             'grails-forge/.idea/**', // grails-forge idea directories
             'grails-gradle/.idea/**', // grails-gradle idea directories
+            'build-logic/.idea/**', // grails-gradle idea directories
             'build/**', // build directories
             'buildSrc/build/**', // build directories
     ] + rootProject.subprojects.collect{"${rootProject.projectDir.relativePath(it.layout.buildDirectory.get().asFile).toString()}/**/*" }

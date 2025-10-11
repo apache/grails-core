@@ -153,7 +153,8 @@ jobs:
           path: ~/.m2/repository
           key: cache-local-maven-${{ github.sha }}
       - name: "🪶 Add mavenLocal repository to build"
-        run: sed -i 's|// mavenLocal() // Keep|mavenLocal() // Keep|' build.gradle
+        run: |
+          sed -i 's|// mavenLocal() // Keep|mavenLocal() // Keep|' settings.gradle
       - name: 'Swap Groovy Version'
         run: |
           sed -i "/['\"]groovy\.version['\"][[:space:]]*:/c\'groovy.version':'${{ needs.build_groovy.outputs.groovyVersion }}'," dependencies.gradle

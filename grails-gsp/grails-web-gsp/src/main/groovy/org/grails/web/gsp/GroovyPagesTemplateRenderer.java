@@ -88,8 +88,9 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
     public void afterPropertiesSet() throws Exception {
         if (scaffoldingTemplateGenerator != null) {
             // use reflection to locate method (would cause cyclic dependency otherwise)
-            generateViewMethod = ReflectionUtils.findMethod(scaffoldingTemplateGenerator.getClass(), "generateView", new Class<?>[] {
-                GrailsDomainClass.class, String.class, Writer.class});
+            generateViewMethod = ReflectionUtils.findMethod(scaffoldingTemplateGenerator.getClass(), "generateView", new Class<?>[]{
+                GrailsDomainClass.class, String.class, Writer.class
+            });
         }
     }
 
@@ -131,12 +132,12 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
 
     // required for binary compatibility: GRAILS-11598
     private Template findAndCacheTemplate(Object controller, GrailsWebRequest webRequest, GroovyPageBinding pageScope, String templateName,
-            String contextPath, String pluginName, String uri) throws IOException {
+                                          String contextPath, String pluginName, String uri) throws IOException {
         return findAndCacheTemplate(controller, pageScope, templateName, contextPath, pluginName, uri);
     }
 
     private Template findAndCacheTemplate(Object controller, TemplateVariableBinding pageScope, String templateName,
-            String contextPath, String pluginName, final String uri) throws IOException {
+                                          String contextPath, String pluginName, final String uri) throws IOException {
 
         String templatePath = GrailsStringUtils.isNotEmpty(contextPath) ? GrailsResourceUtils.appendPiecesForUri(contextPath, templateName) : templateName;
         final GroovyPageScriptSource scriptSource;
@@ -152,8 +153,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         } else {
             if (pluginName != null) {
                 cacheKey = contextPath + pluginName + scriptSource.getURI();
-            }
-            else {
+            } else {
                 cacheKey = scriptSource.getURI();
             }
         }
@@ -204,7 +204,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
                 }, true, null);
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @SuppressWarnings({"rawtypes", "unchecked"})
     private void makeTemplate(GrailsWebRequest webRequest, Template t, Map<String, Object> attrs, Object body, Writer out) throws IOException {
 
         Writer newOut = wrapWriterWithEncoder(webRequest, attrs, out);
@@ -212,7 +212,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         out = newOut;
 
         String var = getStringValue(attrs, "var");
-        Map b = new LinkedHashMap<String, Object>();
+        LinkedHashMap<String, Object> b = new LinkedHashMap<>();
         b.put("body", body);
         if (attrs.get("model") instanceof Map) {
             b.putAll((Map) attrs.get("model"));
@@ -220,8 +220,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         if (attrs.containsKey("bean")) {
             if (GrailsStringUtils.isNotBlank(var)) {
                 b.put(var, attrs.get("bean"));
-            }
-            else {
+            } else {
                 b.put("it", attrs.get("bean"));
             }
         }
@@ -235,10 +234,10 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
                 }
                 Map itmap = new LinkedHashMap<String, Object>();
                 itmap.putAll(b);
+
                 if (GrailsStringUtils.isNotBlank(var)) {
                     itmap.put(var, it);
-                }
-                else {
+                } else {
                     itmap.put("it", it);
                     itmap.put(key, it);
                 }
@@ -315,12 +314,12 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         scaffoldingTemplateGenerator = generator;
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public void setScaffoldedActionMap(Map map) {
         scaffoldedActionMap = map;
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public void setControllerToScaffoldedDomainClassMap(Map map) {
         controllerToScaffoldedDomainClassMap = map;
     }

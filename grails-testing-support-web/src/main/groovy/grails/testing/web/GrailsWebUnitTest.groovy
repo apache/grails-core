@@ -189,8 +189,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         final attributes = webRequest.attributes
         if (args.template) {
             uri = attributes.getTemplateUri(args.template as String, request)
-        }
-        else if (args.view) {
+        } else if (args.view) {
             uri = attributes.getViewUri(args.view as String, request)
         }
         if (uri != null) {
@@ -228,7 +227,7 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
     void applyTemplate(StringWriter sw, String template, Map params = [:]) {
         def engine = applicationContext.getBean(GroovyPagesTemplateEngine)
 
-        def t = engine.createTemplate(template, 'test_' + System.currentTimeMillis())
+        def t = engine.createTemplate(template, 'test_' + System.currentTimeMillis(), false)
         renderTemplateToStringWriter(sw, t, params)
     }
 

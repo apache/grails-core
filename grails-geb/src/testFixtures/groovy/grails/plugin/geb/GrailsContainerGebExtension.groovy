@@ -138,7 +138,7 @@ class GrailsContainerGebExtension implements IGlobalExtension {
     private static boolean validateContainerGebSpec(SpecInfo specInfo) {
         if (!specInfo.annotations.any { it.annotationType() == Integration }) {
             throw new IllegalArgumentException(
-                    'ContainerGebSpec classes must be annotated with @Integration'
+                    'ContainerGebSpec classes must be annotated with @Integration.'
             )
         }
         return true

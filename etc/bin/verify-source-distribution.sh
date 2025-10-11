@@ -31,10 +31,10 @@ fi
 VERSION=${RELEASE_TAG#v}
 
 cd "${DOWNLOAD_LOCATION}"
-ZIP_FILE=$(ls "apache-grails-${VERSION}-incubating-src.zip" 2>/dev/null | head -n 1)
+ZIP_FILE=$(ls "apache-grails-${VERSION}-src.zip" 2>/dev/null | head -n 1)
 
 if [ -z "${ZIP_FILE}" ]; then
-  echo "Error: Could not find apache-grails-${VERSION}-incubating-src.zip in ${DOWNLOAD_LOCATION}"
+  echo "Error: Could not find apache-grails-${VERSION}-src.zip in ${DOWNLOAD_LOCATION}"
   exit 1
 fi
 
@@ -45,7 +45,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "Verifying checksum..."
-shasum -a 512 -c "apache-grails-${VERSION}-incubating-src.zip.sha512"
+shasum -a 512 -c "apache-grails-${VERSION}-src.zip.sha512"
 echo "✅ Checksum Verified"
 
 echo "Importing GPG key to independent GPG home ..."
@@ -53,7 +53,7 @@ gpg --homedir "${GRAILS_GPG_HOME}" --import "${SCRIPT_DIR}/../../KEYS"
 echo "✅ GPG Key Imported"
 
 echo "Verifying GPG signature..."
-gpg --homedir "${GRAILS_GPG_HOME}" --verify "apache-grails-${VERSION}-incubating-src.zip.asc" "apache-grails-${VERSION}-incubating-src.zip"
+gpg --homedir "${GRAILS_GPG_HOME}" --verify "apache-grails-${VERSION}-src.zip.asc" "apache-grails-${VERSION}-src.zip"
 echo "✅ GPG Verified"
 
 SRC_DIR="grails"
@@ -69,7 +69,7 @@ if [ -d "${SRC_DIR}" ]; then
   cd "${DOWNLOAD_LOCATION}"
 fi
 echo "Extracting zip file..."
-unzip -q "apache-grails-${VERSION}-incubating-src.zip"
+unzip -q "apache-grails-${VERSION}-src.zip"
 
 if [ ! -d "${SRC_DIR}" ]; then
   echo "Error: Expected extracted folder '${SRC_DIR}' not found."
@@ -77,7 +77,7 @@ if [ ! -d "${SRC_DIR}" ]; then
 fi
 
 echo "Checking for required files existence..."
-REQUIRED_FILES=("LICENSE" "NOTICE" "README.md" "CONTRIBUTING.md" "PUBLISHED_ARTIFACTS" "CHECKSUMS" "BUILD_DATE" "DISCLAIMER")
+REQUIRED_FILES=("LICENSE" "NOTICE" "README.md" "CONTRIBUTING.md" "PUBLISHED_ARTIFACTS" "CHECKSUMS" "BUILD_DATE")
 
 for FILE in "${REQUIRED_FILES[@]}"; do
   if [ ! -f "${SRC_DIR}/$FILE" ]; then

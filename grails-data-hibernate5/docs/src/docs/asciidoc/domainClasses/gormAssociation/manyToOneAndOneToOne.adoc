@@ -209,7 +209,7 @@ void clearReviews(Book book) {
 }
 ----
 
-Alternatively you could leverage https://docs.grails.org/latest/ref/Database%20Mapping/cascade.html[cascade] behaviour.
+Alternatively you could leverage https://grails.apache.org/docs/latest/ref/Database%20Mapping/cascade.html[cascade] behaviour.
 
 [source,groovy]
 ----

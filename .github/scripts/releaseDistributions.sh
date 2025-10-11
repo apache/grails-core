@@ -32,8 +32,8 @@ RELEASE_TAG="$1"
 RELEASE_VERSION="${RELEASE_TAG#v}"
 SVN_USER="$2"
 SVN_PASS="$3"
-RELEASE_ROOT="https://dist.apache.org/repos/dist/release/incubator/grails/core"
-DEV_ROOT="https://dist.apache.org/repos/dist/dev/incubator/grails/core"
+RELEASE_ROOT="https://dist.apache.org/repos/dist/release/grails/core"
+DEV_ROOT="https://dist.apache.org/repos/dist/dev/grails/core"
 
 if [[ -z "${RELEASE_TAG}" ]]; then
   echo "❌ ERROR: Release Tag must not be empty." >&2
@@ -79,5 +79,5 @@ if svn_exists "${RELEASE_VERSION_URL}"; then
 fi
 
 echo "🚀 Promoting ${DEV_VERSION_URL} -> ${RELEASE_VERSION_URL}"
-svn mv "${svn_flags[@]}" -m "Promote Apache Grails (incubating) ${RELEASE_VERSION} from dev to release" "${DEV_VERSION_URL}" "${RELEASE_VERSION_URL}"
+svn mv "${svn_flags[@]}" -m "Promote Apache Grails ${RELEASE_VERSION} from dev to release" "${DEV_VERSION_URL}" "${RELEASE_VERSION_URL}"
 echo "✅ Promoted"

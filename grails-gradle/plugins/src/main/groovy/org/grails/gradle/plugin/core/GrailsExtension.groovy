@@ -76,21 +76,6 @@ class GrailsExtension {
      */
     boolean micronautAutoSetup = true
 
-    /**
-     * Configure the reloading agent
-     */
-    Agent agent = new Agent()
-
-    /**
-     * Configure the reloading agent
-     */
-    Agent agent(@DelegatesTo(Agent) Closure configurer) {
-        configurer.delegate = agent
-        configurer.resolveStrategy = Closure.DELEGATE_FIRST
-        configurer.call()
-        return agent
-    }
-
     DependencyHandler getPlugins() {
         if (pluginDefiner == null) {
             pluginDefiner = new PluginDefiner(project)
@@ -108,23 +93,6 @@ class GrailsExtension {
         }
         pluginDefiner.grailsRun = developmentRun
         ConfigureUtil.configure(configureClosure, plugins)
-    }
-
-    /**
-     * Configuration for the reloading agent
-     */
-    static class Agent {
-        boolean enabled = true
-        File path
-        String inclusions = 'grails.plugins..*'
-        String exclusions
-        Boolean logging
-        boolean synchronize = true
-        boolean allowSplitPackages = true
-        File cacheDir = new File('build/springloaded')
-
-        Map<String, String> systemProperties = ['jdk.reflect.allowGetCallerClass': 'true']
-        List<String> jvmArgs = ['-Xverify:none']
     }
 
     boolean isDevelopmentRun() {

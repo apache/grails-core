@@ -19,6 +19,8 @@ plugins {
     id 'java'
     id 'groovy'
     id 'distribution'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
 }
 
 version = projectVersion
@@ -56,8 +58,6 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/sbom-config.gradle')
 }
 
 // It's surprisingly hard to generate start scripts and *not* have them nested into a bin / lib directory
@@ -94,7 +94,7 @@ startScripts.configure { CreateStartScripts t ->
 project.extensions.getByType(DistributionContainer).configureEach {
     // WARNING: changing the distro name / classifier requires updating the task in grails-profiles-base to copy from the correct location
     it.distributionBaseName = 'apache-grails-wrapper'
-    it.distributionClassifier = 'incubating-bin'
+    it.distributionClassifier = 'bin'
     it.contents {
         from(jarTask) {
             into ''

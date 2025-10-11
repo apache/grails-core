@@ -131,7 +131,7 @@ while IFS= read -r line; do
 
   if [[ $ARTIFACT_ID != grails-cli && $ARTIFACT_ID != grails-forge-cli && $JAR_FILE != *-javadoc.jar ]]; then
       echo "... Verifying required files exist in non-javadoc jar..."
-        required_jar_contents=(META-INF/LICENSE META-INF/DISCLAIMER META-INF/NOTICE)
+        required_jar_contents=(META-INF/LICENSE META-INF/NOTICE)
         missing_jar_contents=()
         for entry in "${required_jar_contents[@]}"; do
             if ! jar tf "${JAR_FILE}" | grep -qF -- "${entry}"; then

@@ -41,7 +41,7 @@ cd bin
 find . -mindepth 1 -path ./results -prune -o -exec rm -rf {} +
 cd "${CWD}"
 
-rm -rf "apache-grails-${VERSION}-incubating-bin"
-rm -rf "apache-grails-wrapper-${VERSION}-incubating-bin"
+rm -rf "apache-grails-${VERSION}-bin"
+rm -rf "apache-grails-wrapper-${VERSION}-bin"
 rm -rf "profile-wrapper-check"
 rm -f ./custom-repos.gradle

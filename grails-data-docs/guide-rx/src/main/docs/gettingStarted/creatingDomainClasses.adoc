@@ -44,4 +44,4 @@ NOTE: The type is provided as a generic argument to the `RxMongoEntity` trait. T
 
 In addition, for MongoDB an `id` of type `ObjectId` is required.
 
-For more information on domain modelling in GORM, take a look at the https://docs.grails.org/latest/guide/GORM.html#domainClasses[GORM user guide] on the subject.
+For more information on domain modelling in GORM, take a look at the https://grails.apache.org/docs/latest/guide/GORM.html#domainClasses[GORM user guide] on the subject.

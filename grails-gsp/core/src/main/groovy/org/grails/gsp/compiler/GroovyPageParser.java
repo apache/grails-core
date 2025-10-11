@@ -66,7 +66,10 @@ import org.grails.taglib.encoder.OutputEncodingSettings;
 /**
  * NOTE: Based on work done by the GSP standalone project (https://gsp.dev.java.net/).
  * <p>
- * Parsing implementation for GSP files
+ * Parsing implementation for GSP files. This class is responsible for parsing .gsp extension files
+ * and converting them to Groovy source code that extends the {@link GroovyPage} base class. It also gathers
+ * taglib references and html parts (contants with no modification) and writes them to a separate file.
+ * For improved debugging, line number references are also stored for easier exception tracing.
  *
  * @author Troy Heninger
  * @author Graeme Rocher
@@ -643,7 +646,7 @@ public class GroovyPageParser implements Tokens {
     }
 
     private void htmlPartPrintlnRaw(int partNumber) {
-        out.print("printHtmlPart(");
+        out.print("h(");
         out.print(String.valueOf(partNumber));
         out.print(")");
         out.println();
