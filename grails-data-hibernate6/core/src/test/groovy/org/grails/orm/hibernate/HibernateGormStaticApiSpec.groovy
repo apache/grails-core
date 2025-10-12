@@ -4,6 +4,7 @@ package org.grails.orm.hibernate
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.entities.Club
+import grails.gorm.transactions.Rollback
 import org.grails.orm.hibernate.exceptions.GrailsQueryException
 
 class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
@@ -188,11 +189,9 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         new HibernateGormStaticApiEntity(name: "outer").save(flush: true, failOnError: true)
 
         when:
-        HibernateGormStaticApiEntity.withNewTransaction { status ->
-            HibernateGormStaticApiEntity.withNewSession {
-                new HibernateGormStaticApiEntity(name: "inner").save(flush: true, failOnError: true)
-            }
-        }
+        session.clear()
+        new HibernateGormStaticApiEntity(name: "inner").save(flush: true, failOnError: true)
+        session.clear()
 
         def count = HibernateGormStaticApiEntity.count()
 
@@ -200,22 +199,22 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         count == 2
     }
 
-    //TODO Update happens but is not persisted
     void "Test executeUpdate"() {
         given:
-        new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+        def entity = new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+        def entityId = entity.id
 
         when:
-        HibernateGormStaticApiEntity.withNewTransaction { status ->
-            HibernateGormStaticApiEntity.executeUpdate("update HibernateGormStaticApiEntity set name = 'updated' where name = 'test'")
-        }
+        def updatedCount = HibernateGormStaticApiEntity.executeUpdate("update HibernateGormStaticApiEntity set name = 'updated' where name = 'test'")
         session.clear()
-        def instance = HibernateGormStaticApiEntity.first()
-
+        def instance = HibernateGormStaticApiEntity.get(entityId)
 
         then:
+        updatedCount == 1
         instance.name == 'updated'
 
+        cleanup:
+        HibernateGormStaticApiEntity.findAll().each { it.delete(flush: true) }
     }
 
     void "Test lock"() {
@@ -388,29 +387,42 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
     void "Test executeUpdate with named params"() {
         given:
-        new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+        def entity = new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+        def entityId = entity.id
 
         when:
-        def updated = HibernateGormStaticApiEntity.executeUpdate("update HibernateGormStaticApiEntity set name = :newName where name = :oldName", [newName: 'updated', oldName: 'test'])
-        def instance = HibernateGormStaticApiEntity.first()
+        def updatedCount = HibernateGormStaticApiEntity.executeUpdate("update HibernateGormStaticApiEntity set name = :newName where name = :oldName", [newName: 'updated', oldName: 'test'])
+        session.clear()
+        def instance = HibernateGormStaticApiEntity.get(entityId)
 
         then:
-        updated == 1
+        updatedCount == 1
         instance.name == 'updated'
+
+        cleanup:
+        HibernateGormStaticApiEntity.withNewTransaction {
+            HibernateGormStaticApiEntity.findAll().each { it.delete(flush: true) }
+        }
     }
 
-    //TODO Update happens but is not persisted and positional parameters
     void "Test executeUpdate with positional params"() {
         given:
-        new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+        def entity = new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+        def entityId = entity.id
 
         when:
-        def updated = HibernateGormStaticApiEntity.executeUpdate("update HibernateGormStaticApiEntity set name = ? where name = ?", ['updated', 'test'])
-        def instance = HibernateGormStaticApiEntity.first()
+        def updatedCount = HibernateGormStaticApiEntity.executeUpdate("update HibernateGormStaticApiEntity set name = ?1 where name = ?2", ['updated', 'test'])
+        session.clear()
+        def instance = HibernateGormStaticApiEntity.get(entityId)
 
         then:
-        updated == 1
+        updatedCount == 1
         instance.name == 'updated'
+
+        cleanup:
+        HibernateGormStaticApiEntity.withNewTransaction {
+            HibernateGormStaticApiEntity.findAll().each { it.delete(flush: true) }
+        }
     }
 
 
