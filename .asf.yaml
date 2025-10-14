@@ -20,30 +20,46 @@ github:
   environments:
     close:
       required_reviewers:
-        - id: grails-committers
-          type: Team
         - id: jdaugherty
+          type: User
+        - id: matrei
+          type: User
+        - id: jamesfredley
+          type: User
+        - id: sbglasius
           type: User
       wait_timer: 0
     docs:
       required_reviewers:
-        - id: grails-committers
-          type: Team
         - id: jdaugherty
+          type: User
+        - id: matrei
+          type: User
+        - id: jamesfredley
+          type: User
+        - id: sbglasius
           type: User
       wait_timer: 0
     sdkman:
       required_reviewers:
-        - id: grails-committers
-          type: Team
         - id: jdaugherty
+          type: User
+        - id: matrei
+          type: User
+        - id: jamesfredley
+          type: User
+        - id: sbglasius
           type: User
       wait_timer: 0
     release:
       required_reviewers:
-        - id: grails-committers
-          type: Team
         - id: jdaugherty
+          type: User
+        - id: matrei
+          type: User
+        - id: jamesfredley
+          type: User
+        - id: sbglasius
           type: User
       wait_timer: 0
   description: "Grails - the Web Application Framework"

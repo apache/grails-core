@@ -529,6 +529,16 @@ jobs:
     needs: [ publish, source, upload ] # TODO Once we have confirmed release won't fail, add it as a dependency here
     runs-on: ubuntu-24.04
     steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@c28619d8999a147d5e09c1199f84ff6af6ad5794
+        with:
+          root-reserve-mb: 3072  # Leave ~3 GB on root FS
+          swap-size-mb: 2048     # Allocate 2 GB swap (default: 4 GB; reduce if not needed)
+          remove-dotnet: 'true'  # Remove .NET SDK (~3-4 GB savings)
+          remove-android: 'true' # Remove Android tools (~2 GB savings)
+          remove-haskell: 'true' # Remove Haskell (~1 GB savings)
+          remove-codeql: 'true'  # Remove CodeQL (~500 MB savings)
+          remove-docker-images: 'false'  # Prune Docker if used (~1-2 GB savings)
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
         with:
@@ -554,10 +564,12 @@ jobs:
         uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
           GH_TOKEN: ${{ secrets.GRAILS_GHTOKEN }}
-          TARGET_REPOSITORY: 'apache/grails-doc'
           GRADLE_PUBLISH_RELEASE: 'true'
           SOURCE_FOLDER: grails-doc/build/docs
           VERSION: ${{ needs.publish.outputs.release_version }}
+          TARGET_REPOSITORY: 'apache/grails-website'
+          TARGET_FOLDER: 'docs'
+          DOCUMENTATION_BRANCH: 'asf-site-production'
   sdkman:
     environment: sdkman
     name: "VOTE SUCCEEDED - Release to SDKMAN!"

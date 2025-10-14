@@ -24,7 +24,6 @@ buildscript {
     dependencies {
         classpath "org.apache.grails:grails-gradle-plugins:$grailsGradlePluginVersion"
         classpath "org.apache.grails.gradle:grails-gson:$viewsJsonVersion"
-        classpath "org.apache.grails:grails-docs-core:${project.ext.properties.grailsDocsVersion ?: grailsVersion}"
     }
 }
 

@@ -20,6 +20,7 @@
 package grails.plugin.json.converters
 
 import java.time.Instant
+import java.time.format.DateTimeFormatter
 
 import groovy.transform.CompileStatic
 
@@ -40,6 +41,6 @@ class InstantJsonConverter implements JsonGenerator.Converter {
 
     @Override
     Object convert(Object value, String key) {
-        ((Instant) value).toEpochMilli()
+        DateTimeFormatter.ISO_INSTANT.format((Instant) value)
     }
 }

@@ -1,7 +1,7 @@
 Grails Installation Guide
 =======================
 
-Grails is a powerful Groovy-based web application framework for the JVM built on top of Spring Boot that has many plugins to further extend its functionality. The full documentation for how to install Grails via different mechanisms and use it can be found at `https://docs.grails.org/latest`.  This document specifically covers the basic building and installation of Grails from a source distribution.
+Grails is a powerful Groovy-based web application framework for the JVM built on top of Spring Boot that has many plugins to further extend its functionality. The full documentation for how to install Grails via different mechanisms and use it can be found at `https://grails.apache.org/docs/latest`.  This document specifically covers the basic building and installation of Grails from a source distribution.
 
 How to use the source distribution
 ------------------------------

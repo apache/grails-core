@@ -75,7 +75,6 @@ dependencies {
         // TODO: It should be possible to pull these build names using includedBuild, but I haven't found a way to do so
         api "org.apache.grails:grails-gradle-plugins:${projectVersion}"
         api "org.apache.grails.gradle:grails-gradle-model:${projectVersion}"
-        api "org.apache.grails:grails-docs-core:${projectVersion}"
         api "org.apache.grails.gradle:grails-gradle-common:${projectVersion}"
         api "org.apache.grails:grails-gradle-tasks:${projectVersion}"
 
