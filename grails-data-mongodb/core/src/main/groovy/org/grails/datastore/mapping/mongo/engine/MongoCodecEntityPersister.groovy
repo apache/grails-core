@@ -47,6 +47,7 @@ import org.grails.datastore.mapping.dirty.checking.DirtyCheckableCollection
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckingCollection
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckingSupport
 import org.grails.datastore.mapping.engine.EntityAccess
+import org.grails.datastore.mapping.engine.ModificationTrackingEntityAccess
 import org.grails.datastore.mapping.engine.ThirdPartyCacheEntityPersister
 import org.grails.datastore.mapping.engine.internal.MappingUtils
 import org.grails.datastore.mapping.model.ClassMapping
@@ -201,6 +202,7 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
             return (Serializable) id
         } else {
             final EntityAccess entityAccess = createEntityAccess(entity, obj)
+
             boolean isAssigned = isAssignedId(entity)
             if (!isAssigned && idIsNull) {
                 id = generateIdentifier(entity)
@@ -237,10 +239,19 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
                     }
                 })
             } else {
-                mongoCodecSession.addPendingUpdate(new PendingUpdateAdapter(entity, id, obj, entityAccess) {
+                // Updates during PreUpdateEvents are lost due to not being marked dirty. Track access then mark dirty.
+                final ModificationTrackingEntityAccess trackedAccess = new ModificationTrackingEntityAccess(entityAccess)
+                mongoCodecSession.addPendingUpdate(new PendingUpdateAdapter(entity, id, obj, trackedAccess) {
                     @Override
                     void run() {
-                        if (!cancelUpdate(entity, entityAccess)) {
+                        if (!cancelUpdate(entity, trackedAccess)) {
+                            if (obj instanceof DirtyCheckable && !trackedAccess.modifiedProperties.isEmpty()) {
+                                DirtyCheckable dirtyCheckable = (DirtyCheckable) obj
+                                trackedAccess.modifiedProperties.each { String propertyName, Object value ->
+                                    dirtyCheckable.markDirty(propertyName)
+                                }
+                            }
+
                             updateCaches(entity, obj, id)
                             addCascadeOperation(new PendingOperationAdapter(entity, id, obj) {
                                 @Override

@@ -249,12 +249,6 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                 }
 
             }
-            else {
-                // schedule lastUpdated if necessary
-                if (entity.getPropertyByName(GormProperties.LAST_UPDATED) != null) {
-                    dirtyProperties.add(GormProperties.LAST_UPDATED)
-                }
-            }
 
             for (propertyName in dirtyProperties) {
                 def prop = entity.getPropertyByName(propertyName)
