@@ -147,7 +147,7 @@ distributionUrl=https\://services.gradle.org/distributions/gradle-{gradleVersion
 
 ===== 6.4. Removed Gradle Plugins
 
-The `grails-doc` plugin has been removed. If you wish to continue to generate the guide documentation, you can use the PublishGuideTask offered by `grails-docs-core`.
+The `grails-doc` plugin has been removed. Documentation generation is no longer provided by Grails.
 
 ==== 7. Reproducible Builds:
 

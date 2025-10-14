@@ -24,7 +24,6 @@ version = projectVersion
 group = 'this.will.be.overridden'
 
 def publishedProjects = [
-        'grails-docs-core',
         'grails-gradle-bom',
         'grails-gradle-common',
         'grails-gradle-model',

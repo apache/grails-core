@@ -24,7 +24,7 @@ pluginManagement {
         name = 'grails-gradle'
     }
     includeBuild('./build-logic') {
-        name = 'build-logic'
+        name = 'build-logic-root'
     }
     repositories {
         // because our publish plugin uses other plugins, those dependencies have to be resolvable
@@ -447,6 +447,9 @@ project(':grails-test-examples-views-functional-tests-plugin').projectDir = file
 
 includeBuild('./grails-gradle') {
     name = 'grails-gradle'
+}
+includeBuild('./build-logic') {
+    name = 'build-logic-root'
 }
 
 // Due to https://github.com/gradle/gradle/issues/2986 , we can't change the global exclude for profiles, it must be done everywhere

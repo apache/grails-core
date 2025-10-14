@@ -48,4 +48,42 @@ buildCache {
     }
 }
 
-rootProject.name = 'build-logic'
+dependencyResolutionManagement {
+    repositories {
+        // mavenLocal()
+        mavenCentral()
+        gradlePluginPortal()
+        maven {
+            url = 'https://repository.apache.org/content/groups/snapshots'
+            content {
+                includeVersionByRegex('org[.]apache[.]grails[.]gradle.*', '.*', '.*-SNAPSHOT')
+            }
+        }
+        maven {
+            url = 'https://central.sonatype.com/repository/maven-snapshots'
+            content {
+                includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+            }
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+        maven {
+            url = 'https://repository.apache.org/content/groups/staging'
+            content {
+                includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
+            }
+            mavenContent {
+                releasesOnly()
+            }
+        }
+    }
+}
+
+rootProject.name = 'build-logic-root'
+
+include 'build-logic'
+project(':build-logic').projectDir = file('plugins')
+
+include 'grails-docs-core'
+project(':grails-docs-core').projectDir = file('docs-core')
