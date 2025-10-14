@@ -62,9 +62,9 @@ new Requestmap(url: "/secure/someOtherAction",
 and the corresponding static mappings would be
 
 [source,groovy]
-.Listing {counter:listing}. Adding mappings in `grails.plugin.springsecurity.interceptUrlMap`
+.Listing {counter:listing}. Adding mappings in `grails.plugin.springsecurity.controllerAnnotations.staticRules`
 ----
-grails.plugin.springsecurity.interceptUrlMap = [
+grails.plugin.springsecurity.controllerAnnotations.staticRules = [
    [pattern: '/secure/someAction',      access: ["hasRole('ROLE_ADMIN')"]],
    [pattern: '/secure/someOtherAction', access: ["authentication.name == 'ralph'"]]
 ]
