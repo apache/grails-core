@@ -48,7 +48,6 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
 import static org.apache.grails.buildsrc.GradleUtils.lookupProperty
-import static org.apache.grails.buildsrc.GradleUtils.lookupPropertyByType
 
 @CompileStatic
 class SbomPlugin implements Plugin<Project> {
@@ -125,8 +124,8 @@ class SbomPlugin implements Plugin<Project> {
         def sbomOutputLocation = project.layout.buildDirectory.file(
             project.provider {
                 def artifactId = lookupProperty(project, 'pomArtifactId', project.name)
-                def version = lookupPropertyByType(project, 'projectVersion', String)
-                "${artifactId}-${version}-sbom.json" as String
+                def version = project.findProperty('projectVersion')
+                "$artifactId-$version-sbom.json" as String
             }
         )
 

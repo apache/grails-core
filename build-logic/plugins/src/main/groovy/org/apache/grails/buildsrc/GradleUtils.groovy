@@ -41,8 +41,4 @@ class GradleUtils {
     static <T> T lookupProperty(Project project, String name, T defaultValue = null) {
         project.findProperty(name) as T ?: defaultValue
     }
-
-    static <T> T lookupPropertyByType(Project project, String name, Class<T> type) {
-        project.findProperty(name) as T
-    }
 }
