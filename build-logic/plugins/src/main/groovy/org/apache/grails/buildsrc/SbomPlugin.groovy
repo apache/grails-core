@@ -166,8 +166,12 @@ class SbomPlugin implements Plugin<Project> {
                 ))
                 task.@externalReferences.set([
                     new ExternalReference(
-                        url: 'https://grails.apache.org/',
+                        url: 'https://grails.apache.org',
                         type: ExternalReference.Type.WEBSITE
+                    ),
+                    new ExternalReference(
+                            url: 'https://github.com/apache/grails-core',
+                            type: ExternalReference.Type.VCS
                     )
                 ])
 
