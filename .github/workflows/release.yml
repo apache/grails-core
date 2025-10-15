@@ -129,6 +129,7 @@ jobs:
       - name: "📤 Upload grails wrapper ZIP"
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.release.tag_name }}
           files: |
             grails-wrapper/build/distributions/apache-grails-wrapper-${{ steps.release_version.outputs.value }}-bin.zip
             grails-wrapper/build/distributions/apache-grails-wrapper-${{ steps.release_version.outputs.value }}-bin.zip.sha512
@@ -150,6 +151,7 @@ jobs:
       - name: "📤 Upload CLI ZIP"
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.release.tag_name }}
           files: |
             grails-forge/grails-cli/build/distributions/apache-grails-${{ steps.release_version.outputs.value }}-bin.zip
             grails-forge/grails-cli/build/distributions/apache-grails-${{ steps.release_version.outputs.value }}-bin.zip.sha512
@@ -241,6 +243,7 @@ jobs:
       - name: "Upload combined checksums"
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.release.tag_name }}
           files: build/CHECKSUMS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -253,6 +256,7 @@ jobs:
       - name: "Upload combined published artifacts"
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.release.tag_name }}
           files: build/PUBLISHED_ARTIFACTS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -261,6 +265,7 @@ jobs:
       - name: "Upload Build Date file"
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.release.tag_name }}
           files: build/BUILD_DATE.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -334,7 +339,7 @@ jobs:
       - name: "🚀 Upload ZIP and Signature to GitHub Release"
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.publish.outputs.release_version }}
+          tag_name: ${{ github.event.release.tag_name }}
           files: |
             apache-grails-*-src.zip
             apache-grails-*-src.zip.sha512
@@ -456,6 +461,7 @@ jobs:
       - name: "Upload Distribution SVN revision"
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.release.tag_name }}
           files: dev-repo/DIST_SVN_REVISION.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -472,8 +478,9 @@ jobs:
         run: |
           export DIST_SVN_REVISION=$(awk '/Last Changed Rev:/ {print $4}' dev-repo/DIST_SVN_REVISION.txt)
           echo "::group::Grails PMC Vote Email"
+          echo "Subject:"
           echo "*************************************************"
-          echo "Subject: [VOTE] Release Apache Grails ${VERSION}"
+          echo "[VOTE] Release Apache Grails ${VERSION}"
           echo "*************************************************"
           echo "Body:"
           echo "*************************************************"
@@ -646,14 +653,13 @@ jobs:
           VERSION_COMMIT_ID: ${{ needs.publish.outputs.commit_hash }}
           PREVIOUS_VERSION: 'TODO_PREVIOUS_VERSION'
         run: |
-          export DIST_SVN_REVISION=$(awk '/Last Changed Rev:/ {print $4}' dev-repo/DIST_SVN_REVISION.txt)
-          
           echo "::group::Announcement Email"
+          echo "Subject:"
           echo "*************************************************"
-          echo "Subject: [ANNOUNCE] Apache Grails ${VERSION}"
+          echo "[ANNOUNCE] Apache Grails ${VERSION}"
           echo "*************************************************"
           echo "Body:"
           echo "*************************************************"
-          cat grails-core/.github/vote_templates/announce.txt | envsubst
+          cat .github/vote_templates/announce.txt | envsubst
           echo "*************************************************"
           echo "::endgroup::"
