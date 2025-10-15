@@ -53,7 +53,7 @@ public class DateMarshaller implements ObjectMarshaller<JSON> {
      * Default constructor.
      */
     public DateMarshaller() {
-        this(FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss'Z'", TimeZone.getTimeZone("GMT"), Locale.US));
+        this(FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone("GMT"), Locale.US));
     }
 
     public boolean supports(Object object) {

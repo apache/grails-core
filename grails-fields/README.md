@@ -23,8 +23,8 @@ logic.
 
 ## Documentation
 
-* Latest Guide - https://docs.grails.org/latest/guide/theWebLayer.html#fields
-* Latest API - https://docs.grails.org/latest/api/grails/plugin/formfields/package-summary.html
+* Latest Guide - https://grails.apache.org/docs/latest/guide/theWebLayer.html#fields
+* Latest API - https://grails.apache.org/docs/latest/api/grails/plugin/formfields/package-summary.html
 
-* Snapshot Guide - https://docs.grails.org/snapshot/guide/theWebLayer.html#fields
-* Snapshot API - https://docs.grails.org/snapshot/api/grails/plugin/formfields/package-summary.html
+* Snapshot Guide - https://grails.apache.org/docs/snapshot/guide/theWebLayer.html#fields
+* Snapshot API - https://grails.apache.org/docs/snapshot/api/grails/plugin/formfields/package-summary.html

@@ -16,4 +16,4 @@ limitations under the License.
 
 ## grails-logging
 
-This subproject adds a log property to all artefacts. Refer to https://docs.grails.org/latest/ref/Plug-ins/logging.html
+This subproject adds a log property to all artefacts. Refer to https://grails.apache.org/docs/latest/ref/Plug-ins/logging.html

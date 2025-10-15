@@ -240,7 +240,26 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
                 mongoCodecSession.addPendingUpdate(new PendingUpdateAdapter(entity, id, obj, entityAccess) {
                     @Override
                     void run() {
+                        // Take snapshot of all property values BEFORE the PreUpdate event fires
+                        Map<String, Object> beforeUpdateSnapshot = [:]
+                        if (obj instanceof DirtyCheckable) {
+                            for (PersistentProperty prop : entity.persistentProperties) {
+                                beforeUpdateSnapshot[prop.name] = entityAccess.getProperty(prop.name)
+                            }
+                        }
                         if (!cancelUpdate(entity, entityAccess)) {
+                            // Compare with snapshot and mark modified properties dirty
+                            if (obj instanceof DirtyCheckable) {
+                                DirtyCheckable dirtyCheckable = (DirtyCheckable) obj
+                                for (PersistentProperty prop : entity.persistentProperties) {
+                                    Object oldValue = beforeUpdateSnapshot[prop.name]
+                                    Object newValue = entityAccess.getProperty(prop.name)
+                                    boolean valueChanged = oldValue != newValue && (oldValue == null || !oldValue.equals(newValue))
+                                    if (valueChanged) {
+                                        dirtyCheckable.markDirty(prop.name, newValue, oldValue)
+                                    }
+                                }
+                            }
                             updateCaches(entity, obj, id)
                             addCascadeOperation(new PendingOperationAdapter(entity, id, obj) {
                                 @Override

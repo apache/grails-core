@@ -147,7 +147,7 @@ distributionUrl=https\://services.gradle.org/distributions/gradle-{gradleVersion
 
 ===== 6.4. Removed Gradle Plugins
 
-The `grails-doc` plugin has been removed. If you wish to continue to generate the guide documentation, you can use the PublishGuideTask offered by `grails-docs-core`.
+The `grails-doc` plugin has been removed. Documentation generation is no longer provided by Grails.
 
 ==== 7. Reproducible Builds:
 
@@ -570,3 +570,112 @@ db.Example.updateMany(
   [ { $set: { created: { $toDate: "$created" } } } ]
 );
 ----
+
+===== 12.25 JSON Rendering of Date/Time Types
+
+JSON rendering of `java.util.Calendar`, `java.time.Instant`, `java.time.LocalDate`, `java.time.LocalDateTime`, `java.time.OffsetDateTime`, and `java.time.ZonedDateTime` has been updated for consistency across both standard JSON converters (`render ... as JSON`) and JSON views (`.gson` files).
+
+====== Changes to JSON Output
+
+*Calendar*: Previously rendered as a complex object with all properties. Now consistently renders as ISO-8601 format with Z suffix:
+
+[source,json]
+----
+// Before
+{"timestamp": {"time": 1759869218602, "timeZone": {...}, "firstDayOfWeek": 1, ...}}
+
+// After
+{"timestamp": "2025-10-07T21:14:31Z"}
+----
+
+*Instant*: Previously rendered as either epoch milliseconds (standard converters) or a complex object structure (JSON views). Now consistently renders as ISO-8601 format with Z suffix:
+
+[source,json]
+----
+// Before (standard converters)
+{"timestamp": 1759869218602}
+
+// Before (JSON views)
+{"timestamp": {"epochSecond": 1759869218, "nano": 602000000}}
+
+// After (both)
+{"timestamp": "2025-10-07T21:14:31.602Z"}
+----
+
+*LocalDate*: Previously rendered as a complex object structure. Now consistently renders as ISO-8601 date format (YYYY-MM-DD):
+
+[source,json]
+----
+// Before
+{"date": {"year": 2025, "month": "OCTOBER", "dayOfMonth": 8, ...}}
+
+// After
+{"date": "2025-10-08"}
+----
+
+*LocalDateTime*: Previously rendered as a complex object structure (JSON views) or inconsistently. Now consistently renders as ISO-8601 format without timezone (matching Spring Boot behavior):
+
+[source,json]
+----
+// Before (JSON views)
+{"dateTime": {"year": 2025, "month": "OCTOBER", "dayOfMonth": 7, ...}}
+
+// After (both)
+{"dateTime": "2025-10-07T21:14:31"}
+----
+
+NOTE: `LocalDate` and `LocalDateTime` do not include timezone information, so they render without the Z suffix, unlike `Date`, `Calendar`, and `Instant` which represent specific points in time.
+
+*OffsetDateTime*: Previously rendered as a complex object structure. Now consistently renders as ISO-8601 format with timezone offset:
+
+[source,json]
+----
+// Before
+{"dateTime": {"offset": {...}, "year": 2025, "month": "OCTOBER", ...}}
+
+// After
+{"dateTime": "2025-10-08T00:48:46.407254-07:00"}
+----
+
+*ZonedDateTime*: Previously rendered with zone ID brackets like `[America/Los_Angeles]`. Now consistently renders as ISO-8601 format with timezone offset only (matching Spring Boot):
+
+[source,json]
+----
+// Before
+{"dateTime": "2025-10-08T00:48:46.407254-07:00[America/Los_Angeles]"}
+
+// After
+{"dateTime": "2025-10-08T00:48:46.407254-07:00"}
+----
+
+*java.util.Date*: Now renders as ISO-8601 with Z suffix **including milliseconds**:
+
+[source,json]
+----
+// Before
+{"created": "2025-10-07T21:14:31Z"}
+
+// After
+{"created": "2025-10-07T21:14:31.407Z"}
+----
+
+NOTE: `java.util.Date` and `Calendar` have **millisecond precision** (3 decimal places: `.SSS`), while Java 8 date/time types (`Instant`, `OffsetDateTime`, `ZonedDateTime`) have **nanosecond precision** (up to 9 decimal places, with trailing zeros dropped per ISO-8601 spec). This matches Spring Boot's Jackson serialization behavior.
+
+====== Migration Impact
+
+If your application or API consumers depend on the previous JSON format for `Calendar`, `Instant`, `LocalDate`, `LocalDateTime`, `OffsetDateTime`, or `ZonedDateTime` fields:
+
+1. **API Responses**: Client applications may need updates to parse the new ISO-8601 string format instead of epoch milliseconds or object structures.
+
+2. **Date Parsing**: The new format is a standard ISO-8601 string that can be parsed using `Instant.parse()`, `LocalDate.parse()`, `LocalDateTime.parse()`, `OffsetDateTime.parse()`, or `ZonedDateTime.parse()` with appropriate formatters.
+
+3. **Consistency**:
+   - Temporal types with timezone information (`Date`, `Calendar`, `Instant`) render with **Z suffix** (UTC)
+   - `LocalDate` (date only) renders as **YYYY-MM-DD**
+   - `LocalDateTime` (date and time, no timezone) renders **without Z suffix**
+   - `OffsetDateTime` and `ZonedDateTime` render with their **timezone offset** (e.g., `-07:00`)
+   - All formatting matches Spring Boot's behavior
+
+4. **ZonedDateTime**: Note that the zone ID (e.g., `[America/Los_Angeles]`) is no longer included in the output, matching Spring Boot's behavior.
+
+This change applies to both the `grails-converters` module (standard JSON rendering) and the `grails-views-gson` module (JSON views).

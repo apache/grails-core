@@ -16,12 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+import org.gradle.api.initialization.resolve.RepositoriesMode
+
 pluginManagement {
     includeBuild('../grails-gradle') {
         name = 'grails-gradle'
     }
     includeBuild('../build-logic') {
-        name = 'build-logic'
+        name = 'build-logic-root'
     }
     repositories {
         // because our publish plugin uses other plugins, those dependencies have to be resolvable
@@ -105,7 +107,7 @@ includeBuild('../grails-gradle') {
 }
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
     repositories {
         // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
         mavenCentral()

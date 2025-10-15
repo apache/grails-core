@@ -287,7 +287,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         classNode.addMethod('$static_propertyMissing', Modifier.PUBLIC | Modifier.STATIC, AstUtils.OBJECT_CLASS_NODE, propertyMissingGetParameters, null, propertyMissingGetBody)
 
         // now process named query associations
-        // see https://docs.grails.org/latest/ref/Domain%20Classes/namedQueries.html
+        // see https://grails.apache.org/docs/latest/ref/Domain%20Classes/namedQueries.html
 
         // for each method call create a named query proxy lookup
         def thisClassNode = classNode

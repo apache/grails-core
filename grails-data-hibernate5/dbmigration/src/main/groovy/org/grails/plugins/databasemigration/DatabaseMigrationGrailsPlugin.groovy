@@ -44,7 +44,7 @@ class DatabaseMigrationGrailsPlugin extends Plugin {
     def author = 'Kazuki YAMAMOTO'
     def authorEmail = ''
     def description = 'Grails Database Migration Plugin'
-    def documentation = 'https://docs.grails.org/latest/grails-data/hibernate5/manual/index.html#databaseMigration'
+    def documentation = 'https://grails.apache.org/docs/latest/grails-data/hibernate5/manual/index.html#databaseMigration'
     def license = 'APACHE'
     def scm = [url: 'https://github.com/apache/grails-core']
 

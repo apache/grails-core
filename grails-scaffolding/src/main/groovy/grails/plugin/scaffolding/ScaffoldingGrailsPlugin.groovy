@@ -40,7 +40,7 @@ Plugin that generates scaffolded controllers and views for a Grails application.
 '''
 
     // URL to the plugin's documentation
-    def documentation = 'https://docs.grails.org/latest/guide/scaffolding.html'
+    def documentation = 'https://grails.apache.org/docs/latest/guide/scaffolding.html'
 
     // Extra (optional) plugin metadata
 

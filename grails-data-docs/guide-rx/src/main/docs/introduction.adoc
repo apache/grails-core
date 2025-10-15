@@ -19,7 +19,7 @@ under the License.
 
 == Introduction
 
-https://docs.grails.org/lastest/grails-data/[GORM], the object mapping technology built into the Grails framework, has traditionally been a primarily blocking API.
+https://grails.apache.org/docs/lastest/grails-data/[GORM], the object mapping technology built into the Grails framework, has traditionally been a primarily blocking API.
 
 Async features were added in GORM 4, however these are merely a way to isolate your blocking operations onto a different thread and not a truly non-blocking implementation.
 

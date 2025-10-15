@@ -23,11 +23,11 @@ under the License.
 ## Grails @VersionInfo.getGrailsVersion() Documentation
 
 @if (VersionInfo.isGrailsSnapshot()) {
-- [User Guide](https://docs.grails.org/snapshot/guide/index.html)
-- [API Reference](https://docs.grails.org/snapshot/api/index.html)
+- [User Guide](https://grails.apache.org/docs/snapshot/guide/index.html)
+- [API Reference](https://grails.apache.org/docs/snapshot/api/index.html)
 } else {
-- [User Guide](https://docs.grails.org/@VersionInfo.getGrailsVersion()/guide/index.html)
-- [API Reference](https://docs.grails.org/@VersionInfo.getGrailsVersion()/api/index.html)
+- [User Guide](https://grails.apache.org/docs/@VersionInfo.getGrailsVersion()/guide/index.html)
+- [API Reference](https://grails.apache.org/docs/@VersionInfo.getGrailsVersion()/api/index.html)
 }
 - [Grails Guides](https://guides.grails.org/index.html)
 ---

@@ -18,8 +18,8 @@ limitations under the License.
 
 This project contains the sources for GSP, the server-side view rendering technology used in the [Grails framework](https://grails.apache.org/).
 
-* Latest Guide - https://docs.grails.org/latest/guide/theWebLayer.html#gsp
-* Latest API - https://docs.grails.org/latest/api/grails/plugin/formfields/package-summary.html
+* Latest Guide - https://grails.apache.org/docs/latest/guide/theWebLayer.html#gsp
+* Latest API - https://grails.apache.org/docs/latest/api/grails/plugin/formfields/package-summary.html
 
-* Snapshot Guide - https://docs.grails.org/snapshot/guide/theWebLayer.html#gsp
-* Snapshot API - https://docs.grails.org/snapshot/api/grails/plugin/formfields/package-summary.html
+* Snapshot Guide - https://grails.apache.org/docs/snapshot/guide/theWebLayer.html#gsp
+* Snapshot API - https://grails.apache.org/docs/snapshot/api/grails/plugin/formfields/package-summary.html
