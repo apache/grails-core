@@ -132,7 +132,7 @@ public class AutoTimestampUtils {
      * @return true if the property has a @CreatedDate, @LastModifiedDate, or @AutoTimestamp annotation
      */
     public static boolean hasAutoTimestampAnnotation(PersistentProperty<?> persistentProperty) {
-        return getAutoTimestampType(persistentProperty) != AutoTimestampType.NONE;
+        return persistentProperty != null && getAutoTimestampType(persistentProperty) != AutoTimestampType.NONE;
     }
 
     /**
