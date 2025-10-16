@@ -134,6 +134,8 @@ class DefaultGrailsTagDateHelper implements GrailsTagDateHelper {
                 zonedDateTime = ZonedDateTime.of(date, ZoneId.systemDefault())
             } else if (date instanceof LocalDate) {
                 zonedDateTime = ZonedDateTime.of(date, LocalTime.MIN, ZoneId.systemDefault())
+            } else if (date instanceof Instant) {
+                zonedDateTime = ZonedDateTime.ofInstant(date, ZoneId.systemDefault())
             } else if (date instanceof OffsetDateTime) {
                 zonedDateTime = ((OffsetDateTime) date).toZonedDateTime()
 
