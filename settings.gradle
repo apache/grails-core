@@ -273,11 +273,11 @@ include 'grails-data-hibernate6-docs'
 findProject(':grails-data-hibernate6-docs').projectDir = new File(settingsDir, 'grails-data-hibernate6/docs')
 
 //// Plugins
-//include ':grails-data-hibernate6'
-//findProject(':grails-data-hibernate6').projectDir = new File(settingsDir, 'grails-data-hibernate6/grails-plugin')
+include ':grails-data-hibernate6'
+findProject(':grails-data-hibernate6').projectDir = new File(settingsDir, 'grails-data-hibernate6/grails-plugin')
 //
-//include 'grails-data-hibernate6-dbmigration'
-//findProject(':grails-data-hibernate6-dbmigration').projectDir = new File(settingsDir, 'grails-data-hibernate6/dbmigration')
+include 'grails-data-hibernate6-dbmigration'
+findProject(':grails-data-hibernate6-dbmigration').projectDir = new File(settingsDir, 'grails-data-hibernate6/dbmigration')
 //
 //include 'grails-data-hibernate6-spring-boot'
 //findProject(':grails-data-hibernate6-spring-boot').projectDir = new File(settingsDir, 'grails-data-hibernate6/boot-plugin')
