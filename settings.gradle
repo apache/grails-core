@@ -279,8 +279,8 @@ findProject(':grails-data-hibernate6').projectDir = new File(settingsDir, 'grail
 include 'grails-data-hibernate6-dbmigration'
 findProject(':grails-data-hibernate6-dbmigration').projectDir = new File(settingsDir, 'grails-data-hibernate6/dbmigration')
 //
-//include 'grails-data-hibernate6-spring-boot'
-//findProject(':grails-data-hibernate6-spring-boot').projectDir = new File(settingsDir, 'grails-data-hibernate6/boot-plugin')
+include 'grails-data-hibernate6-spring-boot'
+findProject(':grails-data-hibernate6-spring-boot').projectDir = new File(settingsDir, 'grails-data-hibernate6/boot-plugin')
 
 //// functional tests - hibernate6 examples
 //include 'grails-test-examples-hibernate6-grails-hibernate'

@@ -117,6 +117,8 @@ def publishedProjects = [
         'grails-data-hibernate6',
         'grails-data-hibernate6-core',
         'grails-data-hibernate6-dbmigration',
+        'grails-data-hibernate6-spring-boot',
+
         // mongodb
         'grails-data-mongodb',
         'grails-data-mongodb-bson',
