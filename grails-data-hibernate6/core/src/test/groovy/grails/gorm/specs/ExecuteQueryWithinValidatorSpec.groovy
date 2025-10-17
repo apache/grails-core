@@ -60,7 +60,7 @@ class Named {
         nameType (validator: { val, obj, errors ->
             if (val !=null) {
                 def parms = [nameType: val.nameType.trim().toLowerCase() ]
-                def rows = NameType.executeQuery("""select nameType from NameType where lower(nameType) = :nameType""", parms)
+                def rows = NameType.executeQuery("""select nameType from NameType where lower(nameType) = :nameType""", parms,[:])
 
                 def found =false
                 if (rows !=null && rows.size() ==1)
