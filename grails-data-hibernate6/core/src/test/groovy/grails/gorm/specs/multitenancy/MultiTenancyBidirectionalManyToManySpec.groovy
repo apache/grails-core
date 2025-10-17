@@ -123,7 +123,7 @@ abstract class DepartmentService {
 
     List<Department> findAllByUser(String username) {
         User user = User.findByUsername(username)
-        Department.executeQuery('from Department d where :user in elements(d.users)', [user: user])
+        Department.executeQuery('from Department d where :user in elements(d.users)', [user: user],[:])
     }
 
     abstract Number count()
@@ -137,7 +137,7 @@ abstract class UserService {
 
     List<User> findAllByDepartment(String departmentName) {
         Department department = Department.findByName(departmentName)
-        User.executeQuery('from User u where :department in elements(u.departments)', [department: department])
+        User.executeQuery('from User u where :department in elements(u.departments)', [department: department],[:])
     }
 
     abstract User save(User user)
