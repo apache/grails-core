@@ -177,6 +177,11 @@ public class DefaultConvertersConfiguration {
         return jsr310ConvertersConfiguration.instantValueConverter();
     }
 
+    @Bean("instantStructuredBindingEditor")
+    TypedStructuredBindingEditor instantStructuredBindingEditor() {
+        return jsr310ConvertersConfiguration.instantStructuredBindingEditor();
+    }
+
     @Bean("defaultUUIDConverter")
     protected UUIDConverter defaultuuidConverter() {
         return new UUIDConverter();
