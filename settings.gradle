@@ -363,6 +363,37 @@ project(':grails-test-examples-hibernate5-grails-hibernate-groovy-proxy').projec
 include 'grails-test-examples-hibernate5-issue450'
 project(':grails-test-examples-hibernate5-issue450').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/issue450')
 
+// functional tests - Hibernate6 examples
+include 'grails-test-examples-hibernate6-grails-hibernate'
+project(':grails-test-examples-hibernate6-grails-hibernate').projectDir = new File(settingsDir, 'grails-test-examples/hibernate6/grails-hibernate')
+
+include 'grails-test-examples-hibernate6-grails-multiple-datasources'
+project(':grails-test-examples-hibernate6-grails-multiple-datasources').projectDir = new File(settingsDir, 'grails-test-examples/hibernate6/grails-multiple-datasources')
+
+include 'grails-test-examples-hibernate6-grails-database-per-tenant'
+project(':grails-test-examples-hibernate6-grails-database-per-tenant').projectDir = new File(settingsDir, 'grails-test-examples/hibernate6/grails-database-per-tenant')
+
+include 'grails-test-examples-hibernate6-grails-schema-per-tenant'
+project(':grails-test-examples-hibernate6-grails-schema-per-tenant').projectDir = new File(settingsDir, 'grails-test-examples/hibernate6/grails-schema-per-tenant')
+
+include 'grails-test-examples-hibernate6-grails-partitioned-multi-tenancy'
+project(':grails-test-examples-hibernate6-grails-partitioned-multi-tenancy').projectDir = new File(settingsDir, 'grails-test-examples/hibernate6/grails-partitioned-multi-tenancy')
+
+include 'grails-test-examples-hibernate6-standalone-hibernate'
+project(':grails-test-examples-hibernate6-standalone-hibernate').projectDir = new File(settingsDir, 'grails-test-examples/hibernate6/standalone-hibernate')
+
+include 'grails-test-examples-hibernate6-spring-boot-hibernate'
+project(':grails-test-examples-hibernate6-spring-boot-hibernate').projectDir = new File(settingsDir, 'grails-test-examples/hibernate6/spring-boot-hibernate')
+
+include 'grails-test-examples-hibernate6-grails-data-service'
+project(':grails-test-examples-hibernate6-grails-data-service').projectDir = new File(settingsDir, 'grails-test-examples/hibernate6/grails-data-service')
+
+include 'grails-test-examples-hibernate6-grails-hibernate-groovy-proxy'
+project(':grails-test-examples-hibernate6-grails-hibernate-groovy-proxy').projectDir = new File(settingsDir, 'grails-test-examples/hibernate6/grails-hibernate-groovy-proxy')
+
+include 'grails-test-examples-hibernate6-issue450'
+project(':grails-test-examples-hibernate6-issue450').projectDir = new File(settingsDir, 'grails-test-examples/hibernate6/issue450')
+
 // Mongodb
 // core
 include 'grails-data-mongodb-core'
