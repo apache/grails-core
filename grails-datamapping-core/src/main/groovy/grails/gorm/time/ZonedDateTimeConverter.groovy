@@ -23,6 +23,7 @@ import java.time.Instant
 import java.time.ZonedDateTime
 
 import groovy.transform.CompileStatic
+import groovy.transform.Generated
 
 /**
  * A trait to convert a {@link java.time.ZonedDateTime} to and from a long
@@ -32,11 +33,13 @@ import groovy.transform.CompileStatic
 @CompileStatic
 trait ZonedDateTimeConverter implements TemporalConverter<ZonedDateTime> {
 
+    @Generated
     @Override
     Long convert(ZonedDateTime value) {
         value.toInstant().toEpochMilli()
     }
 
+    @Generated
     @Override
     ZonedDateTime convert(Long value) {
         ZonedDateTime.ofInstant(Instant.ofEpochMilli(value), systemOffset)

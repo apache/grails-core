@@ -18,6 +18,7 @@
  */
 package org.grails.compiler.gorm
 
+import groovy.transform.Generated
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValuePersistentEntity
 import org.grails.datastore.mapping.model.MappingContext
@@ -69,5 +70,10 @@ class HotWidgetSetting extends WidgetSetting {
         entity.getPropertyByName("setting")
         entity.getPropertyByName("setting")
         entity.getPropertyByName("setting").type.name == 'test.WidgetSetting'
+
+        and: "generated methods are marked as Generated"
+        cls.getMethod("getSetting").isAnnotationPresent(Generated)
+        cls.getMethod("getId").isAnnotationPresent(Generated)
+        cls.getMethod("getVersion").isAnnotationPresent(Generated)
     }
 }

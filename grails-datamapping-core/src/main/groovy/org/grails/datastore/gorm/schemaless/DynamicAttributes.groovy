@@ -20,7 +20,7 @@
 package org.grails.datastore.gorm.schemaless
 
 import groovy.transform.CompileStatic
-
+import groovy.transform.Generated
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 
 /**
@@ -34,6 +34,7 @@ trait DynamicAttributes {
 
     private transient Map<String, Object> dynamicAttributes = [:]
 
+    @Generated
     private void putAtDynamic(String name, value) {
         def oldValue = dynamicAttributes.put(name, value)
         if (oldValue != value) {
@@ -49,6 +50,7 @@ trait DynamicAttributes {
      * @param name The name of the attribute
      * @param value The value of the attribute
      */
+    @Generated
     void putAt(String name, value) {
         if (this.hasProperty(name)) {
             try {
@@ -67,6 +69,7 @@ trait DynamicAttributes {
      * @param name The name of the attribute
      * @return The value of the attribute
      */
+    @Generated
     def getAt(String name) {
         if (this.hasProperty(name)) {
             return ((GroovyObject) this).getProperty(name)
@@ -81,6 +84,7 @@ trait DynamicAttributes {
      *
      * @return The dynamic attributes
      */
+    @Generated
     Map<String, Object> attributes() {
         return this.dynamicAttributes
     }
@@ -91,6 +95,7 @@ trait DynamicAttributes {
      * @param newAttributes The new attributes
      * @return The dynamic attributes
      */
+    @Generated
     Map<String, Object> attributes(Map<String, Object> newAttributes) {
         if (newAttributes != null) {
             this.dynamicAttributes.putAll(newAttributes)

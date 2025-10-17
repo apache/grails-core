@@ -56,6 +56,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.closureX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
+import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.paramsForArgs
 import static org.grails.datastore.mapping.reflect.AstUtils.COMPILE_STATIC_TYPE
 import static org.grails.datastore.mapping.reflect.AstUtils.EMPTY_CLASS_ARRAY
@@ -351,6 +352,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
         renamedMethodNode.addAnnotations(methodNode.getAnnotations(TYPE_CHECKED_TYPE))
 
         methodNode.setCode(null)
+        markAsGenerated(classNode, renamedMethodNode)
         classNode.addMethod(renamedMethodNode)
 
         // Use a dummy source unit to process the variable scopes to avoid the issue where this is run twice producing an error

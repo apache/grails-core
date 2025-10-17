@@ -20,6 +20,7 @@
 package org.grails.datastore.gorm.services.implementers
 
 import groovy.transform.CompileStatic
+import groovy.transform.Generated
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.expr.Expression
@@ -48,6 +49,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 @CompileStatic
 trait SingleResultInterfaceProjectionBuilder extends InterfaceProjectionBuilder {
 
+    @Generated
     Statement buildInterfaceProjection(ClassNode targetDomainClass, MethodNode abstractMethodNode, Expression queryMethodCall, Expression args, MethodNode newMethodNode) {
         ClassNode declaringClass = newMethodNode.declaringClass
         ClassNode interfaceNode = (ClassNode) newMethodNode.getNodeMetaData(ServiceImplementer.RETURN_TYPE) ?: abstractMethodNode.returnType

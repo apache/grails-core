@@ -19,8 +19,11 @@
 package org.grails.datastore.gorm.async.transform
 
 import grails.async.Promise
+import groovy.transform.Generated
 import org.codehaus.groovy.ast.ClassNode
 import spock.lang.Specification
+
+import java.lang.reflect.Method
 
 /**
  * Created by graemerocher on 01/07/16.
@@ -43,7 +46,12 @@ interface Foo<D> {
 ''')
         expect:"The method is retrieved"
         new ClassNode(cls).methods
-        Promise.isAssignableFrom( cls.getMethod("withTransaction", Closure).returnType )
+
+        Method method = cls.getMethod("withTransaction", Closure)
+        Promise.isAssignableFrom( method.returnType )
+
+        and: 'marked as Generated'
+        method.isAnnotationPresent(Generated)
     }
 
 }

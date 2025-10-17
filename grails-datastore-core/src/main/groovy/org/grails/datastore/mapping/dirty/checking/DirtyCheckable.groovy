@@ -20,7 +20,7 @@
 package org.grails.datastore.mapping.dirty.checking
 
 import groovy.transform.CompileStatic
-
+import groovy.transform.Generated
 import jakarta.persistence.Transient
 
 import org.grails.datastore.mapping.proxy.EntityProxy
@@ -42,6 +42,7 @@ trait DirtyCheckable {
      * Indicates that the instance should start tacking changes. Note that if the instance is dirty this will clear any previously tracked
      * changes
      */
+    @Generated
     void trackChanges() {
         $changedProperties = new LinkedHashMap<String, Object>()
     }
@@ -51,6 +52,7 @@ trait DirtyCheckable {
      *
      * @param o a given object
      */
+    @Generated
     void syncChangedProperties(Object o) {
         if (o instanceof DirtyCheckable) {
             o.trackChanges($changedProperties)
@@ -62,6 +64,7 @@ trait DirtyCheckable {
      *
      * @param changedProperties The changes.
      */
+    @Generated
     void trackChanges(Map<String, Object> changedProperties) {
         $changedProperties = changedProperties
     }
@@ -69,6 +72,7 @@ trait DirtyCheckable {
     /**
      * @return True if the instance has any changes
      */
+    @Generated
     boolean hasChanged() {
         if (this instanceof EntityProxy && !((EntityProxy) this).isInitialized()) {
             return false
@@ -82,6 +86,7 @@ trait DirtyCheckable {
      * @param propertyName The name of the property
      * @return True if the given property has any changes
      */
+    @Generated
     boolean hasChanged(String propertyName) {
         if (this instanceof EntityProxy && !((EntityProxy) this).isInitialized()) {
             return false
@@ -94,6 +99,7 @@ trait DirtyCheckable {
     /**
      * Marks the whole class and all its properties as dirty. When called any future call to any of the hasChanged methods will return true.
      */
+    @Generated
     void markDirty() {
         if ($changedProperties != null && $changedProperties.isEmpty()) {
             $changedProperties = DirtyCheckingSupport.DIRTY_CLASS_MARKER
@@ -104,6 +110,7 @@ trait DirtyCheckable {
      * Marks the given property name as dirty
      * @param propertyName The property name
      */
+    @Generated
     void markDirty(String propertyName) {
         if ($changedProperties != null && !$changedProperties.containsKey(propertyName))  {
             if (DirtyCheckingSupport.DIRTY_CLASS_MARKER.is($changedProperties)) {
@@ -118,6 +125,7 @@ trait DirtyCheckable {
      * @param propertyName The property name
      * @param newValue The new value
      */
+    @Generated
     void markDirty(String propertyName, newValue) {
         if ($changedProperties != null && !$changedProperties.containsKey(propertyName))  {
             def oldValue = ((GroovyObject) this).getProperty(propertyName)
@@ -130,6 +138,7 @@ trait DirtyCheckable {
      * @param propertyName The property name
      * @param newValue The new value
      */
+    @Generated
     void markDirty(String propertyName, newValue, oldValue) {
         if ($changedProperties != null && !$changedProperties.containsKey(propertyName))  {
             boolean isNull = newValue == null
@@ -147,6 +156,7 @@ trait DirtyCheckable {
     /**
      * @return A list of the dirty property names
      */
+    @Generated
     List<String> listDirtyPropertyNames() {
         if (this instanceof EntityProxy && !((EntityProxy) this).isInitialized()) {
             return Collections.emptyList()
@@ -166,6 +176,7 @@ trait DirtyCheckable {
      * @param propertyName The property name
      * @return The original value
      */
+    @Generated
     Object getOriginalValue(String propertyName) {
         if ($changedProperties != null && $changedProperties.containsKey(propertyName)) {
             return $changedProperties.get(propertyName)

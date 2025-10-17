@@ -21,6 +21,9 @@ package grails.gorm.time
 import spock.lang.Shared
 import spock.lang.Specification
 
+import groovy.transform.Generated
+
+import java.lang.reflect.Method
 import java.time.*
 
 class OffsetDateTimeConverterSpec extends Specification implements OffsetDateTimeConverter {
@@ -50,4 +53,15 @@ class OffsetDateTimeConverterSpec extends Specification implements OffsetDateTim
                 converted == offsetDateTime.withNano(0).withOffsetSameInstant(ZoneOffset.ofHours(-8))
     }
 
+    void "test that all OffsetDateTimeConverter/TemporalConverter trait methods are marked as Generated"() {
+        expect: "all OffsetDateTimeConverter methods are marked as Generated on implementation class"
+        OffsetDateTimeConverter.getMethods().each { Method traitMethod ->
+            assert OffsetDateTimeConverterSpec.class.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+        }
+
+        and: "all TemporalConverter methods are marked as Generated on implementation class"
+        TemporalConverter.getMethods().each { Method traitMethod ->
+            assert OffsetDateTimeConverterSpec.class.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+        }
+    }
 }

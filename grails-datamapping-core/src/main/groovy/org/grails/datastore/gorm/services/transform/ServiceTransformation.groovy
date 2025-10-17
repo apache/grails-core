@@ -108,6 +108,7 @@ import static org.grails.datastore.mapping.reflect.AstUtils.error
 import static org.grails.datastore.mapping.reflect.AstUtils.findAllUnimplementedAbstractMethods
 import static org.grails.datastore.mapping.reflect.AstUtils.findAnnotation
 import static org.grails.datastore.mapping.reflect.AstUtils.hasAnnotation
+import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.grails.datastore.mapping.reflect.AstUtils.warning
 
 /**
@@ -231,15 +232,17 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
                 BlockStatement body = block()
                 Parameter datastoreParam = param(datastoreType, 'd')
-                impl.addMethod('setDatastore', Modifier.PUBLIC, ClassHelper.VOID_TYPE, params(
+                MethodNode datastoreSetterNode = impl.addMethod('setDatastore', Modifier.PUBLIC, ClassHelper.VOID_TYPE, params(
                         datastoreParam
                 ), null, body)
+                markAsGenerated(impl, datastoreSetterNode)
                 body.addStatement(
                         assignS(datastoreFieldVar, varX(datastoreParam))
                 )
-                impl.addMethod('getDatastore', Modifier.PUBLIC, datastoreType.plainNodeReference, ZERO_PARAMETERS, null,
+                MethodNode datastoreGetterNode = impl.addMethod('getDatastore', Modifier.PUBLIC, datastoreType.plainNodeReference, ZERO_PARAMETERS, null,
                         returnS(datastoreFieldVar)
                 )
+                markAsGenerated(impl, datastoreGetterNode)
                 for (FieldNode fn in propertiesFields) {
                     body.addStatement(
                             assignS(varX(fn), callX(datastoreFieldVar, 'getService', classX(fn.type.plainNodeReference)))
@@ -311,6 +314,7 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                         }
                         implementedAnn.setMember('by', classX(implementedClass))
                         methodImpl.addAnnotation(implementedAnn)
+                        markAsGenerated(impl, methodImpl)
                         impl.addMethod(methodImpl)
                         break
                     }

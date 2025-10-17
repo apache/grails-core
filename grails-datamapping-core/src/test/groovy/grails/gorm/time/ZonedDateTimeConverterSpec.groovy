@@ -21,6 +21,9 @@ package grails.gorm.time
 import spock.lang.Shared
 import spock.lang.Specification
 
+import groovy.transform.Generated
+
+import java.lang.reflect.Method
 import java.time.*
 
 class ZonedDateTimeConverterSpec extends Specification implements ZonedDateTimeConverter {
@@ -49,4 +52,15 @@ class ZonedDateTimeConverterSpec extends Specification implements ZonedDateTimeC
         converted == zonedDateTime.withNano(0).withZoneSameInstant(ZoneOffset.ofHours(-7)) || converted == zonedDateTime.withNano(0).withZoneSameInstant(ZoneOffset.ofHours(-8))
     }
 
+    void "test that all ZonedDateTimeConverter/TemporalConverter trait methods are marked as Generated"() {
+        expect: "all ZonedDateTimeConverter methods are marked as Generated on implementation class"
+        ZonedDateTimeConverter.getMethods().each { Method traitMethod ->
+            assert ZonedDateTimeConverterSpec.class.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+        }
+
+        and: "all TemporalConverter methods are marked as Generated on implementation class"
+        TemporalConverter.getMethods().each { Method traitMethod ->
+            assert ZonedDateTimeConverterSpec.class.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+        }
+    }
 }

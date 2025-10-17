@@ -27,6 +27,8 @@ import org.codehaus.groovy.ast.MethodNode
 import org.grails.datastore.gorm.services.ServiceEnhancer
 import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
 
+import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
+
 /**
  * Abstract implementer for write operations
  *
@@ -55,6 +57,9 @@ abstract class AbstractWriteOperationImplementer extends AbstractServiceImplemen
         }
 
         doImplement(domainClassNode, abstractMethodNode, newMethodNode, targetClassNode)
+
+        markAsGenerated(targetClassNode, newMethodNode)
+
         abstractMethodNode.putNodeMetaData(IMPLEMENTED, Boolean.TRUE)
     }
 

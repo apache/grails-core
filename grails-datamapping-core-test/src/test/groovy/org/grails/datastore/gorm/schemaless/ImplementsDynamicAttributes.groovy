@@ -18,8 +18,11 @@
  */
 package org.grails.datastore.gorm.schemaless
 
+import groovy.transform.Generated
 import spock.lang.Issue
 import spock.lang.Specification
+
+import java.lang.reflect.Method
 
 
 class DynamicDomainSpec extends Specification {
@@ -41,6 +44,12 @@ class DynamicDomainSpec extends Specification {
         entity.attributes().foo == 123
     }
 
+    void "test that all DynamicAttributes trait methods are marked as Generated"() {
+        expect: "all DynamicAttributes methods are marked as Generated on implementation class"
+        DynamicAttributes.getMethods().each { Method traitMethod ->
+            assert DynamicEntity.class.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+        }
+    }
 }
 
 class DynamicEntity implements DynamicAttributes {

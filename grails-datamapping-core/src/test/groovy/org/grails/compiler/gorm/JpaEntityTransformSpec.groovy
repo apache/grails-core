@@ -18,6 +18,7 @@
  */
 package org.grails.compiler.gorm
 
+import groovy.transform.Generated
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
@@ -63,9 +64,12 @@ class Customer {
         customerClass.getAnnotation(Validated)
         customerClass.getDeclaredMethod("getId").returnType == Long
         customerClass.getDeclaredMethod("getId").getAnnotation(Transient)
+        customerClass.getDeclaredMethod("getId").isAnnotationPresent(Generated)
         cpf.getPropertyDescriptor(GormProperties.IDENTITY)
         customerClass.getDeclaredMethod('addToRelated', Object)
+        customerClass.getDeclaredMethod('addToRelated', Object).isAnnotationPresent(Generated)
         customerClass.getDeclaredMethod('removeFromRelated', Object)
+        customerClass.getDeclaredMethod('removeFromRelated', Object).isAnnotationPresent(Generated)
     }
 }
 

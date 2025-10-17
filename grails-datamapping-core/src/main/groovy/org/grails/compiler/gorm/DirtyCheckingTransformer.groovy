@@ -72,6 +72,7 @@ import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.grails.datastore.mapping.reflect.AstUtils.addAnnotationIfNecessary
 import static org.grails.datastore.mapping.reflect.AstUtils.hasAnnotation
 import static org.grails.datastore.mapping.reflect.AstUtils.isDomainClass
+import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 
 /**
  *
@@ -217,6 +218,8 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                                     null,
                                     GeneralUtils.returnS(GeneralUtils.varX(propertyField))
                             )
+
+                            markAsGenerated(classNode, getIdMethod)
                             classNode.addMethod(getIdMethod)
                             getIdMethod.addAnnotation(GormEntityTransformation.JPA_TRANSIENT_ANNOTATION_NODE)
                         }
@@ -237,6 +240,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                                 null,
                                 GeneralUtils.returnS(GeneralUtils.varX(propertyField))
                         )
+                        markAsGenerated(classNode, getVersionMethod)
                         classNode.addMethod(getVersionMethod)
                         getVersionMethod.addAnnotation(GormEntityTransformation.JPA_TRANSIENT_ANNOTATION_NODE)
                     }
@@ -262,13 +266,15 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                     if (getter == null) {
 
                         getter = classNode.addMethod(getterName, PUBLIC, returnType, ZERO_PARAMETERS, null, returnS(varX(fieldName)))
+                        markAsGenerated(classNode, getter)
 
                         getter.addAnnotation(DIRTY_CHECKED_PROPERTY_ANNOTATION_NODE)
                         staticCompilationVisitor.visitMethod(
                                 getter
                         )
                         if (booleanProperty) {
-                            classNode.addMethod(NameUtils.getGetterName(propertyName, true), PUBLIC, returnType, ZERO_PARAMETERS, null, returnS(varX(fieldName)))
+                            MethodNode methodNode = classNode.addMethod(NameUtils.getGetterName(propertyName, true), PUBLIC, returnType, ZERO_PARAMETERS, null, returnS(varX(fieldName)))
+                            markAsGenerated(classNode, methodNode)
                         }
                     }
 
@@ -309,6 +315,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                     null,
                     GeneralUtils.returnS(GeneralUtils.constX(0))
             )
+            markAsGenerated(classNode, getVersionMethod)
             classNode.addMethod(getVersionMethod)
             getVersionMethod.addAnnotation(GormEntityTransformation.JPA_TRANSIENT_ANNOTATION_NODE)
         }
@@ -362,6 +369,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
             setterBody.addStatement(assignS(propX(varX('this'), fieldName), varX(setterParameter)))
 
             setter = classNode.addMethod(setterName, PUBLIC, ClassHelper.VOID_TYPE, params(setterParameter), null, setterBody)
+            markAsGenerated(classNode, setter)
             setter.addAnnotation(DIRTY_CHECKED_PROPERTY_ANNOTATION_NODE)
             staticCompilationVisitor.visitMethod(
                     setter

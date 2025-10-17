@@ -18,6 +18,7 @@
  */
 package org.grails.datastore.mapping.services
 
+import groovy.transform.Generated
 import org.grails.datastore.mapping.core.Datastore
 
 /**
@@ -33,5 +34,15 @@ trait Service<T> {
     /**
      * The datastore that this service is related to
      */
-    Datastore datastore
+    private Datastore datastore
+
+    @Generated
+    Datastore getDatastore() {
+        return datastore
+    }
+
+    @Generated
+    void setDatastore(Datastore datastore) {
+        this.datastore = datastore
+    }
 }

@@ -17,12 +17,16 @@
  *  under the License.
  */
 package org.grails.compiler.gorm
+
 import grails.gorm.annotation.Entity
+import groovy.transform.Generated
 import org.codehaus.groovy.ast.ClassNode
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import spock.lang.Specification
+
+import java.lang.reflect.Method
 
 /**
  * @author graemerocher
@@ -63,8 +67,13 @@ class Book {
         bookClass.getMethod('startsWithA')
         bookClass.getMethod('getStartsWithB')
         bookClass.getMethod('startsWithB')
-        bookClass.getMethod('startsWithLetter', String)
 
+        and: "they are all marked as Generated"
+        bookClass.getMethod('getStartsWithA').isAnnotationPresent(Generated)
+        bookClass.getMethod('startsWithA').isAnnotationPresent(Generated)
+        bookClass.getMethod('getStartsWithB').isAnnotationPresent(Generated)
+        bookClass.getMethod('startsWithB').isAnnotationPresent(Generated)
+        bookClass.getMethod('startsWithLetter', String).isAnnotationPresent(Generated)
     }
 
     void "test parse withTransaction usage in spock"() {
@@ -175,6 +184,13 @@ class Foo {
         Book.getAnnotation(Entity)
         new Author().respondsTo('addToBooks', Book)
         new Book().hasProperty('authorId')
+
+        Author.getDeclaredMethod('addToBooks', Object).isAnnotationPresent(Generated)
+        Author.getDeclaredMethod('removeFromBooks', Object).isAnnotationPresent(Generated)
+        Author.getDeclaredMethod('setBooks', Set).isAnnotationPresent(Generated)
+        Author.getDeclaredMethod('getBooks').isAnnotationPresent(Generated)
+
+        Book.getDeclaredMethod('getAuthorId').isAnnotationPresent(Generated)
     }
 
     void "Test property/method missing"() {
@@ -187,14 +203,39 @@ class Foo {
         def var = Book.bar
         then:
         Book.getDeclaredMethod('$static_propertyMissing', String)
+        Book.getDeclaredMethod('$static_propertyMissing', String).isAnnotationPresent(Generated)
         thrown MissingPropertyException
         when:
         Book.bar = 'blah'
         then:
         Book.getDeclaredMethod('$static_propertyMissing', String, Object)
+        Book.getDeclaredMethod('$static_propertyMissing', String, Object).isAnnotationPresent(Generated)
         thrown MissingPropertyException
     }
 
+    void "test that all GormEntity/GormValidateable trait methods are marked as Generated"() {
+        expect: "all GormEntity methods are marked as Generated on implementation class"
+        GormEntity.getMethods().each { Method traitMethod ->
+            assert Book.class.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+        }
+
+        and: "all GormValidateable methods are marked as Generated on implementation class"
+        GormValidateable.getMethods().each { Method traitMethod ->
+            assert Book.class.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+        }
+    }
+
+    void "test that all DirtyCheckingTransformer added methods are marked as Generated"() {
+        expect: "added getId and getVersion methods are marked"
+        Book.getMethod('getId').isAnnotationPresent(Generated)
+        Book.getMethod('getVersion').isAnnotationPresent(Generated)
+
+        and: "getter and setter methods are marked"
+        Book.getMethod('getTitle').isAnnotationPresent(Generated)
+        Book.getMethod('setTitle', String).isAnnotationPresent(Generated)
+        Book.getMethod('getAuthor').isAnnotationPresent(Generated)
+        Book.getMethod('setAuthor', Author).isAnnotationPresent(Generated)
+    }
 }
 
 @Entity

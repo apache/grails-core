@@ -19,7 +19,7 @@
 package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
-
+import groovy.transform.Generated
 import jakarta.persistence.Transient
 
 import org.springframework.validation.Errors
@@ -42,13 +42,14 @@ trait GormValidateable {
      * The validation errors object
      */
     @Transient
-    Errors errors
+    private Errors errors
 
     /**
      * Marks this instance to skip validation
      *
      * @param shouldSkip True if validation should be skipped
      */
+    @Generated
     void skipValidation(boolean shouldSkip) {
         this.skipValidate = shouldSkip
     }
@@ -56,6 +57,7 @@ trait GormValidateable {
     /**
      * @return Whether this instance should skip validation
      */
+    @Generated
     boolean shouldSkipValidation() {
         // skip validation if validation set to true or validation handled by jakarta.validation
         return this.skipValidate
@@ -67,6 +69,7 @@ trait GormValidateable {
      * @param arguments The arguments to use
      * @return True if the instance is valid
      */
+    @Generated
     boolean validate(Map arguments) {
         currentGormValidationApi().validate(this, arguments)
     }
@@ -77,6 +80,7 @@ trait GormValidateable {
      * @param fields The list of fields to validate
      * @return True if the instance is valid
      */
+    @Generated
     boolean validate(List fields) {
         currentGormValidationApi().validate(this, fields)
     }
@@ -86,6 +90,7 @@ trait GormValidateable {
      *
      * @return True if the instance is valid
      */
+    @Generated
     boolean validate() {
         currentGormValidationApi().validate(this)
     }
@@ -94,6 +99,7 @@ trait GormValidateable {
      * Obtains the errors for an instance
      * @return The {@link Errors} instance
      */
+    @Generated
     @Transient
     Errors getErrors() {
         if (errors == null) {
@@ -102,9 +108,16 @@ trait GormValidateable {
         errors
     }
 
+    @Generated
+    @Transient
+    void setErrors(Errors errors) {
+        this.errors = errors
+    }
+
     /**
      * Clears any errors that exist on an instance
      */
+    @Generated
     void clearErrors() {
         errors = new ValidationErrors(this)
     }
@@ -113,6 +126,7 @@ trait GormValidateable {
      * Tests whether an instance has any errors
      * @return True if errors exist
      */
+    @Generated
     Boolean hasErrors() {
         getErrors().hasErrors()
     }
@@ -120,6 +134,7 @@ trait GormValidateable {
     /**
      * Used to obtain the {@link GormValidationApi} instance. This method is used internally by the framework and SHOULD NOT be called by the developer
      */
+    @Generated
     private GormValidationApi currentGormValidationApi() {
         GormEnhancer.findValidationApi(getClass())
     }

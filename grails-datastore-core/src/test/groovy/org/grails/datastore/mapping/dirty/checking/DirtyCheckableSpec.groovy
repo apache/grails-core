@@ -18,10 +18,12 @@
  */
 package org.grails.datastore.mapping.dirty.checking
 
-
 import groovy.transform.Sortable
+import groovy.transform.Generated
 import spock.lang.Issue
 import spock.lang.Specification
+
+import java.lang.reflect.Method
 
 class DirtyCheckableSpec extends Specification {
 
@@ -76,6 +78,13 @@ class DirtyCheckableSpec extends Specification {
         animal.hasChanged()
         animal.hasChanged("barks")
 
+    }
+
+    void "test that all DirtyCheckable trait methods are marked as Generated"() {
+        expect: "all DirtyCheckable methods are marked as Generated on implementation class"
+        DirtyCheckable.getMethods().each { Method traitMethod ->
+            assert Animal.class.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+        }
     }
 }
 

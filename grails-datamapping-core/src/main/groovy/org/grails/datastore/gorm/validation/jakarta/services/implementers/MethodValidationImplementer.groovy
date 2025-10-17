@@ -49,6 +49,7 @@ import org.grails.datastore.gorm.validation.jakarta.ConfigurableParameterNamePro
 import org.grails.datastore.gorm.validation.jakarta.services.ValidatedService
 import org.grails.datastore.mapping.reflect.ClassUtils
 
+import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.codehaus.groovy.ast.ClassHelper.CLASS_Type
 import static org.codehaus.groovy.ast.ClassHelper.OBJECT_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.make
@@ -196,6 +197,7 @@ class MethodValidationImplementer implements ServiceEnhancer {
         if (constructorNode == null) {
             constructorNode = new ConstructorNode(Modifier.PUBLIC, ZERO_PARAMETERS, null, new BlockStatement())
             innerClassNode.addConstructor(constructorNode)
+            markAsGenerated(innerClassNode, constructorNode)
         }
         BlockStatement constructorBody = (BlockStatement) constructorNode.code
         constructorBody.addStatement(

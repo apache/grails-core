@@ -25,6 +25,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 
 import groovy.transform.CompileStatic
+import groovy.transform.Generated
 
 /**
  * A trait to convert a {@link java.time.LocalDateTime} to and from a long
@@ -35,11 +36,13 @@ import groovy.transform.CompileStatic
 trait LocalDateTimeConverter implements TemporalConverter<LocalDateTime> {
 
     @Override
+    @Generated
     Long convert(LocalDateTime value) {
         value.toInstant(ZoneOffset.UTC).toEpochMilli()
     }
 
     @Override
+    @Generated
     LocalDateTime convert(Long value) {
         LocalDateTime.ofInstant(Instant.ofEpochMilli(value), ZoneId.of('UTC'))
     }

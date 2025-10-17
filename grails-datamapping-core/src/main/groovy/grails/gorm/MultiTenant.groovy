@@ -20,7 +20,7 @@
 package grails.gorm
 
 import groovy.transform.CompileStatic
-
+import groovy.transform.Generated
 import grails.gorm.api.GormAllOperations
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -41,6 +41,7 @@ trait MultiTenant<D> extends Entity {
      * @param callable The closure
      * @return The result of the closure
      */
+    @Generated
     static <T> T withTenant(Serializable tenantId, Closure<T> callable) {
         GormEnhancer.findStaticApi(this).withTenant(tenantId, callable)
     }
@@ -51,6 +52,7 @@ trait MultiTenant<D> extends Entity {
      * @param callable The closure
      * @return The result of the closure
      */
+    @Generated
     static <D> GormAllOperations eachTenant(Closure callable) {
         GormEnhancer.findStaticApi(this, ConnectionSource.DEFAULT).eachTenant(callable)
     }
@@ -61,6 +63,7 @@ trait MultiTenant<D> extends Entity {
      * @param tenantId The tenant id
      * @return The operations
      */
+    @Generated
     static <D> GormAllOperations<D> withTenant(Serializable tenantId) {
         (GormAllOperations<D>) GormEnhancer.findStaticApi(this).withTenant(tenantId)
     }
