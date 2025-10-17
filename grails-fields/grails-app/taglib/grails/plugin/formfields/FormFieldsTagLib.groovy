@@ -951,11 +951,11 @@ class FormFieldsTagLib {
                 g.formatBoolean(boolean: model.value)
                 break
             case LocalDate:
+            case java.sql.Date:
                 g.formatDate(date: model.value, format: 'yyyy-MM-dd')
                 break
             case Calendar:
             case Date:
-            case java.sql.Date:
             case java.sql.Time:
             case LocalDateTime:
             case Instant:
