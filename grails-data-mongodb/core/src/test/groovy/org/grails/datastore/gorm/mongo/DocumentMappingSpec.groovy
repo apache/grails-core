@@ -32,7 +32,7 @@ import static grails.mongodb.mapping.MappingBuilder.document
  */
 class DocumentMappingSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([CustomMapping])
+        manager.addAllDomainClasses([CustomMapping])
     }
 
     void "test custom document mapping"() {

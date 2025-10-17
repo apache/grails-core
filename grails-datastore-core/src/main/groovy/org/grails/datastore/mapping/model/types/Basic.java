@@ -14,11 +14,6 @@
  */
 package org.grails.datastore.mapping.model.types;
 
-import java.beans.PropertyDescriptor;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.engine.internal.MappingUtils;
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
@@ -26,6 +21,12 @@ import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
+
+import java.beans.PropertyDescriptor;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Models a basic collection type such as a list of Strings
@@ -84,6 +85,10 @@ public abstract class Basic<T extends Property> extends ToMany<T> {
 
     public Class getComponentType() {
         return componentType;
+    }
+
+    public boolean isEnum() {
+       return Optional.ofNullable(componentType).map(Class::isEnum).orElse(false);
     }
 
     @Override

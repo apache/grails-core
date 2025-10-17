@@ -1,0 +1,43 @@
+===== dbm-diff
+
+====== Purpose
+
+Compares two databases and creates a changelog that will make the changes required to bring them into sync.
+
+====== Description
+
+Executes against the database configured in `application.[yml|groovy]`  for the current environment (defaults to `dev`) and another configured datasource in `application.[yml|groovy]`.
+
+If a filename parameter is specified then the output will be written to the named file, otherwise it will be written to the console. If the filename ends with .groovy a Groovy DSL file will be created, otherwise a standard XML file will be created.
+
+File are written to the migrations folder, so specify the filename relative to the migrations folder (`grails-app/migrations` by default).
+
+Usage:
+[source,java]
+----
+grails <<environment>> dbm-diff <<otherEnv>> <<filename>> --defaultSchema=<<defaultSchema>> --dataSource=<<dataSource>> --add
+----
+
+Required arguments:
+
+* `otherEnv` - The name of the environment to compare to
+
+Optional arguments:
+
+* `filename` - The path to the output file to write to. If not specified output is written to the console
+* `defaultSchema` - The default schema name to use
+* `add` - If specified add an include in the root changelog file referencing the new file
+* `dataSource` - If provided will run the script for the specified dataSource. Not needed for the default dataSource.
+
+NOTE: Note that the `defaultSchema` and `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
+[source,groovy]
+----
+grails dbm-diff "--defaultSchema=<<defaultSchema>>" "--dataSource=<<dataSource>>"
+----
+
+NOTE: For the `dataSource` parameter, if the data source is configured as `reports` underneath the `dataSources` key in `application.[yml|groovy]`, the value should be `reports`.
+
+[source,groovy]
+----
+--dataSource=reports
+----

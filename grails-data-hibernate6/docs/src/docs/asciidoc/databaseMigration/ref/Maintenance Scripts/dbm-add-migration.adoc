@@ -1,0 +1,22 @@
+===== dbm-add-migration
+
+====== Purpose
+
+Adds a template migration file to your project and to the changelog file.
+
+====== Description
+
+This script provides a template in which to place your migration behaviour code, whether
+Grails code or raw SQL.
+
+Usage:
+[source,java]
+----
+grails <<environment>> dbm-add-migration <<migrationName>>
+----
+
+Required arguments:
+
+* `migrationName` - The name of the migration - will be used as a filename and the default migration id.
+
+NOTE: This script only supports .groovy-style migrations at the moment.

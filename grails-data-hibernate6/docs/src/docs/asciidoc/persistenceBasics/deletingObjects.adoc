@@ -1,0 +1,49 @@
+An example of the link:../api/org/grails/datastore/gorm/GormEntity.html#delete()[delete()] method can be seen below:
+
+[source,groovy]
+----
+def p = Person.get(1)
+p.delete()
+----
+
+As with saves, Hibernate will use transactional write-behind to perform the delete; to perform the delete in-place you can use the `flush` argument:
+
+[source,groovy]
+----
+def p = Person.get(1)
+p.delete(flush: true)
+----
+
+Using the `flush` argument lets you catch any errors that occur during a delete. A common error that may occur is if you violate a database constraint, although this is normally down to a programming or schema error. The following example shows how to catch a `DataIntegrityViolationException` that is thrown when you violate the database constraints:
+
+[source,java]
+----
+import org.springframework.dao.*
+
+def p = Person.get(1)
+
+try {
+    p.delete(flush: true)
+}
+catch (DataIntegrityViolationException e) {
+    // handle the error
+}
+----
+
+In order to perform a batch delete there are a couple of ways to achieve that. One way is to use a <<whereQueries, Where Query>>:
+
+[source,groovy]
+----
+Person.where {
+	name == "Fred"
+}.deleteAll()
+----
+
+Another alternative is to use an HQL statement within the link:../api/org/grails/datastore/gorm/GormEntity.html#executeUpdate(java.lang.String)[executeUpdate(...)] method:
+
+[source,groovy]
+----
+Customer.executeUpdate("delete Customer c where c.name = :oldName",
+                       [oldName: "Fred"])
+----
+

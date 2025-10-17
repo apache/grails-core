@@ -1,0 +1,331 @@
+Criteria is an advanced way to query that uses a Groovy builder to construct potentially complex queries. It is a much better approach than building up query strings using a `StringBuilder`.
+
+Criteria can be used either with the link:../api/org/grails/datastore/gorm/GormEntity.html#createCriteria()[createCriteria()] or link:../api/org/grails/datastore/gorm/GormEntity.html#withCriteria(groovy.lang.Closure)[withCriteria(closure)] methods.
+
+The builder uses Hibernate's Criteria API. The nodes on this builder map the static methods found in the https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/criterion/Restrictions.html[Restrictions] class of the Hibernate Criteria API. For example:
+
+[source,groovy]
+----
+def c = Account.createCriteria()
+def results = c {
+    between("balance", 500, 1000)
+    eq("branch", "London")
+    or {
+        like("holderFirstName", "Fred%")
+        like("holderFirstName", "Barney%")
+    }
+    maxResults(10)
+    order("holderLastName", "desc")
+}
+----
+
+This criteria will select up to 10 `Account` objects in a List matching the following criteria:
+
+* `balance` is between 500 and 1000
+* `branch` is 'London'
+* `holderFirstName` starts with 'Fred' or 'Barney'
+
+The results will be sorted in descending order by `holderLastName`.
+
+If no records are found with the above criteria, an empty List is returned.
+
+
+==== Conjunctions and Disjunctions
+
+
+As demonstrated in the previous example you can group criteria in a logical OR using an `or { }` block:
+
+[source,java]
+----
+or {
+    between("balance", 500, 1000)
+    eq("branch", "London")
+}
+----
+
+This also works with logical AND:
+
+[source,java]
+----
+and {
+    between("balance", 500, 1000)
+    eq("branch", "London")
+}
+----
+
+And you can also negate using logical NOT:
+
+[source,java]
+----
+not {
+    and{
+        between("balance", 500, 1000)
+        eq("branch", "London")
+    }
+
+}
+----
+
+In previous release all top level conditions weere implied to be AND'd together, but this is not supported anymore
+
+
+==== Querying Associations
+
+
+Associations can be queried by having a node that matches the property name. For example say the `Account` class had many `Transaction` objects:
+
+[source,groovy]
+----
+class Account {
+    ...
+    static hasMany = [transactions: Transaction]
+    ...
+}
+----
+
+We can query this association by using the property name `transactions` as a builder node:
+
+[source,java]
+----
+def c = Account.createCriteria()
+def now = new Date()
+def results = c.list {
+    transactions {
+        between('date', now - 10, now)
+    }
+}
+----
+
+The above code will find all the `Account` instances that have performed `transactions` within the last 10 days.
+You can also nest such association queries within logical blocks:
+
+[source,java]
+----
+def c = Account.createCriteria()
+def now = new Date()
+def results = c.list {
+    or {
+        between('created', now - 10, now)
+        transactions {
+            between('date', now - 10, now)
+        }
+    }
+}
+----
+
+Here we find all accounts that have either performed transactions in the last 10 days OR have been recently created in the last 10 days.
+
+
+==== Querying with Projections
+
+
+Projections may be used to customise the results. Define a "projections" node within the criteria builder tree to use projections. There are equivalent methods within the projections node to the methods found in the Hibernate https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/criterion/Projections.html[Projections] class:
+
+[source,java]
+----
+def c = Account.createCriteria()
+
+def numberOfBranches = c.get {
+    projections {
+        countDistinct('branch')
+    }
+}
+----
+
+When multiple fields are specified in the projection, a List of values will be returned. A single value will be returned otherwise.
+
+
+==== Transforming Projection Results
+
+
+If the raw value or simple object array returned by the criteria method doesn't suit your needs, the result can be transformed with a https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/transform/ResultTransformer.html[ResultTransformer]. Let's say we want to transform the criteria results into a Map so that we can easily reference values by key:
+
+[source,java]
+----
+def c = Account.createCriteria()
+
+def accountsOverview = c.get {
+    resultTransformer(CriteriaSpecification.ALIAS_TO_ENTITY_MAP)
+    projections {
+        sum('balance', 'allBalances')
+        countDistinct('holderLastName', 'lastNames')
+    }
+}
+
+// accountsOverview.allBalances
+// accountsOverview.lastNames
+----
+
+Note that we've added an alias to each projection as an additional parameter to be used as the key. For this to work, all projections must have aliases defined, otherwise the corresponding map entry will not be built.
+
+We can also transform the result into an object of our choosing via the https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/transform/Transformers.html#aliasToBean-java.lang.Class-[Transformers.aliasToBean()] method. In this case, we'll transform it into an `AccountsOverview`:
+
+[source,java]
+----
+class AccountsOverview {
+    Number allBalances
+    Number lastNames
+}
+----
+
+[source,java]
+----
+def c = Account.createCriteria()
+
+def accountsOverview = c.get {
+    resultTransformer(Transformers.aliasToBean(AccountsOverview))
+    projections {
+        sum('balance', 'allBalances')
+        countDistinct('holderLastName', 'lastNames')
+    }
+}
+
+// accountsOverview instanceof AccountsOverview
+----
+
+Each alias must have a corresponding property or explicit setter on the bean otherwise an exception will be thrown.
+
+
+==== SQL Projections are not supported in Hibernate 6
+
+
+
+==== sqlRestriction have been removed from Hibernate 6
+
+
+
+
+
+
+==== Using Scrollable Results
+
+
+You can use Hibernate's https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/ScrollableResults.html[ScrollableResults] feature by calling the scroll method:
+
+[source,java]
+----
+def results = crit.scroll {
+    maxResults(10)
+}
+results.last()
+m =results.get()
+results.previous()
+j = results.get()
+results.first()
+f = results.get()
+results.next()
+b = results.get()
+
+def future = results.scroll(10)
+def g = results.get()
+----
+
+To quote the documentation of Hibernate ScrollableResults:
+
+____
+A result iterator that allows moving around within the results by arbitrary increments. The Query / ScrollableResults pattern is very similar to the JDBC PreparedStatement / ResultSet pattern and the semantics of methods of this interface are similar to the similarly named methods on ResultSet.
+____
+
+Contrary to JDBC, columns of results are numbered from zero.
+
+
+==== The Criteria API is not part of Hibernate 6
+
+
+
+
+
+==== Querying with Eager Fetching
+
+
+In the section on <<fetching,Eager and Lazy Fetching>> we discussed how to declaratively specify fetching to avoid the N+1 SELECT problem. However, this can also be achieved using a criteria query:
+
+[source,java]
+----
+def criteria = Task.createCriteria()
+def tasks = criteria.list{
+    eq "assignee.id", task.assignee.id
+    join 'assignee'
+    join 'project'
+    order 'priority', 'asc'
+}
+----
+
+Notice the usage of the `join` method: it tells the criteria API to use a `JOIN` to fetch the named associations with the `Task` instances. It's probably best not to use this for one-to-many associations though, because you will most likely end up with duplicate results. Instead, use the 'select' fetch mode:
+[source,groovy]
+----
+import org.hibernate.FetchMode as FM
+...
+def results = Airport.withCriteria {
+    eq "region", "EMEA"
+    fetchMode "flights", FM.SELECT
+}
+----
+Although this approach triggers a second query to get the `flights` association, you will get reliable results  - even with the `maxResults` option.
+
+NOTE: `fetchMode` and `join` are general settings of the query and can only be specified at the top-level, i.e. you cannot use them inside projections or association constraints.
+
+An important point to bear in mind is that if you include associations in the query constraints, those associations will automatically be eagerly loaded. For example, in this query:
+[source,groovy]
+----
+def results = Airport.withCriteria {
+    eq "region", "EMEA"
+    flights {
+        like "number", "BA%"
+    }
+}
+----
+the `flights` collection would be loaded eagerly via a join even though the fetch mode has not been explicitly set.
+
+
+==== Method Reference
+
+
+If you invoke the builder with no method name such as:
+
+[source,java]
+----
+c { ... }
+----
+
+The build defaults to listing all the results and hence the above is equivalent to:
+
+[source,java]
+----
+c.list { ... }
+----
+
+[format="csv", options="header"]
+|===
+
+Method,Description
+*list*,This is the default method. It returns all matching rows.
+*get*,Returns a unique result set i.e. just one row. The criteria has to be formed in a way that it only queries one row. This method is not to be confused with a limit to just the first row.
+*scroll*,Returns a scrollable result set.
+*listDistinct*,If subqueries or associations are used one may end up with the same row multiple times in the result set. This allows listing only distinct entities and is equivalent to `DISTINCT_ROOT_ENTITY` of the https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/criterion/CriteriaSpecification.html[CriteriaSpecification] class.
+*count*,Returns the number of matching rows.
+|===
+
+
+==== Combining Criteria
+
+
+You can combine multiple criteria closures in the following way:
+
+[source,java]
+----
+def emeaCriteria = {
+    eq "region", "EMEA"
+}
+
+def results = Airport.withCriteria {
+    emeaCriteria.delegate = delegate
+    emeaCriteria()
+    flights {
+        like "number", "BA%"
+    }
+}
+----
+
+This technique requires that each criteria must refer to the same domain class (i.e. `Airport`).
+A more flexible approach is to use Detached Criteria, as described in the following section.

@@ -1,0 +1,37 @@
+===== dbm-tag
+
+====== Purpose
+
+Adds a tag to mark the current database state.
+
+====== Description
+
+Useful for future rollbacks to a specific tag (e.g. using the <<ref-rollback-scripts-dbm-rollback,dbm-rollback>> script).
+
+Usage:
+[source,java]
+----
+grails <<environment>> dbm-tag <<tagName>> --defaultSchema=<<defaultSchema>> --dataSource=<<dataSource>>
+----
+
+Required arguments:
+
+* `tagName` - The name of the tag to use
+
+Optional arguments:
+
+* `defaultSchema` - The default schema name to use
+* `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
+
+NOTE: Note that the `defaultSchema` and `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
+[source,groovy]
+----
+grails dbm-tag "--defaultSchema=<<defaultSchema>>" "--dataSource=<<dataSource>>"
+----
+
+NOTE: For the `dataSource` parameter, if the data source is configured as `reports` underneath the `dataSources` key in `application.[yml|groovy]`, the value should be `reports`.
+
+[source,groovy]
+----
+--dataSource=reports
+----

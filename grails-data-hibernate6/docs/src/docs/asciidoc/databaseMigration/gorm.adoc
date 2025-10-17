@@ -1,0 +1,25 @@
+=== GORM Support
+
+The plugin's support for GORM is one feature that differentiates it from using Liquibase directly. Typically, when using Liquibase you make changes to a database yourself, and then create changesets manually, or use a diff script to compare your updated database to one that hasn't been updated yet. This is a decent amount of work and is rather error-prone. It's easy to forget some changes that aren't required but help performance, for example creating an index on a foreign key when using MySQL.
+
+*create-drop, create, and update*
+
+On the other end of the spectrum, Hibernate's `create-drop` mode (or `create`) will create a database that matches your domain model, but it's destructive since all previous data is lost when it runs. This works well in the very early stages of development but gets frustrating quickly. Unfortunately Hibernate's `update` mode seems like a good compromise since it only makes changes to your existing schema, but it's very limited in what it will do. It's very pessimistic and won't make any changes that could lose data. So it will add new tables and columns, but won't drop anything. If you remove a not-null domain class property you'll find you can't insert anymore since the column is still there. And it will create not-null columns as nullable since otherwise existing data would be invalid. It won't even widen a column e.g. from `VARCHAR(100)` to `VARCHAR(200)`.
+
+*dbm-gorm-diff*
+
+The plugin provides a script that will compare your GORM current domain model with a database that you specify, and the result is a Liquibase changeset - `dbm-gorm-diff`. This is the same changeset you would get if you exported your domain model to a scratch database and diffed it with the other database, but it's more convenient.
+
+So a good workflow would be:
+
+* make whatever domain class changes you need (add new ones, delete unneeded ones, add/change/remove properties, etc.)
+* once your tests pass, and you're ready to commit your changes to source control, run the script to generate the changeset that will bring your database back in line with your code
+* add the changeset to an existing changelog file, or use the `include` tag to include the whole file
+* run the changeset on your functional test database
+* assuming your functional tests pass, check everything in as one commit
+* the other members of your team will get both the code and database changes when they next update, and will know to run the update script to sync their database with the latest code
+* once you're ready to deploy to QA for testing (or staging or production), you can run all the un-run changes since the last deployment
+
+*dbm-generate-gorm-changelog*
+
+The <<ref-rollback-scripts-dbm-generate-gorm-changelog,dbm-generate-gorm-changelog>> script is useful for when you want to switch from `create-drop` mode to doing proper migrations. It's not very useful if you already have a database that's in sync with your code, since you can just use the <<ref-rollback-scripts-dbm-generate-changelog,dbm-generate-changelog>> script that creates a changelog from your database.

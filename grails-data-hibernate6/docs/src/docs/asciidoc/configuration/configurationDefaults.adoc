@@ -1,0 +1,40 @@
+The `grails.gorm.default.mapping` and `grails.gorm.default.constraints` settings deserve special mention. These define the default <<ormdsl, ORM mapping>> and the default <<constraints, Validation Constraints>> used by each entity.
+
+==== Altering the Default Database Mapping
+
+You may have reason to want to change how all domain classes map to the database. For example, by default GORM uses the `native` id generation strategy of the database, whether that be an auto-increment column or a sequence.
+
+If you wish to globally change all domain classes to use a `uuid` strategy then you can specify that in the default mapping:
+
+[source,groovy]
+.grails-app/conf/application.groovy
+----
+grails.gorm.default.mapping = {
+	cache true
+	id generator:'uuid'
+}
+----
+
+As you can see you can assign a closure that is equivalent to the `mapping` block used to <<ormdsl, customize how a domain class maps to a database table>>.
+
+NOTE: Because the setting is Groovy configuration it must go into a Groovy-aware configuration format. This can be `grails-app/conf/application.groovy` in Grails, or `src/main/resources/application.groovy` in Spring Boot.
+
+==== Altering the Default Constraints
+
+For validation, GORM applies a default set of <<constraints, constraints>> to all domain classes.
+
+For example, by default all properties of GORM classes are not nullable by default. This means a value has to be supplied for each property, otherwise you will get a validation error.
+
+In most cases this is what you want, but if you are dealing with a large number of columns, it may prove inconvinient.
+
+You can alter the default constraints using Groovy configuration using the `grails.gorm.default.constraints` setting:
+
+[source,groovy]
+.grails-app/conf/application.groovy
+----
+grails.gorm.default.constraints = {
+    '*'(nullable: true, size: 1..20)
+}
+----
+
+In the above example, all properties are allowed to be `nullable` by default, but limited to a size of between 1 and 20.

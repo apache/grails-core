@@ -1,0 +1,1 @@
+The full documentation for GORM for Hibernate can be found in the https://grails.org/doc/latest/guide/GORM.html[Grails User Guide], this documentation serves to explain how to get started with GORM for Hibernate with or without Grails and to document release notes.

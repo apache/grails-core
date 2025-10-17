@@ -18,46 +18,49 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import grails.persistence.Entity
 import org.apache.grails.data.testing.tck.domains.Face
 import org.apache.grails.data.testing.tck.domains.Nose
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.Pet
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.model.types.OneToOne
 
 class OneToOneSpec extends GrailsDataTckSpec {
 
-    def 'Test persist and retrieve unidirectional many-to-one'() {
-        given: 'A domain model with a many-to-one'
-        def person = new Person(firstName: 'Fred', lastName: 'Flintstone')
-        def pet = new Pet(name: 'Dino', owner: person)
-        person.save()
-        pet.save(flush: true)
-        manager.session.clear()
-
-        when: 'The association is queried'
-        pet = Pet.findByName('Dino')
-
-        then: 'The domain model is valid'
-        pet != null
-        pet.name == 'Dino'
-        pet.ownerId == person.id
-        pet.owner.firstName == 'Fred'
+    void setupSpec() {
+        manager.addAllDomainClasses([Face, Nose, Person, Pet, OwnerEntity, OwnedEntity])
     }
 
-    def 'Test persist and retrieve one-to-one with inverse key'() {
-        given: 'A domain model with a one-to-one'
-        def face = new Face(name: 'Joe')
+    def "Test persist and retrieve unidirectional many-to-one"() {
+        given: "A domain model with a many-to-one"
+        def oneToManyEntity = new OwnerEntity()
+        def manyToOneEntity = new OwnedEntity(oneToMany: oneToManyEntity)
+        oneToManyEntity.save()
+        manyToOneEntity.save(flush: true)
+        manager.session.clear()
+
+        when: "The association is queried"
+        manyToOneEntity = OwnedEntity.list()[0]
+
+        then: "The domain model is valid"
+        manyToOneEntity != null
+        manyToOneEntity.oneToMany.id == oneToManyEntity.id
+    }
+
+    def "Test persist and retrieve one-to-one with inverse key"() {
+        given: "A domain model with a one-to-one"
+        def face = new Face(name: "Joe")
         def nose = new Nose(hasFreckles: true, face: face)
         face.nose = nose
         face.save(flush: true)
         manager.session.clear()
 
-        when: 'The association is queried'
+        when: "The association is queried"
         face = Face.get(face.id)
         def association = Face.gormPersistentEntity.getPropertyByName('nose')
 
-        then: 'The domain model is valid'
+        then: "The domain model is valid"
         association instanceof OneToOne
         association.bidirectional
         association.associatedEntity.javaClass == Nose
@@ -66,14 +69,27 @@ class OneToOneSpec extends GrailsDataTckSpec {
         face.nose != null
         face.nose.hasFreckles == true
 
-        when: 'The inverse association is queried'
+        when: "The inverse association is queried"
         manager.session.clear()
         nose = Nose.get(nose.id)
 
-        then: 'The domain model is valid'
+        then: "The domain model is valid"
         nose != null
         nose.hasFreckles == true
         nose.face != null
-        nose.face.name == 'Joe'
+        nose.face.name == "Joe"
     }
+}
+
+@Entity
+class OwnerEntity {
+
+}
+
+@Entity
+class OwnedEntity {
+    OwnerEntity oneToMany
+
+    static belongsTo = [oneToMany: OwnerEntity]
+
 }

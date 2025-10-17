@@ -1,0 +1,36 @@
+===== dbm-changelog-sync
+
+====== Purpose
+
+Mark all changes as executed in the database.
+
+====== Description
+
+Registers all changesets as having been run in the Liquibase control table. This is useful when the changes have already been applied, for example if you've just created a changelog from your database using the <<ref-rollback-scripts-dbm-generate-changelog,dbm-generate-changelog>> script.
+
+Usage:
+[source,java]
+----
+grails <<environment>> dbm-changelog-sync --contexts=<<contexts>> --defaultSchema=<<defaultSchema>> --dataSource=<<dataSource>>
+----
+
+Required arguments: __none__.
+
+Optional arguments:
+
+* `contexts` - A comma-delimited list of http://www.liquibase.org/manual/contexts[context] names. If specified, only changesets tagged with one of the context names will be included
+* `defaultSchema` - The default schema name to use
+* `dataSource` - If provided will run the script for the specified dataSource. Not needed for the default dataSource.
+
+NOTE: Note that the `contexts`, `defaultSchema`, and `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
+[source,groovy]
+----
+grails dbm-changelog-sync "--contexts=<<contexts>>" "--defaultSchema=<<defaultSchema>>" "--dataSource=<<dataSource>>"
+----
+
+NOTE: For the `dataSource` parameter, if the data source is configured as `reports` underneath the `dataSources` key in `application.[yml|groovy]`, the value should be `reports`.
+
+[source,groovy]
+----
+--dataSource=reports
+----

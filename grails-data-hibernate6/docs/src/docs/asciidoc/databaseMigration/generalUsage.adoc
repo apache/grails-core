@@ -1,0 +1,95 @@
+=== General Usage
+
+After creating the initial changelog, the typical workflow will be along the lines of:
+
+* make domain class changes that affect the schema
+* add changes to the changelog for them
+* backup your database in case something goes wrong
+* run `grails dbm-update` to update your development environment (or wherever you're applying the changes)
+* check the updated domain class(es) and changelog(s) into source control
+
+[WARNING]
+=====
+1. When running migration scripts on non-development databases, it's important that you backup the database before running the migration in case anything goes wrong. You could also make a copy of the database and run the script against that, and if there's a problem the real database will be unaffected.
+2. Setting the dbCreate setting to "none" is recommended when executing the dbm migration commands. Otherwise you might run into troubles and the commands could not be executed.
+=====
+
+To create the changelog additions, you can either manually create the changes or with the <<ref-diff-scripts-dbm-gorm-diff,dbm-gorm-diff>> script (you can also use the <<ref-diff-scripts-dbm-diff,dbm-diff>> script but it's far less convenient and requires a 2nd temporary database).
+
+You have a few options with `dbm-gorm-diff`:
+
+* `dbm-gorm-diff` will dump to the console if no filename is specified, so you can copy/paste from there
+* if you include the `--add` parameter when running the script with a filename it will register an include for the filename in the main changelog for you
+
+Regardless of which approach you use, be sure to inspect generated changes and adjust as necessary.
+
+
+==== Autorun on start
+
+
+Since Liquibase maintains a record of changes that have been applied, you can avoid manually updating the database by taking advantage of the plugin's auto-run feature. By default this is disabled, but you can enable it by adding
+
+[source,groovy]
+----
+grails.plugin.databasemigration.updateOnStart = true
+----
+
+to application.groovy. In addition you must specify the file containing changes; specify the name using the `updateOnStartFileName` property, e.g.:
+
+[source,groovy]
+----
+grails.plugin.databasemigration.updateOnStartFileName = 'changelog.groovy'
+----
+
+Since changelogs can contain changelogs you'll most often just specify the root changelog, changelog.groovy by convention. Any changes that haven't been executed (in the specified file(s) or files included by them) will be run in the order specified.
+
+You may optionally limit the plugin's auto-run feature to run only specific contexts. If this configuration parameter is empty or omitted, all contexts will be run.
+
+[source,groovy]
+----
+grails.plugin.databasemigration.updateOnStartContexts = ['context1,context2']
+----
+
+You can be notified when migration are run (for example to do some work before and/or after the migrations execute) by registering a "callback" class as a Spring bean. The class can have any name and package and doesn't have to implement any interface since its methods will be called using Groovy duck-typing.
+
+The bean name is "migrationCallbacks" and there are currently three callback methods supported (all are optional):
+
+* `beforeStartMigration` will be called (if it exists) for each datasource before any migrations have run; the method will be passed a single argument, the Liquibase `Database` for that datasource
+* `onStartMigration` will be called (if it exists) for each migration script; the method will be passed three arguments, the Liquibase `Database`, the `Liquibase` instance, and the changelog file name
+* `afterMigrations` will be called (if it exists) for each datasource after all migrations have run; the method will be passed a single argument, the Liquibase `Database` for that datasource
+
+An example class will look like this:
+
+[source,groovy]
+----
+package com.mycompany.myapp
+
+import liquibase.Liquibase
+import liquibase.database.Database
+
+class MigrationCallbacks {
+
+   void beforeStartMigration(Database Database) {
+      ...
+   }
+
+   void onStartMigration(Database database, Liquibase liquibase, String changelogName) {
+      ...
+   }
+
+   void afterMigrations(Database Database) {
+      ...
+   }
+}
+----
+
+Register it in resources.groovy:
+
+[source,groovy]
+----
+import com.mycompany.myapp.MigrationCallbacks
+
+beans = {
+   migrationCallbacks(MigrationCallbacks)
+}
+----

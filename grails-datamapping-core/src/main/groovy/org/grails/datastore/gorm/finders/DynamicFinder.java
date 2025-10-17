@@ -14,33 +14,27 @@
  */
 package org.grails.datastore.gorm.finders;
 
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
+import grails.gorm.DetachedCriteria;
 import groovy.lang.Closure;
 import groovy.lang.MissingMethodException;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
+import java.lang.reflect.Constructor;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.JoinType;
 
-import org.springframework.core.convert.ConversionException;
-import org.springframework.core.convert.ConversionService;
-import org.springframework.util.StringUtils;
-
-import grails.gorm.DetachedCriteria;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.grails.datastore.gorm.finders.MethodExpression.Between;
 import org.grails.datastore.gorm.finders.MethodExpression.Equal;
 import org.grails.datastore.gorm.finders.MethodExpression.GreaterThan;
 import org.grails.datastore.gorm.finders.MethodExpression.GreaterThanEquals;
 import org.grails.datastore.gorm.finders.MethodExpression.Ilike;
 import org.grails.datastore.gorm.finders.MethodExpression.InList;
+import org.grails.datastore.gorm.finders.MethodExpression.NotInList;
 import org.grails.datastore.gorm.finders.MethodExpression.InRange;
 import org.grails.datastore.gorm.finders.MethodExpression.IsEmpty;
 import org.grails.datastore.gorm.finders.MethodExpression.IsNotEmpty;
@@ -50,10 +44,10 @@ import org.grails.datastore.gorm.finders.MethodExpression.LessThan;
 import org.grails.datastore.gorm.finders.MethodExpression.LessThanEquals;
 import org.grails.datastore.gorm.finders.MethodExpression.Like;
 import org.grails.datastore.gorm.finders.MethodExpression.NotEqual;
-import org.grails.datastore.gorm.finders.MethodExpression.NotInList;
 import org.grails.datastore.gorm.finders.MethodExpression.Rlike;
 import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria;
 import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Basic;
@@ -62,7 +56,9 @@ import org.grails.datastore.mapping.query.api.BuildableCriteria;
 import org.grails.datastore.mapping.query.api.QueryArgumentsAware;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.datastore.mapping.reflect.NameUtils;
-
+import org.springframework.core.convert.ConversionException;
+import org.springframework.core.convert.ConversionService;
+import org.springframework.util.StringUtils;
 /**
  * Abstract base class for dynamic finders.
  *
@@ -100,7 +96,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
     private static final Object[] EMPTY_OBJECT_ARRAY = {};
 
     private static final String NOT = "Not";
-    private static final Map<String, Constructor> methodExpressions = new LinkedHashMap<>();
+    private static final Map<String, Constructor> methodExpressions = new LinkedHashMap<String, Constructor>();
     protected final MappingContext mappingContext;
 
     static {
@@ -113,11 +109,10 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         // populate the default method expressions
         try {
             Class[] classes = {
-                Equal.class, NotEqual.class, NotInList.class, InList.class, InRange.class, Between.class, Like.class, Ilike.class, Rlike.class,
-                GreaterThanEquals.class, LessThanEquals.class, GreaterThan.class,
-                LessThan.class, IsNull.class, IsNotNull.class, IsEmpty.class,
-                IsEmpty.class, IsNotEmpty.class
-            };
+                      Equal.class, NotEqual.class, NotInList.class, InList.class, InRange.class, Between.class, Like.class, Ilike.class, Rlike.class,
+                      GreaterThanEquals.class, LessThanEquals.class, GreaterThan.class,
+                      LessThan.class, IsNull.class, IsNotNull.class, IsEmpty.class,
+                      IsEmpty.class, IsNotEmpty.class };
             Class[] constructorParamTypes = { Class.class, String.class };
             for (Class c : classes) {
                 methodExpressions.put(c.getSimpleName(), c.getConstructor(constructorParamTypes));
@@ -180,9 +175,9 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
      * @return The match specification
      */
     public static MatchSpec buildMatchSpec(String prefix, String methodName, int parameterCount) {
-        String methodPattern = "(" + prefix + ")([A-Z]\\w*)";
+        String methodPattern = "("+prefix+")([A-Z]\\w*)";
         Matcher matcher = Pattern.compile(methodPattern).matcher(methodName);
-        if (matcher.find()) {
+        if(matcher.find()) {
             int totalRequiredArguments = 0;
             List<MethodExpression> expressions = new ArrayList<>();
             if (matcher.groupCount() == 2) {
@@ -211,10 +206,10 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
 
                 // otherwise there is only one expression
                 if (!containsOperator && querySequence != null) {
-                    MethodExpression solo = findMethodExpression(querySequence);
+                    MethodExpression solo =findMethodExpression(querySequence);
 
                     final int requiredArguments = solo.getArgumentsRequired();
-                    if (requiredArguments > parameterCount) {
+                    if (requiredArguments  > parameterCount) {
                         return null;
                     }
 
@@ -228,7 +223,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
                     return null;
                 }
                 else {
-                    return new MatchSpec(methodName, prefix, querySequence, totalRequiredArguments, expressions);
+                    return new MatchSpec(methodName,prefix, querySequence, totalRequiredArguments, expressions);
                 }
             }
         }
@@ -253,6 +248,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         return pattern.matcher(methodName.subSequence(0, methodName.length())).find();
     }
 
+
     public Object invoke(final Class clazz, String methodName, Closure additionalCriteria, Object[] arguments) {
         DynamicFinderInvocation invocation = createFinderInvocation(clazz, methodName, additionalCriteria, arguments);
         return doInvokeInternal(invocation);
@@ -260,7 +256,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
 
     public Object invoke(final Class clazz, String methodName, DetachedCriteria detachedCriteria, Object[] arguments) {
         DynamicFinderInvocation invocation = createFinderInvocation(clazz, methodName, null, arguments);
-        if (detachedCriteria != null) {
+        if (detachedCriteria != null ) {
             invocation.setDetachedCriteria(detachedCriteria);
         }
         return doInvokeInternal(invocation);
@@ -273,7 +269,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         if (arguments == null) arguments = EMPTY_OBJECT_ARRAY;
         else {
             Object[] tmp = new Object[arguments.length];
-            System.arraycopy(arguments, 0, tmp, 0, arguments.length);
+            System.arraycopy(arguments,0,tmp, 0, arguments.length);
             arguments = tmp;
         }
         Matcher match = pattern.matcher(methodName);
@@ -352,11 +348,11 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         }
         // otherwise there is only one expression
         if (!containsOperator && querySequence != null) {
-            MethodExpression solo = findMethodExpression(clazz, querySequence);
+            MethodExpression solo =findMethodExpression(clazz,querySequence);
 
             final int requiredArguments = solo.getArgumentsRequired();
-            if (requiredArguments > arguments.length) {
-                throw new MissingMethodException(methodName, clazz, arguments);
+            if (requiredArguments  > arguments.length) {
+                throw new MissingMethodException(methodName,clazz,arguments);
             }
 
             totalRequiredArguments += requiredArguments;
@@ -377,13 +373,13 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         // if the total of all the arguments necessary does not equal the number of arguments
         // throw exception
         if (totalRequiredArguments > arguments.length) {
-            throw new MissingMethodException(methodName, clazz, arguments);
+            throw new MissingMethodException(methodName,clazz,arguments);
         }
 
         // calculate the remaining arguments
         Object[] remainingArguments = new Object[arguments.length - totalRequiredArguments];
         if (remainingArguments.length > 0) {
-            for (int i = 0, j = totalRequiredArguments; i < remainingArguments.length; i++, j++) {
+            for (int i = 0, j = totalRequiredArguments; i < remainingArguments.length; i++,j++) {
                 remainingArguments[i] = arguments[j];
             }
         }
@@ -393,7 +389,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
     }
 
     public Object invoke(final Class clazz, String methodName, Object[] arguments) {
-        return invoke(clazz, methodName, (Closure) null, arguments);
+        return invoke(clazz, methodName, (Closure)null, arguments);
     }
 
     /**
@@ -405,20 +401,20 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         if (argMap == null) {
             return;
         }
-        String orderParam = (String) argMap.get(ARGUMENT_ORDER);
+        String orderParam = (String)argMap.get(ARGUMENT_ORDER);
 
         Object fetchObj = argMap.get(ARGUMENT_FETCH);
         if (fetchObj instanceof Map) {
-            Map fetch = (Map) fetchObj;
+            Map fetch = (Map)fetchObj;
             for (Object o : fetch.keySet()) {
                 String associationName = (String) o;
                 Object fetchValue = fetch.get(associationName);
-                if (fetchValue instanceof FetchType) {
-                    FetchType fetchType = (FetchType) fetchValue;
+                if(fetchValue instanceof FetchType) {
+                    FetchType fetchType = (FetchType)fetchValue;
                     handleFetchType(query, associationName, fetchType);
                 }
-                else if (fetchValue instanceof JoinType) {
-                    JoinType joinType = (JoinType) fetchValue;
+                else if(fetchValue instanceof JoinType) {
+                    JoinType joinType = (JoinType)fetchValue;
                     query.join(associationName, joinType);
                 } else {
                     FetchType fetchType = getFetchMode(fetchValue);
@@ -427,29 +423,30 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
             }
         }
 
-        if (argMap.containsKey(ARGUMENT_CACHE)) {
+        if(argMap.containsKey(ARGUMENT_CACHE)) {
             query.cache(ClassUtils.getBooleanFromMap(ARGUMENT_CACHE, argMap));
         }
 
         Object sortObject = argMap.get(ARGUMENT_SORT);
         boolean ignoreCase = !argMap.containsKey(ARGUMENT_IGNORE_CASE) || ClassUtils.getBooleanFromMap(ARGUMENT_IGNORE_CASE, argMap);
 
+
         if (sortObject != null) {
-            if (sortObject instanceof CharSequence) {
+            if(sortObject instanceof CharSequence) {
                 final String sort = sortObject.toString();
                 final Query.Order order = ORDER_DESC.equalsIgnoreCase(orderParam) ? Query.Order.desc(sort) : Query.Order.asc(sort);
-                if (ignoreCase) {
+                if(ignoreCase) {
                     order.ignoreCase();
                 }
                 query.order(order);
             }
-            else if (sortObject instanceof Map) {
-                Map sortMap = (Map) sortObject;
+            else if(sortObject instanceof Map) {
+                Map sortMap = (Map)sortObject;
                 for (Object key : sortMap.keySet()) {
                     Object value = sortMap.get(key);
                     String sort = key.toString();
                     final Query.Order order = ORDER_DESC.equalsIgnoreCase(orderParam) ? Query.Order.desc(sort) : Query.Order.asc(sort);
-                    if (ignoreCase) {
+                    if(ignoreCase) {
                         order.ignoreCase();
                     }
                     query.order(order);
@@ -458,8 +455,9 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
             }
         }
 
+
         if (query instanceof QueryArgumentsAware) {
-            ((QueryArgumentsAware) query).setArguments(argMap);
+            ((QueryArgumentsAware)query).setArguments(argMap);
         }
     }
 
@@ -483,20 +481,20 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         if (argMap.containsKey(ARGUMENT_OFFSET)) {
             offsetParam = conversionService.convert(argMap.get(ARGUMENT_OFFSET), Integer.class);
         }
-        String orderParam = (String) argMap.get(ARGUMENT_ORDER);
+        String orderParam = (String)argMap.get(ARGUMENT_ORDER);
 
         Object fetchObj = argMap.get(ARGUMENT_FETCH);
         if (fetchObj instanceof Map) {
-            Map fetch = (Map) fetchObj;
+            Map fetch = (Map)fetchObj;
             for (Object o : fetch.keySet()) {
                 String associationName = (String) o;
                 Object fetchValue = fetch.get(associationName);
-                if (fetchValue instanceof FetchType) {
-                    FetchType fetchType = (FetchType) fetchValue;
+                if(fetchValue instanceof FetchType) {
+                    FetchType fetchType = (FetchType)fetchValue;
                     handleFetchType(query, associationName, fetchType);
                 }
-                else if (fetchValue instanceof JoinType) {
-                    JoinType joinType = (JoinType) fetchValue;
+                else if(fetchValue instanceof JoinType) {
+                    JoinType joinType = (JoinType)fetchValue;
                     query.join(associationName, joinType);
                 } else {
                     FetchType fetchType = getFetchMode(fetchValue);
@@ -505,10 +503,10 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
             }
         }
 
-        if (argMap.containsKey(ARGUMENT_CACHE)) {
+        if(argMap.containsKey(ARGUMENT_CACHE)) {
             query.cache(ClassUtils.getBooleanFromMap(ARGUMENT_CACHE, argMap));
         }
-        if (argMap.containsKey(ARGUMENT_LOCK)) {
+        if(argMap.containsKey(ARGUMENT_LOCK)) {
             query.lock(ClassUtils.getBooleanFromMap(ARGUMENT_LOCK, argMap));
         }
 
@@ -524,20 +522,20 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         boolean ignoreCase = !argMap.containsKey(ARGUMENT_IGNORE_CASE) || ClassUtils.getBooleanFromMap(ARGUMENT_IGNORE_CASE, argMap);
 
         if (sortObject != null) {
-            if (sortObject instanceof CharSequence) {
+            if(sortObject instanceof CharSequence) {
                 final String sort = sortObject.toString();
                 final String order = ORDER_DESC.equalsIgnoreCase(orderParam) ? ORDER_DESC : ORDER_ASC;
                 addSimpleSort(query, sort, order, ignoreCase);
             }
-            else if (sortObject instanceof Map) {
-                Map sortMap = (Map) sortObject;
+            else if(sortObject instanceof Map) {
+                Map sortMap = (Map)sortObject;
                 applySortForMap(query, sortMap, ignoreCase);
 
             }
         }
 
         if (query instanceof QueryArgumentsAware) {
-            ((QueryArgumentsAware) query).setArguments(argMap);
+            ((QueryArgumentsAware)query).setArguments(argMap);
         }
     }
 
@@ -585,10 +583,10 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
             Map<String, FetchType> fetchStrategies = detachedCriteria.getFetchStrategies();
             for (Map.Entry<String, FetchType> entry : fetchStrategies.entrySet()) {
                 String property = entry.getKey();
-                switch (entry.getValue()) {
+                switch(entry.getValue()) {
                     case EAGER:
                         JoinType joinType = (JoinType) detachedCriteria.getJoinTypes().get(property);
-                        if (joinType != null) {
+                        if(joinType != null) {
                             query.join(property, joinType);
                         }
                         else {
@@ -616,8 +614,9 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
 
     protected abstract Object doInvokeInternal(DynamicFinderInvocation invocation);
 
+
     private static void handleFetchType(Query q, String associationName, FetchType fetchType) {
-        switch (fetchType) {
+        switch(fetchType) {
             case LAZY:
                 q.select(associationName);
                 break;
@@ -643,7 +642,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         if (matcher.find()) {
             clause = matcher.group(1);
             methodExpressionConstructor = methodExpressions.get(clause);
-            if (methodExpressionConstructor != null) {
+            if(methodExpressionConstructor != null) {
                 methodExpressionClass = methodExpressionConstructor.getDeclaringClass();
             }
         }
@@ -661,7 +660,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         }
 
         propertyName = NameUtils.decapitalizeFirstChar(propertyName);
-        if (methodExpressionConstructor != null) {
+        if(methodExpressionConstructor != null) {
             try {
                 me = (MethodExpression) methodExpressionConstructor.newInstance(clazz, propertyName);
             } catch (Exception e) {
@@ -671,7 +670,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         if (me == null) {
             me = new Equal(clazz, propertyName);
         }
-        if (negation) {
+        if(negation) {
             final MethodExpression finalMe = me;
             return new MethodExpression(clazz, propertyName) {
                 @Override
@@ -699,7 +698,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
     }
 
     private static void handleFetchType(BuildableCriteria q, String associationName, FetchType fetchType) {
-        switch (fetchType) {
+        switch(fetchType) {
             case LAZY:
                 q.select(associationName);
                 break;
@@ -709,7 +708,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
     }
 
     private static void resetMethodExpressionPattern() {
-        String expressionPattern = DefaultGroovyMethods.join((Iterable) methodExpressions.keySet(), "|");
+        String expressionPattern = DefaultGroovyMethods.join((Iterable)methodExpressions.keySet(), "|");
         methodExpressinPattern = Pattern.compile("\\p{Upper}[\\p{Lower}\\d]+(" + expressionPattern + ")");
     }
 
@@ -722,7 +721,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
             o = Query.Order.asc(sort);
         }
 
-        if (ignoreCase) o = o.ignoreCase();
+        if(ignoreCase) o = o.ignoreCase();
 
         q.order(o);
     }
@@ -739,15 +738,16 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
             return;
         }
 
-        Map<?, ?> argMap = (Map<?, ?>) arguments[0];
+        Map<?, ?> argMap = (Map<?, ?>)arguments[0];
         populateArgumentsForCriteria(clazz, query, argMap);
     }
+
 
     private static String calcPropertyName(String queryParameter, String clause) {
         String propName;
         if (clause != null && !clause.equals(Equal.class.getSimpleName())) {
             int i = queryParameter.indexOf(clause);
-            propName = queryParameter.substring(0, i);
+            propName = queryParameter.substring(0,i);
         }
         else {
             propName = queryParameter;
@@ -766,15 +766,44 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
      * @return the initialized expression
      */
     private MethodExpression getInitializedExpression(MethodExpression expression, Object[] arguments) {
-        /*
-        if (expression instanceof Equal && arguments.length == 1 && arguments[0] == null) { // logic moved directly to Equal.createCriterion
-            expression = new IsNull(expression.propertyName);
-        } else {
-        */
+//        if (expression instanceof Equal && arguments.length == 1 && arguments[0] == null) { // logic moved directly to Equal.createCriterion
+//            expression = new IsNull(expression.propertyName);
+//        } else {
         expression.setArguments(arguments);
-        /*
-        }
-        */
+//        }
         return expression;
+    }
+
+
+    public boolean firstExpressionIsRequiredBoolean() {
+        return false;
+    }
+
+    protected Query.Junction getJunction(DynamicFinderInvocation invocation) {
+       var criteria = invocation.getExpressions().stream().map(MethodExpression::createCriterion).collect(Collectors.toList());
+       Query.Junction junction;
+       if (FindAllByFinder.OPERATOR_OR.equals(invocation.getOperator())) {
+           junction = new Query.Disjunction();
+           if (firstExpressionIsRequiredBoolean()) {
+               var conjunction = new Query.Conjunction();
+               conjunction.add(criteria.remove(0));
+               junction.add(conjunction);
+           }
+       }
+       else {
+          junction = new Query.Conjunction();
+       }
+       criteria.forEach(junction::add);
+       return junction;
+   }
+
+    public Query buildQuery(DynamicFinderInvocation invocation, Session session) {
+        final Class<?> clazz = invocation.getJavaClass();
+        var query = session.createQuery(clazz);
+        applyAdditionalCriteria(query, invocation.getCriteria());
+        applyDetachedCriteria(query, invocation.getDetachedCriteria());
+        configureQueryWithArguments(clazz, query, invocation.getArguments());
+        query.add(getJunction(invocation));
+        return query;
     }
 }

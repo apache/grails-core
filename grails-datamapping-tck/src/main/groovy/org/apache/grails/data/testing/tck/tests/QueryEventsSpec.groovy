@@ -41,7 +41,7 @@ class QueryEventsSpec extends GrailsDataTckSpec {
     SpecQueryEventListener listener
 
     void setupSpec() {
-        manager.domainClasses.addAll([Simples])
+        manager.addAllDomainClasses([Simples, TestEntity])
     }
 
     def setup() {
@@ -128,4 +128,3 @@ class QueryEventsSpec extends GrailsDataTckSpec {
         }
     }
 }
-

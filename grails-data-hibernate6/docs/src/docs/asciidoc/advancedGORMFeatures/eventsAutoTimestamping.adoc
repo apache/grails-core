@@ -1,0 +1,391 @@
+GORM supports the registration of events as methods that get fired when certain events occurs such as deletes, inserts and updates. The following is a list of supported events:
+
+* `beforeInsert` - Executed before an object is initially persisted to the database.  If you return false, the insert will be cancelled.
+* `beforeUpdate` - Executed before an object is updated.  If you return false, the update will be cancelled.
+* `beforeDelete` - Executed before an object is deleted.  If you return false, the operation delete will be cancelled.
+* `beforeValidate` - Executed before an object is validated
+* `afterInsert` - Executed after an object is persisted to the database
+* `afterUpdate` - Executed after an object has been updated
+* `afterDelete` - Executed after an object has been deleted
+* `onLoad` - Executed when an object is loaded from the database
+
+To add an event simply register the relevant method with your domain class.
+
+WARNING: Do not attempt to flush the session within an event (such as with obj.save(flush:true)). Since events are fired during flushing this will cause a StackOverflowError.
+
+
+==== The beforeInsert event
+
+
+Fired before an object is saved to the database
+
+[source,java]
+----
+class Person {
+   private static final Date NULL_DATE = new Date(0)
+
+   String firstName
+   String lastName
+   Date signupDate = NULL_DATE
+
+   def beforeInsert() {
+      if (signupDate == NULL_DATE) {
+         signupDate = new Date()
+      }
+   }
+}
+----
+
+
+==== The beforeUpdate event
+
+
+Fired before an existing object is updated
+
+[source,java]
+----
+class Person {
+
+   def securityService
+
+   String firstName
+   String lastName
+   String lastUpdatedBy
+
+   static constraints = {
+      lastUpdatedBy nullable: true
+   }
+   
+   static mapping = {
+      autowire true
+   }
+   
+   def beforeUpdate() {
+      lastUpdatedBy = securityService.currentAuthenticatedUsername()
+   }
+}
+----
+
+Notice the usage of `autowire true` above. This is required for the bean `securityService` to be injected.
+
+
+==== The beforeDelete event
+
+
+Fired before an object is deleted.
+
+[source,java]
+----
+class Person {
+   String name
+
+   def beforeDelete() {
+      ActivityTrace.withNewSession {
+         new ActivityTrace(eventName: "Person Deleted", data: name).save()
+      }
+   }
+}
+----
+
+Notice the usage of `withNewSession` method above. Since events are triggered whilst Hibernate is flushing using persistence methods like `save()` and `delete()` won't result in objects being saved unless you run your operations with a new `Session`.
+
+Fortunately the `withNewSession` method lets you share the same transactional JDBC connection even though you're using a different underlying `Session`.
+
+
+==== The beforeValidate event
+
+
+Fired before an object is validated.
+
+[source,java]
+----
+class Person {
+   String name
+
+   static constraints = {
+       name size: 5..45
+   }
+
+   def beforeValidate() {
+       name = name?.trim()
+   }
+}
+----
+
+The `beforeValidate` method is run before any validators are run.
+
+NOTE: Validation may run more often than you think. It is triggered by the `validate()` and `save()` methods as you'd expect, but it is also typically triggered just before the view is rendered as well. So when writing `beforeValidate()` implementations, make sure that they can handle being called multiple times with the same property values.
+
+GORM supports an overloaded version of `beforeValidate` which accepts a `List` parameter which may include
+the names of the properties which are about to be validated.  This version of `beforeValidate` will be called
+when the `validate` method has been invoked and passed a `List` of property names as an argument.
+
+[source,java]
+----
+class Person {
+   String name
+   String town
+   Integer age
+
+   static constraints = {
+       name size: 5..45
+       age range: 4..99
+   }
+
+   def beforeValidate(List propertiesBeingValidated) {
+      // do pre validation work based on propertiesBeingValidated
+   }
+}
+
+def p = new Person(name: 'Jacob Brown', age: 10)
+p.validate(['age', 'name'])
+----
+
+NOTE: Note that when `validate` is triggered indirectly because of a call to the `save` method that
+the `validate` method is being invoked with no arguments, not a `List` that includes all of
+the property names.
+
+Either or both versions of `beforeValidate` may be defined in a domain class.  GORM will
+prefer the `List` version if a `List` is passed to `validate` but will fall back on the
+no-arg version if the `List` version does not exist.  Likewise, GORM will prefer the
+no-arg version if no arguments are passed to `validate` but will fall back on the
+`List` version if the no-arg version does not exist.  In that case, `null` is passed to `beforeValidate`.
+
+
+==== The onLoad/beforeLoad event
+
+
+Fired immediately before an object is loaded from the database:
+
+[source,java]
+----
+class Person {
+   String name
+   Date dateCreated
+   Date lastUpdated
+
+   def onLoad() {
+      log.debug "Loading ${id}"
+   }
+}
+----
+
+`beforeLoad()` is effectively a synonym for `onLoad()`, so only declare one or the other.
+
+
+==== The afterLoad event
+
+
+Fired immediately after an object is loaded from the database:
+
+[source,java]
+----
+class Person {
+   String name
+   Date dateCreated
+   Date lastUpdated
+
+   def afterLoad() {
+      name = "I'm loaded"
+   }
+}
+----
+
+
+==== Custom Event Listeners
+
+To register a custom event listener you need to subclass `AbstractPersistenceEventListener` (in package _org.grails.datastore.mapping.engine.event_) and implement the methods `onPersistenceEvent` and `supportsEventType`. You also must provide a reference to the datastore to the listener.  The simplest possible implementation can be seen below:
+
+[source,groovy]
+----
+public MyPersistenceListener(final Datastore datastore) {
+    super(datastore)
+}
+
+@Override
+protected void onPersistenceEvent(final AbstractPersistenceEvent event) {
+    switch(event.eventType) {
+        case PreInsert:
+            println "PRE INSERT \${event.entityObject}"
+        break
+        case PostInsert:
+            println "POST INSERT \${event.entityObject}"
+        break
+        case PreUpdate:
+            println "PRE UPDATE \${event.entityObject}"
+        break;
+        case PostUpdate:
+            println "POST UPDATE \${event.entityObject}"
+        break;
+        case PreDelete:
+            println "PRE DELETE \${event.entityObject}"
+        break;
+        case PostDelete:
+            println "POST DELETE \${event.entityObject}"
+        break;
+        case PreLoad:
+            println "PRE LOAD \${event.entityObject}"
+        break;
+        case PostLoad:
+            println "POST LOAD \${event.entityObject}"
+        break;
+    }
+}
+
+@Override
+public boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {
+    return true
+}
+----
+
+The `AbstractPersistenceEvent` class has many subclasses (`PreInsertEvent`, `PostInsertEvent` etc.) that provide further information specific to the event. A `cancel()` method is also provided on the event which allows you to veto an insert, update or delete operation.
+
+Once you have created your event listener you need to register it. If you are using Spring this can be done via the `ApplicationContext`:
+
+[source,groovy]
+----
+HibernateDatastore datastore = applicationContext.getBean(HibernateDatastore)
+applicationContext.addApplicationListener new MyPersistenceListener(datastore)
+----
+
+If you are not using Spring then you can register the event listener using the `getApplicationEventPublisher()` method:
+
+[source,groovy]
+----
+HibernateDatastore datastore = ... // get a reference to the datastore
+datastore.getApplicationEventPublisher()
+         .addApplicationListener new MyPersistenceListener(datastore)
+----
+
+
+==== Hibernate Events
+
+
+It is generally encouraged to use the non-Hibernate specific API described above, but if you need access to more detailed Hibernate events then you can define custom Hibernate-specific event listeners.
+
+You can also register event handler classes in an application's `grails-app/conf/spring/resources.groovy` or in the `doWithSpring` closure in a plugin descriptor by registering a Spring bean named `hibernateEventListeners`. This bean has one property, `listenerMap` which specifies the listeners to register for various Hibernate events.
+
+The values of the Map are instances of classes that implement one or more Hibernate listener interfaces. You can use one class that implements all of the required interfaces, or one concrete class per interface, or any combination. The valid Map keys and corresponding interfaces are listed here:
+
+[format="csv", options="header"]
+|===
+
+*Name*,*Interface*
+auto-flush,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/AutoFlushEventListener.html[AutoFlushEventListener]
+merge,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/MergeEventListener.html[MergeEventListener]
+create,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PersistEventListener.html[PersistEventListener]
+create-onflush,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PersistEventListener.html[PersistEventListener]
+delete,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/DeleteEventListener.html[DeleteEventListener]
+dirty-check,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/DirtyCheckEventListener.html[DirtyCheckEventListener]
+evict,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/EvictEventListener.html[EvictEventListener]
+flush,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/FlushEventListener.html[FlushEventListener]
+flush-entity,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/FlushEntityEventListener.html[FlushEntityEventListener]
+load,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/LoadEventListener.html[LoadEventListener]
+load-collection,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/InitializeCollectionEventListener.html[InitializeCollectionEventListener]
+lock,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/LockEventListener.html[LockEventListener]
+refresh,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/RefreshEventListener.html[RefreshEventListener]
+replicate,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/ReplicateEventListener.html[ReplicateEventListener]
+save-update,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/SaveOrUpdateEventListener.html[SaveOrUpdateEventListener]
+save,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/SaveOrUpdateEventListener.html[SaveOrUpdateEventListener]
+update,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/SaveOrUpdateEventListener.html[SaveOrUpdateEventListener]
+pre-load,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PreLoadEventListener.html[PreLoadEventListener]
+pre-update,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PreUpdateEventListener.html[PreUpdateEventListener]
+pre-delete,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PreDeleteEventListener.html[PreDeleteEventListener]
+pre-insert,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PreInsertEventListener.html[PreInsertEventListener]
+pre-collection-recreate,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PreCollectionRecreateEventListener.html[PreCollectionRecreateEventListener]
+pre-collection-remove,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PreCollectionRemoveEventListener.html[PreCollectionRemoveEventListener]
+pre-collection-update,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PreCollectionUpdateEventListener.html[PreCollectionUpdateEventListener]
+post-load,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostLoadEventListener.html[PostLoadEventListener]
+post-update,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostUpdateEventListener.html[PostUpdateEventListener]
+post-delete,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostDeleteEventListener.html[PostDeleteEventListener]
+post-insert,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostInsertEventListener.html[PostInsertEventListener]
+post-commit-update,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostUpdateEventListener.html[PostUpdateEventListener]
+post-commit-delete,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostDeleteEventListener.html[PostDeleteEventListener]
+post-commit-insert,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostInsertEventListener.html[PostInsertEventListener]
+post-collection-recreate,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostCollectionRecreateEventListener.html[PostCollectionRecreateEventListener]
+post-collection-remove,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostCollectionRemoveEventListener.html[PostCollectionRemoveEventListener]
+post-collection-update,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostCollectionUpdateEventListener.html[PostCollectionUpdateEventListener]
+|===
+
+For example, you could register a class `AuditEventListener` which implements `PostInsertEventListener`, `PostUpdateEventListener`, and `PostDeleteEventListener` using the following in an application:
+
+[source,groovy]
+----
+beans = {
+
+   auditListener(AuditEventListener)
+
+   hibernateEventListeners(HibernateEventListeners) {
+      listenerMap = ['post-insert': auditListener,
+                     'post-update': auditListener,
+                     'post-delete': auditListener]
+   }
+}
+----
+
+or use this in a plugin:
+
+[source,groovy]
+----
+def doWithSpring = {
+
+   auditListener(AuditEventListener)
+
+   hibernateEventListeners(HibernateEventListeners) {
+      listenerMap = ['post-insert': auditListener,
+                     'post-update': auditListener,
+                     'post-delete': auditListener]
+   }
+}
+----
+
+
+==== Automatic timestamping
+
+
+If you define a `dateCreated` property it will be set to the current date for you when you create new instances. Likewise, if you define a `lastUpdated` property it will be automatically be updated for you when you change persistent instances.
+
+If this is not the behaviour you want you can disable this feature with:
+
+[source,java]
+----
+class Person {
+   Date dateCreated
+   Date lastUpdated
+   static mapping = {
+      autoTimestamp false
+   }
+}
+----
+
+WARNING: If you have `nullable: false` constraints on either `dateCreated` or `lastUpdated`, your domain instances will fail validation - probably not what you want. Omit constraints from these properties unless you disable automatic timestamping.
+
+It is also possible to disable the automatic timestamping temporarily. This is most typically done in the case of a test where you need to define values for the `dateCreated` or `lastUpdated` in the past. It may also be useful for importing old data from other systems where you would like to keep the current values of the timestamps.
+
+Timestamps can be temporarily disabled for all domains, a specified list of domains, or a single domain. To get started, you need to get a reference to the `AutoTimestampEventListener`. If you already have access to the datastore, you can execute the `getAutoTimestampEventListener` method. If you don't have access to the datastore, inject the `autoTimestampEventListener` bean.
+
+Once you have a reference to the event listener, you can execute `withoutDateCreated`, `withoutLastUpdated`, or `withoutTimestamps`. The `withoutTimestamps` method will temporarily disable both `dateCreated` and `lastUpdated`.
+
+Example:
+
+[source,groovy]
+----
+//Only the dateCreated property handling will be disabled for only the Foo domain
+autoTimestampEventListener.withoutDateCreated(Foo) {
+    new Foo(dateCreated: new Date() - 1).save(flush: true)
+}
+
+//Only the lastUpdated property handling will be disabled for only the Foo and Bar domains
+autoTimestampEventListener.withoutLastUpdated(Foo, Bar) {
+    new Foo(lastUpdated: new Date() - 1, bar: new Bar(lastUpdated: new Date() + 1)).save(flush: true)
+}
+
+//All timestamp property handling will be disabled for all domains
+autoTimestampEventListener.withoutTimestamps {
+    new Foo(dateCreated: new Date() - 2, lastUpdated: new Date() - 1).save(flush: true)
+    new Bar(dateCreated: new Date() - 2, lastUpdated: new Date() - 1).save(flush: true)
+    new FooBar(dateCreated: new Date() - 2, lastUpdated: new Date() - 1).save(flush: true)
+}
+----
+
+WARNING: Because the timestamp handling is only disabled for the duration of the closure, you must flush the session during the closure execution!

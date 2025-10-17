@@ -1,0 +1,34 @@
+===== dbm-drop-all
+
+====== Purpose
+
+Drops all database objects owned by the user.
+
+====== Description
+
+Usage:
+[source,java]
+----
+grails <<environment>> dbm-drop-all <<schemaNames>> --defaultSchema=<<defaultSchema>> --dataSource=<<dataSource>>
+----
+
+Required arguments: __none__.
+
+Optional arguments:
+
+* `schemaNames` - A comma-delimited list of schema names to use
+* `defaultSchema` - The default schema name to use if the `schemaNames` parameter isn't present
+* `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
+
+NOTE: Note that the `defaultSchema` and `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
+[source,groovy]
+----
+grails dbm-drop-all "--defaultSchema=<<defaultSchema>>" "--dataSource=<<dataSource>>"
+----
+
+NOTE: For the `dataSource` parameter, if the data source is configured as `reports` underneath the `dataSources` key in `application.[yml|groovy]`, the value should be `reports`.
+
+[source,groovy]
+----
+--dataSource=reports
+----

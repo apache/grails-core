@@ -25,7 +25,7 @@ import spock.lang.Issue
 
 class DomainWithPrimitiveGetterSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([DomainWithPrimitiveGetterAuthor, DomainWithPrimitiveGetterBook])
+        manager.addAllDomainClasses([DomainWithPrimitiveGetterAuthor, DomainWithPrimitiveGetterBook])
     }
 
     @Issue('GRAILS-8788')

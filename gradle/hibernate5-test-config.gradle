@@ -26,6 +26,7 @@ tasks.withType(Test).configureEach {
     onlyIf {
         ![
                 'onlyFunctionalTests',
+                'onlyHibernate6Tests',
                 'skipHibernate5Tests',
                 'onlyMongodbTests',
                 'onlyCoreTests',

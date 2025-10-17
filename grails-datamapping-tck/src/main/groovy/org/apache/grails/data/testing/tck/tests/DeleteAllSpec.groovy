@@ -18,16 +18,20 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Person
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class DeleteAllSpec extends GrailsDataTckSpec {
 
-    def 'Test that many objects can be deleted at once using multiple arguments'() {
+    void setupSpec() {
+        manager.addAllDomainClasses([Person])
+    }
+
+    def "Test that many objects can be deleted at once using multiple arguments"() {
         given:
-        def bob = new Person(firstName: 'Bob', lastName: 'Builder').save(flush: true)
-        def fred = new Person(firstName: 'Fred', lastName: 'Flintstone').save(flush: true)
-        def joe = new Person(firstName: 'Joe', lastName: 'Doe').save(flush: true)
+        def bob = new Person(firstName: "Bob", lastName: "Builder").save(flush: true)
+        def fred = new Person(firstName: "Fred", lastName: "Flintstone").save(flush: true)
+        def joe = new Person(firstName: "Joe", lastName: "Doe").save(flush: true)
         Person.deleteAll(bob, fred, joe)
         manager.session.flush()
 
@@ -37,11 +41,11 @@ class DeleteAllSpec extends GrailsDataTckSpec {
         total == 0
     }
 
-    def 'Test that many objects can be deleted using an iterable'() {
+    def "Test that many objects can be deleted using an iterable"() {
         given:
-        def bob = new Person(firstName: 'Bob', lastName: 'Builder').save(flush: true)
-        def fred = new Person(firstName: 'Fred', lastName: 'Flintstone').save(flush: true)
-        def joe = new Person(firstName: 'Joe', lastName: 'Doe').save(flush: true)
+        def bob = new Person(firstName: "Bob", lastName: "Builder").save(flush: true)
+        def fred = new Person(firstName: "Fred", lastName: "Flintstone").save(flush: true)
+        def joe = new Person(firstName: "Joe", lastName: "Doe").save(flush: true)
 
         Vector<Person> people = new Vector<Person>()
         people.add(bob)
@@ -57,11 +61,11 @@ class DeleteAllSpec extends GrailsDataTckSpec {
         total == 0
     }
 
-    def 'Test that many objects can be deleted at once using multiple arguments and flushes'() {
+    def "Test that many objects can be deleted at once using multiple arguments and flushes"() {
         given:
-        def bob = new Person(firstName: 'Bob', lastName: 'Builder').save(flush: true)
-        def fred = new Person(firstName: 'Fred', lastName: 'Flintstone').save(flush: true)
-        def joe = new Person(firstName: 'Joe', lastName: 'Doe').save(flush: true)
+        def bob = new Person(firstName: "Bob", lastName: "Builder").save(flush: true)
+        def fred = new Person(firstName: "Fred", lastName: "Flintstone").save(flush: true)
+        def joe = new Person(firstName: "Joe", lastName: "Doe").save(flush: true)
         Person.deleteAll(flush: true, bob, fred, joe)
 
         when:
@@ -70,11 +74,11 @@ class DeleteAllSpec extends GrailsDataTckSpec {
         total == 0
     }
 
-    def 'Test that many objects can be deleted using an iterable and flushes'() {
+    def "Test that many objects can be deleted using an iterable and flushes"() {
         given:
-        def bob = new Person(firstName: 'Bob', lastName: 'Builder').save(flush: true)
-        def fred = new Person(firstName: 'Fred', lastName: 'Flintstone').save(flush: true)
-        def joe = new Person(firstName: 'Joe', lastName: 'Doe').save(flush: true)
+        def bob = new Person(firstName: "Bob", lastName: "Builder").save(flush: true)
+        def fred = new Person(firstName: "Fred", lastName: "Flintstone").save(flush: true)
+        def joe = new Person(firstName: "Joe", lastName: "Doe").save(flush: true)
 
         Vector<Person> people = new Vector<Person>()
         people.add(bob)

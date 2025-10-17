@@ -60,6 +60,7 @@ List<String> debugArguments = [
 ]
 tasks.withType(Test).configureEach { Test task ->
     boolean isHibernate5 = !project.name.startsWith('grails-test-examples-hibernate5')
+    boolean isHibernate6 = !project.name.startsWith('grails-test-examples-hibernate6')
     boolean isMongo = !project.name.startsWith('grails-test-examples-mongodb')
 
     onlyIf {
@@ -69,6 +70,12 @@ tasks.withType(Test).configureEach { Test task ->
 
         if (project.hasProperty('onlyHibernate5Tests')) {
             if (isHibernate5) {
+                return false
+            }
+        }
+
+        if (project.hasProperty('onlyHibernate6Tests')) {
+            if (isHibernate6) {
                 return false
             }
         }

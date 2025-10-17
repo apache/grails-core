@@ -26,7 +26,7 @@ import spock.lang.Issue
 class IsNullSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Elephant, Trunk])
+        manager.addAllDomainClasses([Elephant, Trunk])
     }
 
     @Issue('GPMONGODB-164')

@@ -1,0 +1,167 @@
+
+==== Sets of Objects
+
+
+By default when you define a relationship with GORM it is a `java.util.Set` which is an unordered collection that cannot contain duplicates. In other words when you have:
+
+[source,groovy]
+----
+class Author {
+    static hasMany = [books: Book]
+}
+----
+
+The books property that GORM injects is a `java.util.Set`. Sets guarantee uniqueness but not order, which may not be what you want. To have custom ordering you configure the Set as a `SortedSet`:
+
+[source,groovy]
+----
+class Author {
+
+    SortedSet books
+
+    static hasMany = [books: Book]
+}
+----
+
+In this case a `java.util.SortedSet` implementation is used which means you must implement `java.lang.Comparable` in your Book class:
+
+[source,groovy]
+----
+class Book implements Comparable {
+
+    String title
+    Date releaseDate = new Date()
+
+    int compareTo(obj) {
+        releaseDate.compareTo(obj.releaseDate)
+    }
+}
+----
+
+The result of the above class is that the Book instances in the books collection of the Author class will be ordered by their release date.
+
+
+==== Lists of Objects
+
+
+To keep objects in the order which they were added and to be able to reference them by index like an array you can define your collection type as a `List`:
+
+[source,groovy]
+----
+class Author {
+
+    List books
+
+    static hasMany = [books: Book]
+}
+----
+
+In this case when you add new elements to the books collection the order is retained in a sequential list indexed from 0 so you can do:
+
+[source,groovy]
+----
+author.books<<0>> // get the first book
+----
+
+The way this works at the database level is Hibernate creates a `books_idx` column where it saves the index of the elements in the collection to retain this order at the database level.
+
+When using a `List`, elements must be added to the collection before being saved, otherwise Hibernate will throw an exception (`org.hibernate.HibernateException`: null index column for collection):
+
+[source,groovy]
+----
+// This won't work!
+def book = new Book(title: 'The Shining')
+book.save()
+author.addToBooks(book)
+
+// Do it this way instead.
+def book = new Book(title: 'Misery')
+author.addToBooks(book)
+author.save()
+----
+
+
+==== Bags of Objects
+
+
+If ordering and uniqueness aren't a concern (or if you manage these explicitly) then you can use the Hibernate https://docs.jboss.org/hibernate/core/3.6/reference/en-US/html/collections.html[Bag] type to represent mapped collections.
+
+The only change required for this is to define the collection type as a `Collection`:
+
+[source,groovy]
+----
+class Author {
+
+   Collection books
+
+   static hasMany = [books: Book]
+}
+----
+
+Since uniqueness and order aren't managed by Hibernate, adding to or removing from collections mapped as a Bag don't trigger a load of all existing instances from the database, so this approach will perform better and require less memory than using a `Set` or a `List`.
+
+
+==== Maps of Objects
+
+
+If you want a simple map of string/value pairs GORM can map this with the following:
+
+[source,groovy]
+----
+class Author {
+    Map books // map of ISBN:book names
+}
+
+def a = new Author()
+a.books = ['1590597583':"My Book"]
+a.save()
+----
+In this case the key and value of the map MUST be strings.
+
+If you want a Map of objects then you can do this:
+
+[source,groovy]
+----
+class Book {
+
+    Map authors
+
+    static hasMany = [authors: Author]
+}
+
+def a = new Author(name:"Stephen King")
+
+def book = new Book()
+book.authors = [stephen:a]
+book.save()
+----
+
+The static `hasMany` property defines the type of the elements within the Map. The keys for the map *must* be strings.
+
+
+==== A Note on Collection Types and Performance
+
+
+The Java `Set` type doesn't allow duplicates. To ensure uniqueness when adding an entry to a `Set` association Hibernate has to load the entire associations from the database. If you have a large numbers of entries in the association this can be costly in terms of performance.
+
+The same behavior is required for `List` types, since Hibernate needs to load the entire association to maintain order. Therefore it is recommended that if you anticipate a large numbers of records in the association that you make the association bidirectional so that the link can be created on the inverse side. For example consider the following code:
+
+[source,java]
+----
+def book = new Book(title:"New Grails Book")
+def author = Author.get(1)
+book.author = author
+book.save()
+----
+
+In this example the association link is being created by the child (Book) and hence it is not necessary to manipulate the collection directly resulting in fewer queries and more efficient code. Given an `Author` with a large number of associated `Book` instances if you were to write code like the following you would see an impact on performance:
+
+[source,java]
+----
+def book = new Book(title:"New Grails Book")
+def author = Author.get(1)
+author.addToBooks(book)
+author.save()
+----
+
+You could also model the collection as a Hibernate Bag as described above.

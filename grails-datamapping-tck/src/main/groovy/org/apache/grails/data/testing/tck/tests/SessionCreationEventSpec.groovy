@@ -40,6 +40,7 @@ class SessionCreationEventSpec extends GrailsDataTckSpec {
     def setup() {
         listener = new Listener()
         manager.session.datastore.applicationContext.addApplicationListener(listener)
+        manager.addAllDomainClasses([TestEntity])
     }
 
     void 'test event for new session'() {

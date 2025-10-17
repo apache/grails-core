@@ -1,0 +1,70 @@
+There are various changes you have to make to your build depending on the version of Grails when using GORM {version}.
+
+==== Grails 7.0.0 and above with Hibernate 5.6.x
+
+Grails 7.0.x is based on Spring Boot 3.4.x which enforces Hibernate 5.6.x as the default version.
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    implementation "org.grails.plugins:hibernate5:{pluginVersion}"
+    runtimeOnly 'org.hibernate:hibernate-ehcache:5.6.15.Final', {
+    // exclude javax variant of hibernate-core
+    exclude group: 'org.hibernate', module: 'hibernate-core'
+    }
+    runtimeOnly 'org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:2.0.0.Final', {
+      // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
+    }
+}
+----
+
+
+==== Grails 3.2.x and above with Hibernate 4
+
+Grails 3.2.x is based on Spring Boot 1.4.x which enforces Hibernate 5.0.x as the default version. If you want to continue to use Hibernate 4 you must explicitly declare the Hibernate 4 dependences in `build.gradle`.
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    compile "org.grails.plugins:hibernate4"
+    compile "org.hibernate:hibernate-core:4.3.10.Final"
+    compile "org.hibernate:hibernate-ehcache:4.3.10.Final"
+}
+----
+
+==== Grails 3.1.x and below with Hibernate 5
+
+Grails 3.1.x and below are based on Spring Boot 1.3.x which enforces Hibernate 4 as the default version of Hibernate, hence you have to use explicit versions to depend on Hibernate 5:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    compile "org.grails.plugins:hibernate5"
+    compile "org.hibernate:hibernate-core:5.1.0.Final"
+    compile "org.hibernate:hibernate-ehcache:5.1.0.Final"
+}
+----
+
+==== Grails 3.0.x Spring Version Conflicts
+
+Grails 3.0.x enforces Spring 4.1.x as the Spring version, so if you want to use Hibernate 5 you must force an upgrade to Spring 4.2.x in `build.gradle`:
+
+[source,groovy]
+.build.gradle
+----
+// the below is unnecessary in Grails 3.1 and above, but required in Grails 3.0.x
+configurations.all {
+    resolutionStrategy {
+        eachDependency { DependencyResolveDetails details ->
+            if(details.requested.group == 'org.springframework') {
+                details.useVersion('4.2.3.RELEASE')
+            }
+        }
+    }
+}
+----
+
+The `resolutionStrategy` is needed to enforce an upgrade to Spring 4.2.x which is required by Hibernate 5 support. This block is not needed if you are using Grails 3.1 or above.

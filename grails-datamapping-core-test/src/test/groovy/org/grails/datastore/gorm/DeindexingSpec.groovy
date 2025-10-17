@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class DeindexingSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([AuthorWithPseudonym])
+        manager.addAllDomainClasses([AuthorWithPseudonym])
     }
 
     def 'Null is de-indexed'() {

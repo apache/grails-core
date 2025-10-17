@@ -1,0 +1,36 @@
+If you need even more flexibility, then HQL queries can be used via the `@Query` annotation:
+
+[source,groovy]
+----
+@Query("from $Book as book where book.title like $pattern")
+Book searchByTitle(String pattern)
+----
+
+Note that in the example above, if you misspell the `pattern` parameter passed to the query a compilation error will occur.
+
+However, if you were to incorrectly input the `title` property no error would occur since it is part of the String and not a variable.
+
+You can resolve this by declaring the value of `book` within the passed GString:
+
+[source,groovy]
+----
+@Query("from ${Book book} where ${book.title} like $pattern")
+Book searchByTitle(String pattern)
+----
+
+In the above example if you misspell the `title` property then a compilation error will occur. This is extremely powerful as it gives you the ability to type check HQL queries, which has always been one of the disadvantages of using them in comparison to criteria.
+
+This support for type checked queries extends to joins. For example consider this query:
+
+[source,groovy]
+----
+@Query("""
+ from ${Book book} <1>
+ inner join ${Author author = book.author} <2>
+ where $book.title = $title and $author.name = $author""") <3>
+Book find(String title, String author)
+----
+
+<1> Using `from` to define the root query
+<2> Use inner join and a declaration to define the association to join on
+<3> Apply any conditions in the `where` clause

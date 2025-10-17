@@ -1,0 +1,28 @@
+GORM domain classes can be mapped onto many legacy schemas with an Object Relational Mapping DSL (domain specific language). The following sections takes you through what is possible with the ORM DSL.
+
+NOTE: None of this is necessary if you are happy to stick to the conventions defined by GORM for table names, column names and so on. You only needs this functionality if you need to tailor the way GORM maps onto legacy schemas or configures caching
+
+Custom mappings are defined using a static `mapping` block defined within your domain class:
+
+[source,java]
+----
+class Person {
+    ...
+    static mapping = {
+        version false
+        autoTimestamp false
+    }
+}
+----
+
+You can also configure global mappings in `application.groovy` (or an external config file) using this setting:
+
+[source,java]
+----
+grails.gorm.default.mapping = {
+    version false
+    autoTimestamp false
+}
+----
+
+It has the same syntax as the standard `mapping` block but it applies to all your domain classes! You can then override these defaults within the `mapping` block of a domain class.

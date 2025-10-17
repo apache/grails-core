@@ -1,0 +1,117 @@
+Associations in GORM are by default lazy. This is best explained by example:
+
+[source,groovy]
+----
+class Airport {
+    String name
+    static hasMany = [flights: Flight]
+}
+----
+
+[source,groovy]
+----
+class Flight {
+    String number
+    Location destination
+    static belongsTo = [airport: Airport]
+}
+----
+
+[source,groovy]
+----
+class Location {
+    String city
+    String country
+}
+----
+
+Given the above domain classes and the following code:
+
+[source,groovy]
+----
+def airport = Airport.findByName("Gatwick")
+for (flight in airport.flights) {
+    println flight.destination.city
+}
+----
+
+GORM will execute a single SQL query to fetch the `Airport` instance, another to get its flights, and then 1 extra query for _each iteration_ over the `flights` association to get the current flight's destination. In other words you get N+1 queries (if you exclude the original one to get the airport).
+
+
+=== Configuring Eager Fetching
+
+
+An alternative approach that avoids the N+1 queries is to use eager fetching, which can be specified as follows:
+
+[source,groovy]
+----
+class Airport {
+    String name
+    static hasMany = [flights: Flight]
+    static mapping = {
+        flights lazy: false
+    }
+}
+----
+
+In this case the `flights` association will be loaded at the same time as its `Airport` instance, although a second query will be executed to fetch the collection. You can also use `fetch: 'join'` instead of `lazy: false` , in which case GORM will only execute a single query to get the airports and their flights. This works well for single-ended associations, but you need to be careful with one-to-manys. Queries will work as you'd expect right up to the moment you add a limit to the number of results you want. At that point, you will likely end up with fewer results than you were expecting. The reason for this is quite technical but ultimately the problem arises from GORM using a left outer join.
+
+So, the recommendation is currently to use `fetch: 'join'` for single-ended associations and `lazy: false` for one-to-manys.
+
+Be careful how and where you use eager loading because you could load your entire database into memory with too many eager associations. You can find more information on the mapping options in the <<fetchingDSL,section on the ORM DSL>>.
+
+=== Altering Fetch Strategy for a Query
+
+Rather than configuring join fetching as the default for an association, it may be better to alter the join strategy only for the queries that require it. This can be done using the `fetch` argument to most GORM methods:
+
+[source,groovy]
+----
+// Using the list method
+Author.list(fetch: [location: 'join']).each { a ->
+    println a.location.city
+}
+// Using a dynamic finder
+Author.findAllByNameLike("John%", [ sort: 'name', order: 'asc', fetch: [location: 'join'] ]).each { a->
+    ...
+}
+----
+
+Or using the `join` method when using <<whereQueries, Where Queries>> or criteria:
+
+[source,groovy]
+----
+Author.where {
+    name == "Stephen King"
+}.join('location')
+ .list()
+----
+
+
+=== Using Batch Fetching
+
+
+Although eager fetching is appropriate for some cases, it is not always desirable. If you made everything eager you could quite possibly load your entire database into memory resulting in performance and memory problems. An alternative to eager fetching is to use batch fetching. You can configure Hibernate to lazily fetch results in "batches". For example:
+
+[source,java]
+----
+class Airport {
+    String name
+    static hasMany = [flights: Flight]
+    static mapping = {
+        flights batchSize: 10
+    }
+}
+----
+
+In this case, due to the `batchSize` argument, when you iterate over the `flights` association, Hibernate will fetch results in batches of 10. For example if you had an `Airport` that had 30 flights, if you didn't configure batch fetching you would get 1 query to fetch the `Airport` and then `30` queries to fetch each flight. With batch fetching you get 1 query to fetch the `Airport` and 3 queries to fetch each `Flight` in batches of 10. In other words, batch fetching is an optimization of the lazy fetching strategy. Batch fetching can also be configured at the class level as follows:
+
+[source,java]
+----
+class Flight {
+    ...
+    static mapping = {
+        batchSize 10
+    }
+}
+----
+

@@ -29,7 +29,7 @@ class EmbeddedAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
     Date now = new Date()
 
     void setupSpec() {
-        manager.domainClasses.addAll([Individual, Address])
+        manager.addAllDomainClasses([Individual, Address])
     }
 
     void "Test persistence of embedded entities"() {

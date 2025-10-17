@@ -18,26 +18,30 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Abstract base test for order by queries. Subclasses should do the necessary setup to configure GORM
  */
 class OrderBySpec extends GrailsDataTckSpec {
 
-    void 'Test order with criteria'() {
+    void setupSpec() {
+        manager.addAllDomainClasses([TestEntity, ChildEntity])
+    }
+
+    void "Test order with criteria"() {
         given:
         def age = 40
 
-        ['Bob', 'Fred', 'Barney', 'Frank', 'Joe', 'Ernie'].each {
+        ["Bob", "Fred", "Barney", "Frank", "Joe", "Ernie"].each {
             new TestEntity(name: it, age: age++, child: new ChildEntity(name: "$it Child")).save()
         }
 
         when:
         def results = TestEntity.createCriteria().list {
-            order('age')
+            order "age"
         }
         then:
         40 == results[0].age
@@ -46,7 +50,7 @@ class OrderBySpec extends GrailsDataTckSpec {
 
         when:
         results = TestEntity.createCriteria().list {
-            order('age', 'desc')
+            order "age", "desc"
         }
 
         then:
@@ -55,16 +59,16 @@ class OrderBySpec extends GrailsDataTckSpec {
         43 == results[2].age
     }
 
-    void 'Test order by with list() method'() {
+    void "Test order by with list() method"() {
         given:
         def age = 40
 
-        ['Bob', 'Fred', 'Barney', 'Frank', 'Joe', 'Ernie'].each {
+        ["Bob", "Fred", "Barney", "Frank", "Joe", "Ernie"].each {
             new TestEntity(name: it, age: age++, child: new ChildEntity(name: "$it Child")).save()
         }
 
         when:
-        def results = TestEntity.list(sort: 'age')
+        def results = TestEntity.list(sort: "age")
 
         then:
         40 == results[0].age
@@ -72,7 +76,7 @@ class OrderBySpec extends GrailsDataTckSpec {
         42 == results[2].age
 
         when:
-        results = TestEntity.list(sort: 'age', order: 'desc')
+        results = TestEntity.list(sort: "age", order: "desc")
 
         then:
         45 == results[0].age
@@ -80,16 +84,16 @@ class OrderBySpec extends GrailsDataTckSpec {
         43 == results[2].age
     }
 
-    void 'Test order by property name with dynamic finder'() {
+    void "Test order by property name with dynamic finder"() {
         given:
         def age = 40
 
-        ['Bob', 'Fred', 'Barney', 'Frank', 'Joe', 'Ernie'].each {
+        ["Bob", "Fred", "Barney", "Frank", "Joe", "Ernie"].each {
             new TestEntity(name: it, age: age++, child: new ChildEntity(name: "$it Child")).save()
         }
 
         when:
-        def results = TestEntity.findAllByAgeGreaterThanEquals(40, [sort: 'age'])
+        def results = TestEntity.findAllByAgeGreaterThanEquals(40, [sort: "age"])
 
         then:
         40 == results[0].age
@@ -97,7 +101,7 @@ class OrderBySpec extends GrailsDataTckSpec {
         42 == results[2].age
 
         when:
-        results = TestEntity.findAllByAgeGreaterThanEquals(40, [sort: 'age', order: 'desc'])
+        results = TestEntity.findAllByAgeGreaterThanEquals(40, [sort: "age", order: "desc"])
 
         then:
         45 == results[0].age

@@ -1,0 +1,129 @@
+GORM supports the concept of *dynamic finders*. A dynamic finder looks like a static method invocation, but the methods themselves don't actually exist in any form at the code level.
+
+Instead, a method is auto-magically generated using code synthesis at runtime, based on the properties of a given class. Take for example the `Book` class:
+
+[source,groovy]
+----
+class Book {
+    String title
+    Date releaseDate
+    Author author
+}
+----
+
+[source,groovy]
+----
+class Author {
+    String name
+}
+----
+
+The `Book` class has properties such as `title`, `releaseDate` and `author`. These can be used by the `findBy*` and `findAllBy*` methods in the form of "method expressions":
+
+[source,groovy]
+----
+def book = Book.findByTitle("The Stand")
+
+book = Book.findByTitleLike("Harry Pot%")
+
+book = Book.findByReleaseDateBetween(firstDate, secondDate)
+
+book = Book.findByReleaseDateGreaterThan(someDate)
+
+book = Book.findByTitleLikeOrReleaseDateLessThan("%Something%", someDate)
+----
+
+==== Method Expressions
+
+A method expression in GORM is made up of the prefix such as `findBy*` followed by an expression that combines one or more properties. The basic form is:
+
+[source,groovy]
+----
+Book.findBy(<<Property>><<Comparator>><<Boolean Operator>>)?<<Property>><<Comparator>>
+----
+
+The tokens marked with a '?' are optional. Each comparator changes the nature of the query. For example:
+
+[source,groovy]
+----
+def book = Book.findByTitle("The Stand")
+
+book =  Book.findByTitleLike("Harry Pot%")
+----
+
+In the above example the first query is equivalent to equality whilst the latter, due to the `Like` comparator, is equivalent to a SQL `like` expression.
+
+The possible comparators include:
+
+* `InList` - In the list of given values
+* `LessThan` - less than a given value
+* `LessThanEquals` - less than or equal a give value
+* `GreaterThan` - greater than a given value
+* `GreaterThanEquals` - greater than or equal a given value
+* `Like` - Equivalent to a SQL like expression
+* `Ilike` - Similar to a `Like`, except case insensitive
+* `NotEqual` - Negates equality
+* `InRange` - Between the `from` and `to` values of a Groovy Range
+* `Rlike` - Performs a Regexp LIKE in MySQL or Oracle otherwise falls back to `Like`
+* `Between` - Between two values (requires two arguments)
+* `IsNotNull` - Not a null value (doesn't take an argument)
+* `IsNull` - Is a null value (doesn't take an argument)
+
+Notice that the last three require different numbers of method arguments compared to the rest, as demonstrated in the following example:
+
+[source,groovy]
+----
+def now = new Date()
+def lastWeek = now - 7
+def book = Book.findByReleaseDateBetween(lastWeek, now)
+
+books = Book.findAllByReleaseDateIsNull()
+books = Book.findAllByReleaseDateIsNotNull()
+----
+
+==== Boolean logic (AND/OR)
+
+Method expressions can also use a boolean operator to combine two or more criteria:
+
+[source,groovy]
+----
+def books = Book.findAllByTitleLikeAndReleaseDateGreaterThan(
+                      "%Java%", new Date() - 30)
+----
+
+In this case we're using `And` in the middle of the query to make sure both conditions are satisfied, but you could equally use `Or`:
+
+[source,groovy]
+----
+def books = Book.findAllByTitleLikeOrReleaseDateGreaterThan(
+                      "%Java%", new Date() - 30)
+----
+
+You can combine as many criteria as you like, but they must all be combined with `And` or all `Or`. If you need to combine `And` and `Or` or if the number of criteria creates a very long method name, just convert the query to a <<criteria,Criteria>> or <<hql,HQL>> query.
+
+
+==== Querying Associations
+
+
+Associations can also be used within queries:
+
+[source,groovy]
+----
+def author = Author.findByName("Stephen King")
+
+def books = author ? Book.findAllByAuthor(author) : []
+----
+
+In this case if the `Author` instance is not null we use it in a query to obtain all the `Book` instances for the given `Author`.
+
+
+==== Pagination and Sorting
+
+
+The same pagination and sorting parameters available on the link:../api/org/grails/datastore/gorm/GormEntity.html#list()[list()] method can also be used with dynamic finders by supplying a map as the final parameter:
+
+[source,groovy]
+----
+def books = Book.findAllByTitleLike("Harry Pot%",
+               [max: 3, offset: 2, sort: "title", order: "desc"])
+----

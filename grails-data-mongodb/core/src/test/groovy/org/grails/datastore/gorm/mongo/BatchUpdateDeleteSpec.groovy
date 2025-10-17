@@ -33,7 +33,7 @@ import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 class BatchUpdateDeleteSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([BatchUser, BatchAddress, Plant])
+        manager.addAllDomainClasses([BatchUser, BatchAddress, Plant])
     }
 
     void "Test that batch delete works"() {

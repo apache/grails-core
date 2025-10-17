@@ -26,7 +26,7 @@ import spock.lang.Ignore
 @Ignore
 class DBObjectConversionSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Boat, Sailor, Captain])
+        manager.addAllDomainClasses([Boat, Sailor, Captain])
     }
 
     void "Test that it is possible to convert DBObjects to GORM entities"() {

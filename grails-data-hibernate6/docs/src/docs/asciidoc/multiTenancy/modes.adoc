@@ -1,0 +1,7 @@
+GORM supports the following different multitenancy modes:
+
+* `DATABASE` - A separate database with a separate connection pool is used to store each tenants data.
+* `SCHEMA` - The same database, but different schemas are used to store each tenants data.
+* `DISCRIMINATOR` - The same database is used with a discriminator used to partition and isolate data.
+
+The above modes are listed from least probable to leak data between tenants to most probable. When using a `DISCRIMINATOR` approach much greater care needs to be taken to ensure tenants don't see each other's data.

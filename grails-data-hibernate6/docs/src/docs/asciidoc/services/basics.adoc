@@ -1,0 +1,102 @@
+==== Writing a Simple Data Service
+
+In a Grails application you can create a Data Service in either `src/main/groovy` or `grails-app/services`. To write a Data Service you should create either an interface (although abstract classes can also be used, more about that later) and annotate it with the `grails.gorm.services.Service` annotation with the domain class the service applies to:
+
+[source,groovy]
+----
+@Service(Book)
+interface BookService {
+    Book getBook(Serializable id)
+}
+----
+
+The `@Service` annotation is an AST transformation that will automatically implement the service for you. You can then obtain the service via Spring autowiring:
+
+[source,groovy]
+----
+@Autowired BookService bookService
+----
+
+Or if you are using GORM standalone by looking it up from the `HibernateDatastore` instance:
+
+[source,groovy]
+----
+BookService bookService = hibernateDatastore.getService(BookService)
+----
+
+TIP: The above example also works in Spock unit tests that extend `HibernateSpec`
+
+==== How Does it Work?
+
+The `@Service` transformation will look at the the method signatures of the interface and make a best effort to find a way to implement each method.
+
+If a method cannot be implemented then a compilation error will occur. At this point you have the option to use an abstract class instead and provide an implementation yourself.
+
+The `@Service` transformation will also generate a `META-INF/services` file for the service so it can be discovered via the standard Java service loader. So no additional configuration is necessary.
+
+
+==== Advantages of Data Services
+
+There are several advantages to Data Services that make them worth considering to abstract your persistence logic.
+
+* *Type Safety* - Data service method signatures are compile time checked and compilation will fail if the types of any parameters don't match up with properties in your domain class
+* *Testing* - Since Data Services are interfaces this makes them easy to test via https://spockframework.org/spock/docs/1.0/interaction_based_testing.html[Spock Mocks]
+* *Performance* - The generated services are statically compiled and unlike competing technologies in the Java space no proxies are created so runtime performance doesn't suffer
+* *Transaction Management* - Each method in a Data Service is wrapped in an appropriate transaction (a read-only transaction in the case of read operations) that can be easily overridden.
+
+==== Abstract Class Support
+
+If you come across a method that GORM doesn't know how to implement, then you can provide an implementation by using an abstract class.
+
+For example:
+
+[source,groovy]
+----
+interface IBookService {
+    Book getBook(Serializable id)
+    Date someOtherMethod()
+}
+@Service(Book)
+abstract class BookService implements IBookService {
+
+   @Override
+   Date someOtherMethod() {
+      // impl
+   }
+}
+----
+
+In this case GORM will implement the interface methods that have not been defined by the abstract class.
+
+In addition, all _public_ methods of the domain class will be automatically wrapped in the appropriate transaction handling.
+
+What this means is that you can define protected abstract methods that are non-transactional in order to compose logic. For example:
+
+[source,groovy]
+----
+@Service(Book)
+abstract class BookService  {
+
+   protected abstract Book getBook(Serializable id) <1>
+
+   protected abstract Author getAuthor(Serializable id) <1>
+
+   Book updateBook(Serializable id, Serializable authorId) { <2>
+      Book book = getBook(id)
+      if(book != null) {
+          Author author = getAuthor(authorId)
+          if(author == null) {
+              throw new IllegalArgumentException("Author does not exist")
+          }
+          book.author = author
+          book.save()
+      }
+      return book
+   }
+}
+----
+
+<1> Two `protected abstract` methods are defined that are not wrapped in transaction handling
+<2> The `updateBook` method uses the two methods that are implemented automatically by GORM and being `public` is automatically made transactional.
+
+TIP: If you have `public` methods that you do not wish to be transactional, then you can annotate them with `@NotTransactional`

@@ -1,0 +1,17 @@
+Dynamic finder styles queries use the stem plus the word `By` and then a <<finders,Dynamic Finder expression>>.
+
+For example:
+
+[source,groovy]
+----
+@Service(Book)
+interface BookService {
+    List<Book> findByTitleAndPublishDateGreaterThan(String title, Date publishDate)
+}
+----
+
+The signature above will produce a dynamic finder query using the method signature expression.
+
+The possible method expressions are the same as those possible with GORM's static <<finders,Dynamic Finders>>
+
+NOTE: In this case the names of the properties to query are inferred from the method signature and the parameter names are not critical. If you misspell the method signature a compilation error will occur.
