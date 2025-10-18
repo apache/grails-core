@@ -26,6 +26,10 @@ extensions.configure(GrailsPublishExtension) {
     it.license.name = 'Apache-2.0'
     it.title = 'Grails Redis Plugin'
     it.desc = 'This Plugin provides access to Redis and various utilities (service, annotations, etc) for caching.'
+    it.organization {
+        name = 'Apache Software Foundation'
+        url = 'https://apache.org/'
+    }
     it.developers = [
             tednaleid: 'Ted Naleid',
             burtbeckwith: 'Burt Beckwith',

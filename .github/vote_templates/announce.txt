@@ -1,19 +1,17 @@
-The Apache Grails community is pleased to announce the release of Apache Grails Redis Plugin ${VERSION}.
+The Apache Grails community is pleased to announce the release of ${PROJECT_NAME} ${VERSION}.
 
-Grails is a powerful Apache Groovy-based web application framework for the JVM built on top of Spring Boot that has many plugins to further extend its functionality.
-
-This Grails Redis Plugin release is another milestone on our journey to a final 7.0 release. Users are encouraged to try the milestone to provide early feedback. 
+${PROJECT_DESC}
 
 The release notes are available here:
-https://github.com/apache/grails-redis/releases/tag/v${VERSION}
+https://github.com/${REPO_SLUG}/releases/tag/${TAG}
 
 Apache Grails website: https://grails.apache.org/
 
 Download Links: https://grails.apache.org/download.html
 
 Grails Resources:
-- Grails Redis GitHub repo: https://github.com/apache/grails-redis
-- Issues: https://github.com/apache/grails-redis/issues
+- ${PROJECT_NAME} GitHub repo: https://github.com/apache/${REPO_SLUG}
+- Issues: https://github.com/${REPO_SLUG}/issues
 - Mailing lists: https://grails.apache.org/community.html
 
 Happy Coding,
