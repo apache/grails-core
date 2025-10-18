@@ -138,7 +138,7 @@ Example:
 ### Manual Verification: Reproducible Jar Files
 After all jar files are verified to be signed by a valid Grails key, we need to build a local copy to ensure the file was built with the right code base. The `very-reproducible.sh` script handles this check, but if the bootstrap needs to be manually bootstrapped, perform the following step: 
 
-    gradle -p gradle bootstrap
+    gradle -p gradle-bootstrap
 
 Further details on the building can be found in the [INSTALL](INSTALL) document.  Otherwise, run the `verify-reproducible.sh` shell script to compare the published jar files to a locally built version of them. 
 
