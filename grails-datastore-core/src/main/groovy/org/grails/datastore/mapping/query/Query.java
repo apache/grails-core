@@ -68,7 +68,7 @@ public abstract class Query implements Cloneable {
     protected boolean uniqueResult;
     protected Map<String, FetchType> fetchStrategies = new HashMap<>();
     protected Map<String, JoinType> joinTypes = new HashMap<>();
-    protected boolean queryCache;
+    protected Boolean queryCache;
     protected LockModeType lockResult;
 
     protected Query(Session session, PersistentEntity entity) {

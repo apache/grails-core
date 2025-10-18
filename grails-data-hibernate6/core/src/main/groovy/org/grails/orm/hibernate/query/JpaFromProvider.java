@@ -50,7 +50,16 @@ public class JpaFromProvider implements Cloneable {
                         .toList().stream())
                 .distinct()
                 .map(joinColumn -> {
-                    var table = detachedFroms.computeIfAbsent(joinColumn, s -> root).join(joinColumn, ((Map<String, JoinType>) detachedCriteria.getJoinTypes())
+                    // Determine owner class for this join path from detached criteria
+                    Class<?> ownerClass = Optional.ofNullable(aliasMap.get(joinColumn))
+                            .map(dac -> dac.getAssociation().getOwner().getJavaClass())
+                            .orElse(root.getJavaType());
+                    // Choose base From: use outer root only if join belongs to the outer root type; otherwise create a detached root for the owner
+                    From base = ownerClass.equals(root.getJavaType())
+                            ? root
+                            : detachedFroms.computeIfAbsent(joinColumn, s -> cq.from(ownerClass));
+
+                    var table = base.join(joinColumn, ((Map<String, JoinType>) detachedCriteria.getJoinTypes())
                             .entrySet()
                             .stream()
                             .filter(entry -> entry.getKey().equals(joinColumn))
@@ -63,7 +72,7 @@ public class JpaFromProvider implements Cloneable {
                             .orElse(joinColumn);
                     table.alias(column);
                     return new AbstractMap.SimpleEntry<>(column, table);
-        }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (existing, replacement) -> existing, java.util.LinkedHashMap::new));
         fromsByName.put("root", root);
         return fromsByName;
     }
@@ -77,9 +86,17 @@ public class JpaFromProvider implements Cloneable {
     }
 
     private Map<String, DetachedAssociationCriteria> createAliasMap(List<DetachedAssociationCriteria> detachedAssociationCriteriaList) {
+        // Use a merge function and a stable map type to avoid DuplicateKey exceptions when the same
+        // association path/alias appears multiple times (e.g., referenced in both predicate and sort).
+        // Keep the first occurrence to preserve deterministic aliasing.
         return detachedAssociationCriteriaList.stream()
                 .map(new AliasMapEntryFunction())
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (existing, replacement) -> existing,
+                        java.util.LinkedHashMap::new
+                ));
     }
 
     public Path getFullyQualifiedPath(String propertyName) {

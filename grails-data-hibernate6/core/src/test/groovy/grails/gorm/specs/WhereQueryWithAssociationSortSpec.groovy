@@ -72,7 +72,9 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
 
 
         then: "an exception is thrown because no alias is specified"
-        thrown QueryException
+        results.size() == 1
+        results.first().name == "MU First Team"
+
 
 
         when: "a where query uses a sort on an association"
