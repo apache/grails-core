@@ -42,6 +42,9 @@ public class AutoTimestampUtils {
     private static final String LAST_MODIFIED_DATE_ANNOTATION = "grails.gorm.annotation.LastModifiedDate";
     private static final String AUTO_TIMESTAMP_ANNOTATION = "grails.gorm.annotation.AutoTimestamp";
 
+    private static final String CREATED_DATE_SPRING_ANNOTATION = "org.springframework.data.annotation.CreatedDate";
+    private static final String LAST_MODIFIED_DATE_SPRING_ANNOTATION = "org.springframework.data.annotation.LastModifiedDate";
+
     /**
      * Gets the auto-timestamp type for a persistent property, using cached metadata when not in development mode.
      *
@@ -92,9 +95,11 @@ public class AutoTimestampUtils {
                 for (java.lang.annotation.Annotation annotation : field.getDeclaredAnnotations()) {
                     String annotationName = annotation.annotationType().getName();
 
-                    if (CREATED_DATE_ANNOTATION.equals(annotationName)) {
+                    if (CREATED_DATE_ANNOTATION.equals(annotationName) ||
+                        CREATED_DATE_SPRING_ANNOTATION.equals(annotationName)) {
                         return AutoTimestampType.CREATED;
-                    } else if (LAST_MODIFIED_DATE_ANNOTATION.equals(annotationName)) {
+                    } else if (LAST_MODIFIED_DATE_ANNOTATION.equals(annotationName) ||
+                               LAST_MODIFIED_DATE_SPRING_ANNOTATION.equals(annotationName)) {
                         return AutoTimestampType.UPDATED;
                     } else if (AUTO_TIMESTAMP_ANNOTATION.equals(annotationName)) {
                         // For @AutoTimestamp, check the EventType value
@@ -129,14 +134,15 @@ public class AutoTimestampUtils {
      * Checks if a property has any auto-timestamp annotation.
      *
      * @param persistentProperty The persistent property to check
-     * @return true if the property has a @CreatedDate, @LastModifiedDate, or @AutoTimestamp annotation
+     * @return true if the property has a GORM @CreatedDate, @LastModifiedDate, @AutoTimestamp annotation,
+     *         or Spring Data @CreatedDate, @LastModifiedDate annotation
      */
     public static boolean hasAutoTimestampAnnotation(PersistentProperty<?> persistentProperty) {
         return persistentProperty != null && getAutoTimestampType(persistentProperty) != AutoTimestampType.NONE;
     }
 
     /**
-     * Checks if a property has a @CreatedDate annotation or @AutoTimestamp(CREATED).
+     * Checks if a property has a @CreatedDate annotation (GORM or Spring Data) or @AutoTimestamp(CREATED).
      *
      * @param persistentProperty The persistent property to check
      * @return true if the property represents a creation timestamp
@@ -146,7 +152,7 @@ public class AutoTimestampUtils {
     }
 
     /**
-     * Checks if a property has a @LastModifiedDate annotation or @AutoTimestamp(UPDATED).
+     * Checks if a property has a @LastModifiedDate annotation (GORM or Spring Data) or @AutoTimestamp(UPDATED).
      *
      * @param persistentProperty The persistent property to check
      * @return true if the property represents an update timestamp
