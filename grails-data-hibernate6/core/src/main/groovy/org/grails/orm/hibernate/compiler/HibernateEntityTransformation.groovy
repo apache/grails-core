@@ -237,6 +237,39 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         AnnotatedNodeUtils.markAsGenerated(classNode, setNextManagedEntityMethod)
         staticCompilationVisitor.visitMethod(setNextManagedEntityMethod)
 
+        // add field: boolean $$_hibernate_useTracker
+        String useTrackerFieldName = '$$_hibernate_useTracker'
+        FieldNode useTrackerField = classNode.addField(useTrackerFieldName, Modifier.PRIVATE | Modifier.TRANSIENT, ClassHelper.boolean_TYPE, constX(false))
+        useTrackerField
+                 .addAnnotation(transientAnnotationNode)
+
+        // add method: boolean $$_hibernate_useTracker()
+        def useTrackerGetter = new MethodNode(
+                '$$_hibernate_useTracker',
+                Modifier.PUBLIC,
+                ClassHelper.boolean_TYPE,
+                AstUtils.ZERO_PARAMETERS,
+                null,
+                returnS(varX(useTrackerField))
+        )
+        classNode.addMethod(useTrackerGetter)
+        AnnotatedNodeUtils.markAsGenerated(classNode, useTrackerGetter)
+        staticCompilationVisitor.visitMethod(useTrackerGetter)
+
+        // add method: void $$_hibernate_setUseTracker(boolean useTracker)
+        def useTrackerParam = param(ClassHelper.boolean_TYPE, 'useTracker')
+        def useTrackerSetter = new MethodNode(
+                '$$_hibernate_setUseTracker',
+                Modifier.PUBLIC,
+                ClassHelper.VOID_TYPE,
+                params(useTrackerParam),
+                null,
+                assignS(varX(useTrackerField), varX(useTrackerParam))
+        )
+        classNode.addMethod(useTrackerSetter)
+        AnnotatedNodeUtils.markAsGenerated(classNode, useTrackerSetter)
+        staticCompilationVisitor.visitMethod(useTrackerSetter)
+
         List<MethodNode> allMethods = classNode.getMethods()
         for(MethodNode methodNode in allMethods) {
             if(methodNode.getAnnotations(ClassHelper.make(DirtyCheckedProperty))) {
