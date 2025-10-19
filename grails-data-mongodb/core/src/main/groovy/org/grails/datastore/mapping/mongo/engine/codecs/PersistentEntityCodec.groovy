@@ -64,7 +64,6 @@ import org.grails.datastore.mapping.engine.internal.MappingUtils
 import org.grails.datastore.mapping.model.EmbeddedPersistentEntity
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.datastore.mapping.model.types.EmbeddedCollection
@@ -248,12 +247,6 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                     EntityPersister.incrementEntityVersion(access)
                 }
 
-            }
-            else {
-                // schedule lastUpdated if necessary
-                if (entity.getPropertyByName(GormProperties.LAST_UPDATED) != null) {
-                    dirtyProperties.add(GormProperties.LAST_UPDATED)
-                }
             }
 
             for (propertyName in dirtyProperties) {
