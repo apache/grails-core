@@ -330,7 +330,7 @@ On the `grails-static-website` repository:
 
 Run the release action (https://github.com/apache/grails-static-website/actions/workflows/release.yml) with the new version to update https://github.com/apache/grails-static-website/blob/HEAD/conf/releases.yml and then run the publish action (https://github.com/apache/grails-static-website/actions/workflows/publish.yml) to update the `asf-site-production` branch and https://grails.apache.org
 
-Create a new `.md` file in the `/posts` directory announcing the release.  The PR will stage this change on https://grails.staged.apache.org/ and when the PR is merged it will deploy to https://grails.apache.org
+Create a new `.md` file in the `/posts` directory announcing the release.  Wwhen the PR is merged it will deploy to https://grails.apache.org
 
 ### Flag release in `grails-core` as latest
 
