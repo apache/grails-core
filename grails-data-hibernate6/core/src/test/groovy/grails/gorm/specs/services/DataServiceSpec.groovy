@@ -433,7 +433,7 @@ class Product {
 @EqualsAndHashCode(includes = ["name"])
 class Attribute {
     String name
-    Product product
+    static belongsTo = [product: Product]
 }
 
 interface AnotherProductInterface {
