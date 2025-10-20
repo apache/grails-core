@@ -18,7 +18,7 @@ class CascadeBehaviorPersisterSpec extends Specification {
 
     @AutoCleanup @Shared HibernateDatastore datastore = new HibernateDatastore(
             // Unidirectional
-            ChildPersister,
+            ChildPersister, Owner_Two_Uni_P,
             Owner_Default_Uni_P, Owner_All_Uni_P, Owner_SaveUpdate_Uni_P, Owner_Merge_Uni_P, Owner_Delete_Uni_P,
             Owner_Lock_Uni_P, Owner_Replicate_Uni_P, Owner_Evict_Uni_P, Owner_Persist_Uni_P,
 
@@ -49,6 +49,20 @@ class CascadeBehaviorPersisterSpec extends Specification {
     // --- Unidirectional `hasMany` Persistence Tests ---
 
 
+
+    @Rollback
+    void "test two unidirectional one to many cascade persists children"() {
+        when: "A new owner is saved after adding a child"
+        new Owner_Two_Uni_P(name: "Owner")
+                .addToFunnyChildren(new ChildPersister(title: "Funny Child"))
+                .addToSillyChildren(new ChildPersister(title: "Silly Child"))
+                .save(flush: true)
+        Owner_Two_Uni_P owner = Owner_Two_Uni_P.first()
+        then: "The owner is saved without errors and both owner and child exist"
+
+        owner.funnyChildren.size() == 1
+        owner.sillyChildren.size() == 1
+    }
 
     @Rollback
     void "test unidirectional 'all' cascade persists child"() {
@@ -278,6 +292,12 @@ class ChildPersister {
 class Owner_Default_Uni_P {
     String name
     static hasMany = [children: ChildPersister]
+}
+
+@Entity
+class Owner_Two_Uni_P {
+    String name
+    static hasMany = [funnyChildren: ChildPersister, sillyChildren: ChildPersister]
 }
 
 @Entity

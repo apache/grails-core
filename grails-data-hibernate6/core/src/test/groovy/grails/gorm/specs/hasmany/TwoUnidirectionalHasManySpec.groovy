@@ -19,33 +19,18 @@
 package grails.gorm.specs.hasmany
 
 import grails.gorm.annotation.Entity
-import grails.gorm.annotation.JpaEntity
-import grails.gorm.hibernate.mapping.MappingBuilder
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
-import org.grails.orm.hibernate.HibernateDatastore
-import spock.lang.AutoCleanup
-import spock.lang.Ignore
 import spock.lang.Issue
-import spock.lang.Shared
-import spock.lang.Specification
-
-import jakarta.persistence.CascadeType
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.Id
-import jakarta.persistence.OneToMany
-import org.grails.orm.hibernate.HibernateDatastore
-import spock.lang.*
 
 /**
  * @author Graeme Rocher
  * @since 1.0
  */
-//TODO: CreatedUsers sql is being run, but not added to the EcmMask instance
 class TwoUnidirectionalHasManySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([EcmMask, EcmMaskJpa, User2, User])
+        manager.addAllDomainClasses([EcmMask, EcmUser])
     }
 
     @Rollback
@@ -53,66 +38,30 @@ class TwoUnidirectionalHasManySpec extends HibernateGormDatastoreSpec {
     void "test two undirectional one to many references"() {
         when:
         new EcmMask(name: "test")
-                .addToCreateUsers(name: "Fred")
-                .addToUpdateUsers(name:"Bob")
-                .save(flush:true).discard()
+                .addToCreateUsers(new EcmUser(name: "Fred"))
+                .addToUpdateUsers(new EcmUser(name: "Bob"))
+                .save(flush:true, failOnError: true)
 
+        session.clear()
         EcmMask mask = EcmMask.first()
 
         then:
         mask != null
         mask.createUsers.size() == 1
         mask.updateUsers.size() == 1
-
     }
 
-
-
-}
-
-@JpaEntity
-class EcmMaskJpa {
-    @Id
-    @GeneratedValue
-    Long id
-
-    String name
-
-    @OneToMany(cascade = CascadeType.ALL)
-    Set<User2> createdUsers = []
-
-    @OneToMany(cascade = CascadeType.ALL)
-    Set<User2> updatedUsers = []
-}
-
-@JpaEntity
-class User2 {
-    @Id
-    @GeneratedValue
-    Long id
-    String name
 }
 
 @Entity
 class EcmMask {
     String name
-    static hasMany = [createUsers:User,updateUsers:User]
+    static hasMany = [createUsers:EcmUser, updateUsers:EcmUser]
 
-    static mapping = MappingBuilder.orm {
-//        property('createUsers') {
-//            joinTable { name"created_users" }
-//        }
-//        property('updateUsers') {
-//            joinTable { name "updated_users" }
-//        }
-    }
 }
 
 @Entity
-class User {
+class EcmUser {
     String name
 
-    static mapping = {
-        table '`user`'
-    }
 }

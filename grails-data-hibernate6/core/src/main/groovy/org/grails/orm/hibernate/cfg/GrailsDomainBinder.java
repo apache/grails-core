@@ -122,7 +122,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     public static final String CASCADE_ALL = "all";
     public static final String CASCADE_SAVE_UPDATE = "save-update";
     public static final String CASCADE_NONE = "none";
-    private static final String BACKTICK = "`";
+    public static final String BACKTICK = "`";
 
     public static final String ENUM_TYPE_CLASS = org.grails.orm.hibernate.HibernateLegacyEnumType.class.getName();
     public static final String ENUM_CLASS_PROP = "enumClass";
@@ -546,7 +546,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             } else {
                 // TODO support unidirectional many-to-many
             }
-        } else if (shouldCollectionBindWithJoinColumn(property)) {
+        } else if (new ShouldCollectionBindWithJoinColumn().apply(property)) {
             bindCollectionWithJoinTable(property, mappings, collection, propConfig, sessionFactoryBeanName);
 
         } else if (ofNullable(property).map(PersistentProperty::isUnidirectionalOneToMany).orElse(false)) {
@@ -796,13 +796,6 @@ public class GrailsDomainBinder implements MetadataContributor {
         new CollectionForPropertyConfigBinder().bindCollectionForPropertyConfig(collection, config);
     }
 
-    private boolean shouldCollectionBindWithJoinColumn(ToMany property) {
-        PropertyConfig config = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
-        JoinTable jt = config.getJoinTable();
-
-        return (ofNullable(property).map(PersistentProperty::isUnidirectionalOneToMany).orElse(false) || (property instanceof Basic)) && jt != null;
-    }
-
     /**
      * @param property The property to bind
      * @param manyToOne The inverse side
@@ -842,7 +835,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         PersistentEntity refDomainClass = property.getOwner();
         final Mapping mapping = new HibernateEntityWrapper().getMappedForm(refDomainClass);
         boolean hasCompositeIdentifier = mapping.hasCompositeIdentifier();
-        if ((shouldCollectionBindWithJoinColumn((ToMany) property) && hasCompositeIdentifier) ||
+        if ((new ShouldCollectionBindWithJoinColumn().apply((ToMany) property) && hasCompositeIdentifier) ||
                 (hasCompositeIdentifier && ( property instanceof ManyToMany))) {
             CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
             new CompositeIdentifierToManyToOneBinder(namingStrategy).bindCompositeIdentifierToManyToOne((Association) property, key, ci, refDomainClass, EMPTY_PATH);
@@ -1063,7 +1056,7 @@ public class GrailsDomainBinder implements MetadataContributor {
      */
     private boolean shouldBindCollectionWithForeignKey(ToMany property) {
         return ((property instanceof org.grails.datastore.mapping.model.types.OneToMany) && property.isBidirectional() ||
-                !shouldCollectionBindWithJoinColumn(property)) &&
+                !(boolean) new ShouldCollectionBindWithJoinColumn().apply(property)) &&
                 !Map.class.isAssignableFrom(property.getType()) &&
                 !(property instanceof ManyToMany) &&
                 !(property instanceof Basic);
@@ -1083,7 +1076,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         PropertyConfig config = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
         JoinTable jt = config.getJoinTable();
 
-        String s = calculateTableForMany(property, sessionFactoryBeanName);
+        String s = new TableForManyCalculator(namingStrategy).calculateTableForMany(property, sessionFactoryBeanName);
         String tableName = (jt != null && jt.getName() != null ? jt.getName() : getNamingStrategy().resolveTableName(s));
 
         String schemaName = new NamespaceNameExtractor().getSchemaName(mappings);
@@ -1106,73 +1099,6 @@ public class GrailsDomainBinder implements MetadataContributor {
                 tableName, null, false, metadataBuildingContext));
     }
 
-    /**
-     * Calculates the mapping table for a many-to-many. One side of
-     * the relationship has to "own" the relationship so that there is not a situation
-     * where you have two mapping tables for left_right and right_left
-     */
-    private String calculateTableForMany(ToMany property, String sessionFactoryBeanName) {
-        String propertyColumnName = getNamingStrategy().resolveColumnName(property.getName());
-        //fix for GRAILS-5895
-        PropertyConfig config = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
-        JoinTable jt = config.getJoinTable();
-        boolean hasJoinTableMapping = jt != null && jt.getName() != null;
-        PersistentEntity domainClass1 = property.getOwner();
-        String left = new TableNameFetcher(getNamingStrategy()).getTableName(domainClass1);
-
-        if (Map.class.isAssignableFrom(property.getType())) {
-            if (hasJoinTableMapping) {
-                return jt.getName();
-            }
-            return new BackticksRemover().apply(left) + UNDERSCORE + new BackticksRemover().apply(propertyColumnName);
-        }
-
-        if (property instanceof Basic) {
-            if (hasJoinTableMapping) {
-                return jt.getName();
-            }
-            return new BackticksRemover().apply(left) + UNDERSCORE + new BackticksRemover().apply(propertyColumnName);
-        }
-
-        if (property.getAssociatedEntity() == null) {
-            throw new MappingException("Expected an entity to be associated with the association ("  + property + ") and none was found. ");
-        }
-
-        PersistentEntity domainClass = property.getAssociatedEntity();
-        String right = new TableNameFetcher(getNamingStrategy()).getTableName(domainClass);
-
-        if (property instanceof ManyToMany property1) {
-            if (hasJoinTableMapping) {
-                return jt.getName();
-            }
-            if (property.isOwningSide()) {
-                return new BackticksRemover().apply(left) + UNDERSCORE + new BackticksRemover().apply(propertyColumnName);
-            }
-            String s2 = getNamingStrategy().resolveColumnName(property1.getInversePropertyName());
-            return new BackticksRemover().apply(right) + UNDERSCORE + new BackticksRemover().apply(s2);
-        }
-
-        if (shouldCollectionBindWithJoinColumn(property)) {
-            if (hasJoinTableMapping) {
-                return jt.getName();
-            }
-            left = trimBackTigs(left);
-            right = trimBackTigs(right);
-            return new BackticksRemover().apply(left) + UNDERSCORE + new BackticksRemover().apply(right);
-        }
-
-        if (property.isOwningSide()) {
-            return new BackticksRemover().apply(left) + UNDERSCORE + new BackticksRemover().apply(right);
-        }
-        return new BackticksRemover().apply(right) + UNDERSCORE + new BackticksRemover().apply(left);
-    }
-
-    private String trimBackTigs(String tableName) {
-        if (tableName.startsWith(BACKTICK)) {
-            return tableName.substring(1, tableName.length() - 1);
-        }
-        return tableName;
-    }
 
     private PhysicalNamingStrategy getPhysicalNamingStrategy(String sessionFactoryBeanName) {
         return NAMING_STRATEGY_PROVIDER.getPhysicalNamingStrategy(sessionFactoryBeanName);
