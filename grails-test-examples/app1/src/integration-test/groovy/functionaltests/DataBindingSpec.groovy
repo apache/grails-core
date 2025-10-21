@@ -20,7 +20,6 @@
 package functionaltests
 
 import spock.lang.Issue
-import spock.lang.PendingFeature
 
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
@@ -28,7 +27,6 @@ import grails.testing.mixin.integration.Integration
 @Integration
 class DataBindingSpec extends ContainerGebSpec {
 
-    @PendingFeature
     @Issue('https://github.com/apache/grails-core/issues/15147')
     void 'data binding works'() {
         when:
