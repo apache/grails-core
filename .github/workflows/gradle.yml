@@ -44,7 +44,12 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🏃‍♂️ Run Tests"
-        run: ./gradlew check --max-workers=2 --refresh-dependencies --continue
+        run: >
+          ./gradlew
+          check
+          --max-workers=2
+          --refresh-dependencies
+          --continue
   functionalTests:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     runs-on: ubuntu-24.04
@@ -65,7 +70,11 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🏃‍♂️ Run Different Config Functional Tests"
-        run: ./gradlew core-examples-functional-test-app:check -DTESTCONFIG=${{ matrix.test-config }}
+        run: >
+          ./gradlew
+          core-examples-functional-test-app:check
+          -DTESTCONFIG=${{ matrix.test-config }}
+          -PgebAtCheckWaiting
   publish:
     needs: [ coreTests, functionalTests ]
     if: ${{ always() && github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (needs.coreTests.result == 'success' || needs.coreTests.result == 'skipped') && (needs.functionalTests.result == 'success' || needs.functionalTests.result == 'skipped') }}

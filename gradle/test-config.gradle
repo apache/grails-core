@@ -48,6 +48,11 @@ tasks.named('integrationTest', Test) {
     // systemProperty('grails.geb.recording.mode', 'RECORD_ALL')
     systemProperty('TESTCONFIG', System.getProperty('TESTCONFIG'))
 
+    // Make Geb tests more resilient in slow CI environments
+    if (project.hasProperty('gebAtCheckWaiting')) {
+        systemProperty('grails.geb.atCheckWaiting.enabled', 'true')
+    }
+
     doFirst {
         logger.quiet(
                 '\n - Running tests for configuration: {} and Grails: {}',
