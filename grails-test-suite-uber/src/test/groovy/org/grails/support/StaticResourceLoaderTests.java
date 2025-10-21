@@ -67,8 +67,6 @@ public class StaticResourceLoaderTests {
             Resource baseResource = new UrlResource("file://home/test");
             srl.setBaseResource(baseResource);
             assertEquals(srl.getResource(""), baseResource);
-        } catch (IllegalStateException ise) {
-            fail("Should not have thrown IllegalStateException");
         } catch (MalformedURLException e) {
             fail("mal formed url");
         }
