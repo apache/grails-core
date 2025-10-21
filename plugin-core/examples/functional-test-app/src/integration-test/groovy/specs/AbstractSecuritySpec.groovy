@@ -63,36 +63,28 @@ abstract class AbstractSecuritySpec extends ContainerGebSpec {
 	}
 
 	protected String getContent(String url) {
-		go url
+		go(url)
 		$().text()
 	}
 
 	protected String getSessionValue(String name) {
-		getContent 'hack/getSessionValue?name=' + name
+		getContent("hack/getSessionValue?name=$name")
 	}
 
 	protected void login(String user, String pwd = 'password', boolean remember = false) {
-		to LoginPage
-		username = user
-		password = pwd
+		def loginPage = to(LoginPage)
+		loginPage.username = user
+		loginPage.password = pwd
 		if (remember) {
-			rememberMe.click()
+			loginPage.rememberMe.click()
 		}
-		loginButton.click()
+		loginPage.loginButton.click()
 	}
 
 	protected void logout() {
-		go SpringSecurityUtils.securityConfig.logout.filterProcessesUrl
+		go(SpringSecurityUtils.securityConfig.logout.filterProcessesUrl)
 		browser.clearCookies()
-		browser.go("/")
-	}
-
-	protected void assertContentContains(String expected) {
-		assert $().text().contains(expected)
-	}
-
-	protected void assertContentDoesNotContain(String unexpected) {
-		assert !$().text().contains(unexpected)
+		browser.go('/')
 	}
 
 	protected MessageDigestPasswordEncoder createSha256Encoder() {

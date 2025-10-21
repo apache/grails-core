@@ -148,7 +148,7 @@ class BasicAuthCacheUsersSecuritySpec extends AbstractSecuritySpec {
 		login 'admin1', 'password1'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		and:
 		userCache.getUserFromCache('admin1')

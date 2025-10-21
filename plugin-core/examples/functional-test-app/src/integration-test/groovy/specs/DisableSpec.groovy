@@ -42,7 +42,7 @@ class DisableSpec extends AbstractHyphenatedSecuritySpec {
 		go 'secure-annotated'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		logout()
@@ -60,7 +60,7 @@ class DisableSpec extends AbstractHyphenatedSecuritySpec {
 		login username
 
 		then:
-		assertContentContains 'accountLocked'
+		pageSource.contains('accountLocked')
 
 		// reset
 		when:
@@ -84,7 +84,7 @@ class DisableSpec extends AbstractHyphenatedSecuritySpec {
 		go 'secure-annotated'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		logout()
@@ -102,7 +102,7 @@ class DisableSpec extends AbstractHyphenatedSecuritySpec {
 		login username
 
 		then:
-		assertContentContains 'accountDisabled'
+		pageSource.contains('accountDisabled')
 
 		// reset
 		when:
@@ -126,7 +126,7 @@ class DisableSpec extends AbstractHyphenatedSecuritySpec {
 		go 'secure-annotated'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		logout()
@@ -144,7 +144,7 @@ class DisableSpec extends AbstractHyphenatedSecuritySpec {
 		login username
 
 		then:
-		assertContentContains 'accountExpired'
+		pageSource.contains('accountExpired')
 
 		// reset
 		when:
@@ -168,7 +168,7 @@ class DisableSpec extends AbstractHyphenatedSecuritySpec {
 		go 'secure-annotated'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		logout()
@@ -186,7 +186,7 @@ class DisableSpec extends AbstractHyphenatedSecuritySpec {
 		login username
 
 		then:
-		assertContentContains 'passwordExpired'
+		pageSource.contains('passwordExpired')
 
 		// reset
 		when:

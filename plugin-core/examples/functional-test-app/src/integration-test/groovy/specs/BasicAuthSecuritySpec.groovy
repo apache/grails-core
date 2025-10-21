@@ -19,6 +19,8 @@
 
 package specs
 
+import spock.lang.Stepwise
+
 import grails.testing.mixin.integration.Integration
 import pages.LoginPage
 import pages.role.CreateRolePage
@@ -30,6 +32,7 @@ import pages.user.ShowUserPage
 import spock.lang.IgnoreIf
 
 @Integration
+@Stepwise
 @IgnoreIf({ System.getProperty('TESTCONFIG') != 'basic' })
 class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 
@@ -37,62 +40,63 @@ class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 
 	void 'create roles'() {
 		when:
-		to ListRolePage
+		def listRolePage = to(ListRolePage)
 
 		then:
-		roleRows.size() == 0
+		listRolePage.roleRows.size() == 0
 
 		when:
-		newRoleButton.click()
+		listRolePage.newRoleButton.click()
 
 		then:
-		at CreateRolePage
+		at(CreateRolePage)
 
 		when:
 		authority = 'ROLE_ADMIN'
 		createButton.click()
 
 		then:
-		at ShowRolePage
+		at(ShowRolePage)
 
 		when:
-		to ListRolePage
+		listRolePage = to(ListRolePage)
 
 		then:
-		roleRows.size() == 1
+		listRolePage.roleRows.size() == 1
 
 		when:
-		newRoleButton.click()
+		listRolePage.newRoleButton.click()
 
 		then:
-		at CreateRolePage
+		at(CreateRolePage)
 
 		when:
 		authority = 'ROLE_ADMIN2'
 		createButton.click()
 
 		then:
-		at ShowRolePage
+		at(ShowRolePage)
 
 		when:
-		to ListRolePage
+		listRolePage = to(ListRolePage)
 
 		then:
-		roleRows.size() == 2
+		listRolePage.roleRows.size() == 2
 	}
 
 	void 'create users'() {
-		when:
-		to ListUserPage
-
-		then:
-		userRows.size() == 0
 
 		when:
-		newUserButton.click()
+		def listUserPage = to(ListUserPage)
 
 		then:
-		at CreateUserPage
+		listUserPage.userRows.size() == 0
+
+		when:
+		listUserPage.newUserButton.click()
+
+		then:
+		at(CreateUserPage)
 
 		when:
 		username = 'admin1'
@@ -102,19 +106,19 @@ class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 		createButton.click()
 
 		then:
-		at ShowUserPage
+		at(ShowUserPage)
 
 		when:
-		to ListUserPage
+		listUserPage = to(ListUserPage)
 
 		then:
-		userRows.size() == 1
+		listUserPage.userRows.size() == 1
 
 		when:
-		newUserButton.click()
+		listUserPage.newUserButton.click()
 
 		then:
-		at CreateUserPage
+		at(CreateUserPage)
 
 		when:
 		username = 'admin2'
@@ -125,13 +129,13 @@ class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 		createButton.click()
 
 		then:
-		at ShowUserPage
+		at(ShowUserPage)
 
 		when:
-		to ListUserPage
+		listUserPage = to(ListUserPage)
 
 		then:
-		userRows.size() == 2
+		listUserPage.userRows.size() == 2
 	}
 
 	void 'secured urls not visible without login'() {
@@ -139,55 +143,55 @@ class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 		// secureClassAnnotated is Basic auth, everything else is form auth
 
 		when:
-		go 'secureAnnotated'
+		go('secureAnnotated')
 
 		then:
-		at LoginPage
+		at(LoginPage)
 
 		when:
-		go 'secureAnnotated/index'
+		go('secureAnnotated/index')
 
 		then:
-		at LoginPage
+		at(LoginPage)
 
 		when:
-		go 'secureAnnotated/adminEither'
+		go('secureAnnotated/adminEither')
 
 		then:
-		at LoginPage
+		at(LoginPage)
 
 		when:
-		getWithoutAuth 'secureClassAnnotated'
-
-		then:
-		401 == connection.responseCode
-
-		when:
-		getWithoutAuth 'secureClassAnnotated/index'
+		getWithoutAuth('secureClassAnnotated')
 
 		then:
 		401 == connection.responseCode
 
 		when:
-		getWithoutAuth 'secureClassAnnotated/otherAction'
+		getWithoutAuth('secureClassAnnotated/index')
 
 		then:
 		401 == connection.responseCode
 
 		when:
-		getWithoutAuth 'secureClassAnnotated/admin2'
+		getWithoutAuth('secureClassAnnotated/otherAction')
 
 		then:
 		401 == connection.responseCode
 
 		when:
-		getWithoutAuth 'secureClassAnnotated/admin2.xml'
+		getWithoutAuth('secureClassAnnotated/admin2')
 
 		then:
 		401 == connection.responseCode
 
 		when:
-		getWithoutAuth 'secureClassAnnotated/admin2;jsessionid=5514B068198CC7DBF372713326E14C12'
+		getWithoutAuth('secureClassAnnotated/admin2.xml')
+
+		then:
+		401 == connection.responseCode
+
+		when:
+		getWithoutAuth('secureClassAnnotated/admin2;jsessionid=5514B068198CC7DBF372713326E14C12')
 
 		then:
 		401 == connection.responseCode
@@ -198,70 +202,70 @@ class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 		// Check with admin1 auth, some @Secure actions are accessible
 
 		when:
-		go 'secureAnnotated'
+		go('secureAnnotated')
 
 		then:
-		at LoginPage
+		at(LoginPage)
 
 		when:
-		login 'admin1', 'password1'
+		login('admin1', 'password1')
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
-
-		when:
-		logout()
-		go 'secureAnnotated/index'
-
-		then:
-		at LoginPage
-
-		when:
-		login 'admin1', 'password1'
-
-		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		logout()
-		go 'secureAnnotated/adminEither'
+		go('secureAnnotated/index')
 
 		then:
-		at LoginPage
+		at(LoginPage)
 
 		when:
-		login 'admin1', 'password1'
+		login('admin1', 'password1')
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
-
-		when:
-		logout()
-		getWithAuth 'secureClassAnnotated', 'admin1', 'password1'
-
-		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		logout()
-		getWithAuth 'secureClassAnnotated/index', 'admin1', 'password1'
+		go('secureAnnotated/adminEither')
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		at(LoginPage)
+
+		when:
+		login('admin1', 'password1')
+
+		then:
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		logout()
-		getWithAuth 'secureClassAnnotated/otherAction', 'admin1', 'password1'
+		getWithAuth('secureClassAnnotated', 'admin1', 'password1')
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		logout()
-		getWithAuth 'secureClassAnnotated/admin2', 'admin1', 'password1'
+		getWithAuth('secureClassAnnotated/index', 'admin1', 'password1')
 
 		then:
-		assertContentContains 'Error 403 Forbidden'
+		pageSource.contains('you have ROLE_ADMIN')
+
+		when:
+		logout()
+		getWithAuth('secureClassAnnotated/otherAction', 'admin1', 'password1')
+
+		then:
+		pageSource.contains('you have ROLE_ADMIN')
+
+		when:
+		logout()
+		getWithAuth('secureClassAnnotated/admin2', 'admin1', 'password1')
+
+		then:
+		pageSource.contains('Error 403 Forbidden')
 	}
 
 	void 'check allowed for admin2'() {
@@ -269,85 +273,85 @@ class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 		// Check that with admin2 auth, some @Secure actions are accessible
 
 		when:
-		go 'secureAnnotated'
+		go('secureAnnotated')
 
 		then:
-		at LoginPage
+		at(LoginPage)
 
 		when:
-		login 'admin2', 'password2'
+		login('admin2', 'password2')
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
-
-		when:
-		logout()
-		go 'secureAnnotated/index'
-
-		then:
-		at LoginPage
-
-		when:
-		login 'admin2', 'password2'
-
-		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		logout()
-		go 'secureAnnotated/adminEither'
+		go('secureAnnotated/index')
 
 		then:
-		at LoginPage
+		at(LoginPage)
 
 		when:
-		login 'admin2', 'password2'
+		login('admin2', 'password2')
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
-
-		when:
-		logout()
-		getWithAuth 'secureClassAnnotated', 'admin2', 'password2'
-
-		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		logout()
-		getWithAuth 'secureClassAnnotated/index', 'admin2', 'password2'
+		go('secureAnnotated/adminEither')
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		at(LoginPage)
+
+		when:
+		login('admin2', 'password2')
+
+		then:
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		logout()
-		getWithAuth 'secureClassAnnotated/otherAction', 'admin2', 'password2'
+		getWithAuth('secureClassAnnotated', 'admin2', 'password2')
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		logout()
-		getWithAuth 'secureClassAnnotated/admin2', 'admin2', 'password2'
+		getWithAuth('secureClassAnnotated/index', 'admin2', 'password2')
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
+
+		when:
+		logout()
+		getWithAuth('secureClassAnnotated/otherAction', 'admin2', 'password2')
+
+		then:
+		pageSource.contains('you have ROLE_ADMIN')
+
+		when:
+		logout()
+		getWithAuth('secureClassAnnotated/admin2', 'admin2', 'password2')
+
+		then:
+		pageSource.contains('you have ROLE_ADMIN')
 	}
 
 	protected void logout() {
 		super.logout()
 		// cheesy, but the 'Authentication' header from basic auth
 		// isn't cleared, so this forces an invalid header
-		getWithAuth '', 'not_a_valid_username', ''
+		getWithAuth('', 'not_a_valid_username', '')
 	}
 
 	private void getWithAuth(String path, String username, String password) {
 		String uri = new URI(browser.baseUrl).resolve(new URI(path))
-		go uri.replace('http://', 'http://' + username + ':' + password + '@')
+		go(uri.replace('http://', "http://$username:$password@"))
 	}
 
 	private void getWithoutAuth(String uri) {
-		connection = download("/${uri}")
+		connection = download("/$uri")
 	}
 }

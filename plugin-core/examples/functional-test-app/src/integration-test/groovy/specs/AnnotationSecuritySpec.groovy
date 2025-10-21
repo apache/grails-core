@@ -214,73 +214,73 @@ class AnnotationSecuritySpec extends AbstractSecuritySpec {
 		go 'secureAnnotated'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		go 'secureAnnotated/index'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		go 'secureAnnotated/adminEither'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		go 'secureClassAnnotated'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		go 'secureClassAnnotated/index'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		go 'secureClassAnnotated/otherAction'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		go 'secureClassAnnotated/admin2'
 
 		then:
-		assertContentContains "Sorry, you're not authorized to view this page."
+		pageSource.contains('Sorry, you\'re not authorized to view this page.')
 
 		when:
 		go 'secureAnnotated/expression'
 
 		then:
-		assertContentContains 'expression: OK'
+		pageSource.contains('expression: OK')
 
 		when:
 		go 'secureAnnotated/indexMethod'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		go 'secureAnnotated/adminEitherMethod'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		go 'secureAnnotated/expressionMethod'
 
 		then:
-		assertContentContains 'OK - method'
+		pageSource.contains('OK - method')
 
 		when:
 		go 'secureAnnotated/closureMethod'
 
 		then:
-		assertContentContains 'OK - closureMethod'
+		pageSource.contains('OK - closureMethod')
 	}
 
 	void 'check allowed for admin2'() {
@@ -295,73 +295,73 @@ class AnnotationSecuritySpec extends AbstractSecuritySpec {
 		go 'secureAnnotated'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		go 'secureAnnotated/index'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		go 'secureAnnotated/adminEither'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		go 'secureClassAnnotated'
 
 		then:
-		assertContentContains 'index: you have ROLE_ADMIN'
+		pageSource.contains('index: you have ROLE_ADMIN')
 
 		when:
 		go 'secureClassAnnotated/index'
 
 		then:
-		assertContentContains 'index: you have ROLE_ADMIN'
+		pageSource.contains('index: you have ROLE_ADMIN')
 
 		when:
 		go 'secureClassAnnotated/otherAction'
 
 		then:
-		assertContentContains 'otherAction: you have ROLE_ADMIN'
+		pageSource.contains('otherAction: you have ROLE_ADMIN')
 
 		when:
 		go 'secureClassAnnotated/admin2'
 
 		then:
-		assertContentContains 'admin2: you have ROLE_ADMIN2'
+		pageSource.contains('admin2: you have ROLE_ADMIN2')
 
 		when:
 		go 'secureAnnotated/expression'
 
 		then:
-		assertContentContains "Sorry, you're not authorized to view this page."
+		pageSource.contains('Sorry, you\'re not authorized to view this page.')
 
 		when:
 		go 'secureAnnotated/indexMethod'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		go 'secureAnnotated/adminEitherMethod'
 
 		then:
-		assertContentContains 'you have ROLE_ADMIN'
+		pageSource.contains('you have ROLE_ADMIN')
 
 		when:
 		go 'secureAnnotated/expressionMethod'
 
 		then:
-		assertContentContains "Sorry, you're not authorized to view this page."
+		pageSource.contains('Sorry, you\'re not authorized to view this page.')
 
 		when:
 		go 'secureAnnotated/closureMethod'
 
 		then:
-		assertContentContains "Sorry, you're not authorized to view this page."
+		pageSource.contains('Sorry, you\'re not authorized to view this page.')
 	}
 
 	void 'restful domains can be secured'() {

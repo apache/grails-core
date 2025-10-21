@@ -262,14 +262,14 @@ class RequestmapSecuritySpec extends AbstractSecuritySpec {
 		go 'secure'
 
 		then:
-		assertContentContains 'SECURE'
+		pageSource.contains('SECURE')
 
 		// but 'expression' requires user1
 		when:
 		go 'secure/expression'
 
 		then:
-		assertContentContains "Sorry, you're not authorized to view this page."
+		pageSource.contains('Sorry, you\'re not authorized to view this page.')
 	}
 
 	void 'check allowed for user1'() {
@@ -285,12 +285,12 @@ class RequestmapSecuritySpec extends AbstractSecuritySpec {
 		go 'secure'
 
 		then:
-		assertContentContains "Sorry, you're not authorized to view this page."
+		pageSource.contains('Sorry, you\'re not authorized to view this page.')
 
 		when:
 		go 'secure/expression'
 
 		then:
-		assertContentContains 'expression: OK'
+		pageSource.contains('expression: OK')
 	}
 }
