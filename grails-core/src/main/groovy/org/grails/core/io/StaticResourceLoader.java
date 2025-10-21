@@ -36,6 +36,15 @@ import org.springframework.util.Assert;
 public class StaticResourceLoader implements ResourceLoader {
     private static final Logger LOG = LoggerFactory.getLogger(StaticResourceLoader.class);
     private Resource baseResource;
+    private final boolean doNotCreateRelative;
+
+    public StaticResourceLoader() {
+        doNotCreateRelative = false;
+    }
+
+    public StaticResourceLoader(boolean doNotCreateRelative) {
+        this.doNotCreateRelative = doNotCreateRelative;
+    }
 
     public void setBaseResource(Resource baseResource) {
         this.baseResource = baseResource;
@@ -48,7 +57,7 @@ public class StaticResourceLoader implements ResourceLoader {
             LOG.debug("Loading resource for path {} from base resource {}", location, baseResource);
         }
         try {
-            Resource resource = baseResource.createRelative(location);
+            Resource resource = doNotCreateRelative ? baseResource : baseResource.createRelative(location);
             if (LOG.isDebugEnabled() && resource.exists()) {
                 LOG.debug("Found resource for path {} from base resource {}", location, baseResource);
             }

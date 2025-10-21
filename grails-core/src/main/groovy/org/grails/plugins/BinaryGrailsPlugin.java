@@ -234,7 +234,7 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
         Resource url = this.baseResourcesResource;
         Properties properties = null;
         if (url != null) {
-            StaticResourceLoader resourceLoader = new StaticResourceLoader();
+            StaticResourceLoader resourceLoader = new StaticResourceLoader(!isJar);
             resourceLoader.setBaseResource(url);
             ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(resourceLoader);
             try {
