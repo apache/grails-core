@@ -61,60 +61,60 @@ class SbomPlugin implements Plugin<Project> {
 
     // licenses are standardized @ https://spdx.org/licenses/
     private static Map<String, LinkedHashMap<String, String>> LICENSES = [
-        'Apache-2.0'  : [
-            id : 'Apache-2.0',
-            url: 'https://www.apache.org/licenses/LICENSE-2.0'
-        ],
-        'BSD-2-Clause': [
-            id : 'BSD-2-Clause',
-            url: 'https://opensource.org/license/bsd-3-clause/'
-        ],
-        'BSD-3-Clause': [
-            id : 'BSD-3-Clause',
-            url: 'https://opensource.org/license/bsd-3-clause/'
-        ],
-        // Variant of Apache 1.1 license. Approved by legal LEGAL-707
-        'OpenSymphony': [
-            // id is optional and the opensymphony license doesn't have an SPDX id
-            name: 'The OpenSymphony Software License, Version 1.1',
-            url : 'https://raw.githubusercontent.com/sitemesh/sitemesh2/refs/heads/master/LICENSE.txt'
-        ],
-        'UPL-1.0'     : [
-            id : 'UPL-1.0',
-            url: 'https://oss.oracle.com/licenses/upl/'
-        ],
+            'Apache-2.0'  : [
+                    id : 'Apache-2.0',
+                    url: 'https://www.apache.org/licenses/LICENSE-2.0'
+            ],
+            'BSD-2-Clause': [
+                    id : 'BSD-2-Clause',
+                    url: 'https://opensource.org/license/bsd-3-clause/'
+            ],
+            'BSD-3-Clause': [
+                    id : 'BSD-3-Clause',
+                    url: 'https://opensource.org/license/bsd-3-clause/'
+            ],
+            // Variant of Apache 1.1 license. Approved by legal LEGAL-707
+            'OpenSymphony': [
+                    // id is optional and the opensymphony license doesn't have an SPDX id
+                    name: 'The OpenSymphony Software License, Version 1.1',
+                    url : 'https://raw.githubusercontent.com/sitemesh/sitemesh2/refs/heads/master/LICENSE.txt'
+            ],
+            'UPL-1.0'     : [
+                    id : 'UPL-1.0',
+                    url: 'https://oss.oracle.com/licenses/upl/'
+            ],
     ]
 
     private static Map<String, String> LICENSE_MAPPING = [
-        'pkg:maven/org.antlr/antlr4-runtime@4.7.2?type=jar'               : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
-        'pkg:maven/jline/jline@2.14.6?type=jar'                           : 'BSD-2-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
-        'pkg:maven/org.jline/jline@3.23.0?type=jar'                       : 'BSD-2-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
-        'pkg:maven/org.liquibase.ext/liquibase-hibernate5@4.27.0?type=jar': 'Apache-2.0', // maps incorrectly because of https://github.com/liquibase/liquibase/issues/2445 & the base pom does not define a license
-        'pkg:maven/com.oracle.coherence.ce/coherence-bom@25.03.1?type=pom': 'UPL-1.0', // does not have map based on license id
-        'pkg:maven/com.oracle.coherence.ce/coherence-bom@22.06.2?type=pom': 'UPL-1.0', // does not have map based on license id
-        'pkg:maven/opensymphony/sitemesh@2.6.0?type=jar'                  : 'OpenSymphony', // custom license approved by legal LEGAL-707
-        'pkg:maven/org.jruby/jzlib@1.1.5?type=jar'                        : 'BSD-3-Clause'// https://web.archive.org/web/20240822213507/http://www.jcraft.com/jzlib/LICENSE.txt shows it's a 3 clause
+            'pkg:maven/org.antlr/antlr4-runtime@4.7.2?type=jar'               : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/jline/jline@2.14.6?type=jar'                           : 'BSD-2-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/org.jline/jline@3.23.0?type=jar'                       : 'BSD-2-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/org.liquibase.ext/liquibase-hibernate5@4.27.0?type=jar': 'Apache-2.0', // maps incorrectly because of https://github.com/liquibase/liquibase/issues/2445 & the base pom does not define a license
+            'pkg:maven/com.oracle.coherence.ce/coherence-bom@25.03.1?type=pom': 'UPL-1.0', // does not have map based on license id
+            'pkg:maven/com.oracle.coherence.ce/coherence-bom@22.06.2?type=pom': 'UPL-1.0', // does not have map based on license id
+            'pkg:maven/opensymphony/sitemesh@2.6.0?type=jar'                  : 'OpenSymphony', // custom license approved by legal LEGAL-707
+            'pkg:maven/org.jruby/jzlib@1.1.5?type=jar'                        : 'BSD-3-Clause'// https://web.archive.org/web/20240822213507/http://www.jcraft.com/jzlib/LICENSE.txt shows it's a 3 clause
     ]
 
     // we don't distribute these so these licenses are considered acceptable, but we still prefer ASF licenses.
     // Require a whitelist of any case of category X licenses to prevent accidental inclusion in a distributed artifact
     // this list will need to be updated anytime we change versions so we can revise the licenses
     private static Map<String, LinkedHashMap<String, String>> LICENSE_EXCEPTIONS = [
-        'grails-data-hibernate5-core'       : [
-            'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-            'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-        ],
-        'grails-data-hibernate5'            : [
-            'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-            'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-        ],
-        'grails-data-hibernate5-spring-boot': [
-            'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-            'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-        ],
-        'grails-data-hibernate5-dbmigration': [
-            'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
-        ],
+            'grails-data-hibernate5-core'       : [
+                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+            ],
+            'grails-data-hibernate5'            : [
+                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+            ],
+            'grails-data-hibernate5-spring-boot': [
+                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+            ],
+            'grails-data-hibernate5-dbmigration': [
+                    'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
+            ],
     ]
 
     @Override
@@ -122,11 +122,11 @@ class SbomPlugin implements Plugin<Project> {
         project.pluginManager.apply(CycloneDxPlugin)
 
         def sbomOutputLocation = project.layout.buildDirectory.file(
-            project.provider {
-                def artifactId = lookupProperty(project, 'pomArtifactId', project.name)
-                def version = project.findProperty('projectVersion')
-                "$artifactId-$version-sbom.json" as String
-            }
+                project.provider {
+                    def artifactId = lookupProperty(project, 'pomArtifactId', project.name)
+                    def version = project.findProperty('projectVersion')
+                    "$artifactId-$version-sbom.json" as String
+                }
         )
 
         configureSbomTask(project, sbomOutputLocation)
@@ -144,32 +144,52 @@ class SbomPlugin implements Plugin<Project> {
                 projectType = Component.Type.valueOf(lookupProperty(project, 'sbomProjectType', 'FRAMEWORK'))
                 componentName = lookupProperty(project, 'pomArtifactId', project.name)
                 task.@organizationalEntity.set(new OrganizationalEntity(
-                    name: 'Apache Software Foundation',
-                    urls: [
-                        'https://www.apache.org/',
-                        'https://security.apache.org/'
-                    ],
-                    contacts: [
-                        new OrganizationalContact(
-                            name: 'Apache Grails Development Team',
-                            email: 'dev@grails.apache.org'
-                        )
-                    ]
+                        name: 'Apache Software Foundation',
+                        urls: [
+                                'https://www.apache.org/',
+                                'https://security.apache.org/'
+                        ],
+                        contacts: [
+                                new OrganizationalContact(
+                                        name: 'Apache Grails Development Team',
+                                        email: 'dev@grails.apache.org'
+                                )
+                        ]
                 ))
                 task.@licenseChoice.set(new LicenseChoice(
-                    licenses: [
-                        new License(
-                            name: 'Apache-2.0',
-                            url: 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-                        )
-                    ]
+                        licenses: [
+                                new License(
+                                        name: 'Apache-2.0',
+                                        url: 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                                )
+                        ]
                 ))
-                task.@externalReferences.set([
-                    new ExternalReference(
-                        url: 'https://grails.apache.org/',
-                        type: ExternalReference.Type.WEBSITE
+
+                def projectVersion = project.findProperty('projectVersion').toString()
+                def references = [
+                        new ExternalReference(
+                                url: 'https://grails.apache.org',
+                                type: ExternalReference.Type.WEBSITE
+                        ),
+                        new ExternalReference(
+                                url: 'https://github.com/apache/grails-core',
+                                type: ExternalReference.Type.VCS
+                        ),
+                        new ExternalReference(
+                                url: projectVersion.endsWith('SNAPSHOT') ? 'dev@grails.apache.org' : 'users@grails.apache.org',
+                                type: ExternalReference.Type.MAILING_LIST
+                        )
+                ]
+
+                if (!projectVersion.endsWith('SNAPSHOT')) {
+                    references.add(
+                            new ExternalReference(
+                                    url: "https://grails.apache.org/docs/${project.findProperty('projectVersion')}/index.html",
+                                    type: ExternalReference.Type.DOCUMENTATION
+                            )
                     )
-                ])
+                }
+                task.@externalReferences.set(references)
 
                 // sboms are published for the purposes of vulnerability analysis so only include the runtime classpath
                 includeConfigs = ['runtimeClasspath']
@@ -194,14 +214,33 @@ class SbomPlugin implements Plugin<Project> {
                         ZonedDateTime buildDate = lookupProperty(project, 'buildDate')
                         bom['metadata']['timestamp'] = DateTimeFormatter.ISO_INSTANT.format(buildDate.truncatedTo(ChronoUnit.SECONDS))
 
-                        // components[*].licenses
+                        // components[*]
                         def comps = (bom instanceof Map && bom.components instanceof List) ? bom.components : []
                         comps.each { c ->
-                            if (c instanceof Map && c.licenses instanceof List && !(c.licenses as List).isEmpty()) {
+                            // .licenses => choose a license that is compatible with ASF policy if multiple licensed
+                            if (c instanceof Map && c.licenses instanceof List && !(c.licenses as List).empty) {
                                 def chosen = pickLicense(task, c['bom-ref'] as String, c.licenses as List)
                                 if (chosen != null) {
                                     c.licenses = [chosen]
                                 }
+                            }
+
+                            // .hashes => project hashes are only generated if the jar file has been created,
+                            // which with a parallel build may not have occurred, so for any dependency that is a
+                            // project we exclude them
+                            if (c instanceof Map && c.hashes instanceof List && !(c.hashes as List).empty) {
+                                def componentPath = c['bom-ref'] as String
+                                if (componentPath.contains('?project_path=')) {
+                                    c.remove('hashes')
+                                }
+                            }
+                        }
+
+                        // dependencies[*].dependsOn is not reproducible, so sort it
+                        def dependencies = (bom instanceof Map && bom.dependencies instanceof List) ? bom.dependencies : []
+                        dependencies.each { d ->
+                            if (d instanceof Map && d.dependsOn instanceof List && !(d.dependsOn as List).empty) {
+                                d.dependsOn = (d.dependsOn as List).sort()
                             }
                         }
 

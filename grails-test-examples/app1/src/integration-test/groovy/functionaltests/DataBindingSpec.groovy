@@ -16,28 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.util;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+package functionaltests
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import spock.lang.Issue
 
-/**
- * Tests for the GrailsUtils class.
- *
- * @author Graeme Rocher
- * @since 0.4
- */
-public class GrailsUtilTests {
+import grails.plugin.geb.ContainerGebSpec
+import grails.testing.mixin.integration.Integration
 
-    @Test
-    public void testGrailsVersion() {
-        assertEquals("7.0.1-SNAPSHOT", GrailsUtil.getGrailsVersion());
-    }
+@Integration
+class DataBindingSpec extends ContainerGebSpec {
 
-    @AfterEach
-    protected void tearDown() throws Exception {
-        System.setProperty(Environment.KEY, "");
+    @Issue('https://github.com/apache/grails-core/issues/15147')
+    void 'data binding works'() {
+        when:
+        go('/dataBinding/submit?id=123&data=456')
+
+        then:
+        pageSource.contains('{"success":true}')
     }
 }

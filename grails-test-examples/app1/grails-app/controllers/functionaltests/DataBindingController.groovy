@@ -16,28 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.util;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+package functionaltests
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import grails.converters.JSON
 
-/**
- * Tests for the GrailsUtils class.
- *
- * @author Graeme Rocher
- * @since 0.4
- */
-public class GrailsUtilTests {
+class DataBindingController {
 
-    @Test
-    public void testGrailsVersion() {
-        assertEquals("7.0.1-SNAPSHOT", GrailsUtil.getGrailsVersion());
+    def show(String id) {
+        render([success: true] as JSON)
     }
 
-    @AfterEach
-    protected void tearDown() throws Exception {
-        System.setProperty(Environment.KEY, "");
+    def submit(long id, long data) {
+        render([success: true] as JSON)
     }
 }
