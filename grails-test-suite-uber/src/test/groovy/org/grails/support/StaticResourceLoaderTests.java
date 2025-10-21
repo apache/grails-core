@@ -18,6 +18,8 @@
  */
 package org.grails.support;
 
+import java.net.MalformedURLException;
+
 import org.grails.core.io.StaticResourceLoader;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.Resource;
@@ -55,6 +57,20 @@ public class StaticResourceLoaderTests {
             fail("Should have thrown IllegalStateException");
         } catch (IllegalStateException ise) {
             // expected
+        }
+    }
+
+    @Test
+    public void testNonJarClasspath() {
+        StaticResourceLoader srl = new StaticResourceLoader(true);
+        try {
+            Resource baseResource = new UrlResource("file://home/test");
+            srl.setBaseResource(baseResource);
+            assertEquals(srl.getResource(""), baseResource);
+        } catch (IllegalStateException ise) {
+            // expected
+        } catch (MalformedURLException e) {
+            fail("Url is well formed");
         }
     }
 }
