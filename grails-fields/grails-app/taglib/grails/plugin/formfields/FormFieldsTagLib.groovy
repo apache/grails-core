@@ -966,7 +966,7 @@ class FormFieldsTagLib {
             case Instant:
             case ZonedDateTime:
             case OffsetDateTime:
-                g.formatDate(date: model.value)
+                g.formatDate(date: model.value, type: 'DATETIME')
                 break
             default:
                 g.fieldValue(bean: model.bean, field: model.property)
