@@ -38,12 +38,12 @@ class DisplayWidgetSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 
 	void 'f:displayWidget without template and a date value renders the formatted date'() {
 		expect:
-		applyTemplate('<f:displayWidget bean="personInstance" property="dateOfBirth"/>', [personInstance: personInstance]) == applyTemplate('<g:formatDate date="${personInstance.dateOfBirth}"/>', [personInstance: personInstance])
+		applyTemplate('<f:displayWidget bean="personInstance" property="dateOfBirth"/>', [personInstance: personInstance]) == applyTemplate('<g:formatDate date="${personInstance.dateOfBirth}" type="DATETIME"/>', [personInstance: personInstance])
 	}
 
 	void 'f:displayWidget without template and an instant value renders the formatted date'() {
 		expect:
-		applyTemplate('<f:displayWidget bean="cyborgInstance" property="timestamp"/>', [cyborgInstance: cyborgInstance]) == applyTemplate('<g:formatDate date="${cyborgInstance.timestamp}"/>', [cyborgInstance: cyborgInstance])
+		applyTemplate('<f:displayWidget bean="cyborgInstance" property="timestamp"/>', [cyborgInstance: cyborgInstance]) == applyTemplate('<g:formatDate date="${cyborgInstance.timestamp}" type="DATETIME"/>', [cyborgInstance: cyborgInstance])
 	}
 
 	void 'f:displayWidget without template and a LocalDate value renders the formatted date'() {
