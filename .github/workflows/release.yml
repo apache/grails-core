@@ -234,6 +234,7 @@ jobs:
           --repo "$REPO_SLUG" \
           --yes
   upload:
+    name: "Upload Source Distribution"
     needs: [ publish, source ]
     runs-on: ubuntu-24.04
     permissions:
@@ -384,21 +385,21 @@ jobs:
           cat .github/vote_templates/vote_succeeded.txt | envsubst
           echo "*************************************************"
           echo "::endgroup::"
-      - name: "🚀 Manual - Release JAR files"
+      - name: "🚀 MANUAL - Release JAR files"
         run: |
           echo "::group::Manual Jar Promotion"
-          echo "Run .github/scripts/releaseJarFiles.sh ${TAG} ${REPO_NAME}:${VERSION} <ASF_USER>"
+          echo "Run .github/scripts/releaseJarFiles.sh ${REPO_NAME}:${VERSION} <ASF_USER>"
           echo "::endgroup::"
-      - name: "🚀 Manual - Release distribution artifacts"
+      - name: "🚀 MANUAL - Release distribution artifacts"
         run: |
           echo "::group::Manual ASF Artifact Promotion"
           echo "Run .github/scripts/releaseDistributions.sh ${TAG} ${SVN_FOLDER} <ASF_USER>"
           echo "::endgroup::"
-      - name: "✅ Manual - Update ASF Reporter"
+      - name: "✅ MANUAL - Update ASF Reporter"
         run: |
           echo "::group::Manual ASF Reporter Update"
           TODAY=$(date +"%Y-%m-%d")
-          echo "Check email from no-reply@reporter.apache.org & update https://reporter.apache.org/addrelease.html?grails to add ${SVN_FOLDER^^}:${VERSION} as complete as of ${TODAY}"
+          echo "Check email from no-reply@reporter.apache.org & update https://reporter.apache.org/addrelease.html?grails to add ${SVN_FOLDER^^}-${VERSION} as complete as of ${TODAY}"
           echo "::endgroup::"
   docs:
     environment: docs
@@ -464,14 +465,12 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "⚙️ Run post-release"
         uses: apache/grails-github-actions/post-release@asf
-      - name: '🌎 Create Blog Post - MANUAL'
+      - name: '🌎 MANUAL - Create Blog Post'
         run: |
           echo "::group::Blog Post Creation - MANUAL"
           echo "Publish a blog post on https://grails.apache.org/blog/ about the new release [${VERSION}] using the repo https://github.com/apache/grails-static-website"
           echo "::endgroup::"
-      - name: "📧 Announcement Email"
-        env:
-          PREVIOUS_VERSION: 'TODO_PREVIOUS_VERSION'
+      - name: "📧 MANUAL - Send Announcement Email"
         run: |
           echo "::group::Announcement Email"
           echo ""

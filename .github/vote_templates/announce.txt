@@ -10,7 +10,7 @@ Apache Grails website: https://grails.apache.org/
 Download Links: https://grails.apache.org/download.html
 
 Grails Resources:
-- ${PROJECT_NAME} GitHub repo: https://github.com/apache/${REPO_SLUG}
+- ${PROJECT_NAME} GitHub repo: https://github.com/${REPO_SLUG}
 - Issues: https://github.com/${REPO_SLUG}/issues
 - Mailing lists: https://grails.apache.org/community.html
 
