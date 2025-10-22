@@ -138,7 +138,7 @@ Example:
 ### Manual Verification: Reproducible Jar Files
 After all jar files are verified to be signed by a valid Grails key, we need to build a local copy to ensure the file was built with the right code base. The `very-reproducible.sh` script handles this check, but if the bootstrap needs to be manually bootstrapped, perform the following step: 
 
-    gradle -p gradle bootstrap
+    gradle -p gradle-bootstrap
 
 Further details on the building can be found in the [INSTALL](INSTALL) document.  Otherwise, run the `verify-reproducible.sh` shell script to compare the published jar files to a locally built version of them. 
 
@@ -286,12 +286,10 @@ an example call to the checked in script to move the distributions.
 ### Update ASF Reporter
 
 After moving the distributions, you will receive an email from the ASF reporter. Click the link in the email to mark the
-release as published. The `release` job in the `Release` workflow has a step to remind you of this.
+release as published or go to https://reporter.apache.org/addrelease.html?grails. The `release` job in the `Release` workflow has a step to remind you of this.
 
 For example, if the release is out of core with version `7.0.0-M4`, then the release name with be `CORE-7.0.0-M4`. Enter
 the date you moved the distribution artifacts and report the release.
-
-NOTE: Grails as a podling, cannot currently do this.
 
 ### Deploy grails-forge so the release is accessible on start.grails.org
 
@@ -332,7 +330,7 @@ On the `grails-static-website` repository:
 
 Run the release action (https://github.com/apache/grails-static-website/actions/workflows/release.yml) with the new version to update https://github.com/apache/grails-static-website/blob/HEAD/conf/releases.yml and then run the publish action (https://github.com/apache/grails-static-website/actions/workflows/publish.yml) to update the `asf-site-production` branch and https://grails.apache.org
 
-Create a new `.md` file in the `/posts` directory announcing the release.  The PR will stage this change on https://grails.staged.apache.org/ and when the PR is merged it will deploy to https://grails.apache.org
+Create a new `.md` file in the `/posts` directory announcing the release.  Wwhen the PR is merged it will deploy to https://grails.apache.org
 
 ### Flag release in `grails-core` as latest
 
