@@ -461,7 +461,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         List<Club> results = Club.findAll("from Club c where c.name like $p order by c.name")
 
         then:"Exception is thrown"
-        thrown(GrailsQueryException)
+        results.size() == 2
 
         when:"A query that passes arguments is used"
         results = Club.findAll("from Club c where c.name like $p and c.name like :test order by c.name", [test:'%e%'])
@@ -481,14 +481,14 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         List<Club> results = Club.executeQuery("from Club c where c.name like $p order by c.name")
 
         then:"The results are correct"
-        thrown(GrailsQueryException)
+        results.size() == 2
 
 
         when:"A query that passes arguments is used"
-        results = Club.executeQuery("from Club c where c.name like $p and c.name like :test order by c.name", [test:'%e%'])
+        results = Club.executeQuery("from Club c where c.name like $p and c.name like :test order by c.name", [test:'%e%'],[:])
 
         then:"The results are correct"
-        thrown(GrailsQueryException)
+        results.size() == 2
     }
 
     void "test escape HQL in find with gstring"() {

@@ -294,7 +294,6 @@ class DataServiceSpec extends Specification {
 
     }
 
-    @Ignore("Query is an Unsafe GString")
     void "test @query annotation"() {
         given:
         ProductService productService = datastore.getService(ProductService)
@@ -305,15 +304,15 @@ class DataServiceSpec extends Specification {
 
 
         when:
-        Product product = productService.searchWithQuery("Carr%")
+        Product product = productService.searchWithQuery([pattern:"Carr%"])
 
         then:
         product != null
         product.name == "Carrot"
-        productService.searchProductType("Carr%") == "Vegetable"
+        productService.searchProductType("Carr%") == ["Vegetable"]
 
         when:
-        List<Product> results = productService.searchAllWithQuery("Veg%")
+        List<Product> results = productService.searchAllWithQuery([pattern:"Veg%"])
 
         then:
         results.size() == 2
@@ -327,7 +326,6 @@ class DataServiceSpec extends Specification {
 
     }
 
-    @Ignore("Query is an Unsafe GString")
     void "test interface projection"() {
         given:
         ProductService productService = datastore.getService(ProductService)
@@ -368,7 +366,6 @@ class DataServiceSpec extends Specification {
 
     }
 
-    @Ignore("Query is an Unsafe GString")
     void "test join query on attributes with @Query"() {
         given:
         ProductService productService = datastore.getService(ProductService)
@@ -479,14 +476,14 @@ interface ProductService {
     @Where({ name ==~ pattern })
     ProductInfo searchProductInfoByName(String pattern)
 
-    @Query("from ${Product p} where $p.name like $pattern")
-    Product searchWithQuery(String pattern)
+    @Query("from ${Product p} where $p.name like :pattern")
+    Product searchWithQuery(Map args)
 
     @Query("select ${p.type} from ${Product p} where $p.name like $pattern")
-    String searchProductType(String pattern)
+    List<String> searchProductType(String pattern)
 
-    @Query("from ${Product p} where $p.type like $pattern")
-    List<Product> searchAllWithQuery(String pattern)
+    @Query("from ${Product p} where $p.type like :pattern")
+    List<Product> searchAllWithQuery(Map args)
 
     @Query("select $p.name from ${Product p} where $p.type like $pattern")
     List<String> searchProductNames(String pattern)

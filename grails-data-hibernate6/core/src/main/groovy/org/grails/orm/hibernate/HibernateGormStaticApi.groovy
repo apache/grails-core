@@ -289,21 +289,10 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                                    Collection _positionalParams,
                                    Map args
                                    , boolean isNative) {
-        Map namedParams
-        String queryString
-        if (queryCharseq instanceof  GString && !isNative) {
-            if(!_namedParams) {
-                throw new GrailsQueryException("Unsafe query [$queryCharseq]. GORM cannot automatically escape a GString value when combined with both named and ordinal parameters, so this query is potentially vulnerable to HQL injection attacks. Please embed the parameters within the GString so they can be safely escaped.");
-            }
-            namedParams = new HashMap(_namedParams)
-            queryString = buildNamedParameterQueryFromGString((GString)queryCharseq,namedParams)
-        } else {
-            if(queryCharseq instanceof  GString) {
-                throw new GrailsQueryException("Unsafe query [$queryCharseq]. GORM cannot automatically escape a GString value when combined with both named and ordinal parameters, so this query is potentially vulnerable to HQL injection attacks. Please embed the parameters within the GString so they can be safely escaped.");
-            }
-            queryString = queryCharseq?.toString()
-            namedParams = _namedParams ? new HashMap(_namedParams) : new HashMap()
-        }
+        Map namedParams = _namedParams ? new HashMap(_namedParams) : new HashMap()
+        String queryString = queryCharseq instanceof GString ?
+                buildNamedParameterQueryFromGString((GString) queryCharseq, namedParams)
+                : queryCharseq?.toString()
         List positionalParams = _positionalParams ? new ArrayList(_positionalParams) : new ArrayList()
         String hql = normalizeMultiLineQueryString(queryString?.toString())
         Map argCopy = args != null ? new HashMap(args) : Collections.emptyMap()
