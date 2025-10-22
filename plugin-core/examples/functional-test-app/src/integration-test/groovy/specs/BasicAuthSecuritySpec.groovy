@@ -211,7 +211,7 @@ class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 		login('admin1', 'password1')
 
 		then:
-		pageSource.contains('you have ROLE_ADMIN')
+		waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
 		when:
 		logout()
@@ -224,7 +224,7 @@ class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 		login('admin1', 'password1')
 
 		then:
-		pageSource.contains('you have ROLE_ADMIN')
+		waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
 		when:
 		logout()
@@ -237,35 +237,35 @@ class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 		login('admin1', 'password1')
 
 		then:
-		pageSource.contains('you have ROLE_ADMIN')
+		waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
 		when:
 		logout()
 		getWithAuth('secureClassAnnotated', 'admin1', 'password1')
 
 		then:
-		pageSource.contains('you have ROLE_ADMIN')
+		waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
 		when:
 		logout()
 		getWithAuth('secureClassAnnotated/index', 'admin1', 'password1')
 
 		then:
-		pageSource.contains('you have ROLE_ADMIN')
+		waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
 		when:
 		logout()
 		getWithAuth('secureClassAnnotated/otherAction', 'admin1', 'password1')
 
 		then:
-		pageSource.contains('you have ROLE_ADMIN')
+		waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
 		when:
 		logout()
 		getWithAuth('secureClassAnnotated/admin2', 'admin1', 'password1')
 
 		then:
-		pageSource.contains('Error 403 Forbidden')
+		waitFor { pageSource.contains('Error 403 Forbidden') }
 	}
 
 	void 'check allowed for admin2'() {
@@ -282,7 +282,7 @@ class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 		login('admin2', 'password2')
 
 		then:
-		pageSource.contains('you have ROLE_ADMIN')
+		waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
 		when:
 		logout()
@@ -295,7 +295,7 @@ class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 		login('admin2', 'password2')
 
 		then:
-		pageSource.contains('you have ROLE_ADMIN')
+		waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
 		when:
 		logout()
@@ -308,35 +308,35 @@ class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 		login('admin2', 'password2')
 
 		then:
-		pageSource.contains('you have ROLE_ADMIN')
+		waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
 		when:
 		logout()
 		getWithAuth('secureClassAnnotated', 'admin2', 'password2')
 
 		then:
-		pageSource.contains('you have ROLE_ADMIN')
+		waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
 		when:
 		logout()
 		getWithAuth('secureClassAnnotated/index', 'admin2', 'password2')
 
 		then:
-		pageSource.contains('you have ROLE_ADMIN')
+		waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
 		when:
 		logout()
 		getWithAuth('secureClassAnnotated/otherAction', 'admin2', 'password2')
 
 		then:
-		pageSource.contains('you have ROLE_ADMIN')
+		waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
 		when:
 		logout()
 		getWithAuth('secureClassAnnotated/admin2', 'admin2', 'password2')
 
 		then:
-		pageSource.contains('you have ROLE_ADMIN')
+		waitFor { pageSource.contains('you have ROLE_ADMIN') }
 	}
 
 	protected void logout() {
