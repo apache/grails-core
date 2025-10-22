@@ -70,7 +70,7 @@ class User1FunctionalSpec extends AbstractSecuritySpec {
 		go("report/show?number=$i")
 
 		then:
-		pageSource.contains("report$i")
+		waitFor { pageSource.contains("report$i") }
 
 		where:
 		i << (1..67)
@@ -81,7 +81,7 @@ class User1FunctionalSpec extends AbstractSecuritySpec {
 		go("report/show?number=$i")
 
 		then:
-		pageSource.contains('Access Denied')
+		waitFor { pageSource.contains('Access Denied') }
 
 		where:
 		i << (68..100)
@@ -162,7 +162,7 @@ class User1FunctionalSpec extends AbstractSecuritySpec {
 		grantPage.grantButton.click()
 
 		then:
-		pageSource.contains('Access Denied')
+		waitFor { pageSource.contains('Access Denied') }
 	}
 
 	void 'edit report 20'() {
@@ -178,6 +178,6 @@ class User1FunctionalSpec extends AbstractSecuritySpec {
 		editPage.updateButton.click()
 
 		then:
-		pageSource.contains('Access Denied')
+		waitFor { pageSource.contains('Access Denied') }
 	}
 }

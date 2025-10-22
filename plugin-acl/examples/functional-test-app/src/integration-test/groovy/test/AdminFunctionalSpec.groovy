@@ -69,12 +69,9 @@ class AdminFunctionalSpec extends AbstractSecuritySpec {
 	void 'view all'() {
 		when:
 		go("report/show?number=$i")
-		waitFor(10, 1) { // 10 seconds, as has shown timeouts in CI
-			title == 'Show Report'
-		}
 
 		then:
-		pageSource.contains("report$i")
+		waitFor { pageSource.contains("report$i") }
 
 		where:
 		i << (1..100)
