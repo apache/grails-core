@@ -71,7 +71,7 @@ class AdminFunctionalSpec extends AbstractSecuritySpec {
 		go("report/show?number=$i")
 
 		then:
-		waitFor(20, 1) { pageSource.contains("report$i") } // Wait for slow CI environments
+		pageSource.contains("report$i")
 
 		where:
 		i << (1..100)

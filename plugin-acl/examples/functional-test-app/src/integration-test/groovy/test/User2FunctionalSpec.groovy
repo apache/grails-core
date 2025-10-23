@@ -41,7 +41,7 @@ class User2FunctionalSpec extends AbstractSecuritySpec {
 		go("report/show?number=$i")
 
 		then:
-		waitFor(20, 1) { pageSource.contains("report$i") } // Wait for slow CI environments
+		pageSource.contains("report$i")
 
 		where:
 		i << (1..5)
@@ -52,7 +52,7 @@ class User2FunctionalSpec extends AbstractSecuritySpec {
 		go("report/show?number=$i")
 
 		then:
-		waitFor(20, 1) { pageSource.contains('Access Denied') } // Wait for slow CI environments
+		pageSource.contains('Access Denied')
 
 		where:
 		i << (6..100)
@@ -64,7 +64,7 @@ class User2FunctionalSpec extends AbstractSecuritySpec {
 		go('report/edit?number=11')
 
 		then:
-		waitFor { pageSource.contains('Access Denied') }
+		pageSource.contains('Access Denied')
 	}
 
 	void 'delete report 1'() {
@@ -72,7 +72,7 @@ class User2FunctionalSpec extends AbstractSecuritySpec {
 		go('report/delete?number=1')
 
 		then:
-		waitFor { pageSource.contains('Access Denied') }
+		pageSource.contains('Access Denied')
 	}
 
 	void 'grant edit 2'() {
@@ -89,7 +89,7 @@ class User2FunctionalSpec extends AbstractSecuritySpec {
 		grantPage.grantButton.click()
 
 		then:
-		waitFor { pageSource.contains('Access Denied') }
+		pageSource.contains('Access Denied')
 	}
 
 	void 'edit report 5'() {
@@ -115,19 +115,15 @@ class User2FunctionalSpec extends AbstractSecuritySpec {
 		go('report/list')
 
 		then:
-		waitFor {
-			pageSource.contains('report1')
-			!pageSource.contains('report6')
-		}
+		pageSource.contains('report1')
+		!pageSource.contains('report6')
 
 		when:
 		go('report/list?offset=80&max=10')
 
 		then:
-		waitFor {
-			pageSource.contains('Next')
-			!pageSource.contains('report85')
-		}
+		pageSource.contains('Next')
+		!pageSource.contains('report85')
 	}
 
 	void 'check tags'() {
@@ -135,27 +131,25 @@ class User2FunctionalSpec extends AbstractSecuritySpec {
 		go('tagLibTest/test')
 
 		then:
-		waitFor {
-			pageSource.contains('test 1 true 1')
-			pageSource.contains('test 2 true 1')
-			pageSource.contains('test 3 true 1')
-			pageSource.contains('test 4 true 1')
-			pageSource.contains('test 5 true 1')
-			pageSource.contains('test 6 true 1')
+		pageSource.contains('test 1 true 1')
+		pageSource.contains('test 2 true 1')
+		pageSource.contains('test 3 true 1')
+		pageSource.contains('test 4 true 1')
+		pageSource.contains('test 5 true 1')
+		pageSource.contains('test 6 true 1')
 
-			pageSource.contains('test 1 false 13')
-			pageSource.contains('test 2 false 13')
-			pageSource.contains('test 3 false 13')
-			pageSource.contains('test 4 false 13')
-			pageSource.contains('test 5 false 13')
-			pageSource.contains('test 6 false 13')
+		pageSource.contains('test 1 false 13')
+		pageSource.contains('test 2 false 13')
+		pageSource.contains('test 3 false 13')
+		pageSource.contains('test 4 false 13')
+		pageSource.contains('test 5 false 13')
+		pageSource.contains('test 6 false 13')
 
-			pageSource.contains('test 1 false 80')
-			pageSource.contains('test 2 false 80')
-			pageSource.contains('test 3 false 80')
-			pageSource.contains('test 4 false 80')
-			pageSource.contains('test 5 false 80')
-			pageSource.contains('test 6 false 80')
-		}
+		pageSource.contains('test 1 false 80')
+		pageSource.contains('test 2 false 80')
+		pageSource.contains('test 3 false 80')
+		pageSource.contains('test 4 false 80')
+		pageSource.contains('test 5 false 80')
+		pageSource.contains('test 6 false 80')
 	}
 }

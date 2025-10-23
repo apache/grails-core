@@ -120,7 +120,7 @@ class RegisterSpec extends AbstractSecuritySpec {
 		}
 
 		then:
-		waitFor { pageSource.contains('Your account registration email was sent - check your mail!') }
+		pageSource.contains('Your account registration email was sent - check your mail!')
 		1 == server.receivedEmailSize
 
 		when:
@@ -145,7 +145,7 @@ class RegisterSpec extends AbstractSecuritySpec {
 		go("register/verifyRegistration?t=$code")
 
 		then:
-		waitFor { pageSource.contains('Your registration is complete') }
+		pageSource.contains('Your registration is complete')
 
 		when:
 		logout()

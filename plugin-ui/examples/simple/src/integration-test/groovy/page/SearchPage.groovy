@@ -22,6 +22,7 @@ package page
 abstract class SearchPage extends AbstractSecurityPage {
 
     static at = { title == "${typeName()} Search" }
+    static atCheckWaiting = true
     static content = {
         form { $('search') }
         submitBtn { $('a', id: 'searchButton') }
