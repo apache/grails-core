@@ -9,7 +9,11 @@ import org.grails.datastore.gorm.proxy.GroovyProxyFactory
  * @author graemerocher
  */
 //TODO Are we still supporting Proxies?
-class GroovyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class Hibernate6GroovyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+
+    void setupSpec() {
+        manager.addAllDomainClasses([Location])
+    }
     void "Test creation and behavior of Groovy proxies"() {
         given:
         manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()

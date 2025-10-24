@@ -54,7 +54,6 @@ class CrudOperationsSpec extends GrailsDataTckSpec {
         t == null
     }
 
-    @IgnoreRest
     void "Test basic CRUD operations"() {
         given:
 

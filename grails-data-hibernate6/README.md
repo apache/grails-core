@@ -14,5 +14,9 @@ For testing the following was done:
 ### Largest Gaps
 * Multitenancy
 * Proxy support
-* AbstractHibernateCriteriaBuilder coverage. (In contrast to HibernateQuery which has good coverage)
-* AsbtractGormStaticApi coverage
+
+### Ignored Features
+* RLIKE
+* * Can be implemented 
+
+
