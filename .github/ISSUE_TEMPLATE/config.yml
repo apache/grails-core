@@ -14,7 +14,7 @@
 # limitations under the License.
 
 contact_links:
-  - name: Grails Mailing List
+  - name: Grails Mailing Lists
     url: https://grails.apache.org/community.html
     about: Ask questions on the Mailing Lists
   - name: Grails Core Discussions
