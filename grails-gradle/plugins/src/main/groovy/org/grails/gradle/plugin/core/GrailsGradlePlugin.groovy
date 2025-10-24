@@ -427,6 +427,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
     @CompileStatic
     protected String configureGrailsBuildSettings(Project project) {
         System.setProperty(BuildSettings.APP_BASE_DIR, project.projectDir.absolutePath)
+        System.setProperty(BuildSettings.PROJECT_TARGET_DIR, project.layout.buildDirectory.get().asFile.name)
     }
 
     @CompileDynamic
