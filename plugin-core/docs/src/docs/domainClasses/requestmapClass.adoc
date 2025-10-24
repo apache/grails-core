@@ -18,9 +18,11 @@ under the License.
 ////
 
 [[requestmapClass]]
-=== Requestmap Class
+=== Requestmap Domain Class
 
-Optionally, use this class to store request mapping entries in the database instead of defining them with annotations or in `application.groovy`. This option makes the class configurable at runtime; you can add, remove and edit rules without restarting your application.
+Create and use a domain class to store request mapping entries in the database instead of defining them with annotations
+or in `application.groovy`. This option makes the rules configurable at runtime; you can add, remove and edit rules
+without restarting your application.
 
 .Requestmap class configuration options
 [cols="30,30,40"]
@@ -28,26 +30,25 @@ Optionally, use this class to store request mapping entries in the database inst
 | *Property* | *Default Value* | *Meaning*
 
 |requestMap.className
-|_none_
-|requestmap class name
+|_none_ - set to your implementation
+|requestmap domain class
 
 |requestMap.urlField
-|"`url`"
+|"url"
 |URL pattern property name
 
 |requestMap.configAttributeField
-|"`configAttribute`"
+|"configAttribute"
 |authority pattern property name
 
 |requestMap.httpMethodField
-|"`httpMethod`"
+|"httpMethod"
 |HTTP method property name (optional, does not have to exist in the class if you don't require URL/method security)
 |====================
 
-Assuming you choose `com.mycompany.myapp` as your package, and `Requestmap` as your class name, you'll generate this class:
+Assuming you choose `com.mycompany.myapp` as your package, and `SecurityMapping` as your class name, you'll generate this class:
 
 [source, groovy]
-.`Requestmap.groovy`
 ----
 package com.mycompany.myapp
 
@@ -60,7 +61,7 @@ import grails.compiler.GrailsCompileStatic
 @GrailsCompileStatic
 @EqualsAndHashCode(includes=['configAttribute', 'httpMethod', 'url'])
 @ToString(includes=['configAttribute', 'httpMethod', 'url'], cache=true, includeNames=true, includePackage=false)
-class RequestMap implements Serializable {
+class SecurityMapping implements Serializable {
 
 	private static final long serialVersionUID = 1
 
@@ -69,15 +70,15 @@ class RequestMap implements Serializable {
 	String url
 
 	static constraints = {
-		configAttribute blank: false
-		httpMethod nullable: true
-		url blank: false, unique: 'httpMethod'
+		configAttribute(blank: false)
+		httpMethod(nullable: true)
+		url(blank: false, unique: 'httpMethod')
 	}
 
 	static mapping = {
-		cache true
+		cache(true)
 	}
 }
 ----
 
-To use Requestmap entries to guard URLs, see <<requestmapInstances>>.
+To use database entries to guard URLs, see <<requestmapInstances>>.
