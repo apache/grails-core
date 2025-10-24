@@ -19,7 +19,7 @@ contact_links:
     about: Ask questions on the Mailing Lists
   - name: Grails Core Discussions
     url: https://github.com/apache/grails-core/discussions
-    about: Ask questions about Grails® framework on Github
+    about: Discuss Grails® framework on GitHub
   - name: Grails Slack
     url: https://grails.slack.com/
     about: Chat with us on Grails Community Slack.
