@@ -699,6 +699,10 @@ class GrailsGradlePlugin extends GroovyPlugin {
             project.tasks.withType(BootRun).configureEach { BootRun it ->
                 it.dependsOn(findMainClassTask)
                 it.mainClass.convention(GrailsGradlePlugin.getMainClassProvider(project))
+                // Pass BuildSettings properties to forked JVM with full "grails." prefix
+                // so they're not affected by the prefix-stripping in configureForkSettings
+                it.systemProperty(BuildSettings.APP_BASE_DIR, project.projectDir.absolutePath)
+                it.systemProperty(BuildSettings.PROJECT_TARGET_DIR, project.layout.buildDirectory.get().asFile.name)
             }
 
             project.tasks.withType(ResolveMainClassName).configureEach {
