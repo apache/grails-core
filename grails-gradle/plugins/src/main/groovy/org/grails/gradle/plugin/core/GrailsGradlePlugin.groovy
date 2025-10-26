@@ -535,7 +535,11 @@ class GrailsGradlePlugin extends GroovyPlugin {
             for (key in map.keySet()) {
                 def value = map.get(key)
                 if (value) {
-                    def sysPropName = key.toString().substring(7)
+                    String keyStr = key.toString()
+                    // Preserve full "grails." prefix for BuildSettings properties that are looked up with the prefix
+                    // Strip prefix for other properties for backward compatibility
+                    boolean isBuildSettingsProperty = keyStr.startsWith('grails.project.') || keyStr == BuildSettings.APP_BASE_DIR
+                    String sysPropName = isBuildSettingsProperty ? keyStr : keyStr.substring(7)
                     task.systemProperty(sysPropName, value.toString())
                 }
             }
