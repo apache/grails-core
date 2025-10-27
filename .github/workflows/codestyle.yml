@@ -46,7 +46,7 @@ jobs:
         run: ./gradlew codeStyle
       - name: "📤 Upload Failure Reports"
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: core-reports
           path: |
@@ -74,7 +74,7 @@ jobs:
         run: ./gradlew codeStyle
       - name: "📤 Upload Failure Reports"
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: gradle-plugin-reports
           path: |
@@ -102,7 +102,7 @@ jobs:
         run: ./gradlew codeStyle
       - name: "📤 Upload Failure Reports"
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: forge-reports
           path: |
