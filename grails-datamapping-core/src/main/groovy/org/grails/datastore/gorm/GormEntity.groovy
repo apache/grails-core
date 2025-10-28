@@ -21,6 +21,7 @@ package org.grails.datastore.gorm
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
+
 import jakarta.persistence.Transient
 
 import org.springframework.transaction.TransactionDefinition
@@ -58,8 +59,8 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @param name The property name
      * @return The property value
      */
-    @CompileDynamic
     @Generated
+    @CompileDynamic
     def propertyMissing(String name) {
         GormEnhancer.findInstanceApi(getClass()).propertyMissing(this, name)
     }

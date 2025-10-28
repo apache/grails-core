@@ -57,9 +57,7 @@ abstract class AbstractWriteOperationImplementer extends AbstractServiceImplemen
         }
 
         doImplement(domainClassNode, abstractMethodNode, newMethodNode, targetClassNode)
-
         markAsGenerated(targetClassNode, newMethodNode)
-
         abstractMethodNode.putNodeMetaData(IMPLEMENTED, Boolean.TRUE)
     }
 

@@ -55,6 +55,7 @@ import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.transactions.CustomizableRollbackTransactionAttribute
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
+import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.codehaus.groovy.ast.ClassHelper.CLASS_Type
 import static org.codehaus.groovy.ast.ClassHelper.STRING_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.VOID_TYPE
@@ -86,7 +87,6 @@ import static org.grails.datastore.mapping.reflect.AstUtils.findAnnotation
 import static org.grails.datastore.mapping.reflect.AstUtils.hasOrInheritsProperty
 import static org.grails.datastore.mapping.reflect.AstUtils.implementsInterface
 import static org.grails.datastore.mapping.reflect.AstUtils.isSubclassOf
-import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.grails.datastore.mapping.reflect.AstUtils.nonGeneric
 import static org.grails.datastore.mapping.reflect.AstUtils.varThis
 
@@ -339,7 +339,6 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
                             parameters,
                             null,
                             setterBody)
-
                     markAsGenerated(declaringClassNode, setterNode)
                 }
             }

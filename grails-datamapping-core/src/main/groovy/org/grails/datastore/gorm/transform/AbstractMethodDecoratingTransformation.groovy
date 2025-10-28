@@ -47,6 +47,7 @@ import jakarta.annotation.PreDestroy
 
 import org.grails.datastore.mapping.reflect.NameUtils
 
+import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.codehaus.groovy.ast.ClassHelper.VOID_TYPE
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
@@ -56,7 +57,6 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.closureX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
-import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.paramsForArgs
 import static org.grails.datastore.mapping.reflect.AstUtils.COMPILE_STATIC_TYPE
 import static org.grails.datastore.mapping.reflect.AstUtils.EMPTY_CLASS_ARRAY

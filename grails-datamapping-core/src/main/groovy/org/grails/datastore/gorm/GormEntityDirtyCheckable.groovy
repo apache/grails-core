@@ -19,9 +19,8 @@
 package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
+import groovy.transform.Generated
 
-import jakarta.annotation.Generated
-import groovy.transform.Generated as GroovyGenerated
 import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -39,7 +38,6 @@ trait GormEntityDirtyCheckable extends DirtyCheckable {
 
     @Override
     @Generated
-    @GroovyGenerated
     boolean hasChanged(String propertyName) {
         PersistentEntity entity = currentGormInstanceApi().persistentEntity
 

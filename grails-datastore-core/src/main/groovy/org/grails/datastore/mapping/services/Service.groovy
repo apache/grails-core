@@ -19,6 +19,7 @@
 package org.grails.datastore.mapping.services
 
 import groovy.transform.Generated
+
 import org.grails.datastore.mapping.core.Datastore
 
 /**

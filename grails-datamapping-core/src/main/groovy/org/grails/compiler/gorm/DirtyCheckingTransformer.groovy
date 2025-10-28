@@ -56,6 +56,7 @@ import org.grails.datastore.mapping.reflect.ReflectionUtils
 import static java.lang.reflect.Modifier.PUBLIC
 import static java.lang.reflect.Modifier.isFinal
 import static java.lang.reflect.Modifier.isTransient
+import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
@@ -72,7 +73,6 @@ import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.grails.datastore.mapping.reflect.AstUtils.addAnnotationIfNecessary
 import static org.grails.datastore.mapping.reflect.AstUtils.hasAnnotation
 import static org.grails.datastore.mapping.reflect.AstUtils.isDomainClass
-import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 
 /**
  *
@@ -218,7 +218,6 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                                     null,
                                     GeneralUtils.returnS(GeneralUtils.varX(propertyField))
                             )
-
                             markAsGenerated(classNode, getIdMethod)
                             classNode.addMethod(getIdMethod)
                             getIdMethod.addAnnotation(GormEntityTransformation.JPA_TRANSIENT_ANNOTATION_NODE)

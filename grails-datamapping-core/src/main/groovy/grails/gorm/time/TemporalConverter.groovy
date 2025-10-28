@@ -19,11 +19,11 @@
 
 package grails.gorm.time
 
-import groovy.transform.Generated
-
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
+
+import groovy.transform.Generated
 
 trait TemporalConverter<T> {
 

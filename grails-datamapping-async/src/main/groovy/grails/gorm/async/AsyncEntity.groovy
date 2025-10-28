@@ -21,6 +21,7 @@ package grails.gorm.async
 
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
+
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.async.GormAsyncStaticApi

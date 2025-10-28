@@ -350,7 +350,6 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
                                             }
                                             methodBody.addStatement(returnS(createNamedQueryCall))
                                             MethodNode newMethod = new MethodNode(methodName, Modifier.PUBLIC | Modifier.STATIC, queryOperationsClassNode, newParams, null, methodBody)
-
                                             markAsGenerated(thisClassNode, newMethod)
                                             thisClassNode.addMethod(newMethod)
 

@@ -66,9 +66,7 @@ abstract class AbstractReadOperationImplementer extends AbstractServiceImplement
             domainClassNode = domainClassFromSignature
         }
         doImplement(domainClassNode, abstractMethodNode, newMethodNode, targetClassNode)
-
         markAsGenerated(targetClassNode, newMethodNode)
-
         abstractMethodNode.putNodeMetaData(IMPLEMENTED, Boolean.TRUE)
     }
 

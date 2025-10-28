@@ -18,17 +18,19 @@
  */
 package org.grails.datastore.mapping.dirty.checking
 
-import groovy.transform.Sortable
+import java.lang.reflect.Method
+
 import groovy.transform.Generated
+import groovy.transform.Sortable
+
 import spock.lang.Issue
 import spock.lang.Specification
-
-import java.lang.reflect.Method
 
 class DirtyCheckableSpec extends Specification {
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/1231')
     def 'setting a field that implements Comparable dirty checks properly'() {
+
         given: 'a person'
         def person = new Person(name: 'John Doe')
 
@@ -55,35 +57,37 @@ class DirtyCheckableSpec extends Specification {
     }
 
     def 'setting a field that is a boolean dirty checks properly'() {
+
         given: 'a class with a boolean property'
         def animal = new Animal()
         animal.trackChanges()
 
-        when:"A boolean property is changed"
+        when: 'a boolean property is changed'
         animal.barks = true
-        animal.markDirty("barks", true, false)
+        animal.markDirty('barks', true, false)
 
-        then:"the property changed"
+        then: 'the property changed'
         animal.barks
         animal.hasChanged()
-        animal.hasChanged("barks")
+        animal.hasChanged('barks')
 
-        when:"it is set to false"
+        when: 'it is set to false'
         animal.trackChanges() // reset
         animal.barks = false
-        animal.markDirty("barks", false, true)
+        animal.markDirty('barks', false, true)
 
-        then:"the property changed"
+        then: 'the property changed'
         !animal.barks
         animal.hasChanged()
-        animal.hasChanged("barks")
+        animal.hasChanged('barks')
 
     }
 
-    void "test that all DirtyCheckable trait methods are marked as Generated"() {
-        expect: "all DirtyCheckable methods are marked as Generated on implementation class"
-        DirtyCheckable.getMethods().each { Method traitMethod ->
-            assert Animal.class.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+    void 'test that all DirtyCheckable trait methods are marked as Generated'() {
+
+        expect: 'all DirtyCheckable methods are marked as Generated on implementation class'
+        DirtyCheckable.methods.each { Method traitMethod ->
+            assert Animal.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
         }
     }
 }

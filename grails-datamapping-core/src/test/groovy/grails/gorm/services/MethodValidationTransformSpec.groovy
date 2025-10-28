@@ -18,100 +18,97 @@
  */
 package grails.gorm.services
 
-import groovy.transform.Generated
+import java.lang.reflect.Method
 
-import grails.gorm.annotation.Entity
-import grails.validation.ValidationException
-import jakarta.validation.constraints.NotNull
-import org.grails.datastore.gorm.validation.jakarta.services.ValidatedService
-import spock.lang.Specification
+import groovy.transform.Generated
 
 import jakarta.validation.ConstraintViolationException
 import jakarta.validation.ParameterNameProvider
-import java.lang.reflect.Method
+import jakarta.validation.constraints.NotNull
 
-/**
- * Created by graemerocher on 14/02/2017.
- */
+import spock.lang.Specification
+
+import grails.gorm.annotation.Entity
+import grails.validation.ValidationException
+import org.grails.datastore.gorm.validation.jakarta.services.ValidatedService
+
 class MethodValidationTransformSpec extends Specification {
 
-    void "test simple validated property"() {
-        when:"The service transform is applied to an interface it can't implement"
-        Class service = new GroovyClassLoader().parseClass('''
-import grails.gorm.services.*
-import grails.gorm.annotation.Entity
-import jakarta.validation.constraints.*
+    void 'test simple validated property'() {
 
-@Service(Foo)
-interface MyService {
-
-    @grails.gorm.transactions.NotTransactional
-    Foo find(@NotNull String title) throws jakarta.validation.ConstraintViolationException
-    
-    @grails.gorm.transactions.NotTransactional
-    Foo findAgain(@NotNull @NotBlank String title)
-}
-@Entity
-class Foo {
-    String title
-}
-
-''')
+        when: 'the service transform is applied to an interface it cannot implement'
+        def serviceClass = new GroovyClassLoader().parseClass('''
+            import grails.gorm.services.*
+            import grails.gorm.annotation.Entity
+            import jakarta.validation.constraints.*
+            
+            @Service(Foo)
+            interface MyService {
+            
+                @grails.gorm.transactions.NotTransactional
+                Foo find(@NotNull String title) throws jakarta.validation.ConstraintViolationException
+                
+                @grails.gorm.transactions.NotTransactional
+                Foo findAgain(@NotNull @NotBlank String title)
+            }
+            @Entity
+            class Foo {
+                String title
+            }
+        ''')
 
         then:
-        service.isInterface()
-        println service.classLoader.loadedClasses
+        serviceClass.isInterface()
 
-        when:"the impl is obtained"
-        Class impl = service.classLoader.loadClass("\$MyServiceImplementation")
+        when: 'the impl is obtained'
+        def implClass = serviceClass.classLoader.loadClass('$MyServiceImplementation')
 
-        then:"The impl is valid"
-        org.grails.datastore.mapping.services.Service.isAssignableFrom(impl)
-        ValidatedService.isAssignableFrom(impl)
+        then: 'the impl is valid'
+        org.grails.datastore.mapping.services.Service.isAssignableFrom(implClass)
+        ValidatedService.isAssignableFrom(implClass)
 
-        and: "All implemented Trait methods are marked as Generated"
-        ValidatedService.getMethods().each { Method traitMethod ->
-            assert impl.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+        and: 'all implemented Trait methods are marked as Generated'
+        ValidatedService.methods.each { Method traitMethod ->
+            assert implClass.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
         }
 
-        when:"The parameter data is obtained"
-        ParameterNameProvider parameterNameProvider = service.classLoader.loadClass("\$MyServiceImplementation\$ParameterNameProvider").newInstance()
-        def instance = impl.newInstance()
+        when: 'the parameter data is obtained'
+        def parameterNameProvider = (ParameterNameProvider) serviceClass.classLoader.loadClass('$MyServiceImplementation$ParameterNameProvider').newInstance()
+        def instance = implClass.newInstance()
 
-        then:"It is correct"
+        then: 'it is correct'
         parameterNameProvider != null
-        parameterNameProvider.getParameterNames(impl.getMethod("find", String)) == ["title"]
+        parameterNameProvider.getParameterNames(implClass.getMethod('find', String)) == ['title']
         instance.parameterNameProvider != null
-        instance.parameterNameProvider.getParameterNames(impl.getMethod("find", String)) == ["title"]
+        instance.parameterNameProvider.getParameterNames(implClass.getMethod('find', String)) == ['title']
         instance.validatorFactory != null
-
 
         when:
         instance.find(null)
 
         then:
-        def e = thrown( ConstraintViolationException)
-        e.constraintViolations.size() == 1
-        e.constraintViolations.first().messageTemplate == '{jakarta.validation.constraints.NotNull.message}'
-        e.constraintViolations.first().propertyPath.toString() == 'find.title'
+        def constraintViolationException = thrown(ConstraintViolationException)
+        constraintViolationException.constraintViolations.size() == 1
+        constraintViolationException.constraintViolations.first().messageTemplate == '{jakarta.validation.constraints.NotNull.message}'
+        constraintViolationException.constraintViolations.first().propertyPath.toString() == 'find.title'
 
         when:
-        instance.findAgain("")
+        instance.findAgain('')
 
         then:
-        def e2 = thrown( ValidationException )
-        e2.message
-        e2.errors.hasErrors()
-        e2.errors.hasFieldErrors('title')
-        e2.errors.getFieldValue('title') == ""
+        def validationException =  thrown(ValidationException)
+        validationException.message
+        validationException.errors.hasErrors()
+        validationException.errors.hasFieldErrors('title')
+        validationException.errors.getFieldValue('title') == ''
     }
 }
 
 @Service(Foo)
 interface MyService {
-
     Foo find(@NotNull String title)
 }
+
 @Entity
 class Foo {
     String title
