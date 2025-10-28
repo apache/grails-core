@@ -19,7 +19,7 @@
 #  under the License.
 #
 
-# ./releaseDistributions.sh <tag> <username> <svn_folder>
+# ./releaseDistributions.sh <tag> <svn_folder> <username>
 
 set -euo pipefail
 

@@ -391,7 +391,7 @@ jobs:
       - name: "🚀 MANUAL - Release JAR files"
         run: |
           echo "::group::Manual Jar Promotion"
-          echo "Run .github/scripts/releaseJarFiles.sh ${TAG} ${REPO_NAME}:${VERSION} <ASF_USER>"
+          echo "Run .github/scripts/releaseJarFiles.sh ${REPO_NAME}:${VERSION} <ASF_USER>"
           echo "::endgroup::"
       - name: "🚀 MANUAL - Release distribution artifacts"
         run: |
