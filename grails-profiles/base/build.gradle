@@ -16,6 +16,8 @@
  */
 plugins {
     id 'org.apache.grails.gradle.grails-profile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
 }
 
 group = 'org.apache.grails.profiles'
@@ -38,7 +40,7 @@ TaskProvider<Copy> copyWrapper = tasks.register('copyGrailsWrapperScripts', Copy
 copyWrapper.configure { Copy copy ->
     Project wrapperProject = rootProject.project(':grails-wrapper')
     copy.dependsOn(wrapperProject.tasks.named('installDist'))
-    copy.from(wrapperProject.layout.buildDirectory.dir('install/apache-grails-wrapper-incubating-bin')) {
+    copy.from(wrapperProject.layout.buildDirectory.dir('install/apache-grails-wrapper-bin')) {
         include '**/grails-wrapper.jar'
         include '**/grailsw.bat'
         include '**/grailsw'
@@ -56,8 +58,4 @@ tasks.named('processProfileResources').configure {
 
 tasks.named('compileProfile').configure {
     it.dependsOn(copyWrapper)
-}
-
-apply {
-    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }

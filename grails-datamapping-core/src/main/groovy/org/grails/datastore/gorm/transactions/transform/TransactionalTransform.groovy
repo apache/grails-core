@@ -55,6 +55,7 @@ import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.transactions.CustomizableRollbackTransactionAttribute
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
+import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.codehaus.groovy.ast.ClassHelper.CLASS_Type
 import static org.codehaus.groovy.ast.ClassHelper.STRING_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.VOID_TYPE
@@ -277,12 +278,12 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
                         returnS(transactionManagerLookupExpr)
                 )
 
-                declaringClassNode.addMethod(GET_TRANSACTION_MANAGER_METHOD,
+                MethodNode methodNode = declaringClassNode.addMethod(GET_TRANSACTION_MANAGER_METHOD,
                         Modifier.PUBLIC,
                         transactionManagerClassNode,
                         ZERO_PARAMETERS, null,
                         ifElse)
-
+                markAsGenerated(declaringClassNode, methodNode)
             }
             else {
                 /// Add field: PlatformTransactionManager $transactionManager
@@ -318,11 +319,12 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
                 getterBody.addStatement(ifElse)
 
                 // Add Method: PlatformTransactionManager getTransactionManager()
-                declaringClassNode.addMethod(GET_TRANSACTION_MANAGER_METHOD,
+                MethodNode getterNode = declaringClassNode.addMethod(GET_TRANSACTION_MANAGER_METHOD,
                         Modifier.PUBLIC,
                         transactionManagerClassNode,
                         ZERO_PARAMETERS, null,
                         getterBody)
+                markAsGenerated(declaringClassNode, getterNode)
 
                 // Prepare setter parameters
                 Parameter p = param(transactionManagerClassNode, PROPERTY_TRANSACTION_MANAGER)
@@ -331,12 +333,13 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
                     Statement setterBody = assignS(transactionManagerPropertyExpr, varX(p))
 
                     // Add Setter Method: void setTransactionManager(PlatformTransactionManager transactionManager)
-                    declaringClassNode.addMethod(SET_TRANSACTION_MANAGER,
+                    MethodNode setterNode = declaringClassNode.addMethod(SET_TRANSACTION_MANAGER,
                             Modifier.PUBLIC,
                             VOID_TYPE,
                             parameters,
                             null,
                             setterBody)
+                    markAsGenerated(declaringClassNode, setterNode)
                 }
             }
 

@@ -77,7 +77,7 @@ class Sitemesh3GrailsPlugin extends Plugin {
         { ->
             ConfigurableEnvironment configurableEnvironment = grailsApplication.mainContext.environment as ConfigurableEnvironment
             def propertySources = configurableEnvironment.getPropertySources()
-            // https://docs.grails.org/latest/guide/single.html#layouts
+            // https://grails.apache.org/docs/latest/guide/single.html#layouts
             // Default view should be application, but it is inefficient to add a rule for a page that may not exist.
             String defaultLayout = grailsApplication.getConfig().getProperty('grails.sitemesh.default.layout')
             propertySources.addFirst(getDefaultPropertySource(configurableEnvironment, defaultLayout))

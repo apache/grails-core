@@ -30,8 +30,8 @@ import java.util.Map;
 import groovy.lang.Binding;
 import groovy.lang.Writable;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import grails.util.Environment;
 import org.grails.taglib.AbstractTemplateVariableBinding;
@@ -47,7 +47,7 @@ import org.grails.taglib.encoder.OutputContextLookup;
  * @since 0.5
  */
 public class GroovyPageWritable implements Writable {
-    private static final Log LOG = LogFactory.getLog(GroovyPageWritable.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GroovyPageWritable.class);
     private static final String GSP_NONE_CODEC_NAME = "none";
     private GroovyPageMetaInfo metaInfo;
     private OutputContextLookup outputContextLookup;
@@ -101,8 +101,7 @@ public class GroovyPageWritable implements Writable {
             // Set it to TEXT
             outputContext.setContentType(GROOVY_SOURCE_CONTENT_TYPE); // must come before response.getOutputStream()
             writeGroovySourceToResponse(metaInfo, out);
-        }
-        else {
+        } else {
             // Set it to HTML by default
             if (metaInfo.getCompilationException() != null) {
                 throw metaInfo.getCompilationException();
@@ -125,9 +124,7 @@ public class GroovyPageWritable implements Writable {
                 // only try to set content type when evaluating top level GSP
                 boolean contentTypeAlreadySet = outputContext.isContentTypeAlreadySet();
                 if (!contentTypeAlreadySet) {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("Writing output with content type: " + metaInfo.getContentType());
-                    }
+                    LOG.debug("Writing output with content type: {}", metaInfo.getContentType());
                     outputContext.setContentType(metaInfo.getContentType()); // must come before response.getWriter()
                 }
             }
@@ -136,13 +133,15 @@ public class GroovyPageWritable implements Writable {
             if (hasRequest) {
                 outputContext.setBinding(binding);
             }
-
+            Binding existingBinding = null;
             GroovyPage page = null;
             try {
-                page = (GroovyPage) metaInfo.getPageClass().newInstance();
+                page = metaInfo.getPageClassInstance();
+                existingBinding = page.getBinding();
             } catch (Exception e) {
                 throw new GroovyPagesException("Problem instantiating page class", e);
             }
+
             page.setBinding(binding);
             binding.setOwner(page);
 
@@ -150,8 +149,10 @@ public class GroovyPageWritable implements Writable {
 
             try {
                 page.run();
-            }
-            finally {
+            } finally {
+                if (existingBinding != null) {
+                    page.setBinding(existingBinding);
+                }
                 page.cleanup();
                 if (hasRequest) {
                     if (newParentCreated) {
@@ -220,13 +221,12 @@ public class GroovyPageWritable implements Writable {
             Reader reader = new InputStreamReader(in, "UTF-8");
             char[] buf = new char[8192];
 
-            for (;;) {
+            for (; ; ) {
                 int read = reader.read(buf);
                 if (read <= 0) break;
                 out.write(buf, 0, read);
             }
-        }
-        finally {
+        } finally {
             out.close();
             in.close();
         }
@@ -249,8 +249,7 @@ public class GroovyPageWritable implements Writable {
         try {
             try {
                 in.reset();
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 // ignore
             }
             BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"));
@@ -288,8 +287,7 @@ public class GroovyPageWritable implements Writable {
                 out.write(line);
                 out.write('\n');
             }
-        }
-        finally {
+        } finally {
             out.close();
             in.close();
         }

@@ -16,6 +16,46 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+import org.gradle.api.initialization.resolve.RepositoriesMode
+
+pluginManagement {
+    includeBuild('../build-logic') {
+        name = 'build-logic-root'
+    }
+    repositories {
+        // because our publish plugin uses other plugins, those dependencies have to be resolvable
+        // mavenLocal()
+        mavenCentral()
+        gradlePluginPortal()
+        maven {
+            url = 'https://repository.apache.org/content/groups/snapshots'
+            content {
+                includeVersionByRegex('org[.]apache[.]grails[.]gradle.*', '.*', '.*-SNAPSHOT')
+            }
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+        maven {
+            url = 'https://central.sonatype.com/repository/maven-snapshots'
+            content {
+                includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+            }
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+        maven {
+            url = 'https://repository.apache.org/content/groups/staging'
+            content {
+                includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
+            }
+            mavenContent {
+                releasesOnly()
+            }
+        }
+    }
+}
 
 plugins {
 	id 'com.gradle.develocity' version '4.1.1'
@@ -64,8 +104,39 @@ project(':grails-gradle-bom').projectDir = file('bom')
 include 'grails-gradle-model'
 project(':grails-gradle-model').projectDir = file('model')
 
-include 'grails-docs-core'
-project(':grails-docs-core').projectDir = file('docs-core')
-
 include 'grails-gradle-tasks'
 project(':grails-gradle-tasks').projectDir = file('tasks')
+
+dependencyResolutionManagement {
+    repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
+    repositories {
+        // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
+        maven { url = 'https://repo.grails.org/grails/restricted' }
+        mavenCentral()
+        maven {
+            url = 'https://repository.apache.org/content/groups/snapshots'
+            content {
+                includeVersionByRegex('org[.]apache[.]grails.*', '.*', '.*-SNAPSHOT')
+                includeVersionByRegex('org[.]apache[.]groovy.*', '.*', '.*-SNAPSHOT')
+            }
+        }
+        maven {
+            url = 'https://central.sonatype.com/repository/maven-snapshots'
+            content {
+                includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+            }
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+        maven {
+            url = 'https://repository.apache.org/content/groups/staging'
+            content {
+                includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
+            }
+            mavenContent {
+                releasesOnly()
+            }
+        }
+    }
+}

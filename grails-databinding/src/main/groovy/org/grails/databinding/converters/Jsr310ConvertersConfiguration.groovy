@@ -388,6 +388,21 @@ class Jsr310ConvertersConfiguration {
         }
     }
 
+    @Bean
+    TypedStructuredBindingEditor instantStructuredBindingEditor() {
+        new CustomDateBindingEditor<Instant>() {
+            @Override
+            Instant getDate(Calendar c) {
+                c.toInstant()
+            }
+
+            @Override
+            Class<?> getTargetType() {
+                Instant
+            }
+        }
+    }
+
     abstract class Jsr310DateValueConverter<T> implements ValueConverter {
 
         @Override

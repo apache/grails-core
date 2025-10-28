@@ -82,11 +82,6 @@ enum Environment {
     public static String RELOAD_ENABLED = 'grails.reload.enabled'
 
     /**
-     * Constant indicating whether run-app or test-app was executed
-     */
-    public static String RUN_ACTIVE = 'grails.run.active'
-
-    /**
      * Whether the display of full stack traces is needed
      */
     public static String FULL_STACKTRACE = 'grails.full.stacktrace'
@@ -349,16 +344,6 @@ enum Environment {
      */
     static boolean isDevelopmentEnvironmentAvailable() {
         return BuildSettings.GRAILS_APP_DIR_PRESENT && !isStandaloneDeployed() && !isWarDeployed()
-    }
-
-    /**
-     * This method will return true the application is run
-     *
-     * @return True if the development sources are present
-     */
-    static boolean isDevelopmentRun() {
-        Environment env = getCurrent()
-        return isDevelopmentEnvironmentAvailable() && Boolean.getBoolean(RUN_ACTIVE) && (env == Environment.DEVELOPMENT)
     }
 
     /**
@@ -653,15 +638,6 @@ enum Environment {
         }
         catch (ClassNotFoundException e) {
             RELOADING_AGENT_ENABLED = false
-            try {
-                Class.forName('org.springsource.loaded.TypeRegistry')
-                String jvmVersion = System.getProperty('java.specification.version')
-                LOG.get().debug('Found spring-loaded on the class path')
-                RELOADING_AGENT_ENABLED = getCurrent().isReloadEnabled()
-            }
-            catch (ClassNotFoundException e1) {
-                RELOADING_AGENT_ENABLED = false
-            }
         }
         return RELOADING_AGENT_ENABLED
     }

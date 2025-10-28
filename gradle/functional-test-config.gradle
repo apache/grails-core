@@ -124,6 +124,11 @@ tasks.withType(Test).configureEach { Test task ->
     if (System.getProperty('debug.tests')) {
         task.jvmArgs += debugArguments
     }
+
+    // Make Geb tests more resilient in slow CI environments
+    if (project.hasProperty('gebAtCheckWaiting')) {
+        systemProperty('grails.geb.atCheckWaiting.enabled', 'true')
+    }
 }
 
 tasks.named('groovydoc').configure {

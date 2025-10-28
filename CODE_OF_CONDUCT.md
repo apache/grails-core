@@ -1,6 +1,6 @@
 # Code of Conduct
 
-Apache Grails (Incubating) follows the ASF [Code of
+Apache Grails follows the ASF [Code of
 Conduct](https://www.apache.org/foundation/policies/conduct).
 
 If you observe behavior that violates those rules please follow the

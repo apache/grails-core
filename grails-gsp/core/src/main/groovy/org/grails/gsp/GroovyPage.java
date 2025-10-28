@@ -23,7 +23,6 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -84,6 +83,7 @@ public abstract class GroovyPage extends Script {
     public static final String LINK_NAMESPACE = "link";
     public static final String TEMPLATE_NAMESPACE = "tmpl";
     public static final String PAGE_SCOPE = "pageScope";
+    private OutputEncodingStackAttributes.Builder attributesBuilder;
 
     public static final Collection<String> RESERVED_NAMES = CollectionUtils.newSet(
             OUT,
@@ -130,23 +130,30 @@ public abstract class GroovyPage extends Script {
         throw new IllegalStateException("Setting out in page isn't allowed.");
     }
 
-    public void initRun(Writer target, OutputContext outputContext, GroovyPageMetaInfo metaInfo) {
-        OutputEncodingStackAttributes.Builder attributesBuilder = new OutputEncodingStackAttributes.Builder();
+    public void initCommonRun(GroovyPageMetaInfo metaInfo) {
+        attributesBuilder = new OutputEncodingStackAttributes.Builder();
         if (metaInfo != null) {
-            setJspTags(metaInfo.getJspTags());
-            setJspTagLibraryResolver(metaInfo.getJspTagLibraryResolver());
-            setGspTagLibraryLookup(metaInfo.getTagLibraryLookup());
-            setHtmlParts(metaInfo.getHtmlParts());
-            setPluginContextPath(metaInfo.getPluginPath());
             attributesBuilder.outEncoder(metaInfo.getOutEncoder());
             attributesBuilder.staticEncoder(metaInfo.getStaticEncoder());
             attributesBuilder.expressionEncoder(metaInfo.getExpressionEncoder());
             attributesBuilder.defaultTaglibEncoder(metaInfo.getTaglibEncoder());
+            setHtmlParts(metaInfo.getHtmlParts());
+            setHtmlPartsSet(metaInfo.getHtmlPartsSet());
+            setJspTags(metaInfo.getJspTags());
+            setJspTagLibraryResolver(metaInfo.getJspTagLibraryResolver());
+            setGspTagLibraryLookup(metaInfo.getTagLibraryLookup());
+            setPluginContextPath(metaInfo.getPluginPath());
+        }
+        attributesBuilder.allowCreate(true).autoSync(false).pushTop(true);
+        attributesBuilder.inheritPreviousEncoders(false);
+    }
+
+    public void initRun(Writer target, OutputContext outputContext, GroovyPageMetaInfo metaInfo) {
+        if (metaInfo != null) {
             applyModelFieldsFromBinding(metaInfo.getModelFields());
         }
-        attributesBuilder.allowCreate(true).topWriter(target).autoSync(false).pushTop(true);
         attributesBuilder.outputContext(outputContext);
-        attributesBuilder.inheritPreviousEncoders(false);
+        attributesBuilder.topWriter(target);
         outputStack = OutputEncodingStack.currentStack(attributesBuilder.build());
 
         out = outputStack.getOutWriter();
@@ -508,6 +515,14 @@ public abstract class GroovyPage extends Script {
     }
 
     /**
+     * Shorthand for printHtmlPart to reduce class size
+     * @param partNumber
+     */
+    public final void h(final int partNumber) {
+        staticOut.write(htmlParts[partNumber]);
+    }
+
+    /**
      * Sets the JSP tags used by this GroovyPage instance
      *
      * @param jspTags The JSP tags used
@@ -527,14 +542,10 @@ public abstract class GroovyPage extends Script {
 
     public void setHtmlParts(String[] htmlParts) {
         this.htmlParts = htmlParts;
-        this.htmlPartsSet = new HashSet<>();
-        if (htmlParts != null) {
-            for (String htmlPart : htmlParts) {
-                if (htmlPart != null) {
-                    htmlPartsSet.add(System.identityHashCode(htmlPart));
-                }
-            }
-        }
+    }
+
+    public void setHtmlPartsSet(Set<Integer> htmlPartsSet) {
+        this.htmlPartsSet = htmlPartsSet;
     }
 
     public final OutputEncodingStack getOutputStack() {

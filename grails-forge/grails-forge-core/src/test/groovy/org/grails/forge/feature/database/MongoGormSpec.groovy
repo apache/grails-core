@@ -43,15 +43,6 @@ class MongoGormSpec extends ApplicationContextSpec implements CommandOutputFixtu
         features.contains("gorm-mongodb")
     }
 
-    void "test there can only be one of either MongoDB or Neo4j feature"() {
-        when:
-        getFeatures(beanContext.getBeansOfType(GormOneOfFeature)*.name)
-
-        then:
-        def ex = thrown(IllegalArgumentException)
-        ex.message.contains("There can only be one of the following features selected")
-    }
-
     void "test dependencies are present for gradle"() {
         when:
         String template = new BuildBuilder(beanContext)

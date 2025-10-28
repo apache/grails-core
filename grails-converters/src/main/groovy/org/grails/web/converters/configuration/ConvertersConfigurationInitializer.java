@@ -112,6 +112,12 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
             }
             marshallers.add(new org.grails.web.converters.marshaller.json.DateMarshaller());
         }
+        marshallers.add(new org.grails.web.converters.marshaller.json.CalendarMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.InstantMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.LocalDateMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.LocalDateTimeMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.OffsetDateTimeMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.ZonedDateTimeMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.ToStringBeanMarshaller());
 
         boolean includeDomainVersion = includeDomainVersionProperty(grailsConfig, "json");

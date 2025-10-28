@@ -41,6 +41,7 @@ import org.grails.datastore.gorm.internal.RuntimeSupport
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 
+import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.codehaus.groovy.ast.ClassHelper.STRING_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.VOID_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.make
@@ -126,6 +127,7 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
                                 returnS(callD(castX(make(MultipleConnectionSourceCapableDatastore), datastoreVar), METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam))),
                                 returnS(datastoreLookupCall)
                         ))
+                markAsGenerated(declaringClassNode, mn)
                 compileMethodStatically(source, mn)
             }
             if (declaringClassNode.getMethod(METHOD_GET_TARGET_DATASTORE, ZERO_PARAMETERS) == null) {
@@ -134,7 +136,7 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
                                 returnS(datastoreVar),
                                 returnS(datastoreLookupDefaultCall))
                 )
-
+                markAsGenerated(declaringClassNode, mn)
                 compileMethodStatically(source, mn)
             }
         }
@@ -171,6 +173,7 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
                 Parameter[] setTargetDatastoreParams = params(datastoresParam)
                 if (declaringClassNode.getMethod('setTargetDatastore', setTargetDatastoreParams) == null) {
                     MethodNode setTargetDatastoreMethod = declaringClassNode.addMethod('setTargetDatastore', Modifier.PUBLIC, VOID_TYPE, setTargetDatastoreParams, null, setTargetDatastoreBody)
+                    markAsGenerated(declaringClassNode, setTargetDatastoreMethod)
 
                     // Autowire setTargetDatastore via Spring
                     addAnnotationOrGetExisting(setTargetDatastoreMethod, Autowired)
@@ -194,6 +197,7 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
                                     returnS(callX(datastoreFieldVar, METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam))),
                                     returnS(datastoreLookupCall)
                             ))
+                    markAsGenerated(declaringClassNode, mn)
                     if (!isSpockTest) {
                         compileMethodStatically(source, mn)
                     }
@@ -204,16 +208,14 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
                                     returnS(datastoreFieldVar),
                                     returnS(datastoreLookupDefaultCall))
                     )
+                    markAsGenerated(declaringClassNode, mn)
 
                     if (!isSpockTest) {
                         compileMethodStatically(source, mn)
                     }
-
                 }
             }
-
         }
-
     }
 
     protected void weaveSetTargetDatastoreBody(SourceUnit source, AnnotationNode annotationNode, ClassNode declaringClassNode, Expression datastoreVar, BlockStatement setTargetDatastoreBody) {

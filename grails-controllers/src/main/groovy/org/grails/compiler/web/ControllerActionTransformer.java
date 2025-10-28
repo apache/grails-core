@@ -941,8 +941,7 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
         Statement declareVariableStatement = new ExpressionStatement(declareConvertedValueExpression);
         wrapper.addStatement(declareVariableStatement);
 
-        final VariableExpression methodParamExpression = new VariableExpression(
-                methodParamName, paramTypeClassNode);
+        final VariableExpression methodParamExpression = localVarX(methodParamName, paramTypeClassNode);
         final DeclarationExpression declareParameterVariableStatement = new DeclarationExpression(
                 methodParamExpression, equalsToken, new EmptyExpression());
         declareVariableStatement = new ExpressionStatement(declareParameterVariableStatement);

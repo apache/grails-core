@@ -48,7 +48,8 @@ repositories {
     maven {
         url = 'https://repository.apache.org/content/groups/snapshots'
         content {
-            includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*SNAPSHOT')
+            includeVersionByRegex('org[.]apache[.]grails.*', '.*', '.*-SNAPSHOT')
+            includeVersionByRegex('org[.]apache[.]groovy.*', '.*', '.*-SNAPSHOT')
         }
     }
     maven {
@@ -77,10 +78,6 @@ configurations.configureEach {
 
 dependencies {
     implementation "org.apache.grails.gradle:grails-publish:$grailsPublishGradleVersion"
-    implementation "gradle.plugin.com.hierynomus.gradle.plugins:license-gradle-plugin:${rootProperties.gradleLicensePluginVersion}", {
-        // Due to https://github.com/hierynomus/license-gradle-plugin/issues/161, spring must be excluded
-        exclude group: 'org.springframework', module: 'spring-core'
-    }
     implementation "io.micronaut.build.internal:micronaut-gradle-plugins:$micronautGradlePlugins"
     implementation "com.fizzed:rocker-compiler:$rockerVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
@@ -99,6 +96,7 @@ dependencies {
     implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:$gradleChecksumPluginVersion"
     implementation "org.apache.ant:ant:$antVersion"
     implementation "org.apache.grails.gradle:grails-gradle-common:$projectVersion"
+    implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${rootProperties.gradleCycloneDxPluginVersion}"
 }
 
 gradlePlugin {

@@ -67,6 +67,7 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation 'org.seleniumhq.selenium:selenium-firefox-driver'
 }
 
 //tasks.withType(Test).configureEach {

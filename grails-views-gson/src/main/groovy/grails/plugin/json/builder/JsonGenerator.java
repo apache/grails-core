@@ -121,7 +121,7 @@ public interface JsonGenerator {
      */
     class Options {
 
-        protected static final String JSON_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
+        protected static final String JSON_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSX";
         protected static final Locale JSON_DATE_FORMAT_LOCALE = Locale.US;
         protected static final String DEFAULT_TIMEZONE = "GMT";
 

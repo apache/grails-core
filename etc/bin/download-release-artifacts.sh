@@ -37,59 +37,59 @@ VERSION=${RELEASE_TAG#v}
 
 # Source distro
 echo "Downloading GitHub source release files"
-curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip"
-curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.asc" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.asc"
-curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512"
+curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-src.zip" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-src.zip"
+curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-src.zip.asc" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-src.zip.asc"
+curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512"
 
 echo "Downloading SVN source release files"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip" "https://dist.apache.org/repos/dist/dev/incubator/grails/${SVN_FOLDER}/${VERSION}/sources/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.asc" "https://dist.apache.org/repos/dist/dev/incubator/grails/${SVN_FOLDER}/${VERSION}/sources/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.asc"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512" "https://dist.apache.org/repos/dist/dev/incubator/grails/${SVN_FOLDER}/${VERSION}/sources/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/sources/apache-${PROJECT_NAME}-${VERSION}-src.zip"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip.asc" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/sources/apache-${PROJECT_NAME}-${VERSION}-src.zip.asc"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/sources/apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512"
 
 # wrapper
 echo "Downloading GitHub wrapper release files"
-curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip"
-curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip.asc" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip.asc"
-curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip.sha512" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip.sha512"
+curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip"
+curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.asc" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.asc"
+curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.sha512" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.sha512"
 
 echo "Downloading SVN wrapper release files"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip" "https://dist.apache.org/repos/dist/dev/incubator/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip.asc" "https://dist.apache.org/repos/dist/dev/incubator/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip.asc"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip.sha512" "https://dist.apache.org/repos/dist/dev/incubator/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip.sha512"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.asc" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.asc"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.sha512" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.sha512"
 
 # sdkman delegating cli
 echo "Downloading GitHub cli release files"
-curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip"
-curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip.asc" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip.asc"
-curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip.sha512" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip.sha512"
+curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-bin.zip" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-bin.zip"
+curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-bin.zip.asc" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-bin.zip.asc"
+curl -f -L -o "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-bin.zip.sha512" "https://github.com/${REPO_NAME}/releases/download/${RELEASE_TAG}/apache-${PROJECT_NAME}-${VERSION}-bin.zip.sha512"
 
 echo "Downloading SVN wrapper release files"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip" "https://dist.apache.org/repos/dist/dev/incubator/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip.asc" "https://dist.apache.org/repos/dist/dev/incubator/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip.asc"
-curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip.sha512" "https://dist.apache.org/repos/dist/dev/incubator/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip.sha512"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-bin.zip" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-${VERSION}-bin.zip"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-bin.zip.asc" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-${VERSION}-bin.zip.asc"
+curl -f -L -o "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-bin.zip.sha512" "https://dist.apache.org/repos/dist/dev/grails/${SVN_FOLDER}/${VERSION}/distribution/apache-${PROJECT_NAME}-${VERSION}-bin.zip.sha512"
 
 # validate downloads
 set +e
 
 echo "Comparing SVN vs GitHub source release files"
-cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.asc" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.asc"
+cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip.asc" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-src.zip.asc"
 if [ $? -eq 0 ]; then
-  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.asc"
+  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-src.zip.asc"
 else
-  echo "❌Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.asc"
+  echo "❌Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-src.zip.asc"
   exit 1
 fi
 
-cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512"
+cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512"
 if [ $? -eq 0 ]; then
-  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512"
+  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512"
 else
-  echo "❌ Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip.sha512"
+  echo "❌ Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-src.zip.sha512"
   exit 1
 fi
 
-SRC_ZIP_SVN_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip" | awk '{print $1}')
-SRC_ZIP_GITHUB_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-src.zip" | awk '{print $1}')
+SRC_ZIP_SVN_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-src.zip" | awk '{print $1}')
+SRC_ZIP_GITHUB_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-src.zip" | awk '{print $1}')
 if [ "${SRC_ZIP_SVN_CHECKSUM}" != "${SRC_ZIP_GITHUB_CHECKSUM}" ]; then
     echo "❌ Checksum mismatch between SVN and GitHub source zip files"
     exit 1
@@ -98,24 +98,24 @@ else
 fi
 
 echo "Comparing SVN vs GitHub wrapper release files"
-cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip.asc" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip.asc"
+cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.asc" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.asc"
 if [ $? -eq 0 ]; then
-  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip.asc"
+  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.asc"
 else
-  echo "❌Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip.asc"
+  echo "❌Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.asc"
   exit 1
 fi
 
-cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip.sha512" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip.sha512"
+cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.sha512" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.sha512"
 if [ $? -eq 0 ]; then
-  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip.sha512"
+  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.sha512"
 else
-  echo "❌ Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip.sha512"
+  echo "❌ Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip.sha512"
   exit 1
 fi
 
-WRAPPER_ZIP_SVN_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip" | awk '{print $1}')
-WRAPPER_ZIP_GITHUB_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-wrapper-${VERSION}-incubating-bin.zip" | awk '{print $1}')
+WRAPPER_ZIP_SVN_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip" | awk '{print $1}')
+WRAPPER_ZIP_GITHUB_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-wrapper-${VERSION}-bin.zip" | awk '{print $1}')
 if [ "${WRAPPER_ZIP_SVN_CHECKSUM}" != "${WRAPPER_ZIP_GITHUB_CHECKSUM}" ]; then
     echo "❌ Checksum mismatch between SVN and GitHub wrapper zip files"
     exit 1
@@ -124,24 +124,24 @@ else
 fi
 
 echo "Comparing SVN vs GitHub cli release files"
-cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip.asc" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip.asc"
+cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-bin.zip.asc" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-bin.zip.asc"
 if [ $? -eq 0 ]; then
-  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip.asc"
+  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-bin.zip.asc"
 else
-  echo "❌Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip.asc"
+  echo "❌Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-bin.zip.asc"
   exit 1
 fi
 
-cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip.sha512" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip.sha512"
+cmp -s "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-bin.zip.sha512" "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-bin.zip.sha512"
 if [ $? -eq 0 ]; then
-  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip.sha512"
+  echo "✅ Identical SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-bin.zip.sha512"
 else
-  echo "❌ Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip.sha512"
+  echo "❌ Different SVN vs GitHub Upload for apache-${PROJECT_NAME}-${VERSION}-bin.zip.sha512"
   exit 1
 fi
 
-CLI_ZIP_SVN_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip" | awk '{print $1}')
-CLI_ZIP_GITHUB_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-incubating-bin.zip" | awk '{print $1}')
+CLI_ZIP_SVN_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/apache-${PROJECT_NAME}-${VERSION}-bin.zip" | awk '{print $1}')
+CLI_ZIP_GITHUB_CHECKSUM=$(shasum -a 512 "${DOWNLOAD_LOCATION}/github-apache-${PROJECT_NAME}-${VERSION}-bin.zip" | awk '{print $1}')
 if [ "${CLI_ZIP_SVN_CHECKSUM}" != "${CLI_ZIP_GITHUB_CHECKSUM}" ]; then
     echo "❌ Checksum mismatch between SVN and GitHub wrapper zip files"
     exit 1

@@ -19,6 +19,8 @@
 
 package org.demo.spock
 
+import org.demo.spock.pages.UploadSuccessPage
+
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 import org.demo.spock.pages.UploadPage
@@ -33,7 +35,7 @@ class ContainerFileDetectorDefaultSpec extends ContainerGebSpec {
 
     void 'should be able to find and upload local files'() {
         given:
-        def uploadPage = to UploadPage
+        def uploadPage = to(UploadPage)
 
         when:
         uploadPage.fileInput.file = new File('src/integration-test/resources/assets/upload-test.txt')
@@ -42,7 +44,6 @@ class ContainerFileDetectorDefaultSpec extends ContainerGebSpec {
         uploadPage.submitBtn.click()
 
         then:
-        title == 'File Uploaded'
-        pageSource.contains('File uploaded successfully')
+        at(UploadSuccessPage)
     }
 }

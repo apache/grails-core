@@ -55,8 +55,10 @@ tasks.named('rat') {
             'grails-profiles/**/features/**', // template files that people are expected to use in the end application
             'grails-profiles/**/skeleton/**', // template files that people are expected to use in the end application
             'grails-scaffolding/src/main/templates/scaffolding/**/*', // template files that people are expected to use in the end application
-            'grails-gradle/docs-core/src/main/template/**', // template files that people are expected to use in the end application
             'bin/**', // scripts generated during build for grails-shell-cli
+            'build-logic/plugins/build/**', // exclude build artifacts
+            'build-logic/docs-core/build/**', // exclude build artifacts
+            'build-logic/docs-core/src/main/template/**', // template files that people are expected to use in the end application
             'grails-common/src/main/groovy/org/apache/grails/common/compiler/asm/Attribute.java', // See license file, BSD licensed
             'grails-common/src/main/groovy/org/apache/grails/common/compiler/asm/ByteVector.java', // See license file, BSD licensed
             'grails-common/src/main/groovy/org/apache/grails/common/compiler/asm/ClassReader.java', // See license file, BSD licensed
@@ -67,8 +69,10 @@ tasks.named('rat') {
             'grails-gradle/**/build/**', // grails-gradle does not have a build package name so exclude any build directories
             'grails-forge/*/build/**', // grails-forge build directories
             'grails-forge/build/**', // grails-forge build directories
+            'build-logic/build/**', // grails-forge build directories
             'grails-forge/.idea/**', // grails-forge idea directories
             'grails-gradle/.idea/**', // grails-gradle idea directories
+            'build-logic/.idea/**', // grails-gradle idea directories
             'build/**', // build directories
             'buildSrc/build/**', // build directories
     ] + rootProject.subprojects.collect{"${rootProject.projectDir.relativePath(it.layout.buildDirectory.get().asFile).toString()}/**/*" }

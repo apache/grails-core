@@ -80,7 +80,7 @@ class GrailsApp extends SpringApplication {
      * @see #GrailsApp(org.springframework.core.io.ResourceLoader, Class<?>...)
      */
     GrailsApp(Class<?>... sources) {
-        super(sources)
+        this(null, sources)
     }
 
     /**
@@ -95,6 +95,7 @@ class GrailsApp extends SpringApplication {
      */
     GrailsApp(ResourceLoader resourceLoader, Class<?>... sources) {
         super(resourceLoader, sources)
+        banner = new ResourceBanner(new ClassPathResource(GRAILS_BANNER))
     }
 
     @Override
@@ -393,8 +394,6 @@ class GrailsApp extends SpringApplication {
      * @return the running {@link org.springframework.context.ApplicationContext}
      */
     static ConfigurableApplicationContext run(Class<?>[] sources, String[] args) {
-        GrailsApp grailsApp = new GrailsApp(sources)
-        grailsApp.banner = new ResourceBanner(new ClassPathResource(GRAILS_BANNER))
-        return grailsApp.run(args)
+        new GrailsApp(sources).run(args)
     }
 }

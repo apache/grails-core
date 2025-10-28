@@ -22,12 +22,14 @@ package org.demo.spock
 import geb.report.CompositeReporter
 import geb.report.PageSourceReporter
 import geb.report.Reporter
+import org.demo.spock.pages.HomePage
+
 import grails.plugin.geb.ContainerGebConfiguration
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 
 /**
- * See https://docs.grails.org/latest/guide/testing.html#functionalTesting and https://groovy.apache.org/geb/manual/current/
+ * See https://grails.apache.org/docs/latest/guide/testing.html#functionalTesting and https://groovy.apache.org/geb/manual/current/
  * for more instructions on how to write functional tests with Grails and Geb.
  */
 @Integration
@@ -42,7 +44,7 @@ class RootPageSpec extends ContainerGebSpec {
 
     void 'should display the correct title on the home page'() {
         when: 'visiting the home page'
-        go('/')
+        to(HomePage)
 
         then: 'the page title is correct'
         report('root page report')

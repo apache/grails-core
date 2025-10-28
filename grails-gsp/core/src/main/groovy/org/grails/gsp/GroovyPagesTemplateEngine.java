@@ -419,6 +419,27 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
     }
 
     /**
+     * Creates a Template using the given text for the Template and the given name. The name
+     * of the template is required
+     *
+     * @param txt The URI of the page to create the template for
+     * @param pageName The name of the page being parsed
+     * @param cache If the template should be cached
+     *
+     * @return The Template instance
+     * @throws CompilationFailedException
+     * @throws IOException Thrown if an IO exception occurs creating the Template
+     */
+    public Template createTemplate(String txt, String pageName, boolean cache) throws IOException {
+        Assert.hasLength(txt, "Argument [txt] cannot be null or blank");
+        Assert.hasLength(pageName, "Argument [pageName] cannot be null or blank");
+
+        return createTemplate(new ByteArrayResource(txt.getBytes(StandardCharsets.UTF_8), pageName), pageName, cache);
+    }
+
+    /**
+     * Creates a Template using the given text for the Template and the given name. The name
+    /**
      * Creates a Template for the given file
      *
      * @param file The File to use to construct the template with

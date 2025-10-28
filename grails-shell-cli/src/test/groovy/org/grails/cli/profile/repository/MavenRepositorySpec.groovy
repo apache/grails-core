@@ -18,13 +18,17 @@
  */
 package org.grails.cli.profile.repository
 
+import grails.util.Environment
+import spock.lang.IgnoreIf
 import spock.lang.Specification
-
-
 
 /**
  * @author graemerocher
  */
+
+// Note: These tests will fail on a new SNAPSHOT version until the corresponding
+// grails-bom has been published for the first time.
+@IgnoreIf({ Environment.grailsVersion?.endsWith('SNAPSHOT') })
 class MavenRepositorySpec extends Specification {
 
     void "Test resolve profile"() {

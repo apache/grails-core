@@ -20,13 +20,14 @@
 plugins {
     // Needed for the dependency configurations
     id 'java-library'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
 }
 
 version = projectVersion
 group = 'org.apache.grails'
 
 ext {
-    skipJavaComponent = true
     pomDescription = 'A meta-project that aggregates all web, non-test, non-database Grails dependencies.'
 }
 
@@ -78,7 +79,6 @@ dependencies {
 apply {
     // java-configuration must be applied first since tasks are now lazy registered
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }
 
 // these must be after the above applies because they opt out of the defaults created in those files

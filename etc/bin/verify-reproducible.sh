@@ -106,6 +106,7 @@ if [ -s diff.txt ]; then
       fi
   fi
 
+  : > diff_purged.txt  # Ensure the file exists and is empty
   while IFS= read -r jar_file; do
       echo "Checking jar ${jar_file}..."
 
@@ -149,6 +150,7 @@ if [ -s diff.txt ]; then
   echo "❌ Differences Found ❌"
   else
     echo "✅ Differences were resolved via decompilation. ✅"
+    exit 0
   fi
 else
   echo "✅ No Differences Found. ✅"

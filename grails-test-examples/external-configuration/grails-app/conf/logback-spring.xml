@@ -39,7 +39,7 @@
     <logger name="grails.config.external" level="DEBUG"/>
 
     <springProfile name="development">
-        <logger name="StackTrace" level="ERROR" additivity="false"/>
+        <logger name="StackTrace" level="ERROR" />
 
         <!--        <logger name="org.demo.spock" level="DEBUG"/>-->
 

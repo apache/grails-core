@@ -33,14 +33,19 @@ Doing so will ensure a seamless transition to the latest version of Grails and e
 ==== 2. Groovy {groovyVersion} as a baseline:
 
 Grails {version} adopts Groovy {groovyVersion} as it's baseline requirement.
-Several changes in Groovy 4 can affect your application.
-Notable changes include:
+Several changes in https://groovy-lang.org/releasenotes/groovy-4.0.html[Groovy 4] can affect your application.
+Changes that may affect a Grails Application or Plugin include:
 
 1. https://issues.apache.org/jira/browse/GROOVY-10621[GROOVY-10621] - Primitive booleans will no longer generate the form of isProperty & getProperty.
 They will only generate isProperty().
 For Grails Domain objects, grails sometimes generates these properties.
 It is advisable to switch to the new form of the property.
 2. https://issues.apache.org/jira/browse/GROOVY-5169[GROOVY-5169] & https://issues.apache.org/jira/browse/GROOVY-10449[GROOVY-10449] - Fields with a public modifier were not returned with MetaClassImpl#getProperties() in groovy 3, but are now.
+3. Closures using the DELEGATE_FIRST strategy now behave differently.
+The resolution order in Groovy 3 used to be Delegate's invokeMethod, Owner's invokeMethod, Delegate's invokeMissingMethod, Owner's invokeMissingMethod.
+In Groovy 4, the order is now Delegate's invokeMethod, Delegate's invokeMissingMethod, Owner's invokeMethod, Owner's invokeMissingMethod.
+4. Closures defined in a parent class that reference its private properties or methods may no longer have access to them in subclasses.
+See https://issues.apache.org/jira/browse/GROOVY-11568[GROOVY-11568] for more details.
 
 Some older libraries may include an older version of groovy, but still be compatible with Groovy 4. One example is GPars.
 In your gradle file, you can force a dependency upgrade via this code:
@@ -142,7 +147,7 @@ distributionUrl=https\://services.gradle.org/distributions/gradle-{gradleVersion
 
 ===== 6.4. Removed Gradle Plugins
 
-The `grails-doc` plugin has been removed. If you wish to continue to generate the guide documentation, you can use the PublishGuideTask offered by `grails-docs-core`.
+The `grails-doc` plugin has been removed. Documentation generation is no longer provided by Grails.
 
 ==== 7. Reproducible Builds:
 
@@ -351,13 +356,17 @@ The asset pipeline has a new https://github.com/wondrify/asset-pipeline[home]. V
 
 Updated maven coordinates:
 
-```console
+[source,groovy]
+.build.gradle
+----
 cloud.wondrify:asset-pipeline-gradle
 cloud.wondrify:asset-pipeline-grails
-```
+----
 
 Gradle plugin:
-```console
+[source,groovy]
+.build.gradle
+----
 plugins {
     id "cloud.wondrify.asset-pipeline"
 }
@@ -365,7 +374,7 @@ plugins {
 or
 
 apply plugin: "cloud.wondrify.asset-pipeline"
-```
+----
 
 ===== 12.12 API Changes
 
@@ -383,9 +392,11 @@ If you decide to use the `grails-layout` plugin, several changes have occurred:
 
 Add the following dependency to your project:
 
-```console
+[source,groovy]
+.build.gradle
+----
 implementation "org.apache.grails:grails-layout"
-```
+----
 
 Package Changes:
 
@@ -398,11 +409,13 @@ Notable Class Moves:
 * org.grails.web.servlet.view.SitemeshLayoutViewResolver -> org.apache.grails.web.layout.GrailsLayoutViewResolver
 * org.grails.web.sitemesh.GrailsLayoutView -> org.apache.grails.web.layout.EmbeddedGrailsLayoutView
 * org.grails.web.sitemesh.SitemeshLayoutView -> org.apache.grails.web.layout.GrailsLayoutView
+* org.grails.web.sitemesh.GSPSitemeshPage -> org.apache.grails.web.layout.GSPGrailsLayoutPage
 
 Property Changes:
 
 * grails.sitemesh.default.layout -> grails.views.layout.default
 * grails.sitemesh.enable.nongsp -> grails.views.layout.enable.nongsp
+* org.grails.web.sitemesh.GrailsLayoutView.GSP_SITEMESH_PAGE -> org.apache.grails.web.layout.EmbeddedGrailsLayoutView.GSP_GRAILS_LAYOUT_PAGE
 
 Tag namespace changes:
 
@@ -421,12 +434,248 @@ https://docs.spring.io/spring-boot/appendix/application-properties/index.html#ap
 
 The `servletContext` is no longer included by default in the generated `Bootstrap` class. If you need access to the `servletContext`, you can inject it into your `Bootstrap` class using:
 
-```console
+[source,groovy]
+----
 ServletContext servletContext
-```
+----
 
 ===== 12.17 Development Reloading
 
 For Grails 7, as was the case with Grails 4 and 5 and shell-generated applications in 6, Spring Boot Developer Tools is used by default for development reloading within generated applications.
 
 To learn more about development reloading options, please see the link:gettingStarted.html#developmentReloading[Development Reloading] section of this guide.
+
+===== 12.18 grails-i18n plugin
+
+`org.apache.grails:grails-i18n` has been changed to `org.apache.grails.i18n:grails-i18n` and is provided transitively, remove `org.apache.grails:grails-i18n` and `org.grails:grails-plugin-i18n` from your dependency list
+
+===== 12.19 hibernate.cache.region.factory_class
+
+`org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory` is deprecated in Hibernate 5.6 and is not compatible with `org.hibernate:hibernate-core-jakarta:{hibernate5Version}`, which is used in Grails 7.
+
+[source,yml]
+.application.yml
+----
+    hibernate:
+        allow_update_outside_transaction: true
+    cache:
+        queries: false
+        use_second_level_cache: true
+        use_query_cache: false
+        region:
+        factory_class: 'org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory'
+----
+
+If your application sets `hibernate.cache.region.factory_class` to `org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory` it will add the `non-jakarta` version of `hibernate-core` to your classpath which will cause `NoClassDefFoundError` and `ClassNotFoundException` errors.
+
+You will need to change it to `jcache` and add the Ehcache dependency as follows:
+
+[source,yml]
+.application.yml
+----
+    hibernate:
+        allow_update_outside_transaction: true
+    cache:
+        queries: false
+        use_second_level_cache: true
+        use_query_cache: false
+        region:
+        factory_class: 'jcache'
+----
+
+[source,groovy]
+.build.gradle
+----
+    implementation 'org.ehcache:ehcache'
+----
+
+Alternatively, you can define the hibernate-ehcache dependency explicitly and adjust it to exclude `hibernate-core` and add the `jboss-transaction-api_1.3_spec` see link:upgrading.html#_12_5_hibernate_ehcache[Hibernate-ehcache]
+
+===== 12.20 A Grails project cannot be both a plugin & an Application
+
+In previous versions of Grails, it was possible to apply both the `grails-plugin` and `grails-web` Gradle plugins in `build.gradle`.
+This would force the project to be both a Grails Plugin and a Grails Application.
+This scenario is not supported and can lead to unexpected behavior due to the AST transforms.
+
+Starting with Grails 7, a validation error will trigger if both a Grails Application Gradle Plugin & a Grails Plugin Gradle Plugin are configured in `build.gradle` for the same Gradle Project.
+
+===== 12.21 `exploded` is supported again to enable multi-project reloading
+
+Earlier versions of Grails supported an `exploded` Gradle configuration that forced defined plugins to use class and resource files, instead of jar files, on the Grails Application runtime classpath if several conditions were true:
+
+1. the property `grails.run.active` was set
+2. the plugin project had the property `exploded` set to `true` prior to the application of the `grails-plugin` Gradle plugin
+3. plugins were added to the Grails Application project via the `plugins` block inside of the `grails` extension in `build.gradle` instead of the `dependencies` block
+4. the property `exploded` was set on the `grails` extension in `build.gradle` of the Grails Application project
+
+The `exploded` setup facilitates better class reloading behavior.
+For Grails 7, it has been simplified to the following:
+
+1. In the plugin project, apply the gradle plugin `org.apache.grails.gradle.grails-exploded`
+2. In the application project, define plugins inside of the `plugins` block of the `grails` extension in `build.gradle`:
+
+[source,groovy]
+----
+grails {
+   plugins {
+        implementation project(":my-plugin")
+   }
+}
+----
+
+NOTE: Expanded class files & resource files will only be used over the jar file if the plugin applies the gradle plugin `org.apache.grails.gradle.grails-exploded` & the plugin is a subproject of your Gradle build.
+
+===== 12.22 Database Migration Plugin migrations directory in the main sourceSet
+
+It is no longer necessary to add the `grails-app/migrations` directory to the `main` sourceSet in order for the Database Migration Plugin to find your changelogs.
+This is now done automatically by the `org.apache.grails.gradle.grails-plugin` Gradle plugin.
+
+The following code can be removed from your `build.gradle` file:
+
+[source,groovy]
+.build.gradle
+----
+sourceSets {
+    main {
+        resources {
+            srcDir 'grails-app/migrations'
+        }
+    }
+}
+----
+
+===== 12.23 Test & JavaExec JVM Args no longer set by default
+
+Previously tasks of type `Test` & `JavaExec` had several JVM args set by default to facilitate faster startup times in larger projects.
+These settings are removed by default in Grails 7. To restore the old behavior, configure the `Test` & `JavaExec` tasks as follows:
+
+[source,groovy]
+----
+tasks.withType(Test).configureEach {
+   jvmArgs('-XX:+TieredCompilation', '-XX:TieredStopAtLevel=1', '-XX:CICompilerCount=3')
+}
+tasks.withType(JavaExec).configureEach {
+   jvmArgs('-XX:+TieredCompilation', '-XX:TieredStopAtLevel=1', '-XX:CICompilerCount=3')
+}
+----
+
+===== 12.24 MongoDB
+
+`Instant` persistence switched from epoch milliseconds (BSON int64) to BSON DateTime (same BSON type as `java.util.Date`); `LocalDateTime` continues to be converted to BSON DateTime using the configured zone. If you currently using domain objects with property type `Instant`, you will need to convert them prior to upgrading. For more info, see https://github.com/apache/grails-core/pull/15111[#15111].
+
+[source,javascript]
+----
+db.Example.updateMany(
+  { created: { $type: "long" } },
+  [ { $set: { created: { $toDate: "$created" } } } ]
+);
+----
+
+===== 12.25 JSON Rendering of Date/Time Types
+
+JSON rendering of `java.util.Calendar`, `java.time.Instant`, `java.time.LocalDate`, `java.time.LocalDateTime`, `java.time.OffsetDateTime`, and `java.time.ZonedDateTime` has been updated for consistency across both standard JSON converters (`render ... as JSON`) and JSON views (`.gson` files).
+
+====== Changes to JSON Output
+
+*Calendar*: Previously rendered as a complex object with all properties. Now consistently renders as ISO-8601 format with Z suffix:
+
+[source,json]
+----
+// Before
+{"timestamp": {"time": 1759869218602, "timeZone": {...}, "firstDayOfWeek": 1, ...}}
+
+// After
+{"timestamp": "2025-10-07T21:14:31Z"}
+----
+
+*Instant*: Previously rendered as either epoch milliseconds (standard converters) or a complex object structure (JSON views). Now consistently renders as ISO-8601 format with Z suffix:
+
+[source,json]
+----
+// Before (standard converters)
+{"timestamp": 1759869218602}
+
+// Before (JSON views)
+{"timestamp": {"epochSecond": 1759869218, "nano": 602000000}}
+
+// After (both)
+{"timestamp": "2025-10-07T21:14:31.602Z"}
+----
+
+*LocalDate*: Previously rendered as a complex object structure. Now consistently renders as ISO-8601 date format (YYYY-MM-DD):
+
+[source,json]
+----
+// Before
+{"date": {"year": 2025, "month": "OCTOBER", "dayOfMonth": 8, ...}}
+
+// After
+{"date": "2025-10-08"}
+----
+
+*LocalDateTime*: Previously rendered as a complex object structure (JSON views) or inconsistently. Now consistently renders as ISO-8601 format without timezone (matching Spring Boot behavior):
+
+[source,json]
+----
+// Before (JSON views)
+{"dateTime": {"year": 2025, "month": "OCTOBER", "dayOfMonth": 7, ...}}
+
+// After (both)
+{"dateTime": "2025-10-07T21:14:31"}
+----
+
+NOTE: `LocalDate` and `LocalDateTime` do not include timezone information, so they render without the Z suffix, unlike `Date`, `Calendar`, and `Instant` which represent specific points in time.
+
+*OffsetDateTime*: Previously rendered as a complex object structure. Now consistently renders as ISO-8601 format with timezone offset:
+
+[source,json]
+----
+// Before
+{"dateTime": {"offset": {...}, "year": 2025, "month": "OCTOBER", ...}}
+
+// After
+{"dateTime": "2025-10-08T00:48:46.407254-07:00"}
+----
+
+*ZonedDateTime*: Previously rendered with zone ID brackets like `[America/Los_Angeles]`. Now consistently renders as ISO-8601 format with timezone offset only (matching Spring Boot):
+
+[source,json]
+----
+// Before
+{"dateTime": "2025-10-08T00:48:46.407254-07:00[America/Los_Angeles]"}
+
+// After
+{"dateTime": "2025-10-08T00:48:46.407254-07:00"}
+----
+
+*java.util.Date*: Now renders as ISO-8601 with Z suffix **including milliseconds**:
+
+[source,json]
+----
+// Before
+{"created": "2025-10-07T21:14:31Z"}
+
+// After
+{"created": "2025-10-07T21:14:31.407Z"}
+----
+
+NOTE: `java.util.Date` and `Calendar` have **millisecond precision** (3 decimal places: `.SSS`), while Java 8 date/time types (`Instant`, `OffsetDateTime`, `ZonedDateTime`) have **nanosecond precision** (up to 9 decimal places, with trailing zeros dropped per ISO-8601 spec). This matches Spring Boot's Jackson serialization behavior.
+
+====== Migration Impact
+
+If your application or API consumers depend on the previous JSON format for `Calendar`, `Instant`, `LocalDate`, `LocalDateTime`, `OffsetDateTime`, or `ZonedDateTime` fields:
+
+1. **API Responses**: Client applications may need updates to parse the new ISO-8601 string format instead of epoch milliseconds or object structures.
+
+2. **Date Parsing**: The new format is a standard ISO-8601 string that can be parsed using `Instant.parse()`, `LocalDate.parse()`, `LocalDateTime.parse()`, `OffsetDateTime.parse()`, or `ZonedDateTime.parse()` with appropriate formatters.
+
+3. **Consistency**:
+   - Temporal types with timezone information (`Date`, `Calendar`, `Instant`) render with **Z suffix** (UTC)
+   - `LocalDate` (date only) renders as **YYYY-MM-DD**
+   - `LocalDateTime` (date and time, no timezone) renders **without Z suffix**
+   - `OffsetDateTime` and `ZonedDateTime` render with their **timezone offset** (e.g., `-07:00`)
+   - All formatting matches Spring Boot's behavior
+
+4. **ZonedDateTime**: Note that the zone ID (e.g., `[America/Los_Angeles]`) is no longer included in the output, matching Spring Boot's behavior.
+
+This change applies to both the `grails-converters` module (standard JSON rendering) and the `grails-views-gson` module (JSON views).

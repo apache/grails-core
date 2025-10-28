@@ -28,7 +28,7 @@ class PageDelegateSpec extends ContainerGebSpec {
 
     void 'should delegate to page object'() {
         given:
-        to UploadPage
+        to(UploadPage)
 
         when:
         nop()

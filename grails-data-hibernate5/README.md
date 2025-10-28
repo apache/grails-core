@@ -15,14 +15,14 @@ limitations under the License.
 -->
 
 # GORM for Hibernate 5
-This project implements [GORM](https://docs.grails.org/latest/grails-data/) for the Hibernate 5.
+This project implements [GORM](https://grails.apache.org/docs/latest/grails-data/) for the Hibernate 5.
 
 For more information see the following links:
 
-* [Documentation](https://docs.grails.org/latest/grails-data/hibernate5/manual)
-* [API Reference](https://docs.grails.org/latest/api)
+* [Documentation](https://grails.apache.org/docs/latest/grails-data/hibernate5/manual)
+* [API Reference](https://grails.apache.org/docs/latest/api)
 
 For the current development version see the following links:
 
-* [Development Snapshot Documentation](https://docs.grails.org/snapshot/grails-data/hibernate5/manual)
-* [Development Snapshot API Reference](https://docs.grails.org/snapshot/api)
+* [Development Snapshot Documentation](https://grails.apache.org/docs/snapshot/grails-data/hibernate5/manual)
+* [Development Snapshot API Reference](https://grails.apache.org/docs/snapshot/api)

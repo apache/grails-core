@@ -23,6 +23,8 @@ plugins {
     id 'groovy'
     id 'java-library'
     id 'org.grails.forge.rocker'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
 }
 
 version = projectVersion
@@ -98,7 +100,7 @@ TaskProvider<Sync> copyGrailsWrapper = tasks.register('copyGrailsWrapper', Sync)
 copyGrailsWrapper.configure { Sync it ->
     it.dependsOn(gradle.includedBuild('grails-core').task(':grails-wrapper:installDist'))
 
-    def wrapperFiles = rootProject.layout.projectDirectory.dir('../grails-wrapper/build/install/apache-grails-wrapper-incubating-bin')
+    def wrapperFiles = rootProject.layout.projectDirectory.dir('../grails-wrapper/build/install/apache-grails-wrapper-bin')
     it.inputs.files(wrapperFiles)
     it.includeEmptyDirs = false
 
@@ -116,7 +118,6 @@ copyGrailsWrapper.configure { Sync it ->
 apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')
 }

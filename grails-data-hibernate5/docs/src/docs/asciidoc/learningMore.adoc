@@ -17,4 +17,4 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-The full documentation for GORM for Hibernate can be found in the https://docs.grails.org/latest/grails-data/[Grails User Guide], this documentation serves to explain how to get started with GORM for Hibernate with or without Grails and to document release notes.
+The full documentation for GORM for Hibernate can be found in the https://grails.apache.org/docs/latest/grails-data/[Grails User Guide], this documentation serves to explain how to get started with GORM for Hibernate with or without Grails and to document release notes.
