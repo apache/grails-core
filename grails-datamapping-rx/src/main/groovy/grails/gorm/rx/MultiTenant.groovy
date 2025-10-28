@@ -19,11 +19,11 @@
 
 package grails.gorm.rx
 
-import grails.gorm.api.GormAllOperations
-import grails.gorm.rx.api.RxGormAllOperations
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
-import org.grails.datastore.gorm.GormEnhancer
+
+import grails.gorm.api.GormAllOperations
+import grails.gorm.rx.api.RxGormAllOperations
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.gorm.rx.api.RxGormEnhancer
 
@@ -35,6 +35,7 @@ import org.grails.gorm.rx.api.RxGormEnhancer
  */
 @CompileStatic
 trait MultiTenant<D> extends RxEntity<D> {
+
     /**
      * Execute the closure with the given tenantId
      *

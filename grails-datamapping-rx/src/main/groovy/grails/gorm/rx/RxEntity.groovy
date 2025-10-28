@@ -19,13 +19,15 @@
 
 package grails.gorm.rx
 
+import groovy.transform.CompileStatic
+import groovy.transform.Generated
+
+import rx.Subscriber
+
 import grails.gorm.rx.api.RxGormAllOperations
-import grails.gorm.rx.api.RxGormInstanceOperations
 import grails.gorm.rx.api.RxGormOperations
 import grails.gorm.rx.api.RxGormStaticOperations
 import grails.gorm.rx.proxy.ObservableProxy
-import groovy.transform.CompileStatic
-import groovy.transform.Generated
 import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
@@ -41,8 +43,6 @@ import org.grails.datastore.mapping.validation.ValidationException
 import org.grails.gorm.rx.api.RxGormEnhancer
 import org.grails.gorm.rx.api.RxGormInstanceApi
 import org.grails.gorm.rx.api.RxGormStaticApi
-import rx.Observable
-import rx.Subscriber
 
 /**
  * Represents a reactive GORM entity
@@ -54,26 +54,27 @@ import rx.Subscriber
  */
 @CompileStatic
 trait RxEntity<D> implements RxGormOperations<D>, GormValidateable, DirtyCheckable, Serializable {
-    @Generated
+
     @Override
+    @Generated
     boolean validate(Map arguments) {
         RxGormEnhancer.findValidationApi((Class<D>)getClass()).validate((D)this, arguments)
     }
 
-    @Generated
     @Override
+    @Generated
     boolean validate(List fields) {
         RxGormEnhancer.findValidationApi((Class<D>)getClass()).validate((D)this, fields)
     }
 
-    @Generated
     @Override
+    @Generated
     boolean validate() {
         RxGormEnhancer.findValidationApi((Class<D>)getClass()).validate((D)this)
     }
 
-    @Generated
     @Override
+    @Generated
     Observable<D> insert(Map arguments = Collections.emptyMap()) {
         return doSave(arguments, true)
     }

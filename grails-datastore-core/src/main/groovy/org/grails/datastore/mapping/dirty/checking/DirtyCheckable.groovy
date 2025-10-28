@@ -21,6 +21,7 @@ package org.grails.datastore.mapping.dirty.checking
 
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
+
 import jakarta.persistence.Transient
 
 import org.grails.datastore.mapping.proxy.EntityProxy

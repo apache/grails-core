@@ -41,6 +41,7 @@ import org.grails.datastore.gorm.internal.RuntimeSupport
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 
+import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.codehaus.groovy.ast.ClassHelper.STRING_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.VOID_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.make
@@ -61,7 +62,6 @@ import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.grails.datastore.mapping.reflect.AstUtils.addAnnotationOrGetExisting
 import static org.grails.datastore.mapping.reflect.AstUtils.implementsInterface
 import static org.grails.datastore.mapping.reflect.AstUtils.isSpockTest
-import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 
 /**
  * An abstract implementation for transformations that decorate a method invocation such that
@@ -208,17 +208,14 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
                                     returnS(datastoreFieldVar),
                                     returnS(datastoreLookupDefaultCall))
                     )
-
                     markAsGenerated(declaringClassNode, mn)
+
                     if (!isSpockTest) {
                         compileMethodStatically(source, mn)
                     }
-
                 }
             }
-
         }
-
     }
 
     protected void weaveSetTargetDatastoreBody(SourceUnit source, AnnotationNode annotationNode, ClassNode declaringClassNode, Expression datastoreVar, BlockStatement setTargetDatastoreBody) {

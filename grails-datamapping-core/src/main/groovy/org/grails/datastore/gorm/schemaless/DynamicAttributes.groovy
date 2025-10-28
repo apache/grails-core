@@ -21,6 +21,7 @@ package org.grails.datastore.gorm.schemaless
 
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
+
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 
 /**

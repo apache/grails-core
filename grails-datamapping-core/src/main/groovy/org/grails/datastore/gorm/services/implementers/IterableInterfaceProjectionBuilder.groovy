@@ -65,8 +65,8 @@ trait IterableInterfaceProjectionBuilder extends InterfaceProjectionBuilder {
      * @param returnType
      * @return True if it is
      */
-    @Generated
     @Override
+    @Generated
     boolean isInterfaceProjection(ClassNode domainClass, MethodNode methodNode, ClassNode returnType) {
         if (AstUtils.isSubclassOfOrImplementsInterface(returnType, Iterable.name) || returnType.isArray()) {
             ClassNode genericType = AstGenericsUtils.resolveSingleGenericType(returnType)

@@ -18,13 +18,13 @@
  */
 package grails.gorm.time
 
-import spock.lang.Shared
-import spock.lang.Specification
+import java.lang.reflect.Method
+import java.time.Period
 
 import groovy.transform.Generated
 
-import java.lang.reflect.Method
-import java.time.Period
+import spock.lang.Shared
+import spock.lang.Specification
 
 class PeriodConverterSpec extends Specification implements PeriodConverter {
 
@@ -35,20 +35,21 @@ class PeriodConverterSpec extends Specification implements PeriodConverter {
         period = Period.of(1941, 1, 5)
     }
 
-    void "test convert to long"() {
+    void 'test convert to long'() {
         expect:
         convert(period) == 'P1941Y1M5D'
     }
 
-    void "test convert from long"() {
+    void 'test convert from long'() {
         expect:
         convert('P1941Y1M5D') == period
     }
 
-    void "test that all PeriodConverter trait methods are marked as Generated"() {
-        expect: "all PeriodConverter methods are marked as Generated on implementation class"
-        PeriodConverter.getMethods().each { Method traitMethod ->
-            assert PeriodConverterSpec.class.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+    void 'test that all PeriodConverter trait methods are marked as Generated'() {
+
+        expect: 'all PeriodConverter methods are marked as Generated on implementation class'
+        PeriodConverter.methods.each { Method traitMethod ->
+            assert PeriodConverterSpec.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
         }
     }
 }

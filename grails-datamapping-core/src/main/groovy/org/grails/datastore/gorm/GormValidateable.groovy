@@ -20,6 +20,7 @@ package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
+
 import jakarta.persistence.Transient
 
 import org.springframework.validation.Errors
@@ -38,6 +39,7 @@ trait GormValidateable {
 
     @Transient
     private transient boolean skipValidate = false
+
     /**
      * The validation errors object
      */

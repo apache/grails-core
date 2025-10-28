@@ -88,6 +88,7 @@ import org.grails.datastore.gorm.validation.jakarta.services.implementers.Method
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.order.OrderedComparator
 
+import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.assignX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
@@ -108,7 +109,6 @@ import static org.grails.datastore.mapping.reflect.AstUtils.error
 import static org.grails.datastore.mapping.reflect.AstUtils.findAllUnimplementedAbstractMethods
 import static org.grails.datastore.mapping.reflect.AstUtils.findAnnotation
 import static org.grails.datastore.mapping.reflect.AstUtils.hasAnnotation
-import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.grails.datastore.mapping.reflect.AstUtils.warning
 
 /**
