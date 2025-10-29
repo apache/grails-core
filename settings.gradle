@@ -44,6 +44,7 @@ pluginManagement {
             url = 'https://central.sonatype.com/repository/maven-snapshots'
             content {
                 includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+                includeGroup('org.spockframework')
             }
             mavenContent {
                 snapshotsOnly()
@@ -56,15 +57,6 @@ pluginManagement {
             }
             mavenContent {
                 releasesOnly()
-            }
-        }
-        maven {
-            url = 'https://central.sonatype.com/repository/maven-snapshots/'
-            content {
-                includeGroup('org.spockframework')
-            }
-            mavenContent {
-                snapshotsOnly()
             }
         }
     }
