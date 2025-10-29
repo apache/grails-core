@@ -24,7 +24,6 @@ import org.grails.plugins.testing.GrailsMockHttpServletRequest
 import org.grails.plugins.testing.GrailsMockHttpServletResponse
 import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException
 import grails.artefact.Artefact
-import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 /**
@@ -34,10 +33,6 @@ import spock.lang.Specification
  */
 class RenderMethodTests extends Specification implements ControllerUnitTest<RenderController> {
 
-    @PendingFeatureIf({
-        // thrown() does currently not work with Groovy 5
-        GroovySystem.version.startsWith('5')
-    })
     void testRenderFile() {
         when:
         controller.render file:"hello".bytes, contentType:"text/plain"

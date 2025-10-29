@@ -26,7 +26,6 @@ import grails.web.mapping.UrlMapping
 import grails.web.mapping.exceptions.UrlMappingException
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
 import org.springframework.context.support.StaticMessageSource
-import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 class RegexUrlMappingTests extends Specification implements UrlMappingsUnitTest<UrlMappings> {
@@ -123,10 +122,6 @@ class RegexUrlMappingTests extends Specification implements UrlMappingsUnitTest<
         m.constraints[0].nullable
     }
 
-    @PendingFeatureIf({
-        // thrown() does currently not work with Groovy 5
-        GroovySystem.version.startsWith('5')
-    })
     void testCreateUrlFromMapping() {
         given:
         def holder = urlMappingsHolder

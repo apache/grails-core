@@ -22,7 +22,6 @@ import jline.console.ConsoleReader
 import org.fusesource.jansi.Ansi
 import spock.lang.IgnoreIf
 import spock.lang.Issue
-import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 import java.util.regex.Pattern
@@ -42,8 +41,7 @@ import java.util.regex.Pattern
  * @since 2.3
  */
 @IgnoreIf({
-    !GrailsConsole.instance.isAnsiEnabled() ||
-    GroovySystem.version.startsWith('5') // Mock() does currently not work with Groovy 5
+    !GrailsConsole.instance.isAnsiEnabled()
 })
 class GrailsConsoleSpec extends Specification {
 

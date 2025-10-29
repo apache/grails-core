@@ -19,7 +19,6 @@
 package org.grails.events
 
 import org.grails.events.bus.ExecutorEventBus
-import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 /**
@@ -107,10 +106,6 @@ class TaskExecuterEventBusSpec  extends Specification {
             result instanceof Throwable
     }
 
-    @PendingFeatureIf({
-        // thrown() does currently not work with Groovy 5
-        GroovySystem.version.startsWith('5')
-    })
     void 'Test task executor bus error handling with publish'() {
 
         given: 'a task executor event bus'

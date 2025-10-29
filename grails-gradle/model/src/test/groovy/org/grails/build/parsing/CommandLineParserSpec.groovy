@@ -20,7 +20,6 @@
 package org.grails.build.parsing
 
 import grails.util.Environment
-import spock.lang.PendingFeatureIf
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -122,10 +121,6 @@ class CommandLineParserSpec extends Specification {
             cl.remainingArgsString == "foo bar"
     }
 
-    @PendingFeatureIf({
-        // thrown() does currently not work with Groovy 5
-        GroovySystem.version.startsWith('5')
-    })
     void "Test that options with spaces throw an exception"() {
         when:
                def parser = new CommandLineParser()
@@ -393,11 +388,6 @@ class CommandLineParserSpec extends Specification {
         cl.optionValue('include-sources') == 'file with spaces.xml'
     }
 
-
-    @PendingFeatureIf({
-        // thrown() does currently not work with Groovy 5
-        GroovySystem.version.startsWith('5')
-    })
     void "Test that parseString with unbalanced double quotes throws ParseException"() {
         when:
             def parser = new CommandLineParser()
@@ -407,10 +397,6 @@ class CommandLineParserSpec extends Specification {
             thrown ParseException
     }
 
-    @PendingFeatureIf({
-        // thrown() does currently not work with Groovy 5
-        GroovySystem.version.startsWith('5')
-    })
     void "Test that parseString with unbalanced single quotes throws ParseException"() {
         when:
             def parser = new CommandLineParser()

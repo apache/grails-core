@@ -20,12 +20,9 @@
 package org.grails.plugins
 
 import grails.core.DefaultGrailsApplication
-import org.grails.plugins.BinaryGrailsPlugin
-import org.grails.plugins.BinaryGrailsPluginDescriptor
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
-import spock.lang.PendingFeatureIf
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -73,10 +70,6 @@ class BinaryPluginSpec extends Specification {
             cssResource == null
     }
 
-    @PendingFeatureIf({
-        // thrown() does currently not work with Groovy 5
-        GroovySystem.version.startsWith('5')
-    })
     def "Test plugin with both plugin.yml and plugin.groovy throws exception"() {
         when:
         def descriptor = new BinaryGrailsPluginDescriptor(new ByteArrayResource(testBinary.getBytes('UTF-8')), ['org.grails.plugins.TestBinaryResource'])
