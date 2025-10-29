@@ -18,10 +18,13 @@
  */
 package grails.gorm.time
 
+import java.lang.reflect.Method
+import java.time.LocalTime
+
+import groovy.transform.Generated
+
 import spock.lang.Shared
 import spock.lang.Specification
-
-import java.time.LocalTime
 
 class LocalTimeConverterSpec extends Specification implements LocalTimeConverter {
 
@@ -32,14 +35,26 @@ class LocalTimeConverterSpec extends Specification implements LocalTimeConverter
         localTime = LocalTime.of(6,5,4,3)
     }
 
-    void "test convert to long"() {
+    void 'test convert to long'() {
         expect:
         convert(localTime) == 21904000000003L
     }
 
-    void "test convert from long"() {
+    void 'test convert from long'() {
         expect:
         convert(21904000000003L) == localTime
     }
 
+    void 'test that all LocalTimeConverter/TemporalConverter trait methods are marked as Generated'() {
+
+        expect: 'all LocalTimeConverter methods are marked as Generated on implementation class'
+        LocalTimeConverter.methods.each { Method traitMethod ->
+            assert LocalTimeConverterSpec.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+        }
+
+        and: 'all TemporalConverter methods are marked as Generated on implementation class'
+        TemporalConverter.methods.each { Method traitMethod ->
+            assert LocalTimeConverterSpec.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+        }
+    }
 }

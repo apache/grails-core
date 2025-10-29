@@ -47,6 +47,7 @@ import jakarta.annotation.PreDestroy
 
 import org.grails.datastore.mapping.reflect.NameUtils
 
+import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.codehaus.groovy.ast.ClassHelper.VOID_TYPE
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
@@ -351,6 +352,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
         renamedMethodNode.addAnnotations(methodNode.getAnnotations(TYPE_CHECKED_TYPE))
 
         methodNode.setCode(null)
+        markAsGenerated(classNode, renamedMethodNode)
         classNode.addMethod(renamedMethodNode)
 
         // Use a dummy source unit to process the variable scopes to avoid the issue where this is run twice producing an error

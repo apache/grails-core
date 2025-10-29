@@ -24,6 +24,7 @@ import java.time.OffsetTime
 import java.time.ZoneOffset
 
 import groovy.transform.CompileStatic
+import groovy.transform.Generated
 
 /**
  * A trait to convert a {@link java.time.OffsetTime} to and from a long
@@ -34,11 +35,13 @@ import groovy.transform.CompileStatic
 trait OffsetTimeConverter implements TemporalConverter<OffsetTime> {
 
     @Override
+    @Generated
     Long convert(OffsetTime value) {
         value.withOffsetSameInstant(ZoneOffset.UTC).toLocalTime().toNanoOfDay()
     }
 
     @Override
+    @Generated
     OffsetTime convert(Long value) {
         OffsetTime.of(LocalTime.ofNanoOfDay(value), ZoneOffset.UTC).withOffsetSameInstant(systemOffset)
     }

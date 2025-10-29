@@ -32,6 +32,8 @@ import org.grails.datastore.gorm.services.ServiceEnhancer
 import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
 import org.grails.datastore.mapping.reflect.AstUtils
 
+import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
+
 /**
  * Abstract implementor for read operations
  *
@@ -64,6 +66,7 @@ abstract class AbstractReadOperationImplementer extends AbstractServiceImplement
             domainClassNode = domainClassFromSignature
         }
         doImplement(domainClassNode, abstractMethodNode, newMethodNode, targetClassNode)
+        markAsGenerated(targetClassNode, newMethodNode)
         abstractMethodNode.putNodeMetaData(IMPLEMENTED, Boolean.TRUE)
     }
 

@@ -17,45 +17,49 @@
  *  under the License.
  */
 package org.grails.compiler.gorm
-import grails.gorm.annotation.Entity
+
+import java.lang.reflect.Method
+
+import groovy.transform.Generated
 import org.codehaus.groovy.ast.ClassNode
+
+import spock.lang.Specification
+
+import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
-import spock.lang.Specification
 
 /**
  * @author graemerocher
  */
 class GormEntityTransformSpec extends Specification{
 
-
-    void "test parse named queries"() {
-        def classLoader = new GroovyClassLoader()
+    void 'test parse named queries'() {
         when:
-        Class bookClass = classLoader.parseClass('''
-import grails.gorm.annotation.Entity
-@Entity
-class Book {
-    String title
+        def bookClass = new GroovyClassLoader().parseClass('''
+            import grails.gorm.annotation.Entity
 
-    static namedQueries = {
-        startsWithA {->
-            like 'title', 'A%'
-        }
-        
-        startsWithB {
-            like 'title', 'B%'
-        }
-        
-        startsWithLetter { String letter ->
-            like 'title', letter
-        }
-    }
-}
-
-
-''')
+            @Entity
+            class Book {
+            
+                String title
+            
+                static namedQueries = {
+                    startsWithA { ->
+                        like('title', 'A%')
+                    }
+                    
+                    startsWithB {
+                        like('title', 'B%')
+                    }
+                    
+                    startsWithLetter { String letter ->
+                        like('title', letter)
+                    }
+                }
+            }
+        ''')
 
         then:
         new ClassNode(bookClass).methods
@@ -63,111 +67,118 @@ class Book {
         bookClass.getMethod('startsWithA')
         bookClass.getMethod('getStartsWithB')
         bookClass.getMethod('startsWithB')
-        bookClass.getMethod('startsWithLetter', String)
 
+        and: 'they are all marked as Generated'
+        bookClass.getMethod('getStartsWithA').isAnnotationPresent(Generated)
+        bookClass.getMethod('startsWithA').isAnnotationPresent(Generated)
+        bookClass.getMethod('getStartsWithB').isAnnotationPresent(Generated)
+        bookClass.getMethod('startsWithB').isAnnotationPresent(Generated)
+        bookClass.getMethod('startsWithLetter', String).isAnnotationPresent(Generated)
     }
 
-    void "test parse withTransaction usage in spock"() {
-            def classLoader = new GroovyClassLoader()
-            when:
-            Class bookClass = classLoader.parseClass('''
-import grails.gorm.annotation.Entity
-@Entity
-class Book {
-    String title
+    void 'test parse withTransaction usage in spock'() {
+        when:
+        def classLoader = new GroovyClassLoader()
+        def bookClass = classLoader.parseClass('''
+            import grails.gorm.annotation.Entity
+            
+            @Entity
+            class Book {
 
-    static constraints = {
-        title validator: { val ->
-            val.asBoolean()
-        }
-    }
-}
+                String title
+            
+                static constraints = {
+                    title(validator: { val ->
+                        val.asBoolean()
+                    })
+                }
+            }
+        ''')
+        def spockClass = classLoader.parseClass('''
+            class HibernateSpecSpec extends spock.lang.Specification {
+            
+                void setupSpec() {
+                    Book.withTransaction {
+                        new Book(title: 'The Stand').save(flush: true)
+                    }
+                }
+            
+                void 'test hibernate spec'() {
+                    expect:
+                    Book.count() == 1
+                    !new Book().validate()
+                    !new Book(title: '').validate()
+                }
+            }
+        ''')
 
-
-''')
-            Class spockClass = classLoader.parseClass('''
-class HibernateSpecSpec extends spock.lang.Specification {
-
-    void setupSpec() {
-        Book.withTransaction {
-            new Book(title: "The Stand").save(flush:true)
-        }
-    }
-    void "test hibernate spec"() {
-        expect:
-        Book.count() == 1
-        !new Book().validate()
-        !new Book(title: "").validate()
-    }
-}
-
-''')
-
-        then:"The classes are valid"
+        then: 'the classes are valid'
         new ClassNode(bookClass).methods
         new ClassNode(spockClass).methods
-
     }
 
-    void "Test parse abstract GORM entity with getters and setters"() {
+    void 'test parse abstract GORM entity with getters and setters'() {
         when:
         def cls = new GroovyClassLoader().parseClass('''
-import grails.gorm.annotation.Entity
+            import grails.gorm.annotation.Entity
+            
+            @Entity
+            abstract class AbstractDomain {
+            
+                abstract String getStringValue()
+                abstract void setStringValue(String value)
+            
+            }
+        ''')
 
-@Entity
-abstract class AbstractDomain {
-
-    abstract String getStringValue()
-    abstract void setStringValue(String value)
-
-}
-
-
-''')
-        then:"It is a valid class"
+        then: 'it is a valid class'
         new ClassNode(cls).methods
     }
 
-    void "Test parse GORM entity with single char properties"() {
-        when:"A gorm entity is parsed"
+    void 'test parse GORM entity with single char properties'() {
+
+        when: 'a gorm entity is parsed'
         def cls = new GroovyClassLoader().parseClass('''
-import grails.gorm.annotation.Entity
+            import grails.gorm.annotation.Entity
+            
+            @Entity
+            class Person {
+                String firstName
+                String lastName
+            }
+            
+            @Entity
+            class PersonLink {
+                Person a
+                Person b
 
-@Entity
-class Person {
-    String firstName
-    String lastName
-}
+                String toString() {
+                    "$a -> $b"
+                }
+            }
+        ''')
 
-@Entity
-class PersonLink {
-    Person a
-    Person b
-
-    String toString() {
-        "$a -> $b"
-    }
-}
-''')
-        then:"It is a valid class"
+        then: 'it is a valid class'
         new ClassNode(cls).methods
     }
 
-    void "Test parse GORM entity"() {
-        when:"A gorm entity is parsed"
+    void 'test parse GORM entity'() {
+
+        when: 'a gorm entity is parsed'
         def cls = new GroovyClassLoader().parseClass('''
-import grails.gorm.annotation.Entity
+            import grails.gorm.annotation.Entity
+            
+            @Entity
+            class Foo {
+                String name
+            }
+        ''')
 
-@Entity
-class Foo {
-    String name
-}
-''')
-        then:"It is a valid class"
+        then: 'it is a valid class'
         new ClassNode(cls).methods
     }
 
-    void "Test GORM entity transformation implements"() {
+    void 'test GORM entity transformation implements'() {
         expect:
         GormEntity.isAssignableFrom(Book)
         GormValidateable.isAssignableFrom(Book)
@@ -175,32 +186,67 @@ class Foo {
         Book.getAnnotation(Entity)
         new Author().respondsTo('addToBooks', Book)
         new Book().hasProperty('authorId')
+        Author.getDeclaredMethod('addToBooks', Object).isAnnotationPresent(Generated)
+        Author.getDeclaredMethod('removeFromBooks', Object).isAnnotationPresent(Generated)
+        Author.getDeclaredMethod('setBooks', Set).isAnnotationPresent(Generated)
+        Author.getDeclaredMethod('getBooks').isAnnotationPresent(Generated)
+        Book.getDeclaredMethod('getAuthorId').isAnnotationPresent(Generated)
     }
 
-    void "Test property/method missing"() {
-
+    void 'test property/method missing'() {
         when:
         Book.foo()
+
         then:
-        thrown IllegalStateException
+        thrown(IllegalStateException)
+
         when:
-        def var = Book.bar
+        Book.bar
+
         then:
         Book.getDeclaredMethod('$static_propertyMissing', String)
-        thrown MissingPropertyException
+        Book.getDeclaredMethod('$static_propertyMissing', String).isAnnotationPresent(Generated)
+        thrown(MissingPropertyException)
+
         when:
         Book.bar = 'blah'
+
         then:
         Book.getDeclaredMethod('$static_propertyMissing', String, Object)
-        thrown MissingPropertyException
+        Book.getDeclaredMethod('$static_propertyMissing', String, Object).isAnnotationPresent(Generated)
+        thrown(MissingPropertyException)
     }
 
+    void 'test that all GormEntity/GormValidateable trait methods are marked as Generated'() {
+
+        expect: 'all GormEntity methods are marked as Generated on implementation class'
+        GormEntity.methods.each { Method traitMethod ->
+            assert Book.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+        }
+
+        and: 'all GormValidateable methods are marked as Generated on implementation class'
+        GormValidateable.methods.each { Method traitMethod ->
+            assert Book.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+        }
+    }
+
+    void 'test that all DirtyCheckingTransformer added methods are marked as Generated'() {
+
+        expect: 'added getId and getVersion methods are marked'
+        Book.getMethod('getId').isAnnotationPresent(Generated)
+        Book.getMethod('getVersion').isAnnotationPresent(Generated)
+
+        and: 'getter and setter methods are marked'
+        Book.getMethod('getTitle').isAnnotationPresent(Generated)
+        Book.getMethod('setTitle', String).isAnnotationPresent(Generated)
+        Book.getMethod('getAuthor').isAnnotationPresent(Generated)
+        Book.getMethod('setAuthor', Author).isAnnotationPresent(Generated)
+    }
 }
 
 @Entity
 class Book {
     String title
-
     static belongsTo = [author:Author]
 }
 

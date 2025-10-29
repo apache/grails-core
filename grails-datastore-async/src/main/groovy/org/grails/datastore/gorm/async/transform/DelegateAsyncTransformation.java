@@ -63,6 +63,7 @@ import grails.async.Promises;
 import org.apache.grails.common.compiler.GroovyTransformOrder;
 import org.grails.async.transform.internal.DelegateAsyncUtils;
 
+import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated;
 import static org.codehaus.groovy.ast.tools.GenericsUtils.correctToGenericsSpecRecurse;
 import static org.codehaus.groovy.ast.tools.GenericsUtils.createGenericsSpec;
 
@@ -163,6 +164,7 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
                     MethodCallExpression delegateMethodCall = new MethodCallExpression(new VariableExpression(fieldName), candidate.getName(), arguments);
                     promiseBody.addStatement(new ExpressionStatement(delegateMethodCall));
                     MethodNode newMethodNode = new MethodNode(candidate.getName(), Modifier.PUBLIC, promiseNode, parameters, null, methodBody);
+                    markAsGenerated(classNode, newMethodNode);
                     classNode.addMethod(newMethodNode);
                 }
             }

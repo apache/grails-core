@@ -26,7 +26,7 @@ For example:
 ----
 import grails.events.annotation.*
 ...
-include::{sourcedir}/grails-events/transform/src/test/groovy/grails/events/annotation/PubSubSpec.groovy[tags=subscriber]
+include::{sourcedir}/grails-events/transforms/src/test/groovy/grails/events/annotation/PubSubSpec.groovy[tags=subscriber]
 ----
 
 In this example, every time a `sum` event occurs the subscriber will be invoked.
@@ -46,7 +46,7 @@ If you wish to subscribe to events dynamically or need more flexibility, then an
 import grails.events.bus.EventBusAware
 import jakarta.annotation.PostConstruct
 ...
-include::{sourcedir}/grails-events/transform/src/test/groovy/grails/events/ManualPubSubSpec.groovy[tags=subscriber]
+include::{sourcedir}/grails-events/transforms/src/test/groovy/grails/events/ManualPubSubSpec.groovy[tags=subscriber]
 ----
 
 In this example the `TotalService` calls `subscribe` and passes a closure within a method called `init`. The `init` method is annotated with the annotation `@PostConstruct` so that is called after the `EventBus` has been injected by Spring, ensuring it is only called once and the events are correctly subscribed to.
