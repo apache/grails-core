@@ -58,6 +58,15 @@ pluginManagement {
                 releasesOnly()
             }
         }
+        maven {
+            url = 'https://central.sonatype.com/repository/maven-snapshots/'
+            content {
+                includeGroup('org.spockframework')
+            }
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
     }
 }
 
@@ -475,6 +484,15 @@ dependencyResolutionManagement {
             url = 'https://central.sonatype.com/repository/maven-snapshots'
             content {
                 includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+            }
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+        maven {
+            url = 'https://central.sonatype.com/repository/maven-snapshots/'
+            content {
+                includeGroup('org.spockframework')
             }
             mavenContent {
                 snapshotsOnly()
