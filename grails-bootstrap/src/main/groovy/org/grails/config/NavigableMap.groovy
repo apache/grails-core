@@ -26,9 +26,6 @@ import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-
 /**
  * @deprecated This class is deprecated to reduce complexity, improve performance, and increase maintainability. Use {@code config.getProperty(String key, Class<T> targetType)} instead.
  */

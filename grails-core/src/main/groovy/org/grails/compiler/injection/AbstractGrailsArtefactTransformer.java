@@ -28,8 +28,8 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.groovy.ast.tools.AnnotatedNodeUtils;
-import org.codehaus.groovy.ast.AnnotationNode;
 import org.apache.groovy.util.BeanUtils;
+import org.codehaus.groovy.ast.AnnotationNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.FieldNode;
