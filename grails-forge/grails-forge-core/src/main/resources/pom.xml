@@ -36,7 +36,7 @@
             <groupId>io.micronaut.platform</groupId>
             <artifactId>micronaut-platform</artifactId>
             <type>pom</type>
-            <version>4.9.2</version>
+            <version>4.10.1</version>
         </dependency>
         <dependency>
             <groupId>org.grails.plugins</groupId>
