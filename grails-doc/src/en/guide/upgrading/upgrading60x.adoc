@@ -176,10 +176,10 @@ This update introduces enhancements and fixes to the Spring Framework, providing
 Grails 6 used Spring Boot 2.7.x. Grails {version} updates this to Spring Boot {springBootVersion}. For more information, consult the release notes for previous Spring Boot releases:
 1. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.5-Release-Notes[Spring Boot 3.5 Release Notes]
 2. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.4 Release Notes]
-3. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.3 Release Notes]
-4. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.2 Release Notes]
-5. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.1 Release Notes]
-6. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.0 Release Notes]
+3. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.3-Release-Notes[Spring Boot 3.3 Release Notes]
+4. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.2-Release-Notes[Spring Boot 3.2 Release Notes]
+5. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.1-Release-Notes[Spring Boot 3.1 Release Notes]
+6. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.0-Release-Notes[Spring Boot 3.0 Release Notes]
 
 ==== 10. Upgrading Your Project:
 
