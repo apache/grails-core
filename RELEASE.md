@@ -83,7 +83,7 @@ For Example:
 Please note that this script will perform steps that will require rebuilding the project & comparing the built artifacts
 to the staged artifacts. Due to OS differences, this can result in reproducibility issues. For this reason, it's advised
 to run these scripts from an environment similar to the GitHub actions environment. See the section
-`Appendix: Verification from a Container` for how to launch a container that closely resembles the GitHub actions
+[Appendix: Verification from a Container](RELEASE.md#appendix-verification-from-a-container) for how to launch a container that closely resembles the GitHub actions
 environment.
 
 If manual verification is desired, the steps below can be followed.
@@ -385,8 +385,16 @@ Setup the key for validity:
 The Grails image is officially built on linux in a GitHub action using an Ubuntu container. To run a linux container
 locally, you can use the following command (substitute `<git-tag-of-release` with the tag name):
 
+**macOS/Linux**
 ```bash
     docker build -t grails:testing -f etc/bin/Dockerfile . && docker run -it --rm -v $(pwd):/home/groovy/project -p 8080:8080 grails:testing bash
+    cd grails-verify
+    verify.sh <git-tag-of-release> .
+```
+
+**Windows**
+```bash
+    docker build -t grails:testing -f etc/bin/Dockerfile . && docker run -it --rm -v "%CD%:/home/groovy/project" -p 8080:8080 grails:testing bash
     cd grails-verify
     verify.sh <git-tag-of-release> .
 ```
