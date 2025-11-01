@@ -94,13 +94,14 @@ class JSONConverterTests extends Specification implements ControllerUnitTest<JSO
         when:
         def enumInstance = Role.HEAD
         params.e = enumInstance
-        controller.testEnum()
+        controller.testEnumInMap()
+        def jsonString = response.contentAsString
         def json = response.json
 
         then:
-        json.enumType == "org.grails.web.converters.Role"
-        json.name == "HEAD"
-        json.size() == 2
+        json.size() == 1
+        jsonString == '{"value":"HEAD"}'
+        json.value == "HEAD"
     }
 
     // GRAILS-11513
@@ -194,6 +195,10 @@ class JSONConverterController {
 
    def testEnum = {
        render params.e as JSON
+   }
+
+   def testEnumInMap = {
+       render([value: params.e] as JSON)
    }
 
     def testNullValues = {

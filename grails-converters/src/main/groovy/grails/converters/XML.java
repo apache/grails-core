@@ -171,6 +171,9 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
             else if (o instanceof Class<?>) {
                 writer.characters(((Class<?>) o).getName());
             }
+            else if (o instanceof Enum) {
+                writer.characters(((Enum<?>) o).name());
+            }
             else if ((o.getClass().isPrimitive() && !o.getClass().equals(byte[].class)) ||
                     o instanceof Number || o instanceof Boolean) {
                 writer.characters(String.valueOf(o));

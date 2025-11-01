@@ -95,7 +95,6 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
         marshallers.add(new org.grails.web.converters.marshaller.json.ByteArrayMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.CollectionMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.MapMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.json.EnumMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.ProxyUnwrappingMarshaller<>());
 
         Config grailsConfig = getGrailsConfig();
@@ -177,7 +176,6 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
         marshallers.add(new org.grails.web.converters.marshaller.xml.ArrayMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.xml.CollectionMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.xml.MapMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.xml.EnumMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.xml.DateMarshaller());
         marshallers.add(new ProxyUnwrappingMarshaller<>());
         marshallers.add(new org.grails.web.converters.marshaller.xml.ToStringBeanMarshaller());
