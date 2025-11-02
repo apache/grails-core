@@ -35,7 +35,7 @@ import org.grails.datastore.gorm.GormEntityApi
 @CompileStatic
 class GormService<T extends GormEntity<T>> {
 
-    private GormAllOperations<T> gormStaticApi
+    GormAllOperations<T> gormStaticApi
     Class<T> resource
     String resourceName
     String resourceClassName
