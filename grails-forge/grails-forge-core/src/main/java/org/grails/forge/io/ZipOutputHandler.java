@@ -109,7 +109,9 @@ public class ZipOutputHandler implements OutputHandler {
 
     private void createParentDirs(String entryName, FileTime lastModified) throws IOException {
         int slash = entryName.lastIndexOf('/');
-        if (slash < 0) return;
+        if (slash < 0) {
+            return;
+        }
 
         int i = 0;
         while ((i = entryName.indexOf('/', i)) >= 0) {
