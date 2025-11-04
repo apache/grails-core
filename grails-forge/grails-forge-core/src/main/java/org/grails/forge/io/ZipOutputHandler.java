@@ -32,7 +32,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
-import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -42,6 +41,7 @@ public class ZipOutputHandler implements OutputHandler {
     private final File zip;
     private final String directory;
     private final Set<String> createdDirs = new HashSet<>();
+    private final FileTime lastModified;
 
     public ZipOutputHandler(Project project) throws IOException {
         File baseDirectory = new File(".").getCanonicalFile();
@@ -53,18 +53,18 @@ public class ZipOutputHandler implements OutputHandler {
         zip.createNewFile();
         zipOutputStream = new ZipArchiveOutputStream(Files.newOutputStream(zip.toPath()));
         directory = project.getName();
+        lastModified = FileTime.from(OutputUtils.createLastModified());
     }
 
     public ZipOutputHandler(OutputStream outputStream) {
-        zip = null;
-        zipOutputStream = new ZipArchiveOutputStream(outputStream);
-        directory = null;
+        this(null, outputStream);
     }
 
     public ZipOutputHandler(String projectName, OutputStream outputStream) {
         zip = null;
         zipOutputStream = new ZipArchiveOutputStream(outputStream);
         directory = projectName;
+        lastModified = FileTime.from(OutputUtils.createLastModified());
     }
 
     @Override
@@ -84,7 +84,6 @@ public class ZipOutputHandler implements OutputHandler {
     @Override
     public void write(String path, Template contents) throws IOException {
         String entryName = (directory != null ? StringUtils.prependUri(directory, path) : path);
-        FileTime lastModified = FileTime.from(Instant.now());
 
         // ensure parent directories exist as explicit dir entries
         // https://github.com/apache/grails-core/issues/15186
