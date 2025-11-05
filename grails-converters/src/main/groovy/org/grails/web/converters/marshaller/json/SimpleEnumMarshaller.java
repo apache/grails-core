@@ -25,7 +25,6 @@ import org.springframework.beans.BeanUtils;
 import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
-import org.grails.web.json.JSONWriter;
 
 /**
  * Marshals enums as simple string values (just the enum name) for symmetric serialization/deserialization.
