@@ -194,9 +194,12 @@ class IOUtils extends SpringIOUtils {
             String rootPath = classRes.toString() - pathToClassFile
             if (rootPath.endsWith(BuildSettings.BUILD_CLASSES_PATH)) {
                 rootPath = rootPath.replace('/build/classes/groovy/', '/build/resources/')
-            } else {
+            }
+
+            if (!rootPath.endsWith('/')) {
                 rootPath = "$rootPath/"
             }
+
             return new URL(rootPath)
         }
         return null
