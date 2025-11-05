@@ -98,7 +98,7 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
 
         Config grailsConfig = getGrailsConfig();
 
-        // Choose enum marshaller based on configuration
+        // Register enum marshaller - defaults to legacy for backward compatibility (will change in Grails 8.0)
         String jsonEnumFormat = grailsConfig.getProperty("grails.converters.json.enum.format", String.class, "default");
         if ("simple".equals(jsonEnumFormat)) {
             marshallers.add(new org.grails.web.converters.marshaller.json.SimpleEnumMarshaller());
@@ -188,7 +188,7 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
 
         Config grailsConfig = getGrailsConfig();
 
-        // Choose enum marshaller based on configuration
+        // Register enum marshaller - defaults to legacy for backward compatibility (will change in Grails 8.0)
         String xmlEnumFormat = grailsConfig.getProperty("grails.converters.xml.enum.format", String.class, "default");
         if ("simple".equals(xmlEnumFormat)) {
             marshallers.add(new org.grails.web.converters.marshaller.xml.SimpleEnumMarshaller());
