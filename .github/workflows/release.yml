@@ -52,7 +52,8 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v5
         with:
-          fetch-tags: true # needed for guide release dropdown generation
+          fetch-depth: 0 # needed for docs release dropdown, (fetch-tags: true with fetch-depth: 1 does not work; https://github.com/actions/checkout/issues/1471)
+          filter: tree:0 # limit size, keeping tags for docs release dropdown
           ref: ${{ env.TAG }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: "📅 Store common build date" # to ensure a reproducible build
@@ -84,7 +85,7 @@ jobs:
       - name: "🧩 Run grails-forge assemble"
         working-directory: grails-forge
         run: ./gradlew assemble -PgithubBranch=${TARGET_BRANCH}
-      - name: "📦 Generate grails-core docs"
+      - name: "📦 Generate grails-core docs (to assert that is works, before proceeding)"
         run: ./gradlew grails-doc:build -PgithubBranch=${TARGET_BRANCH}
       - name: "🔏 Sign grails-wrapper ZIP"
         run: >
@@ -548,7 +549,8 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v5
         with:
-          fetch-tags: true # needed for guide release dropdown generation
+          fetch-depth: 0 # needed for docs release dropdown, (fetch-tags: true with fetch-depth: 1 does not work; https://github.com/actions/checkout/issues/1471)
+          filter: tree:0 # limit size, keeping tags for docs release dropdown
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ env.TAG }}
       - name: "📅 Ensure Common Build Date" # to ensure a reproducible build
