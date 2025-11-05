@@ -29,10 +29,11 @@ import org.grails.web.converters.marshaller.ObjectMarshaller;
 /**
  * @author Siegfried Puchbauer
  * @since 1.1
- * @deprecated Enums are now handled directly as primitives in {@link XML} for symmetric serialization/deserialization.
- *             This marshaller is no longer registered by default and will be removed in Grails 8.0.
+ * @deprecated As of 7.0.2, replaced by {@link SimpleEnumMarshaller} for round-trip compatibility.
+ *             This marshaller will no longer be registered by default in Grails 8.0.
+ *             To opt-in to the new behavior now, set {@code grails.converters.xml.enum.format=simple} in application.yml.
  */
-@Deprecated(forRemoval = true, since = "7.1")
+@Deprecated(forRemoval = true, since = "7.0.2")
 public class EnumMarshaller implements ObjectMarshaller<XML> {
 
     public boolean supports(Object object) {

@@ -95,9 +95,18 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
         marshallers.add(new org.grails.web.converters.marshaller.json.ByteArrayMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.CollectionMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.MapMarshaller());
-        marshallers.add(new org.grails.web.converters.marshaller.ProxyUnwrappingMarshaller<>());
 
         Config grailsConfig = getGrailsConfig();
+
+        // Choose enum marshaller based on configuration
+        String jsonEnumFormat = grailsConfig.getProperty("grails.converters.json.enum.format", String.class, "default");
+        if ("simple".equals(jsonEnumFormat)) {
+            marshallers.add(new org.grails.web.converters.marshaller.json.SimpleEnumMarshaller());
+        } else {
+            marshallers.add(new org.grails.web.converters.marshaller.json.EnumMarshaller());
+        }
+
+        marshallers.add(new org.grails.web.converters.marshaller.ProxyUnwrappingMarshaller<>());
 
         if ("javascript".equals(grailsConfig.getProperty(SETTING_CONVERTERS_JSON_DATE, String.class, "default", Arrays.asList("javascript", "default")))) {
             if (LOG.isDebugEnabled()) {
@@ -176,12 +185,21 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
         marshallers.add(new org.grails.web.converters.marshaller.xml.ArrayMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.xml.CollectionMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.xml.MapMarshaller());
+
+        Config grailsConfig = getGrailsConfig();
+
+        // Choose enum marshaller based on configuration
+        String xmlEnumFormat = grailsConfig.getProperty("grails.converters.xml.enum.format", String.class, "default");
+        if ("simple".equals(xmlEnumFormat)) {
+            marshallers.add(new org.grails.web.converters.marshaller.xml.SimpleEnumMarshaller());
+        } else {
+            marshallers.add(new org.grails.web.converters.marshaller.xml.EnumMarshaller());
+        }
+
         marshallers.add(new org.grails.web.converters.marshaller.xml.DateMarshaller());
         marshallers.add(new ProxyUnwrappingMarshaller<>());
         marshallers.add(new org.grails.web.converters.marshaller.xml.ToStringBeanMarshaller());
         ProxyHandler proxyHandler = getProxyHandler();
-
-        Config grailsConfig = getGrailsConfig();
 
         boolean includeDomainVersion = includeDomainVersionProperty(grailsConfig, "xml");
         if (grailsConfig.getProperty(SETTING_CONVERTERS_XML_DEEP, Boolean.class, false)) {

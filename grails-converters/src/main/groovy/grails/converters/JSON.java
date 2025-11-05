@@ -185,9 +185,6 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
             else if (o instanceof Class<?>) {
                 writer.value(((Class<?>) o).getName());
             }
-            else if (o instanceof Enum) {
-                writer.value(((Enum<?>) o).name());
-            }
             else if (o instanceof Number) {
                 writer.value((Number) o);
             } else if (o instanceof Boolean) {

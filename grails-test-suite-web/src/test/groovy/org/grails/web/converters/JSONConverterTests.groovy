@@ -94,6 +94,25 @@ class JSONConverterTests extends Specification implements ControllerUnitTest<JSO
         when:
         def enumInstance = Role.HEAD
         params.e = enumInstance
+        controller.testEnum()
+        def json = response.json
+
+        then:
+        json.enumType == "org.grails.web.converters.Role"
+        json.name == "HEAD"
+        json.size() == 2
+    }
+
+    void testJSONEnumConvertingWithSimpleMarshaller() {
+        given:
+        JSON.createNamedConfig('simple') {
+            it.registerObjectMarshaller(new org.grails.web.converters.marshaller.json.SimpleEnumMarshaller())
+        }
+        JSON.use('simple')
+
+        when:
+        def enumInstance = Role.HEAD
+        params.e = enumInstance
         controller.testEnumInMap()
         def jsonString = response.contentAsString
         def json = response.json

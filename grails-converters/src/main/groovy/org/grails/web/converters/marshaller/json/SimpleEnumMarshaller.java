@@ -28,33 +28,26 @@ import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.json.JSONWriter;
 
 /**
- * @author Siegfried Puchbauer
- * @since 1.1
- * @deprecated As of 7.0.2, replaced by {@link SimpleEnumMarshaller} for round-trip compatibility.
- *             This marshaller will no longer be registered by default in Grails 8.0.
- *             To opt-in to the new behavior now, set {@code grails.converters.json.enum.format=simple} in application.yml.
+ * Marshals enums as simple string values (just the enum name) for symmetric serialization/deserialization.
+ * This provides round-trip compatibility where POSTing JSON returns the same format when GETting.
+ *
+ * @since 7.0.2
  */
-@Deprecated(forRemoval = true, since = "7.0.2")
-public class EnumMarshaller implements ObjectMarshaller<JSON> {
+public class SimpleEnumMarshaller implements ObjectMarshaller<JSON> {
 
     public boolean supports(Object object) {
         return object.getClass().isEnum();
     }
 
     public void marshalObject(Object en, JSON json) throws ConverterException {
-        JSONWriter writer = json.getWriter();
         try {
-            writer.object();
-            Class<?> enumClass = en.getClass();
-            json.property("enumType", enumClass.getName());
-            Method nameMethod = BeanUtils.findDeclaredMethod(enumClass, "name");
+            Method nameMethod = BeanUtils.findDeclaredMethod(en.getClass(), "name");
             try {
-                json.property("name", nameMethod.invoke(en));
+                json.convertAnother(nameMethod.invoke(en));
             }
             catch (Exception e) {
-                json.property("name", "");
+                json.convertAnother("");
             }
-            writer.endObject();
         }
         catch (ConverterException ce) {
             throw ce;
