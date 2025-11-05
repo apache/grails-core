@@ -24,9 +24,11 @@ import java.lang.reflect.Method
 import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 
 import grails.util.GrailsClassUtils
 import org.grails.datastore.mapping.config.Property
+import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.model.AutoTimestampUtils
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
@@ -44,6 +46,9 @@ class DomainModelServiceImpl implements DomainModelService {
 
     @Autowired
     DomainPropertyFactory domainPropertyFactory
+
+    @Value('${' + Settings.SETTING_AUTO_TIMESTAMP_CACHE_ANNOTATIONS + ':true}')
+    boolean cacheAutoTimestampAnnotations
 
     private static Method derivedMethod
 
@@ -146,7 +151,7 @@ class DomainModelServiceImpl implements DomainModelService {
         // Add properties with auto-timestamp annotations to blacklist only if excludeAnnotatedTimestamps is true
         if (excludeAnnotatedTimestamps) {
             properties.each { DomainProperty property ->
-                if (AutoTimestampUtils.hasAutoTimestampAnnotation(property.persistentProperty)) {
+                if (AutoTimestampUtils.hasAutoTimestampAnnotation(property.persistentProperty, cacheAutoTimestampAnnotations)) {
                     if (!blacklist.contains(property.name)) {
                         blacklist.add(property.name)
                     }

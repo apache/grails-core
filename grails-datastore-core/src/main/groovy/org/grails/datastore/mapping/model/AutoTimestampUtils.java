@@ -22,7 +22,6 @@ import java.lang.reflect.Field;
 
 import org.springframework.util.ReflectionUtils;
 
-import grails.util.Environment;
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.config.Property.AutoTimestampType;
 
@@ -39,8 +38,10 @@ import org.grails.datastore.mapping.config.Property.AutoTimestampType;
  *   <li>@AutoTimestamp - GORM-specific annotation for backwards compatibility</li>
  * </ul>
  *
- * <p>Caching is automatically disabled in development mode ({@link Environment#isDevelopmentMode()})
- * to ensure annotation changes are picked up during class reloading.</p>
+ * <p>Caching behavior is controlled by the {@code grails.gorm.events.autoTimestampCacheAnnotations}
+ * configuration property. When disabled (typically in development mode), annotation changes during
+ * class reloading are immediately recognized. When enabled (production mode), annotations are cached
+ * for optimal performance.</p>
  *
  * @author Scott Murphy Heiberg
  * @since 7.0
@@ -59,20 +60,22 @@ public class AutoTimestampUtils {
     private static final String LAST_MODIFIED_BY_SPRING_ANNOTATION = "org.springframework.data.annotation.LastModifiedBy";
 
     /**
-     * Gets the auto-timestamp type for a persistent property, using cached metadata when not in development mode.
+     * Gets the auto-timestamp type for a persistent property, using cached metadata when caching is enabled.
      *
-     * <p>In development mode, this method will always perform reflection to detect the current
-     * annotation state, ensuring that annotation changes during class reloading are immediately
-     * recognized. In production, the result is cached to avoid repeated reflection calls.</p>
+     * <p>When caching is disabled (typically in development mode), this method will always perform
+     * reflection to detect the current annotation state, ensuring that annotation changes during
+     * class reloading are immediately recognized. When caching is enabled (production mode), the
+     * result is cached to avoid repeated reflection calls.</p>
      *
      * @param persistentProperty The persistent property to check
-     * @return The auto-timestamp type (CREATED, UPDATED, or NONE)
+     * @param cacheAnnotations Whether to cache the annotation metadata
+     * @return The auto-timestamp type (CREATED, UPDATED, CREATED_BY, UPDATED_BY, or NONE)
      */
-    public static AutoTimestampType getAutoTimestampType(PersistentProperty<?> persistentProperty) {
+    public static AutoTimestampType getAutoTimestampType(PersistentProperty<?> persistentProperty, boolean cacheAnnotations) {
         Property mappedForm = persistentProperty.getMapping().getMappedForm();
 
-        // In development mode, always detect fresh to support class reloading
-        if (Environment.isDevelopmentMode()) {
+        // If caching is disabled, always detect fresh to support class reloading
+        if (!cacheAnnotations) {
             return detectAutoTimestampType(persistentProperty);
         }
 
@@ -153,50 +156,11 @@ public class AutoTimestampUtils {
      * Checks if a property has any auto-timestamp or auditing annotation.
      *
      * @param persistentProperty The persistent property to check
+     * @param cacheAnnotations Whether to cache the annotation metadata
      * @return true if the property has any supported annotation (@CreatedDate, @LastModifiedDate,
      *         @CreatedBy, @LastModifiedBy, or @AutoTimestamp) from either GORM or Spring Data
      */
-    public static boolean hasAutoTimestampAnnotation(PersistentProperty<?> persistentProperty) {
-        return persistentProperty != null && getAutoTimestampType(persistentProperty) != AutoTimestampType.NONE;
-    }
-
-    /**
-     * Checks if a property has a @CreatedDate annotation (GORM or Spring Data) or @AutoTimestamp(CREATED).
-     *
-     * @param persistentProperty The persistent property to check
-     * @return true if the property represents a creation timestamp
-     */
-    public static boolean isCreatedTimestamp(PersistentProperty<?> persistentProperty) {
-        return getAutoTimestampType(persistentProperty) == AutoTimestampType.CREATED;
-    }
-
-    /**
-     * Checks if a property has a @LastModifiedDate annotation (GORM or Spring Data) or @AutoTimestamp(UPDATED).
-     *
-     * @param persistentProperty The persistent property to check
-     * @return true if the property represents an update timestamp
-     */
-    public static boolean isUpdatedTimestamp(PersistentProperty<?> persistentProperty) {
-        return getAutoTimestampType(persistentProperty) == AutoTimestampType.UPDATED;
-    }
-
-    /**
-     * Checks if a property has a @CreatedBy annotation (GORM or Spring Data).
-     *
-     * @param persistentProperty The persistent property to check
-     * @return true if the property represents a creation auditor
-     */
-    public static boolean isCreatedBy(PersistentProperty<?> persistentProperty) {
-        return getAutoTimestampType(persistentProperty) == AutoTimestampType.CREATED_BY;
-    }
-
-    /**
-     * Checks if a property has a @LastModifiedBy annotation (GORM or Spring Data).
-     *
-     * @param persistentProperty The persistent property to check
-     * @return true if the property represents an update auditor
-     */
-    public static boolean isUpdatedBy(PersistentProperty<?> persistentProperty) {
-        return getAutoTimestampType(persistentProperty) == AutoTimestampType.UPDATED_BY;
+    public static boolean hasAutoTimestampAnnotation(PersistentProperty<?> persistentProperty, boolean cacheAnnotations) {
+        return persistentProperty != null && getAutoTimestampType(persistentProperty, cacheAnnotations) != AutoTimestampType.NONE;
     }
 }

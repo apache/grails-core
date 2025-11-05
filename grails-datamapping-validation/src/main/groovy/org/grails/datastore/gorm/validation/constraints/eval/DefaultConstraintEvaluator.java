@@ -70,31 +70,37 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
     protected final ConstraintRegistry constraintRegistry;
     protected final MappingContext mappingContext;
     protected final Map<String, Object> defaultConstraints;
+    protected final boolean cacheAutoTimestampAnnotations;
 
     public DefaultConstraintEvaluator() {
-        this(new DefaultConstraintRegistry(new StaticMessageSource()), new KeyValueMappingContext("default"), Collections.<String, Object>emptyMap());
+        this(new DefaultConstraintRegistry(new StaticMessageSource()), new KeyValueMappingContext("default"), Collections.<String, Object>emptyMap(), true);
     }
 
     public DefaultConstraintEvaluator(Map<String, Object> defaultConstraints) {
-        this(new DefaultConstraintRegistry(new StaticMessageSource()), new KeyValueMappingContext("default"), defaultConstraints);
+        this(new DefaultConstraintRegistry(new StaticMessageSource()), new KeyValueMappingContext("default"), defaultConstraints, true);
     }
 
     public DefaultConstraintEvaluator(MessageSource messageSource, MappingContext mappingContext) {
-        this(new DefaultConstraintRegistry(messageSource), mappingContext, Collections.<String, Object>emptyMap());
+        this(new DefaultConstraintRegistry(messageSource), mappingContext, Collections.<String, Object>emptyMap(), true);
     }
 
     public DefaultConstraintEvaluator(MessageSource messageSource, MappingContext mappingContext, Map<String, Object> defaultConstraints) {
-        this(new DefaultConstraintRegistry(messageSource), mappingContext, defaultConstraints);
+        this(new DefaultConstraintRegistry(messageSource), mappingContext, defaultConstraints, true);
     }
 
     public DefaultConstraintEvaluator(MessageSource messageSource) {
-        this(new DefaultConstraintRegistry(messageSource), new KeyValueMappingContext("default"), Collections.<String, Object>emptyMap());
+        this(new DefaultConstraintRegistry(messageSource), new KeyValueMappingContext("default"), Collections.<String, Object>emptyMap(), true);
     }
 
     public DefaultConstraintEvaluator(ConstraintRegistry constraintRegistry, MappingContext mappingContext, Map<String, Object> defaultConstraints) {
+        this(constraintRegistry, mappingContext, defaultConstraints, true);
+    }
+
+    public DefaultConstraintEvaluator(ConstraintRegistry constraintRegistry, MappingContext mappingContext, Map<String, Object> defaultConstraints, boolean cacheAutoTimestampAnnotations) {
         this.constraintRegistry = constraintRegistry;
         this.mappingContext = mappingContext;
         this.defaultConstraints = defaultConstraints;
+        this.cacheAutoTimestampAnnotations = cacheAutoTimestampAnnotations;
     }
 
     @Override
@@ -307,7 +313,7 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
         }
         else {
             // Check if property has @CreatedDate or @LastModifiedDate annotations
-            if (AutoTimestampUtils.hasAutoTimestampAnnotation(persistentProperty)) {
+            if (AutoTimestampUtils.hasAutoTimestampAnnotation(persistentProperty, cacheAutoTimestampAnnotations)) {
                 return false;
             }
 

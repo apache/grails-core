@@ -66,6 +66,10 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
     @Value("${" + Settings.SETTING_AUTO_TIMESTAMP_INSERT_OVERWRITE + ":true}")
     public boolean insertOverwrite = true;
 
+    // if false, will not cache auto-timestamp annotation metadata (for development/class reloading)
+    @Value("${" + Settings.SETTING_AUTO_TIMESTAMP_CACHE_ANNOTATIONS + ":true}")
+    public boolean cacheAutoTimestampAnnotations = true;
+
     public static final String DATE_CREATED_PROPERTY = "dateCreated";
     public static final String LAST_UPDATED_PROPERTY = "lastUpdated";
 
@@ -245,7 +249,7 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
                     } else if (property.getName().equals(DATE_CREATED_PROPERTY)) {
                         storeTimestampAvailability(entitiesWithDateCreated, persistentEntity, property);
                     } else {
-                        AutoTimestampType timestampType = AutoTimestampUtils.getAutoTimestampType(property);
+                        AutoTimestampType timestampType = AutoTimestampUtils.getAutoTimestampType(property, cacheAutoTimestampAnnotations);
                         if (timestampType == AutoTimestampType.CREATED) {
                             storeTimestampAvailability(entitiesWithDateCreated, persistentEntity, property);
                         } else if (timestampType == AutoTimestampType.UPDATED) {
