@@ -31,11 +31,11 @@ import org.grails.datastore.mapping.config.Property;
  *
  * <p>Supports the following annotations (both GORM and Spring Data variants):</p>
  * <ul>
- *   <li>@CreatedDate / @grails.gorm.annotation.CreatedDate - automatically set on insert</li>
- *   <li>@LastModifiedDate / @grails.gorm.annotation.LastModifiedDate - automatically set on insert and update</li>
- *   <li>@CreatedBy / @grails.gorm.annotation.CreatedBy - automatically populated with current auditor on insert</li>
- *   <li>@LastModifiedBy / @grails.gorm.annotation.LastModifiedBy - automatically populated with current auditor on insert and update</li>
- *   <li>@AutoTimestamp - GORM-specific annotation for backwards compatibility</li>
+ *   <li>{@code @CreatedDate} / {@code @grails.gorm.annotation.CreatedDate} - automatically set on insert</li>
+ *   <li>{@code @LastModifiedDate} / {@code @grails.gorm.annotation.LastModifiedDate} - automatically set on insert and update</li>
+ *   <li>{@code @CreatedBy} / {@code @grails.gorm.annotation.CreatedBy} - automatically populated with current auditor on insert</li>
+ *   <li>{@code @LastModifiedBy} / {@code @grails.gorm.annotation.LastModifiedBy} - automatically populated with current auditor on insert and update</li>
+ *   <li>{@code @AutoTimestamp} - GORM-specific annotation for backwards compatibility</li>
  * </ul>
  *
  * <p>Caching behavior is controlled by the {@code grails.gorm.events.autoTimestampCacheAnnotations}
@@ -44,7 +44,7 @@ import org.grails.datastore.mapping.config.Property;
  * for optimal performance.</p>
  *
  * @author Scott Murphy Heiberg
- * @since 7.0
+ * @since 7.1
  */
 public class AutoTimestampUtils {
 
@@ -163,8 +163,8 @@ public class AutoTimestampUtils {
      *
      * @param persistentProperty The persistent property to check
      * @param cacheAnnotations Whether to cache the annotation metadata
-     * @return true if the property has any supported annotation (@CreatedDate, @LastModifiedDate,
-     *         @CreatedBy, @LastModifiedBy, or @AutoTimestamp) from either GORM or Spring Data
+     * @return true if the property has any supported annotation ({@code @CreatedDate}, {@code @LastModifiedDate},
+     *         {@code @CreatedBy}, {@code @LastModifiedBy}, or {@code @AutoTimestamp}) from either GORM or Spring Data
      */
     public static boolean hasAuditMetadataAnnotation(PersistentProperty<?> persistentProperty, boolean cacheAnnotations) {
         return persistentProperty != null && getAuditMetadataType(persistentProperty, cacheAnnotations) != AuditMetadataType.NONE;

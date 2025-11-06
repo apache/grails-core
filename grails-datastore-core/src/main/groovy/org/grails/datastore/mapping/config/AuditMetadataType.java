@@ -28,25 +28,25 @@ package org.grails.datastore.mapping.config;
  */
 public enum AuditMetadataType {
     /**
-     * Property has @CreatedDate annotation or @AutoTimestamp(CREATED).
+     * Property has {@code @CreatedDate} annotation or {@code @AutoTimestamp(CREATED)}.
      * Automatically populated with the creation timestamp on insert.
      */
     CREATED,
 
     /**
-     * Property has @LastModifiedDate annotation or @AutoTimestamp(UPDATED).
+     * Property has {@code @LastModifiedDate} annotation or {@code @AutoTimestamp(UPDATED)}.
      * Automatically populated with the modification timestamp on insert and update.
      */
     UPDATED,
 
     /**
-     * Property has @CreatedBy annotation.
+     * Property has {@code @CreatedBy} annotation.
      * Automatically populated with the current auditor on insert.
      */
     CREATED_BY,
 
     /**
-     * Property has @LastModifiedBy annotation.
+     * Property has {@code @LastModifiedBy} annotation.
      * Automatically populated with the current auditor on insert and update.
      */
     UPDATED_BY,
