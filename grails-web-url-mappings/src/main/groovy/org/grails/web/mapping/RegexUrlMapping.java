@@ -251,8 +251,8 @@ public class RegexUrlMapping extends AbstractUrlMapping {
                 // For /(*)+(\.(*))?  we want regex: /(.+?)(?:\.([^/.]+))?  (required, greedy)
                 // For /(*)?+(\.(*))?  we want regex: /(.+?)?(?:\.([^/.]+))? (optional, greedy)
                 String processed = urlEnd
-                        .replace("/(*)?(\\.(*))?" , "/(.+?)?(?:\\.([^/.]+))?")   // Optional greedy: (*)?+
-                        .replace("/(*)(\\.(*))?" , "/(.+?)(?:\\.([^/.]+))?");     // Required greedy: (*)+
+                        .replace("/(*)?(\\.(*)))", "/(.+?)?(?:\\.([^/.]+))?")   // Optional greedy: (*)?+
+                        .replace("/(*)(\\.(*)))", "/(.+?)(?:\\.([^/.]+))?");     // Required greedy: (*)+
                 pattern += processed;
             } else {
                 pattern += urlEnd
