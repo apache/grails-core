@@ -19,8 +19,7 @@
 package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
-
-import jakarta.annotation.Generated
+import groovy.transform.Generated
 
 import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable

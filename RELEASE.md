@@ -267,7 +267,7 @@ Confirm the Grails PMC votes passed with a +1 from at least 3 PMC members. The `
 The `release` job in the `Release` workflow has a step entitled `🚀 Release JAR files - MANUAL`. You can release the jar
 files by one of 2 ways:
 
-1. In repository.apache.org, the staged artifacts must be released by opening the `grails-core` staging repository and
+1. On https://repository.apache.org/#stagingRepositories, the staged artifacts must be released by opening the `grails-core` staging repository and
    clicking the `Release` button. It took almost 2 hours for the initial ASF release to publish these jars to Maven
    Central.
 2. Alternatively, the `release` job in the `Release` workflow will output an example command line to release the staging
@@ -276,7 +276,7 @@ files by one of 2 ways:
 
 ### Move the distributions from `dev` to `release`
 
-On dist.apache.org, the staged source distribution & binary distributions must be moved from `dev` to `release`. Per ASF
+On dist.apache.org, the staged source distribution & binary distributions must be moved from `https://dist.apache.org/repos/dist/dev/grails/` to `https://dist.apache.org/repos/dist/release/grails/`. Per ASF
 infrastructure, this must be performed manually, and we are not allowed to automate it via a gated approval workflow.
 Either move them via your SVN client or use the checked in script to perform these actions as your user.
 
@@ -313,7 +313,7 @@ this step.
 ### Publish `grails-core` documentation
 
 Open the release workflow in `grails-core` and approve the `Publish Documentation` step. Wait until finished, and a
-workflow should eventually kick off in `grails-doc` to publish the gh-pages branch that was updated.
+workflow should eventually kick off in `grails-doc` to publish to https://github.com/apache/grails-website/tree/asf-site-production/docs and https://grails.apache.org/docs/.
 
 ### Advertise the release via SDKMAN
 
@@ -322,15 +322,17 @@ version from Maven Central.
 
 ### Close out the `grails-core` release
 
-The last step in the `grails-core` release workflow is to run the `Close Release` step.  This will create a merge branch for the original tag with version number and then open a PR to merge back into the next branch.  You will need to merge it into the branch after correcting any merge conflict.
+The last step in the `grails-core` release workflow is to run the `Close Release` step.  This will create a merge branch for the original tag with version number and then open a PR to merge back into the next branch.  You will need to merge this PR into the branch after correcting any merge conflict.
 
 ### Update the `grails-static-website`
 
 On the `grails-static-website` repository:
 
-Run the release action (https://github.com/apache/grails-static-website/actions/workflows/release.yml) with the new version to update https://github.com/apache/grails-static-website/blob/HEAD/conf/releases.yml and then run the publish action (https://github.com/apache/grails-static-website/actions/workflows/publish.yml) to update the `asf-site-production` branch and https://grails.apache.org
+Run the release action (https://github.com/apache/grails-static-website/actions/workflows/release.yml) with the new version to update https://github.com/apache/grails-static-website/blob/HEAD/conf/releases.yml
 
-Create a new `.md` file in the `/posts` directory announcing the release.  Wwhen the PR is merged it will deploy to https://grails.apache.org
+Then run the publish action (https://github.com/apache/grails-static-website/actions/workflows/publish.yml) to update https://github.com/apache/grails-website/tree/asf-site-production/ and publish to https://grails.apache.org
+
+Create a new `.md` file in the `/posts` directory announcing the release.  When the PR is merged it will deploy to https://grails.apache.org
 
 ### Flag release in `grails-core` as latest
 
@@ -339,7 +341,7 @@ Update the release in `grails-core` to be flagged as 'latest'
 ### Announce the release
 
 Announcements should come from your apache email address (see https://infra.apache.org/committer-email.html) and have an
-expected format. The announcement should be sent to `dev@grails.apache.org`, `dev@groovy.apache.org`, &
+expected format. The announcement should be sent to `dev@grails.apache.org`, `dev@groovy.apache.org`, `users@grails.apache.org`, &
 `announce@apache.org`. See the `close` job for a generated email.
 
 # Rollback

@@ -17,32 +17,22 @@
  *  under the License.
  */
 
-package grails.gorm.time
+package functionaltests
 
-import java.time.Instant
-import java.time.OffsetDateTime
+import spock.lang.Issue
 
-import groovy.transform.CompileStatic
-import groovy.transform.Generated
+import grails.plugin.geb.ContainerGebSpec
+import grails.testing.mixin.integration.Integration
 
-/**
- * A trait to convert a {@link java.time.OffsetDateTime} to and from a long
- *
- * @author James Kleeh
- */
-@CompileStatic
-trait OffsetDateTimeConverter implements TemporalConverter<OffsetDateTime> {
+@Integration
+class DataBindingSpec extends ContainerGebSpec {
 
-    @Override
-    @Generated
-    Long convert(OffsetDateTime value) {
-        value.toInstant().toEpochMilli()
+    @Issue('https://github.com/apache/grails-core/issues/15147')
+    void 'data binding works'() {
+        when:
+        go('/dataBinding/submit?id=123&data=456')
+
+        then:
+        pageSource.contains('{"success":true}')
     }
-
-    @Override
-    @Generated
-    OffsetDateTime convert(Long value) {
-        OffsetDateTime.ofInstant(Instant.ofEpochMilli(value), systemOffset)
-    }
-
 }

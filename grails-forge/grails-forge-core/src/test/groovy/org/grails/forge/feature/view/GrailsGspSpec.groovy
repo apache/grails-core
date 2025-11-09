@@ -111,7 +111,22 @@ class GrailsGspSpec extends ApplicationContextSpec implements CommandOutputFixtu
         build.contains("implementation \"org.apache.grails:grails-gsp\"")
 
         where:
-        applicationType << [ApplicationType.WEB, ApplicationType.WEB_PLUGIN]
+        applicationType << [ApplicationType.WEB]
+    }
+
+    @Unroll
+    void "test grails-plugin gradle plugins and dependencies are present for #applicationType application"() {
+        when:
+        final def output = generate(applicationType, new Options(TestFramework.SPOCK))
+        final String build = output['build.gradle']
+
+        then:
+        build.contains('apply plugin: "org.apache.grails.gradle.grails-plugin"')
+        build.contains('apply plugin: "org.apache.grails.gradle.grails-gsp"')
+        build.contains("implementation \"org.apache.grails:grails-gsp\"")
+
+        where:
+        applicationType << [ApplicationType.WEB_PLUGIN]
     }
 
     @Unroll

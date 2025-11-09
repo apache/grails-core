@@ -31,6 +31,7 @@ import jakarta.annotation.PreDestroy;
 import jakarta.persistence.FlushModeType;
 
 import com.mongodb.MongoClientSettings;
+import com.mongodb.MongoCommandException;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoIterable;
 import com.mongodb.client.model.IndexOptions;
@@ -846,7 +847,11 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                 for (MongoCollection.Index index : indices) {
                     final Map<String, Object> options = index.getOptions();
                     final IndexOptions indexOptions = MongoConstants.mapToObject(IndexOptions.class, options);
-                    collection.createIndex(new Document(index.getDefinition()), indexOptions);
+                    try {
+                        collection.createIndex(new Document(index.getDefinition()), indexOptions);
+                    } catch (MongoCommandException e) {
+                        LOG.error("Failed to create index for entity [" + entity.getName() + "] with definition [" + index.getDefinition() + "]: " + e.getMessage(), e);
+                    }
                 }
 
                 for (Map compoundIndex : mappedForm.getCompoundIndices()) {
@@ -859,11 +864,15 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                         }
                     }
                     Document indexDef = new Document(compoundIndex);
-                    if (indexAttributes != null) {
-                        final IndexOptions indexOptions = MongoConstants.mapToObject(IndexOptions.class, indexAttributes);
-                        collection.createIndex(indexDef, indexOptions);
-                    } else {
-                        collection.createIndex(indexDef);
+                    try {
+                        if (indexAttributes != null) {
+                            final IndexOptions indexOptions = MongoConstants.mapToObject(IndexOptions.class, indexAttributes);
+                            collection.createIndex(indexDef, indexOptions);
+                        } else {
+                            collection.createIndex(indexDef);
+                        }
+                    } catch (MongoCommandException e) {
+                        LOG.error("Failed to create compound index for entity [" + entity.getName() + "] with definition [" + indexDef + "]: " + e.getMessage(), e);
                     }
                 }
             }
@@ -889,11 +898,15 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                     }
                 }
                 // continue using deprecated method to support older versions of MongoDB
-                if (options.isEmpty()) {
-                    collection.createIndex(dbObject);
-                } else {
-                    final IndexOptions indexOptions = MongoConstants.mapToObject(IndexOptions.class, options);
-                    collection.createIndex(dbObject, indexOptions);
+                try {
+                    if (options.isEmpty()) {
+                        collection.createIndex(dbObject);
+                    } else {
+                        final IndexOptions indexOptions = MongoConstants.mapToObject(IndexOptions.class, options);
+                        collection.createIndex(dbObject, indexOptions);
+                    }
+                } catch (MongoCommandException e) {
+                    LOG.error("Failed to create index for entity [" + entity.getName() + "] on property [" + property.getName() + "]: " + e.getMessage(), e);
                 }
             }
         }

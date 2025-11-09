@@ -91,7 +91,7 @@ public class MicronautHttpClient implements Feature {
 
         generatorContext.addDependency(Dependency.builder()
                 .groupId("io.micronaut")
-                .artifactId("micronaut-http-client")
+                .artifactId("micronaut-http-client-jdk") // Use jdk version as Spring and Micronaut has different Netty versions https://github.com/apache/grails-core/issues/15149
                 .implementation());
 
         // micronaut-http-client no longer provides the jackson implementation

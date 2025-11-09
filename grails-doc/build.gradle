@@ -254,7 +254,7 @@ publishGuideTask.configure { PublishGuideTask publish ->
         [
                 'cacheExampleSourceDir': rootProject.layout.projectDirectory.dir('grails-test-examples/cache').asFile,
                 'sourcedir'            : rootProject.layout.projectDirectory.asFile,
-                'functionalSourceDir'  : rootProject.layout.projectDirectory.asFile
+                'functionalSourceDir'  : rootProject.layout.projectDirectory.dir('grails-test-examples').asFile
         ] as Map<String, String>
     }
 }

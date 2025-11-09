@@ -93,6 +93,8 @@ class DefaultGrailsTagDateHelper implements GrailsTagDateHelper {
         TemporalAccessor instant
         if (date instanceof java.sql.Date) {
             instant = date.toLocalDate()
+        } else if (date instanceof java.sql.Time) {
+            instant = date.toLocalTime()
         } else if (date instanceof Date) {
             instant = date.toInstant()
         } else if (date instanceof Calendar) {
@@ -134,6 +136,8 @@ class DefaultGrailsTagDateHelper implements GrailsTagDateHelper {
                 zonedDateTime = ZonedDateTime.of(date, ZoneId.systemDefault())
             } else if (date instanceof LocalDate) {
                 zonedDateTime = ZonedDateTime.of(date, LocalTime.MIN, ZoneId.systemDefault())
+            } else if (date instanceof Instant) {
+                zonedDateTime = ZonedDateTime.ofInstant(date, ZoneId.systemDefault())
             } else if (date instanceof OffsetDateTime) {
                 zonedDateTime = ((OffsetDateTime) date).toZonedDateTime()
 

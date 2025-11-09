@@ -17,32 +17,17 @@
  *  under the License.
  */
 
-package grails.gorm.time
+package functionaltests
 
-import java.time.Instant
-import java.time.OffsetDateTime
+import grails.converters.JSON
 
-import groovy.transform.CompileStatic
-import groovy.transform.Generated
+class DataBindingController {
 
-/**
- * A trait to convert a {@link java.time.OffsetDateTime} to and from a long
- *
- * @author James Kleeh
- */
-@CompileStatic
-trait OffsetDateTimeConverter implements TemporalConverter<OffsetDateTime> {
-
-    @Override
-    @Generated
-    Long convert(OffsetDateTime value) {
-        value.toInstant().toEpochMilli()
+    def show(String id) {
+        render([success: true] as JSON)
     }
 
-    @Override
-    @Generated
-    OffsetDateTime convert(Long value) {
-        OffsetDateTime.ofInstant(Instant.ofEpochMilli(value), systemOffset)
+    def submit(long id, long data) {
+        render([success: true] as JSON)
     }
-
 }

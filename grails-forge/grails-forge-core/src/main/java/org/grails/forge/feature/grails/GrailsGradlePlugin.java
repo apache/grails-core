@@ -71,10 +71,10 @@ class GrailsGradlePlugin implements DefaultFeature {
 
         if (applicationType == ApplicationType.PLUGIN || applicationType == ApplicationType.WEB_PLUGIN) {
             generatorContext.addBuildPlugin(GradlePlugin.builder().id("org.apache.grails.gradle.grails-plugin").useApplyPlugin(true).build());
-        }
-        if (generatorContext.getFeature(GrailsWeb.class).isPresent()) {
+        } else if (generatorContext.getFeature(GrailsWeb.class).isPresent()) {
             generatorContext.addBuildPlugin(GradlePlugin.builder().id("org.apache.grails.gradle.grails-web").useApplyPlugin(true).build());
         }
+
         if (generatorContext.getFeature(GrailsGsp.class).isPresent()) {
             generatorContext.addBuildPlugin(GradlePlugin.builder().id("org.apache.grails.gradle.grails-gsp").useApplyPlugin(true).build());
         }
