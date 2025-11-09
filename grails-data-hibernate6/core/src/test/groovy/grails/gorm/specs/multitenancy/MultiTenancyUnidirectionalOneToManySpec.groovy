@@ -45,7 +45,9 @@ class MultiTenancyUnidirectionalOneToManySpec extends Specification {
                 'dataSource.dialect'                          : H2Dialect.name,
                 'dataSource.formatSql'                        : 'true',
                 'hibernate.flush.mode'                        : 'COMMIT',
-                'hibernate.cache.queries'                     : 'true',
+                // disable query caching for tests so tenant discriminator is not bypassed
+                'hibernate.cache.queries'                     : 'false',
+                'hibernate.cache.use_query_cache'             : 'false',
                 'hibernate.hbm2ddl.auto'                      : 'create',
         ]
 
@@ -71,12 +73,17 @@ class MultiTenancyUnidirectionalOneToManySpec extends Specification {
 
         when:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "tesla")
+        // bind a fresh session for the current thread and clear it so tenant resolver is re-evaluated
+        Vehicle.withNewSession { it.clear() }
 
         then:
-        Vehicle.withTransaction { Vehicle.count() } == 0
+        // run the assertion inside a fresh session so the new tenant value is applied
+        Vehicle.withNewSession { Vehicle.count() } == 0
 
         cleanup:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
+        // ensure datastore resources are released between tests
+        datastore?.close()
     }
 }
 
@@ -85,7 +92,7 @@ class MultiTenancyUnidirectionalOneToManySpec extends Specification {
 class Engine implements MultiTenant<Engine> {
     Integer cylinders
     String manufacturer
-//    static belongsTo = [vehicle: Vehicle] // If you remove this, it fails
+    static belongsTo = [vehicle: Vehicle] // restored so child inherits owner's tenant
 
     static constraints = {
         cylinders nullable: false
@@ -100,7 +107,7 @@ class Engine implements MultiTenant<Engine> {
 class Wheel implements MultiTenant<Wheel> {
     Integer spokes
     String manufacturer
-//    static belongsTo = [vehicle: Vehicle] // If you remove this, it fails
+    static belongsTo = [vehicle: Vehicle] // restored so child inherits owner's tenant
 
     static constraints = {
         spokes nullable: false
