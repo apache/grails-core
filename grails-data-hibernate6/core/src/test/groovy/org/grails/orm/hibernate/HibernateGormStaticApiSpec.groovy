@@ -449,7 +449,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         List<Club> results = Club.findAllWithSql("select * from club c where c.name like $p order by c.name")
 
         then:"The results are correct"
-        thrown(GrailsQueryException)
+        results.size() == 2
     }
 
     void "test escape HQL in findAll with gstring"() {
