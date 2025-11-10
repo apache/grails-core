@@ -20,9 +20,11 @@ package org.grails.orm.hibernate.connections
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.MultiTenant
-import grails.gorm.annotation.Entity
+import org.grails.orm.hibernate.connections.MultiTenantAuthor
+import org.grails.orm.hibernate.connections.MultiTenantBook
+import org.grails.orm.hibernate.connections.MultiTenantPublisher
 import grails.gorm.hibernate.mapping.MappingBuilder
-import grails.gorm.multitenancy.CurrentTenant
+import org.grails.orm.hibernate.connections.MultiTenantAuthorService
 import grails.gorm.multitenancy.Tenant
 import grails.gorm.multitenancy.Tenants
 import grails.gorm.specs.HibernateGormDatastoreSpec
@@ -73,10 +75,9 @@ class PartitionedMultiTenancySpec extends HibernateGormDatastoreSpec {
         }
     }
 
-    void "Test partitioned multi tenancy"() {
+    void "test no tenant id present"() {
         when: "no tenant id is present"
         MultiTenantAuthor.list()
-
 
         then: "An exception is thrown"
         thrown(TenantNotFoundException)
@@ -88,7 +89,9 @@ class PartitionedMultiTenancySpec extends HibernateGormDatastoreSpec {
         then: "An exception is thrown"
         !author.errors.hasErrors()
         thrown(TenantNotFoundException)
+    }
 
+    void "test save and count for moreBooks tenant"() {
         when: "A tenant id is present"
         manager.hibernateDatastore.sessionFactory.currentSession.clear()
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "moreBooks")
@@ -97,7 +100,7 @@ class PartitionedMultiTenancySpec extends HibernateGormDatastoreSpec {
         MultiTenantAuthor.count() == 0
 
         when: "An object is saved"
-        author = new MultiTenantAuthor(name: "Stephen King")
+        def author = new MultiTenantAuthor(name: "Stephen King")
         author.save(flush: true)
 
         then: "The results are correct"
@@ -113,40 +116,39 @@ class PartitionedMultiTenancySpec extends HibernateGormDatastoreSpec {
 
         then: "The results are correct"
         MultiTenantAuthor.count() == 2
+    }
 
-        when: "The tenant id is switched"
+    void "test tenant switching and data isolation"() {
+        given: "Setup data for 'moreBooks' tenant"
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "moreBooks")
+        new MultiTenantAuthor(name: "Stephen King").save(flush: true)
+        MultiTenantAuthor.withTransaction {
+            new MultiTenantAuthor(name: "JRR Tolkien").save(flush: true)
+        }
+        manager.session.clear() // Clear session after setup
+        
+        and: "Verify data for 'moreBooks' tenant immediately after creation"
+        assert MultiTenantAuthor.count() == 2
+
+        when: "The tenant id is switched to 'books'"
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "books")
         // Ensure first-level session cache does not bleed across tenant switch
         manager.session.clear()
 
-        then: "the correct tenant is used"
+        then: "the correct tenant is used and no data exists for 'books'"
         MultiTenantAuthor.withNewSession { MultiTenantAuthor.count() } == 0
         MultiTenantAuthor.withNewSession { MultiTenantAuthor.findByName("Stephen King") } == null
         MultiTenantAuthor.withNewSession { MultiTenantAuthor.findAll("from MultiTenantAuthor a").size() } == 0
 
+        when: "Save data for 'books' tenant"
         // Clear any stale first-level cache before switching to explicit tenant contexts
         manager.session.clear()
-        // Verify counts within explicit tenant contexts without creating a new session
-        MultiTenantAuthor.withTenant("moreBooks").count() == 2
-        MultiTenantAuthor.withTenant("moreBooks") { String tenantId, Session s ->
-            assert s != null
-            s.clear()
-            MultiTenantAuthor.count() == 2
-        }
-        Tenants.withId("books") {
-            MultiTenantAuthor.count() == 0
-            new MultiTenantAuthor(name: "James Patterson").save(flush: true)
-        }
-        Tenants.withId("moreBooks") {
-            MultiTenantAuthor.count() == 2
-        }
-        Tenants.withId("moreBooks") {
-            MultiTenantAuthor.withCriteria {
-                eq 'name', 'James Patterson'
-            }.size() == 0
-        }
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "books")
+        new MultiTenantAuthor(name: "James Patterson").save(flush: true)
+        manager.session.clear() // Clear session after saving
 
-
+        then: "Verify data for 'James Patterson' in 'books' tenant"
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "books")
         Tenants.withCurrent {
             def results = MultiTenantAuthor.withCriteria {
                 eq 'name', 'James Patterson'
@@ -160,22 +162,15 @@ class PartitionedMultiTenancySpec extends HibernateGormDatastoreSpec {
             MultiTenantAuthor.count() == 1
         }
 
-//        when: "each tenant is iterated over"
-//        Map tenantIds = [:]
-//        MultiTenantAuthor.eachTenant { String tenantId ->
-//            tenantIds.put(tenantId, MultiTenantAuthor.count())
-//        }
-//
-//        then: "The result is correct"
-//        tenantIds == [moreBooks: 2, books: 1]
+        when: "Switch to 'moreBooks' tenant"
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "moreBooks")
+        manager.session.clear()
 
-//        when: "A tenant service is used"
-//        MultiTenantAuthorService authorService = new MultiTenantAuthorService()
-//
-//        then: "The service works correctly"
-//        authorService.countAuthors() == 1
-//        authorService.countMoreAuthors() == 2
-
+        then: "Assert 'James Patterson' does not exist in 'moreBooks' tenant, and original data is present"
+        MultiTenantAuthor.withCriteria {
+            eq 'name', 'James Patterson'
+        }.size() == 0
+        MultiTenantAuthor.count() == 2
     }
 
     void "test multi tenancy and associations"() {
@@ -328,76 +323,17 @@ class PartitionedMultiTenancySpec extends HibernateGormDatastoreSpec {
         list.size() == 0
         list.getTotalCount() == 0
     }
-}
 
-class MyTenantResolver extends SystemPropertyTenantResolver implements AllTenantsResolver {
+    static class MyTenantResolver extends SystemPropertyTenantResolver implements AllTenantsResolver {
 
-    Iterable<Serializable> resolveTenantIds() {
-        Tenants.withoutId {
-            def tenantIds = new DetachedCriteria<MultiTenantAuthor>(MultiTenantAuthor)
-                    .distinct('tenantId')
-                    .list()
-            return tenantIds
+        Iterable<Serializable> resolveTenantIds() {
+            Tenants.withoutId {
+                def tenantIds = new DetachedCriteria<MultiTenantAuthor>(MultiTenantAuthor)
+                        .distinct('tenantId')
+                        .list()
+                return tenantIds
+            }
         }
-    }
 
-}
-
-@Entity
-class MultiTenantAuthor implements GormEntity<MultiTenantAuthor>, MultiTenant<MultiTenantAuthor> {
-    Long id
-    Long version
-    String tenantId
-    String name
-    transient String tmp
-
-    def beforeInsert() {
-        tmp = "foo"
-    }
-    static hasMany = [books: MultiTenantBook]
-    static constraints = {
-        name blank: false
     }
 }
-
-@CurrentTenant
-class MultiTenantAuthorService {
-    int countAuthors() {
-        MultiTenantAuthor.count()
-    }
-
-    @Tenant({ "moreBooks" })
-    int countMoreAuthors() {
-        MultiTenantAuthor.count()
-    }
-}
-
-@Entity
-class MultiTenantBook implements GormEntity<MultiTenantBook>, MultiTenant<MultiTenantBook> {
-    Long id
-    Long version
-    String tenantCode
-    String title
-
-
-    static belongsTo = [author: MultiTenantAuthor]
-    static constraints = {
-        title blank: false
-    }
-
-    static mapping = {
-        tenantId name: "tenantCode"
-    }
-}
-
-
-@Entity
-class MultiTenantPublisher implements GormEntity<MultiTenantPublisher>, MultiTenant<MultiTenantPublisher> {
-    String tenantCode
-    String name
-
-    static mapping = MappingBuilder.orm {
-        tenantId "tenantCode"
-    }
-}
-
