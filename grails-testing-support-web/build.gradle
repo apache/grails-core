@@ -37,6 +37,7 @@ dependencies {
     implementation platform(project(':grails-bom'))
 
     api project(':grails-gsp')
+    api project(':grails-web-gsp-taglib') // Makes RenderTagLib available for mocking in tests
     api project(':grails-rest-transforms')
     api project(':grails-interceptors')
     api 'jakarta.servlet:jakarta.servlet-api'

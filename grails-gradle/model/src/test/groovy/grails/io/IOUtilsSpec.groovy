@@ -21,7 +21,7 @@ package grails.io
 import org.grails.io.support.Resource
 import spock.lang.Specification
 
-class IOUtilsSpec extends Specification{
+class IOUtilsSpec extends Specification {
 
     void "Test findClassResource finds a class resource"() {
         expect:
@@ -33,5 +33,14 @@ class IOUtilsSpec extends Specification{
         expect:
         IOUtils.findJarResource(Specification)
         IOUtils.findJarResource(Specification).path.endsWith('spock-core-2.3-groovy-3.0.jar!/')
+    }
+
+    void 'findRootResourcesURL - appends / if not present'() {
+        when:
+        def result = IOUtils.findRootResourcesURL(IOUtils).toString()
+
+        then:
+        result.startsWith('file:')
+        result.endsWith('/')
     }
 }

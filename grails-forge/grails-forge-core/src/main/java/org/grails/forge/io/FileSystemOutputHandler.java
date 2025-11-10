@@ -18,19 +18,26 @@
  */
 package org.grails.forge.io;
 
-import org.grails.forge.application.Project;
-import org.grails.forge.template.Template;
-import org.grails.forge.template.Writable;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+import org.grails.forge.application.Project;
+import org.grails.forge.template.Template;
+import org.grails.forge.template.Writable;
 
 public class FileSystemOutputHandler implements OutputHandler {
 
     File applicationDirectory;
     private final ConsoleOutput console;
+    private final Instant lastModified;
 
     public FileSystemOutputHandler(Project project, boolean inplace, ConsoleOutput console) throws IOException {
         this.console = console;
@@ -43,11 +50,13 @@ public class FileSystemOutputHandler implements OutputHandler {
         if (applicationDirectory.exists() && !inplace) {
             throw new IllegalArgumentException("Cannot create the project because the target directory already exists");
         }
+        lastModified = OutputUtils.createLastModified(null);
     }
 
     public FileSystemOutputHandler(File directory, ConsoleOutput console) throws IOException {
         this.console = console;
         this.applicationDirectory = directory;
+        lastModified = OutputUtils.createLastModified(null);
     }
 
     /**
@@ -56,14 +65,8 @@ public class FileSystemOutputHandler implements OutputHandler {
      * @throws IOException If it cannot be resolved
      */
     public static File getDefaultBaseDirectory() throws IOException {
-        File baseDirectory;
         String userDir = System.getProperty("user.dir");
-        if (userDir != null) {
-            baseDirectory = new File(userDir).getCanonicalFile();
-        } else {
-            baseDirectory = new File("").getCanonicalFile();
-        }
-        return baseDirectory;
+        return new File(Objects.requireNonNullElse(userDir, "")).getCanonicalFile();
     }
 
     @Override
@@ -91,13 +94,51 @@ public class FileSystemOutputHandler implements OutputHandler {
         if ('/' != File.separatorChar) {
             path = path.replace('/', File.separatorChar);
         }
-        File targetFile = new File(applicationDirectory, path);
-        targetFile.getParentFile().mkdirs();
-        targetFile.createNewFile();
 
+        File targetFile = new File(applicationDirectory, path);
+        Path base = applicationDirectory.toPath().toAbsolutePath().normalize();
+        Path parent = targetFile.getParentFile().toPath().toAbsolutePath().normalize();
+
+        // 1) Determine which parent directories don't exist yet
+        List<Path> createdDirs = new ArrayList<>();
+        if (!parent.startsWith(base)) {
+            throw new IOException("Refusing to write outside base directory: " + parent);
+        }
+        Path p = base;
+        for (Path seg : base.relativize(parent)) {
+            p = p.resolve(seg);
+            if (Files.notExists(p)) {
+                createdDirs.add(p);
+            }
+        }
+
+        // 2) Create the needed directories
+        Files.createDirectories(parent);
+
+        // 3) Write the file
+        Files.deleteIfExists(targetFile.toPath());
         try (OutputStream os = Files.newOutputStream(targetFile.toPath())) {
             contents.write(os);
         }
+
+        // Should we set a specific mtime (SOURCE_DATE_EPOCH)
+        if (lastModified != null) {
+            // 4) Set the file mtime
+            FileTime mtime = FileTime.from(lastModified);
+            Files.setLastModifiedTime(targetFile.toPath(), mtime);
+
+            // 5) Set the mtime on only the directories we created
+            // Do this after writing the file, since step 3 bumps the parent dir's mtime.
+            for (int i = createdDirs.size() - 1; i >= 0; i--) {
+                try {
+                    Files.setLastModifiedTime(createdDirs.get(i), mtime);
+                } catch (IOException ignore) {
+                    // Non-fatal: some file systems may restrict touching dir times
+                    console.warning("Could not set mtime for dir: " + createdDirs.get(i));
+                }
+            }
+        }
+
         return targetFile;
     }
 

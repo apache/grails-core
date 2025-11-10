@@ -25,7 +25,7 @@ ext {
             'ant.version'                   : '1.10.15',
             'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.0',
-            'asset-pipeline-gradle.version' : '5.0.19',
+            'asset-pipeline-gradle.version' : '5.0.20',
             'byte-buddy.version'            : '1.17.7',
             'commons-text.version'          : '1.13.1',
             'directory-watcher.version'     : '0.19.1',
@@ -68,13 +68,12 @@ ext {
     ]
 
     bomDependencyVersions = [
-            'asset-pipeline-bom.version'  : '5.0.19',
+            'asset-pipeline-bom.version'  : '5.0.20',
             'bootstrap-icons.version'     : '1.13.1',
             'bootstrap.version'           : '5.3.7',
             'commons-codec.version'       : '1.18.0',
             'geb-spock.version'           : '8.0.0',
             'groovy.version'              : '4.0.29',
-            'h2.version'                  : '2.3.232',
             'jackson.version'             : '2.19.1',
             'jquery.version'              : '3.7.1',
             'liquibase-hibernate5.version': '4.27.0',
@@ -103,7 +102,6 @@ ext {
             'bootstrap-icons'          : "org.webjars.npm:bootstrap-icons:${bomDependencyVersions['bootstrap-icons.version']}",
             'commons-codec'            : "commons-codec:commons-codec:${bomDependencyVersions['commons-codec.version']}",
             'geb-spock'                : "org.apache.groovy.geb:geb-spock:${bomDependencyVersions['geb-spock.version']}",
-            'h2'                       : "com.h2database:h2:${bomDependencyVersions['h2.version']}",
             'jquery'                   : "org.webjars.npm:jquery:${bomDependencyVersions['jquery.version']}",
             'liquibase-hibernate5'     : "org.liquibase:liquibase:${bomDependencyVersions['liquibase-hibernate5.version']}",
             'liquibase-hibernate5-cdi' : "org.liquibase:liquibase-cdi:${bomDependencyVersions['liquibase-hibernate5.version']}",

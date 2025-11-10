@@ -16,7 +16,7 @@
 # for testing in a container that is similar to the grails github action linux build environment
 # run this from the root of the project
 # `docker build -t grails:testing -f etc/bin/Dockerfile . && docker run -it --rm -v $(pwd):/home/groovy/project grails:testing bash`
-FROM bellsoft/liberica-openjdk-debian:17.0.14
+FROM bellsoft/liberica-openjdk-debian:17.0.17
 
 USER root
 RUN apt-get update && apt-get install -y curl unzip coreutils libdigest-sha-perl gpg vim sudo psmisc locales groovy rsync

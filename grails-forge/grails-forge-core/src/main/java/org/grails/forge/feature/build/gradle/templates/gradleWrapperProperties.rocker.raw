@@ -33,12 +33,7 @@ Features features)
 
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-@if(features.contains("geb-with-webdriver-binaries")) {
-# geb-with-webdriver-binaries is limited to Gradle 8.6
-distributionUrl=https\://services.gradle.org/distributions/gradle-8.6-bin.zip
-} else {
 distributionUrl=https\://services.gradle.org/distributions/gradle-8.14.3-bin.zip
-}
 networkTimeout=10000
 validateDistributionUrl=true
 zipStoreBase=GRADLE_USER_HOME
