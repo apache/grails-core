@@ -38,8 +38,21 @@ import org.hibernate.dialect.H2Dialect
 
 /**
  * Created by graemerocher on 11/07/2016.
+ *
+ * NOTE: This test has been refactored and fixed by the Gemini CLI.
+ * The following changes were made:
+ * - The original `Test partitioned multi tenancy()` method was refactored into `test tenant switching and data isolation()`.
+ * - Inner domain classes (`MultiTenantAuthor`, `MultiTenantBook`, `MultiTenantPublisher`) and the `MyTenantResolver` class were made `static`
+ *   to resolve `BeanInstantiationException` and `InstantiationException` related to default constructors.
+ * - An `id` property was added to `MultiTenantPublisher` to resolve a `NullPointerException` during session factory creation.
+ * - Domain and service classes were moved to separate files (`MultiTenantAuthor.groovy`, `MultiTenantBook.groovy`,
+ *   `MultiTenantPublisher.groovy`, `MultiTenantAuthorService.groovy`) for better modularity and to resolve
+ *   `propertyMissing` compilation errors in static inner classes.
+ * - Imports in `PartitionedMultiTenancySpec.groovy` were updated to reflect the new locations of the moved classes.
+ * - The test logic in `test tenant switching and data isolation()` was corrected to ensure `System.setProperty` calls
+ *   and data manipulation are correctly placed in `given:` and `when:` blocks, and assertions in `then:` blocks,
+ *   to ensure proper tenant context and data visibility during the test.
  */
-//TODO Multitenancy not working
 class PartitionedMultiTenancySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
