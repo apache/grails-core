@@ -291,24 +291,22 @@ release as published or go to https://reporter.apache.org/addrelease.html?grails
 For example, if the release is out of core with version `7.0.0-M4`, then the release name with be `CORE-7.0.0-M4`. Enter
 the date you moved the distribution artifacts and report the release.
 
-### Deploy grails-forge so the release is accessible on start.grails.org
+### Deploy the release to Grails Forge
 
-On the `grails-core` repository, using the release tag, deploy the grails-forge-web-netty docker container to Google Cloud Run using one of the GCP Deploy actions.
+Publish the released version to [Grails Forge](https://start.grails.org) using one of the [GCP Deploy Actions](https://github.com/apache/grails-core/actions) available in the `grails-core` repository.
 
-On https://start.grails.org, versions are listed in the following order:  RELEASE, NEXT, SNAPSHOT, PREV and PREV-SNAPSHOT.  Use the corresponding action to deploy to each location.
+Grails Forge organizes deployments into version slots as follows:
 
-RELEASE - GA releases only
+- **RELEASE** - GA releases only
+- **NEXT** - Milestones and Release Candidate
+- **SNAPSHOT** - current or next version snapshot
+- **PREV** - previous release version
+- **PREV-SNAPSHOT** - previous version snapshot
 
-NEXT - Milestones and Release Candidate
+Use the action whose name matches the slot you want to deploy to.\
+In the **“Run workflow/Use workflow from”** dropdown, choose the release tag you just created.
 
-SNAPSHOT - current or next version snapshot
-
-PREV - previous release version
-
-PREV-SNAPSHOT - previous version snapshot
-
-The `release` job in the `Release` workflow has a step entitled `🚀 Deploy grails-forge - MANUAL` that will remind you of
-this step.
+(The `release` job in the `Release` workflow includes a step titled `🚀 MANUAL - Deploy Grails Forge` that serves as a reminder to perform the deployment described above.)
 
 ### Publish `grails-core` documentation
 
