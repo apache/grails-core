@@ -25,14 +25,13 @@ class ByteBuddyProxySpec extends HibernateGormDatastoreSpec {
         session.clear()
 
         when:
-        team = ByteBuddyTeam.load(team.id)
+        def hibernateSession = manager.hibernateDatastore.sessionFactory.currentSession
+        team = hibernateSession.getReference(ByteBuddyTeam.class, team.id)
         def proxyHandler = manager.hibernateDatastore.mappingContext.proxyHandler
 
         then:
         "Dynamic Groovy access does not initialize the proxy"
-        !proxyHandler.isInitialized(team)
-        team.id != null
-        !proxyHandler.isInitialized(team)
+        assert_id_without_init(proxyHandler, team)
 
 
     }
@@ -60,7 +59,7 @@ class ByteBuddyProxySpec extends HibernateGormDatastoreSpec {
     }
 
     private void assert_id_without_init(ProxyHandler handler, Object proxy) {
-        assert handler.getIdentifier(proxy) != null
+        assert manager.sessionFactory.persistenceUnitUtil.getIdentifier(proxy) != null
         assert !handler.isInitialized(proxy)
     }
 
