@@ -17,10 +17,15 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-To activate JSON views, add the following dependency to the `dependencies` block of your `build.gradle`:
+To activate JSON views, add the following dependency to the `dependencies` block of your `build.gradle`, if you use the Grails BOM:
+
+[source,groovy]
+implementation "org.apache.grails:grails-views-gson"
+
+otherwise add version information
 
 [source,groovy,subs="attributes"]
-compile "org.apache.grails:grails-views-gson:{version}"
+implementation "org.apache.grails:grails-views-gson:{version}"
 
 To enable Gradle compilation of JSON views for production environment add the following to the `buildscript` `dependencies` block:
 
@@ -29,16 +34,16 @@ buildscript {
     ...
     dependencies {
         ...
-        classpath "org.apache.grails:grails-gradle-bom:{version}"
+        classpath platform("org.apache.grails:grails-gradle-bom:{version}")
         classpath "org.apache.grails:grails-gradle-plugins"
     }
 }
 
-Then apply the `org.apache.grails.grails-views-gson` Gradle plugin after any Grails core gradle plugins:
+Then apply the `org.apache.grails.gradle.grails-gson` Gradle plugin after any Grails core gradle plugins:
 
 [source,groovy]
 ...
-apply plugin: "org.apache.grails:grails-web"
-apply plugin: "org.apache.grails.grails-views-gson"
+apply plugin: "org.apache.grails.gradle.grails-web"
+apply plugin: "org.apache.grails.gradle.grails-gson"
 
 This will add a `compileGsonViews` task to Gradle that is executed when producing a JAR or WAR file.
