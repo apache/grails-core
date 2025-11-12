@@ -48,7 +48,7 @@ import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListene
 import org.grails.datastore.mapping.engine.event.EventType;
 import org.grails.datastore.mapping.engine.event.PreInsertEvent;
 import org.grails.datastore.mapping.engine.event.PreUpdateEvent;
-import org.grails.datastore.mapping.model.AutoTimestampUtils;
+import org.grails.datastore.mapping.model.AuditMetadataUtils;
 import org.grails.datastore.mapping.model.ClassMapping;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -249,7 +249,7 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
                     } else if (property.getName().equals(DATE_CREATED_PROPERTY)) {
                         storeTimestampAvailability(entitiesWithDateCreated, persistentEntity, property);
                     } else {
-                        AuditMetadataType auditMetadataType = AutoTimestampUtils.getAuditMetadataType(property, cacheAutoTimestampAnnotations);
+                        AuditMetadataType auditMetadataType = AuditMetadataUtils.getAuditMetadataType(property, cacheAutoTimestampAnnotations);
                         if (auditMetadataType == AuditMetadataType.CREATED) {
                             storeTimestampAvailability(entitiesWithDateCreated, persistentEntity, property);
                         } else if (auditMetadataType == AuditMetadataType.UPDATED) {

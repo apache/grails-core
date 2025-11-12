@@ -49,7 +49,7 @@ import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstrai
 import org.grails.datastore.mapping.config.AuditMetadataType;
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext;
-import org.grails.datastore.mapping.model.AutoTimestampUtils;
+import org.grails.datastore.mapping.model.AuditMetadataUtils;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -316,7 +316,7 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
             // Check if property has @CreatedDate or @LastModifiedDate annotations
             // Note: We only exclude timestamp date fields (CREATED/UPDATED), not auditor fields (CREATED_BY/UPDATED_BY)
             // because auditor fields can have various types and should support constraints (e.g., maxSize for String)
-            AuditMetadataType auditMetadataType = AutoTimestampUtils.getAuditMetadataType(persistentProperty, cacheAutoTimestampAnnotations);
+            AuditMetadataType auditMetadataType = AuditMetadataUtils.getAuditMetadataType(persistentProperty, cacheAutoTimestampAnnotations);
             if (auditMetadataType == AuditMetadataType.CREATED || auditMetadataType == AuditMetadataType.UPDATED) {
                 return false;
             }

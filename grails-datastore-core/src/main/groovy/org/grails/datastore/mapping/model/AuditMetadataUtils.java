@@ -20,13 +20,15 @@ package org.grails.datastore.mapping.model;
 
 import java.lang.reflect.Field;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.ReflectionUtils;
 
 import org.grails.datastore.mapping.config.AuditMetadataType;
 import org.grails.datastore.mapping.config.Property;
 
 /**
- * Utility class for detecting and caching auto-timestamp and auditing annotations on domain properties.
+ * Utility class for detecting and caching audit metadata annotations on domain properties.
  * This avoids repeated reflection calls by storing the annotation type in the Property metadata.
  *
  * <p>Supports the following annotations (both GORM and Spring Data variants):</p>
@@ -46,7 +48,9 @@ import org.grails.datastore.mapping.config.Property;
  * @author Scott Murphy Heiberg
  * @since 7.1
  */
-public class AutoTimestampUtils {
+public class AuditMetadataUtils {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AuditMetadataUtils.class);
 
     private static final String CREATED_DATE_ANNOTATION = "grails.gorm.annotation.CreatedDate";
     private static final String LAST_MODIFIED_DATE_ANNOTATION = "grails.gorm.annotation.LastModifiedDate";
@@ -145,14 +149,23 @@ public class AutoTimestampUtils {
                                 }
                             } catch (Exception e) {
                                 // If we can't read the value, default to CREATED
+                                if (LOG.isDebugEnabled()) {
+                                    LOG.debug("Failed to read @AutoTimestamp EventType value for property [{}], defaulting to CREATED",
+                                            persistentProperty.getName(), e);
+                                }
                                 return AuditMetadataType.CREATED;
                             }
                             break;
                     }
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
             // If reflection fails, return NONE
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Failed to detect audit metadata annotations for property [{}] on entity [{}]",
+                        persistentProperty.getName(),
+                        persistentProperty.getOwner().getName(), e);
+            }
         }
 
         return AuditMetadataType.NONE;

@@ -29,7 +29,7 @@ import org.springframework.beans.factory.annotation.Value
 import grails.util.GrailsClassUtils
 import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.config.Settings
-import org.grails.datastore.mapping.model.AutoTimestampUtils
+import org.grails.datastore.mapping.model.AuditMetadataUtils
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Embedded
@@ -153,7 +153,7 @@ class DomainModelServiceImpl implements DomainModelService {
         // Add properties with audit metadata annotations to blacklist only if excludeAnnotatedTimestamps is true
         if (excludeAnnotatedTimestamps) {
             properties.each { DomainProperty property ->
-                if (AutoTimestampUtils.hasAuditMetadataAnnotation(property.persistentProperty, cacheAutoTimestampAnnotations)) {
+                if (AuditMetadataUtils.hasAuditMetadataAnnotation(property.persistentProperty, cacheAutoTimestampAnnotations)) {
                     if (!blacklist.contains(property.name)) {
                         blacklist.add(property.name)
                     }
