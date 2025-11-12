@@ -860,3 +860,49 @@ The `+` marker is opt-in and fully backward compatible:
 - Existing URL mappings without the `+` marker continue to work as before (splitting at the first dot)
 - No changes are required to existing applications
 - The feature can be adopted incrementally on a per-mapping basis
+
+===== 12.28 GormService API Changes
+
+The `grails.plugin.scaffolding.GormService` class has been updated to fix a thread-safety issue and improve API clarity.
+
+====== Changes
+
+1. The `resource` field type changed from `GormAllOperations<T>` to `Class<T>`
+2. A new `gormStaticApi` field of type `GormAllOperations<T>` was added with thread-safe lazy initialization using `@Lazy`
+3. The constructor no longer instantiates the resource class - it now stores the Class reference directly
+
+====== Migration Impact
+
+If your code extends `GormService` or accesses its fields:
+
+**Accessing GORM operations**: Previously the `resource` field provided GORM operations. Now use the `gormStaticApi` field instead:
+
+[source,groovy]
+----
+// Before (7.1.x and earlier)
+class MyService extends GormService<MyDomain> {
+    void myMethod() {
+        def result = resource.list()  // resource was GormAllOperations<T>
+        // ...
+    }
+}
+
+// After (7.1.x with fix)
+class MyService extends GormService<MyDomain> {
+    void myMethod() {
+        def result = gormStaticApi.list()  // use gormStaticApi instead
+        // ...
+    }
+}
+----
+
+**Accessing the domain class**: If you need the Class reference, the `resource` field is now properly typed as `Class<T>`:
+
+[source,groovy]
+----
+// Before
+Class<MyDomain> clazz = resource.getClass()  // awkward, resource was an instance
+
+// After
+Class<MyDomain> clazz = resource  // resource is now the Class itself
+----
