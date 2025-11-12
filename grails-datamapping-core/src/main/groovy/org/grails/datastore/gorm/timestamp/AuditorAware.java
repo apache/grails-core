@@ -45,7 +45,7 @@ import java.util.Optional;
  *
  * @param <T> the type of the auditor (e.g., User, Long, String)
  * @author Scott Murphy Heiberg
- * @since 7.0
+ * @since 7.1
  */
 public interface AuditorAware<T> {
 
