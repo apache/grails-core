@@ -114,4 +114,26 @@ class RedirectNonAbsoluteURISpec extends AbstractUrlMappingsSpec {
         cleanup:
         RequestContextHolder.setRequestAttributes(null)
     }
+
+    @Issue('15132')
+    void 'An "absolute=false" redirect not added context-path with url params'() {
+        given:
+        def linkGenerator = getLinkGeneratorWithContextPath {
+            "/$controller/$action?/$id?"()
+        }
+        def responseRedirector = new ResponseRedirector(linkGenerator)
+        HttpServletRequest request = Mock(HttpServletRequest) { lookup() >> GrailsWebMockUtil.bindMockWebRequest() }
+        HttpServletResponse response = Mock(HttpServletResponse)
+
+        when: 'redirecting with absolute=false where context-path is set'
+        String url = linkGenerator.link(controller:"test", action: "foo")
+        responseRedirector.redirect(request, response, [url:url, absolute: false])
+
+        then: 'the partial URL includes context-path'
+        1 * response.setHeader(HttpHeaders.LOCATION, "${CONTEXT_PATH}/test/foo")
+
+        cleanup:
+        RequestContextHolder.setRequestAttributes(null)
+    }
+
 }
