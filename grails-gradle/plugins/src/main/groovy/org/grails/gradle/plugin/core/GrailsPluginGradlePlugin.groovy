@@ -63,15 +63,10 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         project.pluginManager.apply('java-library')
 
         checkForConfigurationClash(project)
-
         configureAstSources(project)
-
         configureAssembleTask(project)
-
         configurePluginResources(project)
-
         configureJarTask(project)
-
         configureSourcesJarTask(project)
     }
 
