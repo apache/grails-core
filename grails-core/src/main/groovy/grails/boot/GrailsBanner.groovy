@@ -43,11 +43,12 @@ class GrailsBanner implements Banner {
         def appNameResolver = { Environment env -> env.getProperty('info.app.name') ?: 'application' }
         def appVersionResolver = { Environment env -> env.getProperty('info.app.version') ?: 'unknown' }
         asciiArt = bannerResource.exists() ? bannerResource.inputStream.text : ''
+        def javaVendor = System.getProperty('java.vendor')
         versions = [
                 (appNameResolver): appVersionResolver,
                 'Grails': BuildSettings.grailsVersion,
                 'Groovy': GroovySystem.version,
-                'JVM': System.getProperty('java.version'),
+                'JVM': System.getProperty('java.version')+(javaVendor ? "-${javaVendor}": ''),
                 'Spring Boot': SpringBootVersion.version,
                 'Spring': SpringVersion.version
         ]
