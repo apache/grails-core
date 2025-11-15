@@ -239,18 +239,12 @@ class GrailsGradlePlugin extends GroovyPlugin {
             starImports.add('jakarta.validation.constraints')
 
             // Check for grails-datamapping-core (grails.gorm.annotation.*)
-            def datamappingCoreDep = project.configurations.getByName('compileClasspath').dependencies.find { Dependency d ->
-                d.group == 'org.apache.grails.data' && d.name == 'grails-datamapping-core'
-            }
-            if (datamappingCoreDep) {
+            if (hasDependency(project, 'compileClasspath', 'org.apache.grails.data', 'grails-datamapping-core')) {
                 starImports.add('grails.gorm.annotation')
             }
 
             // Check for grails-scaffolding (grails.plugin.scaffolding.annotation.*)
-            def scaffoldingDep = project.configurations.getByName('compileClasspath').dependencies.find { Dependency d ->
-                d.group == 'org.apache.grails' && d.name == 'grails-scaffolding'
-            }
-            if (scaffoldingDep) {
+            if (hasDependency(project, 'compileClasspath', 'org.apache.grails', 'grails-scaffolding')) {
                 starImports.add('grails.plugin.scaffolding.annotation')
             }
         }
@@ -269,6 +263,32 @@ ${importStatements}
                     }
                 }
             """
+        }
+    }
+
+    /**
+     * Check if a dependency is present in the configuration hierarchy.
+     * This checks all dependencies including those from parent configurations via extendsFrom.
+     *
+     * @param project The Gradle project
+     * @param configurationName The configuration to check (e.g., 'compileClasspath')
+     * @param group The dependency group (e.g., 'org.apache.grails.data')
+     * @param name The dependency name (e.g., 'grails-datamapping-core')
+     * @return true if the dependency is present in the configuration hierarchy
+     */
+    protected boolean hasDependency(Project project, String configurationName, String group, String name) {
+        try {
+            def configuration = project.configurations.findByName(configurationName)
+            if (configuration == null) {
+                return false
+            }
+
+            return configuration.allDependencies.any { d ->
+                d.group == group && d.name == name
+            }
+        } catch (Exception e) {
+            project.logger.debug("Failed to check for dependency ${group}:${name} in ${configurationName}: ${e.message}")
+            return false
         }
     }
 
