@@ -35,38 +35,30 @@ class GrailsBanner implements Banner {
     private static final int VERSIONS_MARGIN = 4
     private static final String VERSIONS_SEPARATOR = ' | '
 
-    private final String asciiArt
-    private final Map versions
+    private final String bannerFile
 
-    GrailsBanner(String grailsBannerFile) {
-        def bannerResource = new ClassPathResource(grailsBannerFile)
-        def appNameResolver = { Environment env -> env.getProperty('info.app.name') ?: 'application' }
-        def appVersionResolver = { Environment env -> env.getProperty('info.app.version') ?: 'unknown' }
-        asciiArt = bannerResource.exists() ? bannerResource.inputStream.text : ''
-        def javaVendor = System.getProperty('java.vendor')
-        versions = [
-                (appNameResolver): appVersionResolver,
-                'Grails': BuildSettings.grailsVersion,
-                'Groovy': GroovySystem.version,
-                'JVM': System.getProperty('java.version')+(javaVendor ? "-${javaVendor}": ''),
-                'Spring Boot': SpringBootVersion.version,
-                'Spring': SpringVersion.version
-        ]
+    GrailsBanner(String bannerFile) {
+        this.bannerFile = bannerFile
     }
 
     @Override
     void printBanner(Environment environment, Class<?> sourceClass, PrintStream out) {
-        int bannerWidth = longestLineLength(asciiArt) ?: FALLBACK_BANNER_WIDTH
-        def versionPairs = versions.collectEntries {
-            [(resolveValue(it.key, environment)): resolveValue(it.value, environment)]
-        }
+        def bannerResource = new ClassPathResource(bannerFile)
+        def asciiArt = bannerResource.exists() ? bannerResource.inputStream.text : ''
+        def bannerWidth = longestLineLength(asciiArt) ?: FALLBACK_BANNER_WIDTH
+        def versions = [
+                (environment.getProperty('info.app.name') ?: 'application'): environment.getProperty('info.app.version') ?: 'unknown',
+                'JVM': System.getProperty('java.vendor') + ' ' + System.getProperty('java.version'),
+                'Grails': BuildSettings.grailsVersion,
+                'Groovy': GroovySystem.version,
+                'Spring Boot': SpringBootVersion.version,
+                'Spring': SpringVersion.version
+        ]
         out.println()
         out.println(asciiArt)
-        buildVersionRows(versionPairs, bannerWidth).stream().forEach(out::println)
-    }
-
-    private static String resolveValue(Object value, Environment environment) {
-        value instanceof Closure ? value(environment) : value
+        buildVersionRows(versions, bannerWidth)
+            .forEach { out.println(it) }
+        out.println()
     }
 
     private static int longestLineLength(String text) {
@@ -80,8 +72,8 @@ class GrailsBanner implements Banner {
         def countInRow = 0
         versions.each {
             String value = "$it.key: $it.value"
-            int proposedLength = currentRow.size() + (countInRow > 0 ? VERSIONS_SEPARATOR.size() : 0) + value.size()
-            boolean wouldOverflow = proposedLength > maxWidth
+            def proposedLength = currentRow.size() + (countInRow > 0 ? VERSIONS_SEPARATOR.size() : 0) + value.size()
+            def wouldOverflow = proposedLength > maxWidth
             if (wouldOverflow) {
                 rows << currentRow.center(bannerWidth)
                 currentRow.length = 0
