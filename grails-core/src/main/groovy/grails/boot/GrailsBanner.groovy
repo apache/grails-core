@@ -19,6 +19,7 @@
 package grails.boot
 
 import groovy.transform.CompileStatic
+import groovy.transform.Immutable
 
 import org.springframework.boot.Banner
 import org.springframework.boot.SpringBootVersion
@@ -36,8 +37,6 @@ class GrailsBanner implements Banner {
     String bannerFile = 'grails-banner.txt'
     int upperPadding = 1
     int lowerPadding = 1
-    int versionsMargin = 4
-    String versionsSeparator = ' | '
 
     @Override
     void printBanner(Environment environment, Class<?> sourceClass, PrintStream out) {
@@ -53,7 +52,7 @@ class GrailsBanner implements Banner {
         }
 
         if (shouldDisplayVersions(environment)) {
-            buildVersionRows(createBannerVersions(environment), bannerWidth)
+            createVersionsFormatter().format(createBannerVersions(environment), bannerWidth)
                     .forEach { out.println(it) }
         }
 
@@ -84,32 +83,69 @@ class GrailsBanner implements Banner {
         environment.getProperty('grails.banner.display.versions', Boolean, true)
     }
 
-    protected List buildVersionRows(Map versions, int bannerWidth) {
-        def maxWidth = bannerWidth - versionsMargin * 2
-        def rows = []
-        def currentRow = new StringBuilder()
-        def countInRow = 0
-        versions.each {
-            String value = "$it.key: $it.value"
-            def proposedLength = currentRow.size() + (countInRow > 0 ? versionsSeparator.size() : 0) + value.size()
-            def wouldOverflow = proposedLength > maxWidth
-            if (wouldOverflow) {
-                rows << currentRow.center(bannerWidth)
-                currentRow.length = 0
-            }
-            if (currentRow.size() > 0) {
-                currentRow << versionsSeparator
-            }
-            currentRow << value
-            countInRow++
-        }
-        if (countInRow > 0) {
-            rows << currentRow.center(bannerWidth)
-        }
-        rows
+    protected VersionsFormatter createVersionsFormatter() {
+        new DefaultVersionFormatter()
     }
 
     private static int longestLineLength(String text) {
         text.readLines()*.size()?.max() ?: 0
+    }
+
+    @FunctionalInterface
+    interface VersionsFormatter {
+
+        /**
+         * @param versions insertion-ordered map (e.g., LinkedHashMap) of label -> value
+         * @param bannerWidth total banner width in characters
+         * @return formatted lines to print
+         */
+        List<String> format(Map<String, ?> versions, int bannerWidth)
+    }
+
+    @CompileStatic
+    class DefaultVersionFormatter implements VersionsFormatter {
+
+        VersionsFormatOptions options = new VersionsFormatOptions()
+
+        @Override
+        List<String> format(Map<String, ?> versions, int bannerWidth) {
+            def columnWidth = bannerWidth - options.margin * 2
+            List<String> rows = []
+            def currentRow = new StringBuilder()
+            def countInRow = 0
+
+            versions.each { k, v ->
+                String item = "$k: $v"
+                def proposedLength = currentRow.length() + (countInRow > 0 ? options.separator.size() : 0) + item.size()
+                def wouldOverflow = (countInRow > 0 && proposedLength > columnWidth)
+                def hitCountLimit = (options.maxItemsPerRow > 0 && countInRow >= options.maxItemsPerRow)
+
+                if (wouldOverflow || hitCountLimit) {
+                    rows << currentRow.center(bannerWidth)
+                    currentRow.length = 0
+                    countInRow = 0
+                }
+
+                if (currentRow.size() > 0) {
+                    currentRow << options.separator
+                }
+                currentRow << item
+                countInRow++
+            }
+
+            if (countInRow > 0) {
+                rows << currentRow.center(bannerWidth)
+            }
+
+            return rows
+        }
+    }
+
+    @Immutable
+    @CompileStatic
+    class VersionsFormatOptions {
+        int margin = 4
+        int maxItemsPerRow = 0 // 0 or negative = unlimited
+        String separator = ' | '
     }
 }
