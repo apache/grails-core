@@ -20,6 +20,7 @@ package grails.boot
 
 import groovy.transform.CompileStatic
 import groovy.transform.Immutable
+import groovy.transform.MapConstructor
 
 import org.springframework.boot.Banner
 import org.springframework.boot.SpringBootVersion
@@ -30,6 +31,7 @@ import org.springframework.core.io.ClassPathResource
 import grails.util.BuildSettings
 
 @CompileStatic
+@MapConstructor(noArg = true)
 class GrailsBanner implements Banner {
 
     private static final int FALLBACK_BANNER_WIDTH = 0
