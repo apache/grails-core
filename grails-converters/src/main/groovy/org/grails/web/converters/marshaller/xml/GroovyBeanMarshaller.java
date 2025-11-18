@@ -63,6 +63,7 @@ public class GroovyBeanMarshaller extends IncludeExcludePropertyMarshaller<XML> 
                 if (isEntity && (name.equals(GormProperties.ATTACHED) || name.equals(GormProperties.ERRORS))) continue;
                 Method readMethod = property.getReadMethod();
                 if (readMethod != null && !(name.equals("metaClass")) && !(name.equals("class"))) {
+                    if (Modifier.isStatic(readMethod.getModifiers())) continue;
                     if (readMethod.getAnnotation(PersistenceMethod.class) != null) continue;
                     if (readMethod.getAnnotation(ControllerMethod.class) != null) continue;
                     Object value = readMethod.invoke(o, (Object[]) null);
