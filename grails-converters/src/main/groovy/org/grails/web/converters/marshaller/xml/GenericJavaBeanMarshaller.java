@@ -45,6 +45,7 @@ public class GenericJavaBeanMarshaller implements ObjectMarshaller<XML> {
                 String name = property.getName();
                 Method readMethod = property.getReadMethod();
                 if (readMethod != null) {
+                    if (Modifier.isStatic(readMethod.getModifiers())) continue;
                     Object value = readMethod.invoke(o, (Object[]) null);
                     xml.startNode(name);
                     xml.convertAnother(value);

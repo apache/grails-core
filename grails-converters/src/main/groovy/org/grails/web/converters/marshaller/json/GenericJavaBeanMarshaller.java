@@ -61,6 +61,7 @@ public class GenericJavaBeanMarshaller extends IncludeExcludePropertyMarshaller<
                 if (!shouldInclude(includeExcludeSupport, includes, excludes, o, name)) continue;
 
                 if (readMethod != null && !(name.equals("metaClass")) && !(name.equals("class"))) {
+                    if (Modifier.isStatic(readMethod.getModifiers())) continue;
                     if (readMethod.getAnnotation(PersistenceMethod.class) != null) continue;
                     if (readMethod.getAnnotation(ControllerMethod.class) != null) continue;
                     Object value = readMethod.invoke(o, (Object[]) null);
