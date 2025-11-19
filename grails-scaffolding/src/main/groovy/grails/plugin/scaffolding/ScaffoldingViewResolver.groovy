@@ -85,6 +85,8 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
         this.templateOverridePluginDescriptor = templateOverridePluginDescriptor
     }
 
+    private static final Object NULL_SCAFFOLD_VALUE = new Object()
+
     ResourceLoader resourceLoader
     protected Map<String, View> generatedViewCache = new ConcurrentHashMap<>()
     protected Map<Class, Object> scaffoldValueCache = new ConcurrentHashMap<>()
@@ -209,7 +211,8 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
         // Cache the scaffold value to avoid repeated reflection
         Class controllerClazz = controllerClass.clazz
         if (scaffoldValueCache.containsKey(controllerClazz)) {
-            return scaffoldValueCache.get(controllerClazz)
+            Object cached = scaffoldValueCache.get(controllerClazz)
+            return cached == NULL_SCAFFOLD_VALUE? null : cached
         }
 
         def scaffoldValue = controllerClass.getPropertyValue('scaffold')
@@ -222,7 +225,7 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
         }
 
         // Cache the result (even if null, to avoid repeated lookups)
-        scaffoldValueCache.put(controllerClazz, scaffoldValue)
+        scaffoldValueCache.put(controllerClazz, scaffoldValue == null? NULL_SCAFFOLD_VALUE : scaffoldValue)
         return scaffoldValue
     }
 
