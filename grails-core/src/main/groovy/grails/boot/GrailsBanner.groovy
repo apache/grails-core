@@ -325,7 +325,7 @@ class GrailsBanner implements Banner {
         SPRING_SECURITY,
         TOMCAT,
         JETTY,
-        UNDERTOW;
+        UNDERTOW
 
         final String key
 
@@ -352,7 +352,7 @@ class GrailsBanner implements Banner {
         GRAILS,
         GROOVY,
         SPRING_BOOT,
-        SPRING;
+        SPRING
 
         final String key
 
@@ -369,7 +369,7 @@ class GrailsBanner implements Banner {
         SPRING_SECURITY,
         TOMCAT,
         JETTY,
-        UNDERTOW;
+        UNDERTOW
 
         final String key
 
