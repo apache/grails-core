@@ -65,8 +65,8 @@ class GrailsBanner implements Banner {
             def art = createBannerArt(environment)
             bannerWidth = longestLineLength(art) ?: FALLBACK_BANNER_WIDTH
             out.println(art)
+            artPaddingBottom.times { out.println() }
         }
-        artPaddingBottom.times { out.println() }
         if (shouldDisplayVersions(environment)) {
             createVersionsFormatter().format(createBannerVersions(environment), bannerWidth)
                     .forEach { out.println(it) }
