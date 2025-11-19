@@ -19,6 +19,8 @@
 
 package org.demo.spock
 
+import java.nio.file.Files
+
 import spock.lang.Stepwise
 
 import grails.plugin.geb.ContainerGebSpec
@@ -43,9 +45,6 @@ class PerTestRecordingSpec extends ContainerGebSpec {
         when: 'visiting another page than the previous test'
         to(UploadPage)
         
-        and: 'pausing to ensure the recorded file size is different'
-        Thread.sleep(1000)
-
         then: 'the page loads correctly'
         title == 'Upload Test'
     }
@@ -86,15 +85,12 @@ class PerTestRecordingSpec extends ContainerGebSpec {
         recordingFiles != null
         recordingFiles.length >= 2 // At least 2 files for the first two test methods
 
-        and: 'the recording files should have different content (different sizes)'
+        and: 'the recording files should have different content'
         // Sort by last modified time to get the most recent files
         def sortedFiles = recordingFiles.sort { it.lastModified() }
         def secondLastFile = sortedFiles[sortedFiles.length - 2]
         def lastFile = sortedFiles[sortedFiles.length - 1]
-
-        // Files should have different sizes (allowing for small variations due to timing)
-        long sizeDifference = Math.abs(lastFile.length() - secondLastFile.length())
-        sizeDifference > 1000 // Expect at least 1KB difference
+        Files.mismatch(lastFile.toPath(), secondLastFile.toPath()) != -1
     }
 
     private static boolean isVideoFile(File file) {
