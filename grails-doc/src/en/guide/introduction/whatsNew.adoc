@@ -74,7 +74,7 @@ The `@Scaffold` annotation was added to customize scaffolding generation for con
 ==== Bootstrap 5.3.3 support
 
 Bootstrap 5.3.3 support.
-Saffolding and Fields tags now optionally support boostrap classes.
+Scaffolding and Fields tags now optionally support boostrap classes.
 
 ==== Prioritization of AutoConfiguration over bean overriding.
 
@@ -89,5 +89,8 @@ With the removal of Micronaut, and the fixes to the asset pipeline plugin, Grail
 
 The `g:form` tag now automatically provides csrf protection when Spring Security CSRF is enabled.
 
+==== Grails Banner versions and customization (Grails 7.1+)
 
-
+A Grails banner was introduced in Grails 7 that is displayed on application startup.
+From Grails 7.1 onwards, this banner now shows versions of foundational dependencies
+and can be xref:conf.adoc#customizing-the-banner[customized].
