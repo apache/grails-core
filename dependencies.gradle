@@ -72,7 +72,7 @@ ext {
             'bootstrap-icons.version'     : '1.13.1',
             'bootstrap.version'           : '5.3.7',
             'commons-codec.version'       : '1.18.0',
-            'geb-spock.version'           : '8.0.0',
+            'geb-spock.version'           : '8.0.1',
             'groovy.version'              : '4.0.29',
             'jackson.version'             : '2.19.1',
             'jquery.version'              : '3.7.1',
