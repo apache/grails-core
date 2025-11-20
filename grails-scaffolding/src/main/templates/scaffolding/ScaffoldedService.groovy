@@ -1,8 +1,7 @@
 <%=packageName ? "package ${packageName}" : ''%>
 
-import grails.artefact.service.support.Scaffold
+import grails.plugin.scaffolding.annotation.Scaffold
 
 @Scaffold(domain = ${className})
 class ${className}Service {
-
 }

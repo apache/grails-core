@@ -60,7 +60,7 @@ class CreateScaffoldServiceCommand implements GrailsApplicationCommand, CommandL
                 destination: file("grails-app/services/${model.packagePath}/${model.convention('Service')}.groovy"),
                 model: model,
                 overwrite: overwrite)
-        verbose('Scaffold service created for class domain-class')
+        verbose('Scaffold service created for domain class')
 
         return SUCCESS
     }

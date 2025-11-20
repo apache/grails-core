@@ -23,23 +23,22 @@ description("Creates a scaffolded controller") {
     argument name:'Controller Name', description:"The name of controller", required:true
     flag name:'force', description:"Whether to overwrite existing files"
     flag name:'namespace', description:"The namespace for the controller"
+    flag name:'service', description:"Use RestfulServiceController instead of RestfulController as a base class"
  }
 
 def modelInstance = model(args[0])
 def overwrite = flag('force') ? true : false
 def namespace = flag('namespace')
+def useService = flag('service') ? true : false
 
 def templateModel = modelInstance.asMap()
-templateModel.put('useService', false)  // Default to false for direct domain scaffolding
+templateModel.put('useService', useService)
+templateModel.put('namespace', namespace ?: '')
 
 def destinationPath = "grails-app/controllers/${modelInstance.packagePath}"
 
 if (namespace) {
-    templateModel.put('namespace', namespace)
-    // Append namespace to the destination path
     destinationPath = "${destinationPath}/${namespace}"
-} else {
-    templateModel.put('namespace', null)
 }
 
 render 	 template: template('scaffolding/ScaffoldedController.groovy'),

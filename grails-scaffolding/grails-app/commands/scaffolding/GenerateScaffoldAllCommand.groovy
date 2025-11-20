@@ -57,7 +57,6 @@ class GenerateScaffoldAllCommand implements GrailsApplicationCommand, CommandLin
         boolean overwrite = isFlagPresent('force')
         final Model model = model(sourceClass)
 
-        // Get namespace if provided
         String namespace = flag('namespace')
 
         // Generate scaffolded service
@@ -65,27 +64,24 @@ class GenerateScaffoldAllCommand implements GrailsApplicationCommand, CommandLin
                 destination: file("grails-app/services/${model.packagePath}/${model.convention('Service')}.groovy"),
                 model: model,
                 overwrite: overwrite)
-        verbose('Scaffold service created for domain-class')
+        verbose('Scaffold service created for domain class')
 
         // Generate scaffolded controller with service reference
         Map<String, Object> templateModel = model.asMap()
         templateModel.put('useService', true)
+        templateModel.put('namespace', namespace ?: '')
 
         String controllerDestinationPath = "grails-app/controllers/${model.packagePath}"
 
         if (namespace) {
-            templateModel.put('namespace', namespace)
-            // Append namespace to the destination path
             controllerDestinationPath = "${controllerDestinationPath}/${namespace}"
-        } else {
-            templateModel.put('namespace', null)
         }
 
         render(template: template('scaffolding/ScaffoldedController.groovy'),
                 destination: file("${controllerDestinationPath}/${model.convention('Controller')}.groovy"),
                 model: templateModel,
                 overwrite: overwrite)
-        verbose('Scaffold controller created for domain-class with service reference')
+        verbose('Scaffold controller created for domain class with service reference')
 
         return SUCCESS
     }

@@ -1,18 +1,11 @@
-<% if (namespace) { %>
-<%=packageName ? "package ${packageName}.${namespace}" : "package ${namespace}"%>
-<% } else { %>
-<%=packageName ? "package ${packageName}" : ''%>
-<% } %>
+<% if (namespace) { %><%=packageName ? "package ${packageName}.${namespace}" : "package ${namespace}"%>
 
-import grails.artefact.controller.support.Scaffold
+import ${packageName}.${className}<% } else { %><%=packageName ? "package ${packageName}" : ''%><% } %>
 
-<% if (useService) { %>
-@Scaffold(${className}Service<${className}>)
-<% } else { %>
-@Scaffold(domain = ${className})
-<% } %>
-class ${className}Controller {
-<% if (namespace) { %>
+import grails.plugin.scaffolding.annotation.Scaffold<% if (useService) { %>
+import grails.plugin.scaffolding.RestfulServiceController<% } %>
+
+<% if (useService) { %>@Scaffold(RestfulServiceController<${className}>)<% } else { %>@Scaffold(domain = ${className})<% } %>
+class ${className}Controller {<% if (namespace) { %>
     static namespace = '${namespace}'
-<% } %>
-}
+<% } %>}

@@ -38,15 +38,12 @@ render 	 template: template('scaffolding/ScaffoldedService.groovy'),
 // Generate scaffolded controller with service reference
 def templateModel = modelInstance.asMap()
 templateModel.put('useService', true)
+templateModel.put('namespace', namespace ?: '')
 
 def controllerDestinationPath = "grails-app/controllers/${modelInstance.packagePath}"
 
 if (namespace) {
-    templateModel.put('namespace', namespace)
-    // Append namespace to the destination path
     controllerDestinationPath = "${controllerDestinationPath}/${namespace}"
-} else {
-    templateModel.put('namespace', null)
 }
 
 render 	 template: template('scaffolding/ScaffoldedController.groovy'),
