@@ -29,16 +29,16 @@ import grails.plugin.scaffolding.SkipBootstrap
 import org.grails.io.support.Resource
 
 /**
- * Creates a scaffolded controller.
- * Usage: <code>./gradlew runCommand "-Pargs=create-scaffold-controller [DOMAIN_CLASS_NAME]"</code>
+ * Generates a scaffolded service and controller.
+ * Usage: <code>./gradlew runCommand "-Pargs=generate-scaffold-all [DOMAIN_CLASS_NAME]"</code>
  *
- * @author Puneet Behl
- * @since 5.0.0
+ * @author Scott Murphy Heiberg
+ * @since 7.1.0
  */
 @CompileStatic
-class CreateScaffoldControllerCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
+class GenerateScaffoldAllCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
 
-    String description = 'Creates a scaffolded controller'
+    String description = 'Generates a scaffolded service and controller'
 
     @Delegate
     ConsoleLogger consoleLogger = GrailsConsole.getInstance()
@@ -60,25 +60,32 @@ class CreateScaffoldControllerCommand implements GrailsApplicationCommand, Comma
         // Get namespace if provided
         String namespace = flag('namespace')
 
-        // Build template model and destination path
-        Map<String, Object> templateModel = model.asMap()
-        templateModel.put('useService', false)  // Default to false for direct domain scaffolding
+        // Generate scaffolded service
+        render(template: template('scaffolding/ScaffoldedService.groovy'),
+                destination: file("grails-app/services/${model.packagePath}/${model.convention('Service')}.groovy"),
+                model: model,
+                overwrite: overwrite)
+        verbose('Scaffold service created for domain-class')
 
-        String destinationPath = "grails-app/controllers/${model.packagePath}"
+        // Generate scaffolded controller with service reference
+        Map<String, Object> templateModel = model.asMap()
+        templateModel.put('useService', true)
+
+        String controllerDestinationPath = "grails-app/controllers/${model.packagePath}"
 
         if (namespace) {
             templateModel.put('namespace', namespace)
             // Append namespace to the destination path
-            destinationPath = "${destinationPath}/${namespace}"
+            controllerDestinationPath = "${controllerDestinationPath}/${namespace}"
         } else {
             templateModel.put('namespace', null)
         }
 
         render(template: template('scaffolding/ScaffoldedController.groovy'),
-                destination: file("${destinationPath}/${model.convention('Controller')}.groovy"),
+                destination: file("${controllerDestinationPath}/${model.convention('Controller')}.groovy"),
                 model: templateModel,
                 overwrite: overwrite)
-        verbose('Scaffold controller created for class domain-class')
+        verbose('Scaffold controller created for domain-class with service reference')
 
         return SUCCESS
     }

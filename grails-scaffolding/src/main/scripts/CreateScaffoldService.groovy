@@ -17,34 +17,19 @@
  *  under the License.
  */
 
-description("Creates a scaffolded controller") {
-  	usage 'create-controller [controller name]'
+description("Creates a scaffolded service") {
+  	usage 'create-service [service name]'
     completer org.grails.cli.interactive.completers.DomainClassCompleter
-    argument name:'Controller Name', description:"The name of controller", required:true
+    argument name:'Service Name', description:"The name of service", required:true
     flag name:'force', description:"Whether to overwrite existing files"
-    flag name:'namespace', description:"The namespace for the controller"
  }
 
 def modelInstance = model(args[0])
 def overwrite = flag('force') ? true : false
-def namespace = flag('namespace')
 
-def templateModel = modelInstance.asMap()
-templateModel.put('useService', false)  // Default to false for direct domain scaffolding
-
-def destinationPath = "grails-app/controllers/${modelInstance.packagePath}"
-
-if (namespace) {
-    templateModel.put('namespace', namespace)
-    // Append namespace to the destination path
-    destinationPath = "${destinationPath}/${namespace}"
-} else {
-    templateModel.put('namespace', null)
-}
-
-render 	 template: template('scaffolding/ScaffoldedController.groovy'),
-	     destination: file("${destinationPath}/${modelInstance.convention("Controller")}.groovy"),
-	     model: templateModel,
+render 	 template: template('scaffolding/ScaffoldedService.groovy'),
+	     destination: file("grails-app/services/${modelInstance.packagePath}/${modelInstance.convention("Service")}.groovy"),
+	     model: modelInstance,
 	     overwrite: overwrite
 
 return true
