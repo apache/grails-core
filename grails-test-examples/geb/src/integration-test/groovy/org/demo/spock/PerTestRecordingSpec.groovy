@@ -44,7 +44,10 @@ class PerTestRecordingSpec extends ContainerGebSpec {
     void '(setup) running a second test to create another recording'() {
         when: 'visiting another page than the previous test'
         to(UploadPage)
-        
+
+        and: 'pausing so we can see the page change in the video'
+        Thread.sleep(500)
+
         then: 'the page loads correctly'
         title == 'Upload Test'
     }
@@ -77,13 +80,14 @@ class PerTestRecordingSpec extends ContainerGebSpec {
         recordingDir != null
 
         when: 'getting all video recording files (mp4 or flv) from the recording directory'
-        def recordingFiles = recordingDir?.listFiles({ File file ->
-            isVideoFile(file) && file.name.contains(this.class.simpleName)
-        } as FileFilter)
+        def minFileCount = 2 // At least 2 files for the first two test methods
+        def recordingFiles = waitForRecordingFiles(recordingDir, this.class.simpleName, minFileCount)
+        def names = recordingFiles*.name.join('\n')
 
         then: 'recording files should exist for each test method'
-        recordingFiles != null
-        recordingFiles.length >= 2 // At least 2 files for the first two test methods
+        recordingFiles.length >= minFileCount
+        names.contains('setup_running_a_test_to_create_a_recording')
+        names.contains('setup_running_a_second_test_to_create_another')
 
         and: 'the recording files should have different content'
         // Sort by last modified time to get the most recent files
@@ -95,5 +99,27 @@ class PerTestRecordingSpec extends ContainerGebSpec {
 
     private static boolean isVideoFile(File file) {
         file.isFile() && (file.name.endsWith('.mp4') || file.name.endsWith('.flv'))
+    }
+
+    private static File[] waitForRecordingFiles(
+            File recordingDir,
+            String testClassName,
+            int minFileCount = 2,
+            long timeoutMillis = 10_000L,
+            long pollIntervalMillis = 500L
+    ) {
+        long deadline = System.currentTimeMillis() + timeoutMillis
+        File[] recordingFiles = []
+        while (System.currentTimeMillis() < deadline) {
+            recordingFiles = recordingDir.listFiles({ file ->
+                isVideoFile(file) && file.name.contains(testClassName)
+            } as FileFilter) ?: [] as File[]
+
+            if (recordingFiles.length >= minFileCount) {
+                break
+            }
+            sleep(pollIntervalMillis)
+        }
+        return recordingFiles
     }
 }
