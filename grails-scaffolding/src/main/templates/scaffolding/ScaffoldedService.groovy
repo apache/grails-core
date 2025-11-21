@@ -2,6 +2,6 @@
 
 import grails.plugin.scaffolding.annotation.Scaffold
 
-@Scaffold(domain = ${className})
+@Scaffold(${className})
 class ${className}Service {
 }
