@@ -39,7 +39,7 @@ import org.grails.io.support.GrailsResourceUtils
 import org.grails.plugins.web.rest.transform.ResourceTransform
 
 /**
- * Transformation that turns a service into a scaffolding service at compile time if '@ScaffoldService'
+ * Transformation that turns a service into a scaffolding service at compile time if '@Scaffold'
  * is specified
  *
  * @author Scott Murphy Heiberg

@@ -38,9 +38,10 @@ import org.grails.plugins.web.rest.transform.ResourceTransform
 
 /**
  * Transformation that turns a controller into a scaffolding controller at compile time if 'static scaffold = Foo'
- * is specified
+ * or '@Scaffold' is specified
  *
  * @author Graeme Rocher
+ * @author Scott Murphy Heiberg
  * @since 3.1
  */
 @AstTransformer
