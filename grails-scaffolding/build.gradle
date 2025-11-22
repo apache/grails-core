@@ -18,7 +18,6 @@
  */
 
 plugins {
-    id 'java-library'
     id 'project-report'
     id 'org.apache.grails.gradle.grails-plugin'
     id 'org.apache.grails.gradle.grails-gsp'
@@ -41,6 +40,13 @@ dependencies {
     api project(':grails-rest-transforms')
 
     compileOnly 'jline:jline'
+
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation project(':grails-web-gsp')
+    testImplementation project(':grails-core')
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'org.springframework:spring-web'
+    testImplementation 'net.bytebuddy:byte-buddy'
 }
 
 apply {

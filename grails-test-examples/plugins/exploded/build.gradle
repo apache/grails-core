@@ -20,7 +20,6 @@
 version = '0.1-SNAPSHOT'
 group = 'com.example.grails.plugins'
 
-apply plugin: 'java-library'
 apply plugin: 'org.apache.grails.gradle.grails-plugin'
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
 apply plugin: 'org.apache.grails.gradle.grails-exploded'

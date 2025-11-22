@@ -17,7 +17,6 @@
  *  under the License.
  */
 plugins {
-    id 'java-library'
     id 'java-test-fixtures'
     id 'org.apache.grails.gradle.grails-plugin'
     id 'org.apache.grails.buildsrc.publish'

@@ -18,13 +18,11 @@
  */
 
 plugins {
-    id 'java-library'
+    id 'org.apache.grails.gradle.grails-plugin'
 }
 
 version = projectVersion
 group = 'org.apache.grails'
-
-apply plugin: 'org.apache.grails.gradle.grails-plugin'
 
 ext {
     pomTitle = 'GSP Spring Boot Plugin'

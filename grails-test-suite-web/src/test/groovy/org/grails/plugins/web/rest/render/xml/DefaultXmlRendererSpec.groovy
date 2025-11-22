@@ -18,7 +18,6 @@
  */
 package org.grails.plugins.web.rest.render.xml
 
-import groovy.transform.CompileStatic
 import groovy.xml.XmlSlurper
 import grails.converters.XML
 import grails.core.DefaultGrailsApplication
@@ -36,7 +35,6 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
-import spock.lang.PendingFeature
 import spock.lang.Specification
 
 /**
@@ -56,7 +54,6 @@ class DefaultXmlRendererSpec extends Specification implements DomainUnitTest<Xml
         ConvertersConfigurationHolder.clear()
     }
 
-    @PendingFeature(reason = 'java.lang.IllegalAccessException: class org.grails.web.converters.marshaller.xml.GenericJavaBeanMarshaller cannot access a member of class org.grails.datastore.mapping.model.MappingFactory$1 with modifiers "public"')
     void 'Test that XML renderer writes XML to the response for a domain instance'() {
         when: 'A domain instance is rendered'
             def renderer = new DefaultXmlRenderer(XmlBook)

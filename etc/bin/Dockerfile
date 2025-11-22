@@ -16,10 +16,10 @@
 # for testing in a container that is similar to the grails github action linux build environment
 # run this from the root of the project
 # `docker build -t grails:testing -f etc/bin/Dockerfile . && docker run -it --rm -v $(pwd):/home/groovy/project grails:testing bash`
-FROM bellsoft/liberica-openjdk-debian:17.0.14
+FROM bellsoft/liberica-openjdk-debian:17.0.17
 
 USER root
-RUN apt-get update && apt-get install -y curl unzip coreutils libdigest-sha-perl gpg vim sudo psmisc locales groovy rsync
+RUN apt-get update && apt-get install -y curl unzip coreutils libdigest-sha-perl gpg vim sudo psmisc locales groovy rsync nano
 
 RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
     dpkg-reconfigure --frontend=noninteractive locales && \

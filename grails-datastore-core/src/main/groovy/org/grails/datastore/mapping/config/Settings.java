@@ -90,4 +90,6 @@ public interface Settings {
 
     String SETTING_AUTO_TIMESTAMP_INSERT_OVERWRITE = PREFIX + '.' + "events.autoTimestampInsertOverwrite";
 
+    String SETTING_AUTO_TIMESTAMP_CACHE_ANNOTATIONS = PREFIX + '.' + "autoTimestampCacheAnnotations";
+
 }

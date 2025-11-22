@@ -19,19 +19,20 @@
 #  under the License.
 #
 
-# ./releaseJarFiles.sh <staging repo description> <username> <password>
+# ./releaseJarFiles.sh <staging repo description> <username>
 
 set -euo pipefail
 
-if [[ $# -ne 3 ]]; then
-  echo "Usage: $0 <staging repo description> <username> <password>" >&2
+if [[ $# -ne 2 ]]; then
+  echo "Usage: $0 <staging repo description> <username>" >&2
   exit 1
 fi
 
 NEXUS_URL="https://repository.apache.org"
 STAGING_DESCRIPTION="$1"
 NEXUS_USER="$2"
-NEXUS_PASS="$3"
+read -r -s -p "Password: " NEXUS_PASS
+echo
 
 if [[ -z "${STAGING_DESCRIPTION}" ]]; then
   echo "ERROR: Staging Description must not be empty." >&2

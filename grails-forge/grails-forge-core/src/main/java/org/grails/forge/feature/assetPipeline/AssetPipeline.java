@@ -77,6 +77,11 @@ public class AssetPipeline implements DefaultFeature {
                 .runtimeOnly());
 
         generatorContext.addDependency(Dependency.builder()
+                .groupId("org.webjars")
+                .artifactId("webjars-locator-core")
+                .implementation());
+
+        generatorContext.addDependency(Dependency.builder()
                 .groupId("org.webjars.npm")
                 .artifactId("bootstrap")
                 .testAndDevelopmentOnly());

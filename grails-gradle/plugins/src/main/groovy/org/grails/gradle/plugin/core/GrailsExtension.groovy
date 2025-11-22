@@ -65,6 +65,22 @@ class GrailsExtension {
     boolean importJavaTime = false
 
     /**
+     * Whether grails annotation packages and common validation annotations should be default import packages.
+     * When enabled, automatically imports:
+     * - jakarta.validation.constraints.*
+     * - grails.gorm.annotation.* (if grails-datamapping-core is in classpath)
+     * - grails.plugin.scaffolding.annotation.* (if grails-scaffolding is in classpath)
+     */
+    boolean importGrailsCommonAnnotations = false
+
+    /**
+     * Custom star imports to add to Groovy compilation configuration.
+     * Users can add their own package imports that will be combined with
+     * imports added by importJavaTime and importGrailsCommonAnnotations flags.
+     */
+    List<String> starImports = []
+
+    /**
      * Whether the spring dependency management plugin should be applied by default
      */
     boolean springDependencyManagement = true

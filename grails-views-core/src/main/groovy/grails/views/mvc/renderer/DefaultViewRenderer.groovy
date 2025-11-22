@@ -64,7 +64,7 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
     }
 
     @Override
-    void render(T object, RenderContext context) {
+    void render(Object object, RenderContext context) {
         def arguments = context.arguments
         def ct = arguments?.contentType
 

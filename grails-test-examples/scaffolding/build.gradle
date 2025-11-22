@@ -49,6 +49,7 @@ dependencies {
     implementation "org.apache.grails:grails-scaffolding"
     implementation "org.apache.grails:grails-data-hibernate5"
     implementation "org.apache.grails:grails-gsp"
+    implementation 'org.webjars:webjars-locator-core'
     integrationTestImplementation testFixtures("org.apache.grails:grails-geb")
     profile "org.apache.grails.profiles:web"
     runtimeOnly "org.fusesource.jansi:jansi"

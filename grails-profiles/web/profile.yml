@@ -51,6 +51,8 @@ dependencies:
       coords: "org.apache.grails:grails-scaffolding"
     - scope: testImplementation
       coords: "org.apache.grails:grails-testing-support-web"
+    - scope: implementation
+      coords: "org.webjars:webjars-locator-core"
     - scope: testAndDevelopmentOnly
       coords: "org.webjars.npm:bootstrap"
     - scope: testAndDevelopmentOnly

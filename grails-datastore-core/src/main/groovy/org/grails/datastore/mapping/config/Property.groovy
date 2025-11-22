@@ -137,6 +137,11 @@ class Property implements Cloneable {
     private List<String> uniquenessGroup = new ArrayList<String>()
     private String propertyName
     private EnumType enumType
+    /**
+     * The audit metadata type for this property, cached to avoid repeated reflection calls.
+     * Indicates whether this property is annotated for auditing (timestamps or auditor tracking).
+     */
+    AuditMetadataType auditMetadataType
 
     protected void setUniquenessGroup(List<String> uniquenessGroup) {
         this.uniquenessGroup = uniquenessGroup
@@ -161,6 +166,7 @@ class Property implements Cloneable {
         if (inList != null) {
             cloned.inList = new ArrayList<>(inList)
         }
+        cloned.auditMetadataType = this.auditMetadataType
 
         return cloned
     }

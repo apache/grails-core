@@ -457,6 +457,7 @@ include(
         'grails-test-examples-plugins-loadafter',
         'grails-test-examples-plugins-issue11005',
         'grails-test-examples-issue-11767',
+        'grails-test-examples-issue-15228',
         'grails-test-examples-plugins-exploded',
         'grails-test-examples-plugins-issue-11767',
         'grails-test-examples-cache',
@@ -489,6 +490,7 @@ project(':grails-test-examples-plugins-loadsecond').projectDir = file('grails-te
 project(':grails-test-examples-plugins-loadafter').projectDir = file('grails-test-examples/plugins/loadafter')
 project(':grails-test-examples-plugins-issue11005').projectDir = file('grails-test-examples/plugins/issue11005')
 project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')
+project(':grails-test-examples-issue-15228').projectDir = file('grails-test-examples/issue-15228')
 project(':grails-test-examples-plugins-exploded').projectDir = file('grails-test-examples/plugins/exploded')
 project(':grails-test-examples-plugins-issue-11767').projectDir = file('grails-test-examples/plugins/issue-11767')
 project(':grails-test-examples-cache').projectDir = file('grails-test-examples/cache')

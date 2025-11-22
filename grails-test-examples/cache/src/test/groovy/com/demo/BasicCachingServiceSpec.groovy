@@ -17,6 +17,7 @@
  *  under the License.
  */
 
+// tag::basic_declaration[]
 package com.demo
 
 import grails.plugin.cache.CustomCacheKeyGenerator
@@ -78,3 +79,4 @@ class BasicCachingServiceSpec extends Specification implements ServiceUnitTest<B
         service.conditionalInvocationCounter == 3
     }
 }
+// end::basic_declaration[]

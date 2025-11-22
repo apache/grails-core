@@ -16,6 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+// tag::basic_declaration[]
 package grails.testing.spock
 
 import org.junit.jupiter.api.BeforeEach
@@ -82,3 +83,4 @@ class RunOnceSpec extends Specification {
         anotherOnceBeforeCounter == 1
     }
 }
+// end::basic_declaration[]

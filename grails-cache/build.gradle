@@ -18,17 +18,14 @@
  */
 
 plugins {
-    id 'groovy'
-    id 'java-library'
     id 'project-report'
+    id 'org.apache.grails.gradle.grails-plugin'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
 }
 
 version = projectVersion
 group = 'org.apache.grails'
-
-apply plugin: 'org.apache.grails.gradle.grails-plugin'
 
 ext {
     pomTitle = 'Grails Cache Plugin'

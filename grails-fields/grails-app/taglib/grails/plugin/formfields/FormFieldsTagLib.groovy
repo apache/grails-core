@@ -618,7 +618,8 @@ class FormFieldsTagLib {
             }
         } else {
             properties = list ? domainModelService.getListOutputProperties(domainClass) : domainModelService.getInputProperties(domainClass,
-                    exclusionType == ExclusionType.Input ? exclusionsInput : exclusionsDisplay)
+                    exclusionType == ExclusionType.Input ? exclusionsInput : exclusionsDisplay,
+                    exclusionType == ExclusionType.Input)
             // If 'except' is not set, but 'list' is, exclude 'id', 'dateCreated' and 'lastUpdated' by default
             List<String> blacklist = attrs.containsKey('except') ? getList(attrs.except) : (list ? exclusionsList : [])
 

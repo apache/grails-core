@@ -17,7 +17,6 @@
  *  under the License.
  */
 
-apply plugin: 'java-library'
 apply plugin: 'org.apache.grails.gradle.grails-plugin'
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
 

@@ -17,6 +17,7 @@
  *  under the License.
  */
 
+// tag::basic_declaration[]
 package demo
 
 class UrlMappings {
@@ -37,3 +38,4 @@ class UrlMappings {
         "404"(view:'/notFound')
     }
 }
+// end::basic_declaration[]

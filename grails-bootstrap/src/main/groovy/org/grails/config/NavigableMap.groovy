@@ -18,8 +18,6 @@
  */
 package org.grails.config
 
-import java.util.regex.Pattern
-
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
@@ -37,15 +35,6 @@ import org.slf4j.LoggerFactory
 class NavigableMap implements Map<String, Object>, Cloneable {
 
     private static final Logger LOG = LoggerFactory.getLogger(NavigableMap)
-
-    private static final Pattern SPLIT_PATTERN = ~/\./
-    private static final String SPRING_PROFILES = 'spring.profiles.active'
-    private static final String SPRING = 'spring'
-    private static final String CONFIG = 'config'
-    private static final String ACTIVATE = 'activate'
-    private static final String ON_PROFILE = 'on-profile'
-    private static final String PROFILES = 'profiles'
-    private static final String SUBSCRIPT_REGEX = /((.*)\[(\d+)\]).*/
 
     final NavigableMap rootConfig
     final List<String> path
@@ -159,7 +148,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                            Map sourceMap,
                            boolean parseFlatKeys) {
 
-        if (springProfileExclude(sourceMap, path)) {
+        if (isSourceMapExcludedBySpringProfile(sourceMap, path)) {
             return
         }
 
@@ -184,51 +173,41 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         }
     }
 
-    private static boolean springProfileExclude(Map sourceMap, String path) {
+    private static Object resolveConfigMapValue(Map map, Object... keys) {
+        keys.inject(map) { acc, key -> acc instanceof Map ? acc[key] : null }
+    }
 
-        // Is there an active Spring profile?
-        def activeSpringProfile = System.getProperty(SPRING_PROFILES)
+    private static boolean isSourceMapExcludedBySpringProfile(Map configSource, String path) {
 
-        // Is there a 'spring.config.activate.on-profile' property defined in the source map?
-        def sourceMapProfile1 = ((Map) ((Map)((Map)sourceMap?.get(SPRING))?.get(CONFIG))?.get(ACTIVATE))?.get(ON_PROFILE)
-        if (!sourceMapProfile1 && path == "$SPRING.$CONFIG.$ACTIVATE") {
-            sourceMapProfile1 = sourceMap?.get(ON_PROFILE)
-        }
-        if (!sourceMapProfile1) {
-            sourceMapProfile1 = sourceMap.get("$SPRING.$CONFIG.$ACTIVATE.$ON_PROFILE" as String)
-        }
-        if (sourceMapProfile1 && !activeSpringProfile) {
-            // There is a spring.config.activate.on-profile property defined in this sourceMap, but there is no active spring profile
-            return true
-        }
-        if (sourceMapProfile1 == activeSpringProfile) {
-            // The active spring profile matches the spring.config.activate.on-profile property in this sourceMap
-            return false
-        }
+        // get the active spring profile: treat empty string as null
+        def active = System.getProperty('spring.profiles.active')?.trim() ?: null
 
-        // Is there a 'spring.profiles' property defined in the source map? (Old way of Spring profiles activation)
-        def sourceMapProfile2 = ((Map) sourceMap?.get(SPRING))?.get(PROFILES)
-        if (!sourceMapProfile2 && path == SPRING) {
-            sourceMapProfile2 = sourceMap?.get(PROFILES)
-        }
-        if (!sourceMapProfile2) {
-            sourceMapProfile2 = sourceMap.get("$SPRING.$PROFILES" as String)
-        }
-        if (sourceMapProfile1 && !activeSpringProfile) {
-            // There is a spring.config.activate.on-profile property defined in this sourceMap, but there is no active spring profile
-            return true
-        }
-        if (sourceMapProfile2 == activeSpringProfile) {
-            // The active spring profile matches the spring.profiles property in this sourceMap
-            return false
-        }
+        // lookup 'spring.config.activate.on-profile' in this config source
+        def onProfile =
+                resolveConfigMapValue(configSource, 'spring', 'config', 'activate', 'on-profile') ?:
+                        (path == 'spring.config.activate' ? configSource['on-profile'] : null) ?:
+                                configSource['spring.config.activate.on-profile']
 
-        if (activeSpringProfile && !sourceMapProfile1 && !sourceMapProfile2) {
-            // There is no spring profile defined in this sourceMap, it should always be included
-            return false
-        }
+        // no active profile is set but 'spring.config.activate.on-profile' is set in this config source -> exclude it
+        if (!active && onProfile) return true
+        // active profile is set and matches 'spring.config.activate.on-profile' in this config source -> include it
+        if (active && onProfile == active) return false
 
-        // We can skip this sourceMap as it defines a spring profile that is not active
+        // lookup (legacy) 'spring.profiles' in this config source
+        def profiles =
+                resolveConfigMapValue(configSource, 'spring', 'profiles') ?:
+                        (path == 'spring' ? configSource['profiles'] : null) ?:
+                                configSource['spring.profiles']
+
+        // no active profile is set but 'spring.profiles' is set in this config source -> exclude it
+        if (!active && profiles) return true
+        // active profile is set and matches 'spring.profiles' in this config source -> include it
+        if (active && profiles == active) return false
+
+        // active profile is not required for this this source map -> include it
+        if (!onProfile && !profiles) return false
+
+        // a profile constraint exists but doesn't match the active profile -> exclude
         return true
     }
 

@@ -133,8 +133,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
         registerFindMainClassTask(project)
 
-        configureGrailsBuildSettings(project)
-
         String grailsVersion = resolveGrailsVersion(project)
 
         enableNative2Ascii(project, grailsVersion)
@@ -226,17 +224,71 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     protected Closure<String> getGroovyCompilerScript(GroovyCompile compile, Project project) {
         GrailsExtension grails = project.extensions.findByType(GrailsExtension)
-        if (!grails.importJavaTime) {
+
+        // Start with user-configured imports
+        Set<String> starImports = new LinkedHashSet<>(grails.starImports)
+
+        // Add java.time if enabled
+        if (grails.importJavaTime) {
+            starImports.add('java.time')
+        }
+
+        // Add Grails annotation packages and common validation annotations if enabled
+        if (grails.importGrailsCommonAnnotations) {
+            // Always add jakarta.validation.constraints
+            starImports.add('jakarta.validation.constraints')
+
+            // Check for grails-datamapping-core (grails.gorm.annotation.*)
+            if (hasDependency(project, 'compileClasspath', 'org.apache.grails.data', 'grails-datamapping-core')) {
+                starImports.add('grails.gorm.annotation')
+            }
+
+            // Check for grails-scaffolding (grails.plugin.scaffolding.annotation.*)
+            if (hasDependency(project, 'compileClasspath', 'org.apache.grails', 'grails-scaffolding')) {
+                starImports.add('grails.plugin.scaffolding.annotation')
+            }
+        }
+
+        // Return null if no imports are needed
+        if (starImports.isEmpty()) {
             return null
         }
 
+        // Build the import statements
         return { ->
-            '''withConfig(configuration) {
+            def importStatements = starImports.collect { pkg -> "                        star '$pkg'" }.join('\n')
+            """withConfig(configuration) {
                     imports {
-                        star 'java.time'
+${importStatements}
                     }
                 }
-            '''
+            """
+        }
+    }
+
+    /**
+     * Check if a dependency is present in the configuration hierarchy.
+     * This checks all dependencies including those from parent configurations via extendsFrom.
+     *
+     * @param project The Gradle project
+     * @param configurationName The configuration to check (e.g., 'compileClasspath')
+     * @param group The dependency group (e.g., 'org.apache.grails.data')
+     * @param name The dependency name (e.g., 'grails-datamapping-core')
+     * @return true if the dependency is present in the configuration hierarchy
+     */
+    protected boolean hasDependency(Project project, String configurationName, String group, String name) {
+        try {
+            def configuration = project.configurations.findByName(configurationName)
+            if (configuration == null) {
+                return false
+            }
+
+            return configuration.allDependencies.any { d ->
+                d.group == group && d.name == name
+            }
+        } catch (Exception e) {
+            project.logger.debug("Failed to check for dependency ${group}:${name} in ${configurationName}: ${e.message}")
+            return false
         }
     }
 
@@ -376,7 +428,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
                     String dependencyName = details.requested.name
                     String group = details.requested.group
-                    if (group == 'io.micronaut' && dependencyName.startsWith('micronaut-platform')) {
+                    if (group == 'io.micronaut.platform' && dependencyName.startsWith('micronaut-platform')) {
                         project.logger.info('Forcing Micronaut Platform version to {}', micronautPlatformVersion)
                         details.useVersion(micronautPlatformVersion)
                     }
@@ -422,12 +474,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
         if (project.extensions.findByName('grails') == null) {
             project.extensions.add('grails', new GrailsExtension(project))
         }
-    }
-
-    @CompileStatic
-    protected String configureGrailsBuildSettings(Project project) {
-        System.setProperty(BuildSettings.APP_BASE_DIR, project.projectDir.absolutePath)
-        System.setProperty(BuildSettings.PROJECT_TARGET_DIR, project.layout.buildDirectory.get().asFile.name)
     }
 
     @CompileDynamic
@@ -543,6 +589,8 @@ class GrailsGradlePlugin extends GroovyPlugin {
             task.systemProperty(Metadata.APPLICATION_NAME, project.name)
             task.systemProperty(Metadata.APPLICATION_VERSION, (project.version instanceof Serializable ? project.version : project.version.toString()))
             task.systemProperty(Metadata.APPLICATION_GRAILS_VERSION, grailsVersion)
+            task.systemProperty(BuildSettings.APP_BASE_DIR, project.projectDir.absolutePath)
+            task.systemProperty(BuildSettings.PROJECT_TARGET_DIR, project.layout.buildDirectory.get().asFile.name)
             task.systemProperty(Environment.KEY, defaultGrailsEnv)
             task.systemProperty(Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: '')
             if (task.minHeapSize == null) {

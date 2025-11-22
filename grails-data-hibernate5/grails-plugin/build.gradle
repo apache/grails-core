@@ -18,7 +18,6 @@
  */
 
 plugins {
-    id 'java-library'
     id 'org.apache.grails.gradle.grails-plugin'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'

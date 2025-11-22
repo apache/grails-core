@@ -33,6 +33,7 @@ dependencies {
     implementation "org.apache.grails:grails-data-hibernate5:$hibernateDatastoreVersion"
     implementation "org.hibernate:hibernate-ehcache:$hibernateEhcacheVersion"
 
+    implementation 'org.webjars:webjars-locator-core'
     testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 

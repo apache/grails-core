@@ -24,9 +24,12 @@ import java.lang.reflect.Method
 import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 
 import grails.util.GrailsClassUtils
 import org.grails.datastore.mapping.config.Property
+import org.grails.datastore.mapping.config.Settings
+import org.grails.datastore.mapping.model.AuditMetadataUtils
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Embedded
@@ -43,6 +46,9 @@ class DomainModelServiceImpl implements DomainModelService {
 
     @Autowired
     DomainPropertyFactory domainPropertyFactory
+
+    @Value('${' + Settings.SETTING_AUTO_TIMESTAMP_CACHE_ANNOTATIONS + ':true}')
+    boolean cacheAutoTimestampAnnotations
 
     private static Method derivedMethod
 
@@ -107,13 +113,85 @@ class DomainModelServiceImpl implements DomainModelService {
      * <li>version
      * <li>dateCreated
      * <li>lastUpdated
+     * <li>Any properties with @CreatedDate, @LastModifiedDate, or @AutoTimestamp annotations (if excludeAnnotatedTimestamps is true)
+     * </ul><p>
+     *
+     * @see {@link DomainModelServiceImpl#getProperties}
+     * @param domainClass The persistent entity
+     * @param blackList Custom blacklist (optional)
+     * @param excludeAnnotatedTimestamps If true, exclude @CreatedDate/@LastModifiedDate/@AutoTimestamp properties
+     */
+    @Override
+    List<DomainProperty> getInputProperties(PersistentEntity domainClass, List<String> blackList, boolean excludeAnnotatedTimestamps) {
+        getInputPropertiesInternal(domainClass, new ArrayList<>(blackList ?: ['version', 'dateCreated', 'lastUpdated']), excludeAnnotatedTimestamps)
+    }
+
+    /**
+     * <p>Blacklist:<ul>
+     * <li>version
+     * <li>dateCreated
+     * <li>lastUpdated
+     * <li>Any properties with @CreatedDate, @LastModifiedDate, or @AutoTimestamp annotations
      * </ul><p>
      *
      * @see {@link DomainModelServiceImpl#getProperties}
      * @param domainClass The persistent entity
      */
-    List<DomainProperty> getInputProperties(PersistentEntity domainClass, List<String> blackList = null) {
-        getProperties(domainClass, new ArrayList<>(blackList ?: ['version', 'dateCreated', 'lastUpdated']))
+    @Override
+    List<DomainProperty> getInputProperties(PersistentEntity domainClass, List blackList = null) {
+        getInputProperties(domainClass, blackList, true)
+    }
+
+    /**
+     * Internal method that checks for auto-timestamp annotations and adds them to the blacklist
+     */
+    protected List<DomainProperty> getInputPropertiesInternal(PersistentEntity domainClass, List<String> blacklist, boolean excludeAnnotatedTimestamps) {
+        List<DomainProperty> properties = domainClass.persistentProperties.collect {
+            domainPropertyFactory.build(it)
+        }
+
+        // Add properties with audit metadata annotations to blacklist only if excludeAnnotatedTimestamps is true
+        if (excludeAnnotatedTimestamps) {
+            properties.each { DomainProperty property ->
+                if (AuditMetadataUtils.hasAuditMetadataAnnotation(property.persistentProperty, cacheAutoTimestampAnnotations)) {
+                    if (!blacklist.contains(property.name)) {
+                        blacklist.add(property.name)
+                    }
+                }
+            }
+        }
+
+        Object scaffoldProp = GrailsClassUtils.getStaticPropertyValue(domainClass.javaClass, 'scaffold')
+        if (scaffoldProp instanceof Map) {
+            Map scaffold = (Map) scaffoldProp
+            if (scaffold.containsKey('exclude')) {
+                if (scaffold.exclude instanceof Collection) {
+                    blacklist.addAll((Collection) scaffold.exclude)
+                } else if (scaffold.exclude instanceof String) {
+                    blacklist.add((String) scaffold.exclude)
+                }
+            }
+        }
+
+        properties.removeAll {
+            if (it.name in blacklist) {
+                return true
+            }
+            Constrained constrained = it.constrained
+            if (constrained && !constrained.display) {
+                return true
+            }
+            if (derivedMethod != null) {
+                Property property = it.mapping.mappedForm
+                if (derivedMethod.invoke(property, (Object[]) null)) {
+                    return true
+                }
+            }
+
+            false
+        }
+        properties.sort()
+        properties
     }
 
     /**

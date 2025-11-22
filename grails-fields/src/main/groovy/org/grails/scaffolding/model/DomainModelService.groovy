@@ -36,6 +36,7 @@ interface DomainModelService {
      */
     List<DomainProperty> getInputProperties(PersistentEntity domainClass)
     List<DomainProperty> getInputProperties(PersistentEntity domainClass, List blackList)
+    List<DomainProperty> getInputProperties(PersistentEntity domainClass, List<String> blackList, boolean excludeAnnotatedTimestamps)
 
     /**
      * The list of {@link DomainProperty} instances that are to be visible

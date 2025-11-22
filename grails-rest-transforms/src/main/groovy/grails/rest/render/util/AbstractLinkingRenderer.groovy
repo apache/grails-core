@@ -107,7 +107,7 @@ abstract class AbstractLinkingRenderer<T> extends AbstractIncludeExcludeRenderer
     }
 
     @Override
-    void render(T object, RenderContext renderContext) {
+    void render(Object object, RenderContext renderContext) {
         def mimeType = renderContext.acceptMimeType ?: getMimeTypes()[0]
         def contentType = GrailsWebUtil.getContentType(mimeType.name, encoding)
         renderContext.setContentType(contentType)
@@ -123,7 +123,7 @@ abstract class AbstractLinkingRenderer<T> extends AbstractIncludeExcludeRenderer
         }
     }
 
-    abstract void renderInternal(T object, RenderContext context)
+    abstract void renderInternal(Object object, RenderContext context)
 
     protected boolean isDomainResource(Class clazz) {
         if (mappingContext != null) {

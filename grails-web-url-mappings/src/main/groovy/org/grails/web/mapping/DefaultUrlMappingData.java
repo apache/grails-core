@@ -46,6 +46,7 @@ public class DefaultUrlMappingData implements UrlMappingData {
 
     private List<Boolean> optionalTokens = new ArrayList<>();
     private boolean hasOptionalExtension;
+    private boolean hasGreedyExtensionParam;
 
     public DefaultUrlMappingData(String urlPattern) {
         Assert.hasLength(urlPattern, "Argument [urlPattern] cannot be null or blank");
@@ -63,6 +64,11 @@ public class DefaultUrlMappingData implements UrlMappingData {
     @Override
     public boolean hasOptionalExtension() {
         return hasOptionalExtension;
+    }
+
+    @Override
+    public boolean hasGreedyExtensionParam() {
+        return hasGreedyExtensionParam;
     }
 
     private String[] tokenizeUrlPattern(String urlPattern) {
@@ -93,7 +99,23 @@ public class DefaultUrlMappingData implements UrlMappingData {
             if (hasOptionalExtension) {
                 int i = lastToken.indexOf(optionalExtensionPattern);
                 optionalExtension = lastToken.substring(i, lastToken.length());
-                tokens[tokens.length - 1] = lastToken.substring(0, i);
+                String beforeExtension = lastToken.substring(0, i);
+
+                // Check if the parameter before the extension ends with + (greedy marker)
+                // Can be either (*)+ for required greedy or (*)+? for optional greedy
+                if (beforeExtension.endsWith("+") || beforeExtension.endsWith("+?")) {
+                    hasGreedyExtensionParam = true;
+                    // Remove the + (keep ? if it follows)
+                    if (beforeExtension.endsWith("+?")) {
+                        // (*)+? -> (*)?  (optional greedy)
+                        beforeExtension = beforeExtension.substring(0, beforeExtension.length() - 2) + "?";
+                    } else {
+                        // (*)+ -> (*)  (required greedy)
+                        beforeExtension = beforeExtension.substring(0, beforeExtension.length() - 1);
+                    }
+                }
+
+                tokens[tokens.length - 1] = beforeExtension;
             }
 
         }

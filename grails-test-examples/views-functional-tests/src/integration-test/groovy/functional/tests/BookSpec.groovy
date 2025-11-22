@@ -40,7 +40,7 @@ class BookSpec extends HttpClientSpec {
     def setupSpec() {
         objectMapper = new ObjectMapper()
     }
-
+    
     @RunOnce
     @BeforeEach
     void init() {
@@ -56,22 +56,17 @@ class BookSpec extends HttpClientSpec {
         HttpClientResponseException e = thrown()
         e.response.status == HttpStatus.UNPROCESSABLE_ENTITY
         e.response.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
-        // This has changed somewhere along the way
-        // e.response.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/vnd.error;charset=UTF-8'
-        // to ->
-        e.response.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'
-        objectMapper.readTree(e.response.body().toString()) == objectMapper.readTree('''
+        e.response.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/vnd.error;charset=UTF-8'
+        objectMapper.readTree(e.response.body().toString()) == objectMapper.readTree("""
             {
-                "errors": [
-                    {
-                        "object": "functional.tests.Book",
-                        "field": "title",
-                        "rejected-value": null,
-                        "message": "Property [title] of class [class functional.tests.Book] cannot be null"
-                    }
-                ]
-            }
-        ''')
+              "message": "Property [title] of class [class functional.tests.Book] cannot be null",
+              "path": "/book/index",
+              "_links": {
+                "self": {
+                  "href": "$baseUrl/book/index"
+                }
+              }
+            }""")
     }
 
     void 'Test REST view rendering'() {

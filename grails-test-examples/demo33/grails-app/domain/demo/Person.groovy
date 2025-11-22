@@ -16,10 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
+// tag::basic_declaration[]
 package demo
 
 class Person {
     String firstName
     String lastName
 }
+// end::basic_declaration[]

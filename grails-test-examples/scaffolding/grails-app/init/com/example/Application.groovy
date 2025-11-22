@@ -22,10 +22,17 @@ import grails.boot.GrailsApp
 import grails.boot.config.GrailsAutoConfiguration
 
 import groovy.transform.CompileStatic
+import org.grails.datastore.gorm.timestamp.AuditorAware
+import org.springframework.context.annotation.Bean
 
 @CompileStatic
 class Application extends GrailsAutoConfiguration {
     static void main(String[] args) {
         GrailsApp.run(Application, args)
+    }
+
+    @Bean
+    AuditorAware<String> auditorAware() {
+        return new SpringSecurityAuditorAware()
     }
 }

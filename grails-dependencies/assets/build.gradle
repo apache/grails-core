@@ -36,6 +36,7 @@ def configurations = [
                 'org.webjars.npm:bootstrap',
                 'org.webjars.npm:bootstrap-icons',
                 'org.webjars.npm:jquery',
+                'org.webjars:webjars-locator-core',
         ]
 ]
 

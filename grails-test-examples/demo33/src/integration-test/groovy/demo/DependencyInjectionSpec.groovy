@@ -17,6 +17,7 @@
  *  under the License.
  */
 
+// tag::basic_declaration[]
 package demo
 
 import grails.testing.mixin.integration.Integration
@@ -36,3 +37,4 @@ class DependencyInjectionSpec extends Specification {
         helperService != null
     }
 }
+// end::basic_declaration[]

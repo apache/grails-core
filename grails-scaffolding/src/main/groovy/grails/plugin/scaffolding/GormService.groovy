@@ -26,6 +26,7 @@ import grails.gorm.api.GormAllOperations
 import grails.gorm.transactions.ReadOnly
 import grails.gorm.transactions.Transactional
 import grails.util.GrailsNameUtils
+import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.GormEntityApi
 
@@ -34,28 +35,30 @@ import org.grails.datastore.gorm.GormEntityApi
 @CompileStatic
 class GormService<T extends GormEntity<T>> {
 
-    GormAllOperations<T> resource
+    @Lazy
+    GormAllOperations<T> gormStaticApi = GormEnhancer.findStaticApi(resource) as GormAllOperations<T>
+    Class<T> resource
     String resourceName
     String resourceClassName
     boolean readOnly
 
     GormService(Class<T> resource, boolean readOnly) {
-        this.resource = resource.getDeclaredConstructor().newInstance() as GormAllOperations<T>
+        this.resource = resource
         this.readOnly = readOnly
         resourceClassName = resource.simpleName
         resourceName = GrailsNameUtils.getPropertyName(resource)
     }
 
     T get(Serializable id) {
-        resource.get(id)
+        gormStaticApi.get(id)
     }
 
     List<T> list(Map args) {
-        resource.list(args)
+        gormStaticApi.list(args)
     }
 
     Long count(Map args) {
-        resource.count()
+        gormStaticApi.count()
     }
 
     @Transactional
