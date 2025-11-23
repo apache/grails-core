@@ -152,7 +152,7 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
                     if (!res?.exists()) {
                         res = resolveResource(controllerClass.clazz, shortViewName)
                     }
-                    if (res?.exists()) {
+                    if (res.exists()) {
                         def model = model((Class) scaffoldValue)
                         def viewGenerator = new GStringTemplateEngine()
                         Template t = viewGenerator.createTemplate(res.URL)
@@ -168,6 +168,8 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
                         view.setTemplateEngine(templateEngine)
                         view.afterPropertiesSet()
                         generatedViewCache.put(cacheKey, view)
+                        return view
+                    } else {
                         return view
                     }
                 }
