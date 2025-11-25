@@ -28,6 +28,8 @@ import org.gradle.api.plugins.JavaPlatformPlugin
  */
 class PropertyNameCalculator {
 
+    static final String GRAILS_VERSION_PROPERTY = 'grails.version'
+
     final Map<String, String> keysToPlatformCoordinates = [:]
     final Map<String, ExtractedDependencyConstraint> platformDefinitions = [:]
 
@@ -41,22 +43,21 @@ class PropertyNameCalculator {
         this.versions.putAll(definitionVersions)
     }
 
-    void addProjects(Collection<Project> projects) {
+    void addProjects(Collection<Project> projects, String grailsVersion) {
+        versions.put(GRAILS_VERSION_PROPERTY, grailsVersion)
+
         for (Project project : projects) {
             if (project.plugins.hasPlugin(JavaPlatformPlugin) || !project.extensions.findByName('grailsPublish')) {
                 continue
             }
 
             String artifactId = (project.findProperty('pomArtifactId') ?: project.name)
-            String baseVersionName = artifactId.replaceAll('-', '.')
-            String versionName = "${baseVersionName}.version" as String
             String coordinates = "${project.group}:${artifactId}:${project.version}" as String
             ExtractedDependencyConstraint constraint = new ExtractedDependencyConstraint(coordinates as String)
-            constraint.versionPropertyReference = "\${${versionName}}" as String
+            constraint.versionPropertyReference = "\${${GRAILS_VERSION_PROPERTY}}" as String
 
             definitions.put(coordinates, constraint)
-            keysToCoordinates.put(coordinates, baseVersionName)
-            versions.put(versionName, project.version as String)
+            keysToCoordinates.put(coordinates, 'grails')
         }
     }
 

@@ -167,6 +167,9 @@ ext {
         def deps = depMgmt?.dependencies?.getAt(0)
         if (deps) {
             Map<String, String> pomProperties = [:]
+            PropertyNameCalculator propertyNameCalculator = new PropertyNameCalculator(combinedPlatforms, combinedDependencies, combinedVersions)
+            propertyNameCalculator.addProjects(rootProject.subprojects, projectVersion)
+
             deps.dependency.each { dep ->
                 String groupId = dep.groupId.text().trim()
                 String artifactId = dep.artifactId.text().trim()
@@ -178,8 +181,6 @@ ext {
                 }
 
                 if (inlineVersion) {
-                    PropertyNameCalculator propertyNameCalculator = new PropertyNameCalculator(combinedPlatforms, combinedDependencies, combinedVersions)
-                    propertyNameCalculator.addProjects(rootProject.subprojects)
                     ExtractedDependencyConstraint extractedConstraint = propertyNameCalculator.calculate(groupId, artifactId, inlineVersion, isBom)
                     if (extractedConstraint?.versionPropertyReference) {
                         // use the property reference instead of the hard coded version so that it can be
@@ -190,18 +191,17 @@ ext {
                         pomProperties.put(extractedConstraint.versionPropertyName, inlineVersion)
                     }
 
-                    if (gradle.includedBuilds*.any { it.name == artifactId && groupId.startsWith('org.apache.grails') }) {
-                        String baseVersionName = artifactId.replaceAll('-', '.')
-                        String versionName = "${baseVersionName}.version" as String
-                        dep.version[0].value = "\${${versionName}}" as String
-                        pomProperties.put(versionName, inlineVersion)
+                    // For included builds (grails-gradle), also use grails.version
+                    if (gradle.includedBuilds.any { it.name == artifactId && groupId.startsWith('org.apache.grails') }) {
+                        dep.version[0].value = "\${${PropertyNameCalculator.GRAILS_VERSION_PROPERTY}}" as String
+                        pomProperties.put(PropertyNameCalculator.GRAILS_VERSION_PROPERTY, inlineVersion)
                     }
                 } else if (!inlineVersion) {
                     throw new GradleException("Dependency $groupId:$artifactId does not have a version.")
                 }
             }
 
-            for (Map.Entry<String, String> property : pomProperties.entrySet()) {
+            for (Map.Entry<String, String> property : pomProperties.sort().entrySet()) {
                 propertiesNode.appendNode(property.key, property.value)
             }
         }
