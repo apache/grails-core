@@ -39,15 +39,6 @@ javaPlatform {
     allowDependencies()
 }
 
-// Disable gradle (.module file) for the BOM only
-// This allows properties to be overridden with the Spring dependency management plugin
-// Also fixes older versions being resolved on transitive dependencies with updated parents
-afterEvaluate {
-    tasks.named('generateMetadataFileForMavenPublication').configure {
-        enabled = false
-    }
-}
-
 ext {
     isReleaseBuild = System.getenv('GRAILS_PUBLISH_RELEASE') == 'true'
     isPublishedExternal = System.getenv().containsKey('NEXUS_PUBLISH_STAGING_PROFILE_ID')
