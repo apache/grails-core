@@ -109,7 +109,7 @@ echo "✅ RAT passed"
 
 echo "Verifying Reproducible Build ..."
 set +e # because we have known issues here
-verify-reproducible.sh "${DOWNLOAD_LOCATION}"
+"${SCRIPT_DIR}/verify-reproducible.sh" "${DOWNLOAD_LOCATION}"
 set -e
 echo "✅ Reproducible Build Verified"
 

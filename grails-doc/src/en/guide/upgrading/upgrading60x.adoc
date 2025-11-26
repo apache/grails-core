@@ -224,10 +224,11 @@ To apply and configure the `gradle-jakartaee-migration-plugin` in your `build.gr
 .build.gradle
 ----
 plugins {
-    id 'com.netflix.nebula.jakartaee-migration' version '0.24.0'
+    id 'com.netflix.nebula.jakartaee-migration'  version '1.0.0'
 }
 
 jakartaeeMigration {
+    includeTransform('org.grails.plugins:export')
     migrate()
 }
 ----
