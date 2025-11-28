@@ -70,8 +70,8 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
     protected final Map<String, Constraint> appliedConstraints = new LinkedHashMap<String, Constraint>()
 
     // simple constraints
-    /** whether the property should be displayed */
-    boolean display = true
+    /** the display type controlling where the property is shown in scaffolded views */
+    DisplayType displayType = null
     /**
      * whether the property is editable
      */
@@ -579,6 +579,52 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
                 appliedConstraints.remove(URL_CONSTRAINT)
             }
         }
+    }
+
+    /**
+     * @return Whether the property should be displayed (for backwards compatibility).
+     *         Returns true unless displayType is explicitly set to NONE.
+     * @deprecated Use {@link #getDisplayType()} instead for more granular control
+     */
+    @Override
+    boolean isDisplay() {
+        displayType != DisplayType.NONE
+    }
+
+    /**
+     * Returns the display value for property access compatibility with ClassPropertyFetcher.
+     * Returns the displayType if set, otherwise returns the boolean display value.
+     * This method exists to ensure ClassPropertyFetcher.getPropertyDescriptor("display") works.
+     * @return The display value (DisplayType or Boolean)
+     */
+    Object getDisplay() {
+        displayType != null ? displayType : isDisplay()
+    }
+
+    /**
+     * Sets the display constraint with backwards compatibility for boolean values.
+     * @param value Can be a Boolean (true/false) or a DisplayType enum value
+     */
+    void setDisplay(Object value) {
+        if (value instanceof Boolean) {
+            this.displayType = value ? null : DisplayType.NONE
+        } else if (value instanceof DisplayType) {
+            this.displayType = value
+        } else if (value == null) {
+            this.displayType = null
+        } else {
+            throw new IllegalArgumentException("display constraint must be a Boolean or DisplayType, got: ${value?.class?.name}")
+        }
+    }
+
+    /**
+     * @return The display type controlling where this property is shown in scaffolded views.
+     *         Returns null if not explicitly set (default behavior applies).
+     * @since 7.1
+     */
+    @Override
+    DisplayType getDisplayType() {
+        this.displayType
     }
 
     @SuppressWarnings('rawtypes')

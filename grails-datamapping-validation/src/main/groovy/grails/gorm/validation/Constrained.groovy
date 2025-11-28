@@ -88,9 +88,16 @@ interface Constrained {
      */
     boolean isUrl()
     /**
-     * @return Whether the value should be displayed
+     * @return Whether the value should be displayed (for backwards compatibility)
+     * @deprecated Use {@link #getDisplayType()} instead for more granular control
      */
     boolean isDisplay()
+
+    /**
+     * @return The display type controlling where this property is shown in scaffolded views
+     * @since 7.1
+     */
+    DisplayType getDisplayType()
     /**
      * @return Whether the value is editable
      */
