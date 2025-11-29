@@ -1239,3 +1239,51 @@ The admin controller will use the admin-specific template even if a non-namespac
 ====== Backward Compatibility
 
 This feature is **disabled by default** (`false`), ensuring complete backward compatibility. Existing applications will continue to work without any changes. Enable the feature only when you need namespace-specific scaffolded template support.
+
+===== 12.31 Enhanced Display Constraint with DisplayType Enum
+
+Grails 7.1 enhances the `display` constraint with a new `DisplayType` enum that provides fine-grained control over where properties appear in scaffolded views.
+
+====== New DisplayType Values
+
+The `display` constraint now accepts a `DisplayType` enum value in addition to boolean values:
+
+|===
+|Value|Description
+
+|`ALL`|Display in all views. Overrides the default blacklist for properties like `dateCreated` and `lastUpdated`.
+|`NONE`|Never display in any view. Equivalent to `display: false`.
+|`INPUT_ONLY`|Display only in input views (create and edit forms).
+|`OUTPUT_ONLY`|Display only in output views (show and index/list views).
+|===
+
+====== Example Usage
+
+[source,groovy]
+----
+import static grails.gorm.validation.DisplayType.*
+
+class Book {
+    String title
+    String isbn
+    Date dateCreated
+    Date lastUpdated
+    String internalNotes
+
+    static constraints = {
+        dateCreated display: ALL         // Override blacklist, show in all views
+        lastUpdated display: OUTPUT_ONLY // Show only in show/index views
+        isbn display: INPUT_ONLY         // Show only in create/edit forms
+        internalNotes display: NONE      // Never show
+    }
+}
+----
+
+====== Backward Compatibility
+
+Boolean values continue to work as before:
+
+* `display: true` - Default behavior (property is displayed)
+* `display: false` - Equivalent to `DisplayType.NONE`
+
+No changes are required for existing applications using boolean values.
