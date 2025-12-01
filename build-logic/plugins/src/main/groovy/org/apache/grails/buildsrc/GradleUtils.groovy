@@ -50,7 +50,7 @@ class GradleUtils {
 
     static <T> T lookupPropertyByType(Project project, String name, Class<T> type) {
         // a cast exception will occur without this
-        if(type && (type == Integer || type == int.class)) {
+        if (type && (type == Integer || type == int.class)) {
             def v = findProperty(project, name)
             return v == null ? null : Integer.valueOf(v as String) as T
         }
@@ -60,12 +60,12 @@ class GradleUtils {
 
     static Object findProperty(Project project, String name) {
         def property = project.findProperty(name)
-        if(property != null) {
+        if (property != null) {
             return property
         }
 
         def ext = project.extensions.getExtraProperties()
-        if(ext.has(name)) {
+        if (ext.has(name)) {
             return ext.get(name)
         }
 
