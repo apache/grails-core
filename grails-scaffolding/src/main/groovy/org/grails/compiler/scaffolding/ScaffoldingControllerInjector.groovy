@@ -37,8 +37,10 @@ import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.plugins.web.rest.transform.ResourceTransform
 
 /**
- * Transformation that turns a controller into a scaffolding controller at compile time if 'static scaffold = Foo'
- * or '@Scaffold' is specified
+ * Transformation that turns a controller into a scaffolding controller at compile time if '@Scaffold' is specified.
+ *
+ * <p>The legacy 'static scaffold = Foo' syntax is deprecated and will be removed in a future version.
+ * Use the {@code @Scaffold} annotation instead.</p>
  *
  * @author Graeme Rocher
  * @author Scott Murphy Heiberg
@@ -69,6 +71,21 @@ class ScaffoldingControllerInjector implements GrailsArtefactClassInjector {
 
         def expression = propertyNode?.getInitialExpression()
         if (expression instanceof ClassExpression || annotationNode) {
+            if (expression instanceof ClassExpression && !annotationNode) {
+                ClassNode domainClassNode = ((ClassExpression) expression).getType()
+                String domainClassName = domainClassNode.getNameWithoutPackage()
+                String controllerClassName = classNode.getNameWithoutPackage()
+                GrailsASTUtils.warning(source, propertyNode, """
+                    The 'static scaffold = ${domainClassName}' syntax is deprecated and will be removed in a future version of Grails.
+                    Please use the @Scaffold annotation instead:
+
+                    import grails.plugin.scaffolding.annotation.Scaffold
+
+                    @Scaffold(${domainClassName})
+                    class ${controllerClassName} {
+                    }
+                    """.stripIndent())
+            }
             ClassNode valueClassNode = annotationNode?.getMember('value')?.type
             ClassNode superClassNode = ClassHelper.make(RestfulController).getPlainNodeReference()
             ClassNode currentSuperClass = classNode.getSuperClass()
