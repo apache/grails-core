@@ -38,10 +38,12 @@ class SharedPropertyPlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
-        def ext = project.extensions.getExtraProperties()
-
-        def rootGrailsCoreDir = findRootGrailsCoreDir(project)
-        populateParentProperties(project.layout.projectDirectory, rootGrailsCoreDir, ext, project)
+        populateParentProperties(
+                project.layout.projectDirectory,
+                findRootGrailsCoreDir(project),
+                project.extensions.extraProperties,
+                project
+        )
     }
 
     void populateParentProperties(Directory projectDirectory, Directory rootDirectory, ExtraPropertiesExtension ext, Project project) {

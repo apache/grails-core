@@ -56,7 +56,6 @@ dependencies {
     }
 }
 
-// these must be after the above applies because they opt out of the defaults created in those files
 tasks.named('javadocJar').configure {
     it.enabled = false
 }

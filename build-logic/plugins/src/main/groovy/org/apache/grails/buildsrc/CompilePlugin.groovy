@@ -28,7 +28,6 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.plugins.JavaPluginExtension
-import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
@@ -66,7 +65,6 @@ class CompilePlugin implements Plugin<Project> {
 
     private static void configureJars(Project project) {
         project.extensions.configure(JavaPluginExtension) {
-            // Explicit `it` is required here
             it.withJavadocJar()
             it.withSourcesJar()
         }
@@ -93,20 +91,20 @@ class CompilePlugin implements Plugin<Project> {
         project.tasks.withType(JavaCompile).configureEach {
             // Preserve method parameter names in Groovy/Java classes for IDE parameter hints & bean reflection metadata.
             it.options.compilerArgs.add('-parameters')
-            it.options.encoding = StandardCharsets.UTF_8.name()
             // encoding needs to be the same since it's different across platforms
+            it.options.encoding = StandardCharsets.UTF_8.name()
             it.options.fork = true
             it.options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G']
         }
 
         project.plugins.withId('groovy') {
             project.tasks.withType(GroovyCompile).configureEach {
-                it.groovyOptions.encoding = StandardCharsets.UTF_8.name()
                 // encoding needs to be the same since it's different across platforms
+                it.groovyOptions.encoding = StandardCharsets.UTF_8.name()
                 // Preserve method parameter names in Groovy/Java classes for IDE parameter hints & bean reflection metadata.
                 it.groovyOptions.parameters = true
-                it.options.encoding = StandardCharsets.UTF_8.name()
                 // encoding needs to be the same since it's different across platforms
+                it.options.encoding = StandardCharsets.UTF_8.name()
                 it.options.fork = true
                 it.options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G']
             }

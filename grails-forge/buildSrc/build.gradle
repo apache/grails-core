@@ -76,7 +76,7 @@ dependencies {
     implementation "org.antlr:antlr4-runtime:$antlr4Version"
     implementation "org.apache.ant:ant:$antVersion"
     implementation "org.apache.grails.gradle:grails-gradle-common:$projectVersion"
-    implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${gradleCycloneDxPluginVersion}"
+    implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:$gradleCycloneDxPluginVersion"
 }
 
 gradlePlugin {
