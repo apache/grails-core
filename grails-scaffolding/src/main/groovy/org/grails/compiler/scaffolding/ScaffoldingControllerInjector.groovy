@@ -37,10 +37,13 @@ import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.plugins.web.rest.transform.ResourceTransform
 
 /**
- * Transformation that turns a controller into a scaffolding controller at compile time if 'static scaffold = Foo'
- * is specified
+ * Transformation that turns a controller into a scaffolding controller at compile time if '@Scaffold' is specified.
+ *
+ * <p>The legacy 'static scaffold = Foo' syntax is deprecated and will be removed in a future version.
+ * Use the {@code @Scaffold} annotation instead.</p>
  *
  * @author Graeme Rocher
+ * @author Scott Murphy Heiberg
  * @since 3.1
  */
 @AstTransformer
@@ -68,18 +71,47 @@ class ScaffoldingControllerInjector implements GrailsArtefactClassInjector {
 
         def expression = propertyNode?.getInitialExpression()
         if (expression instanceof ClassExpression || annotationNode) {
-            ClassNode controllerClassNode = annotationNode?.getMember('value')?.type
-            ClassNode superClassNode = ClassHelper.make(controllerClassNode?.getTypeClass() ?: RestfulController).getPlainNodeReference()
+            if (!annotationNode) {
+                ClassNode domainClassNode = ((ClassExpression) expression).getType()
+                String domainClassName = domainClassNode.getNameWithoutPackage()
+                String controllerClassName = classNode.getNameWithoutPackage()
+                GrailsASTUtils.warning(source, propertyNode, """
+                    The 'static scaffold = ${domainClassName}' syntax is deprecated and will be removed in a future version of Grails.
+                    Please use the @Scaffold annotation instead:
+
+                    import grails.plugin.scaffolding.annotation.Scaffold
+
+                    @Scaffold(${domainClassName})
+                    class ${controllerClassName} {
+                    }
+                    """.stripIndent())
+            }
+            ClassNode valueClassNode = annotationNode?.getMember('value')?.type
+            ClassNode superClassNode = ClassHelper.make(RestfulController).getPlainNodeReference()
             ClassNode currentSuperClass = classNode.getSuperClass()
             if (currentSuperClass.equals(GrailsASTUtils.OBJECT_CLASS_NODE)) {
                 def domainClass = expression ? ((ClassExpression) expression).getType() : null
                 if (!domainClass) {
                     domainClass = annotationNode.getMember('domain')?.type
                     if (!domainClass) {
-                        domainClass = extractGenericDomainClass(controllerClassNode)
-                        if (domainClass) {
-                            // set the domain value on the annotation so that ScaffoldingViewResolver can identify the domain object.
+                        def genericsTypes = valueClassNode?.genericsTypes
+                        boolean hasGenerics = genericsTypes != null && genericsTypes.length > 0
+
+                        if (hasGenerics) {
+                            // CASE 1: @Scaffold(RestfulController<Car>)
+                            domainClass = extractGenericDomainClass(valueClassNode)
+                            if (domainClass) {
+                                // set the domain value on the annotation so that ScaffoldingViewResolver can identify the domain object.
+                                annotationNode.addMember('domain', new ClassExpression(domainClass))
+                            }
+                            superClassNode = valueClassNode.getPlainNodeReference()
+                        } else if (valueClassNode) {
+                            // CASE 2: @Scaffold(Car)
+                            domainClass = valueClassNode
+                            // Set domain on annotation for view resolution
                             annotationNode.addMember('domain', new ClassExpression(domainClass))
+                            // Set value to RestfulController so it's available at runtime
+                            annotationNode.setMember('value', new ClassExpression(superClassNode))
                         }
                     }
                     if (!domainClass) {
