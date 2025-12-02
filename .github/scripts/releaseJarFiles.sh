@@ -19,16 +19,15 @@
 #  under the License.
 #
 
-# ./releaseJarFiles.sh <staging repo description> <username>
+# ./releaseJarFiles.sh <staging-repo-description> <username>
 
 set -euo pipefail
 
 if [[ $# -ne 2 ]]; then
-  echo "Usage: $0 <staging repo description> <username>" >&2
+  echo "Usage: $0 <staging-repo-description> <username>" >&2
   exit 1
 fi
 
-NEXUS_URL="https://repository.apache.org"
 STAGING_DESCRIPTION="$1"
 NEXUS_USER="$2"
 read -r -s -p "Password: " NEXUS_PASS
@@ -46,6 +45,8 @@ if [[ -z "${NEXUS_PASS}" ]]; then
   echo "ERROR: Password must not be empty." >&2
   exit 1
 fi
+
+NEXUS_URL="https://repository.apache.org"
 
 nexusApi() {
   local request_method="$1"; shift

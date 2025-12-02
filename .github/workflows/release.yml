@@ -24,7 +24,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GRAILS_PUBLISH_RELEASE: 'true'
   JAVA_DISTRIBUTION: liberica
-  JAVA_VERSION: 17.0.17 # this must be a specific version for reproducible builds, keep it synced with .sdkmanrc
+  JAVA_VERSION: 17.0.17 # this must be a specific version for reproducible builds, keep it synced with .sdkmanrc and verification container
   PROJECT_DESC: >
     Grails is a powerful Groovy-based web application framework for the JVM,
     built on top of Spring Boot, and supported by a rich ecosystem of plugins
@@ -161,7 +161,7 @@ jobs:
           publishToSonatype
           aggregateChecksums
           aggregatePublishedArtifacts
-      - name: "📤 Publish grails-core to Staging Repository"
+      - name: "📤 Publish Grails Core to Staging Repository"
         env:
           NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
           NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
@@ -176,7 +176,7 @@ jobs:
           publishToSonatype
           aggregateChecksums
           aggregatePublishedArtifacts
-      - name: "📤 Publish grails-forge to Staging Repository"
+      - name: "📤 Publish Grails Forge to Staging Repository"
         env:
           NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
           NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
@@ -235,7 +235,7 @@ jobs:
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
-      - name: "📥 Checkout grails-core repository"
+      - name: "📥 Checkout Grails Core repository"
         uses: actions/checkout@v5
         with:
           path: grails
@@ -255,19 +255,25 @@ jobs:
           rm -f grails/KEYS
       - name: "📥 Download CHECKSUMS.txt and rename to CHECKSUMS"
         working-directory: grails
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           release_url=$(gh release view "${TAG}" --json assets --repo "${REPO_SLUG}" --jq '.assets[] | select(.name == "CHECKSUMS.txt") | .url')
-          curl -f -L -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -o CHECKSUMS "$release_url"
+          curl -f -L -H "Authorization: token $GH_TOKEN" -o CHECKSUMS "$release_url"
       - name: "📥 Download PUBLISHED_ARTIFACTS.txt and rename to PUBLISHED_ARTIFACTS"
         working-directory: grails
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           release_url=$(gh release view "${TAG}" --json assets --repo "${REPO_SLUG}" --jq '.assets[] | select(.name == "PUBLISHED_ARTIFACTS.txt") | .url')
-          curl -f -L -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -o PUBLISHED_ARTIFACTS "$release_url"
+          curl -f -L -H "Authorization: token $GH_TOKEN" -o PUBLISHED_ARTIFACTS "$release_url"
       - name: "📥 Download BUILD_DATE.txt and rename to BUILD_DATE"
         working-directory: grails
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           release_url=$(gh release view "${TAG}" --json assets --repo "${REPO_SLUG}" --jq '.assets[] | select(.name == "BUILD_DATE.txt") | .url')
-          curl -f -L -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -o BUILD_DATE "$release_url"
+          curl -f -L -H "Authorization: token $GH_TOKEN" -o BUILD_DATE "$release_url"
       - name: "📅 Ensure source files use common date"
         run: |
           SOURCE_DATE_EPOCH=$(cat grails/BUILD_DATE)
@@ -347,7 +353,7 @@ jobs:
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
-      - name: "⚙️ Setup SVN and Tools"
+      - name: "🛠️ Install tools"
         run: sudo apt-get install -y subversion subversion-tools tree gettext-base
       - name: "👀 Ensure dev/${{ env.SVN_PROJECT }} folder exists"
         run: |
@@ -472,8 +478,8 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: ${{ env.TAG }}
-      - name: "⚙️ Setup SVN and Tools"
-        run: sudo apt-get install -y subversion subversion-tools tree gettext-base
+      - name: "🛠️️ Install tools"
+        run: sudo apt-get install -y gettext-base
       - name: "🗳 MANUAL - Confirm Grails PMC Vote succeeded"
         run: |
           echo "::group::Manual Confirmation"
@@ -514,7 +520,8 @@ jobs:
         run: |
           echo "::group::Manual ASF Reporter Update"
           TODAY=$(date +"%Y-%m-%d")
-          echo "Check email from no-reply@reporter.apache.org & update https://reporter.apache.org/addrelease.html?${SVN_PROJECT} to add ${SVN_FOLDER^^}-${VERSION} as complete as of ${TODAY}"
+          echo "Update https://reporter.apache.org/addrelease.html?${SVN_PROJECT} to add"
+          echo "${SVN_FOLDER^^}-${VERSION} as complete as of ${TODAY}"
           echo "::endgroup::"
       - name: "🚀 MANUAL - Deploy Grails Forge"
         run: |
@@ -569,7 +576,7 @@ jobs:
       - name: "🚀 Publish to GitHub Pages"
         uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
-          GH_TOKEN: ${{ secrets.GRAILS_GHTOKEN }}
+          GH_TOKEN: ${{ secrets.GRAILS_GHTOKEN }} # To be able to push to grails-website repo
           GRADLE_PUBLISH_RELEASE: 'true'
           SOURCE_FOLDER: grails-doc/build/docs
           TARGET_REPOSITORY: apache/grails-website
@@ -597,14 +604,14 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🚀 Grails SDK Minor Release"
-        if: contains(env.VERSION, 'M')
+        if: contains(env.VERSION, 'M') || contains(env.VERSION, 'RC')
         working-directory: grails-forge
         run: ./gradlew sdkMinorRelease
         env:
           GVM_SDKVENDOR_KEY: ${{ secrets.GVM_SDKVENDOR_KEY }}
           GVM_SDKVENDOR_TOKEN: ${{ secrets.GVM_SDKVENDOR_TOKEN }}
       - name: "🚀 Grails SDK Major Release"
-        if: startsWith(env.VERSION, '7.') && !contains(env.VERSION, 'M')
+        if: startsWith(env.VERSION, '7.') && !contains(env.VERSION, 'M') && !contains(env.VERSION, 'RC')
         working-directory: grails-forge
         run: ./gradlew sdkMajorRelease
         env:
@@ -635,17 +642,27 @@ jobs:
       - name: "🌎 MANUAL - Create Blog Post"
         run: |
           echo "::group::Blog Post Creation - MANUAL"
-          echo "Publish a blog post on https://grails.apache.org/blog/ about the new release [${VERSION}] using the repo https://github.com/apache/grails-static-website"
+          echo "Publish a blog post on https://grails.apache.org/blog/ about the new release [${VERSION}] using"
+          echo "the repo: https://github.com/apache/grails-static-website"
           echo "::endgroup::"
       - name: "🌎 MANUAL - Merge Close Release PR"
         run: |
           echo "::group::Merge Close Release PR - MANUAL"
-          echo "The last step in the grails-core release workflow will create a merge branch for the original tag with version number and then open a PR to merge back into the next branch. You will need to merge this PR into the branch after correcting any merge conflict."
+          echo "The last step in the grails-core release workflow will create a merge branch for the original tag"
+          echo "with version number and then open a PR to merge back into the next branch."
+          echo "You will need to merge this PR into the branch after correcting any merge conflict."
           echo "::endgroup::"
       - name: "🌎 MANUAL - deploy the new SNAPSHOT to Forge"
         run: |
           echo "::group::Deploy the new SNAPSHOT to Forge - MANUAL"
-          echo "After the Close Release PR is merged, deploy the new SNAPSHOT to Forge via: https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml"
+          echo "After the Close Release PR is merged, deploy the new SNAPSHOT to Forge via:"
+          echo "https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml"
+          echo "::endgroup::"
+      - name: "🌎 MANUAL - Add version to the Grails Website"
+        run: |
+          echo "::group::Add version to the Grails Website - MANUAL"
+          echo "Add the released version [${VERSION}] to the Grails Website by running the Release workflow:"
+          echo "https://github.com/apache/grails-static-website/actions/workflows/release.yml"
           echo "::endgroup::"
       - name: '📧 Announcement Email'
         run: |
