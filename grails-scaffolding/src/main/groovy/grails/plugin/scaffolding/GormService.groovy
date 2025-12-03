@@ -33,7 +33,7 @@ import org.grails.datastore.gorm.GormEntityApi
 @Artefact('Service')
 @ReadOnly
 @CompileStatic
-class GormService<T extends GormEntity<T>> {
+class GormService<T extends GormEntity<T>> implements ScaffoldService<T, Serializable> {
 
     @Lazy
     GormAllOperations<T> gormStaticApi = GormEnhancer.findStaticApi(resource) as GormAllOperations<T>
@@ -49,18 +49,22 @@ class GormService<T extends GormEntity<T>> {
         resourceName = GrailsNameUtils.getPropertyName(resource)
     }
 
+    @Override
     T get(Serializable id) {
         gormStaticApi.get(id)
     }
 
+    @Override
     List<T> list(Map args) {
         gormStaticApi.list(args)
     }
 
+    @Override
     Long count(Map args) {
         gormStaticApi.count()
     }
 
+    @Override
     @Transactional
     void delete(Serializable id) {
         if (readOnly) {
@@ -69,6 +73,7 @@ class GormService<T extends GormEntity<T>> {
         ((GormEntityApi) get(id)).delete(flush: true)
     }
 
+    @Override
     @Transactional
     T save(T instance) {
         if (readOnly) {

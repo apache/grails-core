@@ -44,7 +44,7 @@ dependencies {
     implementation 'org.apache.grails:grails-cache'
     implementation 'org.apache.grails:grails-scaffolding'
 
-    implementation 'org.webjars:webjars-locator-core'
+
     testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 

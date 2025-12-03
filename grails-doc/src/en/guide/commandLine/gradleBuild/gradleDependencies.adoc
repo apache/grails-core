@@ -28,7 +28,6 @@ dependencies {
     testAndDevelopmentOnly "org.webjars.npm:bootstrap"
     testAndDevelopmentOnly "org.webjars.npm:bootstrap-icons"
     testAndDevelopmentOnly "org.webjars.npm:jquery"
-    implementation 'org.webjars:webjars-locator-core'
     implementation platform("org.apache.grails:grails-bom:$grailsVersion")
     implementation "org.apache.grails:grails-core"
     implementation "org.apache.grails:grails-logging"

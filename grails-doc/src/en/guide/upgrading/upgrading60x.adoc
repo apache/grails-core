@@ -228,7 +228,10 @@ plugins {
 }
 
 jakartaeeMigration {
-    includeTransform('org.grails.plugins:export')
+    // Exclude Grails dependencies since AST and jakartaeeMigration are not compatible
+    excludeTransform('org.apache.grails:**')
+    excludeTransform('org.apache.grails.**:**')
+    // enable automatic migration from EE 8 (javax) or earlier to EE 10 (jakarta) or later
     migrate()
 }
 ----
@@ -1239,3 +1242,147 @@ The admin controller will use the admin-specific template even if a non-namespac
 ====== Backward Compatibility
 
 This feature is **disabled by default** (`false`), ensuring complete backward compatibility. Existing applications will continue to work without any changes. Enable the feature only when you need namespace-specific scaffolded template support.
+
+===== 12.31 Enhanced Display Constraint with DisplayType Enum
+
+Grails 7.1 enhances the `display` constraint with a new `DisplayType` enum that provides fine-grained control over where properties appear in scaffolded views.
+
+====== New DisplayType Values
+
+The `display` constraint now accepts a `DisplayType` enum value in addition to boolean values:
+
+|===
+|Value|Description
+
+|`ALL`|Display in all views. Overrides the default blacklist for properties like `dateCreated` and `lastUpdated`.
+|`NONE`|Never display in any view. Equivalent to `display: false`.
+|`INPUT_ONLY`|Display only in input views (create and edit forms).
+|`OUTPUT_ONLY`|Display only in output views (show and index/list views).
+|===
+
+====== Example Usage
+
+[source,groovy]
+----
+import static grails.gorm.validation.DisplayType.*
+
+class Book {
+    String title
+    String isbn
+    Date dateCreated
+    Date lastUpdated
+    String internalNotes
+
+    static constraints = {
+        dateCreated display: ALL         // Override blacklist, show in all views
+        lastUpdated display: OUTPUT_ONLY // Show only in show/index views
+        isbn display: INPUT_ONLY         // Show only in create/edit forms
+        internalNotes display: NONE      // Never show
+    }
+}
+----
+
+====== Backward Compatibility
+
+Boolean values continue to work as before:
+
+* `display: true` - Default behavior (property is displayed)
+* `display: false` - Equivalent to `DisplayType.NONE`
+
+No changes are required for existing applications using boolean values.
+
+===== 12.32 @Scaffold Annotation (Preferred Approach)
+
+Starting in Grails 7.1, the `@Scaffold` annotation is the preferred approach for enabling scaffolding on controllers and services. While the legacy `static scaffold = Domain` syntax is still supported, the annotation provides additional features and flexibility.
+
+====== Benefits of @Scaffold
+
+* **Supports both controllers and services** - The annotation works on both artefact types
+* **Custom class extension** - Specify a custom class to extend using the generic syntax
+* **Service-backed controllers** - Create controllers that delegate to a service layer for better separation of concerns
+* **Read-only mode** - Built-in support for read-only scaffolding
+
+====== Migration Examples
+
+**Basic controller scaffolding:**
+
+[source,groovy]
+----
+// Legacy syntax
+class BookController {
+    static scaffold = Book
+}
+
+// New preferred syntax
+import grails.plugin.scaffolding.annotation.Scaffold
+
+@Scaffold(Book)
+class BookController {
+}
+----
+
+**Scaffolded service:**
+
+[source,groovy]
+----
+import grails.plugin.scaffolding.annotation.Scaffold
+
+@Scaffold(Book)
+class BookService {
+}
+----
+
+**Service-backed controller (delegates to BookService):**
+
+[source,groovy]
+----
+import grails.plugin.scaffolding.annotation.Scaffold
+import grails.plugin.scaffolding.RestfulServiceController
+
+@Scaffold(RestfulServiceController<Book>)
+class BookController {
+}
+----
+
+**Custom class to extend:**
+
+[source,groovy]
+----
+import grails.plugin.scaffolding.annotation.Scaffold
+import com.example.MyCustomService
+
+@Scaffold(MyCustomService<Book>)
+class BookService {
+}
+----
+
+**Read-only scaffolding:**
+
+[source,groovy]
+----
+import grails.plugin.scaffolding.annotation.Scaffold
+
+@Scaffold(domain = Book, readOnly = true)
+class BookController {
+}
+----
+
+====== CLI Commands
+
+New CLI commands are available to generate scaffolded controllers and services:
+
+[source,bash]
+----
+# Generate a scaffolded controller
+grails create-scaffold-controller Book
+
+# Generate a scaffolded service
+grails create-scaffold-service Book
+
+# Generate both service and controller
+grails generate-scaffold-all Book
+----
+
+These commands support options like `--extends` to specify a custom class to extend, `--namespace` for controller namespacing, and `--service` to use `RestfulServiceController`.
+
+For full details, see the link:{guidePath}scaffolding.html[Scaffolding] documentation.

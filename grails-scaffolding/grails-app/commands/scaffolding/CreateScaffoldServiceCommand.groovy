@@ -29,15 +29,16 @@ import grails.plugin.scaffolding.SkipBootstrap
 import org.grails.io.support.Resource
 
 /**
- * Creates a scaffolded controller.
- * Usage: <code>./gradlew runCommand "-Pargs=create-scaffold-controller [DOMAIN_CLASS_NAME]"</code>
+ * Creates a scaffolded service.
+ * Usage: <code>./gradlew runCommand "-Pargs=create-scaffold-service [DOMAIN_CLASS_NAME]"</code>
  *
- * @since 5.0.0
+ * @author Scott Murphy Heiberg
+ * @since 7.1.0
  */
 @CompileStatic
-class CreateScaffoldControllerCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
+class CreateScaffoldServiceCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
 
-    String description = 'Creates a scaffolded controller'
+    String description = 'Creates a scaffolded service'
 
     @Delegate
     ConsoleLogger consoleLogger = GrailsConsole.getInstance()
@@ -56,27 +57,17 @@ class CreateScaffoldControllerCommand implements GrailsApplicationCommand, Comma
         boolean overwrite = isFlagPresent('force')
         final Model model = model(sourceClass)
 
-        String namespace = flag('namespace')
-        boolean useService = isFlagPresent('service')
         String extendsClass = flag('extends')
 
         Map<String, Object> templateModel = model.asMap()
-        templateModel.put('useService', useService)
-        templateModel.put('namespace', namespace ?: '')
         templateModel.put('extendsClass', extendsClass ?: '')
         templateModel.put('extendsClassName', extendsClass ? extendsClass.substring(extendsClass.lastIndexOf('.') + 1) : '')
 
-        String destinationPath = "grails-app/controllers/${model.packagePath}"
-
-        if (namespace) {
-            destinationPath = "${destinationPath}/${namespace}"
-        }
-
-        render(template: template('scaffolding/ScaffoldedController.groovy'),
-                destination: file("${destinationPath}/${model.convention('Controller')}.groovy"),
+        render(template: template('scaffolding/ScaffoldedService.groovy'),
+                destination: file("grails-app/services/${model.packagePath}/${model.convention('Service')}.groovy"),
                 model: templateModel,
                 overwrite: overwrite)
-        verbose('Scaffold controller created for domain class')
+        verbose('Scaffold service created for domain class')
 
         return SUCCESS
     }
