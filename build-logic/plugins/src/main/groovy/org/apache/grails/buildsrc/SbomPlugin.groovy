@@ -103,8 +103,9 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/opensymphony/sitemesh@2.6.0?type=jar'                  : 'OpenSymphony', // custom license approved by legal LEGAL-707
             'pkg:maven/org.jruby/jzlib@1.1.5?type=jar'                        : 'BSD-3-Clause', // https://web.archive.org/web/20240822213507/http://www.jcraft.com/jzlib/LICENSE.txt shows it's a 3 clause
             'pkg:maven/org.jboss/jandex@3.2.3?type=pom'                       : 'CC0-1.0', // upstream declares Public Domain with CC0 URL but no SPDX id
-            'pkg:maven/org.hibernate.tool/hibernate-tools-orm@6.6.29.Final?type=jar' : 'LGPL-2.1-only', // upstream pom does not expose SPDX id
-            'pkg:maven/org.hibernate.tool/hibernate-tools-utils@6.6.29.Final?type=jar' : 'LGPL-2.1-only' // upstream pom does not expose SPDX id
+            'pkg:maven/org.hibernate.tool/hibernate-tools-orm@6.6.36.Final?type=jar' : 'LGPL-2.1-only', // upstream pom does not expose SPDX id
+            'pkg:maven/org.hibernate.orm/hibernate-core@6.6.36.Final?type=jar': 'LGPL-2.1-only',
+            'pkg:maven/org.hibernate.tool/hibernate-tools-utils@6.6.36.Final?type=jar' : 'LGPL-2.1-only' // upstream pom does not expose SPDX id
     ]
 
     // we don't distribute these so these licenses are considered acceptable, but we still prefer ASF licenses.
@@ -127,21 +128,20 @@ class SbomPlugin implements Plugin<Project> {
                     'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
             ],
             'grails-data-hibernate6'       : [
-                    'pkg:maven/org.hibernate.orm/hibernate-core@6.6.29.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-                    'pkg:maven/org.hibernate.orm/hibernate-ant@6.6.29.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-                    'pkg:maven/org.hibernate.tool/hibernate-tools-orm@6.6.29.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-                            'pkg:maven/org.hibernate.tool/hibernate-tools-utils@6.6.29.Final?type=jar'           : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate.orm/hibernate-ant@6.6.36.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate.tool/hibernate-tools-orm@6.6.36.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                            'pkg:maven/org.hibernate.tool/hibernate-tools-utils@6.6.36.Final?type=jar'           : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
                     'pkg:maven/org.jboss/jandex@3.2.3?type=pom'                                    : 'CC0-1.0',
             ],
             'grails-data-hibernate6-core'       : [
-                    'pkg:maven/org.hibernate.orm/hibernate-core@6.6.29.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate.orm/hibernate-core@6.6.36.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
             ],
             'grails-data-hibernate6-spring-boot'       : [
-                    'pkg:maven/org.hibernate.orm/hibernate-core@6.6.29.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate.orm/hibernate-core@6.6.36.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
             ],
             'grails-data-hibernate6-dbmigration': [
-                    'pkg:maven/org.hibernate.orm/hibernate-core@6.6.29.Final?type=jar'             : 'LGPL-2.1-only',
-                    'pkg:maven/org.hibernate.orm/hibernate-envers@6.6.29.Final?type=jar'             : 'LGPL-2.1-only',
+                    'pkg:maven/org.hibernate.orm/hibernate-core@6.6.36.Final?type=jar'             : 'LGPL-2.1-only',
+                    'pkg:maven/org.hibernate.orm/hibernate-envers@6.6.36.Final?type=jar'             : 'LGPL-2.1-only',
                     'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
             ],
     ]
