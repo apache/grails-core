@@ -30,7 +30,7 @@ import org.bson.types.ObjectId
 class EmbeddedCollectionWithIdSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([MainUser, EmbeddedBar])
+        manager.addAllDomainClasses([MainUser, EmbeddedBar])
     }
 
     void "test embedded collection with IDs set reads and saves correctly"() {

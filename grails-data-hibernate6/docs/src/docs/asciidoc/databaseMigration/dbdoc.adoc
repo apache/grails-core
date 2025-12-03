@@ -1,0 +1,23 @@
+=== DbDoc Controller
+
+You can use the <<ref-documentation-scripts-dbm-db-doc,dbm-db-doc>> script to generate static HTML files to view changelog information, but another option is to use the `DbDocController` at runtime. By default this controller is mapped to `/appname/dbdoc/` but this can be customized with `UrlMappings` like any controller.
+
+You probably don't want to expose this information to all of your application's users so by default the controller is only enabled in the development environment. But you can enable or disable it for any environment in `application.groovy` with the `dbDocController.enabled` config option. For example to enable for all environments (be sure to guard the URL with a security plugin in prod):
+
+[source,groovy]
+----
+grails.plugin.databasemigration.dbDocController.enabled = true
+----
+
+or to enable in the production environment:
+
+[source,groovy]
+----
+environments {
+   production {
+      grails.plugin.databasemigration.dbDocController.enabled = true
+   }
+   ...
+}
+----
+

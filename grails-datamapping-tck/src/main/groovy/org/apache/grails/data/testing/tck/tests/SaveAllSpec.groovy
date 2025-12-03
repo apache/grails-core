@@ -18,16 +18,20 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Person
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class SaveAllSpec extends GrailsDataTckSpec {
 
-    def 'Test that many objects can be saved at once using multiple arguments'() {
+    void setupSpec() {
+        manager.addAllDomainClasses([Person])
+    }
+
+    def "Test that many objects can be saved at once using multiple arguments"() {
         given:
-        def bob = new Person(firstName: 'Bob', lastName: 'Builder')
-        def fred = new Person(firstName: 'Fred', lastName: 'Flintstone')
-        def joe = new Person(firstName: 'Joe', lastName: 'Doe')
+        def bob = new Person(firstName: "Bob", lastName: "Builder")
+        def fred = new Person(firstName: "Fred", lastName: "Flintstone")
+        def joe = new Person(firstName: "Joe", lastName: "Doe")
 
         Person.saveAll(bob, fred, joe)
 
@@ -39,11 +43,11 @@ class SaveAllSpec extends GrailsDataTckSpec {
         results.every { it.id != null } == true
     }
 
-    def 'Test that many objects can be saved at once using a list'() {
+    def "Test that many objects can be saved at once using a list"() {
         given:
-        def bob = new Person(firstName: 'Bob', lastName: 'Builder')
-        def fred = new Person(firstName: 'Fred', lastName: 'Flintstone')
-        def joe = new Person(firstName: 'Joe', lastName: 'Doe')
+        def bob = new Person(firstName: "Bob", lastName: "Builder")
+        def fred = new Person(firstName: "Fred", lastName: "Flintstone")
+        def joe = new Person(firstName: "Joe", lastName: "Doe")
 
         Person.saveAll([bob, fred, joe])
 
@@ -55,11 +59,11 @@ class SaveAllSpec extends GrailsDataTckSpec {
         results.every { it.id != null } == true
     }
 
-    def 'Test that many objects can be saved at once using an iterable'() {
+    def "Test that many objects can be saved at once using an iterable"() {
         given:
-        def bob = new Person(firstName: 'Bob', lastName: 'Builder')
-        def fred = new Person(firstName: 'Fred', lastName: 'Flintstone')
-        def joe = new Person(firstName: 'Joe', lastName: 'Doe')
+        def bob = new Person(firstName: "Bob", lastName: "Builder")
+        def fred = new Person(firstName: "Fred", lastName: "Flintstone")
+        def joe = new Person(firstName: "Joe", lastName: "Doe")
 
         Vector<Person> personVector = new Vector<Person>()
         personVector.add(bob)

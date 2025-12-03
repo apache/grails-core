@@ -31,6 +31,10 @@ import org.apache.grails.data.testing.tck.domains.PersonEvent
  */
 class DomainEventsSpec extends GrailsDataTckSpec {
 
+    void setupSpec() {
+        manager.addAllDomainClasses([ModifyPerson, PersonEvent])
+    }
+
     def setup() {
         PersonEvent.resetStore()
     }

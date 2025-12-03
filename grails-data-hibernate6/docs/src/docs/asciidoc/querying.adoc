@@ -1,0 +1,55 @@
+GORM supports a number of powerful ways to query from dynamic finders, to criteria to Hibernate's object oriented query language HQL. Depending on the complexity of the query you have the following options in order of flexibility and power:
+
+* Dynamic Finders
+* Where Queries
+* Criteria Queries
+* Hibernate Query Language (HQL)
+
+In addition, Groovy's ability to manipulate collections with https://groovy.codehaus.org/GPath[GPath] and methods like sort, findAll and so on combined with GORM results in a powerful combination.
+
+However, let's start with the basics.
+
+
+==== Listing instances
+
+
+Use the link:../api/org/grails/datastore/gorm/GormEntity.html#list()[list()] method to obtain all instances of a given class:
+
+[source,groovy]
+----
+def books = Book.list()
+----
+
+The link:../api/org/grails/datastore/gorm/GormEntity.html#list(java.util.Map)[list()] method supports arguments to perform pagination:
+
+[source,groovy]
+----
+def books = Book.list(offset:10, max:20)
+----
+
+as well as sorting:
+
+[source,groovy]
+----
+def books = Book.list(sort:"title", order:"asc")
+----
+
+Here, the `sort` argument is the name of the domain class property that you wish to sort on, and the `order` argument is either `asc` for *asc*ending or `desc` for *desc*ending.
+
+
+==== Retrieval by Database  Identifier
+
+
+The second basic form of retrieval is by database identifier using the link:../api/org/grails/datastore/gorm/GormEntity.html#get(java.io.Serializable)[get(id)] method:
+
+[source,groovy]
+----
+def book = Book.get(23)
+----
+
+You can also obtain a list of instances for a set of identifiers using link:../api/org/grails/datastore/gorm/GormEntity.html#getAll(java.io.Serializable)[getAll()]:
+
+[source,groovy]
+----
+def books = Book.getAll(23, 93, 81)
+----

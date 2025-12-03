@@ -1,0 +1,38 @@
+===== dbm-rollback-count-sql
+
+====== Purpose
+
+Writes the SQL to roll back the specified number of change sets to STDOUT or a file.
+
+====== Description
+
+
+Usage:
+[source,java]
+----
+grails <<environment>> dbm-rollback-count-sql <<number>> <<filename>> --contexts=<<contexts>> --defaultSchema=<<defaultSchema>> --dataSource=<<dataSource>>
+----
+
+Required arguments:
+
+* `number` - The number of changesets to roll back
+
+Optional arguments:
+
+* `filename` - The path to the output file to write to. If not specified output is written to the console
+* `contexts` - A comma-delimited list of http://www.liquibase.org/manual/contexts[context] names. If specified, only changesets tagged with one of the context names will be included
+* `defaultSchema` - The default schema name to use
+* `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
+
+NOTE: Note that the `contexts`, `defaultSchema`, and `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
+[source,groovy]
+----
+grails dbm-rollback-count-sql "--contexts=<<contexts>>" "--defaultSchema=<<defaultSchema>>" "--dataSource=<<dataSource>>"
+----
+
+NOTE: For the `dataSource` parameter, if the data source is configured as `reports` underneath the `dataSources` key in `application.[yml|groovy]`, the value should be `reports`.
+
+[source,groovy]
+----
+--dataSource=reports
+----

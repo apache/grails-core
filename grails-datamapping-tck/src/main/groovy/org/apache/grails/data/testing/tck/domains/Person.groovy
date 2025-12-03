@@ -19,12 +19,11 @@
 
 package org.apache.grails.data.testing.tck.domains
 
-import groovy.transform.EqualsAndHashCode
-
-import grails.gorm.DetachedCriteria
 import grails.gorm.async.AsyncEntity
+import grails.gorm.DetachedCriteria
 import grails.gorm.dirty.checking.DirtyCheck
 import grails.persistence.Entity
+import groovy.transform.EqualsAndHashCode
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 
 @DirtyCheck
@@ -33,18 +32,17 @@ import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 //@groovy.transform.EqualsAndHashCode - breaks gorm-neo4j: TODO: http://jira.grails.org/browse/GPNEO4J-10
 @EqualsAndHashCode(includes = ['firstName', 'lastName', 'age'])
 class Person implements Serializable, Comparable<Person>, AsyncEntity<Person> {
-
     static simpsons = where {
-        lastName == 'Simpson'
+        lastName == "Simpson"
     }
 
-    Long id
+//    Long id
     Long version
     String firstName
     String lastName
     Integer age = 0
-    Set<Pet> pets = [] as Set
     static hasMany = [pets: Pet]
+//    SimpleCountry country
     Face face
     boolean myBooleanProperty
 
@@ -68,13 +66,15 @@ class Person implements Serializable, Comparable<Person>, AsyncEntity<Person> {
     }
 
     static mapping = {
-        firstName(index: true)
-        lastName(index: true)
-        age(index: true)
+        firstName index: true
+        lastName index: true
+        age index: true
+//        pets cascade: 'all-delete-orphan'
     }
 
     static constraints = {
-        face(nullable: true)
+        face nullable: true
+//        country nullable: true
     }
 
     @Override

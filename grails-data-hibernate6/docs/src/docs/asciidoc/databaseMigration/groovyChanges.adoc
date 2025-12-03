@@ -1,0 +1,91 @@
+=== Groovy Changes
+
+In addition to the built-in Liquibase changes (see http://www.liquibase.org/manual/home[the documentation] for what's available) you can also make database changes using Groovy code (as long as you're using the Groovy DSL file format). These changes use the `grailsChange` tag name and are contained in a `changeSet` tag like standard built-in tags.
+
+There are four supported inner tags and two callable methods (to override the default confirmation message and checksum value).
+
+==== General format
+
+This is the general format of a Groovy-based change; all inner tags and methods are optional:
+
+[source,groovy]
+----
+databaseChangeLog = {
+
+   changeSet(author: '...', id: '...') {
+
+      grailsChange {
+         init {
+             // arbitrary initialization code; note that no
+             // database or connection is available
+         }
+
+         validate {
+            // can call warn(String message) to log a warning
+            // or error(String message) to stop processing
+         }
+
+         change {
+            // arbitrary code; make changes directly and/or return a
+            // SqlStatement using the sqlStatement(SqlStatement sqlStatement)
+            // method or multiple with sqlStatements(List sqlStatements)
+
+            confirm 'change confirmation message'
+         }
+
+         rollback {
+            // arbitrary code; make rollback changes directly and/or
+            // return a SqlStatement using the sqlStatement(SqlStatement sqlStatement)
+            // method or multiple with sqlStatements(List sqlStatements)
+
+            confirm 'rollback confirmation message'
+         }
+
+         confirm 'confirmation message'
+
+         checkSum 'override value for checksum'
+      }
+
+   }
+}
+----
+
+==== Available variables
+
+These variables are available throughout the change closure:
+
+* `changeSet` - the current Liquibase `ChangeSet` instance
+* `resourceAccessor` - the current Liquibase `ResourceAccessor` instance
+* `ctx` - the Spring `ApplicationContext`
+* `application` - the `GrailsApplication`
+
+The `change` and `rollback` closures also have the following available:
+
+* `database` - the current Liquibase `Database` instance
+* `databaseConnection` - the current Liquibase `DatabaseConnection` instance, which is a wrapper around the JDBC `Connection` (but doesn't implement the `Connection` interface)
+* `connection` - the real JDBC `Connection` instance (a shortcut for `database.connection.wrappedConnection`)
+* `sql` - a `groovy.sql.Sql` instance which uses the current `connection` and can be used for arbitrary queries and updates
+
+*init*
+
+This is where any optional initialization should happen. You can't access the database from this closure.
+
+*validate*
+
+If there are any necessary validation checks before executing changes or rollbacks they should be done here. You can log warnings by calling `warn(String message)` and stop processing by calling `error(String message)`. It may make more sense to use one or more ++preCondition++s instead of directly validating here.
+
+*change*
+
+All migration changes are done in the `change` closure. You can make changes directly (using the `sql` instance or the `connection`) and/or return one or more ++SqlStatement++s. You can call `sqlStatement(SqlStatement statement)` multiple times to register instances to be run. You can also call the `sqlStatements(statements)` method with an array or list of instances to be run.
+
+*rollback*
+
+All rollback changes are done in the `rollback` closure. You can make changes directly (using the `sql` instance or the `connection`) and/or return one or more ++SqlStatement++s. You can call `sqlStatement(SqlStatement statement)` multiple times to register instances to be run. You can also call the `sqlStatements(statements)` method with an array or list of instances to be run.
+
+*confirm*
+
+The `confirm(String message)` method is used to specify the confirmation message to be shown. The default is "Executed GrailsChange" and it can be overridden in the `change` or `rollback` closures to allow phase-specific messages or outside of both closures to use the same message for the update and rollback phase.
+
+*checkSum*
+
+The checksum for the change will be generated automatically, but if you want to override the value that gets hashed you can specify it with the `checkSum(String value)` method.

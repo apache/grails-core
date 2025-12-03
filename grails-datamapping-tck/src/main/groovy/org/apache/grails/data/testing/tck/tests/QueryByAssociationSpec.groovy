@@ -18,22 +18,26 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Abstract base test for query associations. Subclasses should do the necessary setup to configure GORM
  */
 class QueryByAssociationSpec extends GrailsDataTckSpec {
 
-    void 'Test query entity by single-ended association'() {
+    void setupSpec() {
+        manager.addAllDomainClasses([TestEntity, ChildEntity])
+    }
+
+    void "Test query entity by single-ended association"() {
         given:
         def age = 40
-        ['Bob', 'Fred', 'Barney', 'Frank'].each { new TestEntity(name: it, age: age++, child: new ChildEntity(name: "$it Child")).save() }
+        ["Bob", "Fred", "Barney", "Frank"].each { new TestEntity(name: it, age: age++, child: new ChildEntity(name: "$it Child")).save() }
 
         when:
-        def child = ChildEntity.findByName('Barney Child')
+        def child = ChildEntity.findByName("Barney Child")
 
         then:
         child != null
@@ -44,6 +48,6 @@ class QueryByAssociationSpec extends GrailsDataTckSpec {
 
         then:
         t != null
-        'Barney' == t.name
+        "Barney" == t.name
     }
 }

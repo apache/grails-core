@@ -18,13 +18,11 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import spock.lang.IgnoreIf
-
-import org.springframework.dao.DataIntegrityViolationException
-
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Location
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.proxy.GroovyProxyFactory
+import org.springframework.dao.DataIntegrityViolationException
+import spock.lang.IgnoreIf
 
 /**
  * @author graemerocher
@@ -32,40 +30,44 @@ import org.grails.datastore.gorm.proxy.GroovyProxyFactory
 @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate6.gorm.suite') })
 // this test is ignored because Groovy proxies are not used with Hibernate
 class GroovyProxySpec extends GrailsDataTckSpec {
+    
+    void setupSpec() {
+        manager.addAllDomainClasses([Location])
+    }
 
-    void 'Test proxying of non-existent instance throws an exception'() {
+    void "Test proxying of non-existent instance throws an exception"() {
         setup:
         if (useGroovyProxyFactory) {
             manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
         }
 
-        when: 'A proxy is loaded for an instance that doesn\'t exist'
+        when: "A proxy is loaded for an instance that doesn't exist"
         def location = Location.proxy(123)
 
-        then: 'The proxy is in a valid state'
+        then: "The proxy is in a valid state"
 
         location != null
         123 == location.id
         false == location.isInitialized()
         false == location.initialized
 
-        when: 'The proxy is loaded'
+        when: "The proxy is loaded"
         location.code
 
-        then: 'An exception is thrown'
-        thrown(DataIntegrityViolationException)
+        then: "An exception is thrown"
+        thrown DataIntegrityViolationException
 
         where:
         useGroovyProxyFactory << [true, false]
     }
 
-    void 'Test creation and behavior of Groovy proxies'() {
+    void "Test creation and behavior of Groovy proxies"() {
         setup:
         if (useGroovyProxyFactory) {
             manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
         }
 
-        def id = new Location(name: 'United Kingdom', code: 'UK').save(flush: true)?.id
+        def id = new Location(name: "United Kingdom", code: "UK").save(flush: true)?.id
         manager.session.clear()
 
         when:
@@ -80,8 +82,8 @@ class GroovyProxySpec extends GrailsDataTckSpec {
         false == location.isInitialized()
         false == location.initialized
 
-        'UK' == location.code
-        'United Kingdom - UK' == location.namedAndCode()
+        "UK" == location.code
+        "United Kingdom - UK" == location.namedAndCode()
         true == location.isInitialized()
         true == location.initialized
         null != location.target
@@ -91,7 +93,7 @@ class GroovyProxySpec extends GrailsDataTckSpec {
         useGroovyProxyFactory << [true, false]
     }
 
-    void 'Test setting metaClass property on proxy'() {
+    void "Test setting metaClass property on proxy"() {
         setup:
         if (useGroovyProxyFactory) {
             manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
@@ -106,7 +108,7 @@ class GroovyProxySpec extends GrailsDataTckSpec {
         useGroovyProxyFactory << [true, false]
     }
 
-    void 'Test calling setMetaClass method on proxy'() {
+    void "Test calling setMetaClass method on proxy"() {
         setup:
         if (useGroovyProxyFactory) {
             manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
@@ -123,12 +125,12 @@ class GroovyProxySpec extends GrailsDataTckSpec {
         useGroovyProxyFactory << [true, false]
     }
 
-    void 'Test creation and behavior of Groovy proxies with method call'() {
+    void "Test creation and behavior of Groovy proxies with method call"() {
         setup:
         if (useGroovyProxyFactory) {
             manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
         }
-        def id = new Location(name: 'United Kingdom', code: 'UK').save(flush: true)?.id
+        def id = new Location(name: "United Kingdom", code: "UK").save(flush: true)?.id
         manager.session.clear()
 
         when:
@@ -143,8 +145,8 @@ class GroovyProxySpec extends GrailsDataTckSpec {
         false == location.isInitialized()
         false == location.initialized
 
-        'United Kingdom - UK' == location.namedAndCode() // method first
-        'UK' == location.code
+        "United Kingdom - UK" == location.namedAndCode() // method first
+        "UK" == location.code
         true == location.isInitialized()
         true == location.initialized
         null != location.target

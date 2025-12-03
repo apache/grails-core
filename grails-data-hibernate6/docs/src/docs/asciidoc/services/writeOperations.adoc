@@ -1,0 +1,79 @@
+Write operations in Data Services are automatically wrapped in a transaction. You can modify the transactional attributes by simply adding the `@Transactional` transformation to any method.
+
+The following sections discuss the details of the different write operations.
+
+==== Create
+
+To create a new entity the method should return the new entity and feature either the parameters to be used to create the entity or the entity itself.
+
+For example:
+
+[source,groovy]
+----
+@Service(Book)
+interface BookService {
+    Book saveBook(String title)
+
+    Book saveBook(Book newBook)
+}
+----
+
+If any of the parameters don't match up to a property on the domain class then a compilation error will occur.
+
+If a validation error occurs then a `ValidationException` will be thrown from the service.
+
+==== Update
+
+Update operations are similar to Create operations, the main difference being that the first argument should be the `id` of the object to update.
+
+For example:
+
+[source,groovy]
+----
+@Service(Book)
+interface BookService {
+    Book updateBook(Serializable id, String title)
+}
+----
+
+If any of the parameters don't match up to a property on the domain class then a compilation error will occur.
+
+If a validation error occurs then a `ValidationException` will be thrown from the service.
+
+You can also implement update operations using JPA-QL:
+
+[source,groovy]
+----
+@Query("update ${Book book} set ${book.title} = $newTitle where $book.title = $oldTitle")
+Number updateTitle(String newTitle, String oldTitle)
+----
+
+==== Delete
+
+Delete operations can either return `void` or return the instance that was deleted. In the latter case an extra query is required to fetch the entity prior to issue a delete.
+
+[source,groovy]
+----
+@Service(Book)
+interface BookService {
+    Number deleteAll(String title)
+
+    void delete(Serializable id)
+}
+----
+
+You can also implement delete operations using JPA-QL:
+
+[source,groovy]
+----
+@Query("delete ${Book book} where $book.title = $title")
+void delete(String title)
+----
+
+Or via where queries:
+
+[source,groovy]
+----
+@Where({ title == title && releaseDate > date })
+void delete(String title, Date date)
+----

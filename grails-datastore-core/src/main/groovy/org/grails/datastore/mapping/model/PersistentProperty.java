@@ -20,7 +20,18 @@
 package org.grails.datastore.mapping.model;
 
 import org.grails.datastore.mapping.config.Property;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ManyToMany;
+import org.grails.datastore.mapping.model.types.ManyToOne;
+import org.grails.datastore.mapping.model.types.OneToMany;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.EntityReflector;
+
+import java.util.Optional;
+
+import static java.util.Optional.ofNullable;
 
 /**
  * @author Graeme Rocher
@@ -54,6 +65,12 @@ public interface PersistentProperty<T extends Property> {
     */
     PropertyMapping<T> getMapping();
 
+    default T getMappedForm() {
+        return Optional.of(getMapping())
+                .map(PropertyMapping::getMappedForm)
+                .orElse(null);
+    }
+
     /**
      * Obtains the owner of this persistent property
      *
@@ -82,4 +99,25 @@ public interface PersistentProperty<T extends Property> {
      * @return The writer for this property
      */
     EntityReflector.PropertyWriter getWriter();
+
+    default boolean isUnidirectionalOneToMany() {
+        return ((this instanceof OneToMany) && !((Association<?>)this).isBidirectional());
+    }
+
+    default boolean isLazyAble() {
+        return this instanceof ToOne && !(this instanceof Embedded) ||
+                !(this instanceof Association) && !this.equals(this.getOwner().getIdentity());
+    }
+
+    default boolean isBidirectionalManyToOne() {
+        if (this instanceof ManyToOne manyToOne) {
+            return manyToOne.isBidirectional();
+        }
+        return false;
+    }
+
+    default boolean supportsJoinColumnMapping() {
+        return this instanceof ManyToMany || isUnidirectionalOneToMany()|| this instanceof Basic;
+    }
+
 }

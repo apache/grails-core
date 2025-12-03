@@ -23,6 +23,10 @@ import org.apache.grails.data.testing.tck.domains.Person
 
 class QueryByNullSpec extends GrailsDataTckSpec {
 
+    void setupSpec() {
+        manager.addAllDomainClasses([Person])
+    }
+
     void 'Test passing null as the sole argument to a dynamic finder multiple times'() {
         // see GRAILS-3463
         when:

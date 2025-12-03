@@ -21,11 +21,7 @@ package grails.gorm;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
+import java.util.*;
 
 import org.grails.datastore.mapping.query.Query;
 
@@ -38,6 +34,7 @@ import org.grails.datastore.mapping.query.Query;
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class PagedResultList<E> implements Serializable, List<E> {
+
 
     private static final long serialVersionUID = -5820655628956173929L;
 
@@ -108,7 +105,11 @@ public class PagedResultList<E> implements Serializable, List<E> {
             if (query == null) {
                 totalCount = 0;
             } else {
-                Query newQuery = (Query) query.clone();
+                Query newQuery = (Query)query.clone();
+                newQuery.offset(0);
+                //TODO HACK!!
+                newQuery.order(null);
+                newQuery.max(1);
                 newQuery.projections().count();
                 Number result = (Number) newQuery.singleResult();
                 totalCount = result == null ? 0 : result.intValue();

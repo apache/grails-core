@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class BasicCollectionTypeSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([MyCollections])
+        manager.addAllDomainClasses([MyCollections])
     }
 
     def "Test persist basic collection types"() {

@@ -1,0 +1,57 @@
+Simple queries are queries that use the arguments of the method. For example:
+
+[source,groovy]
+----
+@Service(Book)
+interface BookService {
+    Book findBook(String title)
+}
+----
+
+In the example above the Data Service will generate the implementation based on the fact that the `title` parameter matches the `title` property of the `Book` class both in terms of name and type.
+
+If you were to misspell the `title` parameter or use an incorrect type then a compilation error will occur.
+
+You can alter the return type to return more results:
+
+[source,groovy]
+----
+@Service(Book)
+interface BookService {
+    List<Book> findBooks(String title)
+}
+----
+
+And if you wish to control pagination and query arguments you can add an `args` parameter that should be a `Map`:
+
+
+[source,groovy]
+----
+@Service(Book)
+interface BookService {
+    List<Book> findBooks(String title, Map args)
+}
+----
+
+In this case the following query will control pagination and ordering:
+
+
+[source,groovy]
+----
+List<Book> books = bookService.findBooks(
+    "The Stand",
+    [offset:10, max:10, sort:'title', order:'desc']
+)
+----
+
+You can include multiple parameters in the query:
+
+[source,groovy]
+----
+@Service(Book)
+interface BookService {
+    List<Book> findBooks(String title, Date publishDate)
+}
+----
+
+In this case a conjunction (`AND`) query will be executed. If you need to do a disjunction (`OR`) then it is time you learn about Dynamic Finder-style queries.

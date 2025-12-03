@@ -870,7 +870,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
 
     @Override
     @CompileStatic
-    protected AbstractDetachedCriteria<T> clone() {
+    AbstractDetachedCriteria<T> clone() {
         AbstractDetachedCriteria criteria = newInstance()
         criteria.@criteria = new ArrayList(this.criteria)
         final projections = new ArrayList(this.projections)

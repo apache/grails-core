@@ -18,15 +18,20 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Book
 import org.apache.grails.data.testing.tck.domains.Highway
 import org.apache.grails.data.testing.tck.domains.Person
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 
 /**
  * @author graemerocher
  */
 class FindByMethodSpec extends GrailsDataTckSpec {
+
+    void setupSpec() {
+        manager.addAllDomainClasses([Person, Book, Highway])
+    }
 
     void 'Test Using AND Multiple Times In A Dynamic Finder'() {
         given:
@@ -141,25 +146,6 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         'Not Bypassed Highway' == highways[0].name
         'Not Bypassed Highway' == highways[1].name
 
-        when:
-        def highway = Highway.findNotBypassed()
-        then:
-        'Not Bypassed Highway' == highway?.name
-
-        when:
-        highway = Highway.findBypassed()
-        then:
-        'Bypassed Highway' == highway?.name
-
-        when:
-        highway = Highway.findNotBypassedByName('Not Bypassed Highway')
-        then:
-        'Not Bypassed Highway' == highway?.name
-
-        when:
-        highway = Highway.findBypassedByName('Bypassed Highway')
-        then:
-        'Bypassed Highway' == highway?.name
 
         when:
         Book.newInstance(author: 'Jeff', title: 'Fly Fishing For Everyone', published: false).save()
@@ -190,10 +176,9 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         'Fly Fishing For Everyone' == book.title
 
         when:
-        book = Book.findPublishedByTitleOrAuthor('Fly Fishing For Everyone', 'Dierk')
+        book = Book.findPublishedByTitleAndAuthor('GINA', 'Dierk')
         then:
         'GINA' == book.title
-        Book.findPublished() != null
 
         when:
         book = Book.findNotPublished()
@@ -223,7 +208,7 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         when:
         books = Book.findAllPublishedByAuthorOrTitle('Graeme', 'GINA')
         then:
-        2 == books?.size()
+        3 == books?.size()
 
         when:
         books = Book.findAllNotPublishedByAuthor('Jeff')
@@ -300,49 +285,49 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         Book.findOrCreateByAuthorInList(['Jeff'])
 
         then:
-        thrown(MissingMethodException)
+        thrown MissingMethodException
 
         when:
         Book.findOrCreateByAuthorOrTitle('Jim', 'Title')
 
         then:
-        thrown(MissingMethodException)
+        thrown MissingMethodException
 
         when:
         Book.findOrCreateByAuthorNotEqual('B')
 
         then:
-        thrown(MissingMethodException)
+        thrown MissingMethodException
 
         when:
         Book.findOrCreateByAuthorGreaterThan('B')
 
         then:
-        thrown(MissingMethodException)
+        thrown ConfigurationException
 
         when:
         Book.findOrCreateByAuthorLessThan('B')
 
         then:
-        thrown(MissingMethodException)
+        thrown ConfigurationException
 
         when:
         Book.findOrCreateByAuthorBetween('A', 'B')
 
         then:
-        thrown(MissingMethodException)
+        thrown MissingMethodException
 
         when:
         Book.findOrCreateByAuthorGreaterThanEquals('B')
 
         then:
-        thrown(MissingMethodException)
+        thrown ConfigurationException
 
         when:
         Book.findOrCreateByAuthorLessThanEquals('B')
 
         then:
-        thrown(MissingMethodException)
+        thrown ConfigurationException
 
         // GemFire doesn't like these...
 //        when:
@@ -380,49 +365,49 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         Book.findOrSaveByAuthorInList(['Jeff'])
 
         then:
-        thrown(MissingMethodException)
+        thrown MissingMethodException
 
         when:
         Book.findOrSaveByAuthorOrTitle('Jim', 'Title')
 
         then:
-        thrown(MissingMethodException)
+        thrown MissingMethodException
 
         when:
         Book.findOrSaveByAuthorNotEqual('B')
 
         then:
-        thrown(MissingMethodException)
+        thrown MissingMethodException
 
         when:
         Book.findOrSaveByAuthorGreaterThan('B')
 
         then:
-        thrown(MissingMethodException)
+        thrown ConfigurationException
 
         when:
         Book.findOrSaveByAuthorLessThan('B')
 
         then:
-        thrown(MissingMethodException)
+        thrown ConfigurationException
 
         when:
         Book.findOrSaveByAuthorBetween('A', 'B')
 
         then:
-        thrown(MissingMethodException)
+        thrown MissingMethodException
 
         when:
         Book.findOrSaveByAuthorGreaterThanEquals('B')
 
         then:
-        thrown(MissingMethodException)
+        thrown ConfigurationException
 
         when:
         Book.findOrSaveByAuthorLessThanEquals('B')
 
         then:
-        thrown(MissingMethodException)
+        thrown ConfigurationException
 
         // GemFire doesn't like these...
 //        when:

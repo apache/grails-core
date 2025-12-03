@@ -1,0 +1,41 @@
+===== dbm-rollback-to-date-sql
+
+====== Purpose
+
+Writes SQL to roll back the database to the state it was in at the given date/time to STDOUT or a file.
+
+====== Description
+
+You can specify just the date, or the date and time. The date format must be `yyyy-MM-dd` and the time format must be `HH:mm:ss`.
+
+Usage:
+[source,java]
+----
+grails <<environment>> dbm-rollback-to-date-sql <<date>> <<time>> <<filename>> --contexts=<<contexts>> --defaultSchema=<<defaultSchema>> --dataSource=<<dataSource>>
+----
+
+Required arguments:
+
+* `date` - The rollback date
+
+Optional arguments:
+
+* `time` - The rollback time
+* `filename` - The path to the output file to write to. If not specified output is written to the console
+* `contexts` - A comma-delimited list of http://www.liquibase.org/manual/contexts[context] names. If specified, only changesets tagged with one of the context names will be included
+* `defaultSchema` - The default schema name to use
+* `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
+
+NOTE: Note that the `contexts`, `defaultSchema`, `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
+[source,groovy]
+----
+grails dbm-rollback-to-date-sql "--contexts=<<contexts>>" "--defaultSchema=<<defaultSchema>>" "--dataSource=<<dataSource>>"
+----
+
+NOTE: For the `dataSource` parameter, if the data source is configured as `reports` underneath the `dataSources` key in `application.[yml|groovy]`,
+the value should be `reports`.
+
+[source,groovy]
+----
+--dataSource=reports
+----

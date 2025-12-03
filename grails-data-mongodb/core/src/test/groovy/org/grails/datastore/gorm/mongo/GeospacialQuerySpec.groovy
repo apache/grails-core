@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class GeospacialQuerySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Hotel])
+        manager.addAllDomainClasses([Hotel])
     }
 
     void "Test geolocation with BigDecimal values"() {

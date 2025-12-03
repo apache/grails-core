@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class NestedAssociationQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([UserOpinion, Answer, Question, Release, Department, MilestoneCycle])
+        manager.addAllDomainClasses([UserOpinion, Answer, Question, Release, Department, MilestoneCycle])
     }
 
     void "Test that a join query can be applied to a nested association"() {

@@ -25,18 +25,33 @@ import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
 import org.apache.grails.data.testing.tck.domains.OptLockVersioned
 import org.grails.datastore.mapping.core.OptimisticLockingException
 
+
 /**
  * @author Burt Beckwith
  */
+@IgnoreIf({
+    try {
+        // This class is specific to the Spring/Hibernate 5 integration. If it's on the classpath,
+        // it means we are running against a Hibernate datastore, which has its own specific
+        // optimistic locking tests. This generic TCK test should be skipped.
+        Class.forName('org.springframework.orm.hibernate5.HibernateOptimisticLockingFailureException', false, Thread.currentThread().contextClassLoader)
+        return true
+    } catch (ClassNotFoundException | LinkageError ignored) {
+        return false
+    }
+})
 class OptimisticLockingSpec extends GrailsDataTckSpec {
 
-    void "Test versioning"() {
+    def setupSpec() {
+        manager.addAllDomainClasses([OptLockVersioned, OptLockNotVersioned])
+    }
 
+    void "Test versioning"() {
         given:
         def o = new OptLockVersioned(name: 'locked')
 
         when:
-        o.save(flush: true)
+        o.save flush: true
 
         then:
         o.version == 0
@@ -45,7 +60,7 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
         manager.session.clear()
         o = OptLockVersioned.get(o.id)
         o.name = 'Fred'
-        o.save(flush: true)
+        o.save flush: true
 
         then:
         o.version == 1
@@ -59,76 +74,83 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
         o.version == 1
     }
 
-    // hibernate has a customized version of this
-    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') })
     void "Test optimistic locking"() {
 
         given:
         def o = new OptLockVersioned(name: 'locked').save(flush: true)
         manager.session.clear()
+        manager.transactionManager.commit manager.transactionStatus
+        manager.transactionStatus = null
 
         when:
-        o = OptLockVersioned.get(o.id)
+        OptLockVersioned.withTransaction {
+            try {
+                o = OptLockVersioned.get(o.id)
 
-        Thread.start {
-            OptLockVersioned.withNewSession { s ->
-                def reloaded = OptLockVersioned.get(o.id)
-                assert reloaded
-                reloaded.name += ' in new session'
-                reloaded.save(flush: true)
+                Thread.start {
+                    OptLockVersioned.withTransaction { s ->
+                        def reloaded = OptLockVersioned.get(o.id)
+                        assert reloaded
+                        assert reloaded != o
+                        reloaded.name += ' in new session'
+                        reloaded.save(flush: true)
+                        assert reloaded.version == 1
+                        assert o.version == 0
+                    }
+
+                }.join()
+
+                o.name += ' in main session'
+                o.save(flush: true)
+
+                manager.session.clear()
+                o = OptLockVersioned.get(o.id)
+            } catch (Throwable e) {
+                System.getProperties().each { key, value ->
+                    println "${key}: ${value}"
+                }
+                throw e
             }
-        }.join()
-        sleep(2000) // heisenbug
-
-        o.name += ' in main session'
-        def ex
-        try {
-            o.save(flush: true)
         }
-        catch (e) {
-            ex = e
-            e.printStackTrace()
-        }
-
-        manager.session.clear()
-        o = OptLockVersioned.get(o.id)
-
         then:
-        ex instanceof OptimisticLockingException
-        o.version == 1
-        o.name == 'locked in new session'
+        thrown OptimisticLockingException
     }
 
     void "Test optimistic locking disabled with 'version false'"() {
-
         given:
         def o = new OptLockNotVersioned(name: 'locked').save(flush: true)
         manager.session.clear()
+        manager.transactionManager.commit manager.transactionStatus
+        manager.transactionStatus = null
 
         when:
-        o = OptLockNotVersioned.get(o.id)
-
-        Thread.start {
-            OptLockNotVersioned.withNewSession { s ->
-                def reloaded = OptLockNotVersioned.get(o.id)
-                reloaded.name += ' in new session'
-                reloaded.save(flush: true)
-            }
-        }.join()
-        sleep(2000) // heisenbug
-
-        o.name += ' in main session'
         def ex
-        try {
-            o.save(flush: true)
-        }
-        catch (e) {
-            ex = e
-            e.printStackTrace()
-        }
+        OptLockNotVersioned.withTransaction {
+            o = OptLockNotVersioned.get(o.id)
 
-        manager.session.clear()
-        o = OptLockNotVersioned.get(o.id)
+            Thread.start {
+                OptLockNotVersioned.withTransaction { s ->
+                    def reloaded = OptLockNotVersioned.get(o.id)
+                    reloaded.name += ' in new session'
+                    reloaded.save(flush: true)
+                }
+
+            }.join()
+
+            o.name += ' in main session'
+
+            try {
+                o.save(flush: true)
+            }
+            catch (e) {
+                ex = e
+                e.printStackTrace()
+            }
+
+            manager.session.clear()
+            o = OptLockNotVersioned.get(o.id)
+
+        }
 
         then:
         ex == null

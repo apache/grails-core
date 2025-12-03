@@ -1450,32 +1450,8 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
         currentGormStaticApi().findAll(query, params, args)
     }
 
-    /**
-     * Looks up a named query
-     *
-     * @param queryName The name of the query
-     * @return The query or null
-     *
-     * @deprecated Named queries are deprecated, use where queries instead
-     */
-    @Generated
-    @Deprecated
-    static GormQueryOperations<D> getNamedQuery(String queryName) {
-        GormEnhancer.createNamedQuery(this, queryName)
-    }
-    /**
-     * Looks up a named query
-     *
-     * @param queryName The name of the query
-     * @return The query or null
-     *
-     * @deprecated Named queries are deprecated, use where queries instead
-     */
-    @Generated
-    @Deprecated
-    static GormQueryOperations<D> getNamedQuery(String queryName, Object...args) {
-        GormEnhancer.createNamedQuery(this, queryName, args)
-    }
+
+
 
     @Generated
     private GormInstanceApi<D> currentGormInstanceApi() {

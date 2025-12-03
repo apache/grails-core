@@ -28,7 +28,7 @@ import org.grails.datastore.mapping.mongo.config.MongoSettings
 class MarkDirtyFalseSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Bar, BarWithTimestamp])
+        manager.addAllDomainClasses([Bar, BarWithTimestamp])
         manager.configuration.putAll([(MongoSettings.SETTING_MARK_DIRTY): false])
     }
 

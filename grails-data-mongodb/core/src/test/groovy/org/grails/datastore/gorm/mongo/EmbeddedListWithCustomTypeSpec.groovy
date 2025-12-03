@@ -27,7 +27,7 @@ import spock.lang.Issue
 class EmbeddedListWithCustomTypeSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Person, Family])
+        manager.addAllDomainClasses([Person, Family])
     }
 
     @Issue('GPMONGODB-217')

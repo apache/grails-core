@@ -1,0 +1,194 @@
+Detached Criteria are criteria queries that are not associated with any given database session/connection. Supported since Grails 2.0, Detached Criteria queries have many uses including allowing you to create common reusable criteria queries, execute subqueries and execute batch updates/deletes.
+
+
+
+==== Building Detached Criteria Queries
+
+
+The primary point of entry for using the Detached Criteria is the link:../api/grails/gorm/DetachedCriteria.html[DetachedCriteria] class which accepts a domain class as the only argument to its constructor:
+
+[source,groovy]
+----
+import grails.gorm.*
+...
+def criteria = new DetachedCriteria(Person)
+----
+
+Once you have obtained a reference to a detached criteria instance you can execute <<whereQueries,where>> queries or criteria queries to build up the appropriate query. To build a normal criteria query you can use the `build` method:
+
+[source,groovy]
+----
+def criteria = new DetachedCriteria(Person).build {
+    eq 'lastName', 'Simpson'
+}
+----
+
+Note that methods on the link:../api/grails/gorm/DetachedCriteria.html[DetachedCriteria] instance *do not* mutate the original object but instead return a new query. In other words, you have to use the return value of the `build` method to obtain the mutated criteria object:
+
+[source,groovy]
+----
+def criteria = new DetachedCriteria(Person).build {
+    eq 'lastName', 'Simpson'
+}
+def bartQuery = criteria.build {
+    eq 'firstName', 'Bart'
+}
+----
+
+
+==== Executing Detached Criteria Queries
+
+
+Unlike regular criteria, Detached Criteria are lazy, in that no query is executed at the point of definition. Once a Detached Criteria query has been constructed then there are a number of useful query methods which are summarized in the table below:
+
+[format="csv", options="header"]
+|===
+
+Method,Description
+*list*,List all matching entities
+*get*,Return a single matching result
+*count*,Count all matching records
+*exists*,Return true if any matching records exist
+*deleteAll*,Delete all matching records
+*updateAll(Map)*,Update all matching records with the given properties
+|===
+
+As an example the following code will list the first 4 matching records sorted by the `firstName` property:
+
+[source,groovy]
+----
+def criteria = new DetachedCriteria(Person).build {
+    eq 'lastName', 'Simpson'
+}
+def results = criteria.list(max:4, sort:"firstName")
+----
+
+You can also supply additional criteria to the list method:
+
+[source,groovy]
+----
+def results = criteria.list(max:4, sort:"firstName") {
+    gt 'age', 30
+}
+----
+
+To retrieve a single result you can use the `get` or `find` methods (which are synonyms):
+
+[source,groovy]
+----
+Person p = criteria.find() // or criteria.get()
+----
+
+The `DetachedCriteria` class itself also implements the `Iterable` interface which means that it can be treated like a list:
+
+[source,groovy]
+----
+def criteria = new DetachedCriteria(Person).build {
+    eq 'lastName', 'Simpson'
+}
+criteria.each {
+    println it.firstName
+}
+----
+
+In this case the query is only executed when the `each` method is called. The same applies to all other Groovy collection iteration methods.
+
+You can also execute dynamic finders on `DetachedCriteria` just like on domain classes. For example:
+
+[source,groovy]
+----
+def criteria = new DetachedCriteria(Person).build {
+    eq 'lastName', 'Simpson'
+}
+def bart = criteria.findByFirstName("Bart")
+----
+
+
+==== Using Detached Criteria for Subqueries
+
+
+Within the context of a regular criteria query you can use `DetachedCriteria` to execute subquery. For example if you want to find all people who are older than the average age the following query will accomplish that:
+
+[source,groovy]
+----
+def results = Person.withCriteria {
+     gt "age", new DetachedCriteria(Person).build {
+         projections {
+             avg "age"
+         }
+     }
+     order "firstName"
+ }
+----
+
+Notice that in this case the subquery class is the same as the original criteria query class (i.e. `Person`) and hence the query can be shortened to:
+
+[source,groovy]
+----
+def results = Person.withCriteria {
+     gt "age", {
+         projections {
+             avg "age"
+         }
+     }
+     order "firstName"
+ }
+----
+
+If the subquery class differs from the original criteria query then you will have to use the original syntax.
+
+In the previous example the projection ensured that only a single result was returned (the average age). If your subquery returns multiple results then there are different criteria methods that need to be used to compare the result. For example to find all the people older than the ages 18 to 65 a `gtAll` query can be used:
+
+[source,groovy]
+----
+def results = Person.withCriteria {
+    gtAll "age", {
+        projections {
+            property "age"
+        }
+        between 'age', 18, 65
+    }
+
+    order "firstName"
+}
+----
+
+The following table summarizes criteria methods for operating on subqueries that return multiple results:
+
+[format="csv", options="header"]
+|===
+
+Method,Description
+*gtAll*,greater than all subquery results
+*geAll*,greater than or equal to all subquery results
+*ltAll*,less than all subquery results
+*leAll*,less than or equal to all subquery results
+*eqAll*,equal to all subquery results
+*neAll*,not equal to all subquery results
+|===
+
+
+==== Batch Operations with Detached Criteria
+
+
+The link:../api/grails/gorm/DetachedCriteria.html[DetachedCriteria] class can be used to execute batch operations such as batch updates and deletes. For example, the following query will update all people with the surname "Simpson" to have the surname "Bloggs":
+
+[source,groovy]
+----
+def criteria = new DetachedCriteria(Person).build {
+    eq 'lastName', 'Simpson'
+}
+int total = criteria.updateAll(lastName:"Bloggs")
+----
+
+NOTE: Note that one limitation with regards to batch operations is that join queries (queries that query associations) are not allowed within the `DetachedCriteria` instance.
+
+To batch delete records you can use the `deleteAll` method:
+
+[source,groovy]
+----
+def criteria = new DetachedCriteria(Person).build {
+    eq 'lastName', 'Simpson'
+}
+int total = criteria.deleteAll()
+----

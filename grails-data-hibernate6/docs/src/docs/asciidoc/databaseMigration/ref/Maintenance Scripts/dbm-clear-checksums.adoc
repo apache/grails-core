@@ -1,0 +1,32 @@
+===== dbm-clear-checksums
+
+====== Purpose
+
+Removes current checksums from database. On next run checksums will be recomputed.
+
+====== Description
+
+Usage:
+[source,java]
+----
+grails <<environment>> dbm-clear-checksums --dataSource=<<dataSource>>
+----
+
+Required arguments: __none__.
+
+Optional arguments:
+
+* `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
+
+NOTE: Note that the `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
+[source,groovy]
+----
+grails dbm-clear-checksums  "--dataSource=<<dataSource>>"
+----
+
+NOTE: For the `dataSource` parameter, if the data source is configured as `reports` underneath the `dataSources` key in `application.[yml|groovy]`, the value should be `reports`.
+
+[source,groovy]
+----
+--dataSource=reports
+----

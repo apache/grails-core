@@ -28,7 +28,7 @@ import spock.lang.Issue
  */
 class BasicTypeHasManySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Workspace])
+        manager.addAllDomainClasses([Workspace])
     }
 
     @Issue('GRAILS-9876')

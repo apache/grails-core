@@ -1,0 +1,32 @@
+===== dbm-previous-changeset-sql
+
+====== Purpose
+
+Writes the SQL to STDOUT or a file for the specified number of previous changesets whether they have run or not.
+
+====== Description
+
+Generates SQL for the specifed number of changeSets from the changelog. Executes against the database configured in `application.[yml|groovy]` for the current environment (defaults to `dev`).
+
+Usage:
+[source,java]
+----
+grails <<environment>> dbm-previous-changeset-sql <<number>> <<filename>> --skip=<<skip>> --contexts=<<contexts>> --defaultSchema=<<defaultSchema>>
+----
+
+Required arguments:
+
+* `number` - The number of un-run changesets to run
+
+Optional arguments:
+
+* `filename` - The path to the output file to write to. If not specified output is written to the console
+* `skip` - The number of changesets to skip if you want to exclude recent ones
+* `contexts` - A comma-delimited list of http://www.liquibase.org/manual/contexts[context] names. If specified, only changesets tagged with one of the context names will be run
+* `defaultSchema` - The default schema name to use
+
+NOTE: Note that the `contexts` and `defaultSchema` parameter name and value must be quoted if executed in Windows, e.g.
+[source,groovy]
+----
+grails dbm-update-count-sql "--contexts=<<contexts>>" "--defaultSchema=<<defaultSchema>>"
+----

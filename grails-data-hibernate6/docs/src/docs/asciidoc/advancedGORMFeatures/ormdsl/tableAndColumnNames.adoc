@@ -1,0 +1,200 @@
+
+===== Table names
+
+
+The database table name which the class maps to can be customized using the `table` method:
+
+[source,java]
+----
+class Person {
+    ...
+    static mapping = {
+        table 'people'
+    }
+}
+----
+
+In this case the class would be mapped to a table called `people` instead of the default name of `person`.
+
+
+===== Column names
+
+
+It is also possible to customize the mapping for individual columns onto the database. For example to change the name you can do:
+
+[source,java]
+----
+class Person {
+
+    String firstName
+
+    static mapping = {
+        table 'people'
+        firstName column: 'First_Name'
+    }
+}
+----
+
+Here `firstName` is a dynamic method within the `mapping` Closure that has a single Map parameter. Since its name corresponds to a domain class persistent field, the parameter values (in this case just `"column"`) are used to configure the mapping for that property.
+
+
+===== Column type
+
+
+GORM supports configuration of Hibernate types with the DSL using the type attribute. This includes specifying user types that implement the Hibernate https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/usertype/UserType.html[org.hibernate.usertype.UserType] interface, which allows complete customization of how a type is persisted. As an example if you had a `PostCodeType` you could use it as follows:
+
+[source,java]
+----
+class Address {
+
+    String number
+    String postCode
+
+    static mapping = {
+        postCode type: PostCodeType
+    }
+}
+----
+
+Alternatively if you just wanted to map it to one of Hibernate's basic types other than the default chosen by GORM you could use:
+
+[source,java]
+----
+class Address {
+
+    String number
+    String postCode
+
+    static mapping = {
+        postCode type: 'text'
+    }
+}
+----
+
+This would make the `postCode` column map to the default large-text type for the database you're using (for example TEXT or CLOB).
+
+See the Hibernate documentation regarding https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#basic-explicit[Basic Types] for further information.
+
+
+===== Many-to-One/One-to-One Mappings
+
+
+In the case of associations it is also possible to configure the foreign keys used to map associations. In the case of a many-to-one or one-to-one association this is exactly the same as any regular column. For example consider the following:
+
+[source,java]
+----
+class Person {
+
+    String firstName
+    Address address
+
+    static mapping = {
+        table 'people'
+        firstName column: 'First_Name'
+        address column: 'Person_Address_Id'
+    }
+}
+----
+
+By default the `address` association would map to a foreign key column called `address_id`. By using the above mapping we have changed the name of the foreign key column to `Person_Adress_Id`.
+
+===== One-to-Many Mapping
+
+With a bidirectional one-to-many you can change the foreign key column used by changing the column name on the many side of the association as per the example in the previous section on one-to-one associations. However, with unidirectional associations the foreign key needs to be specified on the association itself. For example given a unidirectional one-to-many relationship between `Person` and `Address` the following code will change the foreign key in the `address` table:
+
+[source,java]
+----
+class Person {
+
+    String firstName
+
+    static hasMany = [addresses: Address]
+
+    static mapping = {
+        table 'people'
+        firstName column: 'First_Name'
+        addresses column: 'Person_Address_Id'
+    }
+}
+----
+
+If you don't want the column to be in the `address` table, but instead some intermediate join table you can use the `joinTable` parameter:
+
+[source,java]
+----
+class Person {
+
+    String firstName
+
+    static hasMany = [addresses: Address]
+
+    static mapping = {
+        table 'people'
+        firstName column: 'First_Name'
+        addresses joinTable: [name: 'Person_Addresses',
+                              key: 'Person_Id',
+                              column: 'Address_Id']
+    }
+}
+----
+
+
+===== Many-to-Many Mapping
+
+
+GORM, by default maps a many-to-many association using a join table. For example consider this many-to-many association:
+
+[source,java]
+----
+class Group {
+    ...
+    static hasMany = [people: Person]
+}
+----
+
+[source,java]
+----
+class Person {
+    ...
+    static belongsTo = Group
+    static hasMany = [groups: Group]
+}
+----
+
+In this case GORM will create a join table called `group_person` containing foreign keys called `person_id` and `group_id` referencing the `person` and `group` tables. To change the column names you can specify a column within the mappings for each class.
+
+[source,java]
+----
+class Group {
+   ...
+   static mapping = {
+       people column: 'Group_Person_Id'
+   }
+}
+class Person {
+   ...
+   static mapping = {
+       groups column: 'Group_Group_Id'
+   }
+}
+----
+
+You can also specify the name of the join table to use:
+
+[source,java]
+----
+class Group {
+   ...
+   static mapping = {
+       people column: 'Group_Person_Id',
+              joinTable: 'PERSON_GROUP_ASSOCIATIONS'
+   }
+}
+class Person {
+   ...
+   static mapping = {
+       groups column: 'Group_Group_Id',
+              joinTable: 'PERSON_GROUP_ASSOCIATIONS'
+   }
+}
+----
