@@ -297,11 +297,11 @@ Publish the released version to [Grails Forge](https://start.grails.org) using o
 
 Grails Forge organizes deployments into version slots as follows:
 
-- **RELEASE** - GA releases only
-- **NEXT** - Milestones and Release Candidate
-- **SNAPSHOT** - current or next version snapshot
-- **PREV** - previous release version
-- **PREV-SNAPSHOT** - previous version snapshot
+- **RELEASE** - Full Final Releases - https://github.com/apache/grails-core/actions/workflows/forge-deploy-release.yml
+- **NEXT** - Milestones and Release Candidate for Next Release (also Next version snapshot prior to Milestone) - https://github.com/apache/grails-core/actions/workflows/forge-deploy-next.yml
+- **SNAPSHOT** - current or next version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
+- **PREV** - previous release version - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev.yml
+- **PREV-SNAPSHOT** - previous version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev-snapshot.yml
 
 Use the action whose name matches the slot you want to deploy to.\
 In the **“Run workflow/Use workflow from”** dropdown, choose the release tag you just created.
@@ -321,6 +321,8 @@ version from Maven Central.
 ### Close out the `grails-core` release
 
 The last step in the `grails-core` release workflow is to run the `Close Release` step.  This will create a merge branch for the original tag with version number and then open a PR to merge back into the next branch.  You will need to merge this PR into the branch after correcting any merge conflict.
+
+After this PR is merged, deploy the new SNAPSHOT to Forge via: https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
 
 ### Update the `grails-static-website`
 

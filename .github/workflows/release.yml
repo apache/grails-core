@@ -521,11 +521,11 @@ jobs:
           echo "::group::Manual Grails Forge deployment"
           echo "Kick off Forge-* workflow for version ${VERSION} based on the below rules:"
           cat <<'EOF'
-          * RELEASE - GA releases only
-          * NEXT - Milestones and Release Candidate
-          * SNAPSHOT - current or next version snapshot
-          * PREV - previous release version
-          * PREV-SNAPSHOT - previous version snapshot
+          * RELEASE - Full Final Releases - https://github.com/apache/grails-core/actions/workflows/forge-deploy-release.yml
+          * NEXT - Milestones and Release Candidate for Next Release (also Next version snapshot prior to Milestone) - https://github.com/apache/grails-core/actions/workflows/forge-deploy-next.yml
+          * SNAPSHOT - current or next version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
+          * PREV - previous release version - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev.yml
+          * PREV-SNAPSHOT - previous version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev-snapshot.yml
           EOF
           echo "::endgroup::"
   docs:
@@ -636,6 +636,16 @@ jobs:
         run: |
           echo "::group::Blog Post Creation - MANUAL"
           echo "Publish a blog post on https://grails.apache.org/blog/ about the new release [${VERSION}] using the repo https://github.com/apache/grails-static-website"
+          echo "::endgroup::"
+      - name: "🌎 MANUAL - Merge Close Release PR"
+        run: |
+          echo "::group::Merge Close Release PR - MANUAL"
+          echo "The last step in the grails-core release workflow will create a merge branch for the original tag with version number and then open a PR to merge back into the next branch. You will need to merge this PR into the branch after correcting any merge conflict."
+          echo "::endgroup::"
+      - name: "🌎 MANUAL - deploy the new SNAPSHOT to Forge"
+        run: |
+          echo "::group::Deploy the new SNAPSHOT to Forge - MANUAL"
+          echo "After the Close Release PR is merged, deploy the new SNAPSHOT to Forge via: https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml"
           echo "::endgroup::"
       - name: '📧 Announcement Email'
         run: |

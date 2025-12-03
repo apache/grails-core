@@ -17,36 +17,24 @@
  *  under the License.
  */
 
-description("Creates a scaffolded controller") {
-  	usage 'create-scaffold-controller [controller name]'
+description("Creates a scaffolded service") {
+  	usage 'create-scaffold-service [service name]'
     completer org.grails.cli.interactive.completers.DomainClassCompleter
-    argument name:'Controller Name', description:"The name of controller", required:true
+    argument name:'Service Name', description:"The name of service", required:true
     flag name:'force', description:"Whether to overwrite existing files"
-    flag name:'namespace', description:"The namespace for the controller"
-    flag name:'service', description:"Use grails.plugin.scaffolding.RestfulServiceController instead of grails.rest.RestfulController"
-    flag name:'extends', description:"The class to extend (default: grails.rest.RestfulController)"
+    flag name:'extends', description:"The class to extend (default: grails.plugin.scaffolding.GormService)"
  }
 
 def modelInstance = model(args[0])
 def overwrite = flag('force') ? true : false
-def namespace = flag('namespace')
-def useService = flag('service') ? true : false
 def extendsClass = flag('extends')
 
 def templateModel = modelInstance.asMap()
-templateModel.put('useService', useService)
-templateModel.put('namespace', namespace ?: '')
 templateModel.put('extendsClass', extendsClass ?: '')
 templateModel.put('extendsClassName', extendsClass ? extendsClass.substring(extendsClass.lastIndexOf('.') + 1) : '')
 
-def destinationPath = "grails-app/controllers/${modelInstance.packagePath}"
-
-if (namespace) {
-    destinationPath = "${destinationPath}/${namespace}"
-}
-
-render 	 template: template('scaffolding/ScaffoldedController.groovy'),
-	     destination: file("${destinationPath}/${modelInstance.convention("Controller")}.groovy"),
+render 	 template: template('scaffolding/ScaffoldedService.groovy'),
+	     destination: file("grails-app/services/${modelInstance.packagePath}/${modelInstance.convention("Service")}.groovy"),
 	     model: templateModel,
 	     overwrite: overwrite
 

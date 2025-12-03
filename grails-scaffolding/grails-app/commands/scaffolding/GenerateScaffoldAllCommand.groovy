@@ -29,15 +29,16 @@ import grails.plugin.scaffolding.SkipBootstrap
 import org.grails.io.support.Resource
 
 /**
- * Creates a scaffolded controller.
- * Usage: <code>./gradlew runCommand "-Pargs=create-scaffold-controller [DOMAIN_CLASS_NAME]"</code>
+ * Generates a scaffolded service and controller.
+ * Usage: <code>./gradlew runCommand "-Pargs=generate-scaffold-all [DOMAIN_CLASS_NAME]"</code>
  *
- * @since 5.0.0
+ * @author Scott Murphy Heiberg
+ * @since 7.1.0
  */
 @CompileStatic
-class CreateScaffoldControllerCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
+class GenerateScaffoldAllCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
 
-    String description = 'Creates a scaffolded controller'
+    String description = 'Generates a scaffolded service and controller'
 
     @Delegate
     ConsoleLogger consoleLogger = GrailsConsole.getInstance()
@@ -57,26 +58,38 @@ class CreateScaffoldControllerCommand implements GrailsApplicationCommand, Comma
         final Model model = model(sourceClass)
 
         String namespace = flag('namespace')
-        boolean useService = isFlagPresent('service')
-        String extendsClass = flag('extends')
+        String serviceExtends = flag('serviceExtends')
+        String controllerExtends = flag('controllerExtends')
 
+        // Generate scaffolded service
+        Map<String, Object> serviceTemplateModel = model.asMap()
+        serviceTemplateModel.put('extendsClass', serviceExtends ?: '')
+        serviceTemplateModel.put('extendsClassName', serviceExtends ? serviceExtends.substring(serviceExtends.lastIndexOf('.') + 1) : '')
+
+        render(template: template('scaffolding/ScaffoldedService.groovy'),
+                destination: file("grails-app/services/${model.packagePath}/${model.convention('Service')}.groovy"),
+                model: serviceTemplateModel,
+                overwrite: overwrite)
+        verbose('Scaffold service created for domain class')
+
+        // Generate scaffolded controller with service reference
         Map<String, Object> templateModel = model.asMap()
-        templateModel.put('useService', useService)
+        templateModel.put('useService', true)
         templateModel.put('namespace', namespace ?: '')
-        templateModel.put('extendsClass', extendsClass ?: '')
-        templateModel.put('extendsClassName', extendsClass ? extendsClass.substring(extendsClass.lastIndexOf('.') + 1) : '')
+        templateModel.put('extendsClass', controllerExtends ?: '')
+        templateModel.put('extendsClassName', controllerExtends ? controllerExtends.substring(controllerExtends.lastIndexOf('.') + 1) : '')
 
-        String destinationPath = "grails-app/controllers/${model.packagePath}"
+        String controllerDestinationPath = "grails-app/controllers/${model.packagePath}"
 
         if (namespace) {
-            destinationPath = "${destinationPath}/${namespace}"
+            controllerDestinationPath = "${controllerDestinationPath}/${namespace}"
         }
 
         render(template: template('scaffolding/ScaffoldedController.groovy'),
-                destination: file("${destinationPath}/${model.convention('Controller')}.groovy"),
+                destination: file("${controllerDestinationPath}/${model.convention('Controller')}.groovy"),
                 model: templateModel,
                 overwrite: overwrite)
-        verbose('Scaffold controller created for domain class')
+        verbose('Scaffold controller created for domain class with service reference')
 
         return SUCCESS
     }

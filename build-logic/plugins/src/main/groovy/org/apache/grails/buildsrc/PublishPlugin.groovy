@@ -183,7 +183,7 @@ class PublishPlugin implements Plugin<Project> {
                 it.url.set('https://apache.org/')
             }
             it.developers.set(project.provider { lookupProperty(project, 'pomDevelopers', determineDevelopers(project))})
-            it.pomCustomization = lookupProperty(project, 'pomCustomization') as Closure
+            it.pomCustomization.set(project.provider { lookupProperty(project, 'pomCustomization') as Closure })
             it.publishTestSources.set(project.provider { lookupProperty(project, 'pomPublishTestSources', false)})
             it.testRepositoryPath.set(project.provider { shouldSkipJavaComponent(project) ? null : findRootGrailsCoreDir(project).dir('build/local-maven')})
             it.publicationName.set(project.provider { lookupProperty(project, 'pomMavenPublicationName', 'maven')})
