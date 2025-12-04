@@ -192,30 +192,128 @@ class PublishPlugin implements Plugin<Project> {
     }
 
     private static List<MavenPomDeveloper> getProjectDevelopers(Project project) {
-        // Note: id is typically the github user id if the user has a github account (historically, not always true)
+        // Note: id is typically the github user id if the user has a github account
+        // Note: these lists are sorted alphabetically by section
         [
             // Founders
             founder('dierk', 'Dierk König', project),
             founder('glaforge', 'Guillaume LaForge', project),
             founder('graemerocher', 'Graeme Rocher', project),
-            founder('stevendevijver', 'Steven Devijver', project),
-            // Developers - `active` contributors (should have an ASF account)
+            founder('devijvers', 'Steven Devijver', project),
+            // Developers
+            // - `active` contributors (should have an ASF account)
+            // - supports the current framework
+            developer('bkoehm','Brian Koehmstedt', project),
+            developer('borinquenkid','Walter B Duque de Estrada', project),
             developer('codeconsole', 'Scott Murphy Heiberg', project),
+            developer('davydotcom','David Estes', project),
             developer('jamesfredley', 'James Fredley', project),
             developer('jdaugherty', 'James Daugherty', project),
+            developer('jpammer', 'Jonas Pammer', project),
             developer('lhotari', 'Lari Hotari', project),
             developer('matrei', 'Mattias Reichel', project),
+            developer('paulk','Paul King', project),
             developer('sbglasius', 'Søren Berg Glasius', project),
             developer('sdelamo', 'Sergio del Amo', project),
-            // Past Developers, Criteria:
+            developer('tbrasmussen', 'Thomas Rasmussen', project),
+            // Past Developers
             // - non-apache members go here until their ASF account is created
             // - non-active, no contributions across mailing lists, commits, or grails processes in the last 12 months
+            // - contributors in the pom previously
+            // - significant contributors (i.e. they were involved in Grails Development or a member of a company that was)
+            emeritus('ColinHarrington','Colin Harrington', project),
+            emeritus('JasonTypesCodes', 'Jason Schindler', project),
+            emeritus('ZacharyKlein','Zachary Klein', project),
+            emeritus('aitortxu','Aitor Alzola', project),
+            emeritus('alexanderzeillinger','Alexander Zeillinger', project),
+            emeritus('alkemist', 'Luke Daley', project),
+            emeritus('alvarosanchez','Álvaro Sánchez-Mariscal', project),
+            emeritus('anshbansal','Aseem Bansal', project),
+            emeritus('basecamp', 'Joshua Burnett', project),
+            emeritus('bluesliverx','Brian Saville', project),
+            emeritus('bobbywarner', 'Bobby Warner', project),
             emeritus('burtbeckwith', 'Burt Beckwith', project),
+            emeritus('davidkron', 'David Kron', project),
+            emeritus('delight', 'Konstantinos Kostarellis', project),
+            emeritus('erawat','Erawat Chamanont', project),
+            emeritus('erichelgeson','Eric Helgeson', project),
+            emeritus('fordguo','Ford Guo', project),
+            emeritus('houbie','Ivo Houbrechts', project),
             emeritus('jameskleeh', 'James Kleeh', project),
+            emeritus('jbrisbin','Jon Brisbin', project),
             emeritus('jeffscottbrown', 'Jeff Brown', project),
+            emeritus('jrudolph','Jason Rudolph', project),
             emeritus('k4zuki', 'Kazuki Yamamoto', project),
+            emeritus('leebutts','Lee Butts', project),
+            emeritus('longwa','Aaron Long', project),
+            emeritus('lopez.ivan@gmail.com', 'Iván López', project),
+            emeritus('marceloverdijk','Marcel Overdijk', project),
+            emeritus('marcpalmer', 'Marc Palmer', project),
+            emeritus('mpccolorado','Martín Caballero', project),
+            emeritus('nebolsin','Sergey Nebolsin', project),
+            emeritus('niravassar','Nirav Assar', project),
+            emeritus('nobeans','Yasuharu Nakano', project),
+            emeritus('paras@atoms.to', 'Paras Lakhani', project),
+            emeritus('pledbrook', 'Peter Ledbrook', project),
             emeritus('puneetbehl', 'Puneet Behl', project),
+            emeritus('rlovtangen','Ronny Løvtangen', project),
+            emeritus('robertoschwald', 'Robert Oschwald', project),
             emeritus('robfletcher', 'Rob Fletcher', project),
+            emeritus('rstepanenko','Roman Stepanenko', project),
+            emeritus('rvanderwerf','Ryan Vanderwerf', project),
+            emeritus('sarmbruster', 'Stefan Armbruster', project),
+            emeritus('smaldini','Stephane Maldini', project),
+            emeritus('tkvw','Dennie de Lange', project),
+            emeritus('tomwidmer','Tom Widmer', project),
+            emeritus('yamkazu','Kazuki Yamamoto', project),
+            emeritus('zanthrash','Zan Thrash', project),
+            emeritus('ziegfried', 'Siegfried Puchbauer', project),
+            // Contributors
+            // - not full time supporting the project and historically were not considered on the Grails Team or an associated project
+            // - if any of these members continue to contribute they will become future developers
+            contributor('B5A7', 'Brad', project),
+            contributor('JudeRV', 'judevargas22@gmail.com', project),
+            contributor('acanby', 'Andrew Canby', project),
+            contributor('aeisenberg', 'Andrew Eisenberg', project),
+            contributor('and-dmitry', 'Dmitry Andreychuk', project),
+            contributor('andersaaberg', 'Anders Aaberg', project),
+            contributor('aulea', 'Alar Aule', project),
+            contributor('beckje01', 'Jeff Beck', project),
+            contributor('benrhine', 'Ben Rhine', project),
+            contributor('bodiam', 'Erik Pragt', project),
+            contributor('ctoestreich', 'Christian Oestreich', project),
+            contributor('danveloper', 'Dan Woods', project),
+            contributor('ddelponte', 'Dean Del Ponte', project),
+            contributor('denisfalqueto', 'Denis Falqueto', project),
+            contributor('dmurat', 'Damir Murat', project),
+            contributor('doelleri', 'Donald Oellerich', project),
+            contributor('domurtag', 'Dónal Murtagh', project),
+            contributor('dpcasady', 'Danny Casady', project),
+            contributor('dtanner', 'Dan Tanner', project),
+            contributor('gsartori','Gianluca Sartori', project),
+            contributor('hansd', 'Hans Dockter', project),
+            contributor('hauner', 'Martin Hauner', project),
+            contributor('jamesdh', 'James Hardwick', project),
+            contributor('jccorp', 'Javier Camacho', project),
+            contributor('joemccall86', 'Joe McCall', project),
+            contributor('jprinet', 'Jérôme Prinet', project),
+            contributor('jwagenleitner', 'John Wagenleitner', project),
+            contributor('lucastex', 'Lucas Frare Teixeira', project),
+            contributor('mburak', 'Matias Burak', project),
+            contributor('micfra', 'Michael Frankfurter', project),
+            contributor('mikea', 'Mike Aizatsky', project),
+            contributor('mjcmatrix', 'Matt Carter', project),
+            contributor('olliefreeman', 'Ollie Freeman', project),
+            contributor('rainboyan', 'Michael Yan', project),
+            contributor('snimavat', 'Sudhir Nimavat', project),
+            contributor('sukrit007', 'Sukrit Khera', project),
+            contributor('tcrossland', 'Tom Crossland', project),
+            contributor('tednaleid', 'Ted Naleid', project),
+            contributor('tomaslin', 'Tomás Lin', project),
+            contributor('uurien', 'Ugaitz Urien', project),
+            contributor('vinod2800', 'Vinodkumar Nemagouda', project),
+            contributor('wololock', 'Szymon Stepniak', project),
+            contributor('zyro23', 'Zyro', project),
         ]
     }
 
@@ -229,6 +327,10 @@ class PublishPlugin implements Plugin<Project> {
 
     private static MavenPomDeveloper emeritus(String id, String name, Project project) {
         pomDeveloper('Developer Emeritus', id, name, project)
+    }
+
+    private static MavenPomDeveloper contributor(String id, String name, Project project) {
+        pomDeveloper('Contributor', id, name, project)
     }
 
     private static MavenPomDeveloper pomDeveloper(String role, String id, String name, Project project) {
