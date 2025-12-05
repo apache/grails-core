@@ -285,6 +285,7 @@ jobs:
           grails
           -x 'grails/.git/*'
           -x 'grails/.github/*'
+          -x 'grails/.mailmap'
       - name: "🔐 Set up GPG" # use env var to not expose the key
         env:
           GPG_KEY: ${{ secrets.GRAILS_GPG_KEY }}

@@ -21,6 +21,8 @@ plugins {
     id 'groovy'
     id 'project-report'
     id 'java-library'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
 }
@@ -31,7 +33,6 @@ group = 'org.apache.grails.views'
 ext {
     pomTitle = 'Groovy Server Pages (GSP)'
     pomDescription = 'Groovy Server Pages (GSP) - A server-side view rendering technology based on Groovy'
-    pomDevelopers = ['graemerocher': 'Graeme Rocher']
 }
 
 dependencies {
@@ -109,8 +110,6 @@ dependencies {
 }
 
 apply {
-    // java-configuration must be applied first since tasks are now lazy registered
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
