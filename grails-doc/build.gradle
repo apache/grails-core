@@ -25,6 +25,7 @@ plugins {
     id 'base'
     id 'org.asciidoctor.jvm.convert'
     id 'groovy'
+    id 'org.apache.grails.buildsrc.properties'
 }
 
 compileJava.options.release = javaVersion.toInteger()

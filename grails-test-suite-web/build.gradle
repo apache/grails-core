@@ -19,6 +19,8 @@
 
 plugins {
     id 'groovy'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
 }
 
 version = projectVersion
@@ -95,7 +97,5 @@ tasks.withType(Groovydoc).configureEach {
 }
 
 apply {
-    // java-configuration must be applied first since tasks are now lazy registered
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

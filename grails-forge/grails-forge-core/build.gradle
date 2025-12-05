@@ -1,5 +1,3 @@
-import org.apache.grails.buildsrc.WriteGrailsVersionInfoTask
-
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
@@ -19,10 +17,14 @@ import org.apache.grails.buildsrc.WriteGrailsVersionInfoTask
  *  under the License.
  */
 
+import org.apache.grails.buildsrc.WriteGrailsVersionInfoTask
+
 plugins {
     id 'groovy'
     id 'java-library'
+    id 'org.apache.grails.buildsrc.properties'
     id 'org.grails.forge.rocker'
+    id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
 }
@@ -116,7 +118,6 @@ copyGrailsWrapper.configure { Sync it ->
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')

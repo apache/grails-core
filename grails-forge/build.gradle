@@ -22,9 +22,8 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-Properties props = new Properties()
-file('../gradle.properties').withInputStream {
-    props.load(it)
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
 }
 
 ext {
@@ -41,12 +40,6 @@ ext {
 }
 
 allprojects {
-    props.forEach { k, v ->
-        if (!project.hasProperty(k as String)) {
-            project.ext.set(k as String, v)
-        }
-    }
-
     tasks.withType(Test).configureEach { Task testTask ->
         testTask.dependsOn(
                 gradle.includedBuild('grails-core').task(':publishAllPublicationsToTestCaseMavenRepoRepository'),
