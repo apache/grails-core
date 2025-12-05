@@ -24,7 +24,6 @@ plugins {
 version = projectVersion
 group = 'examples'
 
-apply plugin: 'groovy'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 
 dependencies {

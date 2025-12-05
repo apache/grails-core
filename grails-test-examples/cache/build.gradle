@@ -18,7 +18,6 @@
  */
 
 plugins {
-    id 'groovy'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.compile'
 }
