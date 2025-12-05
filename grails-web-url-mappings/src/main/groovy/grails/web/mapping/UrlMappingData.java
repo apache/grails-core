@@ -70,4 +70,9 @@ public interface UrlMappingData {
      * @return Whether the pattern has an optional extension
      */
     boolean hasOptionalExtension();
+
+    /**
+     * @return Whether the parameter before the optional extension should use greedy matching (last-dot split)
+     */
+    boolean hasGreedyExtensionParam();
 }

@@ -36,13 +36,14 @@ dependencies {
 
 ==== Dynamic Scaffolding
 
-
-The simplest way to get started with scaffolding is to enable it by setting the `scaffold` property in the controller to a specific domain class:
+The simplest way to get started with scaffolding is to use the `@Scaffold` annotation on a controller:
 
 [source,groovy]
 ----
+import grails.plugin.scaffolding.annotation.Scaffold
+
+@Scaffold(Book)
 class BookController {
-    static scaffold = Book  // Or any other domain class such as "Author", "Publisher"
 }
 ----
 
@@ -58,26 +59,95 @@ With this configured, when you start your application the actions and views will
 
 A CRUD interface will also be generated. To access this open `http://localhost:8080/book` in a browser.
 
-Note: The old alternative of defining `scaffold` property:
+If you prefer to keep your domain model in Java and https://hibernate.org/[mapped with Hibernate] you can still use scaffolding, simply import the domain class and use it in the `@Scaffold` annotation.
+
+===== Legacy Static Scaffold Property
+
+The older `static scaffold = Book` syntax is still supported but the `@Scaffold` annotation is preferred:
 
 [source,groovy]
 ----
 class BookController {
-    static scaffold = true
+    static scaffold = Book  // Legacy syntax - @Scaffold annotation is preferred
 }
 ----
 
-is no longer supported above Grails 3.0.
+NOTE: The `static scaffold = true` form is not supported in Grails 3.0 and above.
 
-If you prefer to keep your domain model in Java and https://hibernate.org/[mapped with Hibernate] you can still use scaffolding, simply import the domain class and set its name as the `scaffold` argument.
+===== Scaffolded Services
 
-You can add new actions to a scaffolded controller, for example:
+In addition to controllers, you can also scaffold services using the `@Scaffold` annotation:
 
 [source,groovy]
 ----
-class BookController {
+import grails.plugin.scaffolding.annotation.Scaffold
 
-    static scaffold = Book
+@Scaffold(Book)
+class BookService {
+}
+----
+
+This generates a service that extends `grails.plugin.scaffolding.GormService` and provides standard CRUD operations:
+
+* `get(id)` - Retrieve by ID
+* `list(Map args)` - List with pagination/sorting
+* `count(Map args)` - Count entities
+* `save(instance)` - Create or update
+* `delete(id)` - Delete by ID
+
+===== Service-Backed Controllers
+
+For better separation of concerns, you can create controllers that delegate to a scaffolded service using `RestfulServiceController`:
+
+[source,groovy]
+----
+import grails.plugin.scaffolding.annotation.Scaffold
+import grails.plugin.scaffolding.RestfulServiceController
+
+@Scaffold(RestfulServiceController<Book>)
+class BookController {
+}
+----
+
+This controller will automatically locate and use the corresponding `BookService` for all data operations.
+
+===== Extending Custom Classes
+
+You can specify a custom class to extend for your scaffolded controllers or services:
+
+[source,groovy]
+----
+import grails.plugin.scaffolding.annotation.Scaffold
+import com.example.MyCustomService
+
+@Scaffold(MyCustomService<Book>)
+class BookService {
+}
+----
+
+===== Read-Only Mode
+
+You can create read-only scaffolded controllers or services:
+
+[source,groovy]
+----
+import grails.plugin.scaffolding.annotation.Scaffold
+
+@Scaffold(domain = Book, readOnly = true)
+class BookController {
+}
+----
+
+===== Adding Custom Actions
+
+You can add new actions to a scaffolded controller:
+
+[source,groovy]
+----
+import grails.plugin.scaffolding.annotation.Scaffold
+
+@Scaffold(Book)
+class BookController {
 
     def changeAuthor() {
         def b = Book.get(params.id)
@@ -85,8 +155,8 @@ class BookController {
         b.save()
 
         // redirect to a scaffolded action
-        redirect(action:show)
-     }
+        redirect(action: 'show')
+    }
 }
 ----
 
@@ -94,9 +164,10 @@ You can also override the scaffolded actions:
 
 [source,groovy]
 ----
-class BookController {
+import grails.plugin.scaffolding.annotation.Scaffold
 
-    static scaffold = Book
+@Scaffold(Book)
+class BookController {
 
     // overrides scaffolded action to return both authors and books
     def index() {
@@ -108,7 +179,7 @@ class BookController {
     def show() {
         def book = Book.get(params.id)
         log.error("{}", book)
-        [bookInstance : book]
+        [bookInstance: book]
     }
 }
 ----
@@ -122,33 +193,94 @@ Also, the standard scaffold views expect model variables of the form `<propertyN
 
 ==== Static Scaffolding
 
+Grails lets you generate a controller and the views used to create the above interface from the command line.
 
-Grails lets you generate a controller and the views used to create the above interface from the command line. To generate a controller type:
+===== Generating Controllers and Views
 
-[source,groovy]
+To generate a controller type:
+
+[source,bash]
 ----
 grails generate-controller Book
 ----
 
 or to generate the views:
 
-[source,groovy]
+[source,bash]
 ----
 grails generate-views Book
 ----
 
 or to generate everything:
 
-[source,groovy]
+[source,bash]
 ----
 grails generate-all Book
 ----
 
 If you have a domain class in a package or are generating from a https://hibernate.org[Hibernate mapped class] remember to include the fully qualified package name:
 
-[source,groovy]
+[source,bash]
 ----
 grails generate-all com.bookstore.Book
+----
+
+===== Generating Scaffolded Controllers and Services
+
+To generate a scaffolded controller (using `@Scaffold` annotation):
+
+[source,bash]
+----
+grails create-scaffold-controller Book
+----
+
+To generate a scaffolded service:
+
+[source,bash]
+----
+grails create-scaffold-service Book
+----
+
+To generate both a scaffolded service and controller together:
+
+[source,bash]
+----
+grails generate-scaffold-all Book
+----
+
+===== Command Options
+
+The `create-scaffold-controller` command supports the following options:
+
+* `--force` - Overwrite existing files
+* `--namespace` - Set the controller namespace
+* `--service` - Use `grails.plugin.scaffolding.RestfulServiceController` instead of `grails.rest.RestfulController`
+* `--extends` - Specify a custom class to extend (default: `grails.rest.RestfulController`)
+
+The `create-scaffold-service` command supports:
+
+* `--force` - Overwrite existing files
+* `--extends` - Specify a custom class to extend (default: `grails.plugin.scaffolding.GormService`)
+
+The `generate-scaffold-all` command supports:
+
+* `--force` - Overwrite existing files
+* `--namespace` - Set the controller namespace
+* `--serviceExtends` - Specify a custom class to extend for the service (default: `grails.plugin.scaffolding.GormService`)
+* `--controllerExtends` - Specify a custom class to extend for the controller (default: `grails.plugin.scaffolding.RestfulServiceController`)
+
+Examples:
+
+[source,bash]
+----
+# Generate a scaffolded controller that uses a service
+grails create-scaffold-controller Book --service
+
+# Generate with a custom class to extend
+grails create-scaffold-service Book --extends=com.example.MyCustomService
+
+# Generate both with namespace
+grails generate-scaffold-all Book --namespace=api
 ----
 
 

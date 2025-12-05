@@ -16,16 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package grails.gorm.annotation;
 
-package grails.doc.macros
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import org.radeox.macro.BaseMacro
-import org.radeox.macro.parameter.MacroParameter
-
-class HiddenMacro extends BaseMacro {
-    String getName() { "hidden" }
-
-    void execute(Writer out, MacroParameter params) {
-        out << '<div class="hidden-block">' << params.content << '</div>'
-    }
+/**
+ * A property annotation used to apply auto-timestamping on a field
+ * upon gorm insert events. This is an alias for @AutoTimestamp(EventType.CREATED).
+ *
+ * @author Scott Murphy Heiberg
+ * @since 7.1
+ */
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.FIELD})
+public @interface CreatedDate {
 }

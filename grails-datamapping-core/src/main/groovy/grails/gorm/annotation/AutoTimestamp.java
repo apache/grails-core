@@ -29,7 +29,9 @@ import java.lang.annotation.Target;
  *
  * @author Scott Murphy Heiberg
  * @since 7.0
+ * @deprecated Use {@link CreatedDate} for creation timestamps or {@link LastModifiedDate} for update timestamps instead. This annotation will be removed in Grails 8.0.
  */
+@Deprecated(forRemoval = true)
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD})
 public @interface AutoTimestamp {

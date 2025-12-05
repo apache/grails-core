@@ -489,12 +489,12 @@ Some common gotchas with Java build reproducibility problems:
    not ship property files with dynamic timestamps.
 4. Gradle builds are not reproducible by default because Gradle does not guarantee file ordering. Grails configures all
    tasks that create archive files to ensure file ordering is reproducible. This configuration can be found in
-   `gradle/java-config.gradle`
+   the `CompilePlugin` in the `build-logic` project.
 5. Grails makes heavy use of Groovy AST transforms. These transforms often lookup methods on a class, and the methods
    returned by Java will vary by operating system. Any code using reflection to lookup methods or fields must sort the
    results to ensure reproducibility.
 6. Javadoc / Groovydoc will by default write out dates in it's documentation headers. Grails configures these settings
-   in `gradle/java-config.gradle`.
+   in the `CompilePlugin` in the `build-logic` project.
 
 After a build is made reproducible on the same machine, the next step is to ensure it's reproducible in GitHub actions.
 OS differences will exist and even exist between different Docker Runtimes. To help test reproducible builds, we found

@@ -20,14 +20,11 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-Properties props = new Properties()
-file('../gradle.properties').withInputStream {
-    props.load(it)
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
 }
 
 allprojects {
-    props.forEach { k, v -> project.ext.set(k as String, v) }
-
     apply from: rootProject.layout.projectDirectory.file('../dependencies.gradle')
 }
 

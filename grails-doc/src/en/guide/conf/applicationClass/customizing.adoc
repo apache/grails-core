@@ -54,3 +54,128 @@ class Application extends GrailsAutoConfiguration {
     ...
 }
 ----
+
+[id=customizing-the-banner]
+=== Customizing the Banner
+
+The banner that is printed on application startup can be customized in several ways. You can use the Spring Boot way and provide your own banner text file by placing a file named `banner.txt` in the `src/main/resources` directory of your application. This will replace the default Grails banner described below.
+
+To turn off the banner completely, set the `spring.main.banner-mode` property to `off` in the `application.yml` file:
+[source,yaml]
+----
+spring:
+  main:
+    banner-mode: "off"
+----
+
+The default Grails banner is configurable via the following configuration properties:
+[source,yaml]
+----
+grails:
+  banner:
+    art:
+      display: true # Whether to display the banner art (default: true).
+      file: 'banner.txt' # Path to a custom banner file on the classpath (default: null).
+    versions:
+      display: true # Whether to display version information (default: true).
+      include:
+        # Include optional versions (default: []).
+        # These will trigger class loading to determine the version
+        # and show 'unknown' if the class is not found.
+        # Valid options are:
+        - spring-security
+        - tomcat
+        - jetty
+        - undertow
+      exclude:
+        # Exclude any of the versions included by default (default: []).
+        # Valid options are:
+        - app
+        - grails
+        - groovy
+        - jvm
+        - spring-boot
+        - spring
+      order:
+        # Optional ordering in which to display the versions in the banner.
+        # You can specify any number of the options listed below
+        # to move them to the top of the list in the specified order.
+        # If no config is specified, the default order is:
+        - app
+        - jvm
+        - grails
+        - groovy
+        - spring-boot
+        - spring
+        - spring-security
+        - tomcat
+        - jetty
+        - undertow
+----
+
+It is also possible to customize the Grails banner by overriding any or all of the following methods of the `GrailsBanner` class and assigning it to the `banner` property of the `GrailsApp` class:
+[source,groovy]
+----
+import grails.boot.GrailsApp
+import grails.boot.banner.GrailsBanner
+import grails.boot.config.GrailsAutoConfiguration
+import org.springframework.core.env.Environment
+
+class Application extends GrailsAutoConfiguration {
+
+    static void main(String[] args) {
+        def app = new GrailsApp(Application)
+        app.banner = new GrailsBanner(
+                // You can specify any path on the classpath here,
+                // typically stored in src/main/resources.
+                // This will take precedence over the 'grails.banner.art.file' config value
+                bannerFile: 'my-banner.txt', // default: 'grails-banner.txt' (provided by Grails)
+
+                // Number of blank lines to print for padding
+                paddingTop: 10, // default: 1
+                artPaddingBottom: 1, // default: 0
+                paddingBottom: 10 // default: 1
+        ) {
+
+            @Override
+            String createBannerArt(Environment env) {
+                // This will take precedence over the bannerFile property
+                'MY CUSTOM BANNER!'
+            }
+
+            @Override
+            Map<String, String> createBannerVersions(Environment env) {
+                // Return a map of version names to version values
+                super.createBannerVersions(env) + ['Some version':  '1.0.0']
+            }
+
+            @Override
+            boolean shouldDisplayArt(Environment env) { true }
+
+            @Override
+            boolean shouldDisplayVersions(Environment env) { true }
+
+            @Override
+            GrailsBanner.VersionsFormatter createVersionsFormatter() {
+                // You can provide your own implementation of the VersionsFormatter interface:
+                def functionalInterfaceExample = { Map<String, String> versions, int bannerWidth ->
+                    // Return a list of strings representing the lines printed,
+                    // in this case, one single line with all versions, comma-separated
+                    [versions.collect { k, v -> "$k: $v" }.join(', ')]
+                } as GrailsBanner.VersionsFormatter
+
+                // or customize the default implementation:
+                def customizingDefaultExample = new GrailsBanner.DefaultVersionsFormatter(
+                    margin: 10, // min spaces to the left and right before breaking, default: 4
+                    maxItemsPerRow: 3, // 0 or negative = unlimited, default: 0
+                    itemSeparator: ' <> ', // default: ' | '
+                    pairSeparator: '-> ' // default: ': '
+                )
+
+                return functionalInterfaceExample
+            }
+        }
+        app.run(args)
+    }
+}
+----
