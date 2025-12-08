@@ -283,6 +283,26 @@ include 'grails-data-hibernate6-spring-boot'
 findProject(':grails-data-hibernate6-spring-boot').projectDir = new File(settingsDir, 'grails-data-hibernate6/boot-plugin')
 
 
+// Data Mapping - Hibernate 7
+// Core
+include 'grails-data-hibernate7-core'
+findProject(':grails-data-hibernate7-core').projectDir = file('grails-data-hibernate7/core')
+
+// Documentation
+include 'grails-data-hibernate7-docs'
+findProject(':grails-data-hibernate7-docs').projectDir = new File(settingsDir, 'grails-data-hibernate7/docs')
+
+//// Plugins
+include ':grails-data-hibernate7'
+findProject(':grails-data-hibernate7').projectDir = new File(settingsDir, 'grails-data-hibernate7/grails-plugin')
+//
+include 'grails-data-hibernate7-dbmigration'
+findProject(':grails-data-hibernate7-dbmigration').projectDir = new File(settingsDir, 'grails-data-hibernate7/dbmigration')
+//
+include 'grails-data-hibernate7-spring-boot'
+findProject(':grails-data-hibernate7-spring-boot').projectDir = new File(settingsDir, 'grails-data-hibernate7/boot-plugin')
+
+
 // Data Mapping - Hibernate 5
 // Core
 include 'grails-data-hibernate5-core'

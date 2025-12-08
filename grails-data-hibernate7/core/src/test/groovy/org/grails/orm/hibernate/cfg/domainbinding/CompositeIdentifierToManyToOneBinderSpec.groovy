@@ -1,0 +1,124 @@
+package org.grails.orm.hibernate.cfg.domainbinding
+
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.types.ToOne
+import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.CompositeIdentity
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.hibernate.mapping.SimpleValue
+import spock.lang.Specification
+
+class CompositeIdentifierToManyToOneBinderSpec extends Specification {
+
+    def "Test bindCompositeIdentifierToManyToOne with nested composite ID"() {
+        given:
+        // 1. Stub all dependencies for the protected constructor
+        def calculator = Stub(ForeignKeyColumnCountCalculator)
+        def tableNameFetcher = Stub(TableNameFetcher)
+        def namingStrategy = Stub(PersistentEntityNamingStrategy)
+        def columnNameFetcher = Stub(DefaultColumnNameFetcher)
+        def propertyConfigConverter = Stub(PersistentPropertyToPropertyConfig)
+        def backticksRemover = Stub(BackticksRemover)
+        def simpleValueBinder = Mock(SimpleValueBinder) // Use Mock to verify interaction
+
+        // Instantiate the binder with stubs
+        def binder = new CompositeIdentifierToManyToOneBinder(calculator, tableNameFetcher, namingStrategy, columnNameFetcher, propertyConfigConverter, backticksRemover, simpleValueBinder)
+
+        // 2. Set up stubs for the method arguments
+        def association = Stub(ToOne)
+        def value = Stub(SimpleValue)
+        def refDomainClass = Stub(PersistentEntity)
+        def path = "/test"
+
+        // Use a real CompositeIdentity object to avoid final method mocking issues
+        def propertyNames = ["nestedEntity"] as String[]
+        def compositeId = new CompositeIdentity()
+        compositeId.setPropertyNames(propertyNames)
+
+        // 3. Define the nested composite key scenario
+        def propertyConfig = new PropertyConfig()
+        propertyConfigConverter.toPropertyConfig(association) >> propertyConfig
+
+        calculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames) >> 2
+
+        def nestedEntityProp = Stub(ToOne)
+        refDomainClass.getPropertyByName("nestedEntity") >> nestedEntityProp
+        nestedEntityProp.name >> "nestedEntity"
+
+        def nestedAssociatedEntity = Stub(PersistentEntity)
+        nestedEntityProp.getAssociatedEntity() >> nestedAssociatedEntity
+
+        def nestedPartA = Stub(PersistentProperty)
+        def nestedPartB = Stub(PersistentProperty)
+        def perArray = [nestedPartA, nestedPartB] as PersistentProperty[]
+        nestedAssociatedEntity.getCompositeIdentity() >> perArray
+
+        // 4. Mock the behavior of the dependency methods
+        tableNameFetcher.getTableName(refDomainClass) >> "ref_table"
+        namingStrategy.resolveColumnName("nestedEntity") >> "nested_entity_col"
+        columnNameFetcher.getDefaultColumnName(nestedPartA) >> "part_a_col"
+        columnNameFetcher.getDefaultColumnName(nestedPartB) >> "part_b_col"
+
+        // Make backticks remover pass through the values for simplicity
+        backticksRemover.apply(_) >> { String s -> s }
+
+        when:
+        binder.bindCompositeIdentifierToManyToOne(association, value, compositeId, refDomainClass, path)
+
+        then:
+        // 5. Verify the final generated column names
+        def finalColumns = propertyConfig.getColumns()
+        finalColumns.size() == 2
+        finalColumns[0].getName() == "ref_table_nested_entity_col_part_a_col"
+        finalColumns[1].getName() == "ref_table_nested_entity_col_part_b_col"
+
+        and: // 6. Verify the call to the simple value binder
+        1 * simpleValueBinder.bindSimpleValue(association, null, value, path)
+    }
+
+    def "Test bindCompositeIdentifierToManyToOne when column count matches"() {
+        given:
+        // 1. Use Mocks for dependencies that require interaction verification
+        def calculator = Stub(ForeignKeyColumnCountCalculator)
+        def tableNameFetcher = Mock(TableNameFetcher)
+        def namingStrategy = Mock(PersistentEntityNamingStrategy)
+        def columnNameFetcher = Mock(DefaultColumnNameFetcher)
+        def propertyConfigConverter = Stub(PersistentPropertyToPropertyConfig)
+        def backticksRemover = Mock(BackticksRemover)
+        def simpleValueBinder = Mock(SimpleValueBinder)
+
+        def binder = new CompositeIdentifierToManyToOneBinder(calculator, tableNameFetcher, namingStrategy, columnNameFetcher, propertyConfigConverter, backticksRemover, simpleValueBinder)
+
+        // 2. Set up arguments
+        def association = Stub(ToOne)
+        def value = Stub(SimpleValue)
+        def compositeId = new CompositeIdentity()
+        compositeId.setPropertyNames(["prop1", "prop2"] as String[])
+        def refDomainClass = Stub(PersistentEntity)
+        def path = "/test"
+
+        // 3. Set up the "match" condition
+        def propertyConfig = new PropertyConfig()
+        propertyConfig.getColumns().add(new ColumnConfig())
+        propertyConfig.getColumns().add(new ColumnConfig())
+        propertyConfigConverter.toPropertyConfig(association) >> propertyConfig
+
+        // The calculated length is the same as the number of columns already in the config
+        calculator.calculateForeignKeyColumnCount(refDomainClass, _ as String[]) >> 2
+
+        when:
+        binder.bindCompositeIdentifierToManyToOne(association, value, compositeId, refDomainClass, path)
+
+        then:
+        // 4. Verify the column name generation logic is skipped
+        0 * tableNameFetcher._
+        0 * namingStrategy._
+        0 * columnNameFetcher._
+        0 * backticksRemover._
+
+        and: // 5. Verify the simple value binder is still called
+        1 * simpleValueBinder.bindSimpleValue(association, null, value, path)
+    }
+}
