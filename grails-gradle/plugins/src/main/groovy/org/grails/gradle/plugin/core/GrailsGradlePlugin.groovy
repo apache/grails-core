@@ -23,13 +23,9 @@ import javax.inject.Inject
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
-import org.gradle.api.DefaultTask
-import org.gradle.api.attributes.AttributeMatchingStrategy
-
-import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
-import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
 import org.apache.tools.ant.filters.EscapeUnicode
 import org.apache.tools.ant.filters.ReplaceTokens
+import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Plugin
@@ -39,11 +35,11 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.attributes.AttributeMatchingStrategy
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.ExtraPropertiesExtension
-import org.gradle.api.plugins.GroovyPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.AbstractCopyTask
 import org.gradle.api.tasks.JavaExec
@@ -57,6 +53,8 @@ import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.process.JavaForkOptions
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 
+import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
+import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
 import org.springframework.boot.gradle.dsl.SpringBootExtension
 import org.springframework.boot.gradle.plugin.ResolveMainClassName
 import org.springframework.boot.gradle.plugin.SpringBootPlugin
@@ -86,7 +84,7 @@ import org.grails.io.support.FactoriesLoaderSupport
  * @author Graeme Rocher
  */
 @CompileStatic
-class GrailsGradlePlugin extends GroovyPlugin {
+class GrailsGradlePlugin implements Plugin<Project> {
 
     public static final String APPLICATION_CONTEXT_COMMAND_CLASS = 'grails.dev.commands.ApplicationCommand'
 
@@ -101,6 +99,9 @@ class GrailsGradlePlugin extends GroovyPlugin {
     }
 
     void apply(Project project) {
+
+        project.pluginManager.apply('groovy')
+
         // validate that only an app or a plugin is registered, and never both
         OnlyOneGrailsPlugin marker = (OnlyOneGrailsPlugin) project.getExtensions().findByName(OnlyOneGrailsPlugin.name)
         if (marker) {
@@ -110,10 +111,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
         // reset the environment to ensure it is resolved again for each invocation
         Environment.reset()
-
-        if (!project.tasks.names.contains('compileGroovy')) {
-            super.apply(project)
-        }
 
         excludeDependencies(project)
 

@@ -46,6 +46,12 @@ class GroovyPagePlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
+        project.pluginManager.withPlugin('groovy') {
+            configureProject(project)
+        }
+    }
+
+    private void configureProject(Project project) {
         TaskContainer tasks = project.tasks
 
         project.configurations.register('gspCompile')

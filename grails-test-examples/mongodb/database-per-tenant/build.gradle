@@ -24,7 +24,6 @@ plugins {
 version = projectVersion
 group = 'examples.mongo.tenant'
 
-apply plugin: 'groovy'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 apply plugin: 'cloud.wondrify.asset-pipeline'
 
