@@ -29,7 +29,7 @@ include::introduction.adoc[]
 
 == What's new in 6.0?
 
-include:whatsNew60.adoc[]
+include::whatsNew60.adoc[]
 
 == What's new in 5.0?
 
