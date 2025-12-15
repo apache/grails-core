@@ -19,10 +19,10 @@
 package grails.gorm.specs.inheritance
 
 import grails.gorm.annotation.Entity
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class SubclassToOneProxySpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class SubclassToOneProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.addAllDomainClasses([SuperclassProxy, SubclassProxy, HasOneProxy])
     }

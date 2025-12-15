@@ -20,10 +20,10 @@
 package grails.gorm.specs
 
 import grails.gorm.annotation.Entity
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class AutoTimestampSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class AutoTimestampSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.addAllDomainClasses([DateCreatedTestA, DateCreatedTestB])
     }

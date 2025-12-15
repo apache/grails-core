@@ -20,7 +20,7 @@ package grails.gorm.specs.validation
 
 import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.springframework.dao.DataIntegrityViolationException
 import spock.lang.Issue
@@ -28,7 +28,7 @@ import spock.lang.Issue
 /**
  * Created by francoiskha on 19/04/18.
  */
-class DeepValidationSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class DeepValidationSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.addAllDomainClasses([AnotherCity, Market, Address])
     }

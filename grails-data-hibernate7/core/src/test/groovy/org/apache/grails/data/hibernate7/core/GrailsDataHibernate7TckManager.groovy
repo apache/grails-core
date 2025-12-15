@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.grails.data.hibernate6.core
+package org.apache.grails.data.hibernate7.core
 
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
@@ -39,7 +39,7 @@ import org.springframework.transaction.support.DefaultTransactionDefinition
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.Specification
 
-class GrailsDataHibernate6TckManager extends GrailsDataTckManager {
+class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
     GrailsApplication grailsApplication
     HibernateDatastore hibernateDatastore
     org.hibernate.Session hibernateSession
@@ -59,8 +59,8 @@ class GrailsDataHibernate6TckManager extends GrailsDataTckManager {
 
     @Override
     Session createSession() {
-        System.setProperty('hibernate6.gorm.suite', "true")
-        grailsApplication = new DefaultGrailsApplication(domainClasses as Class[], new GroovyClassLoader(GrailsDataHibernate6TckManager.getClassLoader()))
+        System.setProperty('hibernate7.gorm.suite', "true")
+        grailsApplication = new DefaultGrailsApplication(domainClasses as Class[], new GroovyClassLoader(GrailsDataHibernate7TckManager.getClassLoader()))
         grailsConfig.dataSource.dbCreate = "create-drop"
         grailsConfig.hibernate.proxy_factory_class = "yakworks.hibernate.proxy.ByteBuddyGroovyProxyFactory"
         if (grailsConfig) {

@@ -19,7 +19,7 @@
 package grails.gorm.specs
 
 import grails.gorm.specs.entities.Club
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
@@ -27,7 +27,7 @@ import spock.lang.Issue
  * @author Graeme Rocher
  * @since 1.0
  */
-class DeleteAllWhereSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class DeleteAllWhereSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.addAllDomainClasses([Club])
     }

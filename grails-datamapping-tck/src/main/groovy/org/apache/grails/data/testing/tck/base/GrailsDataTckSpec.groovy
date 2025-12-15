@@ -29,7 +29,10 @@ class GrailsDataTckSpec<T extends GrailsDataTckManager> extends Specification {
 
     void setupSpec() {
         ServiceLoader<GrailsDataTckManager> loader = ServiceLoader.load(GrailsDataTckManager)
-        manager = loader.findFirst().get() as T
+        // Prefer a provider whose class name indicates the target suite (e.g. hibernate7) if available
+        def providers = loader.stream().map { it.get() }.toList()
+        def preferred = providers.find { it.class.name.toLowerCase().contains('hibernate7') }
+        manager = (preferred ?: providers ? providers.first() : loader.findFirst().get()) as T
         manager.setupSpec()
     }
 

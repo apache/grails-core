@@ -19,13 +19,13 @@
 package grails.gorm.hibernate.mapping
 
 import grails.persistence.Entity
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.hibernate.boot.Metadata
 import org.hibernate.engine.OptimisticLockStyle
 import org.hibernate.mapping.PersistentClass
 
-class HibernateOptimisticLockingStyleMappingSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class HibernateOptimisticLockingStyleMappingSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
 
     void setupSpec() {
         manager.addAllDomainClasses([HibernateOptLockingStyleVersioned, HibernateOptLockingStyleNotVersioned])

@@ -19,13 +19,13 @@
 
 package grails.gorm.specs.belongsto
 
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by graemerocher on 22/08/2017.
  */
-class BidirectionalOneToOneWithUniqueSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class BidirectionalOneToOneWithUniqueSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.addAllDomainClasses([HibernateFace, HibernateNose])
     }

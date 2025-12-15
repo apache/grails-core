@@ -19,10 +19,10 @@
 package grails.gorm.specs
 
 import org.apache.grails.data.testing.tck.domains.TestEntity
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class ReadOperationSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class ReadOperationSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.addAllDomainClasses([TestEntity])
     }

@@ -17,4 +17,4 @@
 # under the License.
 #
 
-org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager

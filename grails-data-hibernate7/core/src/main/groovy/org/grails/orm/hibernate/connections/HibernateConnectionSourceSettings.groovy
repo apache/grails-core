@@ -194,8 +194,10 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         Map<String, Object> toHibernateEventListeners(AbstractClosureEventTriggeringInterceptor eventTriggeringInterceptor) {
             if(eventTriggeringInterceptor != null) {
                 return [
-                    'save': eventTriggeringInterceptor,
-                    'save-update': eventTriggeringInterceptor,
+//                    'save': eventTriggeringInterceptor,
+//                    'save-update': eventTriggeringInterceptor,
+//                        "merge": eventTriggeringInterceptor,
+//                        "persist": eventTriggeringInterceptor,
                     'pre-load': eventTriggeringInterceptor,
                     'post-load': eventTriggeringInterceptor,
                     'pre-insert': eventTriggeringInterceptor,

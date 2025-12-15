@@ -1,8 +1,7 @@
 package grails.gorm.specs
 
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.apache.grails.data.testing.tck.domains.Person
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.orm.hibernate.AbstractHibernateSession
 import org.grails.orm.hibernate.HibernateDatastore
@@ -10,7 +9,7 @@ import org.grails.orm.hibernate.cfg.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.cfg.HibernatePersistentEntity
 import org.grails.orm.hibernate.query.HibernateQuery
-import org.hibernate.Session
+
 import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.internal.BootstrapContextImpl
 import org.hibernate.boot.internal.InFlightMetadataCollectorImpl
@@ -30,7 +29,7 @@ import org.hibernate.service.spi.ServiceRegistryImplementor
  * Finally, it loaded all the test Entities,
  * now it can be setup individually.
  */
-class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
 
     void setupSpec() {
         manager.grailsConfig = [
@@ -107,7 +106,7 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate6T
         registry
                 .getParentServiceRegistry()
                 .getService(ClassLoaderService.class)
-                .loadJavaServices(MetadataContributor.class)
+                .loadJavaServices(AdditionalMappingContributor.class)
                 .find { it instanceof GrailsDomainBinder }
     }
 

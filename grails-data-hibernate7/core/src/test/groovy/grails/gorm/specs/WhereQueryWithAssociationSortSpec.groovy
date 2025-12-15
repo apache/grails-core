@@ -20,16 +20,16 @@ package grails.gorm.specs
 
 import grails.gorm.specs.entities.Club
 import grails.gorm.specs.entities.Team
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.hibernate.QueryException
+
 import spock.lang.Issue
 
 /**
  * Created by graemerocher on 03/11/16.
  */
 //TODO : How to create an alias inside a closure
-class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.addAllDomainClasses([Club, Team])
     }

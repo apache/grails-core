@@ -19,7 +19,7 @@
 package grails.gorm.specs
 
 import grails.gorm.annotation.Entity
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.springframework.dao.DataIntegrityViolationException
 import spock.lang.Issue
@@ -27,7 +27,7 @@ import spock.lang.Issue
 /**
  * Created by graemerocher on 25/01/2017.
  */
-class SizeConstraintSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class SizeConstraintSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.addAllDomainClasses([SizeConstrainedUser])
     }

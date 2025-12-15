@@ -1,6 +1,6 @@
 package grails.gorm.specs.proxy
 
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Location
 import org.grails.datastore.gorm.proxy.GroovyProxyFactory
@@ -9,7 +9,7 @@ import org.grails.datastore.gorm.proxy.GroovyProxyFactory
  * @author graemerocher
  */
 //TODO Are we still supporting Proxies?
-class Hibernate6GroovyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class Hibernate6GroovyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
 
     void setupSpec() {
         manager.addAllDomainClasses([Location])

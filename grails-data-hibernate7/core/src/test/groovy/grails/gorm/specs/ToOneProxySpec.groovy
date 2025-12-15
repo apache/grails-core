@@ -20,14 +20,14 @@ package grails.gorm.specs
 
 import grails.gorm.specs.entities.Club
 import grails.gorm.specs.entities.Team
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
 
 /**
  * Created by graemerocher on 16/12/16.
  */
-class ToOneProxySpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class ToOneProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.addAllDomainClasses([Team, Club])
     }

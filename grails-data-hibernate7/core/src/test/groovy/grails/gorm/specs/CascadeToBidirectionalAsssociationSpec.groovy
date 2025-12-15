@@ -22,7 +22,7 @@ import grails.gorm.specs.entities.Club
 import grails.gorm.specs.entities.Contract
 import grails.gorm.specs.entities.Player
 import grails.gorm.specs.entities.Team
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
@@ -30,7 +30,7 @@ import spock.lang.Issue
  * Created by graemerocher on 01/02/16.
  */
 @Issue('https://github.com/grails/grails-core/issues/9290')
-class CascadeToBidirectionalAsssociationSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class CascadeToBidirectionalAsssociationSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.addAllDomainClasses([Club, Team, Player, Contract])
     }

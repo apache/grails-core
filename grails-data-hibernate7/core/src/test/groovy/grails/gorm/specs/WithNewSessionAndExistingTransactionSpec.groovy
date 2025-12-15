@@ -19,7 +19,7 @@
 package grails.gorm.specs
 
 import org.apache.grails.data.testing.tck.domains.Book
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.Session
@@ -33,7 +33,7 @@ import javax.sql.DataSource
 /**
  * Created by graemerocher on 26/08/2016.
  */
-class WithNewSessionAndExistingTransactionSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class WithNewSessionAndExistingTransactionSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.addAllDomainClasses([Book])
     }

@@ -19,13 +19,13 @@
 package grails.gorm.specs
 
 import grails.gorm.annotation.Entity
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.springframework.dao.DataIntegrityViolationException
 import spock.lang.Issue
 
 @Issue('https://github.com/grails/grails-data-mapping/issues/617')
-class MultiColumnUniqueConstraintSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class MultiColumnUniqueConstraintSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.addAllDomainClasses([DomainOne, Task1, TaskLink])
     }

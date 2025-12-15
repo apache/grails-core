@@ -17,6 +17,12 @@ package org.grails.orm.hibernate
 
 import org.codehaus.groovy.runtime.InvokerHelper
 
+import org.hibernate.engine.spi.SessionFactoryImplementor
+import org.hibernate.engine.spi.SharedSessionContractImplementor
+import org.hibernate.generator.Generator
+import org.hibernate.id.CompositeNestedGeneratedValueGenerator
+import org.hibernate.id.IdentifierGenerationException
+
 import grails.gorm.validation.CascadingValidator
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -147,12 +153,49 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
         try {
 
+            Serializable idVal = (Serializable) InvokerHelper.getProperty(target, "id")
+
             boolean hasInsert = shouldInsert(arguments)
             boolean hasMerge = shouldMerge(arguments)
 
-            if (hasInsert || (!hasMerge && !isItInDb(target))) {
+
+            def isNotInDb = !isItInDb(target, idVal)
+            def shouldInsert = !hasMerge && isNotInDb
+            println ("hasInsert " + hasInsert)
+            println ("hasMerge " + hasMerge)
+            println("isNotInDb " + isNotInDb)
+            println("shouldInsert " + shouldInsert)
+            if (hasInsert || shouldInsert) {
+                if (!idVal){
+                    EntityPersister persister = ((SessionFactoryImplementor) sessionFactory)
+                            .getMappingMetamodel()
+                            .getEntityDescriptor(domainClass.getName())
+                    final Generator generator = persister.getGenerator();
+
+                    def doesNotGenerateOnInsert = !generator.generatesOnInsert()
+                    def isCompositeGenerator = generator instanceof CompositeNestedGeneratedValueGenerator
+                    println("doesNotGenerateOnInsert " + doesNotGenerateOnInsert)
+                    println("isCompositeGenerator " + isCompositeGenerator)
+                    if ( doesNotGenerateOnInsert || isCompositeGenerator)  {
+                        idVal = (Serializable) persister.getIdentifier(target, (SharedSessionContractImplementor) sessionFactory.currentSession)
+                        if ( idVal == null ) {
+                            throw new IdentifierGenerationException( "Identifier of entity '" + persister.getEntityName()
+                                    + "' must be manually assigned before calling 'persist()'" );
+
+                        }
+                        println("idVal " + idVal)
+                        InvokerHelper.setProperty(target, "id", idVal)
+                    }
+
+                }
+
                 return performPersist(target, shouldFlush)
             } else {
+                if ( idVal == null ) {
+                    throw new IdentifierGenerationException( "Identifier of entity '" + persistentEntity.getName()
+                            + "' must be manually assigned before calling 'merge()'" );
+
+                }
                 return performMerge(target, shouldFlush)
             }
         } finally {
@@ -160,10 +203,10 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         }
     }
 
-    private boolean isItInDb(D target) {
-        Serializable idVal = (Serializable) InvokerHelper.getProperty(target, "id")
+    private boolean isItInDb(D target,Serializable idVal) {
         String hql = "select count(e.id) from ${persistentEntity.name} e where e.id = :id"
-        return HibernateHqlQuery.createHqlQuery(
+
+        def result = HibernateHqlQuery.createHqlQuery(
                 (HibernateDatastore) datastore,
                 sessionFactory,
                 persistentEntity,
@@ -171,9 +214,10 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 false,
                 false,
                 null,
-                ["id":idVal]
+                ["id": idVal]
                 , null
-                , (GrailsHibernateTemplate) hibernateTemplate).list().size() == 1
+                , (GrailsHibernateTemplate) hibernateTemplate).singleResult()
+        return result == 1
     }
 
     @CompileDynamic
@@ -259,6 +303,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected D performPersist(final D target, final boolean shouldFlush) {
+        println("target " + target)
         hibernateTemplate.execute { Session session ->
             try {
                 markInsertActive()

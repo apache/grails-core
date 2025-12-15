@@ -19,13 +19,13 @@
 package grails.gorm.specs
 
 import grails.gorm.annotation.Entity
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by graemerocher on 16/09/2016.
  */
-class DomainGetterSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class DomainGetterSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.addAllDomainClasses([DomainOne, DomainWithGetter])
     }

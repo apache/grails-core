@@ -54,12 +54,12 @@ public class CascadeBehaviorFetcher {
             return ALL;
         }
         else if (association.isOneToOne()) {
-            return association.isOwningSide() ?  ALL : SAVE_UPDATE;
+            return ALL;
         }
         else if (association.isOneToMany()) {
-            return association.isOwningSide() ?  ALL : SAVE_UPDATE;
+            return ALL;
         }  else if (association.isManyToMany()) {
-           return  association.isCorrectlyOwned() || association.isCircular() ? SAVE_UPDATE :NONE;
+           return  association.isCorrectlyOwned() || association.isCircular() ? ALL :NONE;
         }
         else if (association.isManyToOne()) {
             if ( association.isCorrectlyOwned() && !association.isCircular()) {
@@ -76,7 +76,7 @@ public class CascadeBehaviorFetcher {
             return ALL;
         }
         else if (Map.class.isAssignableFrom(association.getType())) {
-            return association.isCorrectlyOwned() ? ALL :SAVE_UPDATE;
+            return ALL;
         } else {
             throw new MappingException("Unrecognized association type " + association.getType() );
         }

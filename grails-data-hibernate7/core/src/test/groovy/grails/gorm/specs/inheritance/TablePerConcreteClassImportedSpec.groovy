@@ -18,12 +18,12 @@
  */
 package grails.gorm.specs.inheritance
 
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 @Issue('https://github.com/grails/gorm-hibernate5/issues/151')
-class TablePerConcreteClassImportedSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class TablePerConcreteClassImportedSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.addAllDomainClasses([Vehicle, Spaceship])
     }

@@ -39,10 +39,15 @@ import org.grails.orm.hibernate.cfg.domainbinding.TypeNameProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.*;
 import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
+import org.hibernate.boot.ResourceStreamLocator;
 import org.hibernate.boot.internal.MetadataBuildingContextRootImpl;
 import org.hibernate.boot.internal.RootMappingDefaults;
+import org.hibernate.boot.model.TypeContributions;
+import org.hibernate.boot.model.TypeContributor;
 import org.hibernate.boot.model.internal.BinderHelper;
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
+import org.hibernate.boot.spi.AdditionalMappingContributions;
+import org.hibernate.boot.spi.AdditionalMappingContributor;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.OptimisticLockStyle;
@@ -78,6 +83,7 @@ import org.hibernate.mapping.Table;
 import org.hibernate.mapping.UnionSubclass;
 import org.hibernate.mapping.Value;
 import org.hibernate.metamodel.mapping.JdbcMapping;
+import org.hibernate.service.ServiceRegistry;
 import org.hibernate.type.ForeignKeyDirection;
 import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
@@ -113,7 +119,7 @@ import static org.hibernate.boot.model.naming.Identifier.toIdentifier;
  */
 @SuppressWarnings("WeakerAccess")
 public class GrailsDomainBinder
-//        implements MetadataContributor
+        implements AdditionalMappingContributor, TypeContributor
 {
 
     private static final String CASCADE_ALL_DELETE_ORPHAN = "all-delete-orphan";
@@ -207,8 +213,9 @@ public class GrailsDomainBinder
         this.namingStrategy = namingStrategy;
     }
 
-    //TODO FIXME
-    public void contribute(InFlightMetadataCollector metadataCollector, IndexView jandexIndex) {
+
+    @Override
+    public void contribute(AdditionalMappingContributions contributions, InFlightMetadataCollector metadataCollector, ResourceStreamLocator resourceStreamLocator, MetadataBuildingContext buildingContext) {
         RootMappingDefaults rootMappingDefaults = null;
         this.metadataBuildingContext = new MetadataBuildingContextRootImpl(
                 "default",
@@ -219,9 +226,9 @@ public class GrailsDomainBinder
         );
 
         filterHibernateEntities(hibernateMappingContext.getHibernatePersistentEntities())
-                    .forEach(hibernatePersistentEntity -> bindRoot(hibernatePersistentEntity, metadataCollector, sessionFactoryName));
-
+                .forEach(hibernatePersistentEntity -> bindRoot(hibernatePersistentEntity, metadataCollector, sessionFactoryName));
     }
+
 
     private List<HibernatePersistentEntity> filterHibernateEntities(java.util.Collection<HibernatePersistentEntity> persistentEntities) {
         return persistentEntities.stream()
@@ -2134,6 +2141,17 @@ public class GrailsDomainBinder
 
     public MetadataBuildingContext getMetadataBuildingContext() {
         return metadataBuildingContext;
+    }
+
+    @Override
+    public String getContributorName() {
+        return AdditionalMappingContributor.super.getContributorName();
+    }
+
+
+    @Override
+    public void contribute(TypeContributions typeContributions, ServiceRegistry serviceRegistry) {
+
     }
 
     /**

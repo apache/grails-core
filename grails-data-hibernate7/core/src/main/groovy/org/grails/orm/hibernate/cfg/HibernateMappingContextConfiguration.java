@@ -20,7 +20,7 @@ import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl;
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService;
 import org.hibernate.boot.registry.selector.spi.StrategySelector;
-//import org.hibernate.boot.spi.MetadataContributor;
+import org.hibernate.boot.spi.AdditionalMappingContributor;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.cfg.Environment;
@@ -249,8 +249,13 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         ClassLoaderService classLoaderService = new ClassLoaderServiceImpl(appClassLoader) {
             @Override
             public <S> Collection<S> loadJavaServices(Class<S> serviceContract) {
-
-                    return super.loadJavaServices(serviceContract);
+                // Ensure Grails contributes mappings for GORM entities even if they lack JPA @Entity
+                if (AdditionalMappingContributor.class.isAssignableFrom(serviceContract)) {
+                    @SuppressWarnings("unchecked")
+                    Collection<S> contributors = (Collection<S>) Collections.singletonList(domainBinder);
+                    return contributors;
+                }
+                return super.loadJavaServices(serviceContract);
             }
         };
         EventListenerIntegrator eventListenerIntegrator = new EventListenerIntegrator(hibernateEventListeners, eventListeners);

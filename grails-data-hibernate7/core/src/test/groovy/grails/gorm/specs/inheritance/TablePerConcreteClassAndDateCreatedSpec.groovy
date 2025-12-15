@@ -19,7 +19,7 @@
 package grails.gorm.specs.inheritance
 
 import grails.gorm.annotation.Entity
-import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
+import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
@@ -27,7 +27,7 @@ import spock.lang.Issue
  * Created by graemerocher on 29/05/2017.
  */
 @Issue('https://github.com/grails/grails-data-mapping/issues/937')
-class TablePerConcreteClassAndDateCreatedSpec extends GrailsDataTckSpec<GrailsDataHibernate6TckManager> {
+class TablePerConcreteClassAndDateCreatedSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.addAllDomainClasses([Vehicle, Spaceship])
     }
