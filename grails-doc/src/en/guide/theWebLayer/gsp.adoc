@@ -28,7 +28,7 @@ GSP was previously part of Grails core, but since version 3.3 it is an independe
 ----
 dependencies {
     //...
-    implementation "org.apache.grails:grails-gsp:{version}"
+    implementation "org.apache.grails:grails-gsp"
 }
 ----
 

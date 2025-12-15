@@ -27,15 +27,15 @@ implementation "org.apache.grails:grails-views-gson"
 otherwise, add the version explicitly:
 
 [source,groovy,subs="attributes"]
-implementation "org.apache.grails:grails-views-gson:{version}"
+implementation "org.apache.grails:grails-views-gson"
 
 To enable Gradle compilation of JSON views for production environment add the following to the `buildscript` `dependencies` block:
 
 [source,groovy,subs="attributes"]
 buildscript {
-    ...
+    //...
     dependencies {
-        ...
+        //...
         classpath platform("org.apache.grails:grails-gradle-bom:{version}")
         classpath "org.apache.grails:grails-gradle-plugins"
     }

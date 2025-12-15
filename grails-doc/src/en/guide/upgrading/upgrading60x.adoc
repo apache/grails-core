@@ -85,7 +85,7 @@ Grails 7 introduces a BOM that includes all the dependencies required for a Grai
 .build.gradle
 ----
 dependencies {
-    implementation platform("org.apache.grails:grails-bom:${grailsVersion}")
+    implementation platform("org.apache.grails:grails-bom:{GrailsVersion}")
 }
 ----
 
