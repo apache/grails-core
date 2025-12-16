@@ -111,8 +111,12 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
     }
 
     protected ServiceRegistryImplementor getServiceRegistry() {
-        (manager.hibernateDatastore.sessionFactory as SessionFactoryImpl)
+        getSessionFactory()
                 .getServiceRegistry()
+    }
+
+    protected SessionFactoryImpl getSessionFactory() {
+        manager.hibernateDatastore.sessionFactory as SessionFactoryImpl
     }
 
     protected HibernateDatastore getDatastore() {

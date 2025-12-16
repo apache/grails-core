@@ -8,6 +8,7 @@ import jakarta.persistence.criteria.Path
 import jakarta.persistence.criteria.Root
 import jakarta.persistence.criteria.Subquery
 import org.apache.grails.data.testing.tck.domains.*
+import org.grails.datastore.mapping.engine.event.PersistEvent
 import org.grails.datastore.mapping.query.Query
 import org.grails.orm.hibernate.AbstractHibernateSession
 import org.grails.orm.hibernate.HibernateDatastore
@@ -27,12 +28,15 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def setup() {
 
+        def persister = sessionFactory.getMappingMetamodel().getEntityDescriptor(Person)
+        println "Person ID generator: ${persister.getGenerator().class.name}"
         HibernateDatastore hibernateDatastore = manager.hibernateDatastore
         AbstractHibernateSession session = hibernateDatastore.connect() as AbstractHibernateSession
         hibernateQuery = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(Person.typeName))
         petHibernateQuery = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(Pet.typeName))
         eagerHibernateQuery = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(EagerOwner.typeName))
         oldBob = new Person(firstName: "Bob", lastName: "Builder", age: 50).save(flush: true)
+
     }
 
     def setupSpec() {

@@ -1565,10 +1565,10 @@ public class GrailsDomainBinder
                                                        RootClass root, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
 
         // get the schema and catalog names from the configuration
-        Mapping m = new HibernateEntityWrapper().getMappedForm(domainClass);
+        Mapping gormMapping = new HibernateEntityWrapper().getMappedForm(domainClass);
 
-        configureDerivedProperties(domainClass, m);
-        CacheConfig cc = m.getCache();
+        configureDerivedProperties(domainClass, gormMapping);
+        CacheConfig cc = gormMapping.getCache();
         if (cc != null && cc.getEnabled()) {
             root.setCacheConcurrencyStrategy(cc.getUsage());
             root.setCached(true);
@@ -1577,21 +1577,21 @@ public class GrailsDomainBinder
             }
             root.setLazyPropertiesCacheable(!"non-lazy".equals(cc.getInclude()));
         }
-        root.setBatchSize(ofNullable(m.getBatchSize()).orElse(0));
-        root.setDynamicUpdate(m.getDynamicUpdate());
-        root.setDynamicInsert(m.getDynamicInsert());
+        root.setBatchSize(ofNullable(gormMapping.getBatchSize()).orElse(0));
+        root.setDynamicUpdate(gormMapping.getDynamicUpdate());
+        root.setDynamicInsert(gormMapping.getDynamicInsert());
 
 
-        var schema = ofNullable(m.getTable())
+        var schema = ofNullable(gormMapping.getTable())
                 .map(org.grails.orm.hibernate.cfg.Table::getSchema)
                 .orElse(new NamespaceNameExtractor().getSchemaName(mappings));
 
-        var catalog = ofNullable(m.getTable())
+        var catalog = ofNullable(gormMapping.getTable())
                 .map(org.grails.orm.hibernate.cfg.Table::getCatalog)
                 .orElse(new NamespaceNameExtractor().getCatalogName(mappings));
 
 
-        var isAbstract = !m.getTablePerHierarchy() && m.isTablePerConcreteClass() && root.isAbstract();
+        var isAbstract = !gormMapping.getTablePerHierarchy() && gormMapping.isTablePerConcreteClass() && root.isAbstract();
         // create the table
         var table = mappings.addTable(schema
                 , catalog
@@ -1604,7 +1604,7 @@ public class GrailsDomainBinder
         if (LOG.isDebugEnabled()) {
             LOG.debug("[GrailsDomainBinder] Mapping Grails domain class: " + domainClass.getName() + " -> " + root.getTable().getName());
         }
-        bindIdentity(domainClass, root, mappings, m, sessionFactoryBeanName);
+        bindIdentity(domainClass, root, mappings, gormMapping, sessionFactoryBeanName);
         bindVersion(domainClass.getVersion(), root, mappings, sessionFactoryBeanName);
         root.createPrimaryKey();
         createClassProperties(domainClass, root, mappings, sessionFactoryBeanName);
@@ -2063,7 +2063,8 @@ public class GrailsDomainBinder
         entity.setIdentifier(id);
 
         if (mappedId == null) {
-
+//            id.se
+//            id.setIdentifierGeneratorStrategy(useSequence ? "sequence-identity" : "native");
         } else {
             params.putAll(mappedId.getParams());
             if(params.containsKey(SEQUENCE_KEY)) {

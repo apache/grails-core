@@ -18,10 +18,8 @@ package org.grails.orm.hibernate
 import org.codehaus.groovy.runtime.InvokerHelper
 
 import org.hibernate.engine.spi.SessionFactoryImplementor
-import org.hibernate.engine.spi.SharedSessionContractImplementor
+import org.hibernate.generator.Assigned
 import org.hibernate.generator.Generator
-import org.hibernate.id.CompositeNestedGeneratedValueGenerator
-import org.hibernate.id.IdentifierGenerationException
 
 import grails.gorm.validation.CascadingValidator
 import groovy.transform.CompileDynamic
@@ -30,6 +28,7 @@ import jakarta.persistence.FlushModeType
 import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.engine.event.PersistEvent
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.datastore.mapping.reflect.ClassUtils
@@ -154,48 +153,17 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         try {
 
             Serializable idVal = (Serializable) InvokerHelper.getProperty(target, "id")
-
-            boolean hasInsert = shouldInsert(arguments)
-            boolean hasMerge = shouldMerge(arguments)
-
-
-            def isNotInDb = !isItInDb(target, idVal)
-            def shouldInsert = !hasMerge && isNotInDb
-            println ("hasInsert " + hasInsert)
-            println ("hasMerge " + hasMerge)
-            println("isNotInDb " + isNotInDb)
-            println("shouldInsert " + shouldInsert)
-            if (hasInsert || shouldInsert) {
-                if (!idVal){
-                    EntityPersister persister = ((SessionFactoryImplementor) sessionFactory)
-                            .getMappingMetamodel()
-                            .getEntityDescriptor(domainClass.getName())
-                    final Generator generator = persister.getGenerator();
-
-                    def doesNotGenerateOnInsert = !generator.generatesOnInsert()
-                    def isCompositeGenerator = generator instanceof CompositeNestedGeneratedValueGenerator
-                    println("doesNotGenerateOnInsert " + doesNotGenerateOnInsert)
-                    println("isCompositeGenerator " + isCompositeGenerator)
-                    if ( doesNotGenerateOnInsert || isCompositeGenerator)  {
-                        idVal = (Serializable) persister.getIdentifier(target, (SharedSessionContractImplementor) sessionFactory.currentSession)
-                        if ( idVal == null ) {
-                            throw new IdentifierGenerationException( "Identifier of entity '" + persister.getEntityName()
-                                    + "' must be manually assigned before calling 'persist()'" );
-
-                        }
-                        println("idVal " + idVal)
-                        InvokerHelper.setProperty(target, "id", idVal)
-                    }
-
+            if (!idVal) {
+                if (isAssignedId(persistentEntity)) {
+                    def id = nextId()
+                    InvokerHelper.setProperty(target, "id", id)
+                    return performPersist(target, shouldFlush)
+                } else {
+                    return performPersist(target, shouldFlush)
                 }
-
+            } else if (shouldInsert(arguments)) {
                 return performPersist(target, shouldFlush)
-            } else {
-                if ( idVal == null ) {
-                    throw new IdentifierGenerationException( "Identifier of entity '" + persistentEntity.getName()
-                            + "' must be manually assigned before calling 'merge()'" );
-
-                }
+            } else  {
                 return performMerge(target, shouldFlush)
             }
         } finally {
@@ -203,10 +171,18 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         }
     }
 
-    private boolean isItInDb(D target,Serializable idVal) {
-        String hql = "select count(e.id) from ${persistentEntity.name} e where e.id = :id"
+    private boolean isAssignedId(PersistentEntity entity) {
+        return ((SessionFactoryImplementor) sessionFactory)
+                .getMappingMetamodel()
+                .getEntityDescriptor(entity.getName())
+                .getGenerator() instanceof Assigned
+    }
 
-        def result = HibernateHqlQuery.createHqlQuery(
+
+    private Long nextId() {
+        String hql = "select max(e.id) from ${persistentEntity.name} e"
+
+        def result = (Long) HibernateHqlQuery.createHqlQuery(
                 (HibernateDatastore) datastore,
                 sessionFactory,
                 persistentEntity,
@@ -214,10 +190,11 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 false,
                 false,
                 null,
-                ["id": idVal]
+                null
                 , null
-                , (GrailsHibernateTemplate) hibernateTemplate).singleResult()
-        return result == 1
+                , (GrailsHibernateTemplate) hibernateTemplate).singleResult() ?: 0
+        Random random = new Random()
+        return result + random.nextInt(100) + 1
     }
 
     @CompileDynamic
