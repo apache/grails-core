@@ -65,6 +65,9 @@ dependencies {
 
    api( 'org.jboss:jandex:3.2.3')
 
+    compileOnly "org.hibernate.orm:hibernate-core:$hibernate7Version"
+
+
     compileOnly 'org.hibernate.orm:hibernate-jcache', {
         exclude group:'commons-collections', module:'commons-collections'
         exclude group:'commons-logging', module:'commons-logging'

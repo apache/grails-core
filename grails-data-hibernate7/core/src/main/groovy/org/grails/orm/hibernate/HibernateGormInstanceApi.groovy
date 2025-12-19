@@ -17,6 +17,8 @@ package org.grails.orm.hibernate
 
 import org.codehaus.groovy.runtime.InvokerHelper
 
+import jakarta.persistence.GenerationType
+
 import org.hibernate.engine.spi.SessionFactoryImplementor
 import org.hibernate.generator.Assigned
 import org.hibernate.generator.Generator
@@ -151,25 +153,18 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         validateable.skipValidation(true)
 
         try {
-
-            Serializable idVal = (Serializable) InvokerHelper.getProperty(target, "id")
-            if (!idVal) {
-                if (isAssignedId(persistentEntity)) {
-                    def id = nextId()
-                    InvokerHelper.setProperty(target, "id", id)
-                    return performPersist(target, shouldFlush)
-                } else {
-                    return performPersist(target, shouldFlush)
-                }
-            } else if (shouldInsert(arguments)) {
+            String idPropertyName = domainClass.identity?.name ?: "id"
+            Object idVal = InvokerHelper.getProperty(target, idPropertyName)
+            if (idVal == null) {
                 return performPersist(target, shouldFlush)
-            } else  {
+            } else {
                 return performMerge(target, shouldFlush)
             }
         } finally {
             validateable.skipValidation(false)
         }
     }
+
 
     private boolean isAssignedId(PersistentEntity entity) {
         return ((SessionFactoryImplementor) sessionFactory)

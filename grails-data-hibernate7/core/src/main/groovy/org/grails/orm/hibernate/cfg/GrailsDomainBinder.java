@@ -2048,42 +2048,62 @@ public class GrailsDomainBinder
     private void bindSimpleId(PersistentProperty identifier, RootClass entity,
                                 InFlightMetadataCollector mappings, Identity mappedId, String sessionFactoryBeanName) {
 
-        Mapping mapping = new HibernateEntityWrapper().getMappedForm(identifier.getOwner());
-        boolean useSequence = mapping.isTablePerConcreteClass();
-
+        boolean useSequence = new HibernateEntityWrapper().getMappedForm(identifier.getOwner()).isTablePerConcreteClass();
         // create the id value
         BasicValue id = new BasicValue(metadataBuildingContext, entity.getTable());
+
+        String generator;
+        if (mappedId == null) {
+            generator = useSequence ? "sequence-identity" : "native";
+        } else {
+            generator = mappedId.getGenerator();
+            if ("native".equals(generator) && useSequence) {
+                generator = "sequence-identity";
+            }
+        }
+
+        switch (generator) {
+            case "identity" -> id.setCustomIdGeneratorCreator(context -> {
+                // Force IdentityGenerator for databases like MySQL/H2
+                var gen = new org.hibernate.id.IdentityGenerator();
+                context.getProperty().getValue().getColumns().get(0).setIdentity(true);
+                return gen;
+            });
+
+            case "sequence", "sequence-identity" -> id.setCustomIdGeneratorCreator(context -> {
+                // Use the modern SequenceStyleGenerator
+                return new org.hibernate.id.enhanced.SequenceStyleGenerator();
+            });
+
+            case "increment" -> id.setCustomIdGeneratorCreator(context -> {
+                return new org.hibernate.id.IncrementGenerator();
+            });
+
+            case "uuid", "uuid2" -> id.setCustomIdGeneratorCreator(context -> {
+                return new org.hibernate.id.uuid.UuidGenerator(context.getType().getReturnedClass());
+            });
+
+            case "assigned" -> id.setCustomIdGeneratorCreator(context -> {
+                return new org.hibernate.id.Assigned();
+            });
+
+            case "table", "enhanced-table" -> id.setCustomIdGeneratorCreator(context -> {
+                return new org.hibernate.id.enhanced.TableGenerator();
+            });
+
+            case "hilo" -> id.setCustomIdGeneratorCreator(context -> {
+                // Note: Legacy Hilo is often replaced by SequenceStyleGenerator with optimizer
+                return new org.hibernate.id.enhanced.SequenceStyleGenerator();
+            });
+
+            default -> id.setCustomIdGeneratorCreator(GrailsNativeGenerator::new);
+        }
+
         Property idProperty  = new Property();
         idProperty.setName(identifier.getName());
         idProperty.setValue(id);
         entity.setDeclaredIdentifierProperty(idProperty);
-        // set identifier on entity
-
-        Properties params = new Properties();
         entity.setIdentifier(id);
-
-        if (mappedId == null) {
-//            id.se
-//            id.setIdentifierGeneratorStrategy(useSequence ? "sequence-identity" : "native");
-        } else {
-            params.putAll(mappedId.getParams());
-            if(params.containsKey(SEQUENCE_KEY)) {
-                params.put(SequenceStyleGenerator.SEQUENCE_PARAM,  params.getProperty(SEQUENCE_KEY));
-            }
-
-            if (id.getCustomIdGeneratorCreator().isAssigned()) {
-                id.setNullValue("undefined");
-            }
-        }
-
-        String schemaName = new NamespaceNameExtractor().getSchemaName(mappings);
-        String catalogName = new NamespaceNameExtractor().getCatalogName(mappings);
-
-        IdentifierHelper identifierHelper = getJdbcEnvironment().getIdentifierHelper();
-        params.put(IDENTIFIER_NORMALIZER, identifierHelper);
-
-
-        // bind value
         // set type
         new SimpleValueBinder(namingStrategy).bindSimpleValue(identifier, null, id, EMPTY_PATH);
 
