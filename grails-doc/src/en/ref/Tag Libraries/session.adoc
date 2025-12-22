@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-The {grailsdocs}ref/Servlet%20API/session.html[session] object is an instance of the Servlet API's {javaee}javax/servlet/http/HttpSession.html[HttpSession] class
+The link:{servletApiRefFromRef}session.html[session] object is an instance of the Servlet API's {jakartaee}jakarta/servlet/http/HttpSession.html[HttpSession] class
 
 
 === Examples
@@ -49,6 +49,6 @@ class UserController {
 === Description
 
 
-The {javaee}javax/servlet/http/HttpSession.html[HttpSession] class is useful for associated session data with a client.
+The {jakartaee}jakarta/servlet/http/HttpSession.html[HttpSession] class is useful for associated session data with a client.
 
 NOTE: The additional methods added to the link:{servletApiRefFromRef}session.html[session] object are documented in the Grails Servlet API reference guide
