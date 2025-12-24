@@ -81,7 +81,7 @@ dependencies {
 
     implementation project(':grails-forge-core')
     implementation "org.apache.grails.bootstrap:grails-bootstrap:$projectVersion"
-    implementation 'org.codehaus.groovy:groovy'
+    compileOnly 'org.codehaus.groovy:groovy'
     implementation "com.fizzed:rocker-runtime:$rockerVersion"
     implementation "info.picocli:picocli:$picocliVersion"
     implementation "info.picocli:picocli-shell-jline3:$picocliVersion"
