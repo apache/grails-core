@@ -464,7 +464,7 @@ class Book {
 
         then:
         found != null
-        found.path.contains('com/bar/Book.groovy')
+        found.path.contains("com${File.separator}bar${File.separator}Book.groovy")
     }
 
     def "should throw exception when domain class has syntax errors"() {
