@@ -241,6 +241,10 @@ jakartaeeMigration {
     // Exclude Grails dependencies since AST and jakartaeeMigration are not compatible
     excludeTransform('org.apache.grails:**')
     excludeTransform('org.apache.grails.**:**')
+
+    // Exclude logback-core to avoid extra logback debug messages  
+    excludeTransform('ch.qos.logback:logback-core')
+
     // enable automatic migration from EE 8 (javax) or earlier to EE 10 (jakarta) or later
     migrate()
 }
