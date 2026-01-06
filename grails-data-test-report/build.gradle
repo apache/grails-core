@@ -31,6 +31,7 @@ dependencies {
     testReportAggregation project(':grails-datamapping-core-test')
     testReportAggregation project(':grails-datamapping-validation')
     testReportAggregation project(':grails-datastore-web')
+    testReportAggregation project(':grails-data-hibernate7-core')
 }
 
 tasks.named('check') {

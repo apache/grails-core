@@ -57,10 +57,10 @@ class NaturalIdentifierBinderSpec extends Specification {
         def naturalId = Mock(NaturalId)
         def property1 = Mock(Property)
         def value1 = Mock(Value)
-        def column1 = Mock(Column)
+        def column1 = Mock(Column, name: 'id1')
         def property2 = Mock(Property)
         def value2 = Mock(Value)
-        def column2 = Mock(Column)
+        def column2 = Mock(Column, name: 'id2')
         Table table = Mock(Table)
 
         mapping.getIdentity() >> identity

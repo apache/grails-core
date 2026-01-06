@@ -17,7 +17,7 @@ class NumericColumnConstraintsBinderSpec extends Specification {
 
     void "should use scale and precision from ColumnConfig when provided"() {
         given: "A column config with explicit scale and precision"
-        def column = Mock(Column)
+        def column = Mock(Column, name: 'test')
         def property = Mock(PersistentProperty)
         def columnConfig = new ColumnConfig(scale: 4, precision: 12)
 
@@ -32,7 +32,7 @@ class NumericColumnConstraintsBinderSpec extends Specification {
 
     void "should use scale from PropertyConfig when ColumnConfig is not provided"() {
         given: "A property config with a scale constraint"
-        def column = Mock(Column)
+        def column = Mock(Column, name: 'test')
         def propertyConfig = Mock(PropertyConfig)
         propertyConfig.getScale() >> 3
 
@@ -46,7 +46,7 @@ class NumericColumnConstraintsBinderSpec extends Specification {
     @Unroll
     void "should calculate precision based on min=#minVal, max=#maxVal, and scale=#scale"() {
         given: "A property config with various min/max/scale constraints"
-        def column = Mock(Column)
+        def column = Mock(Column, name: 'test')
         def propertyConfig = Mock(PropertyConfig)
 
         propertyConfig.getScale() >> scale
@@ -90,7 +90,7 @@ class NumericColumnConstraintsBinderSpec extends Specification {
 
     void "should use default precision and scale when no constraints are provided"() {
         given: "A property config with no relevant constraints"
-        def column = Mock(Column)
+        def column = Mock(Column, name: 'test')
         def propertyConfig = Mock(PropertyConfig)
         def defaultPrecision = org.hibernate.engine.jdbc.Size.DEFAULT_PRECISION // 19
         def defaultScale = org.hibernate.engine.jdbc.Size.DEFAULT_SCALE // 0

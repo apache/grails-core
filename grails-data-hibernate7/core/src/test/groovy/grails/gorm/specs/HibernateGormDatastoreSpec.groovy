@@ -20,6 +20,7 @@ import org.hibernate.boot.registry.classloading.spi.ClassLoaderService
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.internal.SessionFactoryImpl
 import org.hibernate.service.spi.ServiceRegistryImplementor
+import org.hibernate.boot.spi.AdditionalMappingContributor
 
 /**
  * The original GormDataStoreSpec destroyed the setup

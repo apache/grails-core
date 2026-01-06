@@ -58,7 +58,7 @@ class Named {
 
     static constraints = {
         nameType (validator: { val, obj, errors ->
-            if (val !=null) {
+            if (val !=null && val.nameType != null) {
                 def parms = [nameType: val.nameType.trim().toLowerCase() ]
                 def rows = NameType.executeQuery("""select nameType from NameType where lower(nameType) = :nameType""", parms,[:])
 

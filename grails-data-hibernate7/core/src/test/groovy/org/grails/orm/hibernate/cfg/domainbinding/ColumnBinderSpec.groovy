@@ -40,7 +40,7 @@ class ColumnBinderSpec extends Specification {
         def prop = Mock(ManyToMany)
         def owner = Mock(PersistentEntity)
         def mappedForm = Mock(PropertyConfig)
-        def column = new Column()
+        def column = new Column("test")
         def table = new Table()
 
         // stubs
@@ -94,7 +94,7 @@ class ColumnBinderSpec extends Specification {
         def owner = Mock(PersistentEntity)
         def mapping = Mock(Mapping)
         def propertyConfig = Mock(PropertyConfig)
-        def column = new Column()
+        def column = new Column("test")
         def table = new Table()
         def cc = new ColumnConfig(comment: "cmt", defaultValue: "def", read: "r", write: "w")
 
@@ -215,7 +215,7 @@ class ColumnBinderSpec extends Specification {
         def prop = Mock(PersistentProperty)
         def owner = Mock(PersistentEntity)
         def propertyConfig = Mock(PropertyConfig)
-        def column = new Column()
+        def column = new Column("test")
         def table = new Table()
 
         userTypeFetcher.getUserType(prop) >> null
@@ -268,7 +268,7 @@ class ColumnBinderSpec extends Specification {
         def inverse = Mock(org.grails.datastore.mapping.model.types.Association)
         def owner = Mock(PersistentEntity)
         def mappedForm = Mock(PropertyConfig)
-        def column = new Column() // name is null so binder should set it
+        def column = new Column("test") // name is null so binder should set it
         def table = new Table()
 
         userTypeFetcher.getUserType(prop) >> null
@@ -323,7 +323,7 @@ class ColumnBinderSpec extends Specification {
         def prop = Mock(org.grails.datastore.mapping.model.types.ToOne)
         def owner = Mock(PersistentEntity)
         def mappedForm = Mock(PropertyConfig)
-        def column = new Column()
+        def column = new Column("test")
         def table = new Table()
 
         userTypeFetcher.getUserType(prop) >> null
@@ -375,7 +375,7 @@ class ColumnBinderSpec extends Specification {
         def prop = Mock(org.grails.datastore.mapping.model.types.Association)
         def owner = Mock(PersistentEntity)
         def mappedForm = Mock(PropertyConfig)
-        def column = new Column()
+        def column = new Column("test")
         def table = new Table()
 
         userTypeFetcher.getUserType(prop) >> null
@@ -429,7 +429,7 @@ class ColumnBinderSpec extends Specification {
         def parentProp = Mock(PersistentProperty)
         def owner = Mock(PersistentEntity)
         def propertyConfig = Mock(PropertyConfig)
-        def column = new Column()
+        def column = new Column("test")
         def table = new Table()
 
         userTypeFetcher.getUserType(prop) >> null
@@ -482,7 +482,7 @@ class ColumnBinderSpec extends Specification {
         def parentProp = Mock(PersistentProperty)
         def owner = Mock(PersistentEntity)
         def propertyConfig = Mock(PropertyConfig)
-        def column = new Column()
+        def column = new Column("test")
         def table = new Table()
 
         userTypeFetcher.getUserType(prop) >> null
@@ -533,7 +533,7 @@ class ColumnBinderSpec extends Specification {
         def parentProp = Mock(PersistentProperty)
         def owner = Mock(PersistentEntity)
         def propertyConfig = Mock(PropertyConfig)
-        def column = new Column()
+        def column = new Column("test")
         def table = new Table()
 
         userTypeFetcher.getUserType(prop) >> null
@@ -582,7 +582,7 @@ class ColumnBinderSpec extends Specification {
 
         def prop = Mock(PersistentProperty)
         def owner = Mock(PersistentEntity)
-        def column = new Column()
+        def column = new Column("test")
         def table = new Table()
 
         userTypeFetcher.getUserType(prop) >> null
@@ -631,7 +631,7 @@ class ColumnBinderSpec extends Specification {
 
         def prop = Mock(PersistentProperty)
         def owner = Mock(PersistentEntity)
-        def column = new Column()
+        def column = new Column("test")
         def table = new Table()
 
         userTypeFetcher.getUserType(prop) >> null
@@ -644,7 +644,7 @@ class ColumnBinderSpec extends Specification {
 
         when:
         // Unique true, withinGroup true => unique false
-        def column2 = new Column()
+        def column2 = new Column("test2")
         def pc2 = Mock(PropertyConfig)
         propToConfig.toPropertyConfig(prop) >> pc2
         pc2.isUnique() >> true
@@ -682,7 +682,7 @@ class ColumnBinderSpec extends Specification {
 
         def prop = Mock(PersistentProperty)
         def owner = Mock(PersistentEntity)
-        def column = new Column()
+        def column = new Column("test")
         def table = new Table()
 
         userTypeFetcher.getUserType(prop) >> null
@@ -695,7 +695,7 @@ class ColumnBinderSpec extends Specification {
 
         when:
         // Unique false => unique false
-        def column3 = new Column()
+        def column3 = new Column("test3")
         def pc3 = Mock(PropertyConfig)
         propToConfig.toPropertyConfig(prop) >>> [pc3, pc3]
         pc3.isUnique() >> false
@@ -734,7 +734,7 @@ class ColumnBinderSpec extends Specification {
         def owner = Mock(PersistentEntity)
         def mapping = Mock(Mapping)
         def propertyConfig = Mock(PropertyConfig)
-        def column = new Column()
+        def column = new Column("test")
         def table = new Table()
 
         userTypeFetcher.getUserType(prop) >> null

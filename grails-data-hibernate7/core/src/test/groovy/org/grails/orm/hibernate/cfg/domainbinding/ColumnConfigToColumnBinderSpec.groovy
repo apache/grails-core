@@ -8,7 +8,7 @@ import spock.lang.Specification
 class ColumnConfigToColumnBinderSpec extends Specification {
 
     def binder = new ColumnConfigToColumnBinder()
-    def column = Mock(Column)
+    def column = Mock(Column, name: "test")
 
     def "should bind column properties when values are valid"() {
         given:

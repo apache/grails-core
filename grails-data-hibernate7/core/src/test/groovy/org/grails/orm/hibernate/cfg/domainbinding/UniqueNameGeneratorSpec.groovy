@@ -20,8 +20,8 @@ class UniqueNameGeneratorSpec extends Specification {
     def "should generate a unique name based on table and column names and truncate it"() {
         given: "A unique key with a table and several columns"
         def table = Mock(Table)
-        def column1 = Mock(Column)
-        def column2 = Mock(Column)
+        def column1 = Mock(Column, name: 'first_name')
+        def column2 = Mock(Column, name: 'last_name')
         def uniqueKey = Mock(UniqueKey)
 
         table.getName() >> "person"
@@ -44,7 +44,7 @@ class UniqueNameGeneratorSpec extends Specification {
     def "should not truncate a generated name that is 30 characters or less"() {
         given: "A unique key whose hash results in a short name"
         def table = Mock(Table)
-        def column = Mock(Column)
+        def column = Mock(Column, name: 'short_col')
         def uniqueKey = Mock(UniqueKey)
 
         table.getName() >> "short_table"
@@ -99,9 +99,9 @@ class UniqueNameGeneratorSpec extends Specification {
     def "should filter out columns with blank or null names"() {
         given: "A unique key with valid, blank, and null column names"
         def table = Mock(Table)
-        def column1 = Mock(Column)
-        def column2 = Mock(Column)
-        def column3 = Mock(Column)
+        def column1 = Mock(Column, name: 'sku')
+        def column2 = Mock(Column, name: '')
+        def column3 = Mock(Column, name: null)
         def uniqueKey = Mock(UniqueKey)
 
         table.getName() >> "product"

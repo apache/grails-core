@@ -121,7 +121,7 @@ class ManyToOneBinderSpec extends Specification {
         def refDomainClass = Mock(PersistentEntity)
         def mapping = Mock(Mapping)
         def propertyConfig = Mock(PropertyConfig)
-        def column = Mock(Column)
+        def column = Mock(Column, name: 'test')
         def inverseSide = Mock(Association)
 
         property.getAssociatedEntity() >> refDomainClass

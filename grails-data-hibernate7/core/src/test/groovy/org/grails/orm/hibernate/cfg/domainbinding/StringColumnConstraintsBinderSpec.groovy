@@ -12,7 +12,7 @@ class StringColumnConstraintsBinderSpec extends Specification {
 
     def setup() {
         binder = new StringColumnConstraintsBinder()
-        column = Mock(Column)
+        column = Mock(Column, name: "test")
         mappedForm = Mock(Property)
     }
 

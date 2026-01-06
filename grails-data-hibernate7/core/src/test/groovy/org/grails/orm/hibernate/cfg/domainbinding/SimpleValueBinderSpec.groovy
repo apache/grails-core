@@ -54,8 +54,14 @@ class SimpleValueBinderSpec extends Specification {
         then:
         1 * sv.setTypeName("custom.Type")
         1 * sv.setTypeParameters({ it.getProperty('p1') == 'v1' })
-        1 * columnBinder.bindColumn(prop, null, _ as Column, null, 'p', null)
-        1 * columnConfigToColumnBinder.bindColumnConfigToColumn(_ as Column, null, pc)
+        1 * columnBinder.bindColumn(prop, null, _, null, 'p', null) >> { args ->
+            def column = args[2] as Column
+            column.setName("testColumn")
+        }
+        1 * columnConfigToColumnBinder.bindColumnConfigToColumn(_, null, pc) >> { args ->
+            def column = args[0] as Column
+            column.setName("testColumn")
+        }
     }
 
     def "falls back to property type when provider returns null"() {
@@ -81,7 +87,10 @@ class SimpleValueBinderSpec extends Specification {
 
         then:
         1 * sv.setTypeName(Integer.name)
-        1 * columnBinder.bindColumn(prop, null, _ as Column, null, null, null)
+        1 * columnBinder.bindColumn(prop, null, _, null, null, null) >> { args ->
+            def column = args[2] as Column
+            column.setName("testColumn")
+        }
     }
 
     def "derived property adds no columns but adds formula, except TenantId"() {
@@ -119,7 +128,10 @@ class SimpleValueBinderSpec extends Specification {
 
         then:
         0 * sv2.addFormula(_)
-        1 * columnBinder.bindColumn(_, _, _ as Column, _, _, _)
+        1 * columnBinder.bindColumn(_, _, _, _, _, _) >> { args ->
+            def column = args[2] as Column
+            column.setName("testColumn")
+        }
     }
 
     def "applies generator and maps sequence param to SequenceStyleGenerator.SEQUENCE_PARAM"() {
@@ -174,10 +186,22 @@ class SimpleValueBinderSpec extends Specification {
         binder.bindSimpleValue(prop, parent, sv, 'path')
 
         then:
-        1 * columnConfigToColumnBinder.bindColumnConfigToColumn(_ as Column, cc1, pc)
-        1 * columnConfigToColumnBinder.bindColumnConfigToColumn(_ as Column, cc2, pc)
-        1 * columnBinder.bindColumn(prop, parent, _ as Column, cc1, 'path', null)
-        1 * columnBinder.bindColumn(prop, parent, _ as Column, cc2, 'path', null)
+        1 * columnConfigToColumnBinder.bindColumnConfigToColumn(_, cc1, pc) >> { args ->
+            def column = args[0] as Column
+            column.setName("testColumn")
+        }
+        1 * columnConfigToColumnBinder.bindColumnConfigToColumn(_, cc2, pc) >> { args ->
+            def column = args[0] as Column
+            column.setName("testColumn")
+        }
+        1 * columnBinder.bindColumn(prop, parent, _, cc1, 'path', null) >> { args ->
+            def column = args[2] as Column
+            column.setName("testColumn")
+        }
+        1 * columnBinder.bindColumn(prop, parent, _, cc2, 'path', null) >> { args ->
+            def column = args[2] as Column
+            column.setName("testColumn")
+        }
         2 * sv.addColumn(_ as Column)
     }
 }
