@@ -667,7 +667,7 @@ class Person {
 }
 ----
 
-A global setting may be configured in `application.groovy` to define date formats which will be used application wide when binding to Date.
+A global setting may be configured in `application.groovy` or `application.yml` to define date formats which will be used application wide when binding to Date.
 
 [source,groovy]
 .grails-app/conf/application.groovy
@@ -675,14 +675,27 @@ A global setting may be configured in `application.groovy` to define date format
 grails.databinding.dateFormats = ['MMddyyyy', 'yyyy-MM-dd HH:mm:ss.S', "yyyy-MM-dd'T'hh:mm:ss'Z'"]
 ----
 
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    databinding:
+        dateFormats: ['MMddyyyy', 'yyyy-MM-dd HH:mm:ss.S', "yyyy-MM-dd'T'hh:mm:ss'Z'"]
+----
+
 The formats specified in `grails.databinding.dateFormats` will be attempted in the order in which they are included in the List.  If a property is marked with `@BindingFormat`, the `@BindingFormat` will take precedence over the values specified in `grails.databinding.dateFormats`.
 
 The formats configured by default are:
 
 * `yyyy-MM-dd HH:mm:ss.S`
-* `yyyy-MM-dd'T'hh:mm:ss'Z'`
+* `yyyy-MM-dd'T'HH:mm:ss'Z'`
 * `yyyy-MM-dd HH:mm:ss.S z`
 * `yyyy-MM-dd'T'HH:mm:ss.SSSX`
+* `yyyy-MM-dd'T'HH:mm:ssZ`
+* `HH:mm:ssZ`
+* `yyyy-MM-dd'T'HH:mm:ss`
+* `yyyy-MM-dd`
+* `HH:mm:ss`
 
 
 ==== Custom Formatted Converters
