@@ -10,7 +10,7 @@ class IndexBinderSpec extends Specification {
 
     def indexBinder = new IndexBinder()
     def table = Mock(Table)
-    def column = Mock(Column, name: "test_column")
+    def column = new Column("test_column")
     def index = Mock(Index)
 
 

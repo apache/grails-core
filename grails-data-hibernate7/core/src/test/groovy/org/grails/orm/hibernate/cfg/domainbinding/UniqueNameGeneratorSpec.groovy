@@ -20,13 +20,11 @@ class UniqueNameGeneratorSpec extends Specification {
     def "should generate a unique name based on table and column names and truncate it"() {
         given: "A unique key with a table and several columns"
         def table = Mock(Table)
-        def column1 = Mock(Column, name: 'first_name')
-        def column2 = Mock(Column, name: 'last_name')
+        def column1 = new Column('first_name')
+        def column2 = new Column('last_name')
         def uniqueKey = Mock(UniqueKey)
 
         table.getName() >> "person"
-        column1.getName() >> "first_name"
-        column2.getName() >> "last_name"
 
         uniqueKey.getTable() >> table
         uniqueKey.getColumns() >> [column1, column2]
@@ -44,11 +42,10 @@ class UniqueNameGeneratorSpec extends Specification {
     def "should not truncate a generated name that is 30 characters or less"() {
         given: "A unique key whose hash results in a short name"
         def table = Mock(Table)
-        def column = Mock(Column, name: 'short_col')
+        def column = new Column('short_col')
         def uniqueKey = Mock(UniqueKey)
 
         table.getName() >> "short_table"
-        column.getName() >> "short_col"
         uniqueKey.getTable() >> table
         uniqueKey.getColumns() >> [column]
 
@@ -99,15 +96,12 @@ class UniqueNameGeneratorSpec extends Specification {
     def "should filter out columns with blank or null names"() {
         given: "A unique key with valid, blank, and null column names"
         def table = Mock(Table)
-        def column1 = Mock(Column, name: 'sku')
-        def column2 = Mock(Column, name: '')
-        def column3 = Mock(Column, name: null)
+        def column1 = new Column('sku')
+        def column2 = new Column('')
+        def column3 = new Column(null)
         def uniqueKey = Mock(UniqueKey)
 
         table.getName() >> "product"
-        column1.getName() >> "sku"
-        column2.getName() >> ""      // Blank name
-        column3.getName() >> null    // Null name
 
         uniqueKey.getTable() >> table
         uniqueKey.getColumns() >> [column1, column2, column3]

@@ -12,7 +12,7 @@ class StringColumnConstraintsBinderSpec extends Specification {
 
     def setup() {
         binder = new StringColumnConstraintsBinder()
-        column = Mock(Column, name: "test")
+        column = new Column("test")
         mappedForm = Mock(Property)
     }
 
@@ -20,24 +20,26 @@ class StringColumnConstraintsBinderSpec extends Specification {
         given:
         mappedForm.getMaxSize() >> null
         mappedForm.getInList() >> null
+        int originalLength = column.length
 
         when:
         binder.bindStringColumnConstraints(column, mappedForm)
 
         then:
-        0 * column.setLength(_)
+        column.length == originalLength
     }
 
     def "should not set column length when empty list"() {
         given:
         mappedForm.getMaxSize() >> null
         mappedForm.getInList() >> []
+        int originalLength = column.length
 
         when:
         binder.bindStringColumnConstraints(column, mappedForm)
 
         then:
-        0 * column.setLength(_)
+        column.length == originalLength
     }
 
     def "should set column length when maxSize is provided"() {
@@ -49,7 +51,7 @@ class StringColumnConstraintsBinderSpec extends Specification {
         binder.bindStringColumnConstraints(column, mappedForm)
 
         then:
-        1 * column.setLength(255)
+        column.length == 255
     }
 
     def "should set column length to longest inList value when maxSize is null"() {
@@ -61,7 +63,7 @@ class StringColumnConstraintsBinderSpec extends Specification {
         binder.bindStringColumnConstraints(column, mappedForm)
 
         then:
-        1 * column.setLength(4) // length of "very long string"
+        column.length == 4 // length of "very long string" - preserving original expectation
     }
 
     def "should set column length to longest valid int inList value when maxSize is null"() {
@@ -73,7 +75,7 @@ class StringColumnConstraintsBinderSpec extends Specification {
         binder.bindStringColumnConstraints(column, mappedForm)
 
         then:
-        1 * column.setLength(4) // length of "very long string"
+        column.length == 4 // length of "very long string" - preserving original expectation
     }
 
 
@@ -86,19 +88,20 @@ class StringColumnConstraintsBinderSpec extends Specification {
         binder.bindStringColumnConstraints(column, mappedForm)
 
         then:
-        1 * column.setLength(1)
+        column.length == 1
     }
 
     def "should handle zero maxSize"() {
         given:
         mappedForm.getMaxSize() >> 0
         mappedForm.getInList() >> null
+        int originalLength = column.length
 
         when:
         binder.bindStringColumnConstraints(column, mappedForm)
 
         then:
-        0 * column.setLength(_)
+        column.length == originalLength
     }
 
 
@@ -111,6 +114,6 @@ class StringColumnConstraintsBinderSpec extends Specification {
         binder.bindStringColumnConstraints(column, mappedForm)
 
         then:
-        1 * column.setLength(50)
+        column.length == 50
     }
 }

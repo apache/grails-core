@@ -1,5 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.ManyToMany
@@ -15,7 +16,7 @@ import org.hibernate.mapping.ManyToOne
 import spock.lang.Specification
 import spock.lang.Unroll
 
-class ManyToOneBinderSpec extends Specification {
+class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
     @Unroll
     def "Test bindManyToOne orchestration for #scenario"() {
@@ -34,7 +35,8 @@ class ManyToOneBinderSpec extends Specification {
 
         // 3. Set up mocks for method arguments
         def association = Mock(Association)
-        def manyToOne = Mock(ManyToOne)
+
+        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(),null)
         def path = "/test"
         def refDomainClass = Mock(PersistentEntity)
         def mapping = Mock(Mapping)
@@ -79,7 +81,7 @@ class ManyToOneBinderSpec extends Specification {
         def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, propertyConfigConverter, manyToOneValuesBinder, compositeBinder, columnFetcher, entityWrapper)
 
         def property = Mock(ManyToMany)
-        def manyToOne = Mock(ManyToOne)
+        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(),null)
         def ownerEntity = Mock(PersistentEntity)
         def mapping = new Mapping()
         mapping.setColumns(new HashMap<String, PropertyConfig>())
@@ -117,11 +119,11 @@ class ManyToOneBinderSpec extends Specification {
         def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, propertyConfigConverter, manyToOneValuesBinder, compositeBinder, columnFetcher, entityWrapper)
 
         def property = Mock(OneToOne)
-        def manyToOne = Mock(ManyToOne)
+        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(),null)
         def refDomainClass = Mock(PersistentEntity)
         def mapping = Mock(Mapping)
         def propertyConfig = Mock(PropertyConfig)
-        def column = Mock(Column, name: 'test')
+        def column = new Column('test')
         def inverseSide = Mock(Association)
 
         property.getAssociatedEntity() >> refDomainClass
@@ -143,9 +145,9 @@ class ManyToOneBinderSpec extends Specification {
         then:
         1 * manyToOne.setAlternateUniqueKey(true)
         if (expectedUniqueValue != null) {
-            1 * column.setUnique(expectedUniqueValue)
+            assert column.isUnique() == expectedUniqueValue
         } else {
-            0 * column.setUnique(_)
+            assert !column.isUnique()
         }
 
         where:
@@ -170,7 +172,7 @@ class ManyToOneBinderSpec extends Specification {
         def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, propertyConfigConverter, manyToOneValuesBinder, compositeBinder, columnFetcher, entityWrapper)
 
         def property = Mock(OneToOne)
-        def manyToOne = Mock(ManyToOne)
+        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(),null)
         def refDomainClass = Mock(PersistentEntity)
         def mapping = Mock(Mapping)
         def propertyConfig = new PropertyConfig()

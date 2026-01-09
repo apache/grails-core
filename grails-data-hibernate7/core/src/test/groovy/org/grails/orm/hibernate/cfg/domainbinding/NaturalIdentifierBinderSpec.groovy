@@ -1,5 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.Identity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.NaturalId
@@ -13,7 +14,7 @@ import org.hibernate.mapping.Value
 import spock.lang.Specification
 import spock.lang.Unroll
 
-class NaturalIdentifierBinderSpec extends Specification {
+class NaturalIdentifierBinderSpec extends HibernateGormDatastoreSpec {
 
     @Unroll("test bindNaturalIdentifier with a single property and mutable=#isMutable")
     void "test bindNaturalIdentifier with a single property"(boolean isMutable) {
@@ -21,18 +22,19 @@ class NaturalIdentifierBinderSpec extends Specification {
         def mapping = Mock(Mapping.class)
         def identity = Mock(Identity)
         def naturalId = Mock(NaturalId)
-        def property = Mock(Property)
+        def property = new Property()
+        property.setName("id1")
         def value = Mock(Value)
+        property.setValue(value)
         Table table = Mock(Table)
         def id1 = "id1"
         mapping.getIdentity() >> identity
         identity.getNatural() >> naturalId
         naturalId.getPropertyNames() >> [id1]
         naturalId.isMutable() >> isMutable
-        def rootClass = Mock(RootClass)
-        rootClass.getProperty(id1) >> property
-        rootClass.getTable() >> table
-        property.getValue() >> value
+        def rootClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        rootClass.setIdentifierProperty(property)
+        rootClass.setTable(table)
         value.getSelectables() >> []
         def uniqueNameGenerator = Mock(UniqueNameGenerator)
         def binder = new NaturalIdentifierBinder(uniqueNameGenerator)
@@ -42,8 +44,8 @@ class NaturalIdentifierBinderSpec extends Specification {
 
         then:
         1 * uniqueNameGenerator.setGeneratedUniqueName(_)
-        1 * property.setNaturalIdentifier(true)
-        1 * property.setUpdateable(isMutable)
+        property.isNaturalIdentifier()
+        property.isUpdatable() == isMutable
         1 * table.addUniqueKey(_)
 
         where:
@@ -55,12 +57,16 @@ class NaturalIdentifierBinderSpec extends Specification {
         def mapping = Mock(Mapping.class)
         def identity = Mock(Identity)
         def naturalId = Mock(NaturalId)
-        def property1 = Mock(Property)
+        def property1 =new Property()
+        property1.setName("id1")
         def value1 = Mock(Value)
-        def column1 = Mock(Column, name: 'id1')
-        def property2 = Mock(Property)
+        property1.setValue(value1)
+        def column1 = new Column('id1')
+        def property2 = new Property()
+        property2.setName("id2")
         def value2 = Mock(Value)
-        def column2 = Mock(Column, name: 'id2')
+        property2.setValue(value2)
+        def column2 = new Column('id2')
         Table table = Mock(Table)
 
         mapping.getIdentity() >> identity
@@ -68,14 +74,13 @@ class NaturalIdentifierBinderSpec extends Specification {
         naturalId.getPropertyNames() >> ["id1", "id2"]
         naturalId.isMutable() >> true
 
-        def rootClass = Mock(RootClass)
-        rootClass.getProperty("id1") >> property1
-        rootClass.getProperty("id2") >> property2
+        def rootClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        rootClass.setTable(table)
+        rootClass.addProperty(property1)
+        rootClass.addProperty(property2)
         rootClass.getTable() >> table
 
-        property1.getValue() >> value1
         value1.getSelectables() >> [column1]
-        property2.getValue() >> value2
         value2.getSelectables() >> [column2]
 
         def uniqueNameGenerator = Mock(UniqueNameGenerator)
@@ -85,8 +90,8 @@ class NaturalIdentifierBinderSpec extends Specification {
         binder.bindNaturalIdentifier(mapping, rootClass)
 
         then:
-        1 * property1.setNaturalIdentifier(true)
-        1 * property2.setNaturalIdentifier(true)
+        property1.isNaturalIdentifier()
+        property2.isNaturalIdentifier()
         1 * table.addUniqueKey(_) >> { uks ->
             def uk = uks.get(0) as UniqueKey
             assert uk.getColumnSpan() == 2
@@ -99,7 +104,7 @@ class NaturalIdentifierBinderSpec extends Specification {
         given:
         def mapping = Mock(Mapping.class)
         def identity = Mock(Identity)
-        def rootClass = Mock(RootClass)
+        def rootClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def uniqueNameGenerator = Mock(UniqueNameGenerator)
         def binder = new NaturalIdentifierBinder(uniqueNameGenerator)
 
@@ -110,7 +115,6 @@ class NaturalIdentifierBinderSpec extends Specification {
         binder.bindNaturalIdentifier(mapping, rootClass)
 
         then:
-        0 * rootClass._
         0 * uniqueNameGenerator._
     }
 
@@ -119,15 +123,14 @@ class NaturalIdentifierBinderSpec extends Specification {
         def mapping = Mock(Mapping.class)
         def identity = Mock(Identity)
         def naturalId = Mock(NaturalId)
-        def rootClass = Mock(RootClass)
+        def rootClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def uniqueNameGenerator = Mock(UniqueNameGenerator)
         def binder = new NaturalIdentifierBinder(uniqueNameGenerator)
         Table table = Mock(Table)
         mapping.getIdentity() >> identity
         identity.getNatural() >> naturalId
         naturalId.getPropertyNames() >> ["nonExistentProperty"]
-        rootClass.getProperty("nonExistentProperty") >> null
-        rootClass.getTable() >> table
+        rootClass.setTable(table)
 
         when:
         binder.bindNaturalIdentifier(mapping, rootClass)

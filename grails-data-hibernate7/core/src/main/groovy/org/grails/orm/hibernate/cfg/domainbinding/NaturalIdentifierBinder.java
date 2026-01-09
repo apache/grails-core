@@ -6,7 +6,10 @@ import org.grails.orm.hibernate.cfg.Mapping;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.UniqueKey;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 public class NaturalIdentifierBinder {
 
@@ -31,10 +34,12 @@ public class NaturalIdentifierBinder {
                     }
                     var uk = new UniqueKey();
                     uk.setTable(persistentClass.getTable());
-                    Integer pks = naturalId.getPropertyNames()
+                    Stream<String> stringStream = naturalId.getPropertyNames()
                             .stream()
+                            .filter(persistentClass::hasProperty);
+                    List<String> list = stringStream.toList();
+                    Integer pks = list.stream()
                             .map(persistentClass::getProperty)
-                            .filter(property -> property != null)
                             .map(property -> {
                                 property.setNaturalIdentifier(true);
                                 property.setUpdateable(naturalId.isMutable());

@@ -8,6 +8,7 @@ import org.hibernate.mapping.ManyToOne;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.ManyToMany;
+import org.grails.datastore.mapping.model.types.OneToOne;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.JoinTable;
@@ -96,7 +97,9 @@ public class ManyToOneBinder {
         }
 
         PropertyConfig config = persistentPropertyToPropertyConfig.toPropertyConfig(property);
-        if ((property instanceof org.grails.datastore.mapping.model.types.OneToOne) && !isComposite) {
+        boolean isOneToOne = property instanceof OneToOne;
+        boolean notComposite = !isComposite;
+        if (isOneToOne && notComposite) {
             manyToOne.setAlternateUniqueKey(true);
             Column c = simpleValueColumnFetcher.getColumnForSimpleValue(manyToOne);
             if (c == null) {

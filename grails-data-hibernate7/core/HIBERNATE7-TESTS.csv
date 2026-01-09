@@ -1,0 +1,38 @@
+ Test File , Status , Notes 
+ `src/test/groovy/org/grails/orm/hibernate/HibernateGormStaticApiSpec.groovy` , FAILED , withSession fails with persistence context issue; HQL escape test fails. 
+ `src/test/groovy/org/grails/orm/hibernate/HibernateGormInstanceApiSpec.groovy` , FAILED , delete() method missing/renamed? remove() called instead. 
+ `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/SimpleValueBinderSpec.groovy` , FAILED , Generator binding issues. 
+ `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/ColumnConfigToColumnBinderSpec.groovy` , FAILED , Sealed class org.hibernate.mapping.Column cannot be mocked. 
+ `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/UniqueNameGeneratorSpec.groovy` , FAILED , Sealed class org.hibernate.mapping.Column cannot be mocked. 
+ `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/CascadeBehaviorPersisterSpec.groovy` , FAILED , Unsupported cascade style: save-update. 
+ `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/ManyToOneBinderSpec.groovy` , FAILED , Final class org.hibernate.mapping.ManyToOne cannot be mocked. 
+ `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/CascadeBehaviorFetcherSpec.groovy` , FAILED , Expected save-update but got all. 
+ `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/StringColumnConstraintsBinderSpec.groovy` , FAILED , Sealed class org.hibernate.mapping.Column cannot be mocked. 
+ `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/ManyToOneValuesBinderSpec.groovy` , FAILED , Final class org.hibernate.mapping.ManyToOne cannot be mocked. 
+ `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/NaturalIdentifierBinderSpec.groovy` , FAILED , Final/Sealed class issues with RootClass and Column. 
+ `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/ColumnBinderSpec.groovy` , FAILED ," Column name mismatch: got ""test"" instead of expected. "
+ `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/IndexBinderSpec.groovy` , FAILED , Sealed class org.hibernate.mapping.Column cannot be mocked. 
+ `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/NamespaceNameExtractorSpec.groovy` , FAILED , Final class org.hibernate.boot.model.relational.Namespace$Name cannot be mocked. 
+ `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/NumericColumnConstraintsBinderSpec.groovy` , FAILED , Sealed class org.hibernate.mapping.Column cannot be mocked. 
+ `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/DefaultColumnNameFetcherSpec.groovy` , FAILED , Package/class name parts in generated column names use dots instead of underscores? 
+ `src/test/groovy/org/grails/orm/hibernate/compiler/HibernateEntityTransformationSpec.groovy` , FAILED , Compilation error: Can't have an abstract method in a non-abstract class. 
+ `src/test/groovy/org/grails/orm/hibernate/BidirectionalManyToOneWithListMappingSpec.groovy` , FAILED , Final class org.hibernate.mapping.ManyToOne cannot be mocked. 
+ `src/test/groovy/grails/gorm/specs/HibernateGormDatastoreSpec.groovy` , PENDING , 
+ `src/test/groovy/grails/gorm/specs/ExecuteQueryWithinValidatorSpec.groovy` , FAILED , Hibernate 7 removal: Session.save() method missing. 
+ `src/test/groovy/grails/gorm/specs/proxy/Hibernate6GroovyProxySpec.groovy` , FAILED , Hibernate 7 change: location.isInitialized() method missing. 
+ `src/test/groovy/grails/gorm/specs/hasmany/TwoUnidirectionalHasManySpec.groovy` , FAILED , SQL Syntax error: Qualified column names in DDL. 
+ `src/test/groovy/grails/gorm/specs/CompositeIdWithManyToOneAndSequenceSpec.groovy` , FAILED , NPE in Hibernate 7 SequenceStyleGenerator. 
+ `src/test/groovy/grails/gorm/specs/SubqueryAliasSpec.groovy` , SKIPPED , 
+ `src/test/groovy/grails/gorm/specs/multitenancy/MultiTenancyBidirectionalManyToManySpec.groovy` , FAILED , Found two representations of same collection. 
+ `src/test/groovy/grails/gorm/specs/inheritance/TablePerConcreteClassAndDateCreatedSpec.groovy` , FAILED , NPE in Hibernate 7 IncrementGenerator. 
+ `src/test/groovy/grails/gorm/specs/dirtychecking/HibernateDirtyCheckingSpec.groovy` , FAILED , Dirty checking issues in Hibernate 7. 
+ `src/test/groovy/grails/gorm/specs/dirtychecking/HibernateUpdateFromListenerSpec.groovy` , FAILED , Dirty checking issues in Hibernate 7. 
+ `src/test/groovy/grails/gorm/specs/dirtychecking/PropertyFieldSpec.groovy` , FAILED , Dirty checking issues in Hibernate 7. 
+ `src/test/groovy/grails/gorm/specs/NullableAndLengthSpec.groovy` , FAILED , Mapping/Constraint issues. 
+ `src/test/groovy/grails/gorm/specs/SubclassMultipleListCollectionSpec.groovy` , FAILED , SQL Syntax error: Qualified column names in DDL. 
+ `src/test/groovy/grails/gorm/specs/perf/JoinPerfSpec.groovy` , FAILED , Unique constraint violation. 
+ `src/test/groovy/grails/gorm/specs/uuid/UuidInsertSpec.groovy` , FAILED , Logic error: name mismatch after insert/update. 
+ `src/test/groovy/grails/gorm/specs/validation/CascadeValidationSpec.groovy` , FAILED , SQL Syntax error: Qualified column names in DDL. 
+ `src/test/groovy/grails/gorm/specs/validation/SaveWithInvalidEntitySpec.groovy` , FAILED , Hibernate 7 change: got EntityActionVetoException instead of IllegalStateException. 
+ `src/test/groovy/grails/gorm/specs/validation/DeepValidationSpec.groovy` , FAILED , SQL Syntax error: Qualified column names in DDL.
+`grails-datamapping-tck/src/main/groovy/org/apache/grails/data/testing/tck/tests/NamedQuerySpec.groovy` , FAILED , "No signature of method: static org.grails.datastore.gorm.GormEnhancer.createNamedQuery()"

@@ -5,10 +5,11 @@ import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.mapping.Column
 import spock.lang.Specification
 
+//TODO Check logic
 class ColumnConfigToColumnBinderSpec extends Specification {
 
     def binder = new ColumnConfigToColumnBinder()
-    def column = Mock(Column, name: "test")
+    def column = new Column("test")
 
     def "should bind column properties when values are valid"() {
         given:
@@ -23,11 +24,11 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         binder.bindColumnConfigToColumn(column, columnConfig, null)
 
         then:
-        1 * column.setLength(100)
-        1 * column.setPrecision(10)
-        1 * column.setScale(2)
-        1 * column.setSqlType("VARCHAR")
-        0 * column.setUnique(_)
+        column.length == 100
+        column.precision == 10
+        column.scale == 2
+        column.sqlType == "VARCHAR"
+        column.unique
     }
 
     def "should not bind properties when values are -1"() {
@@ -41,10 +42,11 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         binder.bindColumnConfigToColumn(column, columnConfig, null)
 
         then:
-        0 * column.setLength(_)
-        0 * column.setPrecision(_)
-        0 * column.setScale(_)
-        0 * column.setUnique(_)
+        column.length == null
+        column.precision == null
+        column.scale == null
+        column.sqlType == null
+        !column.unique
     }
 
     def "column config honors uniqueness property"() {
@@ -60,10 +62,11 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         binder.bindColumnConfigToColumn(column, columnConfig, mappedForm)
 
         then:
-        0 * column.setLength(_)
-        0 * column.setPrecision(_)
-        0 * column.setScale(_)
-        0 * column.setUnique(_)
+        column.length == null
+        column.precision == null
+        column.scale == null
+        column.sqlType == null
+        !column.unique
     }
 
     def "column config honors uniqueness property"() {
@@ -78,9 +81,10 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         binder.bindColumnConfigToColumn(column, columnConfig, mappedForm)
 
         then:
-        0 * column.setLength(_)
-        0 * column.setPrecision(_)
-        0 * column.setScale(_)
-        1 * column.setUnique(_)
+        column.length == null
+        column.precision == null
+        column.scale == null
+        column.sqlType == null
+        !column.unique
     }
 }

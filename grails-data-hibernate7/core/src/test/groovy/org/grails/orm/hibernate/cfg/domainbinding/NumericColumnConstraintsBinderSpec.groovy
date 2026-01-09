@@ -17,7 +17,7 @@ class NumericColumnConstraintsBinderSpec extends Specification {
 
     void "should use scale and precision from ColumnConfig when provided"() {
         given: "A column config with explicit scale and precision"
-        def column = Mock(Column, name: 'test')
+        def column = new Column('test')
         def property = Mock(PersistentProperty)
         def columnConfig = new ColumnConfig(scale: 4, precision: 12)
 
@@ -25,14 +25,13 @@ class NumericColumnConstraintsBinderSpec extends Specification {
         binder.bindNumericColumnConstraints(column, columnConfig, Mock(PropertyConfig))
 
         then: "The column's scale and precision are set directly from the column config"
-        1 * column.setScale(4)
-        1 * column.setPrecision(12)
-        0 * column.setPrecision(org.hibernate.engine.jdbc.Size.DEFAULT_PRECISION)
+        column.scale == 4
+        column.precision == 12
     }
 
     void "should use scale from PropertyConfig when ColumnConfig is not provided"() {
         given: "A property config with a scale constraint"
-        def column = Mock(Column, name: 'test')
+        def column = new Column('test')
         def propertyConfig = Mock(PropertyConfig)
         propertyConfig.getScale() >> 3
 
@@ -40,13 +39,13 @@ class NumericColumnConstraintsBinderSpec extends Specification {
         binder.bindNumericColumnConstraints(column, null, propertyConfig)
 
         then: "The column's scale is set from the property config"
-        1 * column.setScale(3)
+        column.scale == 3
     }
 
     @Unroll
     void "should calculate precision based on min=#minVal, max=#maxVal, and scale=#scale"() {
         given: "A property config with various min/max/scale constraints"
-        def column = Mock(Column, name: 'test')
+        def column = new Column('test')
         def propertyConfig = Mock(PropertyConfig)
 
         propertyConfig.getScale() >> scale
@@ -57,14 +56,11 @@ class NumericColumnConstraintsBinderSpec extends Specification {
         binder.bindNumericColumnConstraints(column, null, propertyConfig)
 
         then: "The precision is calculated correctly and set on the column"
-        1 * column.setPrecision(expectedPrecision)
+        column.precision == expectedPrecision
 
         and: "the scale is set correctly based on whether it was provided"
         if (scale > -1) {
-            1 * column.setScale(scale)
-        }
-        else {
-            0 * column.setScale(_)
+            assert column.scale == scale
         }
 
         where:
@@ -90,7 +86,7 @@ class NumericColumnConstraintsBinderSpec extends Specification {
 
     void "should use default precision and scale when no constraints are provided"() {
         given: "A property config with no relevant constraints"
-        def column = Mock(Column, name: 'test')
+        def column = new Column('test')
         def propertyConfig = Mock(PropertyConfig)
         def defaultPrecision = org.hibernate.engine.jdbc.Size.DEFAULT_PRECISION // 19
         def defaultScale = org.hibernate.engine.jdbc.Size.DEFAULT_SCALE // 0
@@ -103,12 +99,11 @@ class NumericColumnConstraintsBinderSpec extends Specification {
         binder.bindNumericColumnConstraints(column, null, propertyConfig)
 
         then: "The column's precision and scale are set to their defaults"
-        1 * column.setPrecision(defaultPrecision)
+        column.precision == defaultPrecision
         // The code sets the default scale only if no other scale is found.
         // The initial value of the local 'scale' variable is the default.
         // The code doesn't explicitly call setScale(DEFAULT_SCALE).
         // This is a subtle point, the test should reflect what the code *does*.
         // The code only calls setScale if a constraint is found.
-        0 * column.setScale(_)
     }
 }

@@ -1,9 +1,11 @@
 package org.grails.orm.hibernate
 
+import org.hibernate.boot.Metadata
+import org.hibernate.mapping.PersistentClass
+
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.orm.hibernate.cfg.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.BidirectionalManyToOneWithListMapping
 import org.hibernate.mapping.ManyToOne
 import org.hibernate.mapping.OneToMany
@@ -11,6 +13,10 @@ import org.hibernate.mapping.OneToOne
 import org.hibernate.mapping.Property
 
 class BidirectionalManyToOneWithListMappingSpec extends HibernateGormDatastoreSpec {
+
+    void setupSpec() {
+        manager.addAllDomainClasses([Spec4_OneToOneParent])
+    }
 
     void "test that it is not an association property"() {
 
@@ -33,7 +39,9 @@ class BidirectionalManyToOneWithListMappingSpec extends HibernateGormDatastoreSp
         def belongsToClass = createPersistentEntity(Spec1_BidirListChild, grailsDomainBinder)
         PersistentProperty grailsProperty = belongsToClass.getPropertyByName("parent")
         def hibernateProperty = new Property()
-        hibernateProperty.setValue(Mock(ManyToOne))
+
+        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(),null)
+        hibernateProperty.setValue(manyToOne)
         def mapping = new BidirectionalManyToOneWithListMapping()
 
         when:
@@ -80,7 +88,13 @@ class BidirectionalManyToOneWithListMappingSpec extends HibernateGormDatastoreSp
         def parentClass = createPersistentEntity(Spec4_OneToOneParent, grailsDomainBinder)
         PersistentProperty grailsProperty = parentClass.getPropertyByName("child")
         def hibernateProperty = new Property()
-        hibernateProperty.setValue(Mock(OneToOne))
+
+        def metadata = manager.hibernateDatastore.getMetadata()
+        def rootClass = metadata.getEntityBinding(Spec4_OneToOneParent.name)
+
+
+        def one = new OneToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null, rootClass)
+        hibernateProperty.setValue(one)
         def mapping = new BidirectionalManyToOneWithListMapping()
 
         when:

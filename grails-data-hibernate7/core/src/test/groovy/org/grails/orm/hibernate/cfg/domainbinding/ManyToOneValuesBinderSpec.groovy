@@ -1,14 +1,14 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.FetchMode
 import org.hibernate.mapping.ManyToOne
-import spock.lang.Specification
 import spock.lang.Unroll
 
-class ManyToOneValuesBinderSpec extends Specification {
+class ManyToOneValuesBinderSpec extends HibernateGormDatastoreSpec {
 
     @Unroll
     def "Test bindManyToOneValues with #scenario"() {
@@ -19,7 +19,7 @@ class ManyToOneValuesBinderSpec extends Specification {
 
         // 2. Set up mocks for the method arguments
         def association = Mock(Association)
-        def manyToOne = Mock(ManyToOne)
+        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(),null)
         def associatedEntity = Mock(PersistentEntity)
 
         // 3. Create the config object that the converter will return
