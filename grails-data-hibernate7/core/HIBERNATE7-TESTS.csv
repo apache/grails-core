@@ -5,13 +5,9 @@
  `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/CascadeBehaviorPersisterSpec.groovy` , FAILED , Unsupported cascade style: save-update.
  `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/CascadeBehaviorFetcherSpec.groovy` , FAILED , Expected save-update but got all.
  `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/ColumnBinderSpec.groovy` , FAILED ," Column name mismatch: got ""test"" instead of expected. "
- `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/IndexBinderSpec.groovy` , FAILED , Sealed class org.hibernate.mapping.Column cannot be mocked. 
- `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/NamespaceNameExtractorSpec.groovy` , FAILED , Final class org.hibernate.boot.model.relational.Namespace$Name cannot be mocked. 
- `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/NumericColumnConstraintsBinderSpec.groovy` , FAILED , Sealed class org.hibernate.mapping.Column cannot be mocked. 
- `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/DefaultColumnNameFetcherSpec.groovy` , FAILED , Package/class name parts in generated column names use dots instead of underscores? 
+ `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/DefaultColumnNameFetcherSpec.groovy` , FAILED , Package/class name parts in generated column names use dots instead of underscores?
  `src/test/groovy/org/grails/orm/hibernate/compiler/HibernateEntityTransformationSpec.groovy` , FAILED , Compilation error: Can't have an abstract method in a non-abstract class. 
- `src/test/groovy/org/grails/orm/hibernate/BidirectionalManyToOneWithListMappingSpec.groovy` , FAILED , Final class org.hibernate.mapping.ManyToOne cannot be mocked. 
- `src/test/groovy/grails/gorm/specs/HibernateGormDatastoreSpec.groovy` , PENDING , 
+ `src/test/groovy/grails/gorm/specs/HibernateGormDatastoreSpec.groovy` , PENDING ,
  `src/test/groovy/grails/gorm/specs/ExecuteQueryWithinValidatorSpec.groovy` , FAILED , Hibernate 7 removal: Session.save() method missing. 
  `src/test/groovy/grails/gorm/specs/proxy/Hibernate6GroovyProxySpec.groovy` , FAILED , Hibernate 7 change: location.isInitialized() method missing. 
  `src/test/groovy/grails/gorm/specs/hasmany/TwoUnidirectionalHasManySpec.groovy` , FAILED , SQL Syntax error: Qualified column names in DDL. 

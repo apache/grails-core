@@ -26,15 +26,14 @@ class NamespaceNameExtractorSpec extends Specification {
         def mockMappings = Mock(InFlightMetadataCollector)
         def mockDatabase = Mock(Database)
         def mockNamespace = Mock(Namespace)
-        def mockNamespaceName = Mock(Namespace.Name)
         def mockSchemaIdentifier = Mock(Identifier)
+        def namespaceName = new Namespace.Name(null, mockSchemaIdentifier)
         def expectedSchema = "my_schema"
 
         and: "The mocks are configured to return the next object in the chain"
         mockMappings.getDatabase() >> mockDatabase
         mockDatabase.getDefaultNamespace() >> mockNamespace
-        mockNamespace.getName() >> mockNamespaceName
-        mockNamespaceName.getSchema() >> mockSchemaIdentifier
+        mockNamespace.getName() >> namespaceName
         mockSchemaIdentifier.getCanonicalName() >> expectedSchema
 
         when: "the schema name is extracted"
@@ -50,7 +49,8 @@ class NamespaceNameExtractorSpec extends Specification {
         def mockMappings = Mock(InFlightMetadataCollector)
         def mockDatabase = Mock(Database)
         def mockNamespace = Mock(Namespace)
-        def mockNamespaceName = Mock(Namespace.Name)
+        def mockSchemaIdentifier = Mock(Identifier)
+        def namespaceName = new Namespace.Name(null, mockSchemaIdentifier)
 
         and: "The mock chain is built only up to the point of failure"
         switch (failurePoint) {
@@ -69,8 +69,7 @@ class NamespaceNameExtractorSpec extends Specification {
             case 'schema':
                 mockMappings.getDatabase() >> mockDatabase
                 mockDatabase.getDefaultNamespace() >> mockNamespace
-                mockNamespace.getName() >> mockNamespaceName
-                mockNamespaceName.getSchema() >> null
+                mockNamespace.getName() >> new Namespace.Name(null, null)
                 break
         }
 
@@ -103,15 +102,14 @@ class NamespaceNameExtractorSpec extends Specification {
         def mockMappings = Mock(InFlightMetadataCollector)
         def mockDatabase = Mock(Database)
         def mockNamespace = Mock(Namespace)
-        def mockNamespaceName = Mock(Namespace.Name)
         def mockCatalogIdentifier = Mock(Identifier)
+        def namespaceName = new Namespace.Name(mockCatalogIdentifier, null)
         def expectedCatalog = "my_catalog"
 
         and: "The mocks are configured to return the next object in the chain"
         mockMappings.getDatabase() >> mockDatabase
         mockDatabase.getDefaultNamespace() >> mockNamespace
-        mockNamespace.getName() >> mockNamespaceName
-        mockNamespaceName.getCatalog() >> mockCatalogIdentifier
+        mockNamespace.getName() >> namespaceName
         mockCatalogIdentifier.getCanonicalName() >> expectedCatalog
 
         when: "the catalog name is extracted"
@@ -127,7 +125,6 @@ class NamespaceNameExtractorSpec extends Specification {
         def mockMappings = Mock(InFlightMetadataCollector)
         def mockDatabase = Mock(Database)
         def mockNamespace = Mock(Namespace)
-        def mockNamespaceName = Mock(Namespace.Name)
 
         and: "The mock chain is built only up to the point of failure"
         switch (failurePoint) {
@@ -146,8 +143,7 @@ class NamespaceNameExtractorSpec extends Specification {
             case 'catalog':
                 mockMappings.getDatabase() >> mockDatabase
                 mockDatabase.getDefaultNamespace() >> mockNamespace
-                mockNamespace.getName() >> mockNamespaceName
-                mockNamespaceName.getCatalog() >> null
+                mockNamespace.getName() >> new Namespace.Name(null, null)
                 break
         }
 
