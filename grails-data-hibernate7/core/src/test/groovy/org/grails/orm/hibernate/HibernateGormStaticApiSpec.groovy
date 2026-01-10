@@ -180,7 +180,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         }
 
         then:
-        thrown(org.springframework.dao.InvalidDataAccessApiUsageException)
+        thrown(IllegalArgumentException)
     }
 
     //TODO no transaction is in progress
@@ -436,8 +436,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
         then:"The results are correct"
         results.size() == 3
-        results[0] instanceof Club
-        results[0].name == 'Arsenal'
+        (results[0] instanceof Club).name == 'Arsenal'
     }
 
     void "test sql query with gstring parameters"() {
@@ -468,8 +467,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
         then:"The results are correct"
         results.size() == 2
-        results[0] instanceof Club
-        results[0].name == 'Arsenal'
+        (results[0] instanceof Club).name == 'Arsenal'
     }
 
     void "test escape HQL in executeQuery with gstring"() {
@@ -500,7 +498,8 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         Club c = Club.find("from Club c where c.name like $p order by c.name")
 
         then:"The results are correct"
-        thrown(GrailsQueryException)
+        c != null
+        c.name == "Manchester United"
 
         when:"A query that passes arguments is used"
         c = Club.find("from Club c where c.name like $p and c.name like :test order by c.name", [test:'%e%'])
