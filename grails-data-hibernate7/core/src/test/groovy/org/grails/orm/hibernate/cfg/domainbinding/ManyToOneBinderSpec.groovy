@@ -21,7 +21,6 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
     @Unroll
     def "Test bindManyToOne orchestration for #scenario"() {
         given:
-        // 1. Create mocks for all dependencies
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def simpleValueBinder = Mock(SimpleValueBinder)
         def propertyConfigConverter = Mock(PersistentPropertyToPropertyConfig)
@@ -30,34 +29,24 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def columnFetcher = Mock(SimpleValueColumnFetcher)
         def entityWrapper = Mock(HibernateEntityWrapper)
 
-        // 2. Instantiate the binder using the protected constructor
         def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, propertyConfigConverter, manyToOneValuesBinder, compositeBinder, columnFetcher, entityWrapper)
 
-        // 3. Set up mocks for method arguments
         def association = Mock(Association)
-
-        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(),null)
+        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def path = "/test"
         def refDomainClass = Mock(PersistentEntity)
-        def mapping = Mock(Mapping)
-        def propertyConfig = Mock(PropertyConfig)
+        def mapping = new Mapping()
+        def propertyConfig = new PropertyConfig()
 
-        // 4. Define mock behaviors
         association.getAssociatedEntity() >> refDomainClass
         entityWrapper.getMappedForm(refDomainClass) >> mapping
         propertyConfigConverter.toPropertyConfig(association) >> propertyConfig
-        mapping.hasCompositeIdentifier() >> hasCompositeId
-
-        if (hasCompositeId) {
-            def compositeId = Mock(CompositeIdentity)
-            mapping.getIdentity() >> compositeId
-        }
+        mapping.setIdentity(hasCompositeId ? new CompositeIdentity() : null)
 
         when:
         binder.bindManyToOne(association, manyToOne, path)
 
         then:
-        // 5. Verify the orchestration logic
         1 * manyToOneValuesBinder.bindManyToOneValues(association, manyToOne)
         compositeBinderCalls * compositeBinder.bindCompositeIdentifierToManyToOne(association, manyToOne, _, refDomainClass, path)
         simpleValueBinderCalls * simpleValueBinder.bindSimpleValue(association, null, manyToOne, path)
@@ -81,7 +70,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, propertyConfigConverter, manyToOneValuesBinder, compositeBinder, columnFetcher, entityWrapper)
 
         def property = Mock(ManyToMany)
-        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(),null)
+        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def ownerEntity = Mock(PersistentEntity)
         def mapping = new Mapping()
         mapping.setColumns(new HashMap<String, PropertyConfig>())
@@ -119,20 +108,19 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, propertyConfigConverter, manyToOneValuesBinder, compositeBinder, columnFetcher, entityWrapper)
 
         def property = Mock(OneToOne)
-        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(),null)
+        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def refDomainClass = Mock(PersistentEntity)
-        def mapping = Mock(Mapping)
+        def mapping = new Mapping()
         def propertyConfig = Mock(PropertyConfig)
         def column = new Column('test')
         def inverseSide = Mock(Association)
 
         property.getAssociatedEntity() >> refDomainClass
         entityWrapper.getMappedForm(refDomainClass) >> mapping
-        mapping.hasCompositeIdentifier() >> false
+        mapping.setIdentity(null)
         propertyConfigConverter.toPropertyConfig(property) >> propertyConfig
         columnFetcher.getColumnForSimpleValue(manyToOne) >> column
 
-        // Configure mocks based on scenario
         propertyConfig.isUnique() >> isUnique
         propertyConfig.isUniqueWithinGroup() >> isUniqueWithinGroup
         property.isBidirectional() >> isBidirectional
@@ -143,7 +131,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindManyToOne(property, manyToOne, "/test")
 
         then:
-        1 * manyToOne.setAlternateUniqueKey(true)
+        manyToOne.isAlternateUniqueKey()
         if (expectedUniqueValue != null) {
             assert column.isUnique() == expectedUniqueValue
         } else {
@@ -172,16 +160,16 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, propertyConfigConverter, manyToOneValuesBinder, compositeBinder, columnFetcher, entityWrapper)
 
         def property = Mock(OneToOne)
-        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(),null)
+        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def refDomainClass = Mock(PersistentEntity)
-        def mapping = Mock(Mapping)
+        def mapping = new Mapping()
         def propertyConfig = new PropertyConfig()
 
         property.getAssociatedEntity() >> refDomainClass
         entityWrapper.getMappedForm(refDomainClass) >> mapping
-        mapping.hasCompositeIdentifier() >> false
+        mapping.setIdentity(null)
         propertyConfigConverter.toPropertyConfig(property) >> propertyConfig
-        columnFetcher.getColumnForSimpleValue(manyToOne) >> null // No column found
+        columnFetcher.getColumnForSimpleValue(manyToOne) >> null
 
         when:
         binder.bindManyToOne(property, manyToOne, "/test")

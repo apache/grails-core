@@ -21,7 +21,7 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         columnConfig.unique = true
 
         when:
-        binder.bindColumnConfigToColumn(column, columnConfig, null)
+        binder.bindColumnConfigToColumn(column, columnConfig, new PropertyConfig())
 
         then:
         column.length == 100
