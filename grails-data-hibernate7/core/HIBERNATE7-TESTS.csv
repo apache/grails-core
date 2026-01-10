@@ -1,6 +1,4 @@
  Test File , Status , Notes 
- `src/test/groovy/org/grails/orm/hibernate/HibernateGormInstanceApiSpec.groovy` , FAILED , delete() method missing/renamed? remove() called instead.
- `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/SimpleValueBinderSpec.groovy` , FAILED , Generator binding issues. 
  `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/CascadeBehaviorPersisterSpec.groovy` , FAILED , Unsupported cascade style: save-update.
  `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/CascadeBehaviorFetcherSpec.groovy` , FAILED , Expected save-update but got all.
  `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/ColumnBinderSpec.groovy` , FAILED ," Column name mismatch: got ""test"" instead of expected. "

@@ -69,7 +69,7 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         !column.unique
     }
 
-    def "column config honors uniqueness property"() {
+    def "column config honors uniqueness property when mappedForm is empty"() {
         given:
         def columnConfig = new ColumnConfig()
         columnConfig.length = -1

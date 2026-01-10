@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.Properties;
 
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
+import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Formula;
 import org.hibernate.mapping.SimpleValue;
@@ -76,6 +77,34 @@ public class SimpleValueBinder {
             simpleValue.setTypeName(typeName);
             simpleValue.setTypeParameters(propertyConfig.getTypeParams());
         }
+
+        String generator = propertyConfig.getGenerator();
+        if (generator != null && simpleValue instanceof BasicValue) {
+            BasicValue basicValue = (BasicValue) simpleValue;
+            Properties params = propertyConfig.getTypeParams();
+            final Properties generatorProps = new Properties();
+            if (params != null) {
+                generatorProps.putAll(params);
+            }
+
+            if (SEQUENCE_KEY.equals(generator) && generatorProps.containsKey(SEQUENCE_KEY)) {
+                generatorProps.put(SequenceStyleGenerator.SEQUENCE_PARAM, generatorProps.getProperty(SEQUENCE_KEY));
+            }
+
+            switch (generator) {
+                case "identity" -> basicValue.setCustomIdGeneratorCreator(context -> {
+                    var gen = new org.hibernate.id.IdentityGenerator();
+                    context.getProperty().getValue().getColumns().get(0).setIdentity(true);
+                    return gen;
+                });
+                case "sequence", "sequence-identity" -> basicValue.setCustomIdGeneratorCreator(context -> {
+                    var gen = new org.hibernate.id.enhanced.SequenceStyleGenerator();
+                    gen.configure(context.getType(), generatorProps, context.getServiceRegistry());
+                    return gen;
+                });
+            }
+        }
+
         if ( propertyConfig.isDerived() && !(property instanceof TenantId)) {
             Formula formula = new Formula();
             formula.setFormula(propertyConfig.getFormula());

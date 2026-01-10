@@ -140,7 +140,7 @@ class SimpleValueBinderSpec extends Specification {
         def owner = Mock(PersistentEntity)
         def mapping = Mock(Mapping)
         def pc = Mock(PropertyConfig)
-        def sv = Mock(SimpleValue)
+        def sv = Mock(org.hibernate.mapping.BasicValue)
         sv.getTable() >> null
         def genProps = new Properties(); genProps.setProperty('sequence','seq_name'); genProps.setProperty('foo','bar')
 
@@ -157,8 +157,10 @@ class SimpleValueBinderSpec extends Specification {
         binder.bindSimpleValue(prop, null, sv, null)
 
         then:
-        1 * sv.setIdentifierGeneratorStrategy('sequence')
-        1 * sv.setIdentifierGeneratorProperties({ it.getProperty(SequenceStyleGenerator.SEQUENCE_PARAM) == 'seq_name' && it.getProperty('foo') == 'bar' })
+        1 * columnBinder.bindColumn(prop, null, _, null, null, null) >> { args ->
+            args[2].setName("testColumn")
+        }
+        1 * sv.setCustomIdGeneratorCreator(_)
     }
 
     def "binds for each provided column config and adds to table and simple value"() {
