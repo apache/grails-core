@@ -40,10 +40,10 @@ class ManyToOneValuesBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         // 5. Verify that the correct values were set on the ManyToOne object
-        1 * manyToOne.setFetchMode(expectedFetchMode)
-        1 * manyToOne.setLazy(expectedLazy)
-        1 * manyToOne.setIgnoreNotFound(testIgnoreNotFound)
-        1 * manyToOne.setReferencedEntityName("AssociatedEntityName")
+        manyToOne.getFetchMode() == expectedFetchMode
+        manyToOne.isLazy() == expectedLazy
+        manyToOne.isIgnoreNotFound() == testIgnoreNotFound
+        manyToOne.getReferencedEntityName() == "AssociatedEntityName"
 
         where:
         scenario                | testFetchMode    | testLazy | testIgnoreNotFound | expectedFetchMode | expectedLazy

@@ -36,6 +36,7 @@ class NaturalIdentifierBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setIdentifierProperty(property)
         rootClass.setTable(table)
         value.getSelectables() >> []
+        value.hasAnyUpdatableColumns() >> isMutable
         def uniqueNameGenerator = Mock(UniqueNameGenerator)
         def binder = new NaturalIdentifierBinder(uniqueNameGenerator)
 
