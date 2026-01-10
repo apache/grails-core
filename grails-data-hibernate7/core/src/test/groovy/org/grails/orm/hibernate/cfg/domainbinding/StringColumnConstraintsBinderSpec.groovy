@@ -20,7 +20,7 @@ class StringColumnConstraintsBinderSpec extends Specification {
         given:
         mappedForm.getMaxSize() >> null
         mappedForm.getInList() >> null
-        int originalLength = column.length
+        def originalLength = column.length
 
         when:
         binder.bindStringColumnConstraints(column, mappedForm)
@@ -33,7 +33,7 @@ class StringColumnConstraintsBinderSpec extends Specification {
         given:
         mappedForm.getMaxSize() >> null
         mappedForm.getInList() >> []
-        int originalLength = column.length
+        def originalLength = column.length
 
         when:
         binder.bindStringColumnConstraints(column, mappedForm)
@@ -95,7 +95,7 @@ class StringColumnConstraintsBinderSpec extends Specification {
         given:
         mappedForm.getMaxSize() >> 0
         mappedForm.getInList() >> null
-        int originalLength = column.length
+        def originalLength = column.length
 
         when:
         binder.bindStringColumnConstraints(column, mappedForm)
