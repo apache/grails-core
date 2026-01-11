@@ -14,9 +14,9 @@ public enum CascadeBehavior {
     ALL("all"),
 
     /**
-     * Cascades save and update operations. Maps to "save-update".
+     * Cascades save and update operations. Maps to "persist,merge".
      */
-    SAVE_UPDATE("save-update"),
+    SAVE_UPDATE("persist,merge"),
 
     /**
      * Cascades the merge operation. Maps to "merge".

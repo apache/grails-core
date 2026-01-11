@@ -278,7 +278,7 @@ class HibernateMappingBuilderTests {
         def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             columns {
-                things cascade:'save-update'
+                things cascade:'persist,merge'
             }
         }
 
@@ -298,11 +298,11 @@ class HibernateMappingBuilderTests {
         def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             columns {
-                things cascade:'save-update'
+                things cascade:'persist,merge'
             }
         }
 
-        assertEquals 'save-update',mapping.getPropertyConfig('things').cascade
+        assertEquals 'persist,merge',mapping.getPropertyConfig('things').cascade
     }
 
     @Test
@@ -345,9 +345,9 @@ class HibernateMappingBuilderTests {
     void testCascadesWithColumnsBlock() {
         def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
-            things cascade:'save-update'
+            things cascade:'persist,merge'
         }
-        assertEquals 'save-update',mapping.getPropertyConfig('things').cascade
+        assertEquals 'persist,merge',mapping.getPropertyConfig('things').cascade
     }
 
     @Test

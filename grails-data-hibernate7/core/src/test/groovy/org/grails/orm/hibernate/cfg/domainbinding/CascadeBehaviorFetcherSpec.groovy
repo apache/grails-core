@@ -1,14 +1,23 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
 import jakarta.persistence.Embeddable
+
 import org.hibernate.MappingException
 import spock.lang.Shared
 import spock.lang.Unroll
 
+import grails.gorm.annotation.Entity
+import grails.gorm.specs.HibernateGormDatastoreSpec
 
-import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.*
+import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.ALL
+import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.DELETE
+import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.EVICT
+import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.LOCK
+import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.MERGE
+import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.NONE
+import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.PERSIST
+import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.REPLICATE
+import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.SAVE_UPDATE
 
 class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
 
@@ -18,7 +27,7 @@ class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
     private static final List cascadeMetadataTestData = [
             // --- UNIDIRECTIONAL hasMany (should be supported in Hibernate 6+) ---
             ["uni: explicit 'all'", AW_All_Uni, "books", BookUni, ALL.getValue()],
-            ["uni: explicit 'save-update'", AW_SaveUpdate_Uni, "books", BookUni, SAVE_UPDATE.getValue()],
+            ["uni: explicit 'persist,merge'", AW_SaveUpdate_Uni, "books", BookUni, SAVE_UPDATE.getValue()],
             ["uni: explicit 'merge'", AW_Merge_Uni, "books", BookUni, MERGE.getValue()],
             ["uni: explicit 'delete'", AW_Delete_Uni, "books", BookUni, DELETE.getValue()],
             ["uni: explicit 'lock'", AW_Lock_Uni, "books", BookUni, LOCK.getValue()],
@@ -127,7 +136,7 @@ class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
 @Entity class BookUni { String title }
 
 @Entity class AW_All_Uni { static hasMany = [books: BookUni]; static mapping = { books cascade: 'all' } }
-@Entity class AW_SaveUpdate_Uni { static hasMany = [books: BookUni]; static mapping = { books cascade: 'save-update' } }
+@Entity class AW_SaveUpdate_Uni { static hasMany = [books: BookUni]; static mapping = { books cascade: 'persist,merge' } }
 @Entity class AW_Merge_Uni { static hasMany = [books: BookUni]; static mapping = { books cascade: 'merge' } }
 @Entity class AW_Delete_Uni { static hasMany = [books: BookUni]; static mapping = { books cascade: 'delete' } }
 @Entity class AW_Lock_Uni { static hasMany = [books: BookUni]; static mapping = { books cascade: 'lock' } }

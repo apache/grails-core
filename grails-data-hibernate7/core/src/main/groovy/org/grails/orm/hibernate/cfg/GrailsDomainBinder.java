@@ -128,7 +128,7 @@ public class GrailsDomainBinder
     private static final String EMPTY_PATH = "";
     public static final char UNDERSCORE = '_';
     public static final String CASCADE_ALL = "all";
-    public static final String CASCADE_SAVE_UPDATE = "save-update";
+    public static final String CASCADE_SAVE_UPDATE = "persist,merge";
     public static final String CASCADE_NONE = "none";
     public static final String BACKTICK = "`";
 
@@ -1176,9 +1176,13 @@ public class GrailsDomainBinder
         for (String cascadeProp : cascades) {
             String trimmedProp = cascadeProp.trim();
 
-            if (CASCADE_SAVE_UPDATE.equals(trimmedProp) || CASCADE_ALL.equals(trimmedProp) || CASCADE_ALL_DELETE_ORPHAN.equals(trimmedProp)) {
+            if (CASCADE_SAVE_UPDATE.equals(trimmedProp) || CASCADE_ALL.equals(trimmedProp) || CASCADE_ALL_DELETE_ORPHAN.equals(trimmedProp) || "save-update".equals(trimmedProp)) {
                 return true;
             }
+        }
+
+        if (cascade.contains("persist") && cascade.contains("merge")) {
+            return true;
         }
 
         return false;

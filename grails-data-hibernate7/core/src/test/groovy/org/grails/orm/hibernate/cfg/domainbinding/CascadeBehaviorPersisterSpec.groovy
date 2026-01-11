@@ -1,14 +1,14 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import grails.gorm.annotation.Entity
-import grails.gorm.transactions.Rollback
-import org.grails.orm.hibernate.HibernateDatastore
-import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
 
-import java.io.Serializable
+import org.springframework.transaction.PlatformTransactionManager
+
+import grails.gorm.annotation.Entity
+import grails.gorm.transactions.Rollback
+import org.grails.orm.hibernate.HibernateDatastore
 
 /**
  * Tests the persistence behavior of various one-to-many cascade settings in GORM.
@@ -81,7 +81,7 @@ class CascadeBehaviorPersisterSpec extends Specification {
     }
 
     @Rollback
-    void "test unidirectional 'save-update' cascade persists child"() {
+    void "test unidirectional 'persist,merge' cascade persists child"() {
         when: "A new owner is saved after adding a child"
         def owner = new Owner_SaveUpdate_Uni_P(name: "Owner")
         owner.addToChildren(new ChildPersister(title: "Child"))
@@ -132,7 +132,7 @@ class CascadeBehaviorPersisterSpec extends Specification {
     }
 
     @Rollback
-    void "test bidirectional 'save-update' cascade persists child"() {
+    void "test bidirectional 'persist,merge' cascade persists child"() {
         when: "A new owner is saved after adding a child"
         def owner = new Owner_SaveUpdate_Bi_P(name: "Owner")
         owner.addToChildren(new Child_BT_SaveUpdate_P(title: "Child"))
@@ -226,7 +226,7 @@ class CascadeBehaviorPersisterSpec extends Specification {
     }
 
     @Rollback
-    void "test map without belongsTo cascade persists child"() {
+    void "test map without belongsTo 'persist,merge' cascade persists child"() {
         when: "A new owner with a map entry is saved"
         def owner = new MapParentP_SaveUpdate(name: "Owner")
         owner.settings = [foo: new MapChildP_SaveUpdate(childValue: "bar")]
@@ -311,7 +311,7 @@ class Owner_All_Uni_P {
 class Owner_SaveUpdate_Uni_P {
     String name
     static hasMany = [children: ChildPersister]
-    static mapping = { children cascade: 'save-update' }
+    static mapping = { children cascade: 'persist,merge' }
 }
 
 @Entity
@@ -390,7 +390,7 @@ class Owner_SaveUpdate_Bi_P {
     String name
     Set<Child_BT_SaveUpdate_P> children
     static hasMany = [children: Child_BT_SaveUpdate_P]
-    static mapping = { children cascade: 'save-update' }
+    static mapping = { children cascade: 'persist,merge' }
 }
 
 @Entity
@@ -523,6 +523,7 @@ class MapParentP_SaveUpdate {
     String name
     static hasMany = [settings: MapChildP_SaveUpdate]
     Map<String, MapChildP_SaveUpdate> settings
+    static mapping = { settings cascade: 'persist,merge' }
 }
 
 @Entity
