@@ -43,7 +43,7 @@ ext {
 
 dependencies {
     implementation platform(project(':grails-bom'))
-    implementation project(':grails-docs-core')
+    implementation 'org.apache.grails:grails-docs-core'
     implementation 'org.apache.groovy:groovy'
 
     // Used to surface versions for groovydoc
