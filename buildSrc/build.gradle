@@ -28,7 +28,7 @@ dependencies {
     implementation platform("org.apache.grails:grails-gradle-bom:$projectVersion")
     implementation 'org.apache.grails.gradle:grails-publish'
     implementation 'cloud.wondrify:asset-pipeline-gradle'
-    implementation project(':grails-docs-core')
+    implementation 'org.apache.grails:grails-docs-core'
     implementation 'org.apache.grails:grails-gradle-plugins'
     implementation 'org.asciidoctor:asciidoctor-gradle-jvm'
     implementation 'org.springframework.boot:spring-boot-gradle-plugin'
