@@ -51,11 +51,8 @@ import org.hibernate.boot.spi.AdditionalMappingContributor;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.OptimisticLockStyle;
-import org.hibernate.engine.jdbc.env.spi.IdentifierHelper;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.engine.spi.FilterDefinition;
-import org.hibernate.id.PersistentIdentifierGenerator;
-import org.hibernate.id.enhanced.SequenceStyleGenerator;
 import org.hibernate.mapping.Backref;
 import org.hibernate.mapping.Bag;
 import org.hibernate.mapping.BasicValue;
@@ -88,7 +85,6 @@ import org.hibernate.type.ForeignKeyDirection;
 import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
 import org.hibernate.usertype.UserCollectionType;
-import org.jboss.jandex.IndexView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
@@ -101,7 +97,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.StringTokenizer;
@@ -122,22 +117,15 @@ public class GrailsDomainBinder
         implements AdditionalMappingContributor, TypeContributor
 {
 
-    private static final String CASCADE_ALL_DELETE_ORPHAN = CascadeBehavior.ALL_DELETE_ORPHAN.getValue();
     public static final String FOREIGN_KEY_SUFFIX = "_id";
     private static final String STRING_TYPE = "string";
     private static final String EMPTY_PATH = "";
     public static final char UNDERSCORE = '_';
-    public static final String CASCADE_ALL = CascadeBehavior.ALL.getValue();
-    public static final String CASCADE_SAVE_UPDATE = CascadeBehavior.SAVE_UPDATE.getValue();
-    public static final String CASCADE_NONE = CascadeBehavior.NONE.getValue();
     public static final String BACKTICK = "`";
 
     public static final String ENUM_TYPE_CLASS = org.grails.orm.hibernate.HibernateLegacyEnumType.class.getName();
     public static final String ENUM_CLASS_PROP = "enumClass";
-    private static final String ENUM_TYPE_PROP = "type";
-    public static final String DEFAULT_ENUM_TYPE = "default";
     private static final Logger LOG = LoggerFactory.getLogger(GrailsDomainBinder.class);
-    public static final String SEQUENCE_KEY = "sequence";
 
 
 
@@ -146,7 +134,6 @@ public class GrailsDomainBinder
      */
     private static final NamingStrategyProvider NAMING_STRATEGY_PROVIDER = new NamingStrategyProvider();
     public static final String JPA_DEFAULT_DISCRIMINATOR_TYPE = "DTYPE";
-    public static final String IDENTIFIER_NORMALIZER = "identifier_normalizer";
 
     private final CollectionType CT = new CollectionType(null, this) {
         public Collection create(ToMany property, PersistentClass owner, String path, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
@@ -1029,7 +1016,7 @@ public class GrailsDomainBinder
         }
 
         if (pc.getCascade() != null) {
-            collection.setOrphanDelete(pc.getCascade().equals(CASCADE_ALL_DELETE_ORPHAN));
+            collection.setOrphanDelete(pc.getCascade().equals(CascadeBehavior.ALL_DELETE_ORPHAN.getValue()));
         }
         // if it's a one-to-many mapping
         if (shouldBindCollectionWithForeignKey(property)) {
@@ -1170,18 +1157,17 @@ public class GrailsDomainBinder
      * @param cascade The string containing the cascade properties.
      * @return True if save-update or any other cascade property that encompasses those is present.
      */
-    private boolean isSaveUpdateCascade(String cascade) {
-        if (CASCADE_SAVE_UPDATE.equals(cascade) || "save-update".equals(cascade)) {
-            return true;
-        }
-
+    protected boolean isSaveUpdateCascade(String cascade) {
         String[] cascades = cascade.split(",");
 
         for (String cascadeProp : cascades) {
             String trimmedProp = cascadeProp.trim();
-
-            if (CASCADE_ALL.equals(trimmedProp) || CASCADE_ALL_DELETE_ORPHAN.equals(trimmedProp) || "save-update".equals(trimmedProp)) {
-                return true;
+            try {
+                if (CascadeBehavior.fromString(trimmedProp).isSaveUpdate()) {
+                    return true;
+                }
+            } catch (MappingException e) {
+                // ignore
             }
         }
 

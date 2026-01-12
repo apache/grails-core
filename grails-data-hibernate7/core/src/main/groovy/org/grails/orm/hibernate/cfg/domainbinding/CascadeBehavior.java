@@ -71,6 +71,10 @@ public enum CascadeBehavior {
         return value;
     }
 
+    public boolean isSaveUpdate() {
+        return this == ALL || this == ALL_DELETE_ORPHAN || this == SAVE_UPDATE;
+    }
+
 
     public static CascadeBehavior fromString(String value) {
         return Arrays.stream(CascadeBehavior.values())
