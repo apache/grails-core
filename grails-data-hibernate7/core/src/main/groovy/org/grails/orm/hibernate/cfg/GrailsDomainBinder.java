@@ -122,14 +122,14 @@ public class GrailsDomainBinder
         implements AdditionalMappingContributor, TypeContributor
 {
 
-    private static final String CASCADE_ALL_DELETE_ORPHAN = "all-delete-orphan";
+    private static final String CASCADE_ALL_DELETE_ORPHAN = CascadeBehavior.ALL_DELETE_ORPHAN.getValue();
     public static final String FOREIGN_KEY_SUFFIX = "_id";
     private static final String STRING_TYPE = "string";
     private static final String EMPTY_PATH = "";
     public static final char UNDERSCORE = '_';
-    public static final String CASCADE_ALL = "all";
-    public static final String CASCADE_SAVE_UPDATE = "persist,merge";
-    public static final String CASCADE_NONE = "none";
+    public static final String CASCADE_ALL = CascadeBehavior.ALL.getValue();
+    public static final String CASCADE_SAVE_UPDATE = CascadeBehavior.SAVE_UPDATE.getValue();
+    public static final String CASCADE_NONE = CascadeBehavior.NONE.getValue();
     public static final String BACKTICK = "`";
 
     public static final String ENUM_TYPE_CLASS = org.grails.orm.hibernate.HibernateLegacyEnumType.class.getName();
@@ -1171,21 +1171,21 @@ public class GrailsDomainBinder
      * @return True if save-update or any other cascade property that encompasses those is present.
      */
     private boolean isSaveUpdateCascade(String cascade) {
+        if (CASCADE_SAVE_UPDATE.equals(cascade) || "save-update".equals(cascade)) {
+            return true;
+        }
+
         String[] cascades = cascade.split(",");
 
         for (String cascadeProp : cascades) {
             String trimmedProp = cascadeProp.trim();
 
-            if (CASCADE_SAVE_UPDATE.equals(trimmedProp) || CASCADE_ALL.equals(trimmedProp) || CASCADE_ALL_DELETE_ORPHAN.equals(trimmedProp) || "save-update".equals(trimmedProp)) {
+            if (CASCADE_ALL.equals(trimmedProp) || CASCADE_ALL_DELETE_ORPHAN.equals(trimmedProp) || "save-update".equals(trimmedProp)) {
                 return true;
             }
         }
 
-        if (cascade.contains("persist") && cascade.contains("merge")) {
-            return true;
-        }
-
-        return false;
+        return cascade.contains(CascadeBehavior.PERSIST.getValue()) && cascade.contains(CascadeBehavior.MERGE.getValue());
     }
 
     /**

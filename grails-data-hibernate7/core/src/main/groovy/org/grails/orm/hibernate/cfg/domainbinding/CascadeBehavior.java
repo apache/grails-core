@@ -49,6 +49,11 @@ public enum CascadeBehavior {
     PERSIST("persist"),
 
     /**
+     * Cascades all operations, including delete-orphan. Maps to "all-delete-orphan".
+     */
+    ALL_DELETE_ORPHAN("all-delete-orphan"),
+
+    /**
      * No operations are cascaded. This is the default for unrecognized values.
      */
     NONE("none");
@@ -69,9 +74,8 @@ public enum CascadeBehavior {
 
     public static CascadeBehavior fromString(String value) {
         return Arrays.stream(CascadeBehavior.values())
-//                .filter(behavior -> behavior != CascadeBehavior.NONE)
                 .filter(behavior -> behavior.value.equalsIgnoreCase(value)
-                        || ("all-delete-orphan".equalsIgnoreCase(value) && behavior == ALL )
+                        || ("save-update".equalsIgnoreCase(value) && behavior == SAVE_UPDATE)
                 )
                 .findFirst()
                 .orElseThrow(() -> new MappingException("Invalid Cascade value: " + value + "."));

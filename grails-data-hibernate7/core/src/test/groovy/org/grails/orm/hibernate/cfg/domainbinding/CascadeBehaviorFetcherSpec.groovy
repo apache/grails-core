@@ -10,6 +10,7 @@ import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 
 import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.ALL
+import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.ALL_DELETE_ORPHAN
 import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.DELETE
 import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.EVICT
 import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.LOCK
@@ -57,7 +58,7 @@ class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
 //             --- Additional Hibernate 6+ specific scenarios ---
             ["uni: hasMany with explicit none", AW_None_Uni, "books", BookUni, NONE.getValue()],
             ["bi: hasOne default conservative", AW_HasOne_Default, "profile", Profile_Default , ALL.getValue()],
-            ["orphan removal scenario"        , AW_OrphanRemoval , "books", Book_Orphan      , ALL.getValue()],
+            ["orphan removal scenario"        , AW_OrphanRemoval , "books", Book_Orphan      , ALL_DELETE_ORPHAN.getValue()],
 
             // --- Map Association Scenarios ---
             ["map with belongsTo", ImpliedMapParent_All, "settings", ImpliedMapChild_All, ALL.getValue()],
