@@ -43,7 +43,7 @@ public class DefaultColumnNameFetcher {
             }
 
             if (!association.isBidirectional() && association instanceof org.grails.datastore.mapping.model.types.OneToMany) {
-                String prefix = namingStrategyWrapper.resolveTableName(property.getOwner().getName());
+                String prefix = namingStrategyWrapper.resolveTableName(property.getOwner().getName().replace('.', '_'));
                 return backticksRemover.apply(prefix) + UNDERSCORE + backticksRemover.apply(columnName) + FOREIGN_KEY_SUFFIX;
             }
 

@@ -40,7 +40,7 @@ class ColumnBinderSpec extends Specification {
         def prop = Mock(ManyToMany)
         def owner = Mock(PersistentEntity)
         def mappedForm = Mock(PropertyConfig)
-        def column = new Column("test")
+        def column = new Column()
         def table = new Table()
 
         // stubs
@@ -268,7 +268,7 @@ class ColumnBinderSpec extends Specification {
         def inverse = Mock(org.grails.datastore.mapping.model.types.Association)
         def owner = Mock(PersistentEntity)
         def mappedForm = Mock(PropertyConfig)
-        def column = new Column("test") // name is null so binder should set it
+        def column = new Column() // name is null so binder should set it
         def table = new Table()
 
         userTypeFetcher.getUserType(prop) >> null
@@ -323,13 +323,13 @@ class ColumnBinderSpec extends Specification {
         def prop = Mock(org.grails.datastore.mapping.model.types.ToOne)
         def owner = Mock(PersistentEntity)
         def mappedForm = Mock(PropertyConfig)
-        def column = new Column("test")
+        def column = new Column()
         def table = new Table()
 
         userTypeFetcher.getUserType(prop) >> null
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "to_one_fk"
-        prop.isCircular() >> true
         prop.isNullable() >> false
+        prop.isCircular() >> true
         prop.getOwner() >> owner
         owner.isRoot() >> true
         propToConfig.toPropertyConfig(prop) >> mappedForm
@@ -375,7 +375,7 @@ class ColumnBinderSpec extends Specification {
         def prop = Mock(org.grails.datastore.mapping.model.types.Association)
         def owner = Mock(PersistentEntity)
         def mappedForm = Mock(PropertyConfig)
-        def column = new Column("test")
+        def column = new Column()
         def table = new Table()
 
         userTypeFetcher.getUserType(prop) >> null
