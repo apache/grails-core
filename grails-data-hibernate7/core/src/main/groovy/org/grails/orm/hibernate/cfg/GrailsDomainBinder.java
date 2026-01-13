@@ -1158,20 +1158,7 @@ public class GrailsDomainBinder
      * @return True if save-update or any other cascade property that encompasses those is present.
      */
     protected boolean isSaveUpdateCascade(String cascade) {
-        String[] cascades = cascade.split(",");
-
-        for (String cascadeProp : cascades) {
-            String trimmedProp = cascadeProp.trim();
-            try {
-                if (CascadeBehavior.fromString(trimmedProp).isSaveUpdate()) {
-                    return true;
-                }
-            } catch (MappingException e) {
-                // ignore
-            }
-        }
-
-        return cascade.contains(CascadeBehavior.PERSIST.getValue()) && cascade.contains(CascadeBehavior.MERGE.getValue());
+        return CascadeBehavior.isSaveUpdate(cascade);
     }
 
     /**

@@ -75,6 +75,32 @@ public enum CascadeBehavior {
         return this == ALL || this == ALL_DELETE_ORPHAN || this == SAVE_UPDATE;
     }
 
+    /**
+     * Check if a save-update cascade is defined within the Hibernate cascade properties string.
+     * @param cascade The string containing the cascade properties.
+     * @return True if save-update or any other cascade property that encompasses those is present.
+     */
+    public static boolean isSaveUpdate(String cascade) {
+        if (cascade == null || cascade.isEmpty()) {
+            return false;
+        }
+
+        String[] cascades = cascade.split(",");
+
+        for (String cascadeProp : cascades) {
+            String trimmedProp = cascadeProp.trim();
+            try {
+                if (CascadeBehavior.fromString(trimmedProp).isSaveUpdate()) {
+                    return true;
+                }
+            } catch (MappingException e) {
+                // ignore
+            }
+        }
+
+        return cascade.contains(PERSIST.getValue()) && cascade.contains(MERGE.getValue());
+    }
+
 
     public static CascadeBehavior fromString(String value) {
         return Arrays.stream(CascadeBehavior.values())

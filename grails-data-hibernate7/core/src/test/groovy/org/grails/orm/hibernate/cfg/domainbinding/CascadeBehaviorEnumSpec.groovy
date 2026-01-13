@@ -48,4 +48,29 @@ class CascadeBehaviorEnumSpec extends Specification {
         then:
         thrown(MappingException)
     }
+
+    @Unroll
+    void "test static isSaveUpdate for cascade string: #cascade"() {
+        expect:
+        CascadeBehavior.isSaveUpdate(cascade) == expected
+
+        where:
+        cascade              | expected
+        "all"                | true
+        "all-delete-orphan"  | true
+        "persist,merge"      | true
+        "save-update"        | true
+        "merge,persist"      | true
+        "merge"              | false
+        "persist"            | false
+        "none"               | false
+        "delete"             | false
+        "lock"               | false
+        "evict"              | false
+        "replicate"          | false
+        "all,delete"         | true
+        "persist,merge,lock" | true
+        ""                   | false
+        null                 | false
+    }
 }
