@@ -18,8 +18,9 @@
  */
 
 plugins {
-    id 'java-library'
+    id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
 }
@@ -31,12 +32,6 @@ ext {
     gormApiDocs = true
     pomTitle = 'Grails GORM'
     pomDescription = 'GORM - Grails Data Access Framework'
-    pomDevelopers =  [
-            'graemerocher': 'Graeme Rocher',
-            'jeffscottbrown': 'Jeff Brown',
-            'burtbeckwith': 'Burt Beckwith',
-            'puneetbehl': 'Puneet Behl',
-    ]
 }
 
 dependencies {
@@ -86,7 +81,6 @@ dependencies {
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/hibernate5-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')

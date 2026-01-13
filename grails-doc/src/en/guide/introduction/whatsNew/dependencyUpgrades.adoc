@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Grails {version} ships with the following dependency upgrades:
+Grails {version} ships with the following foundational dependency versions:
 
 * Groovy {groovyVersion}
 * Spring Framework {springVersion}

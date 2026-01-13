@@ -24,18 +24,17 @@ import groovy.util.logging.Slf4j
 
 import grails.dev.commands.ApplicationCommand
 import grails.dev.commands.ExecutionContext
-import grails.web.mapping.UrlMappings
-import grails.web.mapping.reporting.UrlMappingsRenderer
+import grails.web.mapping.UrlMappingsHolder
 
 /**
- * A {@link ApplicationCommand} that renders the URL mappings
+ * An {@link ApplicationCommand} that renders the URL mappings.
  *
  * @author Graeme Rocher
  * @since 3.0
  */
+@Slf4j
 @CompileStatic
 @EqualsAndHashCode
-@Slf4j
 class UrlMappingsReportCommand implements ApplicationCommand {
 
     final String description = /Prints out a report of the project's URL mappings/
@@ -43,14 +42,16 @@ class UrlMappingsReportCommand implements ApplicationCommand {
     @Override
     boolean handle(ExecutionContext executionContext) {
         try {
-            def urlMappings = applicationContext.getBean('grailsUrlMappingsHolder', UrlMappings)
-
-            UrlMappingsRenderer renderer = new AnsiConsoleUrlMappingsRenderer()
-            renderer.render(urlMappings.getUrlMappings().toList())
-            return true
+            def urlMappingsHolder = applicationContext.getBean(
+                    'grailsUrlMappingsHolder',
+                    UrlMappingsHolder
+            )
+            new AnsiConsoleUrlMappingsRenderer()
+                    .render(urlMappingsHolder.urlMappings.toList())
         } catch (Throwable e) {
-            log.error("Failed to render URL mappings: ${e.message}", e)
+            log.error("Failed to render URL mappings: $e.message", e)
             return false
         }
+        return true
     }
 }

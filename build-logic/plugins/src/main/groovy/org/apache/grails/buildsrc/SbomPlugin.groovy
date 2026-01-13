@@ -67,7 +67,7 @@ class SbomPlugin implements Plugin<Project> {
             ],
             'BSD-2-Clause': [
                     id : 'BSD-2-Clause',
-                    url: 'https://opensource.org/license/bsd-3-clause/'
+                    url: 'https://opensource.org/license/bsd-2-clause/'
             ],
             'BSD-3-Clause': [
                     id : 'BSD-3-Clause',

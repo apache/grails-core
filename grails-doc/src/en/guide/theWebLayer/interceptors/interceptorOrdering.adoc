@@ -73,4 +73,13 @@ beans {
 }
 ----
 
+Or the equivalent in `grails-app/conf/application.yml`:
+
+[source,yaml]
+----
+beans:
+  authInterceptor:
+    order: 50
+----
+
 Thus giving you complete control over interceptor execution order.

@@ -83,7 +83,7 @@ For Example:
 Please note that this script will perform steps that will require rebuilding the project & comparing the built artifacts
 to the staged artifacts. Due to OS differences, this can result in reproducibility issues. For this reason, it's advised
 to run these scripts from an environment similar to the GitHub actions environment. See the section
-`Appendix: Verification from a Container` for how to launch a container that closely resembles the GitHub actions
+[Appendix: Verification from a Container](RELEASE.md#appendix-verification-from-a-container) for how to launch a container that closely resembles the GitHub actions
 environment.
 
 If manual verification is desired, the steps below can be followed.
@@ -291,24 +291,22 @@ release as published or go to https://reporter.apache.org/addrelease.html?grails
 For example, if the release is out of core with version `7.0.0-M4`, then the release name with be `CORE-7.0.0-M4`. Enter
 the date you moved the distribution artifacts and report the release.
 
-### Deploy grails-forge so the release is accessible on start.grails.org
+### Deploy the release to Grails Forge
 
-On the `grails-core` repository, using the release tag, deploy the grails-forge-web-netty docker container to Google Cloud Run using one of the GCP Deploy actions.
+Publish the released version to [Grails Forge](https://start.grails.org) using one of the [GCP Deploy Actions](https://github.com/apache/grails-core/actions) available in the `grails-core` repository.
 
-On https://start.grails.org, versions are listed in the following order:  RELEASE, NEXT, SNAPSHOT, PREV and PREV-SNAPSHOT.  Use the corresponding action to deploy to each location.
+Grails Forge organizes deployments into version slots as follows:
 
-RELEASE - GA releases only
+- **RELEASE** - Full Final Releases - https://github.com/apache/grails-core/actions/workflows/forge-deploy-release.yml
+- **NEXT** - Milestones and Release Candidate for Next Release (also Next version snapshot prior to Milestone) - https://github.com/apache/grails-core/actions/workflows/forge-deploy-next.yml
+- **SNAPSHOT** - current or next version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
+- **PREV** - previous release version - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev.yml
+- **PREV-SNAPSHOT** - previous version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev-snapshot.yml
 
-NEXT - Milestones and Release Candidate
+Use the action whose name matches the slot you want to deploy to.\
+In the **“Run workflow/Use workflow from”** dropdown, choose the release tag you just created.
 
-SNAPSHOT - current or next version snapshot
-
-PREV - previous release version
-
-PREV-SNAPSHOT - previous version snapshot
-
-The `release` job in the `Release` workflow has a step entitled `🚀 Deploy grails-forge - MANUAL` that will remind you of
-this step.
+(The `release` job in the `Release` workflow includes a step titled `🚀 MANUAL - Deploy Grails Forge` that serves as a reminder to perform the deployment described above.)
 
 ### Publish `grails-core` documentation
 
@@ -323,6 +321,8 @@ version from Maven Central.
 ### Close out the `grails-core` release
 
 The last step in the `grails-core` release workflow is to run the `Close Release` step.  This will create a merge branch for the original tag with version number and then open a PR to merge back into the next branch.  You will need to merge this PR into the branch after correcting any merge conflict.
+
+After this PR is merged, deploy the new SNAPSHOT to Forge via: https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
 
 ### Update the `grails-static-website`
 
@@ -385,8 +385,16 @@ Setup the key for validity:
 The Grails image is officially built on linux in a GitHub action using an Ubuntu container. To run a linux container
 locally, you can use the following command (substitute `<git-tag-of-release` with the tag name):
 
+**macOS/Linux**
 ```bash
     docker build -t grails:testing -f etc/bin/Dockerfile . && docker run -it --rm -v $(pwd):/home/groovy/project -p 8080:8080 grails:testing bash
+    cd grails-verify
+    verify.sh <git-tag-of-release> .
+```
+
+**Windows**
+```bash
+    docker build -t grails:testing -f etc/bin/Dockerfile . && docker run -it --rm -v "%CD%:/home/groovy/project" -p 8080:8080 grails:testing bash
     cd grails-verify
     verify.sh <git-tag-of-release> .
 ```
@@ -481,12 +489,12 @@ Some common gotchas with Java build reproducibility problems:
    not ship property files with dynamic timestamps.
 4. Gradle builds are not reproducible by default because Gradle does not guarantee file ordering. Grails configures all
    tasks that create archive files to ensure file ordering is reproducible. This configuration can be found in
-   `gradle/java-config.gradle`
+   the `CompilePlugin` in the `build-logic` project.
 5. Grails makes heavy use of Groovy AST transforms. These transforms often lookup methods on a class, and the methods
    returned by Java will vary by operating system. Any code using reflection to lookup methods or fields must sort the
    results to ensure reproducibility.
 6. Javadoc / Groovydoc will by default write out dates in it's documentation headers. Grails configures these settings
-   in `gradle/java-config.gradle`.
+   in the `CompilePlugin` in the `build-logic` project.
 
 After a build is made reproducible on the same machine, the next step is to ensure it's reproducible in GitHub actions.
 OS differences will exist and even exist between different Docker Runtimes. To help test reproducible builds, we found

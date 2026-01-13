@@ -27,9 +27,21 @@ https://www.hibernate.org/[Hibernate] features a second-level cache with a custo
 hibernate:
   cache:
     use_second_level_cache: true
-    provider_class: net.sf.ehcache.hibernate.EhCacheProvider
     region:
-       factory_class: org.hibernate.cache.ehcache.EhCacheRegionFactory
+       factory_class: 'jcache'
+----
+
+and the `ehcache` dependency using the `jakarta` classifier needs added to build.gradle:
+
+[source,groovy]
+----
+    dependencies {
+        implementation 'org.ehcache:ehcache', {
+            capabilities {
+                requireCapability('org.ehcache:ehcache-jakarta')
+            }
+        }
+    }
 ----
 
 You can customize any of these settings, for example to use a distributed caching mechanism.

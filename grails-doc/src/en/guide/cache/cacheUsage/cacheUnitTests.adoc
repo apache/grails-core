@@ -29,7 +29,7 @@ include::{cacheExampleSourceDir}/grails-app/services/com/demo/BasicCachingServic
 
 [source,groovy]
 ----
-include::{cacheExampleSourceDir}/src/test/groovy/com/demo/BasicCachingServiceNoCacheManagerSpec.groovy[]
+include::{cacheExampleSourceDir}/src/test/groovy/com/demo/BasicCachingServiceNoCacheManagerSpec.groovy[tags=basic_declaration]
 ----
 
 In order for caching to be active when the unit test is running, cache manager
@@ -38,5 +38,5 @@ test.
 
 [source,groovy]
 ----
-include::{cacheExampleSourceDir}/src/test/groovy/com/demo/BasicCachingServiceSpec.groovy[]
+include::{cacheExampleSourceDir}/src/test/groovy/com/demo/BasicCachingServiceSpec.groovy[tags=basic_declaration]
 ----

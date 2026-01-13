@@ -57,3 +57,17 @@ grails.databinding.convertEmptyStringsToNull = false
 
 // ...
 ----
+
+Or the equivalent in `grails-app/conf/application.yml`:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+
+// the default value for this property is true
+grails:
+    databinding:
+        convertEmptyStringsToNull: false
+
+// ...
+----

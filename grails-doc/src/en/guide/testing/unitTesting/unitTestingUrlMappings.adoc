@@ -27,7 +27,7 @@ The examples assume the following mappings are being used.
 
 [source,groovy]
 ----
-include::{functionalSourceDir}/demo33/grails-app/controllers/demo/UrlMappings.groovy[indent=0]
+include::{functionalSourceDir}/demo33/grails-app/controllers/demo/UrlMappings.groovy[tags=basic_declaration,indent=0]
 ----
 
 === Getting Started

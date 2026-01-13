@@ -40,7 +40,7 @@ supported options in the cache configuration.
 WARNING: Since there is no way to configure "time to live" with this plugin, all
 cached items have no timeout and remain cached until either the JVM restarts
 (since the backing store is in-memory) or the cache is partially or fully
-cleared (by calling a method or action annotated with \@CacheEvict or
+cleared (by calling a method or action annotated with @CacheEvict or
 programmatically).
 
 If you don't need to supply any configuration to your cache, simply don't include it in the configuration.

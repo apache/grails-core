@@ -253,7 +253,7 @@ class BuildSettings {
         }
         BASE_DIR = System.getProperty(APP_BASE_DIR) ? new File(System.getProperty(APP_BASE_DIR)) : (IOUtils.findApplicationDirectoryFile() ?: new File('.'))
         GRAILS_APP_DIR_PRESENT = new File(BASE_DIR, 'grails-app').exists() || new File(BASE_DIR, 'Application.groovy').exists()
-        TARGET_DIR = System.getProperty(PROJECT_TARGET_DIR) ? new File(BASE_DIR, System.getProperty(PROJECT_TARGET_DIR)) : new File(BASE_DIR, 'build')
+        TARGET_DIR = new File(BASE_DIR, System.getProperty('project.target.dir', 'build'))
         RESOURCES_DIR = !GRAILS_APP_DIR_PRESENT ? null : (System.getProperty(PROJECT_RESOURCES_DIR) ? new File(System.getProperty(PROJECT_RESOURCES_DIR)) : new File(TARGET_DIR, 'resources/main'))
     }
 }

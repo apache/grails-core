@@ -62,6 +62,16 @@ In your gradle file, you can force a dependency upgrade via this code:
   }
 ----
 
+5. By default, Groovy 4 switches away from callsite optimizations and uses invokedynamic instead. This can result in performance regressions compared to Grails 6. Groovy 5 will remove the ability to disable invokedynamic, but to disable it for Groovy 4, modify your `build.gradle` to include the following:
+
+[source,groovy]
+.build.gradle
+----
+  tasks.withType(GroovyCompile).configureEach {
+        groovyOptions.optimizationOptions.indy = false
+  }
+----
+
 ==== 3. Unified Project Version
 
 Grails 7 moved to a mono repository.
@@ -85,7 +95,7 @@ Grails 7 introduces a BOM that includes all the dependencies required for a Grai
 .build.gradle
 ----
 dependencies {
-    implementation platform("org.apache.grails:grails-bom:${grailsVersion}")
+    implementation platform("org.apache.grails:grails-bom:{GrailsVersion}")
 }
 ----
 
@@ -176,10 +186,10 @@ This update introduces enhancements and fixes to the Spring Framework, providing
 Grails 6 used Spring Boot 2.7.x. Grails {version} updates this to Spring Boot {springBootVersion}. For more information, consult the release notes for previous Spring Boot releases:
 1. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.5-Release-Notes[Spring Boot 3.5 Release Notes]
 2. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.4 Release Notes]
-3. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.3 Release Notes]
-4. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.2 Release Notes]
-5. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.1 Release Notes]
-6. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.4-Release-Notes[Spring Boot 3.0 Release Notes]
+3. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.3-Release-Notes[Spring Boot 3.3 Release Notes]
+4. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.2-Release-Notes[Spring Boot 3.2 Release Notes]
+5. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.1-Release-Notes[Spring Boot 3.1 Release Notes]
+6. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.0-Release-Notes[Spring Boot 3.0 Release Notes]
 
 ==== 10. Upgrading Your Project:
 
@@ -224,10 +234,18 @@ To apply and configure the `gradle-jakartaee-migration-plugin` in your `build.gr
 .build.gradle
 ----
 plugins {
-    id 'com.netflix.nebula.jakartaee-migration' version '0.24.0'
+    id 'com.netflix.nebula.jakartaee-migration'  version '1.0.0'
 }
 
 jakartaeeMigration {
+    // Exclude Grails dependencies since AST and jakartaeeMigration are not compatible
+    excludeTransform('org.apache.grails:**')
+    excludeTransform('org.apache.grails.**:**')
+
+    // Exclude logback-core to avoid extra logback debug messages  
+    excludeTransform('ch.qos.logback:logback-core')
+
+    // enable automatic migration from EE 8 (javax) or earlier to EE 10 (jakarta) or later
     migrate()
 }
 ----
@@ -480,13 +498,17 @@ You will need to change it to `jcache` and add the Ehcache dependency as follows
         use_second_level_cache: true
         use_query_cache: false
         region:
-        factory_class: 'jcache'
+            factory_class: 'jcache'
 ----
 
 [source,groovy]
 .build.gradle
 ----
-    implementation 'org.ehcache:ehcache'
+    implementation 'org.ehcache:ehcache', {
+        capabilities {
+            requireCapability('org.ehcache:ehcache-jakarta')
+        }
+    }
 ----
 
 Alternatively, you can define the hibernate-ehcache dependency explicitly and adjust it to exclude `hibernate-core` and add the `jboss-transaction-api_1.3_spec` see link:upgrading.html#_12_5_hibernate_ehcache[Hibernate-ehcache]
@@ -679,3 +701,74 @@ If your application or API consumers depend on the previous JSON format for `Cal
 4. **ZonedDateTime**: Note that the zone ID (e.g., `[America/Los_Angeles]`) is no longer included in the output, matching Spring Boot's behavior.
 
 This change applies to both the `grails-converters` module (standard JSON rendering) and the `grails-views-gson` module (JSON views).
+
+===== 12.26 Enum JSON/XML Serialization
+
+As of Grails 7.0.2, enum serialization has been enhanced to support round-trip compatibility between JSON/XML serialization and deserialization. The legacy enum marshaller, which produced verbose output with type metadata, has been deprecated in favor of a simpler format that matches how enums are expected on input.
+
+====== Legacy Behavior (Deprecated)
+
+Previously, enums were serialized with metadata:
+
+*JSON:*
+[source,json]
+----
+{
+  "stage": {
+    "enumType": "com.example.ChallengeStage",
+    "name": "SUBMIT"
+  }
+}
+----
+
+*XML:*
+[source,xml]
+----
+<stage enumType="com.example.ChallengeStage">SUBMIT</stage>
+----
+
+This format is **asymmetric** - when POSTing data, you send `"stage":"SUBMIT"`, but when GETting data, you receive the verbose object structure.
+
+====== New Behavior (Recommended)
+
+The new `SimpleEnumMarshaller` serializes enums as simple string values, providing **round-trip compatibility**:
+
+*JSON:*
+[source,json]
+----
+{
+  "stage": "SUBMIT"
+}
+----
+
+*XML:*
+[source,xml]
+----
+<stage>SUBMIT</stage>
+----
+
+Now the format you POST is the same format you GET back.
+
+====== Migration
+
+To opt-in to the new behavior, add the following to your `application.yml`:
+
+[source,yml]
+.application.yml
+----
+grails:
+  converters:
+    json:
+      enum:
+        format: simple
+    xml:
+      enum:
+        format: simple
+----
+
+====== Deprecation Timeline
+
+* **7.0.2**: Legacy `EnumMarshaller` deprecated (default), `SimpleEnumMarshaller` available via config
+* **8.0**: `SimpleEnumMarshaller` will become the default
+
+The legacy `org.grails.web.converters.marshaller.json.EnumMarshaller` and `org.grails.web.converters.marshaller.xml.EnumMarshaller` classes are marked as `@Deprecated(forRemoval = true, since = "7.0.2")` and will be removed in Grails 8.0.

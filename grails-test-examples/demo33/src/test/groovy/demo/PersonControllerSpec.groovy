@@ -16,6 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+// tag::basic_declaration[]
 package demo
 
 import grails.testing.gorm.DataTest
@@ -41,3 +42,4 @@ class PersonControllerSpec extends Specification implements ControllerUnitTest<P
         model.keySet().contains('people')
     }
 }
+// end::basic_declaration[]

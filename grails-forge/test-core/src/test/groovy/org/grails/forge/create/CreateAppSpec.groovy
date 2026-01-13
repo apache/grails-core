@@ -91,7 +91,7 @@ class CreateAppSpec extends CommandSpec {
 
         expect:
         gradleProperties.exists()
-        gradleProperties.text.contains('micronautPlatformVersion=4.9.2')
+        gradleProperties.text.contains('micronautPlatformVersion=4.10.1')
         gradleBuildFile.exists()
         gradleBuildFile.text.contains('implementation "org.apache.grails:grails-micronaut"')
     }

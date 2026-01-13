@@ -16,6 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+// tag::basic_declaration[]
 package demo
 
 import grails.testing.gorm.DomainUnitTest
@@ -59,3 +60,4 @@ class PersonSpec extends Specification implements DomainUnitTest<Person> {
         System.identityHashCode(domain) != id
     }
 }
+// end::basic_declaration[]

@@ -76,7 +76,7 @@ class DefaultJsonRenderer<T> implements Renderer<T> {
     }
 
     @Override
-    void render(T object, RenderContext context) {
+    void render(Object object, RenderContext context) {
         final mimeType = context.acceptMimeType ?: MimeType.JSON
         context.setContentType(GrailsWebUtil.getContentType(mimeType.name, encoding))
         def viewName = context.viewName ?: context.actionName

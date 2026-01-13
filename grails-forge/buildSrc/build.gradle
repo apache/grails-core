@@ -20,56 +20,7 @@
 plugins {
     id 'java-gradle-plugin'
     id 'groovy-gradle-plugin'
-}
-
-Properties forgeProperties = new Properties()
-file('../gradle.properties').withInputStream { input ->
-    forgeProperties.load(input)
-}
-
-Properties rootProperties = new Properties()
-file('../../gradle.properties').withInputStream { input ->
-    rootProperties.load(input)
-}
-
-for (String key : forgeProperties.stringPropertyNames()) {
-    ext.set(key, forgeProperties.getProperty(key))
-}
-
-for (String key : rootProperties.stringPropertyNames()) {
-    if(!ext.has(key)) {
-        ext.set(key, rootProperties.getProperty(key))
-    }
-}
-
-repositories {
-    mavenCentral()
-    maven { url = 'https://repo.grails.org/grails/restricted' }
-    maven {
-        url = 'https://repository.apache.org/content/groups/snapshots'
-        content {
-            includeVersionByRegex('org[.]apache[.]grails.*', '.*', '.*-SNAPSHOT')
-            includeVersionByRegex('org[.]apache[.]groovy.*', '.*', '.*-SNAPSHOT')
-        }
-    }
-    maven {
-        url = 'https://repository.apache.org/content/groups/staging'
-        content {
-            includeGroupByRegex('org[.]apache[.]grails.*')
-        }
-        mavenContent {
-            releasesOnly()
-        }
-    }
-    maven {
-        url = 'https://central.sonatype.com/repository/maven-snapshots'
-        content {
-            includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
-        }
-        mavenContent {
-            snapshotsOnly()
-        }
-    }
+    id 'org.apache.grails.buildsrc.properties'
 }
 
 configurations.configureEach {
@@ -93,10 +44,9 @@ dependencies {
         exclude group: 'org.asciidoctor'
     }
     implementation "org.antlr:antlr4-runtime:$antlr4Version"
-    implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:$gradleChecksumPluginVersion"
     implementation "org.apache.ant:ant:$antVersion"
     implementation "org.apache.grails.gradle:grails-gradle-common:$projectVersion"
-    implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${rootProperties.gradleCycloneDxPluginVersion}"
+    implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:$gradleCycloneDxPluginVersion"
 }
 
 gradlePlugin {

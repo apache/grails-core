@@ -25,6 +25,7 @@ import groovy.transform.InheritConstructors
 import org.springframework.beans.factory.annotation.Autowired
 
 import grails.plugin.json.view.mvc.JsonViewResolver
+import grails.rest.render.ContainerRenderer
 import grails.rest.render.RenderContext
 import grails.util.GrailsNameUtils
 import grails.views.Views
@@ -39,13 +40,13 @@ import org.grails.plugins.web.rest.render.json.DefaultJsonRenderer
  */
 @CompileStatic
 @InheritConstructors
-abstract class AbstractJsonViewContainerRenderer<C,T> extends DefaultJsonRenderer<T> {
+abstract class AbstractJsonViewContainerRenderer<C,T> extends DefaultJsonRenderer<T> implements ContainerRenderer<C,T> {
 
     @Autowired
     JsonViewResolver jsonViewResolver
 
     @Override
-    void render(T object, RenderContext context) {
+    void render(Object object, RenderContext context) {
         if (jsonViewResolver != null) {
             String viewUri = "/${context.controllerName}/_${GrailsNameUtils.getPropertyName(targetType)}"
             def webRequest = ((ServletRenderContext) context).getWebRequest()
@@ -68,12 +69,10 @@ abstract class AbstractJsonViewContainerRenderer<C,T> extends DefaultJsonRendere
                 def request = webRequest.currentRequest
                 def response = webRequest.currentResponse
                 view.render(model, request, response)
-            }
-            else {
+            } else {
                 super.render(object, context)
             }
-        }
-        else {
+        } else {
             super.render(object, context)
         }
     }

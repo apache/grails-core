@@ -69,7 +69,7 @@ class GebWithWebDriverBinariesSpec extends ApplicationContextSpec implements Com
         def buildGradle = output['build.gradle']
 
         expect:
-        buildGradle.contains('id "com.github.erdi.webdriver-binaries"')
+        buildGradle.contains('id "org.ysb33r.webdriver-binaries"')
         buildGradle.contains('webdriverBinaries')
         buildGradle.contains("chromedriver '122.0.6260.0'")
         buildGradle.contains("geckodriver '0.33.0'")
@@ -82,7 +82,7 @@ class GebWithWebDriverBinariesSpec extends ApplicationContextSpec implements Com
         def buildGradle = output['build.gradle']
 
         expect:
-        buildGradle.contains('id "com.github.erdi.webdriver-binaries"')
+        buildGradle.contains('id "org.ysb33r.webdriver-binaries"')
         buildGradle.contains('webdriverBinaries')
         buildGradle.contains("chromedriver '122.0.6260.0'")
         buildGradle.contains("geckodriver '0.33.0'")

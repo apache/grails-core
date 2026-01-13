@@ -16,6 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+// tag::basic_declaration[]
 package demo
 
 import grails.testing.gorm.DataTest
@@ -39,3 +40,4 @@ class DataTestTraitSpec extends Specification implements DataTest {
         Person.count() == 2
     }
 }
+// end::basic_declaration[]

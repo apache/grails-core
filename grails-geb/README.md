@@ -187,8 +187,11 @@ To make this work, ensure:
 
 Example `GebConfig.groovy`:
 ```groovy
+import org.openqa.selenium.firefox.FirefoxOptions
+import org.openqa.selenium.remote.RemoteWebDriver
+
 driver = {
-  new RemoteWebDriver(new FireFoxOptions())
+  new RemoteWebDriver(new FirefoxOptions())
 }
 containerBrowser = 'firefox'
 ```

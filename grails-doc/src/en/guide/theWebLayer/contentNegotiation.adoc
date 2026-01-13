@@ -74,6 +74,36 @@ grails.mime.types = [ // the first one is the default format
 ]
 ----
 
+Or the equivalent in `grails-app/conf/application.yml`:
+
+[source,yaml]
+----
+grails:
+    mime:
+        types:
+            all: '*/*'  # 'all' maps to '*' or the first available format in withFormat
+            atom: 'application/atom+xml'
+            css: 'text/css'
+            csv: 'text/csv'
+            form: 'application/x-www-form-urlencoded'
+            html:
+              - 'text/html'
+              - 'application/xhtml+xml'
+            js: 'text/javascript'
+            json:
+              - 'application/json'
+              - 'text/json'
+            multipartForm: 'multipart/form-data'
+            rss: 'application/rss+xml'
+            text: 'text/plain'
+            hal:
+              - 'application/hal+json'
+              - 'application/hal+xml'
+            xml:
+              - 'text/xml'
+              - 'application/xml'
+----
+
 The above bit of configuration allows Grails to detect to format of a request containing either the 'text/xml' or 'application/xml' media types as simply 'xml'. You can add your own types by simply adding new entries into the map.
 The first one is the default format.
 
@@ -177,6 +207,18 @@ As mentioned the default configuration in Grails is to ignore the accept header 
 [source,groovy]
 ----
 grails.mime.disable.accept.header.userAgents = ['Gecko', 'WebKit', 'Presto', 'Trident']
+----
+
+Or the equivalent in `application.yml`:
+
+[source,yaml]
+----
+grails:
+    mime:
+        disable:
+            accept:
+                header:
+                    userAgents: ['Gecko', 'WebKit', 'Presto', 'Trident']
 ----
 
 For example, if it sees the accept header above ('application/json') it will set `format` to `json` as you'd expect. And of course this works with the `withFormat()` method in just the same way as when the `format` URL parameter is set (although the URL parameter takes precedence).

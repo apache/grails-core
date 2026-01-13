@@ -17,6 +17,7 @@
  *  under the License.
  */
 
+// tag::basic_declaration[]
 package com.demo
 
 import grails.testing.services.ServiceUnitTest
@@ -40,3 +41,4 @@ class BasicCachingServiceNoCacheManagerSpec extends Specification implements Ser
         service.invocationCounter == 2
     }
 }
+// end::basic_declaration[]

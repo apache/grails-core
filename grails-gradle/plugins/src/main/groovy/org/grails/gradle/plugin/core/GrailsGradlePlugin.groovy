@@ -133,8 +133,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
         registerFindMainClassTask(project)
 
-        configureGrailsBuildSettings(project)
-
         String grailsVersion = resolveGrailsVersion(project)
 
         enableNative2Ascii(project, grailsVersion)
@@ -175,7 +173,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
         }
     }
 
-    private static Provider<String> getMainClassProvider(Project project) {
+    protected static Provider<String> getMainClassProvider(Project project) {
         Provider<FindMainClassTask> findMainClassTask = project.tasks.named('findMainClass', FindMainClassTask)
         project.provider {
             File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
@@ -376,7 +374,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
                     String dependencyName = details.requested.name
                     String group = details.requested.group
-                    if (group == 'io.micronaut' && dependencyName.startsWith('micronaut-platform')) {
+                    if (group == 'io.micronaut.platform' && dependencyName.startsWith('micronaut-platform')) {
                         project.logger.info('Forcing Micronaut Platform version to {}', micronautPlatformVersion)
                         details.useVersion(micronautPlatformVersion)
                     }
@@ -422,12 +420,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
         if (project.extensions.findByName('grails') == null) {
             project.extensions.add('grails', new GrailsExtension(project))
         }
-    }
-
-    @CompileStatic
-    protected String configureGrailsBuildSettings(Project project) {
-        System.setProperty(BuildSettings.APP_BASE_DIR, project.projectDir.absolutePath)
-        System.setProperty(BuildSettings.PROJECT_TARGET_DIR, project.layout.buildDirectory.get().asFile.name)
     }
 
     @CompileDynamic
@@ -543,6 +535,8 @@ class GrailsGradlePlugin extends GroovyPlugin {
             task.systemProperty(Metadata.APPLICATION_NAME, project.name)
             task.systemProperty(Metadata.APPLICATION_VERSION, (project.version instanceof Serializable ? project.version : project.version.toString()))
             task.systemProperty(Metadata.APPLICATION_GRAILS_VERSION, grailsVersion)
+            task.systemProperty(BuildSettings.APP_BASE_DIR, project.projectDir.absolutePath)
+            task.systemProperty(BuildSettings.PROJECT_TARGET_DIR, project.layout.buildDirectory.get().asFile.name)
             task.systemProperty(Environment.KEY, defaultGrailsEnv)
             task.systemProperty(Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: '')
             if (task.minHeapSize == null) {
@@ -859,6 +853,15 @@ class GrailsGradlePlugin extends GroovyPlugin {
             fileCollection = fileCollection + it.filter({ File file -> !file.name.startsWith('spring-boot-devtools') })
         }
         fileCollection
+    }
+
+    protected FileCollection buildClasspath(Project project, String... configurationNames) {
+        buildClasspath(
+                project,
+                configurationNames.collect {
+                    project.configurations.named(it).getOrNull()
+                }.findAll(/* remove nulls */) as Configuration[]
+        )
     }
 
     @CompileStatic

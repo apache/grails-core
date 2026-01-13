@@ -16,16 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+import issue15228.app.OtherValidateableObject
 
-package grails.doc.macros
+model {
+    OtherValidateableObject otherValidateableObject
+}
 
-import org.radeox.macro.BaseMacro
-import org.radeox.macro.parameter.MacroParameter
-
-class HiddenMacro extends BaseMacro {
-    String getName() { "hidden" }
-
-    void execute(Writer out, MacroParameter params) {
-        out << '<div class="hidden-block">' << params.content << '</div>'
+json {
+    type {
+        foo otherValidateableObject.foo
     }
 }
