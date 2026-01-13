@@ -93,6 +93,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         String entryHolderFieldName = '$$_hibernate_entityEntryHolder'
         String previousManagedEntityFieldName = '$$_hibernate_previousManagedEntity'
         String nextManagedEntityFieldName = '$$_hibernate_nextManagedEntity'
+        String instanceIdFieldName = '$$_hibernate_instanceId'
 
         def staticCompilationVisitor = new StaticCompilationVisitor(sourceUnit, classNode)
 
@@ -108,6 +109,10 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         FieldNode nextManagedEntityField = classNode.addField(nextManagedEntityFieldName, Modifier.PRIVATE | Modifier.TRANSIENT, managedEntityClassNode, null)
         nextManagedEntityField
                  .addAnnotation(transientAnnotationNode)
+
+        FieldNode instanceIdField = classNode.addField(instanceIdFieldName, Modifier.PRIVATE | Modifier.TRANSIENT, ClassHelper.int_TYPE, constX(-1))
+        instanceIdField
+                .addAnnotation(transientAnnotationNode)
 
         FieldNode interceptorField = classNode.addField(interceptorFieldName, Modifier.PRIVATE | Modifier.TRANSIENT, persistentAttributeInterceptorClassNode, null)
         interceptorField
@@ -236,6 +241,33 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         classNode.addMethod(setNextManagedEntityMethod)
         AnnotatedNodeUtils.markAsGenerated(classNode, setNextManagedEntityMethod)
         staticCompilationVisitor.visitMethod(setNextManagedEntityMethod)
+
+        // add method: int $$_hibernate_getInstanceId()
+        def getInstanceIdMethod = new MethodNode(
+                '$$_hibernate_getInstanceId',
+                Modifier.PUBLIC,
+                ClassHelper.int_TYPE,
+                AstUtils.ZERO_PARAMETERS,
+                null,
+                returnS(varX(instanceIdField))
+        )
+        classNode.addMethod(getInstanceIdMethod)
+        AnnotatedNodeUtils.markAsGenerated(classNode, getInstanceIdMethod)
+        staticCompilationVisitor.visitMethod(getInstanceIdMethod)
+
+        // add method: void $$_hibernate_setInstanceId(int instanceId)
+        def instanceIdParam = param(ClassHelper.int_TYPE, "instanceId")
+        def setInstanceIdMethod = new MethodNode(
+                '$$_hibernate_setInstanceId',
+                Modifier.PUBLIC,
+                ClassHelper.VOID_TYPE,
+                params(instanceIdParam),
+                null,
+                assignS( varX(instanceIdField), varX(instanceIdParam) )
+        )
+        classNode.addMethod(setInstanceIdMethod)
+        AnnotatedNodeUtils.markAsGenerated(classNode, setInstanceIdMethod)
+        staticCompilationVisitor.visitMethod(setInstanceIdMethod)
 
         // add field: boolean $$_hibernate_useTracker
         String useTrackerFieldName = '$$_hibernate_useTracker'
