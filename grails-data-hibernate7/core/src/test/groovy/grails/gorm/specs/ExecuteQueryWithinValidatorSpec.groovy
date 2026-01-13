@@ -42,7 +42,7 @@ class ExecuteQueryWithinValidatorSpec extends Specification {
         when:"a validator executed an HQL query"
         NameType nt = new NameType(nameType: "test").save(flush:true)
         Named.withSession { Session session ->
-            session.save(new Named(nameType: nt))
+            session.persist(new Named(nameType: nt))
         }
 
 
