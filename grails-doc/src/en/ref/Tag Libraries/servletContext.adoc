@@ -36,7 +36,7 @@ The link:{servletApiRefFromRef}servletContext.html[servletContext] object is an 
 class ExamplesTagLib {
 
     def doSomething = {
-        out << "Servlet major version: ${servletContext.majorVersion    }"
+        out << "Servlet major version: ${servletContext.majorVersion}"
     }
 
 }
