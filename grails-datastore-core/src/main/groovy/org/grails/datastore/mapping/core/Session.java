@@ -336,6 +336,6 @@ public interface Session extends QueryCreator {
      * @return Object
      */
     default Object merge(Object d){
-        throw new org.grails.datastore.mapping.core.MethodNotImplementedException("merge(Object) is not implemented for this IHibernateTemplate");
+        throw new org.grails.datastore.mapping.core.MethodNotImplementedException("merge(Object) is not implemented for this Session");
     }
 }

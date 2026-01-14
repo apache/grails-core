@@ -88,8 +88,10 @@ public class HibernateEventListener extends AbstractHibernateEventListener {
                 break;
             case Merge:
                 onMergeEvent((MergeEvent)event.getNativeEvent());
+                break;
             case Persist:
                 onPersistEvent((PersistEvent)event.getNativeEvent());
+                break;
             case Validation:
                 onValidate((ValidationEvent)event);
                 break;
@@ -98,7 +100,7 @@ public class HibernateEventListener extends AbstractHibernateEventListener {
         }
     }
 
-    private void onPersistEvent(PersistEvent event) {
+    protected void onPersistEvent(PersistEvent event) {
         Object entity =event.getObject();
         if(entity != null) {
             ClosureEventListener eventListener;
@@ -110,7 +112,7 @@ public class HibernateEventListener extends AbstractHibernateEventListener {
         }
     }
 
-    private void onMergeEvent(MergeEvent event) {
+    protected void onMergeEvent(MergeEvent event) {
         Object entity = Optional.ofNullable(event.getOriginal()).orElse(event.getEntity());
         if(entity != null) {
             ClosureEventListener eventListener;
