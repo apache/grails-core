@@ -8,7 +8,7 @@ import org.grails.datastore.gorm.proxy.GroovyProxyFactory
 /**
  * @author graemerocher
  */
-class Hibernate6GroovyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
+class Hibernate7GroovyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
 
     void setupSpec() {
         manager.addAllDomainClasses([Location])

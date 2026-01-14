@@ -1,6 +1,5 @@
  Test File , Status , Notes 
- `src/test/groovy/grails/gorm/specs/proxy/Hibernate6GroovyProxySpec.groovy` , FAILED , Hibernate 7 change: location.isInitialized() method missing.
- `src/test/groovy/grails/gorm/specs/hasmany/TwoUnidirectionalHasManySpec.groovy` , FAILED , SQL Syntax error: Qualified column names in DDL. 
+ `src/test/groovy/grails/gorm/specs/hasmany/TwoUnidirectionalHasManySpec.groovy` , FAILED , SQL Syntax error: Qualified column names in DDL.
  `src/test/groovy/grails/gorm/specs/CompositeIdWithManyToOneAndSequenceSpec.groovy` , FAILED , NPE in Hibernate 7 SequenceStyleGenerator. 
  `src/test/groovy/grails/gorm/specs/SubqueryAliasSpec.groovy` , SKIPPED , 
  `src/test/groovy/grails/gorm/specs/multitenancy/MultiTenancyBidirectionalManyToManySpec.groovy` , FAILED , Found two representations of same collection. 
