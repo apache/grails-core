@@ -35,21 +35,23 @@ The link:{servletApiRefFromRef}session.html[session] object is an instance of th
 ----
 class ExampleTagLib {
 
-    // List all attributes and their values for the current session
-    def listSessionAttributes = { Map params ->
-        out << params.get("name") << ' : ' << session.getAttribute(params.get("name"))
-    }
+     def oncePerSession = { Map attrs, body ->
+        def key = (attrs.key ?: 'default').toString()
+        def sessionKey = "taglib.oncePerSession.${key}"
 
+        if (!session.getAttribute(sessionKey)) {
+            session.setAttribute(sessionKey, true)
+            out << body()
+        }
+    }
 }
 ----
 
 [source,xml]
 ----
-<ul>
-    <g:each var="elm" in="${session.getAttributeNames()}">
-        <li><g:listSessionAttributes name="${elm}" /></li>
-    </g:each>
-</ul>
+<g:oncePerSession key="promo">
+    <div class="promo">Free shipping this week!</div>
+</g:oncePerSession>
 ----
 
 
