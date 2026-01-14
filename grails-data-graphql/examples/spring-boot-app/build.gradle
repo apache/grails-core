@@ -52,7 +52,6 @@ dependencies {
 	implementation 'junit:junit'
 	runtimeOnly 'com.h2database:h2'
 	runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
-	runtimeOnly "org.apache.tomcat.embed:tomcat-embed-logging-log4j"
 	implementation 'jakarta.persistence:jakarta.persistence-api'
 
 	runtimeOnly "javax.el:javax.el-api"
