@@ -26,7 +26,7 @@ To get started simply declare a dependency on the plugin in `build.gradle`:
 ----
 dependencies {
     //...
-    implementation 'org.apache.grails:grails-rxjava:{version}'
+    implementation 'org.apache.grails:grails-rxjava3'
 }
 ----
 

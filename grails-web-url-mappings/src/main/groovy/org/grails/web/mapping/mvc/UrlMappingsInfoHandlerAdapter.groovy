@@ -121,7 +121,7 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
                 }
                 else if (result instanceof Map) {
                     String viewName = controllerClass.actionUriToViewName(action)
-                    def finalModel = new HashMap<String, Object>()
+                    def finalModel = new LinkedHashMap<String, Object>()
                     def flashScope = webRequest.getFlashScope()
                     if (!flashScope.isEmpty()) {
                         def chainModel = flashScope.get(FlashScope.CHAIN_MODEL)
