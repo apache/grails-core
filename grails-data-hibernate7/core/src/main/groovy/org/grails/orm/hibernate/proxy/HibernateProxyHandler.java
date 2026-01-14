@@ -28,6 +28,9 @@ import org.hibernate.proxy.HibernateProxyHelper;
 
 import java.io.Serializable;
 
+import org.grails.orm.hibernate.GrailsHibernateTemplate;
+import org.grails.orm.hibernate.IHibernateTemplate;
+
 /**
  * Implementation of the ProxyHandler interface for Hibernate using org.hibernate.Hibernate
  * and HibernateProxyHelper where possible.
@@ -83,14 +86,9 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
     @Override
     public Serializable getIdentifier(Object o) {
         if (o instanceof HibernateProxy) {
-            return null;
-            //This line does not compile
-//            return ((HibernateProxy)o).getHibernateLazyInitializer().getIdentifier();
+            return (Serializable) ((HibernateProxy)o).getHibernateLazyInitializer().getIdentifier();
         }
         else {
-            //TODO seems we can get the id here if its has normal getId
-            // PersistentEntity persistentEntity = GormEnhancer.findStaticApi(o.getClass()).getGormPersistentEntity();
-            // return persistentEntity.getMappingContext().getEntityReflector(persistentEntity).getIdentifier(o);
             return null;
         }
     }
@@ -133,7 +131,14 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
 
     @Override
     public <T> T createProxy(Session session, Class<T> type, Serializable key) {
-        throw new UnsupportedOperationException("createProxy not supported in HibernateProxyHandler");
+        org.hibernate.Session hibSession = null;
+        if (session.getNativeInterface() instanceof GrailsHibernateTemplate grailsHibernateTemplate) {
+            hibSession = grailsHibernateTemplate.getSession();
+        }
+        if (hibSession == null) {
+            throw new IllegalStateException("Could not obtain native Hibernate Session from Session#getNativeInterface()");
+        }
+        return (T) hibSession.getReference(type, key);
     }
 
     @Override

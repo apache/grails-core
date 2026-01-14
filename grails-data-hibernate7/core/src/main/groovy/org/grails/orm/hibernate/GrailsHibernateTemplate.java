@@ -323,7 +323,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         return sessionHolder != null && sessionHolder.getSession() == session;
     }
 
-    protected Session getSession() {
+    public Session getSession() {
         try {
             return sessionFactory.getCurrentSession();
         } catch (HibernateException ex) {
@@ -699,8 +699,12 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         return translator.translate("Hibernate operation: " + msg, sql, sqlException);
     }
 
-    public void save(Object o) {
+    public void persist(Object o) {
         sessionFactory.getCurrentSession().persist(o);
+    }
+
+    public Object merge(Object o) {
+        return sessionFactory.getCurrentSession().merge(o);
     }
 
     public void flush() {

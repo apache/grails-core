@@ -84,8 +84,26 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
     }
 
     public Serializable persist(Object o) {
-        hibernateTemplate.save(o);
+        hibernateTemplate.persist(o);
+        try {
+            // Try to obtain identifier via mapping context reflectors
+            MappingContext ctx = getDatastore().getMappingContext();
+            org.grails.datastore.mapping.model.PersistentEntity pe = ctx.getPersistentEntity(o.getClass().getName());
+            if (pe != null) {
+                Object id = ctx.getEntityReflector(pe).getIdentifier(o);
+                return id == null ? null : (Serializable) id;
+            }
+        } catch (Exception e) {
+            // ignore and return null when identifier cannot be obtained
+        }
         return null;
+    }
+
+    /**
+     * Merge the given instance state into the current persistence context and return the managed instance.
+     */
+    public Object merge(Object o) {
+        return hibernateTemplate.merge(o);
     }
 
     public void refresh(Object o) {
@@ -127,10 +145,12 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
      */
     @Deprecated()
     public List<Serializable> persist(Iterable objects) {
+        List<Serializable> ids = new ArrayList<>();
         for (Object object : objects) {
-            hibernateTemplate.save(object);
+            Serializable id = persist(object);
+            ids.add(id);
         }
-        return Collections.emptyList();
+        return ids;
     }
 
     public <T> T retrieve(Class<T> type, Serializable key) {

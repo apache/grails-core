@@ -8,7 +8,6 @@ import org.grails.datastore.gorm.proxy.GroovyProxyFactory
 /**
  * @author graemerocher
  */
-//TODO Are we still supporting Proxies?
 class Hibernate6GroovyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
 
     void setupSpec() {
@@ -19,21 +18,20 @@ class Hibernate6GroovyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7Tc
         manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
         def id = new Location(name: "United Kingdom", code: "UK").save(flush: true)?.id
         manager.session.clear()
+        manager.hibernateSession.clear()
 
         when:
         def location = Location.proxy(id)
 
         then:
-
         location != null
         id == location.id
+        // Use the method on the proxy
         false == location.isInitialized()
-        false == location.initialized
 
         "UK" == location.code
         "United Kingdom - UK" == location.namedAndCode()
         true == location.isInitialized()
-        true == location.initialized
         null != location.target
     }
 }

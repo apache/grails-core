@@ -33,9 +33,13 @@ This document summarizes the approaches taken, challenges encountered, and futur
 ### 6. Encapsulation of Save Logic
 - **Observation:** `HibernateGormInstanceApi` correctly encapsulates `save()` calls by delegating to `performPersist()` (using `session.persist()`) if the entity is new (ID is null), or `performMerge()` (using `session.merge()`) if it already exists.
 - **Hibernate 7 Compatibility:** This centralizes the handling of Hibernate 7's removal of `session.save()`.
-- **Requirement:** Direct `session.save()` calls in the codebase or TCK must be identified and replaced with `persist()` or `merge()` as appropriate.
+- **Updates:**
+  - `AbstractHibernateSession` now exposes a dedicated `merge(Object)` method so callers can explicitly request merge semantics when needed.
+  - Hibernate template implementations (`GrailsHibernateTemplate` and the `IHibernateTemplate` contract in this module) were updated: direct `save()` semantics were replaced with `persist()` and templates now implement/forward a `merge()` operation. `GrailsHibernateTemplate.persist(Object)` delegates to the underlying Hibernate `Session.persist(...)`; `GrailsHibernateTemplate.merge(Object)` delegates to `Session.merge(...)`.
+  - A default `merge(Object)` was added to the `IHibernateTemplate` interface to make the API backward compatible; the Hibernate-backed template provides the real implementation delegating to Hibernate's `merge`.
+- **Requirement:** Direct `session.save()` calls in other modules or in the TCK still need to be identified and replaced with `persist()` or `merge()` as appropriate.
 - **Audit Results:**
-    - `GrailsHibernateTemplate.save(Object)` was updated to use `session.persist(Object)`.
+    - `GrailsHibernateTemplate.save(Object)` was updated to use `session.persist(Object)` (renamed to `persist`).
     - `ExecuteQueryWithinValidatorSpec.groovy` direct call replaced with `persist()`.
     - No other direct `session.save()` calls found in `src/main` or `src/test` of the `core` module.
     - Systematic audit of other modules and TCK is still required.

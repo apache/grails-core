@@ -31,7 +31,13 @@ import org.hibernate.query.Query;
  */
 public interface IHibernateTemplate {
 
-    void save(Object o);
+    void persist(Object o);
+
+    /**
+     * Merge the state of the given entity into the current persistence context.
+     * Returns the managed instance that the state was merged to.
+     */
+    Object merge(Object o);
 
     void refresh(Object o);
 
@@ -51,7 +57,7 @@ public interface IHibernateTemplate {
 
     void deleteAll(Collection<?> list);
 
-    void applySettings(Query query);
+    void applySettings(Query<?> query);
 
     <T> T get(Class<T> type, Serializable key);
 

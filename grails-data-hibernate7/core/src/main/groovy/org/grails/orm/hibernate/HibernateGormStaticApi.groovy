@@ -163,6 +163,19 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
+    D proxy(Serializable id) {
+        id = convertIdentifier(id)
+        if (id != null) {
+            // Use the configured MappingContext proxyFactory (e.g. GroovyProxyFactory) so proxies are created correctly
+            def proxyFactory = datastore.getMappingContext().getProxyFactory()
+            return (D) proxyFactory.createProxy(datastore.currentSession, (Class)persistentClass, id)
+        }
+        else {
+            return null
+        }
+    }
+
+    @Override
     List<D> getAll() {
         new HibernateQuery(hibernateSession, persistentEntity).list()
     }

@@ -275,7 +275,6 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected D performPersist(final D target, final boolean shouldFlush) {
-        println("target " + target)
         hibernateTemplate.execute { Session session ->
             try {
                 markInsertActive()

@@ -329,4 +329,13 @@ public interface Session extends QueryCreator {
      * @param synchronizedWithTransaction True if it is
      */
     void setSynchronizedWithTransaction(boolean synchronizedWithTransaction);
+
+    /**
+     * New semantic for merging an entity
+     * @param  d
+     * @return Object
+     */
+    default Object merge(Object d){
+        throw new org.grails.datastore.mapping.core.MethodNotImplementedException("merge(Object) is not implemented for this IHibernateTemplate");
+    }
 }
