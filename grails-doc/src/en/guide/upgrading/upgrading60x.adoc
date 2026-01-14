@@ -62,6 +62,16 @@ In your gradle file, you can force a dependency upgrade via this code:
   }
 ----
 
+5. By default, Groovy 4 switches away from callsite optimizations and uses invokedynamic instead. This can result in performance regressions compared to Grails 6. Groovy 5 will remove the ability to disable invokedynamic, but to disable it for Groovy 4, modify your `build.gradle` to include the following:
+
+[source,groovy]
+.build.gradle
+----
+  tasks.withType(GroovyCompile).configureEach {
+        groovyOptions.optimizationOptions.indy = false
+  }
+----
+
 ==== 3. Unified Project Version
 
 Grails 7 moved to a mono repository.
@@ -85,7 +95,7 @@ Grails 7 introduces a BOM that includes all the dependencies required for a Grai
 .build.gradle
 ----
 dependencies {
-    implementation platform("org.apache.grails:grails-bom:${grailsVersion}")
+    implementation platform("org.apache.grails:grails-bom:{GrailsVersion}")
 }
 ----
 

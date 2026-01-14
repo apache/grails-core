@@ -26,7 +26,7 @@ In order to use JSP support you must ensure you have the `grails-web-jsp` depend
 ----
 dependencies {
     //...
-    runtimeOnly "org.grails:grails-web-jsp:{version}"
+    runtimeOnly "org.apache.grails.views:grails-web-jsp"
 }
 ----
 

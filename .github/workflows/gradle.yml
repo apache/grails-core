@@ -144,7 +144,7 @@ jobs:
           ./tmp1/cli/bin/grails-forge-cli --version
       - name: "📤 Upload CLI Zip to Workflow Summary Page"
         if: ${{ matrix.java == '17' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: 'apache-grails-SNAPSHOT-bin.zip'
           include-hidden-files: true
@@ -279,12 +279,12 @@ jobs:
           --no-build-cache
           --rerun-tasks
       - name: "📤 Upload grails-gradle checksums"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: grails-gradle-checksums
           path: grails-gradle/build/grails-gradle-checksums.txt
       - name: "📤 Upload grails-gradle published artifacts"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: grails-gradle-artifacts.txt
           path: grails-gradle/build/grails-gradle-artifacts.txt
@@ -328,12 +328,12 @@ jobs:
           retry_wait_seconds: 180
           command: ./gradlew publish aggregateChecksums aggregatePublishedArtifacts --no-build-cache --rerun-tasks
       - name: "📤 Upload grails-core checksums"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: grails-core-checksums.txt
           path: build/grails-core-checksums.txt
       - name: "📤 Upload grails-core published artifacts"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: grails-core-artifacts.txt
           path: build/grails-core-artifacts.txt
@@ -350,7 +350,7 @@ jobs:
           mv tmp/apache-grails-wrapper-* tmp/wrapper
           ./tmp/wrapper/grailsw --version
       - name: "📤 Upload Wrapper Zip to Workflow Summary Page"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: apache-grails-wrapper-SNAPSHOT-bin
           path: tmp/wrapper
@@ -384,12 +384,12 @@ jobs:
           --no-build-cache
           --rerun-tasks
       - name: "📤 Upload grails-forge checksums"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: grails-forge-checksums
           path: grails-forge/build/grails-forge-checksums.txt
       - name: "📤 Upload grails-gradle published artifacts"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: grails-forge-artifacts.txt
           path: grails-forge/build/grails-forge-artifacts.txt
@@ -438,7 +438,7 @@ jobs:
           ./gradlew grails-doc:build
           -PgithubBranch=${{ env.TARGET_BRANCH }}
       - name: "📤 Upload Generated Docs to Workflow Result Page"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: grails-docs-${{ env.NOW }}.zip
           path: ./build/distributions/*.zip

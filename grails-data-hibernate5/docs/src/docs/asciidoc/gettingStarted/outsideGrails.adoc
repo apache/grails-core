@@ -17,21 +17,21 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-If you wish to use GORM for Hibernate outside of a Grails application you should declare the necessary dependencies for GORM and the database you are using, for example in Gradle:
+If you wish to use GORM for Hibernate outside a Grails application you should declare the necessary dependencies for GORM and the database you are using, for example in Gradle:
 
 [source,groovy,subs="attributes"]
 ----
-compile "org.apache.grails.data:grails-data-hibernate5-core:{version}"
-runtime "com.h2database:h2:1.4.192"
-runtime "org.apache.tomcat:tomcat-jdbc:8.5.0"
-runtime "org.apache.tomcat.embed:tomcat-embed-logging-log4j:8.5.0"
-runtime "org.slf4j:slf4j-api:1.7.10"
+implementation platform("org.apache.grails:grails-bom:{version}")
+implementation "org.apache.grails.data:grails-data-hibernate5-core"
+runtimeOnly "com.h2database"
+runtimeOnly "org.apache.tomcat:tomcat-jdbc"
+runtimeOnly "org.slf4j:slf4j-nop"
 ----
 
 NOTE: The above example also uses the https://www.h2database.com[H2 Database] and Tomcat connection pool.
-However other pool implementations are supported including `commons-dbcp`, `tomcat pool` or `hikari`.
+However, other pool implementations are supported including `commons-dbcp`, `tomcat pool` or `hikari`.
 If a connection pool is not specified `org.springframework.jdbc.datasource.DriverManagerDataSource` is used,
-which creates a new connection to the database each time you request a connect.
+which creates a new connection to the database each time you request a connection.
 The latter will probably cause issues with an H2 in-memory database in that it will create a new in-memory
 database each time a connection is requested, losing previously created tables.
 Normal databases (`MySql`, `Postgres` or even file-based `H2`) are not affected.
@@ -40,6 +40,9 @@ Then create your entities in the `src/main/groovy` directory and annotate them w
 
 [source,groovy]
 ----
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.GormEntity
+
 @Entity
 class Person implements GormEntity<Person> { // <1>
     String firstName

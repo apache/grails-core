@@ -40,7 +40,6 @@ dependencies {
     testImplementation 'com.github.fakemongo:fongo:2.1.1'
     testImplementation 'com.h2database:h2:2.2.224'
     testImplementation 'org.apache.tomcat:tomcat-jdbc:8.5.97'
-    testImplementation "org.apache.tomcat.embed:tomcat-embed-logging-log4j:8.5.2"
     testImplementation "org.slf4j:slf4j-api:$slf4jVersion"
 }
 
