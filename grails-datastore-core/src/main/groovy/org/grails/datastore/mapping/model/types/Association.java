@@ -369,4 +369,8 @@ public abstract class Association<T extends Property> extends AbstractPersistent
                 .map(otherSide -> !this.isOwningSide() && otherSide.isOwningSide())
                 .orElse(false);
     }
+
+    public boolean isBidirectionalOneToManyMap() {
+        return Map.class.isAssignableFrom(this.getType()) && this.isBidirectional();
+    }
 }

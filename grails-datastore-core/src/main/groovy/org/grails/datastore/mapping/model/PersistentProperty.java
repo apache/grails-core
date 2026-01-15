@@ -30,6 +30,7 @@ import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.EntityReflector;
 
 import java.util.Optional;
+import java.util.SortedSet;
 
 import static java.util.Optional.ofNullable;
 
@@ -118,6 +119,16 @@ public interface PersistentProperty<T extends Property> {
 
     default boolean supportsJoinColumnMapping() {
         return this instanceof ManyToMany || isUnidirectionalOneToMany()|| this instanceof Basic;
+    }
+
+    /**
+     * Establish whether a collection property is sorted
+     *
+     * @param property The property
+     * @return true if sorted
+     */
+    default boolean isSorted() {
+        return SortedSet.class.isAssignableFrom(this.getType());
     }
 
 }

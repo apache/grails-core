@@ -28,6 +28,7 @@ class Hibernate7GroovyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7Tc
         id == location.id
         // Use the method on the proxy
         false == location.isInitialized()
+        false == org.hibernate.Hibernate.isInitialized(location)
 
         "UK" == location.code
         "United Kingdom - UK" == location.namedAndCode()

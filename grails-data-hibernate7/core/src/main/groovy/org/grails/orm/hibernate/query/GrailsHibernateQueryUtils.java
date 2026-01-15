@@ -2,7 +2,7 @@ package org.grails.orm.hibernate.query;
 
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.reflect.ClassUtils;
-import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -11,23 +11,20 @@ import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.hibernate.FetchMode;
 import org.hibernate.FlushMode;
-import org.hibernate.LockMode;
 import org.hibernate.query.Query;
 import org.hibernate.query.sqm.tree.domain.SqmBasicValuedSimplePath;
 import org.hibernate.query.sqm.tree.expression.SqmFunction;
 
 import org.springframework.core.convert.ConversionService;
-import org.springframework.util.ReflectionUtils;
 
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.criteria.*;
-import java.lang.reflect.Method;
+
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 
 /**
@@ -89,7 +86,7 @@ public class GrailsHibernateQueryUtils {
                 addOrderPossiblyNested(query, queryRoot, criteriaBuilder,entity, sort, order, ignoreCase);
             }
         } else if (useDefaultMapping) {
-            Mapping m = AbstractGrailsDomainBinder.getMapping(entity.getJavaClass());
+            Mapping m = GrailsDomainBinder.getMapping(entity.getJavaClass());
             if (m != null) {
                 Map sortMap = m.getSort().getNamesAndDirections();
                 for (Object sort : sortMap.keySet()) {
@@ -281,7 +278,7 @@ public class GrailsHibernateQueryUtils {
      * @param criteria    The criteria
      */
     private static void cacheCriteriaByMapping(Class<?> targetClass, Query criteria) {
-        Mapping m = AbstractGrailsDomainBinder.getMapping(targetClass);
+        Mapping m = GrailsDomainBinder.getMapping(targetClass);
         if (m != null && m.getCache() != null && m.getCache().getEnabled()) {
             criteria.setCacheable(true);
         }

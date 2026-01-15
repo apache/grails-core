@@ -15,9 +15,12 @@
  */
 package org.grails.orm.hibernate.cfg;
 
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
 import org.grails.datastore.mapping.model.*;
 
 import java.util.Optional;
+
+import jakarta.persistence.Entity;
 
 /**
  * Persistent entity implementation for Hibernate
@@ -63,4 +66,20 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
     public Mapping getMappedForm() {
         return Optional.ofNullable(getMapping()).map(ClassMapping::getMappedForm).orElse(null);
     }
+
+    private boolean isAnnotatedEntity() {
+        return getJavaClass().isAnnotationPresent(Entity.class);
+    }
+
+    public boolean usesConnectionSource(String dataSourceName) {
+        return ConnectionSourcesSupport.usesConnectionSource(this, dataSourceName);
+    }
+
+    public boolean forGrailsDomainMapping(String dataSourceName) {
+        return !isAnnotatedEntity()
+                && usesConnectionSource(dataSourceName)
+                && isRoot();
+    }
+
+
 }

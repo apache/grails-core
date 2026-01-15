@@ -15,9 +15,8 @@
 package org.grails.orm.hibernate.cfg;
 
 import groovy.lang.Closure;
-import jakarta.persistence.Entity;
+
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
 import org.grails.datastore.mapping.model.DatastoreConfigurationException;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -45,7 +44,6 @@ import org.hibernate.boot.internal.RootMappingDefaults;
 import org.hibernate.boot.model.TypeContributions;
 import org.hibernate.boot.model.TypeContributor;
 import org.hibernate.boot.model.internal.BinderHelper;
-import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
 import org.hibernate.boot.spi.AdditionalMappingContributions;
 import org.hibernate.boot.spi.AdditionalMappingContributor;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
@@ -118,6 +116,7 @@ public class GrailsDomainBinder
 {
 
     public static final String FOREIGN_KEY_SUFFIX = "_id";
+    protected static final Map<Class<?>, Mapping> MAPPING_CACHE = new HashMap<>();
     private static final String STRING_TYPE = "string";
     private static final String EMPTY_PATH = "";
     public static final char UNDERSCORE = '_';
@@ -148,6 +147,59 @@ public class GrailsDomainBinder
     private Closure defaultMapping;
     private PersistentEntityNamingStrategy namingStrategy;
     private MetadataBuildingContext metadataBuildingContext;
+
+    /**
+     * Obtains a mapping object for the given domain class nam
+     *
+     * @param theClass The domain class in question
+     * @return A Mapping object or null
+     */
+    public static Mapping getMapping(Class<?> theClass) {
+        return theClass == null ? null : MAPPING_CACHE.get(theClass);
+    }
+
+    /**
+     * Obtains a mapping object for the given domain class nam
+     *
+     * @param theClass The domain class in question
+     * @return A Mapping object or null
+     */
+    public static Mapping getMappingValidated(Class<?> theClass) {
+        return ofNullable(getMapping(theClass)).orElseThrow();
+    }
+
+    /**
+     * Obtains a mapping object for the given domain class nam
+     *
+     * @param theClass The domain class in question
+     */
+    public static void cacheMapping(Class<?> theClass, Mapping mapping) {
+        MAPPING_CACHE.put(theClass, mapping);
+    }
+
+    /**
+     * Obtains a mapping object for the given domain class nam
+     *
+     * @param domainClass The domain class in question
+     * @return A Mapping object or null
+     */
+    public static Mapping getMapping(PersistentEntity domainClass) {
+        return domainClass == null ? null : MAPPING_CACHE.get(domainClass.getJavaClass());
+    }
+
+    public static void clearMappingCache() {
+        MAPPING_CACHE.clear();
+    }
+
+    public static void clearMappingCache(Class<?> theClass) {
+        String className = theClass.getName();
+        for(Iterator<Map.Entry<Class<?>, Mapping>> it = MAPPING_CACHE.entrySet().iterator(); it.hasNext();) {
+            Map.Entry<Class<?>, Mapping> entry = it.next();
+            if (className.equals(entry.getKey().getName())) {
+                it.remove();
+            }
+        }
+    }
 
 
     public JdbcEnvironment getJdbcEnvironment() {
@@ -212,24 +264,14 @@ public class GrailsDomainBinder
                 , rootMappingDefaults
         );
 
-        filterHibernateEntities(hibernateMappingContext.getHibernatePersistentEntities())
+        hibernateMappingContext.getHibernatePersistentEntities().stream()
+                .filter(this::isForGrailsDomainMapping)
                 .forEach(hibernatePersistentEntity -> bindRoot(hibernatePersistentEntity, metadataCollector, sessionFactoryName));
     }
 
 
-    private List<HibernatePersistentEntity> filterHibernateEntities(java.util.Collection<HibernatePersistentEntity> persistentEntities) {
-        return persistentEntities.stream()
-                .filter(this::isNotAnnotatedEntity)
-                .filter(this::usesConnectionSource)
-                .filter(HibernatePersistentEntity::isRoot).toList();
-    }
-
-    private boolean usesConnectionSource(HibernatePersistentEntity persistentEntity) {
-        return ConnectionSourcesSupport.usesConnectionSource(persistentEntity, dataSourceName);
-    }
-
-    private boolean isNotAnnotatedEntity(HibernatePersistentEntity persistentEntity) {
-        return !persistentEntity.getJavaClass().isAnnotationPresent(Entity.class);
+    private boolean isForGrailsDomainMapping(HibernatePersistentEntity persistentEntity) {
+        return persistentEntity.forGrailsDomainMapping(dataSourceName);
     }
 
 
@@ -361,7 +403,7 @@ public class GrailsDomainBinder
             PersistentClass referenced = mappings.getEntityBinding(entityName);
 
             Class<?> mappedClass = referenced.getMappedClass();
-            Mapping m = getMapping(mappedClass);
+            Mapping m = getMappingValidated(mappedClass);
 
             boolean compositeIdProperty = m.isCompositeIdProperty(property.getInverseSide());
             if (!compositeIdProperty) {
@@ -439,11 +481,11 @@ public class GrailsDomainBinder
         // Configure one-to-many
         if (collection.isOneToMany()) {
 
-            Mapping m = getRootMapping(referenced);
+            Mapping m = new RootMappingFetcher().getRootMapping(referenced);
             boolean tablePerSubclass = m != null && !m.getTablePerHierarchy();
 
             if (referenced != null && !referenced.isRoot() && !tablePerSubclass) {
-                Mapping rootMapping = getRootMapping(referenced);
+                Mapping rootMapping = new RootMappingFetcher().getRootMapping(referenced);
                 //TODO FIXME
                 String discriminatorColumnName = JPA_DEFAULT_DISCRIMINATOR_TYPE;
 
@@ -496,7 +538,7 @@ public class GrailsDomainBinder
             }
         }
 
-        if (isSorted(property)) {
+        if (property.isSorted()) {
             collection.setSorted(true);
         }
 
@@ -530,7 +572,7 @@ public class GrailsDomainBinder
         }
 
         // if we have a many-to-many
-        if (isManyToMany || isBidirectionalOneToManyMap(property)) {
+        if (isManyToMany || property.isBidirectionalOneToManyMap()) {
             PersistentProperty otherSide = property.getInverseSide();
 
             if (property.isBidirectional()) {
@@ -682,7 +724,7 @@ public class GrailsDomainBinder
                 discriminator = discriminatorConfig.getValue();
             }
         }
-        Mapping rootMapping = getRootMapping(domainClass);
+        Mapping rootMapping = new RootMappingFetcher().getRootMapping(domainClass);
         String quote = "'";
         if (rootMapping != null && rootMapping.getDatasources() != null) {
             DiscriminatorConfig discriminatorConfig = rootMapping.getDiscriminator();
@@ -696,19 +738,6 @@ public class GrailsDomainBinder
             theSet.addAll(buildDiscriminatorSet((HibernatePersistentEntity) subClass));
         }
         return theSet;
-    }
-
-    private Mapping getRootMapping(PersistentEntity referenced) {
-        return Optional.of(referenced)
-                .map(PersistentEntity::getRootEntity)
-                .filter(HibernatePersistentEntity.class::isInstance)
-                .map(HibernatePersistentEntity.class::cast)
-                .map(HibernatePersistentEntity::getMappedForm)
-                .orElse(null);
-    }
-
-    private boolean isBidirectionalOneToManyMap(Association property) {
-        return Map.class.isAssignableFrom(property.getType()) && property.isBidirectional();
     }
 
     private void bindCollectionWithJoinTable(ToMany property,
@@ -948,16 +977,6 @@ public class GrailsDomainBinder
     }
 
     /**
-     * Establish whether a collection property is sorted
-     *
-     * @param property The property
-     * @return true if sorted
-     */
-    private boolean isSorted(PersistentProperty property) {
-        return SortedSet.class.isAssignableFrom(property.getType());
-    }
-
-    /**
      * Binds a many-to-many relationship. A many-to-many consists of
      * - a key (a DependentValue)
      * - an element
@@ -1100,13 +1119,6 @@ public class GrailsDomainBinder
     }
 
 
-    private PhysicalNamingStrategy getPhysicalNamingStrategy(String sessionFactoryBeanName) {
-        return NAMING_STRATEGY_PROVIDER.getPhysicalNamingStrategy(sessionFactoryBeanName);
-    }
-
-
-
-
     /**
      * Binds a Grails domain class to the Hibernate runtime meta model
      *
@@ -1128,7 +1140,7 @@ public class GrailsDomainBinder
             try {
                 final Mapping m = new HibernateEntityWrapper().getMappedForm(domainClass);
                 trackCustomCascadingSaves(m, domainClass.getPersistentProperties());
-                AbstractGrailsDomainBinder.cacheMapping(domainClass.getJavaClass(), m);
+                cacheMapping(domainClass.getJavaClass(), m);
             } catch (Exception e) {
                 throw new DatastoreConfigurationException("Error evaluating ORM mappings block for domain [" +
                         domainClass.getName() + "]:  " + e.getMessage(), e);
@@ -1147,38 +1159,11 @@ public class GrailsDomainBinder
             PropertyConfig propConf = mapping.getPropertyConfig(property.getName());
 
             if (propConf != null && propConf.getCascade() != null) {
-                propConf.setExplicitSaveUpdateCascade(isSaveUpdateCascade(propConf.getCascade()));
+                propConf.setExplicitSaveUpdateCascade(CascadeBehavior.isSaveUpdate(propConf.getCascade()));
             }
         }
     }
 
-    /**
-     * Check if a save-update cascade is defined within the Hibernate cascade properties string.
-     * @param cascade The string containing the cascade properties.
-     * @return True if save-update or any other cascade property that encompasses those is present.
-     */
-    protected boolean isSaveUpdateCascade(String cascade) {
-        return CascadeBehavior.isSaveUpdate(cascade);
-    }
-
-    /**
-     * Obtains a mapping object for the given domain class nam
-     *
-     * @param theClass The domain class in question
-     * @return A Mapping object or null
-     */
-    private static Mapping getMapping(Class<?> theClass) {
-        return Optional.ofNullable(AbstractGrailsDomainBinder.getMapping(theClass)).orElseThrow();
-    }
-
-
-    public static void clearMappingCache() {
-        AbstractGrailsDomainBinder.clearMappingCache();
-    }
-
-    public static void clearMappingCache(Class<?> theClass) {
-        // no-op, here for compatibility
-    }
 
     /**
      * Binds a root class (one with no super classes) to the runtime meta model
@@ -1223,7 +1208,7 @@ public class GrailsDomainBinder
 
     public PersistentEntityNamingStrategy getNamingStrategy() {
         if (namingStrategy == null) {
-            namingStrategy = new NamingStrategyWrapper(getPhysicalNamingStrategy(sessionFactoryName), getJdbcEnvironment());
+            namingStrategy = new NamingStrategyWrapper(NAMING_STRATEGY_PROVIDER.getPhysicalNamingStrategy(sessionFactoryName), getJdbcEnvironment());
         }
         return namingStrategy;
     }
@@ -1285,7 +1270,7 @@ public class GrailsDomainBinder
                 .stream()
                 .filter(HibernatePersistentEntity.class::isInstance)
                 .map(HibernatePersistentEntity.class::cast)
-                .filter(this::usesConnectionSource)
+                .filter(persistentEntity -> persistentEntity.usesConnectionSource(dataSourceName))
                 .filter(sub -> isChildEntity(sub, domainClass))
                 .forEach( sub -> bindSubClass(sub, parent, mappings, sessionFactoryBeanName, m));
 
