@@ -263,9 +263,16 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                             encodeEmbeddedCollectionUpdate(access, sets, unsets, (Association) prop, v)
                         }
                         else {
-                            def propKind = prop.getClass().superclass
-                            PropertyEncoder<? extends PersistentProperty> propertyEncoder = getPropertyEncoder((Class<? extends PersistentProperty>) propKind)
-                            propertyEncoder?.encode(writer, prop, v, access, encoderContext, codecRegistry)
+                            def propKind = (Class<? extends PersistentProperty>) prop.getClass().superclass
+                            def propertyEncoder = getPropertyEncoder(propKind)
+                            ((PropertyEncoder<PersistentProperty>) propertyEncoder)?.encode(
+                                    writer,
+                                    (PersistentProperty) prop,
+                                    v,
+                                    access,
+                                    encoderContext,
+                                    codecRegistry
+                            )
                         }
 
                     }
@@ -345,10 +352,18 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
 
             if (hasSets && isVersioned) {
                 def version = entity.version
-                def propKind = version.getClass().superclass
+                def propKind = (Class<? extends PersistentProperty>) version.getClass().superclass
                 MongoCodecEntityPersister.incrementEntityVersion(access)
                 def v = access.getProperty(version.name)
-                getPropertyEncoder((Class<? extends PersistentProperty>) propKind)?.encode(writer, version, v, access, encoderContext, codecRegistry)
+                def propertyEncoder = getPropertyEncoder(propKind)
+                ((PropertyEncoder<PersistentProperty>) propertyEncoder)?.encode(
+                        writer,
+                        version,
+                        v,
+                        access,
+                        encoderContext,
+                        codecRegistry
+                )
             }
 
             writer.writeEndDocument()

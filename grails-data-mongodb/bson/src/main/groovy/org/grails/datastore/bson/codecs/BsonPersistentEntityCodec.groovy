@@ -157,13 +157,20 @@ class BsonPersistentEntityCodec implements Codec {
                 else {
                     PersistentProperty property = persistentEntity.getPropertyByName(name)
                     if (property && bsonType != BsonType.NULL) {
-                        def propKind = property.getClass().superclass
+                        def propKind = (Class<? extends PersistentProperty>) property.getClass().superclass
 
                         if (CharSequence.isAssignableFrom(property.type) && bsonType == BsonType.STRING) {
                             access.setPropertyNoConversion(property.name, bsonReader.readString())
                         }
                         else {
-                            getPropertyDecoder((Class<? extends PersistentProperty>) propKind)?.decode(bsonReader, property, access, decoderContext, codecRegistry)
+                            def decoder = getPropertyDecoder(propKind)
+                            ((PropertyDecoder<PersistentProperty>) decoder)?.decode(
+                                    bsonReader,
+                                    (PersistentProperty) property,
+                                    access,
+                                    decoderContext,
+                                    codecRegistry
+                            )
                         }
 
                     }
@@ -215,11 +222,18 @@ class BsonPersistentEntityCodec implements Codec {
         }
 
         for (PersistentProperty prop in entity.persistentProperties) {
-            def propKind = prop.getClass().superclass
+            def propKind = (Class<? extends PersistentProperty>) prop.getClass().superclass
             Object v = access.getProperty(prop.name)
             if (v != null) {
-                PropertyEncoder<? extends PersistentProperty> encoder = getPropertyEncoder((Class<? extends PersistentProperty>) propKind)
-                encoder?.encode(writer, (PersistentProperty) prop, v, access, encoderContext, codecRegistry)
+                def encoder = getPropertyEncoder(propKind)
+                ((PropertyEncoder<PersistentProperty>) encoder)?.encode(
+                        writer,
+                        (PersistentProperty) prop,
+                        v,
+                        access,
+                        encoderContext,
+                        codecRegistry
+                )
             }
         }
 
@@ -289,10 +303,17 @@ class BsonPersistentEntityCodec implements Codec {
                             // TODO: embedded collections
                         }
                         else {
-                            def propKind = prop.getClass().superclass
+                            def propKind = (Class<? extends PersistentProperty>) prop.getClass().superclass
                             if (prop instanceof PersistentProperty) {
-                                PropertyEncoder<? extends PersistentProperty> propertyEncoder = getPropertyEncoder((Class<? extends PersistentProperty>) propKind)
-                                propertyEncoder?.encode(writer, prop, v, access, encoderContext, codecRegistry)
+                                def propertyEncoder = getPropertyEncoder(propKind)
+                                ((PropertyEncoder<PersistentProperty>) propertyEncoder)?.encode(
+                                        writer,
+                                        (PersistentProperty) prop,
+                                        v,
+                                        access,
+                                        encoderContext,
+                                        codecRegistry
+                                )
                             }
                         }
 
@@ -447,7 +468,7 @@ class BsonPersistentEntityCodec implements Codec {
      * @param type The property encoder type
      * @return The encoder or null if it doesn't exist
      */
-    protected <T extends PersistentProperty> PropertyEncoder<T> getPropertyEncoder(Class<T> type) {
+    protected <E extends PersistentProperty> PropertyEncoder<E> getPropertyEncoder(Class<E> type) {
         return ENCODERS.get(type)
     }
 
@@ -457,7 +478,7 @@ class BsonPersistentEntityCodec implements Codec {
      * @param type The property encoder type
      * @return The encoder or null if it doesn't exist
      */
-    protected <T extends PersistentProperty> PropertyDecoder<T> getPropertyDecoder(Class<T> type) {
+    protected <D extends PersistentProperty> PropertyDecoder<D> getPropertyDecoder(Class<D> type) {
         return DECODERS.get(type)
     }
 }
