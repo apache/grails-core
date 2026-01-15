@@ -58,6 +58,35 @@ class CreateAppSpec extends CommandSpec {
         new File(dir, "grails-app/i18n").exists()
     }
 
+    void 'create-app creates expected assets'(String assetPath) {
+        given:
+        generateProject(OperatingSystem.MACOS_ARCH64)
+
+        expect:
+        new File(dir, assetPath).exists()
+        
+        where:
+        assetPath << [
+                'grails-app/assets/images/advancedgrails.svg',
+                'grails-app/assets/images/community.svg',
+                'grails-app/assets/images/documentation.svg',
+                'grails-app/assets/images/favicon.ico',
+                'grails-app/assets/images/grails.svg',
+                'grails-app/assets/images/groovy.svg',
+                'grails-app/assets/images/java.svg',
+                'grails-app/assets/images/spring.svg',
+                'grails-app/assets/images/spring-boot.svg',
+
+                'grails-app/assets/javascripts/application.js',
+                'grails-app/assets/javascripts/welcome.js',
+
+                'grails-app/assets/stylesheets/application.css',
+                'grails-app/assets/stylesheets/errors.css',
+                'grails-app/assets/stylesheets/grails.css',
+                'grails-app/assets/stylesheets/welcome.css'
+        ]
+    }
+
     void "test create-app creates a correct Application.groovy"() {
         given:
         generateProject(OperatingSystem.MACOS_ARCH64, [], ApplicationType.DEFAULT_OPTION)
