@@ -132,6 +132,46 @@ class NamingStrategyWrapperSpec extends HibernateGormDatastoreSpec {
         and: "The wrapped strategy was called with an identifier based on the decapitalized owner name"
         capturedIdentifier.text == decapitalizedOwnerName
     }
+
+    def "should replace dots with underscores for logical column name before passing to wrapped strategy"() {
+        given:
+        def logicalNameWithDots = "com.example.MyClass.myProperty"
+        def expectedLogicalNameForStrategy = "com_example_MyClass_myProperty"
+        def expectedPhysicalName = "com_example_my_class_my_property"
+        def capturedIdentifier
+
+        mockStrategy.toPhysicalColumnName(_, mockJdbcEnv) >> { Identifier id, JdbcEnvironment env ->
+            capturedIdentifier = id
+            return Identifier.toIdentifier(expectedPhysicalName)
+        }
+
+        when:
+        def actualResult = wrapper.resolveColumnName(logicalNameWithDots)
+
+        then:
+        actualResult == expectedPhysicalName
+        capturedIdentifier.text == expectedLogicalNameForStrategy
+    }
+
+    def "should replace dots with underscores for logical table name before passing to wrapped strategy"() {
+        given:
+        def logicalNameWithDots = "com.example.MyClass"
+        def expectedLogicalNameForStrategy = "com_example_MyClass"
+        def expectedPhysicalName = "com_example_my_class"
+        def capturedIdentifier
+
+        mockStrategy.toPhysicalTableName(_, mockJdbcEnv) >> { Identifier id, JdbcEnvironment env ->
+            capturedIdentifier = id
+            return Identifier.toIdentifier(expectedPhysicalName)
+        }
+
+        when:
+        def actualResult = wrapper.resolveTableName(logicalNameWithDots)
+
+        then:
+        actualResult == expectedPhysicalName
+        capturedIdentifier.text == expectedLogicalNameForStrategy
+    }
 }
 
 // Helper domain class for testing
@@ -140,3 +180,4 @@ class Owner {
     Long id
     String someProperty
 }
+

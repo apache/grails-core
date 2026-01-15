@@ -44,20 +44,26 @@ This document summarizes the approaches taken, challenges encountered, and futur
     - No other direct `session.save()` calls found in `src/main` or `src/test` of the `core` module.
     - Systematic audit of other modules and TCK is still required.
 
+### 7. Fixed DDL Generation Issues
+- **Approach:** Updated `NamingStrategyWrapper` to globally replace dots with underscores in logical class names before passing them to Hibernate's `PhysicalNamingStrategy`.
+- **Reasoning:** Hibernate 7's default naming strategies preserve dots in logical names (e.g., from FQCNs), which leads to invalid SQL in databases like H2. GORM expects underscores for compatibility and valid SQL.
+- **Result:** Resolved `JdbcSQLSyntaxErrorException` in tests like `CascadeBehaviorPersisterSpec`, where join table columns now use valid underscore-delimited names instead of dotted class names.
+
 ## Challenges & Failures
 
 ### 1. Proxy Initialization Behavior
 - **Issue:** In `Hibernate6GroovyProxySpec`, `Location.proxy(id)` returns an object that is already initialized (`Hibernate.isInitialized(location) == true`), even after clearing the session.
 - **Attempts:** Tried `session.getReference()`, `session.byId().getReference()`, and using fresh sessions.
-- **Status:** Ongoing investigation. Debugging indicates that even native Hibernate proxies might be reporting as initialized or are being initialized during the proxy creation/retrieval process in the test environment.
+- **Status:** Ongoing investigation. Debugging indicates that Hibernate 7's bytecode enhancement or session management might be reporting Groovy proxies as initialized even when they haven't fetched their target.
 
-### 2. SQL Syntax Errors in DDL
-- **Issue:** Several tests (e.g., `CascadeBehaviorPersisterSpec`) show `JdbcSQLSyntaxErrorException` during schema creation.
-- **Observation:** DDL statements are attempting to use qualified class names as column names (e.g., `create table ... (org.grails.orm..._id bigint)`), which fails in H2. This is likely related to how Hibernate 7 handles component or join column naming when dots are present.
+### 2. SQL Syntax Errors in DDL (RESOLVED)
+- **Issue:** Several tests showed `JdbcSQLSyntaxErrorException` during schema creation due to dots in column names.
+- **Solution:** Centralized dot-to-underscore replacement in `NamingStrategyWrapper`.
 
-### 3. Missing Methods in Proxies
+### 3. Missing Methods in Proxies (RESOLVED)
 - **Issue:** Hibernate 7 proxies no longer implement `isInitialized()` or `getInitialized()` directly on the proxy object.
 - **Solution:** Switched to `Hibernate.isInitialized(proxy)`.
+
 
 ## Strategy for GrailsDomainBinder Refactoring
 
