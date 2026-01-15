@@ -54,14 +54,57 @@ class TwoUnidirectionalHasManySpec extends HibernateGormDatastoreSpec {
 }
 
 @Entity
+
 class EcmMask {
+
     String name
+
     static hasMany = [createUsers:EcmUser, updateUsers:EcmUser]
+
+    static mappedBy = [createUsers: 'maskForCreated', updateUsers: 'maskForUpdated']
 
 }
 
+
+
 @Entity
+
+
+
 class EcmUser {
+
+
+
     String name
+
+
+
+    EcmMask maskForCreated
+
+
+
+    EcmMask maskForUpdated
+
+
+
+
+
+
+
+    static constraints = {
+
+
+
+        maskForCreated nullable: true
+
+
+
+        maskForUpdated nullable: true
+
+
+
+    }
+
+
 
 }

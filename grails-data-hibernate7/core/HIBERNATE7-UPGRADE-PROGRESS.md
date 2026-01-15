@@ -87,8 +87,8 @@ Unit tests should be created for each new binder class (e.g., `CollectionBinderS
 
 1.  **Resolve Proxy Initialization:** Determine why proxies are returning as initialized in `Hibernate6GroovyProxySpec`. Investigate if Hibernate 7's bytecode enhancement or ByteBuddy factory settings are interfering.
 2.  **Fix DDL Generation:** Investigate why FQCNs are leaking into DDL column definitions. This likely requires further changes in `ColumnNameFetcher` or the mapping binders to ensure dots are replaced by underscores globally for generated columns.
-3.  **Continue TCK Failure Audit:** Move to the next items in `HIBERNATE7-TESTS.csv`:
-    -   `HibernateGormDatastoreSpec` (Pending)
-    -   `TwoUnidirectionalHasManySpec` (DDL issues)
-    -   `CompositeIdWithManyToOneAndSequenceSpec` (NPE in SequenceStyleGenerator)
+3. Continue TCK Failure Audit:
+    - `HibernateGormDatastoreSpec` (Base class, not directly runnable - Pending)
+    - `TwoUnidirectionalHasManySpec` (RESOLVED by converting to bidirectional association with explicit `mappedBy` and nullable back-references)
+    - `CompositeIdWithManyToOneAndSequenceSpec` (NPE in SequenceStyleGenerator)
 4.  **Address `Session.save()` usage:** Systematically find and replace `save()` with `persist()` or `merge()` across the codebase and TCK where direct Hibernate session access is used.
