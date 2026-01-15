@@ -23,8 +23,9 @@ pluginManagement {
         name = 'build-logic-root'
     }
     repositories {
-        // because our publish plugin uses other plugins, those dependencies have to be resolvable
-        // mavenLocal()
+        if (System.getenv('GRAILS_INCLUDE_MAVEN_LOCAL')) {
+            mavenLocal()
+        }
         mavenCentral()
         gradlePluginPortal()
         maven {
@@ -110,7 +111,9 @@ project(':grails-gradle-tasks').projectDir = file('tasks')
 dependencyResolutionManagement {
     repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
     repositories {
-        // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
+        if (System.getenv('GRAILS_INCLUDE_MAVEN_LOCAL')) {
+            mavenLocal()
+        }
         maven { url = 'https://repo.grails.org/grails/restricted' }
         mavenCentral()
         maven {
