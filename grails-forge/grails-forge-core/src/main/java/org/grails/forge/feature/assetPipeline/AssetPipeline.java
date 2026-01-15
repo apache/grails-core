@@ -32,6 +32,7 @@ import org.grails.forge.options.Options;
 import org.grails.forge.template.URLTemplate;
 
 import java.util.Set;
+import java.util.List;
 
 @Singleton
 public class AssetPipeline implements DefaultFeature {
@@ -91,21 +92,49 @@ public class AssetPipeline implements DefaultFeature {
                 .artifactId("jquery")
                 .testAndDevelopmentOnly());
 
-        final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        generatorContext.addTemplate("advancedgrails_svg", new URLTemplate("grails-app/assets/images/advancedgrails.svg", classLoader.getResource("assets/images/advancedgrails.svg")));
-        generatorContext.addTemplate("apple-touch-icon_png", new URLTemplate("grails-app/assets/images/apple-touch-icon.png", classLoader.getResource("assets/images/apple-touch-icon.png")));
-        generatorContext.addTemplate("apple-touch-icon-retina_png", new URLTemplate("grails-app/assets/images/apple-touch-icon-retina.png", classLoader.getResource("assets/images/apple-touch-icon-retina.png")));
-        generatorContext.addTemplate("documentation_svg", new URLTemplate("grails-app/assets/images/documentation.svg", classLoader.getResource("assets/images/documentation.svg")));
-        generatorContext.addTemplate("favicon_ico", new URLTemplate("grails-app/assets/images/favicon.ico", classLoader.getResource("assets/images/favicon.ico")));
-        generatorContext.addTemplate("grails_svg", new URLTemplate("grails-app/assets/images/grails.svg", classLoader.getResource("assets/images/grails.svg")));
-        generatorContext.addTemplate("grails-cupsonly-logo-white_svg", new URLTemplate("grails-app/assets/images/grails-cupsonly-logo-white.svg", classLoader.getResource("assets/images/grails-cupsonly-logo-white.svg")));
-        generatorContext.addTemplate("slack_svg", new URLTemplate("grails-app/assets/images/slack.svg", classLoader.getResource("assets/images/slack.svg")));
+        var assetPaths = List.of(
+                // Keep categories separate for readability.
+                "grails-app/assets/images/advancedgrails.svg",
+                "grails-app/assets/images/community.svg",
+                "grails-app/assets/images/documentation.svg",
+                "grails-app/assets/images/favicon.ico",
+                "grails-app/assets/images/grails.svg",
+                "grails-app/assets/images/groovy.svg",
+                "grails-app/assets/images/java.svg",
+                "grails-app/assets/images/spring.svg",
+                "grails-app/assets/images/spring-boot.svg",
 
-        generatorContext.addTemplate("application_js", new URLTemplate("grails-app/assets/javascripts/application.js", classLoader.getResource("assets/javascripts/application.js")));
+                "grails-app/assets/javascripts/application.js",
+                "grails-app/assets/javascripts/welcome.js",
 
-        generatorContext.addTemplate("application_css", new URLTemplate("grails-app/assets/stylesheets/application.css", classLoader.getResource("assets/stylesheets/application.css")));
-        generatorContext.addTemplate("errors_css", new URLTemplate("grails-app/assets/stylesheets/errors.css", classLoader.getResource("assets/stylesheets/errors.css")));
-        generatorContext.addTemplate("grails_css", new URLTemplate("grails-app/assets/stylesheets/grails.css", classLoader.getResource("assets/stylesheets/grails.css")));
+                "grails-app/assets/stylesheets/application.css",
+                "grails-app/assets/stylesheets/errors.css",
+                "grails-app/assets/stylesheets/grails.css",
+                "grails-app/assets/stylesheets/welcome.css"
+        );
+
+        var classLoader = Thread.currentThread().getContextClassLoader();
+        for (var assetTemplate : assetPaths) {
+            addAssetTemplate(generatorContext, classLoader, assetTemplate);
+        }
+    }
+
+    private static void addAssetTemplate(GeneratorContext generatorContext, ClassLoader classLoader, String assetPath) {
+
+        // The template key is the filename with extension dot replaced by underscore,
+        // e.g. application.css -> application_css
+        var fileName = assetPath.substring(assetPath.lastIndexOf('/') + 1);
+        var templateKey = fileName.replaceFirst("\\.", "_");
+
+        // Resource paths are relative to the classpath root (no leading slash)
+        var resourcePath = assetPath.replaceFirst("^grails-app/", "");
+        generatorContext.addTemplate(
+                templateKey,
+                new URLTemplate(
+                        assetPath,
+                        classLoader.getResource(resourcePath)
+                )
+        );
     }
 
     @Override

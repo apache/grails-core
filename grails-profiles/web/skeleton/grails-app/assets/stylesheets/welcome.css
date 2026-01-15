@@ -1,0 +1,63 @@
+.reload-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .35rem .6rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 999px;
+    background: var(--bs-body-bg);
+    font-size: .875rem;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.reload-dot {
+    position: relative;
+    width: .6rem;
+    height: .6rem;
+    border-radius: 999px;
+    background: currentColor;
+    flex: 0 0 auto;
+}
+
+.reload-dot.ping::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: .35;
+    animation: reload-ping 1.25s ease-out infinite;
+}
+
+.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.sort-hint {
+    display: inline-block;
+    width: .9em;
+}
+
+.sort-hint::before {
+    content: '';
+}
+
+th.sortable[data-sort-dir="asc"] .sort-hint::before {
+    content: '↑';
+}
+
+th.sortable[data-sort-dir="desc"] .sort-hint::before {
+    content: '↓';
+}
+
+@keyframes reload-ping {
+    0% { transform: scale(1); opacity: .35; }
+    70% { transform: scale(2.25); opacity: 0; }
+    100% { transform: scale(2.25); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .reload-dot::before { animation: none; }
+}
