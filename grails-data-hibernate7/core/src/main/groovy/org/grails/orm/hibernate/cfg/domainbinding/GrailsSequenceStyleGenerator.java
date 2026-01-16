@@ -1,4 +1,4 @@
-package org.grails.orm.hibernate.cfg;
+package org.grails.orm.hibernate.cfg.domainbinding;
 
 import org.hibernate.MappingException;
 import org.hibernate.boot.model.relational.Database;
@@ -15,7 +15,7 @@ import java.util.Set;
 
 public class GrailsSequenceStyleGenerator extends SequenceStyleGenerator {
 
-    public GrailsSequenceStyleGenerator(GeneratorCreationContext context, Identity mappedId) {
+    public GrailsSequenceStyleGenerator(GeneratorCreationContext context, org.grails.orm.hibernate.cfg.Identity mappedId) {
         // Call super's no-arg constructor first
         super();
         Properties generatorProps = new Properties();

@@ -1,10 +1,15 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.id.IncrementGenerator;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.RootClass;
 
-import org.grails.orm.hibernate.cfg.GrailsSequenceStyleGenerator;
 import org.grails.orm.hibernate.cfg.Identity;
 
 public class BasicValueIdCreator {
@@ -29,37 +34,19 @@ public class BasicValueIdCreator {
         }
 
         switch (generator) {
-            case "identity" -> id.setCustomIdGeneratorCreator(context -> {
-                // Force IdentityGenerator for databases like MySQL/H2
-                var gen = new org.hibernate.id.IdentityGenerator();
-                context.getProperty().getValue().getColumns().get(0).setIdentity(true);
-                return gen;
-            });
+            case "identity" -> id.setCustomIdGeneratorCreator(GrailsIdentityGenerator::new);
 
-            case "sequence", "sequence-identity" -> id.setCustomIdGeneratorCreator(context -> {
-                return new GrailsSequenceStyleGenerator(context,mappedId);
-            });
+            case "sequence", "sequence-identity" -> id.setCustomIdGeneratorCreator(context -> new GrailsSequenceStyleGenerator(context,mappedId));
 
-            case "increment" -> id.setCustomIdGeneratorCreator(context -> {
-                return new org.hibernate.id.IncrementGenerator();
-            });
+            case "increment" -> id.setCustomIdGeneratorCreator(context -> new IncrementGenerator());
 
-            case "uuid", "uuid2" -> id.setCustomIdGeneratorCreator(context -> {
-                return new org.hibernate.id.uuid.UuidGenerator(context.getType().getReturnedClass());
-            });
+            case "uuid", "uuid2" -> id.setCustomIdGeneratorCreator(context -> new org.hibernate.id.uuid.UuidGenerator(context.getType().getReturnedClass()));
 
-            case "assigned" -> id.setCustomIdGeneratorCreator(context -> {
-                return new org.hibernate.id.Assigned();
-            });
+            case "assigned" -> id.setCustomIdGeneratorCreator(context -> new org.hibernate.id.Assigned());
 
-            case "table", "enhanced-table" -> id.setCustomIdGeneratorCreator(context -> {
-                return new org.hibernate.id.enhanced.TableGenerator();
-            });
+            case "table", "enhanced-table" -> id.setCustomIdGeneratorCreator(context -> new org.hibernate.id.enhanced.TableGenerator());
 
-            case "hilo" -> id.setCustomIdGeneratorCreator(context -> {
-                // Note: Legacy Hilo is often replaced by SequenceStyleGenerator with optimizer
-                return new org.hibernate.id.enhanced.SequenceStyleGenerator();
-            });
+            case "hilo" -> id.setCustomIdGeneratorCreator(context -> new org.hibernate.id.enhanced.SequenceStyleGenerator());
 
             default -> id.setCustomIdGeneratorCreator(GrailsNativeGenerator::new);
         }
