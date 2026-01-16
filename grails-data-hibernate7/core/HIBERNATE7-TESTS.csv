@@ -1,6 +1,8 @@
  Test File , Status , Notes 
- `src/test/groovy/grails/gorm/specs/hasmany/TwoUnidirectionalHasManySpec.groovy` , FAILED , SQL Syntax error: Qualified column names in DDL.
- `src/test/groovy/grails/gorm/specs/CompositeIdWithManyToOneAndSequenceSpec.groovy` , FAILED , NPE in Hibernate 7 SequenceStyleGenerator. 
+ `src/test/groovy/grails/gorm/specs/HibernateGormDatastoreSpec.groovy` , PENDING ,
+ `src/test/groovy/grails/gorm/specs/ExecuteQueryWithinValidatorSpec.groovy` , FAILED , Hibernate 7 removal: Session.save() method missing.
+ `src/test/groovy/grails/gorm/specs/proxy/Hibernate6GroovyProxySpec.groovy` , FAILED , "No signature of method: Location.isInitialized()"
+ `src/test/groovy/grails/gorm/specs/CompositeIdWithManyToOneAndSequenceSpec.groovy` , FAILED , NPE in Hibernate 7 SequenceStyleGenerator.
  `src/test/groovy/grails/gorm/specs/SubqueryAliasSpec.groovy` , SKIPPED , 
  `src/test/groovy/grails/gorm/specs/multitenancy/MultiTenancyBidirectionalManyToManySpec.groovy` , FAILED , Found two representations of same collection. 
  `src/test/groovy/grails/gorm/specs/inheritance/TablePerConcreteClassAndDateCreatedSpec.groovy` , FAILED , NPE in Hibernate 7 IncrementGenerator. 
@@ -9,9 +11,4 @@
  `src/test/groovy/grails/gorm/specs/dirtychecking/PropertyFieldSpec.groovy` , FAILED , Dirty checking issues in Hibernate 7. 
  `src/test/groovy/grails/gorm/specs/NullableAndLengthSpec.groovy` , FAILED , Mapping/Constraint issues. 
  `src/test/groovy/grails/gorm/specs/SubclassMultipleListCollectionSpec.groovy` , FAILED , SQL Syntax error: Qualified column names in DDL. 
- `src/test/groovy/grails/gorm/specs/perf/JoinPerfSpec.groovy` , FAILED , Unique constraint violation. 
- `src/test/groovy/grails/gorm/specs/uuid/UuidInsertSpec.groovy` , FAILED , Logic error: name mismatch after insert/update. 
- `src/test/groovy/grails/gorm/specs/validation/CascadeValidationSpec.groovy` , FAILED , SQL Syntax error: Qualified column names in DDL. 
- `src/test/groovy/grails/gorm/specs/validation/SaveWithInvalidEntitySpec.groovy` , FAILED , Hibernate 7 change: got EntityActionVetoException instead of IllegalStateException. 
- `src/test/groovy/grails/gorm/specs/validation/DeepValidationSpec.groovy` , FAILED , SQL Syntax error: Qualified column names in DDL.
-`grails-datamapping-tck/src/main/groovy/org/apache/grails/data/testing/tck/tests/NamedQuerySpec.groovy` , FAILED , "No signature of method: static org.grails.datastore.gorm.GormEnhancer.createNamedQuery()"
+ `grails-datamapping-tck/src/main/groovy/org/apache/grails/data/testing/tck/tests/NamedQuerySpec.groovy` , FAILED , "No signature of method: static org.grails.datastore.gorm.GormEnhancer.createNamedQuery()"

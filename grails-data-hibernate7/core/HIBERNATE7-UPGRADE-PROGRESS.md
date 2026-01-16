@@ -3,76 +3,7 @@
 ## Overview
 This document summarizes the approaches taken, challenges encountered, and future steps for upgrading the GORM Hibernate implementation to Hibernate 7.
 
-## Completed Tasks & Approaches
 
-### 1. Cascade Logic Refactoring
-- **Approach:** Centralized cascade check logic by moving `isSaveUpdateCascade` from `GrailsDomainBinder` to the `CascadeBehavior` enum.
-- **Hibernate 7 Compatibility:** Mapped the legacy `save-update` cascade style to `persist,merge`, as Hibernate 7 removed direct support for `save-update`.
-- **Result:** Successfully refactored and added unit tests in `CascadeBehaviorEnumSpec`.
-
-### 2. Naming Strategy Compatibility
-- **Approach:** Updated `DefaultColumnNameFetcher` to replace package dots with underscores in Fully Qualified Class Name (FQCN) prefixes.
-- **Reasoning:** Hibernate 7's default naming strategies preserve dots in class names, which can lead to invalid SQL or unexpected column names in join tables. GORM expects underscores for compatibility.
-- **Result:** Resolved failures in `DefaultColumnNameFetcherSpec`.
-
-### 3. Column Binding Fixes
-- **Approach:** Refined `ColumnBinder` to only apply conventional naming to associations if the column name is `null`. 
-- **Testing:** Updated `ColumnBinderSpec` to use name-less `Column` instances (`new Column()`) for association tests, ensuring conventional naming is correctly applied without interfering with explicit mappings.
-- **Result:** All 14 tests in `ColumnBinderSpec` are passing.
-
-### 4. AST Transformation for `ManagedEntity`
-- **Approach:** Updated `HibernateEntityTransformation` to implement the new methods required by the Hibernate 7 `ManagedEntity` interface.
-- **Implementation:** Added `$$_hibernate_instanceId` field and implemented `$$_hibernate_getInstanceId()` and `$$_hibernate_setInstanceId(int)`.
-- **Result:** Resolved compilation errors in `HibernateEntityTransformationSpec`.
-
-### 5. API Updates in Tests
-- **Approach:** Replaced removed Hibernate 6 methods with their Hibernate 7 equivalents in test specifications.
-- **Changes:** Swapped `session.save()` for `session.persist()` in `ExecuteQueryWithinValidatorSpec`.
-- **Result:** `ExecuteQueryWithinValidatorSpec` is now passing.
-
-### 6. Encapsulation of Save Logic
-- **Observation:** `HibernateGormInstanceApi` correctly encapsulates `save()` calls by delegating to `performPersist()` (using `session.persist()`) if the entity is new (ID is null), or `performMerge()` (using `session.merge()`) if it already exists.
-- **Hibernate 7 Compatibility:** This centralizes the handling of Hibernate 7's removal of `session.save()`.
-- **Updates:**
-  - `AbstractHibernateSession` now exposes a dedicated `merge(Object)` method so callers can explicitly request merge semantics when needed.
-  - Hibernate template implementations (`GrailsHibernateTemplate` and the `IHibernateTemplate` contract in this module) were updated: direct `save()` semantics were replaced with `persist()` and templates now implement/forward a `merge()` operation. `GrailsHibernateTemplate.persist(Object)` delegates to the underlying Hibernate `Session.persist(...)`; `GrailsHibernateTemplate.merge(Object)` delegates to `Session.merge(...)`.
-  - A default `merge(Object)` was added to the `IHibernateTemplate` interface to make the API backward compatible; the Hibernate-backed template provides the real implementation delegating to Hibernate's `merge`.
-- **Requirement:** Direct `session.save()` calls in other modules or in the TCK still need to be identified and replaced with `persist()` or `merge()` as appropriate.
-- **Audit Results:**
-    - `GrailsHibernateTemplate.save(Object)` was updated to use `session.persist(Object)` (renamed to `persist`).
-    - `ExecuteQueryWithinValidatorSpec.groovy` direct call replaced with `persist()`.
-    - No other direct `session.save()` calls found in `src/main` or `src/test` of the `core` module.
-    - Systematic audit of other modules and TCK is still required.
-
-### 7. Fixed DDL Generation Issues
-- **Approach:** Updated `NamingStrategyWrapper` to globally replace dots with underscores in logical class names before passing them to Hibernate's `PhysicalNamingStrategy`.
-- **Reasoning:** Hibernate 7's default naming strategies preserve dots in logical names (e.g., from FQCNs), which leads to invalid SQL in databases like H2. GORM expects underscores for compatibility and valid SQL.
-- **Result:** Resolved `JdbcSQLSyntaxErrorException` in tests like `CascadeBehaviorPersisterSpec`, where join table columns now use valid underscore-delimited names instead of dotted class names.
-
-### 8. Refactoring of `AbstractGrailsDomainBinder`
-- **Approach:** Merged `AbstractGrailsDomainBinder` into `GrailsDomainBinder` to simplify the class hierarchy and remove the abstract base class.
-- **Result:** `AbstractGrailsDomainBinder` has been removed and its functionality (mapping cache management) is now part of `GrailsDomainBinder`.
-
-### 9. Test Fixes for Sealed Classes
-- **Issue:** Tests were failing with "Sealed class ... cannot be mocked" for Hibernate classes like `Column`, `Table`, and `UniqueKey`.
-- **Approach:** Refactored tests (`ColumnConfigToColumnBinderSpec`, `StringColumnConstraintsBinderSpec`, `IndexBinderSpec`, `UniqueNameGeneratorSpec`) to instantiate these classes instead of mocking them.
-- **Result:** Resolved mocking errors for sealed classes.
-
-### 10. Fixes for `BasicValueIdCreatorSpec` and `ManyToOneBinderSpec`
-- **Issue:** `BasicValueIdCreatorSpec` failed with NPE in `NativeGenerator`. `ManyToOneBinderSpec` failed with `MissingMethodException`.
-- **Approach:**
-    - In `BasicValueIdCreatorSpec`, mocked `Database`, `Dialect`, and `GenerationType` to satisfy `NativeGenerator` initialization.
-    - In `ManyToOneBinderSpec`, replaced `setCompositeIdentifier` with `setIdentity` and mocked `PropertyConfig` to handle `setUniqueWithinGroup`.
-- **Result:** Resolved these specific test failures.
-
-### 11. Fixes for `BasicValueIdCreatorSpec` and `SimpleIdBinderSpec`
-- **Issue:** `BasicValueIdCreatorSpec` failed with NPE in `NativeGenerator` and `SequenceStyleGenerator`. `SimpleIdBinderSpec` failed with mocking issues.
-- **Approach:**
-    - Created `GrailsIdentityGenerator` to encapsulate identity generation logic.
-    - Updated `BasicValueIdCreator` to use `GrailsIdentityGenerator` and `GrailsSequenceStyleGenerator`.
-    - Updated `BasicValueIdCreatorSpec` to mock `ServiceRegistry`, `JdbcEnvironment`, `IdentifierHelper`, and `SequenceSupport` to satisfy `SequenceStyleGenerator` dependencies.
-    - Updated `SimpleIdBinderSpec` to use real `BasicValueIdCreator` and `Table` instances instead of mocks, avoiding interaction verification issues on real objects.
-- **Result:** Resolved NPEs and mocking failures in these specs.
 
 ## Challenges & Failures
 
@@ -102,6 +33,4 @@ Unit tests should be created for each new binder class (e.g., `CollectionBinderS
 ## Future Steps
 
 1.  **Resolve Proxy Initialization:** Determine why proxies are returning as initialized in `Hibernate7GroovyProxySpec`. Investigate if Hibernate 7's bytecode enhancement or ByteBuddy factory settings are interfering.
-2. Continue TCK Failure Audit:
-    - `HibernateGormDatastoreSpec` (Base class, not directly runnable - Pending)
 3.  **Address `Session.save()` usage:** Systematically find and replace `save()` with `persist()` or `merge()` across the codebase and TCK where direct Hibernate session access is used.

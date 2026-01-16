@@ -105,6 +105,9 @@ class EcmUser {
 
     }
 
-
+    static mapping = {
+        maskForCreated column: 'mask_created_id'
+        maskForUpdated column: 'mask_updated_id'
+    }
 
 }
