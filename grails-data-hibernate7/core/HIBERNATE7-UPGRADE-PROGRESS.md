@@ -65,21 +65,21 @@ This document summarizes the approaches taken, challenges encountered, and futur
     - In `ManyToOneBinderSpec`, replaced `setCompositeIdentifier` with `setIdentity` and mocked `PropertyConfig` to handle `setUniqueWithinGroup`.
 - **Result:** Resolved these specific test failures.
 
+### 11. Fixes for `BasicValueIdCreatorSpec` and `SimpleIdBinderSpec`
+- **Issue:** `BasicValueIdCreatorSpec` failed with NPE in `NativeGenerator` and `SequenceStyleGenerator`. `SimpleIdBinderSpec` failed with mocking issues.
+- **Approach:**
+    - Created `GrailsIdentityGenerator` to encapsulate identity generation logic.
+    - Updated `BasicValueIdCreator` to use `GrailsIdentityGenerator` and `GrailsSequenceStyleGenerator`.
+    - Updated `BasicValueIdCreatorSpec` to mock `ServiceRegistry`, `JdbcEnvironment`, `IdentifierHelper`, and `SequenceSupport` to satisfy `SequenceStyleGenerator` dependencies.
+    - Updated `SimpleIdBinderSpec` to use real `BasicValueIdCreator` and `Table` instances instead of mocks, avoiding interaction verification issues on real objects.
+- **Result:** Resolved NPEs and mocking failures in these specs.
+
 ## Challenges & Failures
 
 ### 1. Proxy Initialization Behavior
 - **Issue:** In `Hibernate7GroovyProxySpec`, `Location.proxy(id)` returns an object that is already initialized (`Hibernate.isInitialized(location) == true`), even after clearing the session.
 - **Attempts:** Tried `session.getReference()`, `session.byId().getReference()`, and using fresh sessions.
 - **Status:** Ongoing investigation. Debugging indicates that Hibernate 7's bytecode enhancement or session management might be reporting Groovy proxies as initialized even when they haven't fetched their target.
-
-### 2. SQL Syntax Errors in DDL (RESOLVED)
-- **Issue:** Several tests showed `JdbcSQLSyntaxErrorException` during schema creation due to dots in column names.
-- **Solution:** Centralized dot-to-underscore replacement in `NamingStrategyWrapper`.
-
-### 3. Missing Methods in Proxies (RESOLVED)
-- **Issue:** Hibernate 7 proxies no longer implement `isInitialized()` or `getInitialized()` directly on the proxy object.
-- **Solution:** Switched to `Hibernate.isInitialized(proxy)`.
-
 
 ## Strategy for GrailsDomainBinder Refactoring
 
@@ -102,9 +102,6 @@ Unit tests should be created for each new binder class (e.g., `CollectionBinderS
 ## Future Steps
 
 1.  **Resolve Proxy Initialization:** Determine why proxies are returning as initialized in `Hibernate7GroovyProxySpec`. Investigate if Hibernate 7's bytecode enhancement or ByteBuddy factory settings are interfering.
-2.  **Fix DDL Generation:** Investigate why FQCNs are leaking into DDL column definitions. This likely requires further changes in `ColumnNameFetcher` or the mapping binders to ensure dots are replaced by underscores globally for generated columns.
-3. Continue TCK Failure Audit:
+2. Continue TCK Failure Audit:
     - `HibernateGormDatastoreSpec` (Base class, not directly runnable - Pending)
-    - `TwoUnidirectionalHasManySpec` (RESOLVED by converting to bidirectional association with explicit `mappedBy` and nullable back-references)
-    - `CompositeIdWithManyToOneAndSequenceSpec` (NPE in SequenceStyleGenerator)
-4.  **Address `Session.save()` usage:** Systematically find and replace `save()` with `persist()` or `merge()` across the codebase and TCK where direct Hibernate session access is used.
+3.  **Address `Session.save()` usage:** Systematically find and replace `save()` with `persist()` or `merge()` across the codebase and TCK where direct Hibernate session access is used.
