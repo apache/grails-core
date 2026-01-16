@@ -182,7 +182,7 @@ ext {
                         pomProperties.put(extractedConstraint.versionPropertyName, inlineVersion)
                     }
 
-                    if (gradle.includedBuilds*.any { it.name == artifactId && groupId.startsWith('org.apache.grails') }) {
+                    if (gradle.includedBuilds.flatten().any { it.name == artifactId && groupId.startsWith('org.apache.grails') }) {
                         String baseVersionName = artifactId.replaceAll('-', '.')
                         String versionName = "${baseVersionName}.version" as String
                         dep.version[0].value = "\${${versionName}}" as String
