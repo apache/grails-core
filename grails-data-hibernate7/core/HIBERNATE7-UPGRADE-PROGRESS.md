@@ -49,10 +49,26 @@ This document summarizes the approaches taken, challenges encountered, and futur
 - **Reasoning:** Hibernate 7's default naming strategies preserve dots in logical names (e.g., from FQCNs), which leads to invalid SQL in databases like H2. GORM expects underscores for compatibility and valid SQL.
 - **Result:** Resolved `JdbcSQLSyntaxErrorException` in tests like `CascadeBehaviorPersisterSpec`, where join table columns now use valid underscore-delimited names instead of dotted class names.
 
+### 8. Refactoring of `AbstractGrailsDomainBinder`
+- **Approach:** Merged `AbstractGrailsDomainBinder` into `GrailsDomainBinder` to simplify the class hierarchy and remove the abstract base class.
+- **Result:** `AbstractGrailsDomainBinder` has been removed and its functionality (mapping cache management) is now part of `GrailsDomainBinder`.
+
+### 9. Test Fixes for Sealed Classes
+- **Issue:** Tests were failing with "Sealed class ... cannot be mocked" for Hibernate classes like `Column`, `Table`, and `UniqueKey`.
+- **Approach:** Refactored tests (`ColumnConfigToColumnBinderSpec`, `StringColumnConstraintsBinderSpec`, `IndexBinderSpec`, `UniqueNameGeneratorSpec`) to instantiate these classes instead of mocking them.
+- **Result:** Resolved mocking errors for sealed classes.
+
+### 10. Fixes for `BasicValueIdCreatorSpec` and `ManyToOneBinderSpec`
+- **Issue:** `BasicValueIdCreatorSpec` failed with NPE in `NativeGenerator`. `ManyToOneBinderSpec` failed with `MissingMethodException`.
+- **Approach:**
+    - In `BasicValueIdCreatorSpec`, mocked `Database`, `Dialect`, and `GenerationType` to satisfy `NativeGenerator` initialization.
+    - In `ManyToOneBinderSpec`, replaced `setCompositeIdentifier` with `setIdentity` and mocked `PropertyConfig` to handle `setUniqueWithinGroup`.
+- **Result:** Resolved these specific test failures.
+
 ## Challenges & Failures
 
 ### 1. Proxy Initialization Behavior
-- **Issue:** In `Hibernate6GroovyProxySpec`, `Location.proxy(id)` returns an object that is already initialized (`Hibernate.isInitialized(location) == true`), even after clearing the session.
+- **Issue:** In `Hibernate7GroovyProxySpec`, `Location.proxy(id)` returns an object that is already initialized (`Hibernate.isInitialized(location) == true`), even after clearing the session.
 - **Attempts:** Tried `session.getReference()`, `session.byId().getReference()`, and using fresh sessions.
 - **Status:** Ongoing investigation. Debugging indicates that Hibernate 7's bytecode enhancement or session management might be reporting Groovy proxies as initialized even when they haven't fetched their target.
 
@@ -85,7 +101,7 @@ Unit tests should be created for each new binder class (e.g., `CollectionBinderS
 
 ## Future Steps
 
-1.  **Resolve Proxy Initialization:** Determine why proxies are returning as initialized in `Hibernate6GroovyProxySpec`. Investigate if Hibernate 7's bytecode enhancement or ByteBuddy factory settings are interfering.
+1.  **Resolve Proxy Initialization:** Determine why proxies are returning as initialized in `Hibernate7GroovyProxySpec`. Investigate if Hibernate 7's bytecode enhancement or ByteBuddy factory settings are interfering.
 2.  **Fix DDL Generation:** Investigate why FQCNs are leaking into DDL column definitions. This likely requires further changes in `ColumnNameFetcher` or the mapping binders to ensure dots are replaced by underscores globally for generated columns.
 3. Continue TCK Failure Audit:
     - `HibernateGormDatastoreSpec` (Base class, not directly runnable - Pending)

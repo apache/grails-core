@@ -99,6 +99,7 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy-json'
     testImplementation 'org.hibernate.orm:hibernate-jcache'
     testImplementation 'org.spockframework:spock-core'
+    testImplementation "org.hibernate.orm:hibernate-core:$hibernate7Version"
 
     // groovy proxy fixes bytebuddy to be a bit smarter when it comes to groovy metaClass
     testImplementation "org.yakworks:hibernate-groovy-proxy:$yakworksHibernateGroovyProxyVersion", {

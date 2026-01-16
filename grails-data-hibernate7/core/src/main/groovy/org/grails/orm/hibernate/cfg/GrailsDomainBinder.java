@@ -36,6 +36,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.PersistentPropertyToPropertyCo
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.TypeNameProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.*;
+
 import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
 import org.hibernate.boot.ResourceStreamLocator;
@@ -94,8 +95,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
+import java.util.Optional;
 import java.util.SortedSet;
 import java.util.StringTokenizer;
 
@@ -118,7 +119,7 @@ public class GrailsDomainBinder
     public static final String FOREIGN_KEY_SUFFIX = "_id";
     protected static final Map<Class<?>, Mapping> MAPPING_CACHE = new HashMap<>();
     private static final String STRING_TYPE = "string";
-    private static final String EMPTY_PATH = "";
+    public static final String EMPTY_PATH = "";
     public static final char UNDERSCORE = '_';
     public static final String BACKTICK = "`";
 
@@ -2009,77 +2010,9 @@ public class GrailsDomainBinder
     @SuppressWarnings("unchecked")
     private void bindSimpleId(PersistentProperty identifier, RootClass entity,
                                 InFlightMetadataCollector mappings, Identity mappedId, String sessionFactoryBeanName) {
+        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext,namingStrategy);
+        simpleIdBinder.bindSimpleId(identifier, entity, mappedId);
 
-        boolean useSequence = new HibernateEntityWrapper().getMappedForm(identifier.getOwner()).isTablePerConcreteClass();
-        // create the id value
-        BasicValue id = new BasicValue(metadataBuildingContext, entity.getTable());
-
-        String generator;
-        if (mappedId == null) {
-            generator = useSequence ? "sequence-identity" : "native";
-        } else {
-            generator = mappedId.getGenerator();
-            if ("native".equals(generator) && useSequence) {
-                generator = "sequence-identity";
-            }
-        }
-
-        switch (generator) {
-            case "identity" -> id.setCustomIdGeneratorCreator(context -> {
-                // Force IdentityGenerator for databases like MySQL/H2
-                var gen = new org.hibernate.id.IdentityGenerator();
-                context.getProperty().getValue().getColumns().get(0).setIdentity(true);
-                return gen;
-            });
-
-            case "sequence", "sequence-identity" -> id.setCustomIdGeneratorCreator(context -> {
-                // Use the modern SequenceStyleGenerator
-                return new org.hibernate.id.enhanced.SequenceStyleGenerator();
-            });
-
-            case "increment" -> id.setCustomIdGeneratorCreator(context -> {
-                return new org.hibernate.id.IncrementGenerator();
-            });
-
-            case "uuid", "uuid2" -> id.setCustomIdGeneratorCreator(context -> {
-                return new org.hibernate.id.uuid.UuidGenerator(context.getType().getReturnedClass());
-            });
-
-            case "assigned" -> id.setCustomIdGeneratorCreator(context -> {
-                return new org.hibernate.id.Assigned();
-            });
-
-            case "table", "enhanced-table" -> id.setCustomIdGeneratorCreator(context -> {
-                return new org.hibernate.id.enhanced.TableGenerator();
-            });
-
-            case "hilo" -> id.setCustomIdGeneratorCreator(context -> {
-                // Note: Legacy Hilo is often replaced by SequenceStyleGenerator with optimizer
-                return new org.hibernate.id.enhanced.SequenceStyleGenerator();
-            });
-
-            default -> id.setCustomIdGeneratorCreator(GrailsNativeGenerator::new);
-        }
-
-        Property idProperty  = new Property();
-        idProperty.setName(identifier.getName());
-        idProperty.setValue(id);
-        entity.setDeclaredIdentifierProperty(idProperty);
-        entity.setIdentifier(id);
-        // set type
-        new SimpleValueBinder(namingStrategy).bindSimpleValue(identifier, null, id, EMPTY_PATH);
-
-        // create property
-        Property prop = new Property();
-        prop.setValue(id);
-
-        // bind property
-        new PropertyBinder().bindProperty(identifier, prop);
-        // set identifier property
-        entity.setIdentifierProperty(prop);
-
-        Table table = id.getTable();
-        table.setPrimaryKey(new PrimaryKey(table));
     }
 
 
