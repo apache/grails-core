@@ -24,6 +24,6 @@ public class GrailsSequenceStyleGenerator extends SequenceStyleGenerator {
                 generatorProps.setProperty(entry.getKey().toString(), entry.getValue().toString());
             }
         }
-        super.configure(context.getType(), generatorProps, context.getServiceRegistry());
+        super.configure(context,generatorProps);
     }
 }
