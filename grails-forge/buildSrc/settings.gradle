@@ -37,6 +37,7 @@ pluginManagement {
             url = 'https://repository.apache.org/content/groups/staging'
             content {
                 includeGroupByRegex('org[.]apache[.]grails.*')
+                includeModuleByRegex('org[.]apache[.]groovy', 'groovy.*')
             }
             mavenContent {
                 releasesOnly()
@@ -76,6 +77,7 @@ dependencyResolutionManagement {
             url = 'https://repository.apache.org/content/groups/staging'
             content {
                 includeGroupByRegex('org[.]apache[.]grails.*')
+                includeModuleByRegex('org[.]apache[.]groovy', 'groovy.*')
             }
             mavenContent {
                 releasesOnly()
