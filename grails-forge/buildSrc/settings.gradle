@@ -20,77 +20,12 @@ pluginManagement {
     includeBuild('../../build-logic') {
         name = 'build-logic-root'
     }
-    repositories {
-        if (System.getenv('GRAILS_INCLUDE_MAVEN_LOCAL')) {
-            mavenLocal()
-        }
-        mavenCentral()
-        maven { url = 'https://repo.grails.org/grails/restricted' }
-        maven {
-            url = 'https://repository.apache.org/content/groups/snapshots'
-            content {
-                includeVersionByRegex('org[.]apache[.]grails.*', '.*', '.*-SNAPSHOT')
-                includeVersionByRegex('org[.]apache[.]groovy.*', '.*', '.*-SNAPSHOT')
-            }
-        }
-        maven {
-            url = 'https://repository.apache.org/content/groups/staging'
-            content {
-                includeGroupByRegex('org[.]apache[.]grails.*')
-                includeModuleByRegex('org[.]apache[.]groovy', 'groovy.*')
-            }
-            mavenContent {
-                releasesOnly()
-            }
-        }
-        maven {
-            url = 'https://central.sonatype.com/repository/maven-snapshots'
-            content {
-                includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
-            }
-            mavenContent {
-                snapshotsOnly()
-            }
-        }
-    }
+}
+
+plugins {
+    id 'org.apache.grails.buildsrc.repo'
 }
 
 includeBuild('../../build-logic') {
     name = 'build-logic-root'
-}
-
-dependencyResolutionManagement {
-    repositories {
-        if (System.getenv('GRAILS_INCLUDE_MAVEN_LOCAL')) {
-            mavenLocal()
-        }
-        mavenCentral()
-        maven { url = 'https://repo.grails.org/grails/restricted' }
-        maven {
-            url = 'https://repository.apache.org/content/groups/snapshots'
-            content {
-                includeVersionByRegex('org[.]apache[.]grails.*', '.*', '.*-SNAPSHOT')
-                includeVersionByRegex('org[.]apache[.]groovy.*', '.*', '.*-SNAPSHOT')
-            }
-        }
-        maven {
-            url = 'https://repository.apache.org/content/groups/staging'
-            content {
-                includeGroupByRegex('org[.]apache[.]grails.*')
-                includeModuleByRegex('org[.]apache[.]groovy', 'groovy.*')
-            }
-            mavenContent {
-                releasesOnly()
-            }
-        }
-        maven {
-            url = 'https://central.sonatype.com/repository/maven-snapshots'
-            content {
-                includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
-            }
-            mavenContent {
-                snapshotsOnly()
-            }
-        }
-    }
 }
