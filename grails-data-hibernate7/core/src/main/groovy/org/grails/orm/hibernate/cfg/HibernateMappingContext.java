@@ -260,7 +260,10 @@ public class HibernateMappingContext extends AbstractMappingContext {
                     try {
                         resolvedGenerator = ValueGenerator.valueOf(generatorName.toUpperCase(java.util.Locale.ENGLISH));
                     } catch (IllegalArgumentException e) {
-                        if(ClassUtils.isPresent(generatorName)) {
+                        if(generatorName.equalsIgnoreCase("table")) {
+                            resolvedGenerator = ValueGenerator.CUSTOM;
+                        }
+                        else if(ClassUtils.isPresent(generatorName)) {
                             resolvedGenerator = ValueGenerator.CUSTOM;
                         }
                         else {

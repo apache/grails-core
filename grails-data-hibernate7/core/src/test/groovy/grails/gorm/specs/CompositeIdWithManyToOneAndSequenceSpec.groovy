@@ -68,7 +68,7 @@ class Tooth {
 
     static mapping = {
         table name: 'AK_TOOTH'
-        id generator: 'sequence', params: [sequence: 'SEQ_AK_TOOTH']
+        id generator: 'native', params: [sequence_name: 'SEQ_AK_TOOTH']
     }
 }
 

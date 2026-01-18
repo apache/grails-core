@@ -105,4 +105,12 @@ class Identity extends Property {
         config.call()
         return property
     }
+
+    Properties getProperties() {
+        new Properties().tap {
+            getParams()?.each { k, v ->
+                setProperty(k.toString(), v.toString())
+            }
+        }
+    }
 }
