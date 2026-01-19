@@ -3,6 +3,7 @@ package org.grails.orm.hibernate.cfg.domainbinding;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.function.BiFunction;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -45,20 +46,25 @@ public class BasicValueIdCreator {
         generatorFactories.put("uuid", (context, mappedId) -> new UuidGenerator(context.getType().getReturnedClass()));
         generatorFactories.put("uuid2", (context, mappedId) -> new UuidGenerator(context.getType().getReturnedClass()));
         generatorFactories.put("assigned", (context, mappedId) -> new Assigned());
-        generatorFactories.put("table", (context, mappedId) -> new TableGenerator());
-        generatorFactories.put("enhanced-table", (context, mappedId) -> new TableGenerator());
+        generatorFactories.put("table", (context, mappedId) -> new GrailsTableGenerator(context, mappedId));
+        generatorFactories.put("enhanced-table", (context, mappedId) -> new GrailsTableGenerator(context,mappedId));
         generatorFactories.put("hilo", (context, mappedId) -> new SequenceStyleGenerator());
     }
 
     public BasicValue getBasicValueId(RootClass entity, Identity mappedId, boolean useSequence) {
         BasicValue id = new BasicValue(metadataBuildingContext, entity.getTable());
-        String generator = determineGeneratorName(mappedId, useSequence);
+        String generatorName = determineGeneratorName(mappedId, useSequence);
+        final String entityName = entity.getEntityName();
 
-        id.setCustomIdGeneratorCreator(context -> 
-            generatorFactories.getOrDefault(generator, (ctx, mid) -> new GrailsNativeGenerator(ctx))
-                              .apply(context, mappedId)
-        );
-        
+        id.setCustomIdGeneratorCreator(context -> {
+            // Ensure the ID object knows which entity it belongs to
+            if (mappedId != null && mappedId.getName() == null) {
+                mappedId.setName(entityName);
+            }
+            return generatorFactories.getOrDefault(generatorName, (ctx, mid) -> new GrailsNativeGenerator(ctx))
+                    .apply(context, mappedId);
+        });
+
         return id;
     }
 
