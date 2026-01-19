@@ -18,11 +18,12 @@
  */
 
 plugins {
-    id 'application'
     id 'groovy'
+    id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.gradle.grails-gsp'
     id 'org.apache.grails.gradle.grails-web'
     id 'cloud.wondrify.asset-pipeline'
+    id 'org.apache.grails.buildsrc.compile'
 }
 
 version = "0.0.1"
@@ -58,8 +59,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
     implementation 'org.springframework.boot:spring-boot-starter-logging'
     implementation 'org.springframework.boot:spring-boot-starter-tomcat'
-
-    implementation 'org.webjars:webjars-locator-core'
+    
     testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
@@ -79,7 +79,6 @@ dependencies {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

@@ -49,6 +49,16 @@ public interface GradleRepository extends Ordered {
                             )
                     )
             ));
+            repositories.add(new DefaultGradleRepository(
+                    repositories.size(),
+                    "https://repository.apache.org/content/groups/staging",
+                    null,
+                    List.of(
+                            new VersionRegexRepoFilter(
+                                    "org[.]apache[.]grails[.]gradle", "grails-publish", ".*"
+                            )
+                    )
+            ));
         }
 
         return repositories;

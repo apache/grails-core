@@ -228,7 +228,10 @@ plugins {
 }
 
 jakartaeeMigration {
-    includeTransform('org.grails.plugins:export')
+    // Exclude Grails dependencies since AST and jakartaeeMigration are not compatible
+    excludeTransform('org.apache.grails:**')
+    excludeTransform('org.apache.grails.**:**')
+    // enable automatic migration from EE 8 (javax) or earlier to EE 10 (jakarta) or later
     migrate()
 }
 ----

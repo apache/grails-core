@@ -42,13 +42,21 @@ dependencies {
 
 gradlePlugin {
     plugins {
-        publishPlugin {
+        register('compilePlugin') {
+            id = 'org.apache.grails.buildsrc.compile'
+            implementationClass = 'org.apache.grails.buildsrc.CompilePlugin'
+        }
+        register('publishPlugin') {
             id = 'org.apache.grails.buildsrc.publish'
             implementationClass = 'org.apache.grails.buildsrc.PublishPlugin'
         }
-        sbomPlugin {
+        register('sbomPlugin') {
             id = 'org.apache.grails.buildsrc.sbom'
             implementationClass = 'org.apache.grails.buildsrc.SbomPlugin'
+        }
+        register('sharedPropertyPlugin') {
+            id = 'org.apache.grails.buildsrc.properties'
+            implementationClass = 'org.apache.grails.buildsrc.SharedPropertyPlugin'
         }
     }
 }

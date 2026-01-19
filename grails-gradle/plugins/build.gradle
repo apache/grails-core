@@ -20,7 +20,8 @@
 plugins {
     id 'groovy'
     id 'java-gradle-plugin'
-    id 'maven-publish'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
 }
@@ -122,7 +123,6 @@ tasks.withType(Copy) {
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
 }

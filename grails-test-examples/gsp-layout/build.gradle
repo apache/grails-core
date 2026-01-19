@@ -17,6 +17,11 @@
  *  under the License.
  */
 
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
+}
+
 version = '0.0.1'
 group = 'org.example.grails.layout'
 
@@ -36,7 +41,6 @@ dependencies {
     implementation 'org.apache.grails:grails-controllers'
     implementation 'org.apache.grails:grails-rest-transforms'
 
-    implementation 'org.webjars:webjars-locator-core'
     testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
@@ -66,7 +70,6 @@ dependencies {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }
