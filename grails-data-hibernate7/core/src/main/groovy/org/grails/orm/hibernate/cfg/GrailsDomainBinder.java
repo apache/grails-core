@@ -2010,8 +2010,8 @@ public class GrailsDomainBinder
     @SuppressWarnings("unchecked")
     private void bindSimpleId(PersistentProperty identifier, RootClass entity,
                                 InFlightMetadataCollector mappings, Identity mappedId, String sessionFactoryBeanName) {
-        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext,namingStrategy);
-        simpleIdBinder.bindSimpleId(identifier, entity, mappedId);
+        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext,namingStrategy, getJdbcEnvironment());
+        simpleIdBinder.bindSimpleId(identifier, entity, mappedId, getJdbcEnvironment());
 
     }
 

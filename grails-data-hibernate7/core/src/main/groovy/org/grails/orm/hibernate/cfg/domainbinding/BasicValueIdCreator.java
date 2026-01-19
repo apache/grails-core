@@ -7,9 +7,10 @@ import java.util.Properties;
 import java.util.function.BiFunction;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
+import org.hibernate.generator.Assigned;
 import org.hibernate.generator.Generator;
 import org.hibernate.generator.GeneratorCreationContext;
-import org.hibernate.id.Assigned;
 import org.hibernate.id.IncrementGenerator;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 import org.hibernate.id.enhanced.TableGenerator;
@@ -22,17 +23,24 @@ import org.grails.orm.hibernate.cfg.Identity;
 public class BasicValueIdCreator {
 
     private final MetadataBuildingContext metadataBuildingContext;
+    private JdbcEnvironment jdbcEnvironment;
     private final Map<String, BiFunction<GeneratorCreationContext, Identity, Generator>> generatorFactories;
 
-    public BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext) {
+    public BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext, JdbcEnvironment jdbcEnvironment) {
         this.metadataBuildingContext = metadataBuildingContext;
+        this.jdbcEnvironment = jdbcEnvironment;
         this.generatorFactories = new HashMap<>();
         initializeGeneratorFactories();
     }
 
-    protected BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext, Map<String, BiFunction<GeneratorCreationContext, Identity, Generator>> generatorFactories) {
+    protected BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext
+                                  , JdbcEnvironment  jdbcEnvironment
+            , Map<String, BiFunction<GeneratorCreationContext
+                    , Identity
+                    , Generator>> generatorFactories) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.generatorFactories = generatorFactories;
+        this.jdbcEnvironment =jdbcEnvironment;
     }
 
     private void initializeGeneratorFactories() {
@@ -46,8 +54,8 @@ public class BasicValueIdCreator {
         generatorFactories.put("uuid", (context, mappedId) -> new UuidGenerator(context.getType().getReturnedClass()));
         generatorFactories.put("uuid2", (context, mappedId) -> new UuidGenerator(context.getType().getReturnedClass()));
         generatorFactories.put("assigned", (context, mappedId) -> new Assigned());
-        generatorFactories.put("table", (context, mappedId) -> new GrailsTableGenerator(context, mappedId));
-        generatorFactories.put("enhanced-table", (context, mappedId) -> new GrailsTableGenerator(context,mappedId));
+        generatorFactories.put("table", (context, mappedId) -> new GrailsTableGenerator(context, mappedId, jdbcEnvironment));
+        generatorFactories.put("enhanced-table", (context, mappedId) -> new GrailsTableGenerator(context,mappedId, jdbcEnvironment));
         generatorFactories.put("hilo", (context, mappedId) -> new SequenceStyleGenerator());
     }
 

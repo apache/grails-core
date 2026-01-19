@@ -1,5 +1,8 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
+import org.hibernate.boot.model.relational.SqlStringGenerationContext;
+import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl;
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.id.enhanced.TableGenerator;
 import org.hibernate.id.enhanced.StandardOptimizerDescriptor;
@@ -10,7 +13,7 @@ import java.util.Properties;
 
 public class GrailsTableGenerator extends TableGenerator {
 
-    public GrailsTableGenerator(GeneratorCreationContext context, Identity mappedId) {
+    public GrailsTableGenerator(GeneratorCreationContext context, Identity mappedId, JdbcEnvironment jdbcEnvironment) {
         Properties generatorProps = Optional.ofNullable(mappedId)
                 .map(Identity::getProperties)
                 .orElse(new Properties());
@@ -36,8 +39,28 @@ public class GrailsTableGenerator extends TableGenerator {
 
         // Fixes the "SQL to format should not be null" error
         this.configure(context, generatorProps);
+        var database = context.getDatabase();
+        this.registerExportables(database);
+        // Get the Name record from the physical name
+        var physicalName = database.getDefaultNamespace().getPhysicalName();
 
-        // Ensures the hibernate_sequences table and initial rows are in the DDL
-//        this.registerExportables(context.getDatabase());
-    }
+        // Use the record component accessors (catalog() and schema())
+        // instead of the deprecated getCatalog()/getSchema()
+        String catalog = (physicalName.catalog() != null)
+                ? physicalName.catalog().getCanonicalName()
+                : null;
+
+        String schema = (physicalName.schema() != null)
+                ? physicalName.schema().getCanonicalName()
+                : null;
+
+        // Build the context and initialize templates
+        SqlStringGenerationContext context1 = SqlStringGenerationContextImpl.fromExplicit(
+                jdbcEnvironment,
+                database,
+                catalog,
+                schema
+        );
+        this.initialize(context1);
+     }
 }

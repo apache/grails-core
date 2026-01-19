@@ -1,6 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.PrimaryKey;
 import org.hibernate.mapping.Property;
@@ -20,8 +21,8 @@ public class SimpleIdBinder {
     private final SimpleValueBinder simpleValueBinder;
     private final PropertyBinder propertyBinder;
 
-    public SimpleIdBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy)  {
-        this.basicValueIdCreator = new BasicValueIdCreator(metadataBuildingContext);
+    public SimpleIdBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment)  {
+        this.basicValueIdCreator = new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment);
         this.hibernateEntityWrapper = new HibernateEntityWrapper();
         this.simpleValueBinder =new SimpleValueBinder(namingStrategy);
         this.propertyBinder = new PropertyBinder();
@@ -35,7 +36,7 @@ public class SimpleIdBinder {
     }
 
 
-    public void bindSimpleId(PersistentProperty identifier, RootClass entity, Identity mappedId) {
+    public void bindSimpleId(PersistentProperty identifier, RootClass entity, Identity mappedId, JdbcEnvironment jdbcEnvironment) {
 
         boolean useSequence = hibernateEntityWrapper.getMappedForm(identifier.getOwner()).isTablePerConcreteClass();
         // create the id value
