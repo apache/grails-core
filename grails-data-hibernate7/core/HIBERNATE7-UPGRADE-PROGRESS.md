@@ -7,6 +7,12 @@ This document summarizes the approaches taken, challenges encountered, and futur
 
 
 
+## Hibernate 7 Key Constraints & Best Practices
+
+### Identifier Generators
+- **Avoid Deprecated `configure`:** Do **not** use the three-parameter `configure(Type, Properties, ServiceRegistry)` method in `IdentifierGenerator` (or its subclasses like `SequenceStyleGenerator`). It is marked for removal in Hibernate 7.
+- **Prefer modern initialization:** Use the `GeneratorCreationContext` provided by `setCustomIdGeneratorCreator` to perform initialization. If a manual call to `configure` is absolutely necessary for legacy bridge logic, be aware it may trigger warnings or fail in future versions.
+
 ## Challenges & Failures
 
 ### 1. Proxy Initialization Behavior
@@ -46,6 +52,18 @@ Each new binder should follow this structure:
         generatorFactories.put("enhanced-table", (context, mappedId) -> new TableGenerator());
         generatorFactories.put("hilo", (context, mappedId) -> new SequenceStyleGenerator());
     }
+```
+
+#### GrailsSequenceStyleGenerator Implementation
+```java
+public class GrailsSequenceStyleGenerator extends SequenceStyleGenerator {
+    public GrailsSequenceStyleGenerator(GeneratorCreationContext context, org.grails.orm.hibernate.cfg.Identity mappedId) {
+        var generatorProps = Optional.ofNullable(mappedId).map(Identity::getProperties).orElse(new Properties());
+        // Use 2-parameter configure from IdentifierGenerator / SequenceStyleGenerator
+        super.configure(context, generatorProps);
+        this.registerExportables(context.getDatabase());
+    }
+}
 ```
 
 #### Test Status (`SequenceGeneratorsSpec`)

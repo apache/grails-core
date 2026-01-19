@@ -40,6 +40,7 @@ public class GrailsTableGenerator extends TableGenerator {
         // Fixes the "SQL to format should not be null" error
         this.configure(context, generatorProps);
         var database = context.getDatabase();
+        
         this.registerExportables(database);
         // Get the Name record from the physical name
         var physicalName = database.getDefaultNamespace().getPhysicalName();

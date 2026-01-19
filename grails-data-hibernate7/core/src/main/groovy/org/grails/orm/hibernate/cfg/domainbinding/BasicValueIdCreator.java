@@ -46,7 +46,7 @@ public class BasicValueIdCreator {
     private void initializeGeneratorFactories() {
         generatorFactories.put("identity", (context, mappedId) -> new GrailsIdentityGenerator(context, mappedId));
 
-        BiFunction<GeneratorCreationContext, Identity, Generator> sequenceFactory = (context, mappedId) -> new GrailsSequenceStyleGenerator(context, mappedId);
+        BiFunction<GeneratorCreationContext, Identity, Generator> sequenceFactory = (context, mappedId) -> new GrailsSequenceStyleGenerator(context, mappedId, jdbcEnvironment);
         generatorFactories.put("sequence", sequenceFactory);
         generatorFactories.put("sequence-identity", sequenceFactory);
 
