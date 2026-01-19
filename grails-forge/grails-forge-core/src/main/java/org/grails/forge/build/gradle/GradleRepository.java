@@ -21,6 +21,7 @@ package org.grails.forge.build.gradle;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.order.Ordered;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,7 +35,19 @@ public interface GradleRepository extends Ordered {
 
         String overrideRepo = System.getenv("GRAILS_REPO_URL");
         if (overrideRepo != null && !overrideRepo.isEmpty()) {
-            repositories.add(new DefaultGradleRepository(0, overrideRepo));
+            List<String> overrides = Arrays.stream(overrideRepo.split(";"))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+
+            for (String overrideUrl : overrides) {
+                repositories.add(
+                        new DefaultGradleRepository(
+                                repositories.size(),
+                                overrideUrl
+                        )
+                );
+            }
         }
         repositories.add(new MavenCentralRepository(repositories.size()));
         repositories.add(new DefaultGradleRepository(repositories.size(), "https://repo.grails.org/grails/restricted"));

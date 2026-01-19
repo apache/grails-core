@@ -45,8 +45,7 @@ public class GrailsWrapperHome {
         wrapperDirectory = new File(home, "wrapper");
         if (!wrapperDirectory.exists()) {
             wrapperDirectory.mkdirs();
-        }
-        else if (!wrapperDirectory.isDirectory()) {
+        } else if (!wrapperDirectory.isDirectory()) {
             throw new IllegalStateException("GRAILS_WRAPPER_HOME must contain a wrapper directory. File exists instead at " + wrapperDirectory.getAbsolutePath());
         }
 
@@ -115,27 +114,24 @@ public class GrailsWrapperHome {
         for (GrailsVersion version : versions) {
             if (version.releaseType == GrailsReleaseType.RELEASE && (lastRelease == null || version.compareTo(lastRelease) > 0)) {
                 lastRelease = version;
-            }
-            else if (version.releaseType == GrailsReleaseType.RC && (lastReleaseCandidate == null || version.compareTo(lastReleaseCandidate) > 0)) {
+            } else if (version.releaseType == GrailsReleaseType.RC && (lastReleaseCandidate == null || version.compareTo(lastReleaseCandidate) > 0)) {
                 lastReleaseCandidate = version;
-            }
-            else if (version.releaseType == GrailsReleaseType.MILESTONE && (lastMilestone == null || version.compareTo(lastMilestone) > 0)) {
+            } else if (version.releaseType == GrailsReleaseType.MILESTONE && (lastMilestone == null || version.compareTo(lastMilestone) > 0)) {
                 lastMilestone = version;
-            }
-            else if (version.releaseType == GrailsReleaseType.SNAPSHOT && (lastSnapshot == null || version.compareTo(lastSnapshot) > 0)) {
+            } else if (version.releaseType == GrailsReleaseType.SNAPSHOT && (lastSnapshot == null || version.compareTo(lastSnapshot) > 0)) {
                 lastSnapshot = version;
             }
         }
 
         List<GrailsVersion> sortedVersions = Stream.of(
-                        lastRelease,
-                        lastReleaseCandidate,
-                        lastMilestone,
-                        lastSnapshot
-                )
-                .filter(Objects::nonNull)
-                .sorted()
-                .toList();
+                lastRelease,
+                lastReleaseCandidate,
+                lastMilestone,
+                lastSnapshot
+            )
+            .filter(Objects::nonNull)
+            .sorted()
+            .toList();
 
         return sortedVersions.isEmpty() ? null : sortedVersions.get(sortedVersions.size() - 1);
     }
@@ -161,8 +157,7 @@ public class GrailsWrapperHome {
                     continue;
                 }
                 versions.add(version);
-            }
-            catch (Exception ignored) {
+            } catch (Exception ignored) {
                 throw new IllegalStateException("Grails Version [" + child.getName() + "] at [" + child.getAbsolutePath() + "] is not a valid Grails version.");
             }
         }

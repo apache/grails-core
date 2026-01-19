@@ -19,26 +19,15 @@
 
 package org.grails.cli.profile.commands
 
-import java.nio.file.DirectoryNotEmptyException
-import java.nio.file.FileVisitResult
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.nio.file.SimpleFileVisitor
-import java.nio.file.attribute.BasicFileAttributes
-import java.util.stream.Stream
-
-import groovy.ant.AntBuilder
-import groovy.transform.CompileDynamic
-import groovy.transform.CompileStatic
-import groovy.transform.TypeCheckingMode
-
-import org.eclipse.aether.graph.Dependency
-
 import grails.build.logging.GrailsConsole
 import grails.io.IOUtils
 import grails.util.Environment
 import grails.util.GrailsNameUtils
+import groovy.ant.AntBuilder
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
+import groovy.transform.TypeCheckingMode
+import org.eclipse.aether.graph.Dependency
 import org.grails.build.logging.GrailsConsoleAntBuilder
 import org.grails.build.parsing.CommandLine
 import org.grails.cli.GrailsCli
@@ -52,6 +41,15 @@ import org.grails.cli.profile.commands.io.GradleDependency
 import org.grails.cli.profile.repository.MavenProfileRepository
 import org.grails.io.support.FileSystemResource
 import org.grails.io.support.Resource
+
+import java.nio.file.DirectoryNotEmptyException
+import java.nio.file.FileVisitResult
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
+import java.util.stream.Stream
 
 /**
  * Command for creating Grails applications
@@ -425,7 +423,9 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
             repo.startsWith('http') ? "${' ' * spaces}maven { url \"${repo}\" }" : "${' ' * spaces}${repo}"
         }
 
-        def repositories = profile.repositories.collect(repositoryUrl.curry(4)).unique().join(ln)
+        String configuredRepositories = createRepositoryList(profile.repositories)
+
+        def repositories = configuredRepositories.collect(repositoryUrl.curry(4)).unique().join(ln)
 
         List<Dependency> profileDependencies = profile.dependencies
         def dependencies = profileDependencies.findAll() { Dependency dep ->
@@ -452,11 +452,12 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
                 .unique()
                 .join(ln)
 
-        def buildRepositories = profile.buildRepositories
+        def profileBuildRepositories = profile.buildRepositories
         for (Feature f in features) {
-            buildRepositories.addAll(f.getBuildRepositories())
+            profileBuildRepositories.addAll(f.getBuildRepositories())
         }
-        buildRepositories = buildRepositories.collect(repositoryUrl.curry(8)).unique().join(ln)
+
+        List<String> buildRepositories = createRepositoryList(profileBuildRepositories).collect(repositoryUrl.curry(8)).unique().join(ln)
 
         buildDependencies = buildDependencies.collect() { Dependency dep ->
             String artifactStr = resolveArtifactString(dep)
@@ -503,6 +504,23 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
                 }
             }
         }
+    }
+
+    private String createRepositoryList(List<String> profileRepositories) {
+        List<String> configuredRepositories = []
+        String overrideRepo = System.getProperty('grails.repo.url') ?: System.getenv('GRAILS_REPO_URL')
+        if (overrideRepo) {
+            List<String> overrideRepos = Arrays.stream(overrideRepo.split(';'))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toList()
+            for (String overrideUrl : overrideRepos) {
+                System.out.println("Grails repo url override detected, including repo: ${overrideUrl}")
+                configuredRepositories.add(overrideUrl)
+            }
+        }
+        configuredRepositories.addAll(profileRepositories)
+        configuredRepositories
     }
 
     protected String evaluateProfileName(CommandLine mainCommandLine) {
