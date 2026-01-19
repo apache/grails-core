@@ -34,11 +34,16 @@ class PropertyNameCalculator {
     final Map<String, String> keysToCoordinates = [:]
     final Map<String, ExtractedDependencyConstraint> definitions = [:]
     final Map<String, String> versions = [:]
+    final Map<String, String> forceGroupPrefixes = [:]
 
     PropertyNameCalculator(Map<String, String> platformDefinitions, Map<String, String> definitions, Map<String, String> definitionVersions) {
         this.platformDefinitions.putAll(populate(platformDefinitions, keysToPlatformCoordinates))
         this.definitions.putAll(populate(definitions, keysToCoordinates))
         this.versions.putAll(definitionVersions)
+    }
+
+    void addForcedGroupPrefix(String groupId, String groupPrefix) {
+        forceGroupPrefixes.put(groupId, groupPrefix)
     }
 
     void addProjects(Collection<Project> projects) {
@@ -48,16 +53,21 @@ class PropertyNameCalculator {
             }
 
             String artifactId = (project.findProperty('pomArtifactId') ?: project.name)
-            String baseVersionName = artifactId.replaceAll('-', '.')
-            String versionName = "${baseVersionName}.version" as String
-            String coordinates = "${project.group}:${artifactId}:${project.version}" as String
-            ExtractedDependencyConstraint constraint = new ExtractedDependencyConstraint(coordinates as String)
-            constraint.versionPropertyReference = "\${${versionName}}" as String
-
-            definitions.put(coordinates, constraint)
-            keysToCoordinates.put(coordinates, baseVersionName)
-            versions.put(versionName, project.version as String)
+            String baseVersionName = artifactId.replaceAll('[.]', '-')
+            addProject(project.group, artifactId, project.version as String, baseVersionName)
         }
+    }
+
+    void addProject(String groupId, String artifactId, String version, String baseBomPropertyName) {
+        String baseVersionName = forceGroupPrefixes.containsKey(groupId) ? "${forceGroupPrefixes.get(groupId)}-${baseBomPropertyName}" : baseBomPropertyName
+        String versionName = "${baseVersionName}.version" as String
+        String coordinates = "${groupId}:${artifactId}:${version}" as String
+        ExtractedDependencyConstraint constraint = new ExtractedDependencyConstraint(coordinates as String)
+        constraint.versionPropertyReference = "\${${versionName}}" as String
+
+        definitions.put(coordinates, constraint)
+        keysToCoordinates.put(coordinates, baseVersionName)
+        versions.put(versionName, version)
     }
 
     private static Map<String, ExtractedDependencyConstraint> populate(Map<String, String> definitions, Map<String, String> keyMappings) {
