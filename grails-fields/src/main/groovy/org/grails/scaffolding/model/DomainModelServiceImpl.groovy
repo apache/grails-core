@@ -96,7 +96,8 @@ class DomainModelServiceImpl implements DomainModelService {
             DisplayType displayType = constrained?.displayType
 
             if (displayType == DisplayType.ALL || displayType == DisplayType.OUTPUT_ONLY) {
-                // Explicit DisplayType overrides blacklist
+                // Explicit DisplayType overrides blacklist and all other checks
+                return false
             } else if (displayType == DisplayType.NONE || displayType == DisplayType.INPUT_ONLY) {
                 return true
             } else {
@@ -191,7 +192,8 @@ class DomainModelServiceImpl implements DomainModelService {
             DisplayType displayType = constrained?.displayType
 
             if (displayType == DisplayType.ALL || displayType == DisplayType.INPUT_ONLY) {
-                // Explicit DisplayType overrides blacklist
+                // Explicit DisplayType overrides blacklist and all other checks
+                return false
             } else if (displayType == DisplayType.NONE || displayType == DisplayType.OUTPUT_ONLY) {
                 return true
             } else {
@@ -226,6 +228,18 @@ class DomainModelServiceImpl implements DomainModelService {
      */
     List<DomainProperty> getOutputProperties(PersistentEntity domainClass) {
         getProperties(domainClass, ['version'])
+    }
+
+    /**
+     * <p>Retrieves output properties with a custom blacklist.</p>
+     *
+     * @see {@link DomainModelServiceImpl#getProperties}
+     * @param domainClass The persistent entity
+     * @param blackList Custom blacklist of property names to exclude
+     */
+    @Override
+    List<DomainProperty> getOutputProperties(PersistentEntity domainClass, List<String> blackList) {
+        getProperties(domainClass, new ArrayList<>(blackList ?: ['version']))
     }
 
     /**
