@@ -18,16 +18,16 @@
  */
 package org.grails.datastore.gorm.mongodb.boot.autoconfigure
 
-import grails.gorm.annotation.Entity
-import org.apache.grails.testing.mongo.AbstractMongoGrailsExtension
-import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages
 import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration
-import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
+import org.springframework.boot.mongodb.autoconfigure.MongoAutoConfiguration
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
-import spock.lang.Specification
+
+import grails.gorm.annotation.Entity
+import org.apache.grails.testing.mongo.AbstractMongoGrailsExtension
+import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 
 /**
  * Tests for MongoDB autoconfigure

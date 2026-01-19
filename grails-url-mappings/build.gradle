@@ -37,6 +37,7 @@ dependencies {
     api project(':grails-web-core')
     api project(':grails-controllers')
     api 'org.apache.groovy:groovy'
+    api 'org.springframework.boot:spring-boot-servlet'
 
     testCompileOnly 'org.junit.jupiter:junit-jupiter-api'
 
@@ -50,7 +51,7 @@ dependencies {
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.junit.platform:junit-platform-runner'
+    testImplementation 'org.junit.platform:junit-platform-suite'
 
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 

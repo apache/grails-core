@@ -82,10 +82,9 @@ public class UrlMappingsAutoConfiguration {
     }
 
     @Bean
-    public UrlMappingsErrorPageCustomizer urlMappingsErrorPageCustomizer(ObjectProvider<UrlMappings> urlMappingsProvider) {
-        UrlMappingsErrorPageCustomizer errorPageCustomizer = new UrlMappingsErrorPageCustomizer();
-        errorPageCustomizer.setUrlMappings(urlMappingsProvider.getIfAvailable());
-        return errorPageCustomizer;
+    @ConditionalOnMissingBean
+    public UrlMappingsErrorPageCustomizer urlMappingsErrorPageCustomizer() {
+        return new UrlMappingsErrorPageCustomizer();
     }
 
     @Bean

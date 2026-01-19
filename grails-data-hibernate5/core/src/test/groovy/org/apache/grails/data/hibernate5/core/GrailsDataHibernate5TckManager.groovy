@@ -32,8 +32,8 @@ import org.h2.Driver
 import org.hibernate.SessionFactory
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.context.ApplicationContext
-import org.springframework.orm.hibernate5.SessionFactoryUtils
-import org.springframework.orm.hibernate5.SessionHolder
+import org.grails.orm.hibernate.support.hibernate5.SessionFactoryUtils
+import org.grails.orm.hibernate.support.hibernate5.SessionHolder
 import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.DefaultTransactionDefinition
 import org.springframework.transaction.support.TransactionSynchronizationManager

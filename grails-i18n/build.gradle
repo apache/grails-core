@@ -40,6 +40,7 @@ dependencies {
     testCompileOnly 'org.apache.groovy:groovy-ant'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    compileOnly 'org.springframework.boot:spring-boot-webmvc'
     compileOnly 'org.springframework:spring-test', {
         // MockHttpServletRequest/Response/Context used in many classes
     }
@@ -49,7 +50,7 @@ dependencies {
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.junit.platform:junit-platform-runner'
+    testImplementation 'org.junit.platform:junit-platform-suite'
 
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 

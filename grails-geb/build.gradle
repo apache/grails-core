@@ -48,7 +48,7 @@ dependencies {
     testFixturesApi 'org.apache.groovy.geb:geb-spock'
     testFixturesApi project(':grails-testing-support-core')
     testFixturesApi project(':grails-datamapping-core')
-    testFixturesApi "org.testcontainers:selenium"
+    testFixturesApi "org.testcontainers:testcontainers-selenium"
     testFixturesApi "org.seleniumhq.selenium:selenium-chrome-driver"
     testFixturesApi "org.seleniumhq.selenium:selenium-remote-driver"
 

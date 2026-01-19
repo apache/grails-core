@@ -28,7 +28,7 @@ import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
 
 import org.springframework.boot.SpringApplication
-import org.springframework.boot.web.context.WebServerApplicationContext
+import org.springframework.boot.web.server.context.WebServerApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.io.ResourceLoader

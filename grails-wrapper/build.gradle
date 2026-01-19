@@ -43,7 +43,7 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.junit.platform:junit-platform-runner'
+    testImplementation 'org.junit.platform:junit-platform-suite'
     // for easier setting of environment variables in tests
     testImplementation 'uk.org.webcompere:system-stubs-core:2.1.8'
 }

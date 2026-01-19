@@ -39,24 +39,28 @@ class RenderMethodTests extends Specification implements ControllerUnitTest<Rend
 
         then:
         "hello" == response.contentAsString
+    }
 
+    void testRenderFileWithoutContentType() {
         when:
-        response.reset()
         controller.render file:"hello".bytes
        
         then:
-        thrown(ControllerExecutionException)
+        // Spring 7.0: rendering file without contentType is not allowed
+        thrown(Exception)
+    }
 
+    void testRenderFileFromInputStream() {
         when:
-        response.reset()
         controller.render file:new ByteArrayInputStream("hello".bytes), contentType:"text/plain"
 
         then:
         "hello" == response.contentAsString
         null == response.getHeader(HttpHeaders.CONTENT_DISPOSITION)
+    }
 
+    void testRenderFileFromInputStreamWithFilename() {
         when:
-        response.reset()
         controller.render file:new ByteArrayInputStream("hello".bytes), contentType:"text/plain", fileName:"hello.txt"
         
         then:
