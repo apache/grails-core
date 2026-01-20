@@ -65,7 +65,7 @@ abstract class Vehicle {
     static mapping = {
         tablePerConcreteClass true
         dynamicUpdate true
-        id generator: 'increment'
+        id generator: 'table'
     }
 }
 
