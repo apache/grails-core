@@ -86,6 +86,19 @@ grails.mime.types = [
 }
 ----
 
+Or the equivalent in `application.yml`:
+
+[source,yaml]
+----
+grails:
+    mime:
+        types:
+            all: '*/*'
+            book: "application/vnd.books.org.book+json;v=1.0"
+            bookv2: "application/vnd.books.org.book+json;v=2.0"
+            ...
+----
+
 WARNING: It is critical that place your new mime types after the 'all' Mime Type because if the Content Type of the request cannot be established then the first entry in the map is used for the response. If you have your new Mime Type at the top then Grails will always try and send back your new Mime Type if the requested Mime Type cannot be established.
 
 Then override the renderer (see the section on "Customizing Response Rendering" for more information on custom renderers) to send back the custom Mime Type in `grails-app/conf/spring/resourses.groovy`:

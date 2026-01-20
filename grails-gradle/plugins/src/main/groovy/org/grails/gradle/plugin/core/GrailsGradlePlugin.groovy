@@ -173,7 +173,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
         }
     }
 
-    private static Provider<String> getMainClassProvider(Project project) {
+    protected static Provider<String> getMainClassProvider(Project project) {
         Provider<FindMainClassTask> findMainClassTask = project.tasks.named('findMainClass', FindMainClassTask)
         project.provider {
             File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
@@ -907,6 +907,15 @@ ${importStatements}
             fileCollection = fileCollection + it.filter({ File file -> !file.name.startsWith('spring-boot-devtools') })
         }
         fileCollection
+    }
+
+    protected FileCollection buildClasspath(Project project, String... configurationNames) {
+        buildClasspath(
+                project,
+                configurationNames.collect {
+                    project.configurations.named(it).getOrNull()
+                }.findAll(/* remove nulls */) as Configuration[]
+        )
     }
 
     @CompileStatic

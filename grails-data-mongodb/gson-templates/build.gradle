@@ -24,6 +24,7 @@ plugins {
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
 
 version = projectVersion
@@ -71,7 +72,6 @@ tasks.named('classes').configure {
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/mongodb-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
 }

@@ -18,7 +18,7 @@ limitations under the License.
 
 ## Branches
 
-**9.0.x** Version of the plugin compatible with Grails 7 and Liquibase 4.27
+**7.0.x** Version of the plugin compatible with Grails 7 and Liquibase 4.27
 
 **5.0.x** Version of the plugin compatible with Grails 6 and Liquibase 4.19
 
@@ -47,7 +47,7 @@ One popular approach is to have a root changelog named changelog.groovy (or chan
 * 3.x: Grails 3 with Hibernate 5
 * 4.0.x Grails 5
 * 5.0.x Grails 6
-* 9.0.x Grails 7
+* 7.0.x Grails 7
 
 ## Documentation
 

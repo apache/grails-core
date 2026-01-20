@@ -18,6 +18,8 @@
  */
 package grails.dev.commands
 
+import groovy.transform.CompileStatic
+
 import org.springframework.context.ConfigurableApplicationContext
 
 import grails.util.Described
@@ -25,43 +27,48 @@ import grails.util.GrailsNameUtils
 import grails.util.Named
 
 /**
- * Represents a command that is run against the {@link org.springframework.context.ApplicationContext}
+ * Represents a command that runs with access to the
+ * {@link org.springframework.context.ApplicationContext}.
  *
  * @author Graeme Rocher
  * @since 3.0
  */
+@CompileStatic
 trait ApplicationCommand implements Named, Described {
 
-    private ConfigurableApplicationContext applicationContext
+    ConfigurableApplicationContext applicationContext
 
     /**
-     * Sets the application context of the command
-     *
-     * @param applicationContext The application context
+     * Calculates the command name as used on the command line.
+     * <p>Example:
+     * {@code UrlMappingsReportCommand} -> {@code url-mappings-report}
+     * @return The command line name of the command
      */
-    void setApplicationContext(ConfigurableApplicationContext applicationContext) {
-        this.applicationContext = applicationContext
-    }
-
-    ConfigurableApplicationContext getApplicationContext() {
-        return this.applicationContext
-    }
-
     @Override
     String getName() {
-        return GrailsNameUtils.getScriptName(GrailsNameUtils.getLogicalName(getClass().getName(), 'Command'))
-    }
-
-    @Override
-    String getDescription() {
-        getName()
+        GrailsNameUtils.getScriptName(
+                GrailsNameUtils.getLogicalName(
+                        getClass().name,
+                        'Command'
+                )
+        )
     }
 
     /**
-     * Handles the command
+     * The description of the command.
+     * By default this returns the name of the command.
+     * @return The description of the command
+     */
+    @Override
+    String getDescription() {
+        name
+    }
+
+    /**
+     * Executes the command.
      *
      * @param executionContext The execution context
-     * @return True if the command was successful
+     * @return {@code true} if the command was successful; {@code false} otherwise
      */
     abstract boolean handle(ExecutionContext executionContext)
 

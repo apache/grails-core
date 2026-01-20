@@ -664,6 +664,8 @@ jobs:
           echo "::group::Add version to the Grails Website - MANUAL"
           echo "Add the released version [${VERSION}] to the Grails Website by running the Release workflow:"
           echo "https://github.com/apache/grails-static-website/actions/workflows/release.yml"
+          echo "Republish Grails Website by running the Publish workflow:"
+          echo "https://github.com/apache/grails-static-website/actions/workflows/publish.yml"
           echo "::endgroup::"
       - name: '📧 Announcement Email'
         run: |
