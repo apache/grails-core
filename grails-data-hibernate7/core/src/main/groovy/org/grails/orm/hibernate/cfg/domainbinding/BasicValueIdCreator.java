@@ -18,18 +18,21 @@ import org.hibernate.id.uuid.UuidGenerator;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.RootClass;
 
+import org.grails.orm.hibernate.cfg.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Identity;
 
 public class BasicValueIdCreator {
 
     private final MetadataBuildingContext metadataBuildingContext;
     private JdbcEnvironment jdbcEnvironment;
+    private HibernatePersistentEntity domainClass;
     private final Map<String, BiFunction<GeneratorCreationContext, Identity, Generator>> generatorFactories;
 
-    public BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext, JdbcEnvironment jdbcEnvironment) {
+    public BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext, JdbcEnvironment jdbcEnvironment, HibernatePersistentEntity domainClass) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.jdbcEnvironment = jdbcEnvironment;
         this.generatorFactories = new HashMap<>();
+        this.domainClass = domainClass;
         initializeGeneratorFactories();
     }
 
@@ -50,7 +53,7 @@ public class BasicValueIdCreator {
         generatorFactories.put("sequence", sequenceFactory);
         generatorFactories.put("sequence-identity", sequenceFactory);
 
-        generatorFactories.put("increment", (context, mappedId) -> new IncrementGenerator());
+        generatorFactories.put("increment", (context, mappedId) -> new GrailsIncrementGenerator(context, mappedId, jdbcEnvironment, domainClass));
         generatorFactories.put("uuid", (context, mappedId) -> new UuidGenerator(context.getType().getReturnedClass()));
         generatorFactories.put("uuid2", (context, mappedId) -> new UuidGenerator(context.getType().getReturnedClass()));
         generatorFactories.put("assigned", (context, mappedId) -> new Assigned());

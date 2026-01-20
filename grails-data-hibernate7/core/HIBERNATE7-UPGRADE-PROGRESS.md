@@ -73,9 +73,19 @@ public class GrailsSequenceStyleGenerator extends SequenceStyleGenerator {
 | `native` | [x] PASS | |
 | `uuid` | [x] PASS | |
 | `assigned` | [x] PASS | |
-| `sequence` | [ ] FAIL | `AssertionFailure: SequenceStructure not properly initialized` |
-| `table` | [ ] FAIL | `NPE: this.optimizer is null` |
-| `increment` | [ ] FAIL | `NPE: this.previousValueHolder is null` |
+| `sequence` | [x] PASS | |
+| `table` | [x] PASS | |
+| `increment` | [ ] POSTPONED | `Table "org.grails.orm.hibernate.cfg.domainbinding.EntityWithIncrement" not found` |
+
+### GrailsIncrementGenerator Fix Strategy (Postponed)
+
+#### Problem
+The `increment` generator fails because:
+1.  **Quoted Table Name:** Hibernate 7 appears to be quoting the table name which defaults to the FQN, and H2 cannot find it.
+2.  **Initialization:** In Hibernate 7, `IncrementGenerator` needs explicit initialization of its SQL context to avoid NPEs.
+
+#### Current State
+Partial work was done to address initialization and table name resolution, but the test still fails with table-not-found errors in H2. Further investigation into how Hibernate 7 resolves and quotes table names for the `increment` generator is required.
 
 - [x] `SimpleIdBinder`: Orchestrates the binding of simple identifiers by coordinating `BasicValueIdCreator`, `SimpleValueBinder`, and `PropertyBinder`.
 - [x] `PropertyBinder`: Binds `PersistentProperty` to Hibernate `Property`, handling cascade behaviors, access strategies (including Groovy traits), and lazy loading configurations.

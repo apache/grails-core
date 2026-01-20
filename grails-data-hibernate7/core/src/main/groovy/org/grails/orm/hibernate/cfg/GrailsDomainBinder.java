@@ -68,7 +68,6 @@ import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.OneToMany;
 import org.hibernate.mapping.OneToOne;
 import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.PrimaryKey;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.Selectable;
@@ -1585,7 +1584,7 @@ public class GrailsDomainBinder
         PersistentProperty identifierProp = domainClass.getIdentity();
         if (gormMapping == null) {
             if(identifierProp != null) {
-                bindSimpleId(identifierProp, root, mappings, null, sessionFactoryBeanName);
+                bindSimpleId(identifierProp, root, mappings, null, sessionFactoryBeanName, domainClass);
             }
             return;
         }
@@ -1605,7 +1604,7 @@ public class GrailsDomainBinder
                     identifierProp = namedIdentityProp;
                 }
             }
-            bindSimpleId(identifierProp, root, mappings, identity, sessionFactoryBeanName);
+            bindSimpleId(identifierProp, root, mappings, identity, sessionFactoryBeanName, domainClass);
         }
     }
 
@@ -2009,8 +2008,8 @@ public class GrailsDomainBinder
 
     @SuppressWarnings("unchecked")
     private void bindSimpleId(PersistentProperty identifier, RootClass entity,
-                                InFlightMetadataCollector mappings, Identity mappedId, String sessionFactoryBeanName) {
-        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext,namingStrategy, getJdbcEnvironment());
+                              InFlightMetadataCollector mappings, Identity mappedId, String sessionFactoryBeanName, HibernatePersistentEntity domainClass) {
+        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext,namingStrategy, getJdbcEnvironment(), domainClass);
         simpleIdBinder.bindSimpleId(identifier, entity, mappedId, getJdbcEnvironment());
 
     }

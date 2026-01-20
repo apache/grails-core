@@ -9,6 +9,7 @@ import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.Table;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.orm.hibernate.cfg.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 
@@ -21,8 +22,8 @@ public class SimpleIdBinder {
     private final SimpleValueBinder simpleValueBinder;
     private final PropertyBinder propertyBinder;
 
-    public SimpleIdBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment)  {
-        this.basicValueIdCreator = new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment);
+    public SimpleIdBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment, HibernatePersistentEntity domainClass)  {
+        this.basicValueIdCreator = new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment, domainClass);
         this.hibernateEntityWrapper = new HibernateEntityWrapper();
         this.simpleValueBinder =new SimpleValueBinder(namingStrategy);
         this.propertyBinder = new PropertyBinder();

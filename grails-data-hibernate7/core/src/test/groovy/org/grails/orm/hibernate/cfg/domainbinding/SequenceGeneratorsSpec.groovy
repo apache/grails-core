@@ -74,6 +74,7 @@ class SequenceGeneratorsSpec extends HibernateGormDatastoreSpec {
     }
 
     @Rollback
+    //TODO Still broken
     void "test increment generator"() {
         when:
         def entity1 = new EntityWithIncrement(name: "test1").save(flush: true)
