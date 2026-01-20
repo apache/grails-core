@@ -586,6 +586,7 @@ class DefaultConstrainedProperty implements ConstrainedProperty {
      *         Returns true unless displayType is explicitly set to NONE.
      * @deprecated Use {@link #getDisplayType()} instead for more granular control
      */
+    @Deprecated
     @Override
     boolean isDisplay() {
         displayType != DisplayType.NONE
