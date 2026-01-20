@@ -21,6 +21,9 @@ pluginManagement {
         name = 'build-logic-root'
     }
     repositories {
+        if (System.getenv('GRAILS_INCLUDE_MAVEN_LOCAL')) {
+            mavenLocal()
+        }
         mavenCentral()
         maven { url = 'https://repo.grails.org/grails/restricted' }
         maven {
@@ -57,6 +60,9 @@ includeBuild('../../build-logic') {
 
 dependencyResolutionManagement {
     repositories {
+        if (System.getenv('GRAILS_INCLUDE_MAVEN_LOCAL')) {
+            mavenLocal()
+        }
         mavenCentral()
         maven { url = 'https://repo.grails.org/grails/restricted' }
         maven {

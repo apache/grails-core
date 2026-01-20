@@ -24,6 +24,7 @@ apply plugin: 'checkstyle'
 apply plugin: 'codenarc'
 apply plugin: 'com.diffplug.spotless'
 apply plugin: 'io.spring.nohttp' // enforce https everywhere
+apply plugin: 'org.apache.grails.gradle.grails-code-style'
 
 extensions.configure(SpotlessExtension) {
     // Explicit `it` is required in extension configuration block
@@ -47,18 +48,6 @@ extensions.configure(SpotlessExtension) {
     }
 }
 
-extensions.configure(CheckstyleExtension) {
-    // Explicit `it` is required in extension configuration
-    it.configDirectory = rootProject.layout.projectDirectory.dir('config/checkstyle').asFile
-    it.toolVersion = checkstyleVersion
-}
-
-extensions.configure(CodeNarcExtension) {
-    // Explicit `it` is required in extension configuration
-    it.configFile = rootProject.layout.projectDirectory.file('../etc/config/codenarc/codenarc.groovy').asFile
-    it.toolVersion = codenarcVersion
-}
-
 extensions.configure(NoHttpExtension) {
     // Explicit `it` is required in extension configuration block
     it.source.exclude(
@@ -69,35 +58,6 @@ extensions.configure(NoHttpExtension) {
     )
 }
 
-// Do not run Code Style checks if the property 'skipCodeStyle' is defined
-tasks.withType(Checkstyle).configureEach {
-    group = 'verification'
-    onlyIf { !project.hasProperty('skipCodeStyle') }
-}
-tasks.withType(CodeNarc).configureEach {
-    group = 'verification'
-    onlyIf { !project.hasProperty('skipCodeStyle') }
-}
-
-tasks.register('codeStyle') {
-    group = 'verification'
-    description = 'Runs code style checks'
-    dependsOn(tasks.withType(Checkstyle))
-    dependsOn(tasks.withType(CodeNarc))
-}
-
-tasks.named('checkstyleTest') {
-    enabled = false // Do not check test sources at this time
-}
-
 tasks.named('checkstyleMain') {
     dependsOn('spotlessCheck')
-}
-
-gradle.taskGraph.whenReady {
-    if (tasks.findByName('codenarcTest')) {
-        tasks.named('codenarcTest') {
-            enabled = false // Do not check test sources at this time
-        }
-    }
 }

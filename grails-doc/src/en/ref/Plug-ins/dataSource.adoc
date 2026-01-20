@@ -45,6 +45,19 @@ dataSource {
 }
 ----
 
+Or the equivalent in `grails-app/conf/application.yml`:
+
+[source,yaml]
+----
+dataSource:
+    pooled: true
+    dbCreate: "update"
+    url: "jdbc:mysql://localhost/yourDB"
+    driverClassName: "com.mysql.jdbc.Driver"
+    username: "yourUser"
+    password: "yourPassword"
+----
+
 A `DataSource` configured to look up via JNDI:
 
 [source,groovy]

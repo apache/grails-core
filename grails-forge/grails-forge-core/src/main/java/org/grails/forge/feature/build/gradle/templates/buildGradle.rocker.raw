@@ -141,3 +141,8 @@ assets {
 }
 
 }
+
+// https://github.com/apache/grails-core/issues/15321
+tasks.withType(GroovyCompile).configureEach {
+    groovyOptions.optimizationOptions.indy = false
+}

@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-The {grailsdocs}ref/Servlet%20API/session.html[session] object is an instance of the Servlet API's {javaee}javax/servlet/http/HttpSession.html[HttpSession] class
+The link:{servletApiRefFromRef}session.html[session] object is an instance of the Servlet API's {jakartaee}jakarta/servlet/http/HttpSession.html[HttpSession] class
 
 
 === Examples
@@ -33,22 +33,31 @@ The {grailsdocs}ref/Servlet%20API/session.html[session] object is an instance of
 
 [source,groovy]
 ----
-class UserController {
+class ExampleTagLib {
 
-    def logout() {
-        log.info "User agent: " + request.getHeader("User-Agent")
-        session.invalidate()
-        redirect(action: "login")
+     def oncePerSession = { Map attrs, body ->
+        def key = (attrs.key ?: 'default').toString()
+        def sessionKey = "taglib.oncePerSession.${key}"
+
+        if (!session.getAttribute(sessionKey)) {
+            session.setAttribute(sessionKey, true)
+            out << body()
+        }
     }
-
-    def login() {}
 }
+----
+
+[source,xml]
+----
+<g:oncePerSession key="promo">
+    <div class="promo">Free shipping this week!</div>
+</g:oncePerSession>
 ----
 
 
 === Description
 
 
-The {javaee}javax/servlet/http/HttpSession.html[HttpSession] class is useful for associated session data with a client.
+The {jakartaee}jakarta/servlet/http/HttpSession.html[HttpSession] class is useful for associated session data with a client.
 
 NOTE: The additional methods added to the link:{servletApiRefFromRef}session.html[session] object are documented in the Grails Servlet API reference guide

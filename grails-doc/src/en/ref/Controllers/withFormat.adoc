@@ -104,3 +104,19 @@ withFormat {
 This way the `html` Closure will only be executed if the `html` format is matched.
 
 NOTE: Grails ignores the HTTP Accept header unless you add a `grails.mime.use.accept.header = true` setting to your `application.groovy` file. In other words, `withFormat()` will be completely unaffected by the Accept header without that setting.
+
+[source,groovy]
+----
+grails.mime.use.accept.header = true
+----
+
+Or the equivalent in `application.yml`:
+
+[source,yaml]
+----
+grails:
+    mime:
+        use:
+            accept:
+                header: true
+----

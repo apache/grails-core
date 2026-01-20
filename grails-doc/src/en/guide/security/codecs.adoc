@@ -93,6 +93,16 @@ You can use plain XML escaping instead of HTML4 escaping by setting this config 
 grails.views.gsp.htmlcodec = 'xml'
 ----
 
+Or the equivalent in `application.yml`:
+
+[source,yaml]
+----
+grails:
+    views:
+        gsp:
+            htmlcodec: 'xml'
+----
+
 
 *XMLCodec*
 

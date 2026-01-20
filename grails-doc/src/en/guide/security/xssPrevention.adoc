@@ -130,6 +130,18 @@ Grails also features the ability to control the codecs used on a per plugin basi
 foo.grails.views.gsp.codecs.expression = "none"
 ----    
 
+Or the equivalent in `application.yml`:
+
+[source,yaml]
+----
+foo:
+    grails:
+        views:
+            gsp:
+                codecs:
+                    expression: "none"
+----
+
 
 ==== Per Page Encoding
 
@@ -197,6 +209,17 @@ The default configuration for new applications is fine for most use cases, and b
 grails.views.gsp.filteringCodecForContentType.'text/html' = 'html'
 ----    
 
+Or the equivalent in `application.yml`:
+
+[source,yaml]
+----
+grails:
+    views:
+        gsp:
+            filteringCodecForContentType:
+                text/html: 'html'
+----
+
 Note that, if activated, the `staticparts` codec typically needs to be set to `raw` so that static markup is not encoded:
 
 [source,groovy]
@@ -207,4 +230,15 @@ codecs {
         taglib = 'none' // escapes output from taglibs
         staticparts = 'raw' // escapes output from static template parts
     }
+----
+
+Or the equivalent in `application.yml`:
+
+[source,yaml]
+----
+codecs:
+    expression: 'html'  # escapes values inside ${}
+    scriptlet: 'html'   # escapes output from scriptlets in GSPs
+    taglib: 'none'      # escapes output from taglibs
+    staticparts: 'raw'  # escapes output from static template parts
 ----

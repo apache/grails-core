@@ -27,7 +27,7 @@ Within the scope of a tag library there are a number of pre-defined variables in
 * `pageScope` - A reference to the link:{tagLibrariesRef}pageScope.html[pageScope] object used for GSP rendering (i.e. the binding)
 * `params` - The link:{controllersRef}params.html[params] object for retrieving request parameters
 * `pluginContextPath` - The context path to the plugin that contains the tag library
-* `request` - The {javaee}javax/servlet/http/HttpServletRequest.html[HttpServletRequest] instance
-* `response` - The {javaee}javax/servlet/http/HttpServletResponse.html[HttpServletResponse] instance
-* `servletContext` - The {javaee}javax/servlet/ServletContext.html[javax.servlet.ServletContext] instance
-* `session` - The {javaee}javax/servlet/http/HttpSession.html[HttpSession] instance
+* `request` - The {jakartaee}jakarta/servlet/http/HttpServletRequest.html[HttpServletRequest] instance
+* `response` - The {jakartaee}jakarta/servlet/http/HttpServletResponse.html[HttpServletResponse] instance
+* `servletContext` - The {jakartaee}jakarta/servlet/ServletContext.html[javax.servlet.ServletContext] instance
+* `session` - The {jakartaee}jakarta/servlet/http/HttpSession.html[HttpSession] instance

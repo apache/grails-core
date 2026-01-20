@@ -28,7 +28,7 @@ There are a few configuration options for the plugin; these are specified in
 *Property*,*Default*,*Description*
 grails.cache.enabled,`true`,Whether to enable the plugin
 grails.cache.clearAtStartup,`false`,Whether to clear all caches at startup
-grails.cache.cacheManager,lGrailsConcurrentMapCacheManager,Cache Manager to use. Default cache manager uses Spring Frameworks ConcurrentMapCache which might grow limitless. If you cannot predict how many cache entries you are going to generate use "GrailsConcurrentLinkedMapCacheManager" instead which uses com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap and limits by default to 10000 entries per cache.
+grails.cache.cacheManager,GrailsConcurrentMapCacheManager,Cache Manager to use. Default cache manager uses Spring Frameworks ConcurrentMapCache which might grow limitless. If you cannot predict how many cache entries you are going to generate use "GrailsConcurrentLinkedMapCacheManager" instead which uses com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap and limits by default to 10000 entries per cache.
 |===
 
 The cache implementation used by this plugin is very simple, so there aren't
