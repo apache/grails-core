@@ -37,7 +37,7 @@ public class SimpleIdBinder {
     }
 
 
-    public void bindSimpleId(PersistentProperty identifier, RootClass entity, Identity mappedId, JdbcEnvironment jdbcEnvironment) {
+    public void bindSimpleId(PersistentProperty identifier, RootClass entity, Identity mappedId) {
 
         boolean useSequence = hibernateEntityWrapper.getMappedForm(identifier.getOwner()).isTablePerConcreteClass();
         // create the id value

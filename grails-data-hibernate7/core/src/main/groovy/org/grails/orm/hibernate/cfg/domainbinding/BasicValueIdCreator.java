@@ -3,7 +3,6 @@ package org.grails.orm.hibernate.cfg.domainbinding;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.function.BiFunction;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -11,9 +10,7 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.generator.Assigned;
 import org.hibernate.generator.Generator;
 import org.hibernate.generator.GeneratorCreationContext;
-import org.hibernate.id.IncrementGenerator;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
-import org.hibernate.id.enhanced.TableGenerator;
 import org.hibernate.id.uuid.UuidGenerator;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.RootClass;
@@ -24,26 +21,29 @@ import org.grails.orm.hibernate.cfg.Identity;
 public class BasicValueIdCreator {
 
     private final MetadataBuildingContext metadataBuildingContext;
-    private JdbcEnvironment jdbcEnvironment;
+    private final JdbcEnvironment jdbcEnvironment;
     private HibernatePersistentEntity domainClass;
     private final Map<String, BiFunction<GeneratorCreationContext, Identity, Generator>> generatorFactories;
+    @SuppressWarnings("unused") // kept for tests that want to provide a prototype BasicValue
+    private final BasicValue id;
 
     public BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext, JdbcEnvironment jdbcEnvironment, HibernatePersistentEntity domainClass) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.jdbcEnvironment = jdbcEnvironment;
-        this.generatorFactories = new HashMap<>();
+        // create a prototype BasicValue (table will be set per-entity when creating the actual BasicValue)
+        this(metadataBuildingContext, jdbcEnvironment, new BasicValue(metadataBuildingContext, null), new HashMap<>());
         this.domainClass = domainClass;
         initializeGeneratorFactories();
     }
 
     protected BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext
                                   , JdbcEnvironment  jdbcEnvironment
+                                  , BasicValue prototypeBasicValue
             , Map<String, BiFunction<GeneratorCreationContext
                     , Identity
                     , Generator>> generatorFactories) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.generatorFactories = generatorFactories;
-        this.jdbcEnvironment =jdbcEnvironment;
+        this.jdbcEnvironment = jdbcEnvironment;
+        this.id = prototypeBasicValue;
     }
 
     private void initializeGeneratorFactories() {
@@ -63,7 +63,7 @@ public class BasicValueIdCreator {
     }
 
     public BasicValue getBasicValueId(RootClass entity, Identity mappedId, boolean useSequence) {
-        BasicValue id = new BasicValue(metadataBuildingContext, entity.getTable());
+        // create a BasicValue for the specific entity table (do not reuse the prototype directly because table differs)
         String generatorName = determineGeneratorName(mappedId, useSequence);
         final String entityName = entity.getEntityName();
 
