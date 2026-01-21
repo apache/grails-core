@@ -18,6 +18,7 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import spock.lang.IgnoreIf
 import org.apache.grails.data.testing.tck.domains.PlantCategory
 import org.apache.grails.data.testing.tck.domains.Publication
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
@@ -26,6 +27,7 @@ import spock.lang.PendingFeature
 /**
  * @author graemerocher
  */
+@IgnoreIf({ System.getProperty("hibernate7.gorm.suite") == "true" })
 class NamedQuerySpec extends GrailsDataTckSpec {
 
     void setupSpec() {

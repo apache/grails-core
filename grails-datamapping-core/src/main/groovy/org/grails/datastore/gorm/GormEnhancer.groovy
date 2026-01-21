@@ -463,7 +463,7 @@ class GormEnhancer implements Closeable {
     protected void addStaticMethods(PersistentEntity e, boolean onlyExtendedMethods) {
         def cls = e.javaClass
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
-        def staticApiProvider = getStaticApi(cls)
+        def staticApiProvider = getStaticApi(cls as Class<Object>)
         for (Method m in (onlyExtendedMethods ? staticApiProvider.extendedMethods : staticApiProvider.methods)) {
             def method = m
             if (method != null) {
@@ -500,7 +500,7 @@ class GormEnhancer implements Closeable {
     protected void addInstanceMethods(PersistentEntity e, boolean onlyExtendedMethods) {
         Class cls = e.javaClass
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
-        for (AbstractGormApi apiProvider in getInstanceMethodApiProviders(cls)) {
+        for (AbstractGormApi apiProvider in getInstanceMethodApiProviders(cls as Class<Object>)) {
 
             for (Method method in (onlyExtendedMethods ? apiProvider.extendedMethods : apiProvider.methods)) {
                 def methodName = method.name
