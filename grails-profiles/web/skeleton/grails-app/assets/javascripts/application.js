@@ -5,8 +5,8 @@
 // You're free to add application-wide JavaScript to this file, but it's generally better
 // to create separate JavaScript files as needed.
 //
-//= require webjars/dist/jquery.js
-//= require webjars/dist/js/bootstrap.bundle.js
+//= require webjars/jquery/%/dist/jquery.js
+//= require webjars/bootstrap/%/dist/js/bootstrap.bundle.js
 //= require_self
 
 if (typeof jQuery !== 'undefined') {
