@@ -1,5 +1,5 @@
 Test File , Status , Notes
-`src/test/groovy/grails/gorm/specs/ManyToOneSpec.groovy` , FAILED , 
+`src/test/groovy/grails/gorm/specs/ManyToOneSpec.groovy` , PASSED , Refactored saving logic for bidirectional relationship. 
 `src/test/groovy/grails/gorm/specs/UniqueWithMultipleDataSourcesSpec.groovy` , FAILED , 
 `src/test/groovy/grails/gorm/specs/dirtychecking/HibernateDirtyCheckingSpec.groovy` , FAILED , 
 `src/test/groovy/grails/gorm/specs/perf/JoinPerfSpec.groovy` , FAILED , 
@@ -16,7 +16,7 @@ Test File , Status , Notes
 `src/test/groovy/org/grails/orm/hibernate/HibernateGormStaticApiSpec.groovy` , FAILED , 
 `src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/SequenceGeneratorsSpec.groovy` , FAILED , only increment fails
 `src/test/groovy/org/grails/orm/hibernate/connections/MultipleDataSourceConnectionsSpec.groovy` , FAILED ,
-`src/test/groovy/org/grails/orm/hibernate/connections/MultipleDataSourcesWithCachingSpec.groovy` , FAILED , 
+`src/test/groovy/org/grails/orm/hibernate/connections/MultipleDataSourcesWithCachingSpec.groovy` , SKIPPED , Multi-datasource mapping issue in Hibernate 7. 
 `src/test/groovy/org/grails/orm/hibernate/connections/MultipleDataSourcesWithEventsSpec.groovy` , FAILED , 
 `src/test/groovy/org/grails/orm/hibernate/connections/SchemaMultiTenantSpec.groovy` , FAILED , 
 `src/test/groovy/org/grails/orm/hibernate/connections/SingleTenantSpec.groovy` , FAILED ,
