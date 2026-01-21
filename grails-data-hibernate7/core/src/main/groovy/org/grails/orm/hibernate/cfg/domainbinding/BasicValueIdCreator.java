@@ -20,27 +20,24 @@ import org.grails.orm.hibernate.cfg.Identity;
 
 public class BasicValueIdCreator {
 
-    private final MetadataBuildingContext metadataBuildingContext;
     private final JdbcEnvironment jdbcEnvironment;
     private HibernatePersistentEntity domainClass;
     private final Map<String, BiFunction<GeneratorCreationContext, Identity, Generator>> generatorFactories;
     @SuppressWarnings("unused") // kept for tests that want to provide a prototype BasicValue
     private final BasicValue id;
 
-    public BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext, JdbcEnvironment jdbcEnvironment, HibernatePersistentEntity domainClass) {
+    public BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext, JdbcEnvironment jdbcEnvironment, HibernatePersistentEntity domainClass, RootClass entity) {
         // create a prototype BasicValue (table will be set per-entity when creating the actual BasicValue)
-        this(metadataBuildingContext, jdbcEnvironment, new BasicValue(metadataBuildingContext, null), new HashMap<>());
+        this(jdbcEnvironment, new BasicValue(metadataBuildingContext, entity.getTable()), new HashMap<>());
         this.domainClass = domainClass;
         initializeGeneratorFactories();
     }
 
-    protected BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext
-                                  , JdbcEnvironment  jdbcEnvironment
+    protected BasicValueIdCreator(JdbcEnvironment  jdbcEnvironment
                                   , BasicValue prototypeBasicValue
             , Map<String, BiFunction<GeneratorCreationContext
                     , Identity
                     , Generator>> generatorFactories) {
-        this.metadataBuildingContext = metadataBuildingContext;
         this.generatorFactories = generatorFactories;
         this.jdbcEnvironment = jdbcEnvironment;
         this.id = prototypeBasicValue;
