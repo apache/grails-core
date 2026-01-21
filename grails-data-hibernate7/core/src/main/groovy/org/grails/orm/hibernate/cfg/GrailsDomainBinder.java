@@ -1914,7 +1914,7 @@ public class GrailsDomainBinder
      */
     private Property createProperty(Value value, PersistentClass persistentClass, PersistentProperty grailsProperty, InFlightMetadataCollector mappings) {
         // set type
-        value.setTypeUsingReflection(persistentClass.getClassName(), grailsProperty.getName());
+        value.setTypeUsingReflection(grailsProperty.getOwner().getJavaClass().getName(), grailsProperty.getName());
 
         if (value.getTable() != null) {
             value.createForeignKey();

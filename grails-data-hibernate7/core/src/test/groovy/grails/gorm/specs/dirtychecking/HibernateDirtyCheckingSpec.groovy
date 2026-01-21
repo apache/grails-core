@@ -168,7 +168,13 @@ class Person {
 }
 
 @DirtyCheck
+
 class Address {
+
     String street
+
     String zip
+
 }
+
+

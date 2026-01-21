@@ -18,12 +18,12 @@ public class GrailsIncrementGenerator extends IncrementGenerator {
         }
 
         // Fix the blank FROM clause: Resolve table name
-        String tableName = (mappedId != null && mappedId.getName() != null)
-                ? mappedId.getName()
-                : domainClass.getMappedForm().getTableName();
+        String tableName = domainClass.getMappedForm().getTableName();
 
         if (tableName == null || tableName.isEmpty()) {
-            tableName = domainClass.getJavaClass().getSimpleName();
+            tableName = (mappedId != null && mappedId.getName() != null)
+                    ? mappedId.getName()
+                    : domainClass.getJavaClass().getSimpleName();
         }
         params.put("table", tableName);
 

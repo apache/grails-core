@@ -28,11 +28,12 @@ class Hibernate7GroovyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7Tc
         id == location.id
         // Use the method on the proxy
         false == location.isInitialized()
-        false == org.hibernate.Hibernate.isInitialized(location)
+        false == manager.hibernateDatastore.mappingContext.proxyHandler.isInitialized(location)
 
         "UK" == location.code
         "United Kingdom - UK" == location.namedAndCode()
         true == location.isInitialized()
+        true == manager.hibernateDatastore.mappingContext.proxyHandler.isInitialized(location)
         null != location.target
     }
 }
