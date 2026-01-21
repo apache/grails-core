@@ -377,7 +377,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     }
 
     public <T> T load(final Class<T> entityClass, final Serializable id) throws DataAccessException {
-        return doExecute(session -> session.load(entityClass, id), true);
+        return doExecute(session -> session.getReference(entityClass, id), true);
     }
 
     public <T> T lock(final Class<T> entityClass, final Serializable id, final LockMode lockMode) throws DataAccessException {

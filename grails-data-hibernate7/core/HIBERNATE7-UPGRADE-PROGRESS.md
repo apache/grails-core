@@ -54,3 +54,28 @@ To decompose the monolithic `GrailsDomainBinder` (over 2000 lines) into smaller,
 1.  **Complete Increment Generator Fix:** Implement a mechanism to call `initialize()` on `GrailsIncrementGenerator` with a valid `SqlStringGenerationContext`.
 2.  **Address `Session.save()` usage:** Systematically find and replace `save()` with `persist()` or `merge()` across the codebase and TCK where direct Hibernate session access is used.
 3.  **Resolve Dirty Checking Test:** Investigate why `@DirtyCheck` AST transformation is not providing `hasChanged()` in the `HibernateDirtyCheckingSpec` test environment.
+
+## Current Task: Multi-module Refactoring and Test Fixing
+
+The current task involves extensive modifications and additions across multiple `grails-data-hibernate` modules (`hibernate5`, `hibernate6`, and `hibernate7`).
+
+**Objective:**
+To align the testing infrastructure and add specific proxy handler tests across different Hibernate versions.
+
+**Steps to be completed (blocked by agent's working directory limitations):**
+
+1.  **Add `GrailsDataHibernate5TckManager` to `grails-data-hibernate5`:** Create a `GrailsDataHibernate5TckManager.groovy` based on `GrailsDataHibernate7TckManager` in `grails-data-hibernate5/core/src/test/groovy/org/apache/grails/data/hibernate5/core/`.
+2.  **Add `HibernateGormDatastoreSpec` to `grails-data-hibernate5`:** Create a `HibernateGormDatastoreSpec.groovy` based on the existing `grails.gorm.specs.HibernateGormDatastoreSpec` in `grails-data-hibernate5/core/src/test/groovy/grails/gorm/specs/`, adapted to use `GrailsDataHibernate5TckManager`.
+3.  **Add `HibernateProxyHandlerSpec` to `grails-data-hibernate5`, `grails-data-hibernate6`, and `grails-data-hibernate7`:**
+    *   For each module, create `HibernateProxyHandlerSpec.groovy` in `[module]/core/src/test/groovy/org/grails/orm/hibernate/proxy/`.
+    *   This test will extend the respective module's `HibernateGormDatastoreSpec`.
+    *   The test content will validate `isInitialized`, `unwrap`, and `getIdentifier` methods of `HibernateProxyHandler`.
+4.  **Make tests pass in sequence:**
+    *   Run and fix tests for `grails-data-hibernate5`.
+    *   Run and fix tests for `grails-data-hibernate6`.
+    *   Run and fix tests for `grails-data-hibernate7`.
+
+**Current Blocking Issue:**
+The `read_file` and `write_file` tools are strictly confined to the agent's initial launch directory: `/Users/walterduquedeestrada/IdeaProjects/grails-core/grails-data-hibernate7/core`.
+
+To proceed with creating and modifying files in other modules (`grails-data-hibernate5`, `grails-data-hibernate6`), the agent's working directory needs to be moved to the root of the entire `grails-core` project: `/Users/walterduquedeestrada/IdeaProjects/grails-core`.

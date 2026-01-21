@@ -62,10 +62,10 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
         System.setProperty('hibernate5.gorm.suite', "true")
         grailsApplication = new DefaultGrailsApplication(domainClasses as Class[], new GroovyClassLoader(GrailsDataHibernate5TckManager.getClassLoader()))
         grailsConfig.dataSource.dbCreate = "create-drop"
+        grailsConfig.hibernate.proxy_factory_class = "yakworks.hibernate.proxy.ByteBuddyGroovyProxyFactory"
         if (grailsConfig) {
             grailsApplication.config.putAll(grailsConfig)
         }
-
         hibernateDatastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(grailsConfig), domainClasses as Class[])
         transactionManager = hibernateDatastore.getTransactionManager()
         sessionFactory = hibernateDatastore.sessionFactory
@@ -94,10 +94,10 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
             transactionManager.rollback(tx)
         }
         if (hibernateSession != null) {
-            SessionFactoryUtils.closeSession( (org.hibernate.Session)hibernateSession )
+            SessionFactoryUtils.closeSession((org.hibernate.Session) hibernateSession)
         }
 
-        if(hibernateConfig != null) {
+        if (hibernateConfig != null) {
             hibernateConfig = null
         }
         if (hibernateDatastore != null) {
@@ -108,7 +108,7 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
         hibernateSession = null
         transactionManager = null
         sessionFactory = null
-        if(applicationContext instanceof DisposableBean) {
+        if (applicationContext instanceof DisposableBean) {
             applicationContext.destroy()
         }
         applicationContext = null
@@ -123,7 +123,10 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
         } catch (e) {
             // already closed, ignore
         } finally {
-            try { sql?.close() } catch (ignored) {}
+            try {
+                sql?.close()
+            } catch (ignored) {
+            }
         }
     }
 }
