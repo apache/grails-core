@@ -19,6 +19,8 @@
 
 package org.grails.cli.profile.commands
 
+import groovy.transform.EqualsAndHashCode
+
 import grails.build.logging.GrailsConsole
 import grails.io.IOUtils
 import grails.util.Environment
@@ -61,7 +63,7 @@ import java.util.stream.Stream
 @CompileStatic
 class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepositoryAware {
 
-    private static final String GRAILS_VERSION_FALLBACK_IN_IDE_ENVIRONMENTS_FOR_RUNNING_TESTS = '4.0.0.BUILD-SNAPSHOT'
+    private static final String GRAILS_VERSION_FALLBACK_IN_IDE_ENVIRONMENTS_FOR_RUNNING_TESTS = '7.0.0'
     public static final String NAME = 'create-app'
     public static final String PROFILE_FLAG = 'profile'
     public static final String FEATURES_FLAG = 'features'
@@ -109,8 +111,7 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
                 if (val == true) {
                     candidates.addAll(profileNames)
                     return cursor
-                }
-                else if (!profileNames.contains(val)) {
+                } else if (!profileNames.contains(val)) {
                     def valStr = val.toString()
 
                     def candidateProfiles = profileNames.findAll { String pn ->
@@ -121,16 +122,14 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
                     candidates.addAll(candidateProfiles)
                     return cursor
                 }
-            }
-            else if (lastOption.key == FEATURES_FLAG) {
+            } else if (lastOption.key == FEATURES_FLAG) {
                 def val = lastOption.value
                 def profile = profileRepository.getProfile(commandLine.hasOption(PROFILE_FLAG) ? commandLine.optionValue(PROFILE_FLAG).toString() : getDefaultProfile())
                 def featureNames = profile.features.collect() { Feature f -> f.name }
                 if (val == true) {
                     candidates.addAll(featureNames)
                     return cursor
-                }
-                else if (!profileNames.contains(val)) {
+                } else if (!profileNames.contains(val)) {
                     def valStr = val.toString()
                     if (valStr.endsWith(',')) {
                         def specified = valStr.split(',')
@@ -212,9 +211,10 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
     }
 
     Set<File> findAllFilesByName(File projectDir, String fileName) {
-        Set<File> files = (Set)[]
+        Set<File> files = (Set) []
         if (projectDir.exists()) {
             Files.walkFileTree(projectDir.absoluteFile.toPath(), new SimpleFileVisitor<Path>() {
+
                 @Override
                 FileVisitResult visitFile(Path path, BasicFileAttributes mainAtts)
                         throws IOException {
@@ -307,8 +307,7 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
                 File tmpDir
                 if (location instanceof FileSystemResource) {
                     skeletonDir = location.createRelative('skeleton').file
-                }
-                else {
+                } else {
                     tmpDir = unzipProfile(ant, location)
                     skeletonDir = new File(tmpDir, "META-INF/grails-profile/features/$f.name/skeleton")
                 }
@@ -328,15 +327,14 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
 
             replaceBuildTokens(profileName, profileInstance, features, projectTargetDirectory)
             cmd.console.addStatus(
-                "${name == 'create-plugin' ? 'Plugin' : 'Application'} created at ${projectTargetDirectory.absolutePath}"
+                    "${name == 'create-plugin' ? 'Plugin' : 'Application'} created at ${projectTargetDirectory.absolutePath}"
             )
             if (profileInstance.instructions) {
                 cmd.console.addStatus(profileInstance.instructions)
             }
             GrailsCli.tiggerAppLoad()
             return true
-        }
-        else {
+        } else {
             System.err.println("Cannot find profile $profileName")
             return false
         }
@@ -376,13 +374,13 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
         List<String> features = commandLine.optionValue('features')?.toString()?.split(',')?.toList()
 
         CreateAppCommandObject cmd = new CreateAppCommandObject(
-            appName: appName,
-            baseDir: executionContext.baseDir,
-            profileName: profileName,
-            grailsVersion: Environment.getPackage().getImplementationVersion() ?: GRAILS_VERSION_FALLBACK_IN_IDE_ENVIRONMENTS_FOR_RUNNING_TESTS,
-            features: features,
-            inplace: inPlace,
-            console: executionContext.console
+                appName: appName,
+                baseDir: executionContext.baseDir,
+                profileName: profileName,
+                grailsVersion: Environment.getPackage().getImplementationVersion() ?: GRAILS_VERSION_FALLBACK_IN_IDE_ENVIRONMENTS_FOR_RUNNING_TESTS,
+                features: features,
+                inplace: inPlace,
+                console: executionContext.console
         )
 
         return this.handle(cmd)
@@ -419,12 +417,8 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
         AntBuilder ant = new GrailsConsoleAntBuilder()
         def ln = System.getProperty('line.separator')
 
-        Closure repositoryUrl = { int spaces, String repo ->
-            repo.startsWith('http') ? "${' ' * spaces}maven { url \"${repo}\" }" : "${' ' * spaces}${repo}"
-        }
-
-        List<String> configuredRepositories = createRepositoryList(profile.repositories)
-        def repositories = configuredRepositories.collect(repositoryUrl.curry(4)).unique().join(ln)
+        List<GrailsGradleRepository> configuredRepositories = createRepositoryList(profile.repositories)
+        String repositories = configuredRepositories.collect { it.generate(4, ln) }.join(ln)
 
         List<Dependency> profileDependencies = profile.dependencies
         def dependencies = profileDependencies.findAll() { Dependency dep ->
@@ -451,12 +445,12 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
                 .unique()
                 .join(ln)
 
-        List<String> configuredBuildRepositories = createRepositoryList(profile.buildRepositories)
+        List<String> configuredBuildRepositories = new ArrayList<>(profile.buildRepositories)
         for (Feature f in features) {
             configuredBuildRepositories.addAll(f.getBuildRepositories())
         }
 
-        String buildRepositories = createRepositoryList(configuredBuildRepositories).collect(repositoryUrl.curry(8)).unique().join(ln)
+        String buildRepositories = createRepositoryList(configuredBuildRepositories).collect { it.generate(8, ln) }.join(ln)
 
         buildDependencies = buildDependencies.collect() { Dependency dep ->
             String artifactStr = resolveArtifactString(dep)
@@ -505,8 +499,8 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
         }
     }
 
-    private List<String> createRepositoryList(List<String> profileRepositories) {
-        List<String> configuredRepositories = []
+    private List<GrailsGradleRepository> createRepositoryList(List<String> baseRepositories) {
+        List<GrailsGradleRepository> configuredRepositories = []
         String overrideRepo = System.getProperty('grails.repo.url') ?: System.getenv('GRAILS_REPO_URL')
         if (overrideRepo) {
             List<String> overrideRepos = Arrays.stream(overrideRepo.split(';'))
@@ -515,11 +509,18 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
                     .toList()
             for (String overrideUrl : overrideRepos) {
                 System.out.println("Grails repo url override detected, including repo: ${overrideUrl}")
-                configuredRepositories.add(overrideUrl)
+                configuredRepositories.add(new GrailsGradleRepository(url: overrideUrl))
             }
         }
-        configuredRepositories.addAll(profileRepositories)
-        configuredRepositories
+        for (String repoUrl : baseRepositories) {
+            configuredRepositories.add(new GrailsGradleRepository(url: repoUrl))
+        }
+        if (variables['grails.version'].endsWith('-SNAPSHOT')) {
+            GrailsGradleRepository repository = new GrailsGradleRepository(url: 'https://repository.apache.org/content/groups/snapshots', snapshotsOnly: true)
+            repository.includeOnly('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
+            configuredRepositories.add(repository)
+        }
+        configuredRepositories.unique()
     }
 
     protected String evaluateProfileName(CommandLine mainCommandLine) {
@@ -543,8 +544,7 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
                 GrailsConsole.getInstance().warn(warning.toString())
             }
             return (profile.features.findAll() { Feature f -> validFeatureNames.contains(f.name) } + profile.requiredFeatures).unique()
-        }
-        else {
+        } else {
             return (profile.defaultFeatures + profile.requiredFeatures).unique()
         }
     }
@@ -660,8 +660,7 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
         File tmpDir
         if (skeletonResource instanceof FileSystemResource) {
             skeletonDir = skeletonResource.file
-        }
-        else {
+        } else {
             // establish the JAR file name and extract
             tmpDir = unzipProfile(ant, skeletonResource)
             skeletonDir = new File(tmpDir, 'META-INF/grails-profile/skeleton')
@@ -789,6 +788,7 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
     }
 
     static class CreateAppCommandObject {
+
         String appName
         File baseDir
         String profileName
@@ -796,5 +796,83 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
         List<String> features
         boolean inplace = false
         GrailsConsole console
+    }
+
+    @EqualsAndHashCode(includes = ['url', 'includeRestriction'])
+    private static class GrailsGradleRepository {
+
+        String url
+
+        GradleRepositoryRegex includeRestriction
+        boolean releaseOnly
+        boolean snapshotsOnly
+
+        void validate() {
+            if (releaseOnly && snapshotsOnly) {
+                throw new IllegalArgumentException('Repository cannot be both releaseOnly and snapshotsOnly')
+            }
+        }
+
+        void includeOnly(String groupRegex, String artifactRegex, String versionRegex) {
+            includeRestriction = new GradleRepositoryRegex(
+                    groupPattern: groupRegex,
+                    artifactPattern: artifactRegex,
+                    versionPattern: versionRegex
+            )
+        }
+
+        String generate(int spaces, String lineSeparator) {
+            validate()
+
+            List<String> lines = ["${' ' * spaces}maven {" as String]
+            if (url.startsWith('http')) {
+                lines.add("${' ' * (spaces + 4)}url = '${url}'" as String)
+            } else {
+                // mavenLocal(), mavenCentral(), etc
+                lines.add("${' ' * (spaces + 4)}${url}" as String)
+            }
+
+            if (includeRestriction) {
+                lines.add(includeRestriction.generate(spaces + 4, lineSeparator))
+            }
+
+            if (releaseOnly || snapshotsOnly) {
+                lines.add("${' ' * (spaces + 4)}mavenContent {" as String)
+                if (releaseOnly) {
+                    lines.add("${' ' * (spaces + 8)}releasesOnly()" as String)
+                } else { // snapshotsOnly
+                    lines.add("${' ' * (spaces + 8)}snapshotsOnly()" as String)
+                }
+                lines.add("${' ' * (spaces + 4)}}" as String)
+            }
+
+            lines.add("${' ' * spaces}}" as String)
+
+            return lines.join(lineSeparator)
+        }
+    }
+
+    @EqualsAndHashCode(includes = ['groupPattern', 'artifactPattern', 'versionPattern'])
+    private static class GradleRepositoryRegex {
+
+        String groupPattern = '.*'
+        String artifactPattern = '.*'
+        String versionPattern = '.*'
+
+        private void validate() {
+            if (!groupPattern || !artifactPattern || !versionPattern) {
+                throw new IllegalArgumentException('Patterns must be defined')
+            }
+        }
+
+        String generate(int spaces, String lineSeparator) {
+            validate()
+
+            List<String> lines = []
+            lines.add("${' ' * spaces}content {" as String)
+            lines.add("${' ' * (spaces + 4)}includeVersionByRegex('${groupPattern}', '${artifactPattern}', '${versionPattern}')" as String)
+            lines.add("${' ' * spaces}}" as String)
+            return lines.join(lineSeparator)
+        }
     }
 }
