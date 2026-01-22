@@ -65,7 +65,7 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate5T
                 ${staticMapping.collect { name, value -> "${name} ${value}" }.join('\n            ')}
             }
         }
-    """.stripIndent()
+    """
 
         def clazz = classLoader.parseClass(classText)
         createPersistentEntity(clazz, binder)

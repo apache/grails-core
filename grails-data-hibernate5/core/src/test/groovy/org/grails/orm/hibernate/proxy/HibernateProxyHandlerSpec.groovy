@@ -30,6 +30,9 @@ class HibernateProxyHandlerSpec extends HibernateGormDatastoreSpec {
 
         // Get a proxy without initializing it
         Location proxyLocation = Location.proxy(location.id)
+        println "proxyLocation class: ${proxyLocation.getClass().name}"
+        println "proxyLocation instanceof EntityProxy: ${proxyLocation instanceof org.grails.datastore.mapping.proxy.EntityProxy}"
+        println "Hibernate.isInitialized(proxyLocation): ${org.hibernate.Hibernate.isInitialized(proxyLocation)}"
 
         expect:
         proxyHandler.isInitialized(proxyLocation) == false

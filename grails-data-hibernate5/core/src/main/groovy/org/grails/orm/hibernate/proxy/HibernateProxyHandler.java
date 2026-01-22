@@ -20,17 +20,22 @@ package org.grails.orm.hibernate.proxy;
 
 import java.io.Serializable;
 
+import groovy.lang.GroovyObject;
+import groovy.lang.MetaClass;
+import org.codehaus.groovy.runtime.HandleMetaClass;
 import org.hibernate.Hibernate;
 import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.proxy.HibernateProxyHelper;
 
+import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
 import org.grails.datastore.mapping.proxy.EntityProxy;
 import org.grails.datastore.mapping.proxy.ProxyFactory;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
+import org.grails.orm.hibernate.GrailsHibernateTemplate;
 
 /**
  * Implementation of the ProxyHandler interface for Hibernate using org.hibernate.Hibernate
@@ -49,6 +54,10 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
     public boolean isInitialized(Object o) {
         if (o instanceof EntityProxy) {
             return ((EntityProxy)o).isInitialized();
+        }
+        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
+        if (proxyMc != null) {
+            return proxyMc.isProxyInitiated();
         }
         return Hibernate.isInitialized(o);
     }
@@ -79,6 +88,10 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
         if (object instanceof EntityProxy) {
             return ((EntityProxy)object).getTarget();
         }
+        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(object);
+        if (proxyMc != null) {
+            return proxyMc.getProxyTarget();
+        }
         if (object instanceof PersistentCollection) {
             initialize(object);
             return object;
@@ -94,6 +107,10 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
     public Serializable getIdentifier(Object o) {
         if (o instanceof EntityProxy) {
             return ((EntityProxy)o).getProxyKey();
+        }
+        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
+        if (proxyMc != null) {
+            return proxyMc.getKey();
         }
         if (o instanceof HibernateProxy) {
             return (Serializable) ((HibernateProxy)o).getHibernateLazyInitializer().getIdentifier();
@@ -127,6 +144,9 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
      */
     @Override
     public boolean isProxy(Object o) {
+        if (getProxyInstanceMetaClass(o) != null) {
+            return true;
+        }
         return (o instanceof EntityProxy) || (o instanceof HibernateProxy)  || (o instanceof PersistentCollection);
     }
 
@@ -140,13 +160,39 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
             ((EntityProxy)o).initialize();
         }
         else {
-            Hibernate.initialize(o);
+            ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
+            if (proxyMc != null) {
+                proxyMc.getProxyTarget();
+            }
+            else {
+                Hibernate.initialize(o);
+            }
         }
+    }
+
+    private ProxyInstanceMetaClass getProxyInstanceMetaClass(Object o) {
+        if (o instanceof GroovyObject) {
+            MetaClass mc = ((GroovyObject) o).getMetaClass();
+            if (mc instanceof HandleMetaClass) {
+                mc = ((HandleMetaClass) mc).getAdaptee();
+            }
+            if (mc instanceof ProxyInstanceMetaClass) {
+                return (ProxyInstanceMetaClass) mc;
+            }
+        }
+        return null;
     }
 
     @Override
     public <T> T createProxy(Session session, Class<T> type, Serializable key) {
-        throw new UnsupportedOperationException("createProxy not supported in HibernateProxyHandler");
+        org.hibernate.Session hibSession = null;
+        if (session.getNativeInterface() instanceof GrailsHibernateTemplate grailsHibernateTemplate) {
+            hibSession = grailsHibernateTemplate.getSession();
+        }
+        if (hibSession == null) {
+            throw new IllegalStateException("Could not obtain native Hibernate Session from Session#getNativeInterface()");
+        }
+        return (T) hibSession.getReference(type, key);
     }
 
     @Override

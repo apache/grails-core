@@ -2,7 +2,6 @@ package grails.gorm.specs
 
 import org.apache.grails.data.hibernate6.core.GrailsDataHibernate6TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.apache.grails.data.testing.tck.domains.Person
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.orm.hibernate.AbstractHibernateSession
 import org.grails.orm.hibernate.HibernateDatastore
@@ -10,7 +9,7 @@ import org.grails.orm.hibernate.cfg.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.cfg.HibernatePersistentEntity
 import org.grails.orm.hibernate.query.HibernateQuery
-import org.hibernate.Session
+
 import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.internal.BootstrapContextImpl
 import org.hibernate.boot.internal.InFlightMetadataCollectorImpl
@@ -18,10 +17,10 @@ import org.hibernate.boot.internal.MetadataBuilderImpl
 import org.hibernate.boot.registry.BootstrapServiceRegistry
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService
-import org.hibernate.boot.spi.MetadataContributor
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.internal.SessionFactoryImpl
 import org.hibernate.service.spi.ServiceRegistryImplementor
+import org.hibernate.boot.spi.MetadataContributor
 
 /**
  * The original GormDataStoreSpec destroyed the setup
@@ -113,8 +112,12 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate6T
     }
 
     protected ServiceRegistryImplementor getServiceRegistry() {
-        (manager.hibernateDatastore.sessionFactory as SessionFactoryImpl)
+        getSessionFactory()
                 .getServiceRegistry()
+    }
+
+    protected SessionFactoryImpl getSessionFactory() {
+        manager.hibernateDatastore.sessionFactory as SessionFactoryImpl
     }
 
     protected HibernateDatastore getDatastore() {

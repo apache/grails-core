@@ -342,7 +342,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         return sessionHolder != null && sessionHolder.getSession() == session;
     }
 
-    protected Session getSession() {
+    public Session getSession() {
         try {
             return sessionFactory.getCurrentSession();
         } catch (HibernateException ex) {
