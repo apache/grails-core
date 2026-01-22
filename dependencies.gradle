@@ -37,7 +37,6 @@ ext {
             'jna.version'                   : '5.17.0',
             'jquery.version'                : '3.7.1',
             'objenesis.version'             : '3.4',
-            'gradle-spock.version'          : '2.3-groovy-3.0',
             'spring-boot.version'           : '3.5.9',
     ]
 
