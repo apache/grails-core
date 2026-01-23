@@ -1,13 +1,16 @@
 package org.grails.orm.hibernate.proxy
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.apache.grails.data.testing.tck.domains.Location
 import org.hibernate.Hibernate
 import spock.lang.Shared
 import org.grails.datastore.gorm.proxy.GroovyProxyFactory
 
-class HibernateProxyHandlerSpec extends HibernateGormDatastoreSpec {
+class HibernateProxyHandler6Spec extends HibernateGormDatastoreSpec {
 
+    private static final Logger LOG = LoggerFactory.getLogger(HibernateProxyHandler6Spec.class)
     @Shared HibernateProxyHandler proxyHandler = new HibernateProxyHandler()
 
     void setupSpec() {
@@ -30,6 +33,9 @@ class HibernateProxyHandlerSpec extends HibernateGormDatastoreSpec {
 
         // Get a proxy without initializing it
         Location proxyLocation = Location.proxy(location.id)
+        LOG.info "proxyLocation class: ${proxyLocation.getClass().name}"
+        LOG.info "proxyLocation instanceof EntityProxy: ${proxyLocation instanceof org.grails.datastore.mapping.proxy.EntityProxy}"
+        LOG.info "Hibernate.isInitialized(proxyLocation): ${org.hibernate.Hibernate.isInitialized(proxyLocation)}"
 
         expect:
         proxyHandler.isInitialized(proxyLocation) == false
@@ -60,6 +66,15 @@ class HibernateProxyHandlerSpec extends HibernateGormDatastoreSpec {
 
         // Get a proxy without initializing it
         Location proxyLocation = Location.proxy(location.id)
+        LOG.info "Groovy proxyLocation class: ${proxyLocation.getClass().name}"
+        LOG.info "Groovy proxyLocation instanceof GroovyObject: ${proxyLocation instanceof GroovyObject}"
+        LOG.info "Groovy proxyLocation MetaClass: ${proxyLocation.getMetaClass().getClass().name}"
+        if (proxyLocation instanceof GroovyObject) {
+            def mc = proxyLocation.getMetaClass()
+            if (mc instanceof org.codehaus.groovy.runtime.HandleMetaClass) {
+                LOG.info "Groovy proxyLocation Adaptee: ${mc.getAdaptee().getClass().name}"
+            }
+        }
 
         expect:
         proxyHandler.isInitialized(proxyLocation) == false

@@ -1,13 +1,16 @@
 package org.grails.orm.hibernate.proxy
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.apache.grails.data.testing.tck.domains.Location
 import org.hibernate.Hibernate
 import spock.lang.Shared
 import org.grails.datastore.gorm.proxy.GroovyProxyFactory
 
-class HibernateProxyHandlerSpec extends HibernateGormDatastoreSpec {
+class HibernateProxyHandler5Spec extends HibernateGormDatastoreSpec {
 
+    private static final Logger LOG = LoggerFactory.getLogger(HibernateProxyHandler5Spec.class)
     @Shared HibernateProxyHandler proxyHandler = new HibernateProxyHandler()
 
     void setupSpec() {
@@ -30,9 +33,9 @@ class HibernateProxyHandlerSpec extends HibernateGormDatastoreSpec {
 
         // Get a proxy without initializing it
         Location proxyLocation = Location.proxy(location.id)
-        println "proxyLocation class: ${proxyLocation.getClass().name}"
-        println "proxyLocation instanceof EntityProxy: ${proxyLocation instanceof org.grails.datastore.mapping.proxy.EntityProxy}"
-        println "Hibernate.isInitialized(proxyLocation): ${org.hibernate.Hibernate.isInitialized(proxyLocation)}"
+        LOG.info "proxyLocation class: ${proxyLocation.getClass().name}"
+        LOG.info "proxyLocation instanceof EntityProxy: ${proxyLocation instanceof org.grails.datastore.mapping.proxy.EntityProxy}"
+        LOG.info "Hibernate.isInitialized(proxyLocation): ${org.hibernate.Hibernate.isInitialized(proxyLocation)}"
 
         expect:
         proxyHandler.isInitialized(proxyLocation) == false
