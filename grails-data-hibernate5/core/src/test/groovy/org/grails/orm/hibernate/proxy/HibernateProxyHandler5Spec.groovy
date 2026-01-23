@@ -4,6 +4,8 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.apache.grails.data.testing.tck.domains.Location
+import org.apache.grails.data.testing.tck.domains.Person
+import org.apache.grails.data.testing.tck.domains.Pet
 import org.hibernate.Hibernate
 import spock.lang.Shared
 import org.grails.datastore.gorm.proxy.GroovyProxyFactory
@@ -14,7 +16,7 @@ class HibernateProxyHandler5Spec extends HibernateGormDatastoreSpec {
     @Shared HibernateProxyHandler proxyHandler = new HibernateProxyHandler()
 
     void setupSpec() {
-        manager.addAllDomainClasses([Location])
+        manager.addAllDomainClasses([Location, Person, Pet])
     }
 
     void "test isInitialized for a non-proxied object"() {
@@ -105,5 +107,198 @@ class HibernateProxyHandler5Spec extends HibernateGormDatastoreSpec {
 
         cleanup:
         manager.session.mappingContext.proxyFactory = originalFactory
+    }
+
+    void "test isInitialized for null"() {
+        expect:
+        proxyHandler.isInitialized(null) == false
+    }
+
+    void "test isInitialized for a persistent collection"() {
+        given:
+        Person p = new Person(firstName: "Homer", lastName: "Simpson").save(flush: true)
+        new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        Person loaded = Person.get(p.id)
+        def pets = loaded.pets
+
+        expect:
+        proxyHandler.isInitialized(pets) == false
+
+        when:
+        pets.size()
+
+        then:
+        proxyHandler.isInitialized(pets) == true
+    }
+
+    void "test isInitialized for association name"() {
+        given:
+        Person p = new Person(firstName: "Homer", lastName: "Simpson").save(flush: true)
+        new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        Person loaded = Person.get(p.id)
+
+        expect:
+        proxyHandler.isInitialized(loaded, 'pets') == false
+
+        when:
+        loaded.pets.size()
+
+        then:
+        proxyHandler.isInitialized(loaded, 'pets') == true
+    }
+
+    void "test isProxy"() {
+        given:
+        Location location = new Location(name: "Test").save(flush: true)
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        Location proxy = Location.proxy(location.id)
+
+        expect:
+        proxyHandler.isProxy(proxy) == true
+        proxyHandler.isProxy(location) == false
+        proxyHandler.isProxy(null) == false
+    }
+
+    void "test getIdentifier"() {
+        given:
+        Location location = new Location(name: "Test").save(flush: true)
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        Location proxy = Location.proxy(location.id)
+
+        expect:
+        proxyHandler.getIdentifier(proxy) == location.id
+        proxyHandler.getIdentifier(location) == null
+    }
+
+    void "test getProxiedClass"() {
+        given:
+        Location location = new Location(name: "Test").save(flush: true)
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        Location proxy = Location.proxy(location.id)
+
+        expect:
+        proxyHandler.getProxiedClass(proxy) == Location
+        proxyHandler.getProxiedClass(location) == Location
+    }
+
+    void "test initialize"() {
+        given:
+        Location location = new Location(name: "Test").save(flush: true)
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        Location proxy = Location.proxy(location.id)
+
+        expect:
+        !Hibernate.isInitialized(proxy)
+
+        when:
+        proxyHandler.initialize(proxy)
+
+        then:
+        Hibernate.isInitialized(proxy)
+    }
+
+    void "test unwrap for persistent collection"() {
+        given:
+        Person p = new Person(firstName: "Homer", lastName: "Simpson").save(flush: true)
+        new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        Person loaded = Person.get(p.id)
+        def pets = loaded.pets
+
+        expect:
+        !proxyHandler.isInitialized(pets)
+
+        when:
+        def unwrapped = proxyHandler.unwrap(pets)
+
+        then:
+        unwrapped == pets
+        proxyHandler.isInitialized(pets)
+    }
+
+    void "test isInitialized for association name with null object"() {
+        expect:
+        proxyHandler.isInitialized(null, 'any') == false
+    }
+
+    void "test createProxy"() {
+        given:
+        Location location = new Location(name: "Test").save(flush: true)
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        when:
+        Location proxy = proxyHandler.createProxy(manager.session, Location, location.id)
+
+        then:
+        proxy != null
+        proxy instanceof org.hibernate.proxy.HibernateProxy
+        proxy.id == location.id
+        !Hibernate.isInitialized(proxy)
+    }
+
+    void "test createProxy with AssociationQueryExecutor"() {
+        when:
+        proxyHandler.createProxy(manager.session, null, null)
+
+        then:
+        thrown(UnsupportedOperationException)
+    }
+
+    void "test createProxy throws IllegalStateException if native interface is not GrailsHibernateTemplate"() {
+        given:
+        def mockSession = Stub(org.grails.datastore.mapping.core.Session)
+        mockSession.getNativeInterface() >> "not a template"
+
+        when:
+        proxyHandler.createProxy(mockSession, Location, 1L)
+
+        then:
+        thrown(IllegalStateException)
+    }
+
+    void "test deprecated unwrapProxy and unwrapIfProxy"() {
+        given:
+        Location location = new Location(name: "Test").save(flush: true)
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        Location proxy = Location.proxy(location.id)
+
+        expect:
+        proxyHandler.unwrapProxy(proxy) != proxy
+        proxyHandler.unwrapIfProxy(proxy) != proxy
+        proxyHandler.unwrapProxy(location) == location
+        proxyHandler.unwrapIfProxy(location) == location
+    }
+
+    void "test getAssociationProxy"() {
+        given:
+        Person p = new Person(firstName: "Homer", lastName: "Simpson").save(flush: true)
+        Pet pet = new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        Pet loadedPet = Pet.get(pet.id)
+
+        expect:
+        proxyHandler.getAssociationProxy(loadedPet, 'owner') instanceof org.hibernate.proxy.HibernateProxy
+        proxyHandler.getAssociationProxy(loadedPet, 'name') == null
     }
 }

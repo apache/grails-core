@@ -1,37 +1,42 @@
 /*
- * Copyright 2004-2008 the original author or authors.
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.grails.orm.hibernate.proxy;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.io.Serializable;
+
+import groovy.lang.GroovyObject;
+import groovy.lang.MetaClass;
+import org.codehaus.groovy.runtime.HandleMetaClass;
+import org.hibernate.Hibernate;
+import org.hibernate.collection.spi.PersistentCollection;
+import org.hibernate.proxy.HibernateProxy;
+import org.hibernate.proxy.HibernateProxyHelper;
+
+import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
 import org.grails.datastore.mapping.proxy.EntityProxy;
 import org.grails.datastore.mapping.proxy.ProxyFactory;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
-import org.hibernate.Hibernate;
-import org.hibernate.collection.spi.PersistentCollection;
-import org.hibernate.proxy.HibernateProxy;
-import org.hibernate.proxy.HibernateProxyHelper;
-
-import java.io.Serializable;
-
-import groovy.lang.GroovyObject;
-import groovy.lang.MetaClass;
-import org.codehaus.groovy.runtime.HandleMetaClass;
-import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
 
 /**
@@ -43,20 +48,43 @@ import org.grails.orm.hibernate.GrailsHibernateTemplate;
  */
 public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
 
+    private static final Logger LOG = LoggerFactory.getLogger(HibernateProxyHandler.class);
+
     /**
      * Check if the proxy or persistent collection is initialized.
      * {@inheritDoc}
      */
     @Override
     public boolean isInitialized(Object o) {
+        if (o == null) {
+            LOG.info("isInitialized(Object) - object is null, returning false");
+            return false;
+        }
+        LOG.info("isInitialized(Object) - checking object of type: {}", o.getClass().getName());
         if (o instanceof EntityProxy) {
-            return ((EntityProxy)o).isInitialized();
+            boolean initialized = ((EntityProxy) o).isInitialized();
+            LOG.info("isInitialized(Object) - object is EntityProxy, isInitialized: {}", initialized);
+            return initialized;
+        }
+        if (o instanceof HibernateProxy) {
+            boolean initialized = !((HibernateProxy) o).getHibernateLazyInitializer().isUninitialized();
+            LOG.info("isInitialized(Object) - object is HibernateProxy, isInitialized: {}", initialized);
+            return initialized;
+        }
+        if (o instanceof PersistentCollection) {
+            boolean initialized = ((PersistentCollection) o).wasInitialized();
+            LOG.info("isInitialized(Object) - object is PersistentCollection, wasInitialized: {}", initialized);
+            return initialized;
         }
         ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
         if (proxyMc != null) {
-            return proxyMc.isProxyInitiated();
+            boolean initialized = proxyMc.isProxyInitiated();
+            LOG.info("isInitialized(Object) - object is Groovy Proxy, isProxyInitiated: {}", initialized);
+            return initialized;
         }
-        return Hibernate.isInitialized(o);
+        boolean initialized = Hibernate.isInitialized(o);
+        LOG.info("isInitialized(Object) - Hibernate.isInitialized returned: {}", initialized);
+        return initialized;
     }
 
     /**
@@ -65,11 +93,15 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
      */
     @Override
     public boolean isInitialized(Object obj, String associationName) {
+        LOG.info("isInitialized(Object, String) - checking association '{}' on object of type: {}", associationName, obj != null ? obj.getClass().getName() : "null");
         try {
             Object proxy = ClassPropertyFetcher.getInstancePropertyValue(obj, associationName);
-            return isInitialized(proxy);
+            boolean initialized = isInitialized(proxy);
+            LOG.info("isInitialized(Object, String) - association '{}' isInitialized: {}", associationName, initialized);
+            return initialized;
         }
         catch (RuntimeException e) {
+            LOG.info("isInitialized(Object, String) - RuntimeException occurred while checking association '{}', returning false", associationName);
             return false;
         }
     }
@@ -168,15 +200,20 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
     }
 
     private ProxyInstanceMetaClass getProxyInstanceMetaClass(Object o) {
+        LOG.info("getProxyInstanceMetaClass() - checking if object is GroovyObject: {}", o != null ? o.getClass().getName() : "null");
         if (o instanceof GroovyObject) {
             MetaClass mc = ((GroovyObject) o).getMetaClass();
+            LOG.info("getProxyInstanceMetaClass() - metaClass type: {}", mc.getClass().getName());
             if (mc instanceof HandleMetaClass) {
                 mc = ((HandleMetaClass) mc).getAdaptee();
+                LOG.info("getProxyInstanceMetaClass() - handleMetaClass adaptee type: {}", mc.getClass().getName());
             }
             if (mc instanceof ProxyInstanceMetaClass) {
+                LOG.info("getProxyInstanceMetaClass() - found ProxyInstanceMetaClass");
                 return (ProxyInstanceMetaClass) mc;
             }
         }
+        LOG.info("getProxyInstanceMetaClass() - no ProxyInstanceMetaClass found");
         return null;
     }
 

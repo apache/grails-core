@@ -13,6 +13,24 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         manager.addAllDomainClasses([HibernateGormStaticApiEntity,Club])
     }
 
+    void "proxy test"() {
+        given:
+        def entity = new Club(name: "test").save(flush: true, failOnError: true)
+        println "SAVED ENTITY"
+        manager.session.clear()
+        println "CLEARED SESSION"
+        when:
+        println "CALLING PROXY"
+        def same = Club.proxy(entity.id)
+        println "CALLED PROXY"
+        then:
+        same != null
+        println "CHECKING INITIALIZED"
+        !datastore.mappingContext.proxyFactory.isInitialized(same)
+        println "CHECKED INITIALIZED"
+        same.id == entity.id
+    }
+
     void "Test that get returns the correct instance"() {
         given:
         def entity = new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
