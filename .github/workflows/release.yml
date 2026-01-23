@@ -37,6 +37,9 @@ env:
   TAG: ${{ github.event.release.tag_name }}
   TARGET_BRANCH: ${{ github.event.release.target_commitish }}
   VERSION: will be computed in each job
+concurrency:
+  group: release-pipeline
+  cancel-in-progress: false
 jobs:
   publish:
     name: "Stage Jar Files"

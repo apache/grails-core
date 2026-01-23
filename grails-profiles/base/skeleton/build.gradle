@@ -1,13 +1,6 @@
 buildscript {
     repositories {
-        mavenCentral()
 @buildRepositories@
-        maven {
-           url = 'https://repository.apache.org/content/groups/snapshots'
-           content {
-              includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
-           }
-        }
     }
     dependencies {
         classpath platform("org.apache.grails:grails-bom:$grailsVersion")
@@ -21,14 +14,7 @@ group = "@grails.app.group@"
 @buildPlugins@
 
 repositories {
-    mavenCentral()
 @repositories@
-    maven {
-       url = 'https://repository.apache.org/content/groups/snapshots'
-       content {
-          includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
-       }
-    }
 }
 
 dependencies {

@@ -16,32 +16,13 @@
  */
 package grails.init;
 
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.stream.Collectors;
+public class GrailsReleaseNotFoundException extends Exception {
 
-/**
- * The type of releases that a Grails version may represent
- */
-public enum GrailsReleaseType {
-    RELEASE,
-    RC,
-    MILESTONE,
-    SNAPSHOT;
-
-    /**
-     * @return true if this is a snapshot release
-     */
-    boolean isSnapshot() {
-        return this == SNAPSHOT;
+    public GrailsReleaseNotFoundException(String message) {
+        super(message);
     }
 
-    /**
-     * @return this release type and all higher priority release types
-     */
-    public LinkedHashSet<GrailsReleaseType> upTo() {
-        return new LinkedHashSet<>(Arrays.stream(GrailsReleaseType.values())
-            .filter(e -> e.ordinal() <= this.ordinal())
-            .collect(Collectors.toList()));
+    public GrailsReleaseNotFoundException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

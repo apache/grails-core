@@ -91,6 +91,10 @@ By default, the Grails CLI uses standard maven repos to retrieve upstream Grails
 
         export GRAILS_REPO_URL=$HOME/.m2/repository
 
+This variable also supports multiple repositories by using the separator ';'.  For example:
+
+        export GRAILS_REPO_URL=$HOME/.m2/repository;https://repo1.maven.org/maven2/
+
 The CLI distributions are located under the `grails-forge/grails-cli` project.  The build directory contains the CLI distribution, which can be used to create a Grails Application. Unzip it to any location, for the purposes of this document, we will use `grails-forge/grails-cli/build/distributions` as the working directory.
 
         cd grails-forge/grails-cli/build/distributions
