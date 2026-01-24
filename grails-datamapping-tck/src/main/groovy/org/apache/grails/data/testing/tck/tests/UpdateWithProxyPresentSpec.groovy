@@ -62,30 +62,44 @@ class UpdateWithProxyPresentSpec extends GrailsDataTckSpec {
 
     void 'Test update unidirectional oneToMany with proxy'() {
         given:
-        def parent = new Parent(name: 'Bob').save(flush: true)
-        def child = new Child(name: 'Bill').save(flush: true)
+        Long parentId
+        Long childId
+
+        // Step 1: Persist initial data
+        Parent.withTransaction {
+            parentId = new Parent(name: 'Bob').save(flush: true).id
+            childId = new Child(name: 'Bill').save(flush: true).id
+        }
         manager.session.clear()
 
-        when:
-        parent = Parent.get(parent.id)
-        child = Child.load(child.id) // make sure we've got a proxy.
-        then:
-        manager.session.mappingContext.proxyFactory.isProxy(child) == true
+        when: "Re-loading in a new transaction to test proxy behavior"
+        Parent.withTransaction {
+            def parent = Parent.get(parentId)
 
-        when:
-        parent.addToChildren(child)
-        parent.save(flush: true)
+            // Use the native Hibernate session to ensure a clean, uninitialized proxy
+            // GORM's .load() can sometimes be 'too helpful' and fetch the data
+            def child = manager.hibernateSession.getReference(Child, childId)
+
+            // Verify it is indeed a proxy before we use it
+            assert proxyHandler.isProxy(child)
+            assert !proxyHandler.isInitialized(child)
+
+            // Add the proxy to the parent
+            parent.addToChildren(child)
+            parent.save(flush: true)
+        }
+
+        // Clear to ensure we fetch from DB in the next step
         manager.session.clear()
-        parent = Parent.get(parent.id)
 
-        then:
-        parent.name == 'Bob'
-        parent.children.size() == 1
+        then: "Verify the association was persisted correctly"
+        Parent.withTransaction {
+            def parent = Parent.get(parentId)
+            assert parent.name == 'Bob'
+            assert parent.children.size() == 1
 
-        when:
-        child = parent.children.first()
-
-        then:
-        child.name == 'Bill'
+            def child = parent.children.first()
+            assert child.name == 'Bill'
+        }
     }
 }
