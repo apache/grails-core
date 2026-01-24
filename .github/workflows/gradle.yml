@@ -62,7 +62,7 @@ jobs:
           ./gradlew build
           --continue
           --stacktrace
-          --rerun-tasks
+          --configuration-cache-problems=warn
           -PskipCodeStyle
   build:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
@@ -91,7 +91,6 @@ jobs:
         run: >
           ./gradlew build :grails-shell-cli:installDist groovydoc
           --continue
-          --rerun-tasks
           --stacktrace
           -PonlyCoreTests
           -PskipCodeStyle
@@ -131,8 +130,8 @@ jobs:
         run: >
           ./gradlew build
           --continue
-          --rerun-tasks
           --stacktrace
+          --configuration-cache-problems=warn
           -PskipCodeStyle
       - name: "✅ Verify combined CLI"
         run: |
@@ -176,8 +175,8 @@ jobs:
         run: >
           ./gradlew bootJar check
           --continue
-          --rerun-tasks
           --stacktrace
+          --configuration-cache-problems=warn
           -PgebAtCheckWaiting
           -PonlyFunctionalTests
           -PskipCodeStyle
@@ -210,10 +209,10 @@ jobs:
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: >
-          ./gradlew bootJar cleanTest check
+          ./gradlew bootJar check
           --continue
-          --rerun-tasks
           --stacktrace
+          --configuration-cache-problems=warn
           -PonlyMongodbTests
           -PmongodbContainerVersion=${{ matrix.mongodb-version }}
           -PskipCodeStyle
@@ -243,10 +242,10 @@ jobs:
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: >
-          ./gradlew bootJar cleanTest check
+          ./gradlew bootJar check
           --continue
-          --rerun-tasks
           --stacktrace
+          --configuration-cache-problems=warn
           -PonlyHibernate5Tests
           -PskipCodeStyle
   publishGradle:

@@ -32,6 +32,9 @@ dependencies {
 }
 
 tasks.withType(Test).configureEach {
+    // Disable build cache for tests in CI to ensure they always run
+    outputs.cacheIf { !isCiBuild }
+
     onlyIf {
         ![
                 'onlyFunctionalTests',
@@ -52,6 +55,10 @@ tasks.withType(Test).configureEach {
             maxFailures = 20
             failOnPassedAfterRetry = true
         }
+        testDistribution {
+            enabled = isCiBuild
+            maxLocalExecutors = configuredTestParallel
+        }
     }
     testLogging {
         events('passed', 'skipped', 'failed')
@@ -63,7 +70,7 @@ tasks.withType(Test).configureEach {
     excludes = ['**/*TestCase.class', '**/*$*.class']
     maxParallelForks = configuredTestParallel
     maxHeapSize = isCiBuild ? '768m' : '1024m'
-    forkEvery = hasProperty('forkEveryUnitTest') ? getProperty('forkEveryUnitTest') as long : (isCiBuild ? 20 : 100)
+    forkEvery = hasProperty('forkEveryUnitTest') ? getProperty('forkEveryUnitTest') as long : (isCiBuild ? 50 : 100)
     if (System.getProperty('debug.tests')) {
         jvmArgs += debugArguments
     }
