@@ -18,18 +18,18 @@
  */
 package org.grails.gradle.plugin.core
 
-import javax.inject.Inject
-
+import grails.util.BuildSettings
+import grails.util.Environment
+import grails.util.GrailsNameUtils
+import grails.util.Metadata
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-
-import org.gradle.api.DefaultTask
-import org.gradle.api.attributes.AttributeMatchingStrategy
-
 import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
 import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
+import org.apache.grails.gradle.common.PropertyFileUtils
 import org.apache.tools.ant.filters.EscapeUnicode
 import org.apache.tools.ant.filters.ReplaceTokens
+import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Plugin
@@ -39,6 +39,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.attributes.AttributeMatchingStrategy
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFile
@@ -56,18 +57,6 @@ import org.gradle.api.tasks.testing.Test
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.process.JavaForkOptions
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
-
-import org.springframework.boot.gradle.dsl.SpringBootExtension
-import org.springframework.boot.gradle.plugin.ResolveMainClassName
-import org.springframework.boot.gradle.plugin.SpringBootPlugin
-import org.springframework.boot.gradle.tasks.bundling.BootArchive
-import org.springframework.boot.gradle.tasks.run.BootRun
-
-import grails.util.BuildSettings
-import grails.util.Environment
-import grails.util.GrailsNameUtils
-import grails.util.Metadata
-import org.apache.grails.gradle.common.PropertyFileUtils
 import org.grails.build.parsing.CommandLineParser
 import org.grails.gradle.plugin.commands.ApplicationContextCommandTask
 import org.grails.gradle.plugin.commands.ApplicationContextScriptTask
@@ -78,6 +67,13 @@ import org.grails.gradle.plugin.model.GrailsClasspathToolingModelBuilder
 import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
 import org.grails.io.support.FactoriesLoaderSupport
+import org.springframework.boot.gradle.dsl.SpringBootExtension
+import org.springframework.boot.gradle.plugin.ResolveMainClassName
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+import org.springframework.boot.gradle.tasks.bundling.BootArchive
+import org.springframework.boot.gradle.tasks.run.BootRun
+
+import javax.inject.Inject
 
 /**
  * The main Grails gradle plugin implementation
@@ -364,7 +360,6 @@ ${importStatements}
         dme.imports({
             mavenBom("org.apache.grails:grails-bom:${project.properties['grailsVersion']}")
         })
-        dme.setApplyMavenExclusions(false)
     }
 
     protected String getDefaultProfile() {

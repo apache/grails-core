@@ -46,6 +46,7 @@ pluginManagement {
             url = 'https://repository.apache.org/content/groups/staging'
             content {
                 includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
+                includeModuleByRegex('org[.]apache[.]groovy', 'groovy.*')
             }
             mavenContent {
                 releasesOnly()
@@ -92,16 +93,11 @@ dependencyResolutionManagement {
         }
         mavenCentral()
         gradlePluginPortal()
+        // publish plugin
         maven {
             url = 'https://repository.apache.org/content/groups/snapshots'
             content {
                 includeVersionByRegex('org[.]apache[.]grails[.]gradle.*', '.*', '.*-SNAPSHOT')
-            }
-        }
-        maven {
-            url = 'https://central.sonatype.com/repository/maven-snapshots'
-            content {
-                includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
             }
             mavenContent {
                 snapshotsOnly()

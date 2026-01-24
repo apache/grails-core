@@ -116,38 +116,54 @@ public class GrailsUpdater {
      * @return true if an update was performed, false otherwise
      */
     public boolean update() {
-        GrailsWrapperRepo repo = GrailsWrapperRepo.getSelectedRepo();
+        boolean validRepoFound = false;
+        List<GrailsWrapperRepo> repos = GrailsWrapperRepo.getSelectedRepos();
+        for (GrailsWrapperRepo repo : repos) {
+            GrailsVersion selectedVersion = null;
+            if (preferredVersion != null) {
+                selectedVersion = preferredVersion;
+            } else {
+                try {
+                    selectedVersion = getRootVersion(repo);
+                } catch (GrailsReleaseNotFoundException e) {
+                    continue;
+                } catch (Exception e) {
+                    System.err.println("Unable to fetch latest Grails CLI from [" + repo.getUrl() + "].");
+                    e.printStackTrace();
+                    System.exit(1);
+                }
+            }
 
-        GrailsVersion selectedVersion = null;
-        if (preferredVersion != null) {
-            selectedVersion = preferredVersion;
-        } else {
-            try {
-                selectedVersion = getRootVersion(repo);
-            } catch (Exception e) {
-                System.err.println("Unable to fetch latest Grails CLI.");
-                e.printStackTrace();
-                System.exit(1);
+            String detailedVersion = null;
+            if (selectedVersion.releaseType.isSnapshot()) {
+                try {
+                    detailedVersion = fetchSnapshotForVersion(repo, selectedVersion);
+                } catch (GrailsReleaseNotFoundException e) {
+                    continue;
+                } catch (Exception e) {
+                    System.err.println("Could not parse snapshot version from maven metadata.");
+                    e.printStackTrace();
+                    System.exit(1);
+                }
+            }
+
+            validRepoFound = true;
+
+            boolean theResult = updateJar(repo, selectedVersion, detailedVersion);
+            if (theResult) {
+                updatedVersion = selectedVersion;
+                return theResult;
             }
         }
 
-        String detailedVersion = null;
-        if (selectedVersion.releaseType.isSnapshot()) {
-            try {
-                detailedVersion = fetchSnapshotForVersion(repo, selectedVersion);
-            } catch (Exception e) {
-                System.err.println("Could not parse snapshot version from maven metadata.");
-                e.printStackTrace();
-                System.exit(1);
-            }
+        if (validRepoFound) {
+            return false;
         }
 
-        boolean theResult = updateJar(repo, selectedVersion, detailedVersion);
-        if (theResult) {
-            updatedVersion = selectedVersion;
-        }
-
-        return theResult;
+        String repoUrls = repos.stream()
+            .map(GrailsWrapperRepo::getUrl)
+            .collect(Collectors.joining(","));
+        throw new IllegalStateException("Could not find the Grails Repo in any repository: " + repoUrls);
     }
 
     private boolean updateJar(GrailsWrapperRepo repo, GrailsVersion version, String snapshotVersion) {
@@ -182,7 +198,7 @@ public class GrailsUpdater {
 
             success = downloadWrapperJar(version, downloadedJar, inputStream, contentLength, repo.isFile);
         } catch (Exception e) {
-            System.err.println("There was an error downloading the wrapper jar");
+            System.err.println("There was an error downloading the wrapper jar from [" + repo.getUrl() + "]");
             e.printStackTrace();
         }
         return success;
@@ -219,8 +235,7 @@ public class GrailsUpdater {
                         lastMillis = currentMillis;
                         lastBytes = totalBytesRead;
                     }
-                }
-                else {
+                } else {
                     // cannot determine the size
                     System.out.printf("\r... %s", readableSize(totalBytesRead, false));
                 }
@@ -268,11 +283,11 @@ public class GrailsUpdater {
         return true;
     }
 
-    private static InputStream retrieveMavenMetadata(GrailsWrapperRepo repo, String metadataUrl) throws IOException {
+    private static InputStream retrieveMavenMetadata(GrailsWrapperRepo repo, String metadataUrl) throws IOException, GrailsReleaseNotFoundException {
         if (repo.isFile) {
             File metadataFile = new File(metadataUrl);
             if (!metadataFile.exists()) {
-                throw new IllegalStateException("Could not determine local metadata file from local maven repository: " + metadataFile.getAbsolutePath() + " does not exist");
+                throw new GrailsReleaseNotFoundException("Could not determine local metadata file from local maven repository: " + metadataFile.getAbsolutePath() + " does not exist");
             }
             return Files.newInputStream(metadataFile.toPath());
         } else {
@@ -280,29 +295,28 @@ public class GrailsUpdater {
             try {
                 return connection.getInputStream();
             } catch (Exception e) {
-                throw new RuntimeException("There was an error downloading the metadata file", e);
+                throw new GrailsReleaseNotFoundException("There was an error downloading the metadata file", e);
             }
         }
     }
 
-    private GrailsVersion getRootVersion(GrailsWrapperRepo repo) throws IOException, SAXException, ParserConfigurationException {
+    private GrailsVersion getRootVersion(GrailsWrapperRepo repo) throws IOException, SAXException, ParserConfigurationException, GrailsReleaseNotFoundException {
         RootMetadataHandler findLastReleaseHandler = new RootMetadataHandler(grailsWrapperHome.allowedReleaseTypes);
 
         try (InputStream stream = retrieveMavenMetadata(repo, repo.getRootMetadataUrl())) {
             createSAXParser().parse(stream, findLastReleaseHandler);
             List<GrailsVersion> foundVersions = findLastReleaseHandler.getVersions();
             if (foundVersions.isEmpty()) {
-                throw new IllegalStateException("No Grails Releases were found for the allowed types: " + grailsWrapperHome.allowedReleaseTypes.stream().map(Enum::name).collect(Collectors.joining(", ")));
+                throw new GrailsReleaseNotFoundException("No Grails Releases were found for the allowed types: " + grailsWrapperHome.allowedReleaseTypes.stream().map(Enum::name).collect(Collectors.joining(", ")));
             }
 
             Collections.sort(foundVersions);
 
             return foundVersions.get(0);
-
         }
     }
 
-    private String fetchSnapshotForVersion(GrailsWrapperRepo repo, GrailsVersion baseVersion) throws IOException, SAXException, ParserConfigurationException {
+    private String fetchSnapshotForVersion(GrailsWrapperRepo repo, GrailsVersion baseVersion) throws IOException, SAXException, ParserConfigurationException, GrailsReleaseNotFoundException {
         System.out.println("...A Grails snapshot version has been detected. Downloading latest snapshot.");
 
         FindLastSnapshotHandler findVersionHandler = new FindLastSnapshotHandler();

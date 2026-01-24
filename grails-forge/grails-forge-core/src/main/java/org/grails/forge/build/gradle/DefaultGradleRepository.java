@@ -23,11 +23,13 @@ import io.micronaut.core.annotation.NonNull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class DefaultGradleRepository implements GradleRepository {
     private final int order;
     private final String url;
     private final String name;
+    private final List<VersionType> versionTypes;
     private final List<VersionRegexRepoFilter> versionFilters;
 
     public DefaultGradleRepository(int order, String url) {
@@ -35,10 +37,19 @@ public class DefaultGradleRepository implements GradleRepository {
     }
 
     public DefaultGradleRepository(int order, String url, String name, List<VersionRegexRepoFilter> versionFilters) {
+        this(order, url, name, versionFilters, List.of(VersionType.SNAPSHOT, VersionType.RELEASE));
+    }
+
+    public DefaultGradleRepository(int order, String url, String name, List<VersionRegexRepoFilter> versionFilters, List<VersionType> versionTypes) {
         this.order = order;
         this.url = url;
         this.name = name;
         this.versionFilters = versionFilters;
+        this.versionTypes = versionTypes;
+
+        if (versionTypes == null || versionTypes.isEmpty()) {
+            throw new IllegalArgumentException("Expected at least one version type");
+        }
     }
 
     public int getOrder() {
@@ -57,6 +68,10 @@ public class DefaultGradleRepository implements GradleRepository {
         return versionFilters;
     }
 
+    public List<VersionType> getVersionTypes() {
+        return versionTypes;
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj == this) {
@@ -67,9 +82,9 @@ public class DefaultGradleRepository implements GradleRepository {
         }
         var that = (DefaultGradleRepository) obj;
         return this.order == that.order &&
-                Objects.equals(this.url, that.url) &&
-                Objects.equals(this.name, that.name) &&
-                Objects.equals(this.versionFilters, that.versionFilters);
+            Objects.equals(this.url, that.url) &&
+            Objects.equals(this.name, that.name) &&
+            Objects.equals(this.versionFilters, that.versionFilters);
     }
 
     @Override
@@ -89,12 +104,23 @@ public class DefaultGradleRepository implements GradleRepository {
         }
         for (VersionRegexRepoFilter filter : versionFilters) {
             snippet.append(basePadding).append(indent).append("content {\n")
-                    .append(basePadding).append(indent).append(indent).append("includeVersionByRegex('")
-                    .append(filter.groupRegex()).append("', '")
-                    .append(filter.artifactRegex()).append("', '")
-                    .append(filter.versionRegex())
-                    .append("')").append("\n")
-                    .append(basePadding).append(indent).append("}\n");
+                .append(basePadding).append(indent).append(indent).append("includeVersionByRegex('")
+                .append(filter.groupRegex()).append("', '")
+                .append(filter.artifactRegex()).append("', '")
+                .append(filter.versionRegex())
+                .append("')").append("\n")
+                .append(basePadding).append(indent).append("}\n");
+        }
+        if (versionTypes.size() == 1) {
+            snippet.append(basePadding).append(indent).append("mavenContent {\n");
+            for (VersionType versionType : versionTypes) {
+                if (versionType == VersionType.SNAPSHOT) {
+                    snippet.append(basePadding).append(indent).append(indent).append("snapshotsOnly()").append("\n");
+                } else { // RELEASE
+                    snippet.append(basePadding).append(indent).append(indent).append("releasesOnly()").append("\n");
+                }
+            }
+            snippet.append(basePadding).append(indent).append("}\n");
         }
         snippet.append(basePadding).append("}");
         return snippet.toString();
@@ -102,10 +128,15 @@ public class DefaultGradleRepository implements GradleRepository {
 
     @Override
     public String toString() {
-        return "GradleRepository[" +
-                "order=" + order + ", " +
-                "url=" + url + ", " +
-                "name=" + name + ", " +
-                "versionFilters=" + versionFilters + ']';
+        String versionTypes = this.versionTypes.stream()
+            .map(VersionType::name)
+            .collect(Collectors.joining(","));
+
+        return "GradleRepository(" +
+            "order=" + order + ", " +
+            "url=" + url + ", " +
+            "name=" + name + ", " +
+            "versionFilters=" + versionFilters + ", " +
+            "versionTypes=[" + versionTypes + "])";
     }
 }

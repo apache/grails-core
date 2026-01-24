@@ -31,9 +31,8 @@ import java.util.stream.Collectors;
 public enum JdkVersion {
     JDK_17(17),
     JDK_21(21),
-    // 24 is the current non-LTS release and will be replaced by 25 (LTS) in Sep 2025
-    // Spring Framework 6.2.x and Spring Boot 3.5.x will support 25
-    JDK_24(24);
+    // 25 is an LTS release and will be supported by Spring Framework 6.2.x and Spring Boot 3.5.x
+    JDK_25(25);
 
     public static final JdkVersion DEFAULT_OPTION = JDK_17;
 
