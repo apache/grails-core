@@ -20,7 +20,6 @@ package org.grails.web.mime
 
 import grails.artefact.Artefact
 import grails.testing.web.controllers.ControllerUnitTest
-import grails.util.Holders
 import grails.web.mime.MimeType
 import spock.lang.Issue
 import spock.lang.Specification
@@ -37,19 +36,14 @@ class WithFormatContentTypeSpec extends Specification implements ControllerUnitT
     }}
 
     def setup() {
-        // Clear the static mimeTypes cache to ensure proper test isolation in parallel test runs
+        // Clear the static mimeTypes cache to ensure proper test isolation in parallel test runs.
+        // HttpServletResponseExtension caches mime types in a static field.
         HttpServletResponseExtension.@mimeTypes = null
-        // Ensure Holders has the correct application context set up for this test.
-        // This is necessary because MimeType.configuredMimeTypes uses Holders to find
-        // the application context, and parallel test execution can cause ThreadLocal pollution.
-        Holders.grailsApplication = grailsApplication
     }
 
     def cleanup() {
-        // Clear the static mimeTypes cache to ensure proper test isolation in parallel test runs
+        // Clear the static mimeTypes cache after each test
         HttpServletResponseExtension.@mimeTypes = null
-        // Note: Don't call Holders.clear() here as it can affect parallel tests.
-        // The GrailsUnitTest trait already handles Holders cleanup in cleanupClass().
     }
 
     @Issue('GRAILS-11093')
