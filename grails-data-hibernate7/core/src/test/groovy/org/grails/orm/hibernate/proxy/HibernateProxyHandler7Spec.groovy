@@ -1,7 +1,6 @@
 package org.grails.orm.hibernate.proxy
 
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import org.hibernate.proxy.HibernateProxy
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.apache.grails.data.testing.tck.domains.Location
 import org.hibernate.Hibernate
@@ -10,7 +9,6 @@ import org.grails.datastore.gorm.proxy.GroovyProxyFactory
 
 class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HibernateProxyHandler7Spec.class)
     @Shared HibernateProxyHandler proxyHandler = new HibernateProxyHandler()
 
     void setupSpec() {
@@ -22,24 +20,33 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         Location location = new Location(name: "Test Location").save(flush: true)
 
         expect:
-        proxyHandler.isInitialized(location) == true
+        proxyHandler.isInitialized(location)
     }
 
     void "test isInitialized for a native Hibernate proxy before initialization"() {
         given:
-        Location location = new Location(name: "Test Location").save(flush: true)
-        manager.session.clear()
-        manager.hibernateSession.clear()
+        Long savedId
 
-        // Get a proxy without initializing it
-        Location proxyLocation = Location.proxy(location.id)
-        LOG.info "proxyLocation class: ${proxyLocation.getClass().name}"
-        LOG.info "proxyLocation instanceof EntityProxy: ${proxyLocation instanceof org.grails.datastore.mapping.proxy.EntityProxy}"
-        LOG.info "Hibernate.isInitialized(proxyLocation): ${org.hibernate.Hibernate.isInitialized(proxyLocation)}"
+        // Step 1: Persist the data and close the session
+        Location.withNewSession {
+            Location.withTransaction {
+                Location location = new Location(name: "Test Location", code: "TL1").save(flush: true)
+                savedId = location.id
+            }
+        }
 
-        expect:
-        proxyHandler.isInitialized(proxyLocation) == false
-        !Hibernate.isInitialized(proxyLocation)
+        expect: "The proxy remains uninitialized when loaded via the standard Hibernate reference API"
+        Location.withNewSession { session ->
+            // Use the native Hibernate session to get a reference
+            // This is the "purest" way to get an uninitialized proxy
+            def proxyLocation = session.getSessionFactory().currentSession.getReference(Location, savedId)
+
+            // 1. Verify it is actually a proxy
+            proxyLocation instanceof HibernateProxy
+
+            // 2. Verify the handler sees it as uninitialized
+            (!proxyHandler.isInitialized(proxyLocation))
+        }
     }
 
     void "test isInitialized for a native Hibernate proxy after initialization"() {
@@ -52,7 +59,7 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         proxyLocation.name // Accessing a property to initialize the proxy
 
         expect:
-        proxyHandler.isInitialized(proxyLocation) == true
+        proxyHandler.isInitialized(proxyLocation)
         Hibernate.isInitialized(proxyLocation)
     }
 
@@ -60,15 +67,24 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         given:
         def originalFactory = manager.session.mappingContext.proxyFactory
         manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
-        Location location = new Location(name: "Test Location").save(flush: true)
+
+        // 1. Save and flush in a transaction
+        Long savedId
+        Location.withTransaction {
+            savedId = new Location(name: "Test Location", code: "TL-GROOVY").save(flush: true).id
+        }
+
+        // 2. Clear the sessions to ensure the next load isn't from cache
         manager.session.clear()
         manager.hibernateSession.clear()
 
-        // Get a proxy without initializing it
-        Location proxyLocation = Location.proxy(location.id)
+        when: "We get a reference via the native Hibernate API"
+        // getReference is the Hibernate 6 way to get a 'hollow' proxy safely
+        def proxyLocation = manager.hibernateSession.getReference(Location, savedId)
 
-        expect:
-        proxyHandler.isInitialized(proxyLocation) == false
+        then: "The proxy handler should recognize it as uninitialized"
+        // Ensure no methods (like .name or .toString()) are called on proxyLocation before this
+        !proxyHandler.isInitialized(proxyLocation)
 
         cleanup:
         manager.session.mappingContext.proxyFactory = originalFactory

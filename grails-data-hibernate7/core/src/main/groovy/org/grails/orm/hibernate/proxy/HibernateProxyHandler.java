@@ -18,17 +18,16 @@
  */
 package org.grails.orm.hibernate.proxy;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import java.io.Serializable;
-
 import groovy.lang.GroovyObject;
 import groovy.lang.MetaClass;
 import org.codehaus.groovy.runtime.HandleMetaClass;
 import org.hibernate.Hibernate;
+import org.hibernate.collection.spi.LazyInitializable;
 import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.proxy.HibernateProxyHelper;
+
+import java.io.Serializable;
 
 import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass;
 import org.grails.datastore.mapping.core.Session;
@@ -40,222 +39,150 @@ import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
 
 /**
- * Implementation of the ProxyHandler interface for Hibernate using org.hibernate.Hibernate
- * and HibernateProxyHelper where possible.
+ * Implementation of the ProxyHandler interface for Hibernate 6 using Java 17 features.
  *
  * @author Graeme Rocher
  * @since 1.2.2
  */
 public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HibernateProxyHandler.class);
-
-    /**
-     * Check if the proxy or persistent collection is initialized.
-     * {@inheritDoc}
-     */
     @Override
     public boolean isInitialized(Object o) {
-        if (o == null) {
-            LOG.info("isInitialized(Object) - object is null, returning false");
-            return false;
+        if (o == null) return false;
+
+        if (o instanceof HibernateProxy hp) {
+            return !hp.getHibernateLazyInitializer().isUninitialized();
         }
-        LOG.info("isInitialized(Object) - checking object of type: {}", o.getClass().getName());
-        if (o instanceof EntityProxy) {
-            boolean initialized = ((EntityProxy) o).isInitialized();
-            LOG.info("isInitialized(Object) - object is EntityProxy, isInitialized: {}", initialized);
-            return initialized;
+        if (o instanceof EntityProxy ep) {
+            return ep.isInitialized();
         }
-        if (o instanceof HibernateProxy) {
-            boolean initialized = !((HibernateProxy) o).getHibernateLazyInitializer().isUninitialized();
-            LOG.info("isInitialized(Object) - object is HibernateProxy, isInitialized: {}", initialized);
-            return initialized;
+        if (o instanceof LazyInitializable li) {
+            return li.wasInitialized();
         }
-        if (o instanceof PersistentCollection) {
-            boolean initialized = ((PersistentCollection) o).wasInitialized();
-            LOG.info("isInitialized(Object) - object is PersistentCollection, wasInitialized: {}", initialized);
-            return initialized;
-        }
-        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
-        if (proxyMc != null) {
-            boolean initialized = proxyMc.isProxyInitiated();
-            LOG.info("isInitialized(Object) - object is Groovy Proxy, isProxyInitiated: {}", initialized);
-            return initialized;
-        }
-        boolean initialized = Hibernate.isInitialized(o);
-        LOG.info("isInitialized(Object) - Hibernate.isInitialized returned: {}", initialized);
-        return initialized;
+
+        return Hibernate.isInitialized(o);
     }
 
-    /**
-     * Check if an association proxy or persistent collection is initialized.
-     * {@inheritDoc}
-     */
     @Override
     public boolean isInitialized(Object obj, String associationName) {
-        LOG.info("isInitialized(Object, String) - checking association '{}' on object of type: {}", associationName, obj != null ? obj.getClass().getName() : "null");
         try {
             Object proxy = ClassPropertyFetcher.getInstancePropertyValue(obj, associationName);
-            boolean initialized = isInitialized(proxy);
-            LOG.info("isInitialized(Object, String) - association '{}' isInitialized: {}", associationName, initialized);
-            return initialized;
-        }
-        catch (RuntimeException e) {
-            LOG.info("isInitialized(Object, String) - RuntimeException occurred while checking association '{}', returning false", associationName);
+            return isInitialized(proxy);
+        } catch (RuntimeException e) {
             return false;
         }
     }
 
-    /**
-     * Unproxies a HibernateProxy. If the proxy is uninitialized, it automatically triggers an initialization.
-     * In case the supplied object is null or not a proxy, the object will be returned as-is.
-     * {@inheritDoc}
-     * @see Hibernate#unproxy
-     */
     @Override
     public Object unwrap(Object object) {
-        if (object instanceof EntityProxy) {
-            return ((EntityProxy)object).getTarget();
+        if (object instanceof EntityProxy ep) {
+            return ep.getTarget();
         }
+
         ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(object);
         if (proxyMc != null) {
             return proxyMc.getProxyTarget();
         }
+
         if (object instanceof PersistentCollection) {
             initialize(object);
             return object;
         }
+
         return Hibernate.unproxy(object);
     }
 
-    /**
-     * {@inheritDoc}
-     * @see org.hibernate.proxy.AbstractLazyInitializer#getIdentifier
-     */
     @Override
     public Serializable getIdentifier(Object o) {
-        if (o instanceof EntityProxy) {
-            return ((EntityProxy)o).getProxyKey();
+        if (o instanceof EntityProxy ep) {
+            return ep.getProxyKey();
         }
+
         ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
         if (proxyMc != null) {
             return proxyMc.getKey();
         }
-        if (o instanceof HibernateProxy) {
-            return (Serializable) ((HibernateProxy)o).getHibernateLazyInitializer().getIdentifier();
+
+        if (o instanceof HibernateProxy hp) {
+            return (Serializable) hp.getHibernateLazyInitializer().getIdentifier();
         }
-        else {
-            return null;
-        }
+
+        return null;
     }
 
-    /**
-     * {@inheritDoc}
-     * @see HibernateProxyHelper#getClassWithoutInitializingProxy
-     */
     @Override
     public Class<?> getProxiedClass(Object o) {
         return HibernateProxyHelper.getClassWithoutInitializingProxy(o);
     }
 
-    /**
-     * calls unwrap which calls unproxy
-     * @see #unwrap(Object)
-     * @deprecated use unwrap
-     */
-    @Deprecated
-    public Object unwrapIfProxy(Object instance) {
-        return unwrap(instance);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean isProxy(Object o) {
-        if (getProxyInstanceMetaClass(o) != null) {
-            return true;
-        }
-        return (o instanceof EntityProxy) || (o instanceof HibernateProxy)  || (o instanceof PersistentCollection);
+        return getProxyInstanceMetaClass(o) != null
+                || o instanceof EntityProxy
+                || o instanceof HibernateProxy
+                || o instanceof PersistentCollection;
     }
 
-    /**
-     * Force initialization of a proxy or persistent collection.
-     * {@inheritDoc}
-     */
     @Override
     public void initialize(Object o) {
-        if (o instanceof EntityProxy) {
-            ((EntityProxy)o).initialize();
+        if (o instanceof EntityProxy ep) {
+            ep.initialize();
+            return;
         }
-        else {
-            ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
-            if (proxyMc != null) {
-                proxyMc.getProxyTarget();
-            }
-            else {
-                Hibernate.initialize(o);
-            }
+
+        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
+        if (proxyMc != null) {
+            proxyMc.getProxyTarget();
+        } else {
+            Hibernate.initialize(o);
         }
     }
 
     private ProxyInstanceMetaClass getProxyInstanceMetaClass(Object o) {
-        LOG.info("getProxyInstanceMetaClass() - checking if object is GroovyObject: {}", o != null ? o.getClass().getName() : "null");
-        if (o instanceof GroovyObject) {
-            MetaClass mc = ((GroovyObject) o).getMetaClass();
-            LOG.info("getProxyInstanceMetaClass() - metaClass type: {}", mc.getClass().getName());
-            if (mc instanceof HandleMetaClass) {
-                mc = ((HandleMetaClass) mc).getAdaptee();
-                LOG.info("getProxyInstanceMetaClass() - handleMetaClass adaptee type: {}", mc.getClass().getName());
+        if (o instanceof GroovyObject go) {
+            MetaClass mc = go.getMetaClass();
+            if (mc instanceof HandleMetaClass hmc) {
+                mc = hmc.getAdaptee();
             }
-            if (mc instanceof ProxyInstanceMetaClass) {
-                LOG.info("getProxyInstanceMetaClass() - found ProxyInstanceMetaClass");
-                return (ProxyInstanceMetaClass) mc;
+            if (mc instanceof ProxyInstanceMetaClass pmc) {
+                return pmc;
             }
         }
-        LOG.info("getProxyInstanceMetaClass() - no ProxyInstanceMetaClass found");
         return null;
     }
 
     @Override
     public <T> T createProxy(Session session, Class<T> type, Serializable key) {
-        org.hibernate.Session hibSession = null;
-        if (session.getNativeInterface() instanceof GrailsHibernateTemplate grailsHibernateTemplate) {
-            hibSession = grailsHibernateTemplate.getSession();
+        if (session.getNativeInterface() instanceof GrailsHibernateTemplate ght) {
+            org.hibernate.Session hibSession = ght.getSession();
+            if (hibSession != null) {
+                return hibSession.getReference(type, key);
+            }
         }
-        if (hibSession == null) {
-            throw new IllegalStateException("Could not obtain native Hibernate Session from Session#getNativeInterface()");
-        }
-        return (T) hibSession.getReference(type, key);
+        throw new IllegalStateException("Could not obtain native Hibernate Session from Session#getNativeInterface()");
     }
 
     @Override
     public <T, K extends Serializable> T createProxy(Session session, AssociationQueryExecutor<K, T> executor, K associationKey) {
-        throw new UnsupportedOperationException("createProxy not supported in HibernateProxyHandler");
+        throw new UnsupportedOperationException("createProxy via AssociationQueryExecutor not supported in HibernateProxyHandler");
     }
 
-    /**
-     * @deprecated use unwrap
-     */
-    @Deprecated
-    public Object unwrapProxy(Object proxy) {
-        return unwrap(proxy);
-    }
-
-    /**
-     * returns the proxy for an association. returns null if its not a proxy.
-     * Note: Only used in a test. Deprecate?
-     */
     public HibernateProxy getAssociationProxy(Object obj, String associationName) {
         try {
             Object proxy = ClassPropertyFetcher.getInstancePropertyValue(obj, associationName);
-            if (proxy instanceof HibernateProxy) {
-                return (HibernateProxy) proxy;
-            }
+            return (proxy instanceof HibernateProxy hp) ? hp : null;
+        } catch (RuntimeException e) {
             return null;
         }
-        catch (RuntimeException e) {
-            return null;
-        }
+    }
+
+    @Deprecated
+    public Object unwrapIfProxy(Object instance) {
+        return unwrap(instance);
+    }
+
+    @Deprecated
+    public Object unwrapProxy(Object proxy) {
+        return unwrap(proxy);
     }
 }
