@@ -48,8 +48,8 @@ class WithFormatContentTypeSpec extends Specification implements ControllerUnitT
     def cleanup() {
         // Clear the static mimeTypes cache to ensure proper test isolation in parallel test runs
         HttpServletResponseExtension.@mimeTypes = null
-        // Clear Holders to prevent ThreadLocal pollution to other tests
-        Holders.clear()
+        // Note: Don't call Holders.clear() here as it can affect parallel tests.
+        // The GrailsUnitTest trait already handles Holders cleanup in cleanupClass().
     }
 
     @Issue('GRAILS-11093')
