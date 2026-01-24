@@ -20,10 +20,10 @@ on:
       - '[0-9]+.[0-9]+.x'
   pull_request:
   workflow_dispatch:
-# queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
+# Queue jobs - cancel in-progress PR runs when new commits pushed, but allow branch builds to complete
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   buildGradle:
     name: 'Build Gradle Plugins'
