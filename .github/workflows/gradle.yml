@@ -100,7 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ 17, 25 ]
+        java: [ 17, 21 ]
     runs-on: ubuntu-24.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
