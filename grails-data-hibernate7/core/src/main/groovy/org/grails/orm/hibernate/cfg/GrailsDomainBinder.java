@@ -37,6 +37,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.TypeNameProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.*;
 
+import com.sun.jdi.IntegerType;
+import com.sun.jdi.LongType;
 import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
 import org.hibernate.boot.ResourceStreamLocator;
@@ -1584,7 +1586,9 @@ public class GrailsDomainBinder
         PersistentProperty identifierProp = domainClass.getIdentity();
         if (gormMapping == null) {
             if(identifierProp != null) {
-                bindSimpleId(identifierProp, root, mappings, null, sessionFactoryBeanName, domainClass);
+                SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext,namingStrategy, getJdbcEnvironment(), domainClass, root);
+                simpleIdBinder.bindSimpleId(identifierProp, root, null);
+
             }
             return;
         }
@@ -1595,7 +1599,7 @@ public class GrailsDomainBinder
         } else {
             final Identity identity = (Identity) id;
             String propertyName = identity.getName();
-            if (propertyName != null) {
+                if (propertyName != null && !propertyName.equals(domainClass.getName())) {
                 PersistentProperty namedIdentityProp = domainClass.getPropertyByName(propertyName);
                 if (namedIdentityProp == null) {
                     throw new MappingException("Mapping specifies an identifier property name that doesn't exist ["+propertyName+"]");
@@ -1604,7 +1608,9 @@ public class GrailsDomainBinder
                     identifierProp = namedIdentityProp;
                 }
             }
-            bindSimpleId(identifierProp, root, mappings, identity, sessionFactoryBeanName, domainClass);
+            SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext,namingStrategy, getJdbcEnvironment(), domainClass, root);
+            simpleIdBinder.bindSimpleId(identifierProp, root, identity);
+
         }
     }
 
@@ -2004,14 +2010,6 @@ public class GrailsDomainBinder
         else {
             entity.setOptimisticLockStyle(OptimisticLockStyle.NONE);
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private void bindSimpleId(PersistentProperty identifier, RootClass entity,
-                              InFlightMetadataCollector mappings, Identity mappedId, String sessionFactoryBeanName, HibernatePersistentEntity domainClass) {
-        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext,namingStrategy, getJdbcEnvironment(), domainClass,entity);
-        simpleIdBinder.bindSimpleId(identifier, entity, mappedId);
-
     }
 
 
