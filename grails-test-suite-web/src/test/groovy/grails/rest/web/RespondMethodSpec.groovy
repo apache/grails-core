@@ -37,6 +37,11 @@ class RespondMethodSpec extends Specification implements ControllerUnitTest<Book
         HttpServletResponseExtension.@mimeTypes = null
     }
 
+    def cleanup() {
+        // Clear the static mimeTypes cache to ensure proper test isolation in parallel test runs
+        HttpServletResponseExtension.@mimeTypes = null
+    }
+
     Closure doWithConfig() {{ config ->
         // unit tests in real applications will not need to do
         // this because the real Config.groovy will be loaded
