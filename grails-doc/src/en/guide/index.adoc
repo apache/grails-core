@@ -146,9 +146,7 @@ include::conf/config.adoc[]
 include::conf/config/ymlPropertyOptions.adoc[]
 
 [[builtInOptions]]
-==== Built in options
-
-include::conf/config/builtInOptions.adoc[]
+include::conf/config/builtInOptions.adoc[leveloffset=+3]
 
 [[logging]]
 ==== Logging
@@ -961,9 +959,7 @@ include::testing/unitTesting.adoc[]
 include::testing/unitTesting/unitTestingControllers.adoc[]
 
 [[unitTestingTagLibraries]]
-==== Unit Testing Tag Libraries
-
-include::testing/unitTesting/unitTestingTagLibraries.adoc[]
+include::testing/unitTesting/unitTestingTagLibraries.adoc[leveloffset=+3]
 
 [[unitTestingDomains]]
 ==== Unit Testing Domains
@@ -1076,9 +1072,7 @@ include::security/securityPlugins/shiro.adoc[]
 include::plugins.adoc[]
 
 [[creatingAndInstallingPlugins]]
-=== Creating and Installing Plugins
-
-include::plugins/creatingAndInstallingPlugins.adoc[]
+include::plugins/creatingAndInstallingPlugins.adoc[leveloffset=+2]
 
 [[repositories]]
 === Plugin Repositories
@@ -1201,14 +1195,10 @@ include::scaffolding.adoc[]
 include::deployment.adoc[]
 
 [[deploymentStandalone]]
-=== Standalone
-
-include::deployment/deploymentStandalone.adoc[]
+include::deployment/deploymentStandalone.adoc[leveloffset=+2]
 
 [[deploymentContainer]]
-=== Container Deployment (e.g. Tomcat)
-
-include::deployment/deploymentContainer.adoc[]
+include::deployment/deploymentContainer.adoc[leveloffset=+2]
 
 [[deploymentTasks]]
 === Deployment Configuration Tasks
