@@ -1,0 +1,919 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+==== Plugin Best Practices
+
+Developing high-quality, maintainable Grails plugins requires following established best practices. This guide covers the essential practices for creating professional Grails 7 plugins that are robust, well-tested, and easily distributable.
+
+===== Build Configuration: Multiproject Structure
+
+When developing plugins, it's crucial to separate example/test code from the core plugin code using Gradle's multiproject build capabilities. This approach provides clean separation of concerns and better maintainability.
+
+====== Recommended Project Structure
+
+[source,groovy]
+----
+my-plugin-project/
+├── my-plugin/              # Core plugin code
+│   ├── build.gradle
+│   └── src/
+├── my-plugin-example/      # Example application demonstrating plugin usage
+│   ├── build.gradle
+│   └── grails-app/
+├── my-plugin-test/         # Integration tests and test utilities
+│   ├── build.gradle
+│   └── src/
+└── settings.gradle
+----
+
+====== Root settings.gradle Configuration
+
+Create a `settings.gradle` file in the root directory to define the multiproject structure:
+
+[source,groovy]
+----
+rootProject.name = 'my-plugin-project'
+
+include 'my-plugin'
+include 'my-plugin-example'
+include 'my-plugin-test'
+
+project(':my-plugin').projectDir = file('my-plugin')
+project(':my-plugin-example').projectDir = file('my-plugin-example')
+project(':my-plugin-test').projectDir = file('my-plugin-test')
+----
+
+====== Plugin Build Configuration
+
+Configure your plugin's `build.gradle` with proper dependencies and plugin applications:
+
+[source,groovy]
+----
+plugins {
+    id "org.apache.grails.gradle.grails-plugin"
+    id "org.apache.grails.gradle.grails-publish"
+    id "org.apache.grails.gradle.grails-github-pages"
+}
+
+group = "org.mycompany.plugins"
+version = "1.0.0"
+
+dependencies {
+    implementation "org.grails:grails-core"
+    implementation "org.grails:grails-web"
+    
+    testImplementation "org.grails:grails-testing-support"
+    testImplementation "org.spockframework:spock-core"
+}
+
+grailsPublish {
+    githubSlug = 'mycompany/my-plugin'
+    license {
+        name = 'Apache-2.0'
+    }
+    title = 'My Plugin'
+    desc = 'Description of my awesome plugin'
+    developers = [johndoe: 'John Doe']
+    portalUrl = "https://grails-plugins.github.io/my-plugin/"
+    vcsUrl = "https://github.com/mycompany/my-plugin"
+}
+----
+
+====== Example Application Configuration
+
+The example application should depend on the plugin project:
+
+[source,groovy]
+----
+dependencies {
+    implementation project(':my-plugin')
+    implementation "org.grails:grails-core"
+    implementation "org.grails:grails-web"
+}
+
+grails {
+    plugins {
+        implementation project(':my-plugin')
+    }
+}
+----
+
+===== Continuous Integration with GitHub Actions
+
+Adopt CI/CD practices using GitHub Actions to automate testing, building, and releasing your plugins.
+
+====== Basic CI Workflow
+
+Create `.github/workflows/ci.yml` for continuous integration:
+
+[source,yaml]
+----
+name: CI
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [17, 21]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK ${{ matrix.java }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ matrix.java }}
+        distribution: 'temurin'
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+    - name: Build and Test
+      run: ./gradlew build
+----
+
+====== Release Workflow
+
+Create `.github/workflows/release.yml` for automated releases:
+
+[source,yaml]
+----
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: 17
+        distribution: 'temurin'
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+    - name: Publish to Maven Central
+      run: ./gradlew publish
+      env:
+        MAVEN_PUBLISH_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+        MAVEN_PUBLISH_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+        SIGNING_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        SIGNING_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+----
+
+===== Publishing Configuration
+
+Use the `grails-gradle-publish` plugin for streamlined publishing to Maven Central and other repositories.
+
+====== Publishing Setup
+
+Configure publishing in your plugin's `build.gradle`:
+
+[source,groovy]
+----
+plugins {
+    id "org.apache.grails.gradle.grails-publish"
+}
+
+grailsPublish {
+    githubSlug = 'mycompany/my-plugin'
+    license {
+        name = 'Apache-2.0'
+    }
+    title = 'My Plugin Title'
+    desc = '''\
+A comprehensive description of what your plugin does and why it's useful.
+This can span multiple lines and should clearly explain the plugin's purpose.
+'''
+    developers = [
+        johndoe: 'John Doe',
+        janedoe: 'Jane Doe'
+    ]
+    portalUrl = "https://grails-plugins.github.io/my-plugin/"
+    vcsUrl = "https://github.com/mycompany/my-plugin"
+    issueTrackerUrl = "https://github.com/mycompany/my-plugin/issues"
+    
+    organization {
+        name = 'My Company'
+        url = 'https://www.mycompany.com'
+    }
+}
+
+// Configure signing for releases
+if (project.hasProperty('release')) {
+    signing {
+        useInMemoryPgpKeys findProperty("signingKey"), findProperty("signingPassword")
+    }
+}
+----
+
+====== Environment Variables for Publishing
+
+Set these environment variables in your GitHub repository secrets:
+
+[source,bash]
+----
+# Maven Central credentials
+MAVEN_PUBLISH_USERNAME=your-sonatype-username
+MAVEN_PUBLISH_PASSWORD=your-sonatype-password
+MAVEN_PUBLISH_URL=https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/
+
+# GPG signing (for releases)
+SIGNING_KEY=-----BEGIN PGP PRIVATE KEY BLOCK-----...
+SIGNING_PASSPHRASE=your-gpg-passphrase
+
+# Release identification
+GRAILS_PUBLISH_RELEASE=true
+----
+
+===== GitHub Template Initialization
+
+Create a standardized GitHub template repository for new plugin developers.
+
+====== Template Repository Structure
+
+[source,text]
+----
+grails-plugin-template/
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml
+│   │   └── release.yml
+│   └── ISSUE_TEMPLATE/
+│       ├── bug_report.md
+│       └── feature_request.md
+├── gradle/
+│   └── wrapper/
+├── src/
+│   ├── main/
+│   │   └── groovy/
+│   └── test/
+│       └── groovy/
+├── grails-app/
+├── .gitignore
+├── .sdkmanrc
+├── build.gradle
+├── gradle.properties
+├── gradlew
+├── gradlew.bat
+├── README.md
+├── settings.gradle
+└── USAGE.md
+----
+
+====== Template README.md
+
+[source,markdown]
+----
+# My Grails Plugin
+
+[![Build Status](https://github.com/mycompany/my-plugin/workflows/CI/badge.svg)](https://github.com/mycompany/my-plugin/actions)
+[![Maven Central](https://img.shields.io/maven-central/v/org.mycompany.plugins/my-plugin.svg)](https://search.maven.org/artifact/org.mycompany.plugins/my-plugin)
+
+## Description
+
+Brief description of what this plugin does.
+
+## Installation
+
+Add the following dependency to your `build.gradle`:
+
+```groovy
+dependencies {
+    implementation "org.mycompany.plugins:my-plugin:1.0.0"
+}
+```
+
+## Usage
+
+Basic usage examples and configuration options.
+
+## Documentation
+
+Complete documentation is available at [https://mycompany.github.io/my-plugin/](https://mycompany.github.io/my-plugin/)
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
+## License
+
+This project is licensed under the Apache License, Version 2.0 - see the [LICENSE](LICENSE) file for details.
+----
+
+===== Documentation Publishing
+
+Establish a clear process for publishing plugin documentation.
+
+====== GitHub Pages Setup
+
+Configure documentation publishing in your `build.gradle`:
+
+[source,groovy]
+----
+plugins {
+    id "org.apache.grails.gradle.grails-github-pages"
+}
+
+githubPages {
+    repoUri = 'https://github.com/mycompany/my-plugin.git'
+    targetBranch = 'gh-pages'
+    pages {
+        from 'build/docs/manual'
+    }
+}
+----
+
+====== Documentation Structure
+
+Organize your documentation files:
+
+[source,text]
+----
+src/docs/
+├── guide/
+│   ├── introduction.adoc
+│   ├── installation.adoc
+│   ├── configuration.adoc
+│   ├── usage.adoc
+│   └── advanced-topics.adoc
+├── ref/
+│   ├── configuration-reference.adoc
+│   └── api-reference.adoc
+└── toc.yml
+----
+
+====== Automated Documentation Publishing
+
+Add documentation publishing to your release workflow:
+
+[source,yaml]
+----
+- name: Generate Documentation
+  run: ./gradlew docs
+  
+- name: Deploy Documentation
+  run: ./gradlew githubPages
+  env:
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+----
+
+===== Development Environment Setup
+
+Streamline development environment configuration using SDKMAN for easy Grails version management.
+
+====== SDKMAN Configuration
+
+Create a `.sdkmanrc` file in your project root:
+
+[source,properties]
+----
+# grails-plugin-template/.sdkmanrc
+grails=7.0.0
+java=17.0.10-tem
+----
+
+Developers can then initialize the environment with:
+
+[source,bash]
+----
+sdk env
+----
+
+====== Development Setup Script
+
+Create a `setup-dev.sh` script for new contributors:
+
+[source,bash]
+----
+#!/bin/bash
+# setup-dev.sh
+
+echo "Setting up development environment..."
+
+# Install SDKMAN if not present
+if ! command -v sdk &> /dev/null; then
+    echo "Installing SDKMAN..."
+    curl -s "https://get.sdkman.io" | bash
+    source "$HOME/.sdkman/bin/sdkman-init.sh"
+fi
+
+# Install required versions
+sdk env install
+
+# Verify setup
+echo "Verifying installation..."
+grails --version
+java -version
+
+echo "Development environment ready!"
+----
+
+===== Licensing Guidelines
+
+Ensure clear licensing with the recommended Apache Software Foundation license.
+
+====== License File Setup
+
+Include the standard Apache 2.0 license file:
+
+[source,text]
+----
+                                 Apache License
+                           Version 2.0, January 2004
+                        http://www.apache.org/licenses/
+
+   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+   1. Definitions.
+   
+   [Full Apache 2.0 license text...]
+----
+
+====== Plugin Descriptor Licensing
+
+Configure licensing in your plugin descriptor:
+
+[source,groovy]
+----
+class MyPluginGrailsPlugin extends Plugin {
+    def version = "1.0.0"
+    def grailsVersion = "7.0.0 > *"
+    
+    def title = "My Plugin"
+    def author = "John Doe"
+    def authorEmail = "john.doe@example.com"
+    def description = '''\
+Brief description of the plugin functionality.
+'''
+    
+    // Licensing information
+    def license = "APACHE"
+    
+    def developers = [
+        [name: "John Doe", email: "john.doe@example.com"],
+        [name: "Jane Smith", email: "jane.smith@example.com"]
+    ]
+    
+    def organization = [
+        name: "My Company",
+        url: "https://www.mycompany.com"
+    ]
+    
+    def issueManagement = [
+        system: "GitHub Issues",
+        url: "https://github.com/mycompany/my-plugin/issues"
+    ]
+    
+    def scm = [
+        url: "https://github.com/mycompany/my-plugin"
+    ]
+}
+----
+
+====== Copyright Headers
+
+Add copyright headers to all source files:
+
+[source,groovy]
+----
+/*
+ * Copyright 2024 Original Author
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+----
+
+===== Gradle Multiproject Design
+
+Use composition-based Gradle project design instead of conditional logic in root build files.
+
+====== Composition Over Conditional Logic
+
+Instead of using if/else statements in build files, use Gradle's composition features:
+
+[source,groovy]
+----
+// BAD: Conditional logic in root build.gradle
+if (project.hasProperty('enableExamples')) {
+    include 'examples'
+}
+
+// GOOD: Composition-based approach
+// Always include projects, let individual projects decide their behavior
+include 'my-plugin'
+include 'my-plugin-examples'
+include 'my-plugin-tests'
+----
+
+====== Shared Build Logic
+
+Create shared build configuration using Gradle's `buildSrc` or precompiled script plugins:
+
+[source,groovy]
+----
+// buildSrc/src/main/groovy/mycompany.grails-plugin-convention.gradle
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+}
+
+group = 'org.mycompany.plugins'
+version = '1.0.0'
+
+dependencies {
+    implementation "org.grails:grails-core"
+    testImplementation "org.grails:grails-testing-support"
+}
+
+grailsPublish {
+    license {
+        name = 'Apache-2.0'
+    }
+    developers = [maintainer: 'Plugin Maintainer']
+}
+----
+
+Apply the convention plugin in individual plugin projects:
+
+[source,groovy]
+----
+// my-plugin/build.gradle
+plugins {
+    id 'mycompany.grails-plugin-convention'
+}
+
+grailsPublish {
+    githubSlug = 'mycompany/my-plugin'
+    title = 'My Specific Plugin'
+    desc = 'Description for this specific plugin'
+}
+----
+
+===== Plugin Discoverability
+
+Register your plugin in the official Grails plugins metadata repository for better discoverability.
+
+====== Metadata Registration Process
+
+To have your plugin listed on the Grails Plugin Portal:
+
+1. Ensure your plugin is published to Maven Central
+2. Fork the https://github.com/apache/grails-plugins-metadata[grails-plugins-metadata] repository
+3. Add your plugin entry to `grails-plugins.json`:
+
+[source,json]
+----
+{
+  "bintrayPackage": {
+    "name": "My Plugin",
+    "repo": "my-plugin",
+    "owner": "mycompany",
+    "desc": "A comprehensive plugin for XYZ functionality",
+    "labels": ["web", "utility", "api"],
+    "licenses": ["Apache-2.0"],
+    "issueTrackerUrl": "https://github.com/mycompany/my-plugin/issues",
+    "latestVersion": "1.0.0",
+    "updated": "2024-12-25T04:00:40.855Z",
+    "systemIds": ["org.mycompany.plugins:my-plugin"],
+    "vcsUrl": "https://github.com/mycompany/my-plugin"
+  },
+  "documentationUrl": "https://mycompany.github.io/my-plugin/",
+  "mavenMetadataUrl": "https://repo1.maven.org/maven2/org/mycompany/plugins/my-plugin/maven-metadata.xml"
+}
+----
+
+4. Submit a pull request with your changes
+5. Wait for approval from the Grails team
+
+====== Plugin Portal Benefits
+
+Registering your plugin provides:
+- Visibility on https://grails.apache.org/plugins.html[Grails Plugin Portal]
+- Discovery through `grails list-plugins` command
+- Enhanced SEO and community exposure
+- Professional credibility
+
+===== Advanced Plugin Design Decisions
+
+Understand when to include the Grails Plugin Gradle Plugin and when to use simpler approaches.
+
+====== When to Use Grails Plugin Gradle Plugin
+
+Use `org.apache.grails.gradle.grails-plugin` when you need:
+
+[source,groovy]
+----
+plugins {
+    id "org.apache.grails.gradle.grails-plugin"  // For full plugin features
+}
+
+// This provides:
+// - Plugin descriptor generation
+// - Grails-specific conventions
+// - Asset pipeline integration
+// - Plugin reloading support
+// - Proper packaging for distribution
+----
+
+Use cases:
+- Complex plugins with domain classes
+- Plugins requiring asset processing
+- Plugins with extensive Grails integration
+- Plugins intended for public distribution
+
+====== When to Use Simpler Approaches
+
+For lightweight functionality, consider a simple library approach:
+
+[source,groovy]
+----
+plugins {
+    id "groovy"  // Simple Groovy library
+    id "java-library"  // Or Java library
+}
+
+// This provides:
+// - Standard JAR packaging
+// - Maven/Gradle publication
+// - No Grails-specific overhead
+----
+
+Use cases:
+- Utility functions and helpers
+- Simple service classes
+- Configuration extensions
+- Internal company libraries
+
+====== Hybrid Approach Example
+
+[source,groovy]
+----
+// build.gradle for a hybrid plugin
+plugins {
+    id "org.apache.grails.gradle.grails-plugin"
+    id "maven-publish"
+}
+
+// Core functionality as a separate module
+dependencies {
+    api project(':my-plugin-core')  // Lightweight library
+    implementation "org.grails:grails-web"
+}
+
+// Publish both the plugin and core library
+publishing {
+    publications {
+        plugin(MavenPublication) {
+            from components.java
+            artifactId = 'my-plugin'
+        }
+        core(MavenPublication) {
+            from project(':my-plugin-core').components.java
+            artifactId = 'my-plugin-core'
+        }
+    }
+}
+----
+
+===== Testing Strategies for Long-term Maintenance
+
+Implement comprehensive testing approaches to ensure plugin quality and maintainability.
+
+====== Test Structure Organization
+
+[source,groovy]
+----
+src/
+├── test/
+│   ├── groovy/
+│   │   ├── unit/           // Unit tests
+│   │   ├── integration/    // Integration tests
+│   │   └── functional/     // Functional/end-to-end tests
+│   └── resources/
+└── integration-test/       // Separate source set for integration tests
+    ├── groovy/
+    └── resources/
+----
+
+====== Unit Testing Configuration
+
+Configure unit testing in `build.gradle`:
+
+[source,groovy]
+----
+dependencies {
+    testImplementation "org.grails:grails-testing-support"
+    testImplementation "org.spockframework:spock-core"
+    testImplementation "cglib:cglib-nodep:3.3.0"
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+}
+----
+
+====== Integration Testing Setup
+
+Create separate integration test source set:
+
+[source,groovy]
+----
+sourceSets {
+    integrationTest {
+        groovy {
+            srcDirs = ['src/integration-test/groovy']
+        }
+        resources {
+            srcDirs = ['src/integration-test/resources']
+        }
+        compileClasspath += main.output + test.output
+        runtimeClasspath += main.output + test.output
+    }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+task integrationTest(type: Test) {
+    description = 'Runs integration tests'
+    group = 'verification'
+    
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    
+    shouldRunAfter test
+}
+
+check.dependsOn integrationTest
+----
+
+====== Functional Testing with Geb
+
+For web plugin testing, use Geb for browser automation:
+
+[source,groovy]
+----
+dependencies {
+    testImplementation "org.grails.plugins:geb"
+    testImplementation "org.seleniumhq.selenium:selenium-chrome-driver"
+    testImplementation "org.seleniumhq.selenium:selenium-firefox-driver"
+}
+
+// Geb configuration
+test {
+    systemProperties[
+        'geb.build.reportsDir': 'build/geb-reports',
+        'geb.env': 'chrome'
+    ]
+}
+----
+
+====== Test Coverage and Quality Metrics
+
+Configure code coverage reporting:
+
+[source,groovy]
+----
+plugins {
+    id "jacoco"
+}
+
+jacoco {
+    toolVersion = "0.8.11"
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+check.dependsOn jacocoTestReport
+----
+
+====== Continuous Testing in Development
+
+Enable continuous testing during development:
+
+[source,groovy]
+----
+test {
+    // Enable continuous testing
+    outputs.upToDateWhen { false }
+    
+    // Parallel test execution
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+    
+    // Test filtering for development
+    if (project.hasProperty('testSingle')) {
+        include "**/*${project.property('testSingle')}*"
+    }
+}
+----
+
+====== Test Documentation and Examples
+
+Include comprehensive test documentation:
+
+[source,groovy]
+----
+// Example unit test
+class MyServiceSpec extends Specification {
+    
+    @Shared
+    MyService myService
+    
+    def setupSpec() {
+        // One-time setup
+        myService = new MyService()
+    }
+    
+    def "service should perform calculation correctly"() {
+        given: "valid input parameters"
+        def input = [value: 42]
+        
+        when: "the service method is called"
+        def result = myService.calculate(input)
+        
+        then: "the expected result is returned"
+        result == 84
+    }
+    
+    def "service should handle edge cases"() {
+        given: "boundary condition input"
+        def input = [value: 0]
+        
+        when: "the service method is called"
+        def result = myService.calculate(input)
+        
+        then: "appropriate handling occurs"
+        result == 0
+    }
+}
+----
+
+====== Maintenance Testing Strategy
+
+Implement a testing strategy for long-term maintenance:
+
+1. **Unit Tests**: Fast, isolated tests for individual components
+2. **Integration Tests**: Tests that verify component interactions
+3. **Regression Tests**: Tests to prevent breaking changes
+4. **Compatibility Tests**: Tests for different Grails versions
+5. **Performance Tests**: Tests to monitor performance degradation
+
+[source,groovy]
+----
+// Version compatibility testing
+task testCompatibility {
+    doLast {
+        def versions = ['7.0.0', '7.1.0', '7.2.0']
+        versions.each { version ->
+            println "Testing compatibility with Grails ${version}"
+            // Execute tests with different Grails versions
+        }
+    }
+}
+----
+
+Following these comprehensive best practices will ensure your Grails plugins are professional, maintainable, and ready for production use. The combination of proper build structure, automated testing, clear documentation, and standardized processes creates plugins that can be confidently used in enterprise environments.
