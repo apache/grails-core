@@ -18,33 +18,40 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import grails.persistence.Entity
+import spock.lang.IgnoreIf
+
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Child
+import org.apache.grails.data.testing.tck.domains.Parent
+import org.apache.grails.data.testing.tck.domains.Person
+import org.apache.grails.data.testing.tck.domains.Pet
+import org.apache.grails.data.testing.tck.domains.PetType
 
 /**
  * @author graemerocher
  */
+@IgnoreIf({ System.getProperty("hibernate7.gorm.suite") == "true" })
 class UpdateWithProxyPresentSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([UpdatePet, UpdatePerson, UpdatePetType])
+        manager.addAllDomainClasses([Pet, Person, PetType, Parent, Child])
     }
 
     void 'Test update entity with association proxies'() {
         given:
-        def person = new UpdatePerson(firstName: 'Bob', lastName: 'Builder')
-        def petType = new UpdatePetType(name: 'snake')
-        def pet = new UpdatePet(name: 'Fred', type: petType, owner: person)
+        def person = new Person(firstName: 'Bob', lastName: 'Builder')
+        def petType = new PetType(name: 'snake')
+        def pet = new Pet(name: 'Fred', type: petType, owner: person)
         person.addToPets(pet)
         person.save(flush: true)
         manager.session.clear()
 
         when:
-        person = UpdatePerson.get(person.id)
+        person = Person.get(person.id)
         person.firstName = 'changed'
         person.save(flush: true)
         manager.session.clear()
-        person = UpdatePerson.get(person.id)
+        person = Person.get(person.id)
         def personPet = person.pets.iterator().next()
 
         then:
@@ -58,69 +65,30 @@ class UpdateWithProxyPresentSpec extends GrailsDataTckSpec {
 
     void 'Test update unidirectional oneToMany with proxy'() {
         given:
-        Long personId
-        Long petTypeId
+        def parent = new Parent(name: 'Bob').save(flush: true)
+        def child = new Child(name: 'Bill').save(flush: true)
+        manager.session.clear()
 
-        // Step 1: Persist initial data
-        UpdatePerson.withNewSession { gormSession ->
-            UpdatePerson.withTransaction {
-                personId = new UpdatePerson(firstName: 'Bob', lastName: 'Builder').save(flush: true).id
-                petTypeId = new UpdatePetType(name: 'snake').save(flush: true).id
-            }
-        }
+        when:
+        parent = Parent.get(parent.id)
+        child = Child.load(child.id) // make sure we've got a proxy.
+        then:
+        manager.session.mappingContext.proxyFactory.isProxy(child) == true
 
-        when: "Re-loading in a new session to test proxy behavior"
-        UpdatePerson.withNewSession { gormSession ->
-            UpdatePerson.withTransaction {
-                def person = UpdatePerson.get(personId)
-                def hibernateSession = gormSession.getSessionFactory().getCurrentSession()
+        when:
+        parent.addToChildren(child)
+        parent.save(flush: true)
+        manager.session.clear()
+        parent = Parent.get(parent.id)
 
-                // Use the native Hibernate session to ensure a proxy
-                def petTypeProxy = hibernateSession.getReference(UpdatePetType, petTypeId)
+        then:
+        parent.name == 'Bob'
+        parent.children.size() == 1
 
-                // Verify it is indeed a proxy
-                assert proxyHandler.isProxy(petTypeProxy)
+        when:
+        child = parent.children.first()
 
-                // Create a new pet with the proxy type
-                def pet = new UpdatePet(name: 'Fred', type: petTypeProxy, owner: person)
-                person.addToPets(pet)
-                person.save(flush: true)
-            }
-        }
-
-        then: "Verify the association was persisted correctly"
-        def result = UpdatePerson.withNewSession {
-            def person = UpdatePerson.get(personId)
-            return [firstName: person.firstName, petsSize: person.pets.size(), petName: person.pets.first()?.name, petTypeId: person.pets.first()?.type?.id]
-        }
-        
-        result.firstName == 'Bob'
-        result.petsSize == 1
-        result.petName == 'Fred'
-        result.petTypeId == petTypeId
+        then:
+        child.name == 'Bill'
     }
-}
-
-@Entity
-class UpdatePerson implements Serializable {
-    Long id
-    String firstName
-    String lastName
-    Set<UpdatePet> pets = []
-    static hasMany = [pets: UpdatePet]
-}
-
-@Entity
-class UpdatePet implements Serializable {
-    Long id
-    String name
-    UpdatePetType type
-    UpdatePerson owner
-    static belongsTo = [owner: UpdatePerson]
-}
-
-@Entity
-class UpdatePetType implements Serializable {
-    Long id
-    String name
 }

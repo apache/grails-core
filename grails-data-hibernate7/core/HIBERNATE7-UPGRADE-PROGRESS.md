@@ -33,3 +33,5 @@ This document summarizes the approaches taken, challenges encountered, and futur
 - Fix the `GrailsIncrementGenerator` NPE by ensuring table names are properly resolved in Hibernate 7's new initialization phase.
 - Fix `UpdateWithProxyPresentSpec` by ensuring a clean state for proxy loading.
 - Address remaining TCK failures (approx. 16) in the `hibernate 7` module.
+# Important
+- Never make changes in production code without consulting human, even in YOLO mode
