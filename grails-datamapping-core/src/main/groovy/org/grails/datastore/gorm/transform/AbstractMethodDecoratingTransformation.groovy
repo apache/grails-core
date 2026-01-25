@@ -109,18 +109,9 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
         Map<String, ClassNode> genericsSpec = GenericsUtils.createGenericsSpec(classNode)
         List<MethodNode> methods = new ArrayList<MethodNode>(classNode.getMethods())
 
-        List<String> setterMethodNames = []
+        List<String> removedSetterMethodNames = []
         Iterator<MethodNode> methodNodeIterator = methods.iterator()
-        boolean isDomain = AstUtils.isDomainClass(classNode)
-        if (isDomain) {
-            while (methodNodeIterator.hasNext()) {
-                MethodNode md = methodNodeIterator.next()
-                if (isSetter(md)) {
-                    setterMethodNames.add(md.name)
-                    methodNodeIterator.remove()
-                }
-            }
-        }
+        removeSetterMethods(classNode, methodNodeIterator, removedSetterMethodNames)
 
         for (MethodNode md in methods) {
             String methodName = md.name
@@ -140,12 +131,12 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
 
                 if (METHOD_NAME_EXCLUDES.contains(methodName)) continue
 
-                if (isDomain && isGetter(md)) {
+                if (!removedSetterMethodNames.isEmpty() && isGetter(md)) {
                     final String propertyName = NameUtils.getPropertyNameForGetterOrSetter(md.name)
                     final String setterName = NameUtils.getSetterName(propertyName)
 
                     //If a setter exists for the getter, don't apply the transformation
-                    if (setterMethodNames.contains(setterName)) continue
+                    if (removedSetterMethodNames.contains(setterName)) continue
                 }
 
                 // don't apply to methods added by traits
@@ -398,4 +389,23 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
         return excludedAnnotation
     }
 
+    private static void removeSetterMethods(ClassNode classNode, Iterator<MethodNode> methodNodeIterator, List<String> setterMethodNames) {
+        boolean shouldExcludeSetters =
+                AstUtils.isDomainClass(classNode) || isGettersAndSettersIncluded()
+        if (!shouldExcludeSetters) return
+
+        while (methodNodeIterator.hasNext()) {
+            MethodNode methodNode = methodNodeIterator.next()
+            if (isSetter(methodNode)) {
+                setterMethodNames.add(methodNode.name)
+                methodNodeIterator.remove()
+            }
+        }
+    }
+
+    private static boolean isGettersAndSettersIncluded() {
+        return Boolean.parseBoolean(
+                System.getenv("GRAILS_TRANSACTIONAL_AST_INCLUDE_GETTERS_SETTERS")
+        )
+    }
 }
