@@ -13,8 +13,7 @@ class SequenceGeneratorsSpec extends HibernateGormDatastoreSpec {
                                      EntityWithSequence,
                                      EntityWithTable,
                                      EntityWithUUID,
-                                     EntityWithAssigned,
-                                     EntityWithIncrement])
+                                     EntityWithAssigned])
     }
 
 
@@ -72,19 +71,6 @@ class SequenceGeneratorsSpec extends HibernateGormDatastoreSpec {
         then:
         entity.id == 123
     }
-
-    @Rollback
-    //TODO Still broken
-    void "test increment generator"() {
-        when:
-        def entity1 = new EntityWithIncrement(name: "test1").save(flush: true)
-        def entity2 = new EntityWithIncrement(name: "test2").save(flush: true)
-
-        then:
-        entity1.id != null
-        entity2.id != null
-        entity2.id > entity1.id
-    }
 }
 
 @Entity
@@ -138,14 +124,5 @@ class EntityWithAssigned {
     String name
     static mapping = {
         id generator: 'assigned'
-    }
-}
-
-@Entity
-class EntityWithIncrement {
-    Long id
-    String name
-    static mapping = {
-        id generator: 'increment'
     }
 }

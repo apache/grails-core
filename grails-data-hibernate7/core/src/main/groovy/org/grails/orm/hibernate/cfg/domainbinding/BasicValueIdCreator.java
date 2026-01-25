@@ -66,23 +66,16 @@ public class BasicValueIdCreator {
     public BasicValue getBasicValueId(RootClass entity, Identity mappedId, boolean useSequence) {
         // create a BasicValue for the specific entity table (do not reuse the prototype directly because table differs)
         String generatorName = determineGeneratorName(mappedId, useSequence);
-        final String entityName = entity.getEntityName();
-
-        id.setCustomIdGeneratorCreator(context -> {
-            // Ensure the ID object knows which entity it belongs to
-            if (mappedId != null && mappedId.getName() == null) {
-                mappedId.setName(entityName);
-            }
-            Generator generator = generatorFactories.getOrDefault(generatorName, (ctx, mid) -> new GrailsNativeGenerator(ctx))
-                    .apply(context, mappedId);
-            System.out.println("GENERATOR: name=" + generatorName + ", type=" + generator.getClass().getName());
-            if (generator instanceof org.hibernate.id.IdentifierGenerator identifierGenerator) {
-                identifierGenerator.initialize(context.getSqlStringGenerationContext());
-            }
-            return generator;
-        });
-
+        if (mappedId != null && mappedId.getName() == null) {
+            mappedId.setName(entity.getEntityName());
+        }
+        id.setCustomIdGeneratorCreator(context -> createGenerator(mappedId, context, generatorName));
         return id;
+    }
+
+    private Generator createGenerator(Identity mappedId, GeneratorCreationContext context, String generatorName) {
+        return generatorFactories.getOrDefault(generatorName, (ctx, mid) -> new GrailsNativeGenerator(ctx))
+                .apply(context, mappedId);
     }
 
     private String determineGeneratorName(Identity mappedId, boolean useSequence) {
