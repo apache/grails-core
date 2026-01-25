@@ -43,11 +43,11 @@ class ValidateableTraitSpec extends Specification {
      * has registered the shared constraints.
      */
     void setup() {
-        SharedConstraintsValidateable.clearConstraintsMap()
+        SharedConstraintsValidateable.clearConstraintsMapCache()
     }
 
     void cleanup() {
-        SharedConstraintsValidateable.clearConstraintsMap()
+        SharedConstraintsValidateable.clearConstraintsMapCache()
     }
 
     void 'Test validate can be invoked in a unit test with no special configuration'() {

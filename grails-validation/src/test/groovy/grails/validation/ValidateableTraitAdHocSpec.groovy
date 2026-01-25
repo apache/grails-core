@@ -34,11 +34,11 @@ class ValidateableTraitAdHocSpec extends Specification {
      * has registered the shared constraints.
      */
     void setup() {
-        PersonAdHocSharedConstraintsValidateable.clearConstraintsMap()
+        PersonAdHocSharedConstraintsValidateable.clearConstraintsMapCache()
     }
 
     void cleanup() {
-        PersonAdHocSharedConstraintsValidateable.clearConstraintsMap()
+        PersonAdHocSharedConstraintsValidateable.clearConstraintsMapCache()
     }
 
     void 'Test that pre-declared constraints can be used'() {

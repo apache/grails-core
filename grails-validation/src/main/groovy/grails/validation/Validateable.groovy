@@ -111,7 +111,7 @@ trait Validateable {
      * @since 7.0
      */
     @Generated
-    static void clearConstraintsMap() {
+    static void clearConstraintsMapCache() {
         constraintsMapInternal = null
     }
 

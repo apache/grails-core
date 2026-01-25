@@ -43,12 +43,12 @@ class CommandObjectNoDataSpec extends Specification implements GrailsWebUnitTest
      */
     def setup() {
         ConstraintEvalUtils.clearDefaultConstraints()
-        Artist.clearConstraintsMap()
+        Artist.clearConstraintsMapCache()
     }
 
     def cleanup() {
         ConstraintEvalUtils.clearDefaultConstraints()
-        Artist.clearConstraintsMap()
+        Artist.clearConstraintsMapCache()
     }
 
     void "test shared constraint"() {

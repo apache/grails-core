@@ -51,14 +51,14 @@ class CommandObjectsSpec extends Specification implements ControllerUnitTest<Tes
      */
     def setup() {
         ConstraintEvalUtils.clearDefaultConstraints()
-        Artist.clearConstraintsMap()
-        ArtistSubclass.clearConstraintsMap()
+        Artist.clearConstraintsMapCache()
+        ArtistSubclass.clearConstraintsMapCache()
     }
 
     def cleanup() {
         ConstraintEvalUtils.clearDefaultConstraints()
-        Artist.clearConstraintsMap()
-        ArtistSubclass.clearConstraintsMap()
+        Artist.clearConstraintsMapCache()
+        ArtistSubclass.clearConstraintsMapCache()
     }
 
     void "Test command object with date binding"() {
