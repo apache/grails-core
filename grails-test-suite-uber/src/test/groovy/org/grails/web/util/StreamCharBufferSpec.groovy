@@ -32,6 +32,7 @@ import org.grails.encoder.impl.HTML4Codec
 import org.grails.encoder.impl.JavaScriptCodec
 import org.grails.encoder.impl.RawCodec
 import org.grails.plugins.codecs.HTMLCodec
+import org.springframework.web.context.request.RequestContextHolder
 
 import spock.lang.Issue
 import spock.lang.Specification
@@ -67,7 +68,7 @@ class StreamCharBufferSpec extends Specification {
     }
 
     def cleanup() {
-        org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes()
+        RequestContextHolder.resetRequestAttributes()
     }
 
     def "stream char buffer should support encoding"() {
