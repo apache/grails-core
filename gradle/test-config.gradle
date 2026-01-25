@@ -31,6 +31,17 @@ dependencies {
     add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher')
 }
 
+// Disable build cache for Groovy compilation in CI to ensure AST transformations are always applied.
+// AST transformers are applied at compile time, and Gradle's incremental compilation might not detect
+// when a transformer itself changes, leading to stale bytecode.
+// This applies to:
+// - compileGroovy
+// - compileTestGroovy
+// - compileGroovyPlugins (if present)
+tasks.withType(GroovyCompile).configureEach {
+    outputs.cacheIf { !isCiBuild }
+}
+
 tasks.withType(Test).configureEach {
     // Disable build cache for tests in CI to ensure they always run
     outputs.cacheIf { !isCiBuild }
