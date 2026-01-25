@@ -79,7 +79,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         given:
         def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Fred")
         when:
-        person.remove(flush: true)
+        person.delete(flush: true)
         then:
         HibernateGormInstanceApiSpecPerson.findByFirstName("Fred") == null
     }
