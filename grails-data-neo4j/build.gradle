@@ -220,11 +220,10 @@ subprojects { subproject ->
     configurations.all {
         resolutionStrategy.eachDependency { DependencyResolveDetails details ->
             def dependencyName = details.requested.name
-            if (details.requested.group == 'org.apache.grails.data' &&
+            if ((details.requested.group == 'org.apache.grails.data' &&
                     details.requested.name in ['grails-datastore-core',
                                                'grails-datastore-async',
                                                'grails-datamapping-core',
-                                               'grails-datamapping-async',
                                                'grails-datamapping-rx',
                                                'grails-datamapping-support',
                                                'grails-datamapping-tck-tests',
@@ -232,7 +231,8 @@ subprojects { subproject ->
                                                'grails-datamapping-tck-domains',
                                                'grails-datamapping-core-test',
                                                'grails-datamapping-validation',
-                                               'grails-datastore-web']
+                                               'grails-datastore-web']) ||
+                    (details.requested.group == 'org.apache.grails' && details.requested.name == 'grails-datamapping-async')
             ) {
                 details.useVersion(datastoreVersion)
             } else if(details.requested.group == 'org.springframework') {

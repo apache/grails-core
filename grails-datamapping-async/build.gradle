@@ -28,7 +28,7 @@ plugins {
 }
 
 version = projectVersion
-group = 'org.apache.grails.data'
+group = 'org.apache.grails'
 
 ext {
     pomTitle = 'Grails GORM'
