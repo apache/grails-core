@@ -45,6 +45,9 @@ import org.codehaus.groovy.transform.trait.Traits
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
 import org.grails.datastore.mapping.reflect.AstUtils
 import org.grails.datastore.mapping.reflect.NameUtils
 
@@ -84,6 +87,8 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
 
     private static final Set<String> METHOD_NAME_EXCLUDES = new HashSet<String>(Arrays.asList('afterPropertiesSet', 'destroy'))
     private static final Set<String> ANNOTATION_NAME_EXCLUDES = new HashSet<String>(Arrays.asList(PostConstruct.getName(), PreDestroy.getName(), 'grails.web.controllers.ControllerMethod'))
+    private static final Logger LOG =
+            LoggerFactory.getLogger(AbstractMethodDecoratingTransformation)
     /**
      * Key used to store within the original method node metadata, all previous decorated methods
      */
@@ -397,6 +402,11 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
         while (methodNodeIterator.hasNext()) {
             MethodNode methodNode = methodNodeIterator.next()
             if (isSetter(methodNode)) {
+                LOG.debug(
+                        "Removing setter method '{}' from transactional AST processing for class '{}'",
+                        methodNode.name,
+                        classNode.name
+                )
                 setterMethodNames.add(methodNode.name)
                 methodNodeIterator.remove()
             }
