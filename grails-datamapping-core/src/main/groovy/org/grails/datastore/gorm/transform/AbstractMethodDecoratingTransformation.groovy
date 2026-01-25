@@ -45,6 +45,7 @@ import org.codehaus.groovy.transform.trait.Traits
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 
+import org.grails.datastore.mapping.reflect.AstUtils
 import org.grails.datastore.mapping.reflect.NameUtils
 
 import static org.codehaus.groovy.ast.ClassHelper.VOID_TYPE
@@ -110,11 +111,14 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
 
         List<String> setterMethodNames = []
         Iterator<MethodNode> methodNodeIterator = methods.iterator()
-        while (methodNodeIterator.hasNext()) {
-            MethodNode md = methodNodeIterator.next()
-            if (isSetter(md)) {
-                setterMethodNames.add(md.name)
-                methodNodeIterator.remove()
+        boolean isDomain = AstUtils.isDomainClass(classNode)
+        if (isDomain) {
+            while (methodNodeIterator.hasNext()) {
+                MethodNode md = methodNodeIterator.next()
+                if (isSetter(md)) {
+                    setterMethodNames.add(md.name)
+                    methodNodeIterator.remove()
+                }
             }
         }
 
@@ -136,7 +140,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
 
                 if (METHOD_NAME_EXCLUDES.contains(methodName)) continue
 
-                if (isGetter(md)) {
+                if (isDomain && isGetter(md)) {
                     final String propertyName = NameUtils.getPropertyNameForGetterOrSetter(md.name)
                     final String setterName = NameUtils.getSetterName(propertyName)
 
