@@ -145,6 +145,14 @@ public interface PersistentEntity extends Initializable {
     ClassMapping getMapping();
 
     /**
+     * @return The mapped form of the entity
+     */
+    default org.grails.datastore.mapping.config.Entity getMappedForm() {
+        ClassMapping mapping = getMapping();
+        return mapping != null ? mapping.getMappedForm() : null;
+    }
+
+    /**
      * Constructs a new instance
      * @return The new instnace
      */
@@ -226,6 +234,7 @@ public interface PersistentEntity extends Initializable {
      * @return True if the operation was successful
      */
     boolean addOwner(Class type);
+
 
 
 }

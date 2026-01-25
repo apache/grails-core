@@ -18,13 +18,11 @@ class SimpleValueBinderSpec extends Specification {
     def columnConfigToColumnBinder = Mock(ColumnConfigToColumnBinder)
     def columnBinder = Mock(ColumnBinder)
     def persistentPropertyToPropertyConfig = Mock(PersistentPropertyToPropertyConfig)
-    def hibernateEntityWrapper = Mock(HibernateEntityWrapper)
     def typeNameProvider = Mock(TypeNameProvider)
 
     def binder = new SimpleValueBinder(columnConfigToColumnBinder,
             columnBinder,
             persistentPropertyToPropertyConfig,
-            hibernateEntityWrapper,
             typeNameProvider)
 
     def "sets type from provider when present and applies type params"() {
@@ -40,7 +38,7 @@ class SimpleValueBinderSpec extends Specification {
         // stubs
         persistentPropertyToPropertyConfig.toPropertyConfig(prop) >> pc
         prop.getOwner() >> owner
-        hibernateEntityWrapper.getMappedForm(owner) >> mapping
+        owner.getMappedForm() >> mapping
         typeNameProvider.getTypeName(prop, mapping) >> "custom.Type"
         pc.getTypeParams() >> props
         pc.isDerived() >> false
@@ -75,7 +73,7 @@ class SimpleValueBinderSpec extends Specification {
 
         persistentPropertyToPropertyConfig.toPropertyConfig(prop) >> pc
         prop.getOwner() >> owner
-        hibernateEntityWrapper.getMappedForm(owner) >> mapping
+        owner.getMappedForm() >> mapping
         typeNameProvider.getTypeName(prop, mapping) >> null
         pc.isDerived() >> false
         pc.getColumns() >> null
@@ -108,7 +106,7 @@ class SimpleValueBinderSpec extends Specification {
         persistentPropertyToPropertyConfig.toPropertyConfig(tenantProp) >> tenantPc
         prop.getOwner() >> owner
         tenantProp.getOwner() >> owner
-        hibernateEntityWrapper.getMappedForm(owner) >> mapping
+        owner.getMappedForm() >> mapping
         typeNameProvider.getTypeName(_, _) >> 'X'
 
         pc.isDerived() >> true
@@ -146,7 +144,7 @@ class SimpleValueBinderSpec extends Specification {
 
         persistentPropertyToPropertyConfig.toPropertyConfig(prop) >> pc
         prop.getOwner() >> owner
-        hibernateEntityWrapper.getMappedForm(owner) >> mapping
+        owner.getMappedForm() >> mapping
         typeNameProvider.getTypeName(prop, mapping) >> 'Y'
         pc.isDerived() >> false
         pc.getColumns() >> null
@@ -177,7 +175,7 @@ class SimpleValueBinderSpec extends Specification {
 
         persistentPropertyToPropertyConfig.toPropertyConfig(prop) >> pc
         prop.getOwner() >> owner
-        hibernateEntityWrapper.getMappedForm(owner) >> mapping
+        owner.getMappedForm() >> mapping
         typeNameProvider.getTypeName(prop, mapping) >> 'Z'
         pc.isDerived() >> false
         pc.getColumns() >> [cc1, cc2]

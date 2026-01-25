@@ -9,7 +9,6 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 public class ColumnNameForPropertyAndPathFetcher {
 
     private final PersistentEntityNamingStrategy namingStrategy;
-    private final HibernateEntityWrapper hibernateEntityWrapper;
     private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
     private final DefaultColumnNameFetcher defaultColumnNameFetcher;
     private final BackticksRemover backticksRemover;
@@ -17,19 +16,16 @@ public class ColumnNameForPropertyAndPathFetcher {
     public ColumnNameForPropertyAndPathFetcher(PersistentEntityNamingStrategy namingStrategy
     ) {
         this.namingStrategy = namingStrategy;
-        this.hibernateEntityWrapper = new HibernateEntityWrapper();
         this.persistentPropertyToPropertyConfig = new PersistentPropertyToPropertyConfig();
         this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy);
         this.backticksRemover = new BackticksRemover();
     }
 
     protected ColumnNameForPropertyAndPathFetcher(PersistentEntityNamingStrategy namingStrategy
-            , HibernateEntityWrapper hibernateEntityWrapper
             , PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig
     , DefaultColumnNameFetcher defaultColumnNameFetcher
     , BackticksRemover backticksRemover) {
         this.namingStrategy = namingStrategy;
-        this.hibernateEntityWrapper = hibernateEntityWrapper;
         this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
         this.defaultColumnNameFetcher = defaultColumnNameFetcher;
         this.backticksRemover = backticksRemover;

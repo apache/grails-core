@@ -21,7 +21,6 @@ class ColumnBinderSpec extends Specification {
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def hibernateWrapper = Mock(HibernateEntityWrapper)
         def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
@@ -32,7 +31,6 @@ class ColumnBinderSpec extends Specification {
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                hibernateWrapper,
                 userTypeFetcher,
                 indexBinder
         )
@@ -73,7 +71,6 @@ class ColumnBinderSpec extends Specification {
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def hibernateWrapper = Mock(HibernateEntityWrapper)
         def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
@@ -84,7 +81,6 @@ class ColumnBinderSpec extends Specification {
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                hibernateWrapper,
                 userTypeFetcher,
                 indexBinder
         )
@@ -106,7 +102,7 @@ class ColumnBinderSpec extends Specification {
         parentProp.isNullable() >> true // should make column initially nullable
         prop.getOwner() >> owner
         owner.isRoot() >> false
-        hibernateWrapper.getMappedForm(owner) >> mapping
+        owner.getMappedForm() >> mapping
         mapping.getTablePerHierarchy() >> true // forces nullable true for subclass
         propToConfig.toPropertyConfig(prop) >>> [propertyConfig, propertyConfig] // called twice in code
         // numeric constraints applied
@@ -139,7 +135,6 @@ class ColumnBinderSpec extends Specification {
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def hibernateWrapper = Mock(HibernateEntityWrapper)
         def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
@@ -150,7 +145,6 @@ class ColumnBinderSpec extends Specification {
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                hibernateWrapper,
                 userTypeFetcher,
                 indexBinder
         )
@@ -196,7 +190,6 @@ class ColumnBinderSpec extends Specification {
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def hibernateWrapper = Mock(HibernateEntityWrapper)
         def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
@@ -207,7 +200,6 @@ class ColumnBinderSpec extends Specification {
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                hibernateWrapper,
                 userTypeFetcher,
                 indexBinder
         )
@@ -248,7 +240,6 @@ class ColumnBinderSpec extends Specification {
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def hibernateWrapper = Mock(HibernateEntityWrapper)
         def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
@@ -259,7 +250,6 @@ class ColumnBinderSpec extends Specification {
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                hibernateWrapper,
                 userTypeFetcher,
                 indexBinder
         )
@@ -304,7 +294,6 @@ class ColumnBinderSpec extends Specification {
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def hibernateWrapper = Mock(HibernateEntityWrapper)
         def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
@@ -315,7 +304,6 @@ class ColumnBinderSpec extends Specification {
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                hibernateWrapper,
                 userTypeFetcher,
                 indexBinder
         )
@@ -356,7 +344,6 @@ class ColumnBinderSpec extends Specification {
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def hibernateWrapper = Mock(HibernateEntityWrapper)
         def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
@@ -367,7 +354,6 @@ class ColumnBinderSpec extends Specification {
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                hibernateWrapper,
                 userTypeFetcher,
                 indexBinder
         )
@@ -409,7 +395,6 @@ class ColumnBinderSpec extends Specification {
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def hibernateWrapper = Mock(HibernateEntityWrapper)
         def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
@@ -420,7 +405,6 @@ class ColumnBinderSpec extends Specification {
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                hibernateWrapper,
                 userTypeFetcher,
                 indexBinder
         )
@@ -462,7 +446,6 @@ class ColumnBinderSpec extends Specification {
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def hibernateWrapper = Mock(HibernateEntityWrapper)
         def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
@@ -473,7 +456,6 @@ class ColumnBinderSpec extends Specification {
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                hibernateWrapper,
                 userTypeFetcher,
                 indexBinder
         )
@@ -513,7 +495,6 @@ class ColumnBinderSpec extends Specification {
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def hibernateWrapper = Mock(HibernateEntityWrapper)
         def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
@@ -524,7 +505,6 @@ class ColumnBinderSpec extends Specification {
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                hibernateWrapper,
                 userTypeFetcher,
                 indexBinder
         )
@@ -564,7 +544,6 @@ class ColumnBinderSpec extends Specification {
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def hibernateWrapper = Mock(HibernateEntityWrapper)
         def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
@@ -575,7 +554,6 @@ class ColumnBinderSpec extends Specification {
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                hibernateWrapper,
                 userTypeFetcher,
                 indexBinder
         )
@@ -613,7 +591,6 @@ class ColumnBinderSpec extends Specification {
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def hibernateWrapper = Mock(HibernateEntityWrapper)
         def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
@@ -624,7 +601,6 @@ class ColumnBinderSpec extends Specification {
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                hibernateWrapper,
                 userTypeFetcher,
                 indexBinder
         )
@@ -664,7 +640,6 @@ class ColumnBinderSpec extends Specification {
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def hibernateWrapper = Mock(HibernateEntityWrapper)
         def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
@@ -675,7 +650,6 @@ class ColumnBinderSpec extends Specification {
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                hibernateWrapper,
                 userTypeFetcher,
                 indexBinder
         )
@@ -714,7 +688,6 @@ class ColumnBinderSpec extends Specification {
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def hibernateWrapper = Mock(HibernateEntityWrapper)
         def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
@@ -725,7 +698,6 @@ class ColumnBinderSpec extends Specification {
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                hibernateWrapper,
                 userTypeFetcher,
                 indexBinder
         )
@@ -743,7 +715,7 @@ class ColumnBinderSpec extends Specification {
         prop.isNullable() >> false
         prop.getOwner() >> owner
         owner.isRoot() >> false
-        hibernateWrapper.getMappedForm(owner) >> mapping
+        owner.getMappedForm() >> mapping
         mapping.getTablePerHierarchy() >> false
         propToConfig.toPropertyConfig(prop) >>> [propertyConfig, propertyConfig]
         propertyConfig.isUnique() >> false

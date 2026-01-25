@@ -27,19 +27,19 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def manyToOneValuesBinder = Mock(ManyToOneValuesBinder)
         def compositeBinder = Mock(CompositeIdentifierToManyToOneBinder)
         def columnFetcher = Mock(SimpleValueColumnFetcher)
-        def entityWrapper = Mock(HibernateEntityWrapper)
 
-        def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, propertyConfigConverter, manyToOneValuesBinder, compositeBinder, columnFetcher, entityWrapper)
+        def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, propertyConfigConverter, manyToOneValuesBinder, compositeBinder, columnFetcher)
 
         def association = Mock(Association)
         def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def path = "/test"
-        def refDomainClass = Mock(PersistentEntity)
         def mapping = new Mapping()
+        def refDomainClass = Mock(PersistentEntity) {
+            getMappedForm() >> mapping
+        }
         def propertyConfig = new PropertyConfig()
 
         association.getAssociatedEntity() >> refDomainClass
-        entityWrapper.getMappedForm(refDomainClass) >> mapping
         propertyConfigConverter.toPropertyConfig(association) >> propertyConfig
         mapping.setIdentity(hasCompositeId ? new CompositeIdentity() : null)
 
@@ -65,21 +65,21 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def manyToOneValuesBinder = Mock(ManyToOneValuesBinder)
         def compositeBinder = Mock(CompositeIdentifierToManyToOneBinder)
         def columnFetcher = Mock(SimpleValueColumnFetcher)
-        def entityWrapper = Mock(HibernateEntityWrapper)
 
-        def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, propertyConfigConverter, manyToOneValuesBinder, compositeBinder, columnFetcher, entityWrapper)
+        def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, propertyConfigConverter, manyToOneValuesBinder, compositeBinder, columnFetcher)
 
         def property = Mock(ManyToMany)
         def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
-        def ownerEntity = Mock(PersistentEntity)
         def mapping = new Mapping()
         mapping.setColumns(new HashMap<String, PropertyConfig>())
+        def ownerEntity = Mock(PersistentEntity) {
+            getMappedForm() >> mapping
+        }
         def propertyConfig = new PropertyConfig()
 
         property.isCircular() >> true
         property.getOwner() >> ownerEntity
         property.getName() >> "myCircularProp"
-        entityWrapper.getMappedForm(ownerEntity) >> mapping
         propertyConfigConverter.toPropertyConfig(property) >> propertyConfig
         namingStrategy.resolveColumnName("myCircularProp") >> "my_circular_prop"
 
@@ -103,20 +103,20 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def manyToOneValuesBinder = Mock(ManyToOneValuesBinder)
         def compositeBinder = Mock(CompositeIdentifierToManyToOneBinder)
         def columnFetcher = Mock(SimpleValueColumnFetcher)
-        def entityWrapper = Mock(HibernateEntityWrapper)
 
-        def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, propertyConfigConverter, manyToOneValuesBinder, compositeBinder, columnFetcher, entityWrapper)
+        def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, propertyConfigConverter, manyToOneValuesBinder, compositeBinder, columnFetcher)
 
         def property = Mock(OneToOne)
         def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
-        def refDomainClass = Mock(PersistentEntity)
         def mapping = new Mapping()
+        def refDomainClass = Mock(PersistentEntity) {
+            getMappedForm() >> mapping
+        }
         def propertyConfig = Mock(PropertyConfig)
         def column = new Column('test')
         def inverseSide = Mock(Association)
 
         property.getAssociatedEntity() >> refDomainClass
-        entityWrapper.getMappedForm(refDomainClass) >> mapping
         mapping.setIdentity(null)
         propertyConfigConverter.toPropertyConfig(property) >> propertyConfig
         columnFetcher.getColumnForSimpleValue(manyToOne) >> column
@@ -155,18 +155,18 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def manyToOneValuesBinder = Mock(ManyToOneValuesBinder)
         def compositeBinder = Mock(CompositeIdentifierToManyToOneBinder)
         def columnFetcher = Mock(SimpleValueColumnFetcher)
-        def entityWrapper = Mock(HibernateEntityWrapper)
 
-        def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, propertyConfigConverter, manyToOneValuesBinder, compositeBinder, columnFetcher, entityWrapper)
+        def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, propertyConfigConverter, manyToOneValuesBinder, compositeBinder, columnFetcher)
 
         def property = Mock(OneToOne)
         def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
-        def refDomainClass = Mock(PersistentEntity)
         def mapping = new Mapping()
+        def refDomainClass = Mock(PersistentEntity) {
+            getMappedForm() >> mapping
+        }
         def propertyConfig = new PropertyConfig()
 
         property.getAssociatedEntity() >> refDomainClass
-        entityWrapper.getMappedForm(refDomainClass) >> mapping
         mapping.setIdentity(null)
         propertyConfigConverter.toPropertyConfig(property) >> propertyConfig
         columnFetcher.getColumnForSimpleValue(manyToOne) >> null

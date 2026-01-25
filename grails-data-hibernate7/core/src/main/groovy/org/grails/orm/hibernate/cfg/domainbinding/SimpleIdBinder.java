@@ -9,6 +9,7 @@ import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.Table;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
@@ -18,20 +19,17 @@ import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH;
 public class SimpleIdBinder {
 
     private final BasicValueIdCreator basicValueIdCreator;
-    private final HibernateEntityWrapper hibernateEntityWrapper;
     private final SimpleValueBinder simpleValueBinder;
     private final PropertyBinder propertyBinder;
 
     public SimpleIdBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment, HibernatePersistentEntity domainClass, RootClass entity)  {
         this.basicValueIdCreator = new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment, domainClass, entity);
-        this.hibernateEntityWrapper = new HibernateEntityWrapper();
         this.simpleValueBinder =new SimpleValueBinder(namingStrategy);
         this.propertyBinder = new PropertyBinder();
     }
 
-    protected SimpleIdBinder(BasicValueIdCreator basicValueIdCreate, HibernateEntityWrapper hibernateEntityWrapper, SimpleValueBinder simpleValueBinder, PropertyBinder propertyBinder) {
+    protected SimpleIdBinder(BasicValueIdCreator basicValueIdCreate, SimpleValueBinder simpleValueBinder, PropertyBinder propertyBinder) {
         this.basicValueIdCreator = basicValueIdCreate;
-        this.hibernateEntityWrapper = hibernateEntityWrapper;
         this.simpleValueBinder = simpleValueBinder;
         this.propertyBinder = propertyBinder;
     }
@@ -39,7 +37,7 @@ public class SimpleIdBinder {
 
     public void bindSimpleId(PersistentProperty identifier, RootClass entity, Identity mappedId) {
 
-        boolean useSequence = hibernateEntityWrapper.getMappedForm(identifier.getOwner()).isTablePerConcreteClass();
+        boolean useSequence = GrailsDomainBinder.getMapping(identifier.getOwner()).isTablePerConcreteClass();
         // create the id value
 
         BasicValue id = basicValueIdCreator.getBasicValueId(entity, mappedId, useSequence);

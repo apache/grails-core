@@ -16,7 +16,6 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
 
     MetadataBuildingContext metadataBuildingContext
     JdbcEnvironment jdbcEnvironment
-    def hibernateEntityWrapper
     def simpleValueBinder
     def propertyBinder
     def basicValueIdcreator
@@ -34,26 +33,26 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         }
 
         // Mock the collaborators that can be safely mocked
-        hibernateEntityWrapper = Mock(HibernateEntityWrapper)
         simpleValueBinder = Mock(SimpleValueBinder)
         propertyBinder = Mock(PropertyBinder)
 
-        simpleIdBinder = new SimpleIdBinder(basicValueIdcreator, hibernateEntityWrapper, simpleValueBinder, propertyBinder)
+        simpleIdBinder = new SimpleIdBinder(basicValueIdcreator, simpleValueBinder, propertyBinder)
     }
 
     def "bindSimpleId with identity generator"() {
         given:
+        def mapping = Mock(org.grails.orm.hibernate.cfg.Mapping) {
+            isTablePerConcreteClass() >> false
+        }
         def testProperty = Mock(PersistentProperty) {
             getName() >> "id"
-            getOwner() >> Mock(PersistentEntity)
+            getOwner() >> Mock(PersistentEntity) {
+                getMappedForm() >> mapping
+            }
         }
         def rootClass = new RootClass(metadataBuildingContext)
         def table = new Table("TEST_TABLE")
         rootClass.setTable(table)
-
-        hibernateEntityWrapper.getMappedForm(_) >> Mock(org.grails.orm.hibernate.cfg.Mapping) {
-            isTablePerConcreteClass() >> false
-        }
 
         when:
         simpleIdBinder.bindSimpleId(testProperty, rootClass, new Identity(generator: 'identity'))
@@ -70,17 +69,18 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
 
     def "bindSimpleId with sequence generator"() {
         given:
+        def mapping = Mock(org.grails.orm.hibernate.cfg.Mapping) {
+            isTablePerConcreteClass() >> true
+        }
         def testProperty = Mock(PersistentProperty) {
             getName() >> "id"
-            getOwner() >> Mock(PersistentEntity)
+            getOwner() >> Mock(PersistentEntity) {
+                getMappedForm() >> mapping
+            }
         }
         def rootClass = new RootClass(metadataBuildingContext)
         def table = new Table("TEST_TABLE")
         rootClass.setTable(table)
-
-        hibernateEntityWrapper.getMappedForm(_) >> Mock(org.grails.orm.hibernate.cfg.Mapping) {
-            isTablePerConcreteClass() >> true
-        }
 
         when:
         simpleIdBinder.bindSimpleId(testProperty, rootClass, new Identity(generator: 'sequence', params: [sequence: 'SEQ_TEST']))

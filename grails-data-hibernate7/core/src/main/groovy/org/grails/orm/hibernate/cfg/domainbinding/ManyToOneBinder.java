@@ -11,6 +11,7 @@ import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.datastore.mapping.model.types.OneToOne;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
+import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
@@ -26,7 +27,6 @@ public class ManyToOneBinder {
     private final ManyToOneValuesBinder manyToOneValuesBinder;
     private final CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder;
     private final SimpleValueColumnFetcher simpleValueColumnFetcher;
-    private final HibernateEntityWrapper hibernateEntityWrapper;
 
     public ManyToOneBinder(PersistentEntityNamingStrategy namingStrategy) {
         this.namingStrategy = namingStrategy;
@@ -35,7 +35,6 @@ public class ManyToOneBinder {
         this.manyToOneValuesBinder = new ManyToOneValuesBinder();
         this.compositeIdentifierToManyToOneBinder = new CompositeIdentifierToManyToOneBinder(namingStrategy);
         this.simpleValueColumnFetcher = new SimpleValueColumnFetcher();
-        this.hibernateEntityWrapper = new HibernateEntityWrapper();
     }
 
     protected  ManyToOneBinder(PersistentEntityNamingStrategy namingStrategy
@@ -43,15 +42,13 @@ public class ManyToOneBinder {
     , PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig
     , ManyToOneValuesBinder manyToOneValuesBinder
     , CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder
-    , SimpleValueColumnFetcher simpleValueColumnFetcher
-    , HibernateEntityWrapper hibernateEntityWrapper) {
+    , SimpleValueColumnFetcher simpleValueColumnFetcher) {
         this.namingStrategy = namingStrategy;
         this.simpleValueBinder =simpleValueBinder;
         this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
         this.manyToOneValuesBinder = manyToOneValuesBinder;
         this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder;
         this.simpleValueColumnFetcher = simpleValueColumnFetcher;
-        this.hibernateEntityWrapper = hibernateEntityWrapper;
     }
 
 
@@ -65,7 +62,7 @@ public class ManyToOneBinder {
             ,String path) {
         manyToOneValuesBinder.bindManyToOneValues(property, manyToOne);
         PersistentEntity refDomainClass = property instanceof ManyToMany ? property.getOwner() : property.getAssociatedEntity();
-        Mapping mapping = hibernateEntityWrapper.getMappedForm(refDomainClass);
+        Mapping mapping = GrailsDomainBinder.getMapping(refDomainClass);
 
         boolean isComposite = mapping.hasCompositeIdentifier();
         if (isComposite) {

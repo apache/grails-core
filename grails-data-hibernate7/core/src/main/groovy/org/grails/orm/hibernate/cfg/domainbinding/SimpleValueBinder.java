@@ -14,6 +14,7 @@ import org.hibernate.mapping.Table;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
+import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -23,7 +24,6 @@ public class SimpleValueBinder {
     private final ColumnConfigToColumnBinder columnConfigToColumnBinder ;
     private final ColumnBinder columnBinder;
     private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
-    private final HibernateEntityWrapper hibernateEntityWrapper;
     private final TypeNameProvider typeNameProvider;
 
 
@@ -33,7 +33,6 @@ public class SimpleValueBinder {
         this.columnConfigToColumnBinder = new ColumnConfigToColumnBinder();
         this.columnBinder = new ColumnBinder(namingStrategy);
         this.persistentPropertyToPropertyConfig = new PersistentPropertyToPropertyConfig();
-        this.hibernateEntityWrapper = new HibernateEntityWrapper();
         this.typeNameProvider = new TypeNameProvider();
 
     }
@@ -41,13 +40,11 @@ public class SimpleValueBinder {
     protected SimpleValueBinder(ColumnConfigToColumnBinder columnConfigToColumnBinder
             , ColumnBinder columnBinder
             , PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig
-    , HibernateEntityWrapper hibernateEntityWrapper
     ,TypeNameProvider typeNameProvider) {
         this.columnConfigToColumnBinder = columnConfigToColumnBinder;
         this.columnBinder = columnBinder;
         this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
         this.typeNameProvider = typeNameProvider;
-        this.hibernateEntityWrapper = hibernateEntityWrapper;
     }
 
 
@@ -68,7 +65,7 @@ public class SimpleValueBinder {
             , String path
     ) {
         PropertyConfig propertyConfig = persistentPropertyToPropertyConfig.toPropertyConfig(property);
-        Mapping mapping = hibernateEntityWrapper.getMappedForm(property.getOwner());
+        Mapping mapping = GrailsDomainBinder.getMapping(property.getOwner());
         final String typeName = typeNameProvider.getTypeName(property, mapping);
         if (typeName == null) {
             simpleValue.setTypeName(property.getType().getName());

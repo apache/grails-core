@@ -3,6 +3,7 @@ package org.grails.orm.hibernate.cfg.domainbinding;
 import java.util.Optional;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 
@@ -13,20 +14,13 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 public class TableNameFetcher {
 
     private final PersistentEntityNamingStrategy persistentEntityNamingStrategy;
-    private final HibernateEntityWrapper hibernateEntityWrapper;
 
     public TableNameFetcher(PersistentEntityNamingStrategy persistentEntityNamingStrategy) {
         this.persistentEntityNamingStrategy = persistentEntityNamingStrategy;
-        this.hibernateEntityWrapper = new HibernateEntityWrapper();
-    }
-
-    protected TableNameFetcher(PersistentEntityNamingStrategy persistentEntityNamingStrategy, HibernateEntityWrapper hibernateEntityWrapper) {
-        this.persistentEntityNamingStrategy = persistentEntityNamingStrategy;
-        this.hibernateEntityWrapper = hibernateEntityWrapper;
     }
 
     public String getTableName(PersistentEntity domainClass) {
-        var tableName = hibernateEntityWrapper.getMappedForm(domainClass).getTableName();
+        var tableName = GrailsDomainBinder.getMapping(domainClass).getTableName();
         return tableName != null ? tableName  :persistentEntityNamingStrategy.resolveTableName(domainClass);
     }
 }

@@ -12,6 +12,7 @@ import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.datastore.mapping.model.types.OneToOne;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
+import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -25,7 +26,6 @@ public class ColumnBinder {
    private final StringColumnConstraintsBinder stringColumnConstraintsBinder;
    private final NumericColumnConstraintsBinder numericColumnConstraintsBinder;
    private final CreateKeyForProps createKeyForProps;
-   private final HibernateEntityWrapper hibernateEntityWrapper;
    private final UserTypeFetcher userTypeFetcher;
    private final IndexBinder indexBinder;
 
@@ -35,7 +35,6 @@ public class ColumnBinder {
        this.stringColumnConstraintsBinder = new StringColumnConstraintsBinder();
        this.numericColumnConstraintsBinder = new NumericColumnConstraintsBinder();
        this.createKeyForProps = new CreateKeyForProps(columnNameForPropertyAndPathFetcher);
-       this.hibernateEntityWrapper = new HibernateEntityWrapper();
        this.userTypeFetcher = new UserTypeFetcher();
        this.indexBinder = new IndexBinder();
    }
@@ -44,7 +43,6 @@ public class ColumnBinder {
    , StringColumnConstraintsBinder stringColumnConstraintsBinder
    , NumericColumnConstraintsBinder numericColumnConstraintsBinder
    , CreateKeyForProps createKeyForProps
-   , HibernateEntityWrapper hibernateEntityWrapper
    , UserTypeFetcher userTypeFetcher
    , IndexBinder indexBinder) {
        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
@@ -52,7 +50,6 @@ public class ColumnBinder {
        this.stringColumnConstraintsBinder = stringColumnConstraintsBinder;
        this.numericColumnConstraintsBinder =  numericColumnConstraintsBinder;
        this.createKeyForProps = createKeyForProps;
-       this.hibernateEntityWrapper = hibernateEntityWrapper;
        this.userTypeFetcher = userTypeFetcher;
        this.indexBinder = indexBinder;
    }
@@ -122,7 +119,7 @@ public class ColumnBinder {
 
         final PersistentEntity owner = property.getOwner();
         if (!owner.isRoot()) {
-            Mapping mapping = hibernateEntityWrapper.getMappedForm(owner);
+            Mapping mapping = GrailsDomainBinder.getMapping(owner);
             if (mapping.getTablePerHierarchy()) {
                 if (LOG.isDebugEnabled())
                     LOG.debug("[GrailsDomainBinder] Sub class property [" + property.getName() + "] for column name ["+column.getName()+"] set to nullable");

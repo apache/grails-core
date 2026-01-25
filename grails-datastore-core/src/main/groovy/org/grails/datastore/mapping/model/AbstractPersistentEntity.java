@@ -452,4 +452,6 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
         return owners.add(type);
     }
 
+
+
 }

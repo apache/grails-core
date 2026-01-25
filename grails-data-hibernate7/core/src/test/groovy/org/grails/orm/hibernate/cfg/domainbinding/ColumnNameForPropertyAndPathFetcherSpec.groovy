@@ -16,12 +16,10 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
     def "when ColumnConfig is null and mapping has explicit column then it is used"() {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
-        def hibernateEntityWrapper = Mock(HibernateEntityWrapper)
         def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def defaultColumnFetcher = Mock(DefaultColumnNameFetcher)
         def fetcher = new ColumnNameForPropertyAndPathFetcher(
                 namingStrategy,
-                hibernateEntityWrapper,
                 propToConfig,
                 defaultColumnFetcher,
                 backticksRemover
@@ -46,12 +44,10 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
     def "when ColumnConfig provided and join key mapping exists then join key name is used"() {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
-        def hibernateEntityWrapper = Mock(HibernateEntityWrapper)
         def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def defaultColumnFetcher = Mock(DefaultColumnNameFetcher)
         def fetcher = new ColumnNameForPropertyAndPathFetcher(
                 namingStrategy,
-                hibernateEntityWrapper,
                 propToConfig,
                 defaultColumnFetcher,
                 backticksRemover
@@ -80,12 +76,10 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
     def "when no explicit column then builds from path '#path' and default column '#defaultCol' with backticks removed"() {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
-        def hibernateEntityWrapper = Mock(HibernateEntityWrapper)
         def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def defaultColumnFetcher = Mock(DefaultColumnNameFetcher)
         def fetcher = new ColumnNameForPropertyAndPathFetcher(
                 namingStrategy,
-                hibernateEntityWrapper,
                 propToConfig,
                 defaultColumnFetcher,
                 backticksRemover
@@ -114,12 +108,10 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
     def "when path is empty falls back to default column name only"() {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
-        def hibernateEntityWrapper = Mock(HibernateEntityWrapper)
         def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def defaultColumnFetcher = Mock(DefaultColumnNameFetcher)
         def fetcher = new ColumnNameForPropertyAndPathFetcher(
                 namingStrategy,
-                hibernateEntityWrapper,
                 propToConfig,
                 defaultColumnFetcher,
                 backticksRemover

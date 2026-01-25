@@ -2,7 +2,6 @@ package org.grails.orm.hibernate.cfg
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.domainbinding.HibernateEntityWrapper
 import spock.lang.Unroll
 
 /**
@@ -17,7 +16,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         // Ensure all related entities are processed by the mapping context
         createPersistentEntity(Author, binder)
         def entity = createPersistentEntity(domainClass, binder)
-        def mapping = new HibernateEntityWrapper().getMappedForm(entity)
+        def mapping = (Mapping) entity.getMappedForm()
         def property = entity.getPropertyByName(propertyName)
 
         when: "The method is called on the mapping object"
