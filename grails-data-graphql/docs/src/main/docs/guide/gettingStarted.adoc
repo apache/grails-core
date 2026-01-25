@@ -19,7 +19,7 @@ under the License.
 
 == Standalone Projects
 
-For standalone projects, it is up to the developer how and when the schema gets created. A mapping context is required to create a schema. The mapping context is available on all link:{gormapi}/org/grails/datastore/mapping/core/Datastore.html#getMappingContext()[datastore implementations]. See the link:https://grails.apache.org/docs/latest/grails-data/hibernate5/manual/index.html#outsideGrails#outsideGrails[GORM documentation] for information on creating a datastore.
+For standalone projects, it is up to the developer how and when the schema gets created. A mapping context is required to create a schema. The mapping context is available on all link:../../../api/org/grails/datastore/mapping/core/Datastore.html#getMappingContext()[datastore implementations]. See the link:https://grails.apache.org/docs/latest/grails-data/hibernate5/manual/index.html#outsideGrails#outsideGrails[GORM documentation] for information on creating a datastore.
 
 The example below is the simplest way possible to generate a schema.
 

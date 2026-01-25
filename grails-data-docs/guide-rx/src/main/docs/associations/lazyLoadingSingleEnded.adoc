@@ -43,7 +43,7 @@ for (Book book in books) {
 }
 ----
 
-In the above example RxGORM has no choice but to block in order to load the association lazy and access the `name`! Typically, you do not want your reactive application to block at any point, so in order to get around this, each proxy loaded by GORM implements the link:../api/grails/gorm/rx/proxy/ObservableProxy.html[ObservableProxy] interface. That means the above code can be written in a non-blocking manner:
+In the above example RxGORM has no choice but to block in order to load the association lazy and access the `name`! Typically, you do not want your reactive application to block at any point, so in order to get around this, each proxy loaded by GORM implements the link:../../api/grails/gorm/rx/proxy/ObservableProxy.html[ObservableProxy] interface. That means the above code can be written in a non-blocking manner:
 
 [source,groovy]
 ----

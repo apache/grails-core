@@ -19,7 +19,7 @@ under the License.
 
 GORM for Hibernate can be configured with the `grails-app/conf/application.yml` file when using Grails, the `src/main/resources/application.yml` file when using Spring Boot or by passing a `Map` or instanceof the `PropertyResolver` interface to the `org.grails.orm.hibernate.HibernateDatastore` class when used standalone.
 
-All configuration options are read and materialized into an instance of link:../api/org/grails/orm/hibernate/connections/HibernateConnectionSourceSettings.html[HibernateConnectionSourceSettings].
+All configuration options are read and materialized into an instance of link:../../../api/org/grails/orm/hibernate/connections/HibernateConnectionSourceSettings.html[HibernateConnectionSourceSettings].
 
 === Configuration Example
 
@@ -42,9 +42,9 @@ hibernate:
         region.factory_class: org.hibernate.cache.ehcache.EhCacheRegionFactory
 ----
 
-Each one of the settings under the `dataSource` block is set on the link:../api/org/grails/datastore/gorm/jdbc/connections/DataSourceSettings.html[DataSourceSettings] property of `HibernateConnectionSourceSettings`.
+Each one of the settings under the `dataSource` block is set on the link:../../../api/org/grails/datastore/gorm/jdbc/connections/DataSourceSettings.html[DataSourceSettings] property of `HibernateConnectionSourceSettings`.
 
-Whilst each setting under the `hibernate` block is set on the link:../api/org/grails/orm/hibernate/connections/HibernateConnectionSourceSettings.HibernateSettings.html[HibernateSettings] property.
+Whilst each setting under the `hibernate` block is set on the link:../../../api/org/grails/orm/hibernate/connections/HibernateConnectionSourceSettings.HibernateSettings.html[HibernateSettings] property.
 
 === Configuration Reference
 

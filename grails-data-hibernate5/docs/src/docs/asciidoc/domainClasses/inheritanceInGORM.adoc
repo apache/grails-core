@@ -63,7 +63,7 @@ However, excessive use of inheritance and table-per-subclass can result in poor 
 ==== Polymorphic Queries
 
 
-The upshot of inheritance is that you get the ability to polymorphically query. For example using the link:../api/org/grails/datastore/gorm/GormEntity.html#list()[list()] method on the `Content` super class will return all subclasses of `Content`:
+The upshot of inheritance is that you get the ability to polymorphically query. For example using the link:../../../api/org/grails/datastore/gorm/GormEntity.html#list()[list()] method on the `Content` super class will return all subclasses of `Content`:
 
 [source,groovy]
 ----

@@ -21,7 +21,7 @@ Schema-per-tenant is when a single database is used, but a different database sc
 
 ==== Configuration
 
-In order to activate schema-per-tenant multi-tenancy you need to set the multi-tenancy mode to `SCHEMA` in your configuration and supply a link:../api/org/grails/datastore/mapping/multitenancy/TenantResolver.html[TenantResolver]:
+In order to activate schema-per-tenant multi-tenancy you need to set the multi-tenancy mode to `SCHEMA` in your configuration and supply a link:../../../api/org/grails/datastore/mapping/multitenancy/TenantResolver.html[TenantResolver]:
 
 [source,yaml]
 ----
@@ -37,13 +37,13 @@ dataSource:
 
 The `TenantResolver` can optionally implement the `AllTenantsResolver` interface and return the schema names of all tenants. This gives you the option to hard code these, place them in configuration or read them from the default schema dynamically.
 
-If the `AllTenantsResolver` resolver is not implemented then GORM will use the configured link:../api/org/grails/org/hibernate/jdbc/schema/SchemaHandler.html[SchemaHandler] to resolve all the schema names from the database which it will use for the tenants.
+If the `AllTenantsResolver` resolver is not implemented then GORM will use the configured link:../../../api/org/grails/orm/hibernate/support/SchemaHandler.html[SchemaHandler] to resolve all the schema names from the database which it will use for the tenants.
 
 ==== Runtime Schema Creation
 
 On startup, if `dataSource.dbCreate` is set to create the database at runtime, then GORM will attempt to create the schemas if they are missing.
 
-To do this it uses an instance link:../api/org/grails/org/hibernate/jdbc/schema/SchemaHandler.html[SchemaHandler] which by default uses the `CREATE SCHEMA [name]` syntax, but can be overridden and customized for other database dialects as necessary.
+To do this it uses an instance link:../../../api/org/grails/orm/hibernate/support/SchemaHandler.html[SchemaHandler] which by default uses the `CREATE SCHEMA [name]` syntax, but can be overridden and customized for other database dialects as necessary.
 
 If you want to use this feature and create schemas at runtime depending on the database you may need to configure an alternate implementation:
 

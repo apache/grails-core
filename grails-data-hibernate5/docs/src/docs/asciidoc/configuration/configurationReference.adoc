@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-You can refer to the link:../api/org/grails/orm/hibernate/connections/HibernateConnectionSourceSettings.html[HibernateConnectionSourceSettings] class for all available configuration options, but below is a table of the common ones:
+You can refer to the link:../../../api/org/grails/orm/hibernate/connections/HibernateConnectionSourceSettings.html[HibernateConnectionSourceSettings] class for all available configuration options, but below is a table of the common ones:
 
 [format="csv", options="header"]
 |===
@@ -64,4 +64,4 @@ name,description,default value
 
 In addition, any additional settings that start with `hibernate.` are passed through to Hibernate, so if there is any specific feature of Hibernate you wish to configure that is possible.
 
-TIP: The above table covers the common configuration options. For all configuration refer to properties of the link:../api/org/grails/orm/hibernate/connections/HibernateConnectionSourceSettings.html[HibernateConnectionSourceSettings] class.
+TIP: The above table covers the common configuration options. For all configuration refer to properties of the link:../../../api/org/grails/orm/hibernate/connections/HibernateConnectionSourceSettings.html[HibernateConnectionSourceSettings] class.

@@ -23,7 +23,7 @@ WARNING: When using a discriminator all data for all tenants is stored in a sing
 
 ==== Configuration
 
-In order to activate discriminator-based multi-tenancy you need to set the multi-tenancy mode to `DISCRIMINATOR` in your configuration and supply a link:../api/org/grails/datastore/mapping/multitenancy/TenantResolver.html[TenantResolver]:
+In order to activate discriminator-based multi-tenancy you need to set the multi-tenancy mode to `DISCRIMINATOR` in your configuration and supply a link:../../../api/org/grails/datastore/mapping/multitenancy/TenantResolver.html[TenantResolver]:
 
 [source,yaml]
 ----
@@ -37,11 +37,11 @@ dataSource:
     url: jdbc:h2:mem:books
 ----
 
-NOTE: The specified `TenantResolver` will also need to implement the link:../api/org/grails/datastore/mapping/multitenancy/AllTenantsResolver.html[AllTenantsResolver] interface, which has an additional method to resolve all known tenants.
+NOTE: The specified `TenantResolver` will also need to implement the link:../../../api/org/grails/datastore/mapping/multitenancy/AllTenantsResolver.html[AllTenantsResolver] interface, which has an additional method to resolve all known tenants.
 
 ==== Mapping Domain Classes
 
-Like the other forms of multi-tenancy you then need to implement the link:../api/grails/gorm/MultiTenant.html[MultiTenant] trait in the domain classes that are multi-tenant. In addition, you also need to specify a discriminator column. The default discriminator column is called `tenantId`, for example:
+Like the other forms of multi-tenancy you then need to implement the link:../../../api/grails/gorm/MultiTenant.html[MultiTenant] trait in the domain classes that are multi-tenant. In addition, you also need to specify a discriminator column. The default discriminator column is called `tenantId`, for example:
 
 
 [source,groovy]
@@ -68,7 +68,7 @@ class Book implements MultiTenant<Book> {
 
 ==== Querying and Caveats
 
-The discriminator-based multi-tenancy transparently adds a Hibernate filter that is activated when you query the domain class and you can also use the link:../api/grails/gorm/multitenancy/Tenants.html[Tenants] API to switch between tenants:
+The discriminator-based multi-tenancy transparently adds a Hibernate filter that is activated when you query the domain class and you can also use the link:../../../api/grails/gorm/multitenancy/Tenants.html[Tenants] API to switch between tenants:
 
 [source,groovy]
 ----

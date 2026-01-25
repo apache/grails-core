@@ -17,11 +17,11 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-This library provides a means for overriding the data fetchers used for the default provided operations. That is done through the use of a link:{api}/org/grails/gorm/graphql/fetcher/manager/GraphQLDataFetcherManager.html[GraphQLDataFetcherManager].
+This library provides a means for overriding the data fetchers used for the default provided operations. That is done through the use of a link:../../../api/org/grails/gorm/graphql/fetcher/manager/GraphQLDataFetcherManager.html[GraphQLDataFetcherManager].
 
 == Get The Manager
 
-To register a fetcher, you need to get a reference to the link:{api}/org/grails/gorm/graphql/fetcher/manager/GraphQLDataFetcherManager.html[GraphQLDataFetcherManager]. If you are using the manager provided by default, how you access it will depend on whether you are using the plugin or standalone.
+To register a fetcher, you need to get a reference to the link:../../../api/org/grails/gorm/graphql/fetcher/manager/GraphQLDataFetcherManager.html[GraphQLDataFetcherManager]. If you are using the manager provided by default, how you access it will depend on whether you are using the plugin or standalone.
 
 === Standalone
 
@@ -84,7 +84,7 @@ fetcherManager.registerDeletingDataFetcher(Author, new DeleteEntityDataFetcher(A
 })
 ----
 
-TIP: A class exists to use for soft deletes: link:{api}/org/grails/gorm/graphql/fetcher/impl/SoftDeleteEntityDataFetcher.html[SoftDeleteEntityDataFetcher]
+TIP: A class exists to use for soft deletes: link:../../../api/org/grails/gorm/graphql/fetcher/impl/SoftDeleteEntityDataFetcher.html[SoftDeleteEntityDataFetcher]
 
 There are 3 types of data fetchers that can be registered.
 
@@ -102,7 +102,7 @@ Reading data fetchers are designed to execute read only queries. They don't requ
 
 == Query Optimization
 
-All of the default data fetcher classes extend from link:{api}/org/grails/gorm/graphql/fetcher/DefaultGormDataFetcher.html[DefaultGormDataFetcher]. If you are creating your own custom data fetcher class, it is highly recommended to extend from it as well. The main reason for doing so is to take advantage of the built in query optimization. Based on what fields are requested in any given request, the default data fetchers will execute a query that will join any associations that have been requested. This feature ensures that each API call is as efficient as possible.
+All of the default data fetcher classes extend from link:../../../api/org/grails/gorm/graphql/fetcher/DefaultGormDataFetcher.html[DefaultGormDataFetcher]. If you are creating your own custom data fetcher class, it is highly recommended to extend from it as well. The main reason for doing so is to take advantage of the built in query optimization. Based on what fields are requested in any given request, the default data fetchers will execute a query that will join any associations that have been requested. This feature ensures that each API call is as efficient as possible.
 
 For example, consider the following domain structure:
 
@@ -147,11 +147,11 @@ Example generated SQL:
 
 `select * from book b inner join author a on b.author_id = a.id where b.id = 5`
 
-The logic for retrieving the list of properties to be joined is contained within the link:{api}/org/grails/gorm/graphql/entity/EntityFetchOptions.html[EntityFetchOptions] class. If you prefer not to extend from the default gorm data fetcher, it is possible to make use of this class in your own data fetcher.
+The logic for retrieving the list of properties to be joined is contained within the link:../../../api/org/grails/gorm/graphql/entity/EntityFetchOptions.html[EntityFetchOptions] class. If you prefer not to extend from the default gorm data fetcher, it is possible to make use of this class in your own data fetcher.
 
 === Custom Property Data Fetchers
 
-When adding a custom property to a domain class, it may be the case that a separate query is being executed on another domain class. Normally that query would not be able to benefit from the automatic join operations based on the requested fields in that domain class. When providing the closure to retrieve the relevant data, a second parameter is available. The second parameter to the closure will be an instance of link:{api}/org/grails/gorm/graphql/fetcher/impl/ClosureDataFetchingEnvironment.html[ClosureDataFetchingEnvironment].
+When adding a custom property to a domain class, it may be the case that a separate query is being executed on another domain class. Normally that query would not be able to benefit from the automatic join operations based on the requested fields in that domain class. When providing the closure to retrieve the relevant data, a second parameter is available. The second parameter to the closure will be an instance of link:../../../api/org/grails/gorm/graphql/fetcher/impl/ClosureDataFetchingEnvironment.html[ClosureDataFetchingEnvironment].
 
 The environment is an extension of the GraphQL Java `DataFetchingEnvironment`. In addition to everything the standard environment has, the environment also has methods for retrieving the fetch options or the list of join properties to use in your query.
 

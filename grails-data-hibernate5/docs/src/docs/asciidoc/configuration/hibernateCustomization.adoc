@@ -21,7 +21,7 @@ If you want to hook into GORM and customize how Hibernate is configured there ar
 
 Firstly, as mentioned previously, any configuration you specify when configuring GORM for Hibernate will be passed through to Hibernate so you can configure any setting of Hibernate itself.
 
-For more advanced configuration you may want to configure or supply a new link:../api/org/grails/orm/hibernate/connections/HibernateConnectionSourceFactory.html[HibernateConnectionSourceFactory] instance or a link:../api/org/grails/orm/hibernate/cfg/HibernateMappingContextConfiguration.html[HibernateMappingContextConfiguration] or both.
+For more advanced configuration you may want to configure or supply a new link:../../../api/org/grails/orm/hibernate/connections/HibernateConnectionSourceFactory.html[HibernateConnectionSourceFactory] instance or a link:../../../api/org/grails/orm/hibernate/cfg/HibernateMappingContextConfiguration.html[HibernateMappingContextConfiguration] or both.
 
 ==== The HibernateConnectionSourceFactory
 
@@ -35,7 +35,7 @@ The `HibernateConnectionSourceFactory` has a few useful setters that allow you t
 
 ==== The HibernateMappingContextConfiguration
 
-link:../api/org/grails/orm/hibernate/cfg/HibernateMappingContextConfiguration.html[HibernateMappingContextConfiguration] is built by the `HibernateConnectionSourceFactory`, but a customized version can be specified using the `hibernate.configClass` setting in your configuration:
+link:../../../api/org/grails/orm/hibernate/cfg/HibernateMappingContextConfiguration.html[HibernateMappingContextConfiguration] is built by the `HibernateConnectionSourceFactory`, but a customized version can be specified using the `hibernate.configClass` setting in your configuration:
 
 [source,yaml]
 .grails-app/conf/application.yml

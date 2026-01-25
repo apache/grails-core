@@ -21,7 +21,7 @@ Using a database per tenant is the most secure way to isolate each tenants data 
 
 ==== Configuration
 
-In order to activate database-per-tenant multi-tenancy you need to set the multi-tenancy mode to `DATABASE` in your configuration and supply a link:../api/org/grails/datastore/mapping/multitenancy/TenantResolver.html[TenantResolver]:
+In order to activate database-per-tenant multi-tenancy you need to set the multi-tenancy mode to `DATABASE` in your configuration and supply a link:../../../api/org/grails/datastore/mapping/multitenancy/TenantResolver.html[TenantResolver]:
 
 [source,yaml]
 ----
@@ -44,7 +44,7 @@ The above example uses a built-in `TenantResolver` implementation that works wit
 
 ==== Multi Tenant Domain Classes
 
-With the above configuration in place you then to need to implement the link:../api/grails/gorm/MultiTenant.html[MultiTenant] trait in the domain classes you want to be regarded as multi tenant:
+With the above configuration in place you then to need to implement the link:../../../api/grails/gorm/MultiTenant.html[MultiTenant] trait in the domain classes you want to be regarded as multi tenant:
 
 
 [source,groovy]
@@ -76,7 +76,7 @@ SessionFactory sessionFactory = hibernateDatastore
 
 ==== Multi Tenancy with Sessions
 
-When working with GORM typically you need a session bound to the current thread in order for GORM and transactions to work consistently. If you switch to a different tenant then it may be that the session bound to the current thread no longer matches the underlying `SessionFactory` being used by the tenant. With this in mind you may wants to use the link:../api/grails/gorm/multitenancy/Tenants.html[Tenants] class to ensure the correct session is bound for the current tenant:
+When working with GORM typically you need a session bound to the current thread in order for GORM and transactions to work consistently. If you switch to a different tenant then it may be that the session bound to the current thread no longer matches the underlying `SessionFactory` being used by the tenant. With this in mind you may wants to use the link:../../../api/grails/gorm/multitenancy/Tenants.html[Tenants] class to ensure the correct session is bound for the current tenant:
 
 [source,groovy]
 ----
@@ -114,7 +114,7 @@ List<Book> books = withId(HibernateDatastore, "moreBooks") {
 
 Provisioning and creating SQL databases at runtime is non-trivial and beyond the scope of what GORM offers, however the <<connectionSources, ConnectionSources API>> does provide a way to hook into GORM to make this possible.
 
-By default an link:../api/org/grails/datastore/mapping/core/connections/InMemoryConnectionSources.html[InMemoryConnectionSources] object is used which will read the connection sources from the application configuration and store them in-memory.
+By default an link:../../../api/org/grails/datastore/mapping/core/connections/InMemoryConnectionSources.html[InMemoryConnectionSources] object is used which will read the connection sources from the application configuration and store them in-memory.
 
 However, it is possible to configure an alternate implementation:
 

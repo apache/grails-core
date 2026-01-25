@@ -19,7 +19,7 @@ under the License.
 
 == Custom Naming Conventions
 
-The names used to describe entities is configurable through the use of an link:{api}/org/grails/gorm/graphql/entity/GraphQLEntityNamingConvention.html[GraphQLEntityNamingConvention].
+The names used to describe entities is configurable through the use of an link:../../../api/org/grails/gorm/graphql/entity/GraphQLEntityNamingConvention.html[GraphQLEntityNamingConvention].
 
 The class controls the name of the default operations and the names of the GraphQL types built from the GORM entities.
 
@@ -37,7 +37,7 @@ schema.namingConvention = new MyNamingConvention()
 
 === Grails
 
-To override the naming convention in a Grails application, register a bean with the name "graphQLEntityNamingConvention" that extends link:{api}/org/grails/gorm/graphql/entity/GraphQLEntityNamingConvention.html[GraphQLEntityNamingConvention].
+To override the naming convention in a Grails application, register a bean with the name "graphQLEntityNamingConvention" that extends link:../../../api/org/grails/gorm/graphql/entity/GraphQLEntityNamingConvention.html[GraphQLEntityNamingConvention].
 
 [source,groovy]
 .resources.groovy
