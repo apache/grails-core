@@ -37,8 +37,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.TypeNameProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.*;
 
-import com.sun.jdi.IntegerType;
-import com.sun.jdi.LongType;
 import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
 import org.hibernate.boot.ResourceStreamLocator;
@@ -1569,7 +1567,7 @@ public class GrailsDomainBinder
             LOG.debug("[GrailsDomainBinder] Mapping Grails domain class: " + domainClass.getName() + " -> " + root.getTable().getName());
         }
         bindIdentity(domainClass, root, mappings, gormMapping, sessionFactoryBeanName);
-        bindVersion(domainClass.getVersion(), root, mappings, sessionFactoryBeanName);
+        new VersionBinder(metadataBuildingContext, namingStrategy).bindVersion(domainClass.getVersion(), root);
         root.createPrimaryKey();
         createClassProperties(domainClass, root, mappings, sessionFactoryBeanName);
     }
@@ -1974,44 +1972,6 @@ public class GrailsDomainBinder
             oneToOne.setReferencedPropertyName(otherSide.getName());
         }
     }
-
-    private void bindVersion(PersistentProperty version, RootClass entity,
-                               InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
-
-        if (version != null) {
-
-            BasicValue val = new BasicValue(metadataBuildingContext, entity.getTable());
-
-            // set type
-            new SimpleValueBinder(namingStrategy).bindSimpleValue(version, null, val, EMPTY_PATH);
-
-            if (val.isTypeSpecified()) {
-//                if (!(val.getType() instanceof IntegerType ||
-//                        val.getType() instanceof LongType ||
-//                        val.getType() instanceof TimestampType)) {
-//                    LOG.warn("Invalid version class specified in " + version.getOwner().getName() +
-//                            "; must be one of [int, Integer, long, Long, Timestamp, Date]. Not mapping the version.");
-//                    return;
-//                }
-            }
-            else {
-                val.setTypeName("version".equals(version.getName()) ? "integer" : "timestamp");
-            }
-            Property prop = new Property();
-            prop.setValue(val);
-            new PropertyBinder().bindProperty(version, prop);
-            prop.setLazy(false);
-            val.setNullValue("undefined");
-            entity.setVersion(prop);
-            entity.setDeclaredVersion(prop);
-            entity.setOptimisticLockStyle(OptimisticLockStyle.VERSION);
-            entity.addProperty(prop);
-        }
-        else {
-            entity.setOptimisticLockStyle(OptimisticLockStyle.NONE);
-        }
-    }
-
 
     private String getIndexColumnName(PersistentProperty property, String sessionFactoryBeanName) {
         PropertyConfig pc = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
