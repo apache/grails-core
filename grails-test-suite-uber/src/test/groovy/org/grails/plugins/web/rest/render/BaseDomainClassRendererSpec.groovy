@@ -64,6 +64,8 @@ abstract class BaseDomainClassRendererSpec extends Specification {
 
     void cleanup() {
         RequestContextHolder.resetRequestAttributes()
+        // Clear the static mimeTypes cache after each test for parallel test isolation
+        HttpServletResponseExtension.@mimeTypes = null
     }
 
     protected abstract Renderer getRenderer()

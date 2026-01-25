@@ -72,6 +72,8 @@ grails.mime.types = [ html: ['text/html','application/xhtml+xml'],
     @AfterEach
     void tearDown() {
         RequestContextHolder.resetRequestAttributes()
+        // Clear the static mimeTypes cache after each test for parallel test isolation
+        HttpServletResponseExtension.@mimeTypes = null
     }
 
     @Test

@@ -36,6 +36,11 @@ class MimeUtilitySpec extends Specification {
         HttpServletResponseExtension.@mimeTypes = null
     }
 
+    void cleanup() {
+        // Clear the static mimeTypes cache after each test for parallel test isolation
+        HttpServletResponseExtension.@mimeTypes = null
+    }
+
     MimeUtility getMimeUtility() {
         def ga = new DefaultGrailsApplication()
         ga.config['grails.mime.types'] = [ html: ['text/html','application/xhtml+xml'],

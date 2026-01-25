@@ -32,6 +32,11 @@ class MimeTypesConfigurationSpec extends Specification {
         HttpServletResponseExtension.@mimeTypes = null
     }
 
+    void cleanup() {
+        // Clear the static mimeTypes cache after each test for parallel test isolation
+        HttpServletResponseExtension.@mimeTypes = null
+    }
+
     void "test when no mimeTypes configured then default should be used"() {
         setup:
         def application = new DefaultGrailsApplication()

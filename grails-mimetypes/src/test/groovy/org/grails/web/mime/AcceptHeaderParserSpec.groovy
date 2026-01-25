@@ -68,6 +68,8 @@ grails.mime.types = [ xml: ['text/xml', 'application/xml'],
     void cleanup() {
         config = null
         Holders.setConfig null
+        // Clear the static mimeTypes cache after each test for parallel test isolation
+        HttpServletResponseExtension.@mimeTypes = null
     }
 
     void testXmlContentTypeWithCharset() {

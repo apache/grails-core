@@ -94,6 +94,8 @@ class HalJsonRendererSpec extends Specification {
     void cleanup() {
         RequestContextHolder.resetRequestAttributes()
         ShutdownOperations.runOperations()
+        // Clear the static mimeTypes cache after each test for parallel test isolation
+        HttpServletResponseExtension.@mimeTypes = null
     }
 
     boolean jsonEquals(String json1, String json2) {

@@ -38,6 +38,11 @@ class ContentFormatControllerTests extends Specification implements ControllerUn
         HttpServletResponseExtension.@mimeTypes = null
     }
 
+    def cleanup() {
+        // Clear the static mimeTypes cache after each test for parallel test isolation
+        HttpServletResponseExtension.@mimeTypes = null
+    }
+
     Closure doWithConfig() {{ c ->
         c['grails.mime.use.accept.header'] = true
         c['grails.mime.types'] = [html: ['text/html', 'application/xhtml+xml'],

@@ -64,6 +64,8 @@ class RequestAndResponseMimeTypesApiSpec extends Specification{
     void cleanup() {
         RequestContextHolder.resetRequestAttributes()
         ShutdownOperations.runOperations()
+        // Clear the static mimeTypes cache after each test for parallel test isolation
+        HttpServletResponseExtension.@mimeTypes = null
     }
 
     void "Test format property is valid for CONTENT_TYPE header only"() {
