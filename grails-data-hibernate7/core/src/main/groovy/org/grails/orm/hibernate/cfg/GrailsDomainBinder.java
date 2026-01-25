@@ -49,7 +49,6 @@ import org.hibernate.boot.spi.AdditionalMappingContributions;
 import org.hibernate.boot.spi.AdditionalMappingContributor;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.engine.OptimisticLockStyle;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.engine.spi.FilterDefinition;
 import org.hibernate.mapping.Backref;
@@ -1139,7 +1138,13 @@ public class GrailsDomainBinder
         Optional.ofNullable(persistentEntity).ifPresent(domainClass -> {
             try {
                 final Mapping m = new HibernateEntityWrapper().getMappedForm(domainClass);
-                trackCustomCascadingSaves(m, domainClass.getPersistentProperties());
+                for (PersistentProperty property : domainClass.getPersistentProperties()) {
+                    PropertyConfig propConf = m.getPropertyConfig(property.getName());
+
+                    if (propConf != null && propConf.getCascade() != null) {
+                        propConf.setExplicitSaveUpdateCascade(CascadeBehavior.isSaveUpdate(propConf.getCascade()));
+                    }
+                }
                 cacheMapping(domainClass.getJavaClass(), m);
             } catch (Exception e) {
                 throw new DatastoreConfigurationException("Error evaluating ORM mappings block for domain [" +
@@ -1147,21 +1152,6 @@ public class GrailsDomainBinder
             }
         });
 
-    }
-
-    /**
-     * Checks for any custom cascading saves set up via the mapping DSL and records them within the persistent property.
-     * @param mapping The Mapping.
-     * @param persistentProperties The persistent properties of the domain class.
-     */
-    private void trackCustomCascadingSaves(Mapping mapping, Iterable<PersistentProperty> persistentProperties) {
-        for (PersistentProperty property : persistentProperties) {
-            PropertyConfig propConf = mapping.getPropertyConfig(property.getName());
-
-            if (propConf != null && propConf.getCascade() != null) {
-                propConf.setExplicitSaveUpdateCascade(CascadeBehavior.isSaveUpdate(propConf.getCascade()));
-            }
-        }
     }
 
 
@@ -1814,7 +1804,6 @@ public class GrailsDomainBinder
      */
     private void bindComponent(Component component, Embedded property,
                                  boolean isNullable, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
-        component.setEmbedded(true);
         Class<?> type = property.getType();
         String role = qualify(type.getName(), property.getName());
         component.setRoleName(role);

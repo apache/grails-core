@@ -70,7 +70,6 @@ class HibernateDirtyCheckingSpec extends HibernateGormDatastoreSpec {
     }
 
     @Rollback
-    //TODO Embedded class not working
     void "test dirty checking on embedded"() {
         given: 'a new person'
         Person person = new Person(name: 'John', occupation: 'Grails developer', address: new Address(street: "Old Town", zip: "1234")).save(flush: true)
