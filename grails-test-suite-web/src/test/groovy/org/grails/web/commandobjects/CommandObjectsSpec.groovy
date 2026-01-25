@@ -29,6 +29,9 @@ import spock.lang.Specification
 
 class CommandObjectsSpec extends Specification implements ControllerUnitTest<TestController>, DataTest {
 
+    // Cache the static field helper interface for performance
+    private static final Class<?> STATIC_FIELD_HELPER = Class.forName('grails.validation.Validateable$Trait$StaticFieldHelper')
+
     Closure doWithSpring() {{ ->
         theAnswer(Integer, 42)
     }}
@@ -51,14 +54,30 @@ class CommandObjectsSpec extends Specification implements ControllerUnitTest<Tes
      */
     def setup() {
         ConstraintEvalUtils.clearDefaultConstraints()
-        Artist.clearConstraintsMapCache()
-        ArtistSubclass.clearConstraintsMapCache()
+        clearConstraintsMapCache(Artist)
+        clearConstraintsMapCache(ArtistSubclass)
     }
 
     def cleanup() {
         ConstraintEvalUtils.clearDefaultConstraints()
-        Artist.clearConstraintsMapCache()
-        ArtistSubclass.clearConstraintsMapCache()
+        clearConstraintsMapCache(Artist)
+        clearConstraintsMapCache(ArtistSubclass)
+    }
+
+    /**
+     * Clears the private static constraintsMapInternal field in the Validateable trait.
+     * In Groovy 4, static fields in traits are accessed via the Validateable$Trait$StaticFieldHelper
+     * interface which implementing classes implement. This method uses that interface to clear the cache.
+     * This is used for test isolation until a public API is available in Grails 7.1.
+     */
+    private static void clearConstraintsMapCache(Class<?> clazz) {
+        // In Groovy 4, classes implementing a trait with static fields also implement
+        // the TraitName$Trait$StaticFieldHelper interface with getter/setter methods
+        if (STATIC_FIELD_HELPER.isAssignableFrom(clazz)) {
+            // The setter method name follows the pattern: traitFQN__fieldName$set
+            def setterMethod = clazz.getMethod('grails_validation_Validateable__constraintsMapInternal$set', Map)
+            setterMethod.invoke(null, (Map) null)
+        }
     }
 
     void "Test command object with date binding"() {
