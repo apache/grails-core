@@ -699,20 +699,29 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         return translator.translate("Hibernate operation: " + msg, sql, sqlException);
     }
 
-    public void persist(Object o) {
-        sessionFactory.getCurrentSession().persist(o);
+    public void persist(final Object entity) throws DataAccessException {
+        doExecute(session -> {
+            session.persist(entity);
+            return null;
+        }, true);
     }
 
-    public Object merge(Object o) {
-        return sessionFactory.getCurrentSession().merge(o);
+    public Object merge(final Object entity) throws DataAccessException {
+        return doExecute(session -> session.merge(entity), true);
     }
 
-    public void flush() {
-        sessionFactory.getCurrentSession().flush();
+    public void flush() throws DataAccessException {
+        doExecute(session -> {
+            session.flush();
+            return null;
+        }, true);
     }
 
-    public void clear() {
-        sessionFactory.getCurrentSession().clear();
+    public void clear() throws DataAccessException {
+        doExecute(session -> {
+            session.clear();
+            return null;
+        }, true);
     }
 
     public void deleteAll(final Collection<?> objects) {

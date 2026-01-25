@@ -47,7 +47,8 @@ class SaveWithInvalidEntitySpec extends Specification {
         hibernateDatastore.currentSession.flush()
 
         then:
-        IllegalStateException e = thrown()
+        Exception e = thrown()
+        throw new RuntimeException("EXCEPTION: " + e.getClass().getName() + "\nSTACK: " + e.stackTrace.collect { it.toString() }.join("\n"))
 
     }
 }

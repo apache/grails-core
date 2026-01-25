@@ -42,13 +42,20 @@ class SaveWithInvalidEntitySpec extends Specification {
     @Rollback
     @Issue('https://github.com/grails/grails-core/issues/10604')
     void "test save with an invalid entity"() {
+        given:
+        def b = new B(field2: "test")
+        def a = new A(b: b)
+
         when:
-        hibernateDatastore.currentSession.persist(new A(b:new B(field2: "test")))
+        hibernateDatastore.currentSession.persist(a)
         hibernateDatastore.currentSession.flush()
 
         then:
-        IllegalStateException e = thrown()
-
+        Exception e = thrown()
+        // In Hibernate 7, a veto results in EntityActionVetoException (translated to HibernateSystemException)
+        e.getClass().simpleName in ['HibernateSystemException', 'IllegalStateException']
+        b.hasErrors()
+        b.errors.hasFieldErrors('field1')
     }
 }
 
