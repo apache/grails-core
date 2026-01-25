@@ -23,6 +23,7 @@ import grails.artefact.Artefact
 import grails.testing.gorm.DataTest
 import grails.testing.web.controllers.ControllerUnitTest
 import grails.validation.Validateable
+import org.grails.validation.ConstraintEvalUtils
 import spock.lang.Issue
 import spock.lang.Specification
 
@@ -43,8 +44,13 @@ class CommandObjectsSpec extends Specification implements ControllerUnitTest<Tes
      * This is necessary because the Validateable trait caches constraints in a static field,
      * and in parallel test execution, the constraints may be evaluated before doWithConfig()
      * has registered the shared constraint 'isProg'.
+     *
+     * Also clear ConstraintEvalUtils.defaultConstraintsMap which caches shared constraints
+     * globally. In parallel test execution, another test's config may have been cached,
+     * causing the 'isProg' shared constraint to not be found.
      */
     def setup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
         Artist.clearConstraintsMap()
         ArtistSubclass.clearConstraintsMap()
     }

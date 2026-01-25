@@ -20,6 +20,7 @@
 package org.grails.web.commandobjects
 
 import grails.testing.web.GrailsWebUnitTest
+import org.grails.validation.ConstraintEvalUtils
 import spock.lang.Specification
 
 class CommandObjectNoDataSpec extends Specification implements GrailsWebUnitTest {
@@ -35,8 +36,13 @@ class CommandObjectNoDataSpec extends Specification implements GrailsWebUnitTest
      * This is necessary because the Validateable trait caches constraints in a static field,
      * and in parallel test execution, the constraints may be evaluated before doWithConfig()
      * has registered the shared constraint 'isProg'.
+     *
+     * Also clear ConstraintEvalUtils.defaultConstraintsMap which caches shared constraints
+     * globally. In parallel test execution, another test's config may have been cached,
+     * causing the 'isProg' shared constraint to not be found.
      */
     def setup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
         Artist.clearConstraintsMap()
     }
 
