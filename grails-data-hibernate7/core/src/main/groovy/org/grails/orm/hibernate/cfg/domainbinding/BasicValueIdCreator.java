@@ -33,6 +33,10 @@ public class BasicValueIdCreator {
         initializeGeneratorFactories();
     }
 
+    public BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext, JdbcEnvironment jdbcEnvironment, Map<String, BiFunction<GeneratorCreationContext, Identity, Generator>> generatorFactories) {
+        this(jdbcEnvironment, new BasicValue(metadataBuildingContext), generatorFactories);
+    }
+
     protected BasicValueIdCreator(JdbcEnvironment  jdbcEnvironment
                                   , BasicValue prototypeBasicValue
             , Map<String, BiFunction<GeneratorCreationContext
@@ -69,8 +73,13 @@ public class BasicValueIdCreator {
             if (mappedId != null && mappedId.getName() == null) {
                 mappedId.setName(entityName);
             }
-            return generatorFactories.getOrDefault(generatorName, (ctx, mid) -> new GrailsNativeGenerator(ctx))
+            Generator generator = generatorFactories.getOrDefault(generatorName, (ctx, mid) -> new GrailsNativeGenerator(ctx))
                     .apply(context, mappedId);
+            System.out.println("GENERATOR: name=" + generatorName + ", type=" + generator.getClass().getName());
+            if (generator instanceof org.hibernate.id.IdentifierGenerator identifierGenerator) {
+                identifierGenerator.initialize(context.getSqlStringGenerationContext());
+            }
+            return generator;
         });
 
         return id;

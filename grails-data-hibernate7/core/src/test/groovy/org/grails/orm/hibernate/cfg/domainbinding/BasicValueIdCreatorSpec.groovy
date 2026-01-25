@@ -26,7 +26,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         creator = new BasicValueIdCreator(metadataBuildingContext, getGrailsDomainBinder().getJdbcEnvironment(), generatorFactories)
         entity = new RootClass(metadataBuildingContext)
         table = new Table("test_table")
-        entity.setTable(table)\
+        entity.setTable(table)
     }
 
     @Unroll
