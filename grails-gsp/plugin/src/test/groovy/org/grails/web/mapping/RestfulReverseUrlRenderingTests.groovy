@@ -31,17 +31,17 @@ import spock.lang.Specification
 class RestfulReverseUrlRenderingTests extends Specification implements UrlMappingsUnitTest<RestfulReverseUrlMappings> {
 
     def setup() {
-        // Clear any existing URL mappings artefacts to ensure test isolation
-        clearUrlMappingsArtefacts()
+        // Reset URL mappings to ensure test isolation - clear any mappings from previous tests
+        // and re-register this test's URL mappings with a fresh holder bean
+        if (grailsApplication instanceof grails.core.DefaultGrailsApplication) {
+            grailsApplication.@artefactInfo.remove(UrlMappingsArtefactHandler.TYPE)
+        }
+        // Re-register this test's URL mappings and recreate the holder bean
+        mockArtefact(RestfulReverseUrlMappings)
     }
 
     def cleanup() {
         // Clear URL mappings artefacts added by this test to ensure test isolation
-        clearUrlMappingsArtefacts()
-    }
-
-    private void clearUrlMappingsArtefacts() {
-        // Access the protected artefactInfo map and remove URL mappings to ensure test isolation
         if (grailsApplication instanceof grails.core.DefaultGrailsApplication) {
             grailsApplication.@artefactInfo.remove(UrlMappingsArtefactHandler.TYPE)
         }
