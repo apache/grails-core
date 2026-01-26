@@ -271,6 +271,18 @@ grails.databinding.trimStrings = false
 // ...
 ----
 
+Or the equivalent in `grails-app/conf/application.yml`:
+
+[source,yaml]
+----
+# the default value is true
+grails:
+    databinding:
+        trimStrings: false
+
+# ...
+----
+
 The mass property binding mechanism will by default automatically convert all empty Strings to null at binding time.  To disable this behavior set the `grails.databinding.convertEmptyStringsToNull` property to false in `grails-app/conf/application.groovy`.
 
 [source,groovy]
@@ -279,6 +291,18 @@ The mass property binding mechanism will by default automatically convert all em
 grails.databinding.convertEmptyStringsToNull = false
 
 // ...
+----
+
+Or the equivalent in `grails-app/conf/application.yml`:
+
+[source,yaml]
+----
+# the default value is true
+grails:
+    databinding:
+        convertEmptyStringsToNull: false
+
+# ...
 ----
 
 The order of events is that the String trimming happens and then null conversion happens so if `trimStrings` is `true` and `convertEmptyStringsToNull` is `true`, not only will empty Strings be converted to null but also blank Strings.  A blank String is any String such that the `trim()` method returns an empty String.
@@ -402,6 +426,19 @@ NOTE: The default limit to how large the binder will grow a collection is 256. I
 grails.databinding.autoGrowCollectionLimit = 128
 
 // ...
+----
+
+Or the equivalent in `grails-app/conf/application.yml`:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+# the default value is 256
+grails:
+    databinding:
+        autoGrowCollectionLimit: 128
+
+# ...
 ----
 
 
@@ -667,12 +704,20 @@ class Person {
 }
 ----
 
-A global setting may be configured in `application.groovy` to define date formats which will be used application wide when binding to Date.
+A global setting may be configured in `application.groovy` or `application.yml` to define date formats which will be used application wide when binding to Date.
 
 [source,groovy]
 .grails-app/conf/application.groovy
 ----
-grails.databinding.dateFormats = ['MMddyyyy', 'yyyy-MM-dd HH:mm:ss.S', "yyyy-MM-dd'T'hh:mm:ss'Z'"]
+grails.databinding.dateFormats = ['MMddyyyy', 'yyyy-MM-dd HH:mm:ss.S', "yyyy-MM-dd'T'HH:mm:ss'Z'"]
+----
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    databinding:
+        dateFormats: ['MMddyyyy', 'yyyy-MM-dd HH:mm:ss.S', "yyyy-MM-dd'T'HH:mm:ss'Z'"]
 ----
 
 The formats specified in `grails.databinding.dateFormats` will be attempted in the order in which they are included in the List.  If a property is marked with `@BindingFormat`, the `@BindingFormat` will take precedence over the values specified in `grails.databinding.dateFormats`.
@@ -680,9 +725,14 @@ The formats specified in `grails.databinding.dateFormats` will be attempted in t
 The formats configured by default are:
 
 * `yyyy-MM-dd HH:mm:ss.S`
-* `yyyy-MM-dd'T'hh:mm:ss'Z'`
+* `yyyy-MM-dd'T'HH:mm:ss'Z'`
 * `yyyy-MM-dd HH:mm:ss.S z`
 * `yyyy-MM-dd'T'HH:mm:ss.SSSX`
+* `yyyy-MM-dd'T'HH:mm:ssZ`
+* `HH:mm:ssZ`
+* `yyyy-MM-dd'T'HH:mm:ss`
+* `yyyy-MM-dd`
+* `HH:mm:ss`
 
 
 ==== Custom Formatted Converters

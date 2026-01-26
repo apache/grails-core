@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-The link:{servletApiRefFromRef}servletContext.html[servletContext] object is an instance of the Servlet API's {javaee}javax/servlet/ServletContext.html[ServletContext] class.
+The link:{servletApiRefFromRef}servletContext.html[servletContext] object is an instance of the Servlet API's {jakartaee}jakarta/servlet/ServletContext.html[ServletContext] class.
 
 
 === Examples
@@ -33,18 +33,12 @@ The link:{servletApiRefFromRef}servletContext.html[servletContext] object is an 
 
 [source,groovy]
 ----
-class BookController {
-    def doSomething() {
-        def input
-        try {
-            input = servletContext.getResourceAsStream("/WEB-INF/myscript.groovy")
-            def result = new GroovyShell().evaluate(input.text)
-            render result
-        }
-        finally {
-            input.close()
-        }
+class ExamplesTagLib {
+
+    def doSomething = {
+        out << "Servlet major version: ${servletContext.majorVersion}"
     }
+
 }
 ----
 
@@ -52,6 +46,6 @@ class BookController {
 === Description
 
 
-The Servlet API's {javaee}javax/servlet/ServletContext.html[ServletContext] is useful for, amongst other things, storing global application attributes, reading local server resources and establishing information about the servlet container.
+The Servlet API's {jakartaee}jakarta/servlet/ServletContext.html[ServletContext] is useful for, amongst other things, storing global application attributes, reading local server resources and establishing information about the servlet container.
 
 NOTE: Grails adds additional methods to the standard Servlet API's link:{servletApiRefFromRef}servletContext.html[servletContext] object. See link for details.

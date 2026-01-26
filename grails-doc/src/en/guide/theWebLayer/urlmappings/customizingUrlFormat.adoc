@@ -25,6 +25,17 @@ The default URL Mapping mechanism supports camel case names in the URLs.  The de
 grails.web.url.converter = 'hyphenated'
 ----
 
+Or the equivalent in `grails-app/conf/application.yml`:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    web:
+        url:
+            converter: 'hyphenated'
+----
+
 Arbitrary strategies may be plugged in by providing a class which implements the link:{api}grails/web/UrlConverter.html[UrlConverter] interface and adding an instance of that class to the Spring application context with the bean name of `grails.web.UrlConverter.BEAN_NAME`.  If Grails finds a bean in the context with that name, it will be used as the default converter and there is no need to assign a value to the `grails.web.url.converter` config property.
 
 [source,groovy]

@@ -33,13 +33,18 @@ Returns the name of the currently executing action
 
 [source,groovy]
 ----
-class BookController {
-    def list() {
-        log.info "Executing action $actionName"
+class ExamplesTagLib {
 
-        render(view: actionName)
+    def showActionName = { attrs, body ->
+        out << "Executing action: ${actionName}"
     }
+
 }
+----
+
+[source,xml]
+----
+<g:showActionName />
 ----
 
 

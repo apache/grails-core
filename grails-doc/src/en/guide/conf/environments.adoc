@@ -80,6 +80,33 @@ environments {
 }
 ----
 
+Or the equivalent in `application.yml`:
+
+[source,yaml]
+----
+dataSource:
+    pooled: false
+    driverClassName: "org.h2.Driver"
+    username: "sa"
+    password: ""
+environments:
+    development:
+        dataSource:
+            dbCreate: "create-drop"
+            url: "jdbc:h2:mem:devDb"
+    test:
+        dataSource:
+            dbCreate: "update"
+            url: "jdbc:h2:mem:testDb"
+    production:
+        dataSource:
+            dbCreate: "update"
+            url: "jdbc:h2:prodDb"
+            properties:
+               jmxEnabled: true
+               initialSize: 5
+----
+
 Notice how the common configuration is provided at the top level and then an `environments` block specifies per environment settings for the `dbCreate` and `url` properties of the `DataSource`.
 
 

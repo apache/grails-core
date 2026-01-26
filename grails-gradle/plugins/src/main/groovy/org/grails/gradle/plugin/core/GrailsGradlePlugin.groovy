@@ -18,11 +18,15 @@
  */
 package org.grails.gradle.plugin.core
 
-import javax.inject.Inject
-
+import grails.util.BuildSettings
+import grails.util.Environment
+import grails.util.GrailsNameUtils
+import grails.util.Metadata
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-
+import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
+import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
+import org.apache.grails.gradle.common.PropertyFileUtils
 import org.apache.tools.ant.filters.EscapeUnicode
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.api.DefaultTask
@@ -52,20 +56,6 @@ import org.gradle.api.tasks.testing.Test
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.process.JavaForkOptions
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
-
-import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
-import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
-import org.springframework.boot.gradle.dsl.SpringBootExtension
-import org.springframework.boot.gradle.plugin.ResolveMainClassName
-import org.springframework.boot.gradle.plugin.SpringBootPlugin
-import org.springframework.boot.gradle.tasks.bundling.BootArchive
-import org.springframework.boot.gradle.tasks.run.BootRun
-
-import grails.util.BuildSettings
-import grails.util.Environment
-import grails.util.GrailsNameUtils
-import grails.util.Metadata
-import org.apache.grails.gradle.common.PropertyFileUtils
 import org.grails.build.parsing.CommandLineParser
 import org.grails.gradle.plugin.commands.ApplicationContextCommandTask
 import org.grails.gradle.plugin.commands.ApplicationContextScriptTask
@@ -76,6 +66,13 @@ import org.grails.gradle.plugin.model.GrailsClasspathToolingModelBuilder
 import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
 import org.grails.io.support.FactoriesLoaderSupport
+import org.springframework.boot.gradle.dsl.SpringBootExtension
+import org.springframework.boot.gradle.plugin.ResolveMainClassName
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+import org.springframework.boot.gradle.tasks.bundling.BootArchive
+import org.springframework.boot.gradle.tasks.run.BootRun
+
+import javax.inject.Inject
 
 /**
  * The main Grails gradle plugin implementation
@@ -170,7 +167,7 @@ class GrailsGradlePlugin implements Plugin<Project> {
         }
     }
 
-    private static Provider<String> getMainClassProvider(Project project) {
+    protected static Provider<String> getMainClassProvider(Project project) {
         Provider<FindMainClassTask> findMainClassTask = project.tasks.named('findMainClass', FindMainClassTask)
         project.provider {
             File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
@@ -361,7 +358,6 @@ ${importStatements}
         dme.imports({
             mavenBom("org.apache.grails:grails-bom:${project.properties['grailsVersion']}")
         })
-        dme.setApplyMavenExclusions(false)
     }
 
     protected String getDefaultProfile() {
@@ -904,6 +900,15 @@ ${importStatements}
             fileCollection = fileCollection + it.filter({ File file -> !file.name.startsWith('spring-boot-devtools') })
         }
         fileCollection
+    }
+
+    protected FileCollection buildClasspath(Project project, String... configurationNames) {
+        buildClasspath(
+                project,
+                configurationNames.collect {
+                    project.configurations.named(it).getOrNull()
+                }.findAll(/* remove nulls */) as Configuration[]
+        )
     }
 
     @CompileStatic

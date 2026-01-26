@@ -24,6 +24,7 @@ plugins {
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
 
 version = projectVersion
@@ -63,7 +64,7 @@ dependencies {
     api project(':grails-encoder'), { // CodecLookup, Encoder
         // API dependencies in grails-encoder
         exclude group: 'org.apache.groovy', module: 'groovy'
-        exclude group: 'org.apache.groovy', module: 'groovy-json'
+        //exclude group: 'org.apache.groovy', module: 'groovy-json' // Hack: exclusion removed, library dependency forwarded even though not used in api, should be able to exclude this here
         exclude group: 'org.apache.grails', module: 'grails-core'
         exclude group: 'org.slf4j', module: 'jcl-over-slf4j'
         exclude group: 'org.slf4j', module: 'slf4j-api'
@@ -124,7 +125,7 @@ dependencies {
         exclude group: 'org.apache.grails', module: 'grails-core'
         exclude group: 'org.apache.grails', module: 'grails-databinding'
         exclude group: 'org.apache.grails', module: 'grails-encoder'
-        exclude group: 'org.springframework', module: 'spring-webmvc'
+        //exclude group: 'org.springframework', module: 'spring-webmvc' // Hack: exclusion removed as library is needed by applications, should be able to exclude this here
         exclude group: 'org.springframework', module: 'spring-context-support'
     }
     implementation project(':grails-web-mvc'), { // SynchronizerTokensHolder
@@ -180,7 +181,6 @@ dependencies {
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')

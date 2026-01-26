@@ -88,6 +88,21 @@ grails.mime.types = [
 ]
 ----
 
+Or the equivalent in `application.yml`:
+
+[source,yaml]
+----
+grails:
+    mime:
+        types:
+            json:
+              - 'application/json'
+              - 'text/json'
+            xml:
+              - 'text/xml'
+              - 'application/xml'
+----
+
 See the section on link:theWebLayer.html#contentNegotiation[Configuring Mime Types] in the user guide for more information.
 
 Instead of using the file extension in the URI, you can also obtain a JSON response using the ACCEPT header. Here's an example using the Unix `curl` tool:

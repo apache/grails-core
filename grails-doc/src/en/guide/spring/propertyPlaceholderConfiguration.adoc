@@ -27,6 +27,15 @@ database.driver="com.mysql.jdbc.Driver"
 database.dbname="mysql:mydb"
 ----
 
+Or the equivalent in `grails-app/conf/application.yml`:
+
+[source,yaml]
+----
+database:
+    driver: "com.mysql.jdbc.Driver"
+    dbname: "mysql:mydb"
+----
+
 You can then specify placeholders in `resources.xml` as follows using the familiar ${..} syntax:
 
 [source,xml]

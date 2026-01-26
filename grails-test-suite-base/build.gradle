@@ -23,6 +23,7 @@ plugins {
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
 
 version = projectVersion
@@ -72,8 +73,4 @@ dependencies {
 tasks.withType(Groovydoc).configureEach {
     // tests do not have groovydoc
     enabled = false
-}
-
-apply {
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
 }

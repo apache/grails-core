@@ -33,7 +33,7 @@ A reference to the binding of the GSP that the tag library is being executed wit
 
 [source,groovy]
 ----
-class BookTagLib {
+class ExamplesTagLib {
 
    def parent = { attrs, body ->
        pageScope.parent = "John"
@@ -43,13 +43,14 @@ class BookTagLib {
    def child = { attrs, body ->
        out << "My parent is ${pageScope.parent}"
    }
+
 }
 ----
 
 [source,xml]
 ----
 <g:parent>
-    <g:child /> // Outputs "My parent is John"
+    <g:child /> <!-- Outputs "My parent is John" -->
 </g:parent>
 ----
 
