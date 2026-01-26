@@ -35,21 +35,7 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
     public HibernatePersistentEntity(Class javaClass, final MappingContext context) {
         super(javaClass, context);
 
-
-
-        this.classMapping = new AbstractClassMapping<Mapping>(this, context) {
-            Mapping mappedForm = (Mapping) context.getMappingFactory().createMappedForm(HibernatePersistentEntity.this);
-            @Override
-            public PersistentEntity getEntity() {
-                return HibernatePersistentEntity.this;
-            }
-
-            @Override
-            public Mapping getMappedForm() {
-                return mappedForm;
-            }
-        };
-
+        this.classMapping = new HibernateClassMapping(this, context);
     }
 
     @Override

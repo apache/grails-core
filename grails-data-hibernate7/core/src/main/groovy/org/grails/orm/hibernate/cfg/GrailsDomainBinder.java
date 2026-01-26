@@ -1092,23 +1092,8 @@ public class GrailsDomainBinder
 
     private void evaluateMapping(GrailsHibernatePersistentEntity persistentEntity) {
         Optional.ofNullable(persistentEntity).ifPresent(domainClass -> {
-            try {
-                Mapping m = domainClass.getMappedForm();
-                for (PersistentProperty property : domainClass.getPersistentProperties()) {
-                    PropertyConfig propConf = m.getPropertyConfig(property.getName());
-
-                    if (propConf != null && propConf.getCascade() != null) {
-                        propConf.setExplicitSaveUpdateCascade(CascadeBehavior.isSaveUpdate(propConf.getCascade()));
-                    }
-                }
-                Class<?> theClass = domainClass.getJavaClass();
-                MappingCacheHolder.getInstance().cacheMapping(theClass, m);
-            } catch (Exception e) {
-                throw new DatastoreConfigurationException("Error evaluating ORM mappings block for domain [" +
-                        domainClass.getName() + "]:  " + e.getMessage(), e);
-            }
+            domainClass.getMappedForm();
         });
-
     }
 
 

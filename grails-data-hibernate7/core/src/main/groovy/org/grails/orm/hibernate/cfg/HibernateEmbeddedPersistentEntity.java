@@ -32,28 +32,7 @@ public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<
 
     public HibernateEmbeddedPersistentEntity(Class type, MappingContext ctx) {
         super(type, ctx);
-        this.classMapping = new ClassMapping<Mapping>() {
-            Mapping mappedForm = (Mapping) context.getMappingFactory().createMappedForm(HibernateEmbeddedPersistentEntity.this);
-
-            @Override
-            public PersistentEntity getEntity() {
-                return HibernateEmbeddedPersistentEntity.this;
-            }
-
-            @Override
-            public Mapping getMappedForm() {
-                return mappedForm;
-            }
-
-            @Override
-            public IdentityMapping getIdentifier() {
-                return null;
-            }
-
-
-        };
-
-
+        this.classMapping = new HibernateEmbeddedClassMapping(this, ctx);
     }
 
     @Override
