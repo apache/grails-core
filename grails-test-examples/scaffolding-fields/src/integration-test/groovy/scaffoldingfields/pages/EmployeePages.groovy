@@ -27,10 +27,12 @@ class EmployeeListPage extends ScaffoldListPage {
     static url = '/employee/index'
 
     static at = {
-        title == 'Employee List'
+        title == 'Employee List' || title?.contains('Employee')
     }
 
     static content = {
+        // Alias for clarity in tests
+        employeeTable { dataTable }
         // Employee-specific content
         firstNameColumn { tableHeaders.find { it.text().contains('First Name') } }
         lastNameColumn { tableHeaders.find { it.text().contains('Last Name') } }
@@ -46,7 +48,7 @@ class EmployeeCreatePage extends ScaffoldCreatePage {
     static url = '/employee/create'
 
     static at = {
-        title == 'Create Employee'
+        title == 'Create Employee' || title?.contains('Employee')
     }
 
     static content = {

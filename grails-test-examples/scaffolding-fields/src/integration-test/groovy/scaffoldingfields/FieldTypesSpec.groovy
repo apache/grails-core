@@ -216,7 +216,9 @@ class FieldTypesSpec extends ContainerGebSpec {
 
     def "Fields have associated labels"() {
         expect: "fields have labels"
-        def firstNameLabel = $('label[for*="firstName"], label:contains("First Name")')
+        // Use valid CSS selector - check for label with for attribute containing firstName
+        // or any label element exists
+        def firstNameLabel = $('label[for*="firstName"]')
         firstNameLabel.displayed || $('label').size() > 0
     }
 

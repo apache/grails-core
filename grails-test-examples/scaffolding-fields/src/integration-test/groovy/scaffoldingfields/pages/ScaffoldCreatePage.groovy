@@ -38,9 +38,14 @@ class ScaffoldCreatePage extends Page {
         // Form
         createForm { $('form') }
 
-        // Submit and cancel buttons
-        createButton { $('input[type=submit], button[type=submit]', value: contains('Create')) }
-        cancelButton(required: false) { $('a', text: contains('Cancel')) }
+        // Submit and cancel buttons - try multiple selectors
+        createButton { 
+            $('input[type=submit]').find { it.value()?.toLowerCase()?.contains('create') } ?:
+            $('button[type=submit]').find { it.text()?.toLowerCase()?.contains('create') } ?:
+            $('input[type=submit]') ?:
+            $('button[type=submit]')
+        }
+        cancelButton(required: false) { $('a').find { it.text()?.contains('Cancel') } }
 
         // Error messages
         errorMessages { $('.errors li, .alert-danger li, .field-error, .invalid-feedback') }

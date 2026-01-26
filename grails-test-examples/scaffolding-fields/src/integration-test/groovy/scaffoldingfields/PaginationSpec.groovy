@@ -51,7 +51,7 @@ class PaginationSpec extends ContainerGebSpec {
         at EmployeeListPage
 
         and: "table with data is shown"
-        employeeTable.displayed
+        dataTable.displayed
 
         and: "rows are present"
         tableRows.size() > 0
@@ -128,7 +128,7 @@ class PaginationSpec extends ContainerGebSpec {
         at DepartmentListPage
 
         and: "table with data is shown"
-        departmentTable.displayed
+        dataTable.displayed
 
         and: "rows are present from bootstrap data"
         tableRows.size() > 0

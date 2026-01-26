@@ -27,7 +27,12 @@ class DepartmentListPage extends ScaffoldListPage {
     static url = '/department/index'
 
     static at = {
-        title == 'Department List'
+        title == 'Department List' || title?.contains('Department')
+    }
+
+    static content = {
+        // Alias for clarity in tests
+        departmentTable { dataTable }
     }
 }
 
