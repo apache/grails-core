@@ -1,23 +1,10 @@
 Test File , Status , Notes
-`src/test/groovy/grails/gorm/specs/UniqueWithMultipleDataSourcesSpec.groovy` , PASSED ,
-`src/test/groovy/grails/gorm/specs/dirtychecking/HibernateDirtyCheckingSpec.groovy` , PASSED , 
-`src/test/groovy/grails/gorm/specs/perf/JoinPerfSpec.groovy` , FAILED , 
-`src/test/groovy/grails/gorm/specs/uuid/UuidInsertSpec.groovy` , FAILED , 
-`src/test/groovy/grails/gorm/specs/validation/SaveWithInvalidEntitySpec.groovy` , PASSED , 
-`TCK: org.apache.grails.data.testing.tck.tests.AttachMethodSpec` , FAILED , 
+`src/test/groovy/grails/gorm/specs/perf/JoinPerfSpec.groovy` , FAILED ,
+`TCK: org.apache.grails.data.testing.tck.tests.AttachMethodSpec` , FAILED ,
 `TCK: org.apache.grails.data.testing.tck.tests.BuiltinUniqueConstraintWorksWithTargetProxiesConstraintsSpec` , FAILED , 
 `TCK: org.apache.grails.data.testing.tck.tests.DirtyCheckingSpec` , FAILED , 
 `TCK: org.apache.grails.data.testing.tck.tests.GroovyProxySpec` , SKIPPED , Requires fix in GORM Hibernate 7 implementation for proxy initialization (isInitialized method) for native proxies. 
 `TCK: org.apache.grails.data.testing.tck.tests.QueryEventsSpec` , FAILED , 
 `TCK: org.apache.grails.data.testing.tck.tests.SessionCreationEventSpec` , FAILED , 
-`TCK: org.apache.grails.data.testing.tck.tests.UpdateWithProxyPresentSpec` , FAILED , Fails when hibernate7.gorm.suite=false
-`TCK: org.apache.grails.data.testing.tck.tests.NamedQuerySpec` , FAILED , Fails when hibernate7.gorm.suite=false
-`src/test/groovy/org/grails/orm/hibernate/HibernateGormInstanceApiSpec.groovy` , PASSED , 
-`src/test/groovy/org/grails/orm/hibernate/HibernateGormStaticApiSpec.groovy` , PASSED , 
-`src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/SequenceGeneratorsSpec.groovy` , PASSED , 
-`src/test/groovy/org/grails/orm/hibernate/cfg/domainbinding/IncrementGeneratorSpec.groovy` , FAILED , 
-`src/test/groovy/org/grails/orm/hibernate/connections/MultipleDataSourceConnectionsSpec.groovy` , PASSED ,
-`src/test/groovy/org/grails/orm/hibernate/connections/MultipleDataSourcesWithCachingSpec.groovy` , PASSED , 
-`src/test/groovy/org/grails/orm/hibernate/connections/MultipleDataSourcesWithEventsSpec.groovy` , PASSED , 
-`src/test/groovy/org/grails/orm/hibernate/connections/SchemaMultiTenantSpec.groovy` , PASSED , 
-`src/test/groovy/org/grails/orm/hibernate/connections/SingleTenantSpec.groovy` , PASSED ,
+`TCK: org.apache.grails.data.testing.tck.tests.UpdateWithProxyPresentSpec` , NOT SUPPORTED , Not supported in Hibernate 7.
+`TCK: org.apache.grails.data.testing.tck.tests.NamedQuerySpec` , NOT SUPPORTED , Not supported in Hibernate 7.

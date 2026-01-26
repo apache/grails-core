@@ -17,20 +17,17 @@
  *  under the License.
  */
 import grails.gorm.annotation.Entity
-import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import grails.testing.spock.IgnoreIf
+import grails.gorm.specs.HibernateGormDatastoreSpec
 
-@IgnoreIf({ System.getProperty("hibernate7.gorm.suite") == "true" })
-class DirtyCheckingSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+class DirtyCheckingSpecHibernate7 extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestBook])
+        manager.addAllDomainClasses([DirtyCheckingTestBookHibernate7])
     }
 
     void "When marking whole class dirty, then derived and transient properties are still not dirty"() {
         when:
-        TestBook book = new TestBook()
+        DirtyCheckingTestBookHibernate7 book = new DirtyCheckingTestBookHibernate7()
         book.title = "Test"
         and: "mark class as not dirty - to clear previous dirty tracking"
         book.trackChanges()
@@ -56,7 +53,7 @@ class DirtyCheckingSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void "Test that dirty tracking doesn't apply on Entity's transient properties"() {
         when:
-        TestBook book = new TestBook()
+        DirtyCheckingTestBookHibernate7 book = new DirtyCheckingTestBookHibernate7()
         book.title = "Test"
         and: "mark class as not dirty, clear previous dirty tracking"
         book.trackChanges()
@@ -76,7 +73,7 @@ class DirtyCheckingSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 }
 
 @Entity
-class TestBook implements Serializable {
+class DirtyCheckingTestBookHibernate7 implements Serializable {
 
     Long id
     String title
@@ -90,4 +87,27 @@ class TestBook implements Serializable {
     }
 
     static transients = ['transientProperty']
+}
+
+@Entity
+class DirtyCheckingTestAuthorHibernate7 implements Serializable {
+    Long id
+    String name
+    Integer age
+
+    @Override
+    boolean equals(Object o) {
+        if (this.is(o)) return true
+        if (o == null || getClass() != o.class) return false
+
+        DirtyCheckingTestAuthorHibernate7 that = (DirtyCheckingTestAuthorHibernate7) o
+
+        if (id != null ? !id.equals(that.id) : that.id != null) return false
+        return true
+    }
+
+    @Override
+    int hashCode() {
+        return id != null ? id.hashCode() : 0
+    }
 }
