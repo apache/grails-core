@@ -431,6 +431,16 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
                 delegate.grailsApplication = grailsApplication
             }
         }
+
+        // Update the linkGenerator's urlMappingsHolder reference to point to the new holder bean.
+        // This is necessary because linkGenerator was @Autowired with the previous holder instance
+        // and won't automatically update when we redefine the grailsUrlMappingsHolder bean.
+        if (applicationContext.containsBean('grailsLinkGenerator')) {
+            def linkGenerator = applicationContext.getBean('grailsLinkGenerator')
+            if (linkGenerator.hasProperty('urlMappingsHolder')) {
+                linkGenerator.urlMappingsHolder = urlMappingsHolder
+            }
+        }
     }
 
     String getBeanName(Class<?> urlMappingsClass) {
