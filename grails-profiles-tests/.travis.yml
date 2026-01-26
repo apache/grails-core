@@ -1,0 +1,23 @@
+jdk:
+  - oraclejdk8
+addons:
+  chrome: stable
+  firefox: latest
+install: ./profiles-install.sh
+script:
+  - ./vue.sh
+  - ./react.sh
+  - ./web.sh
+  - ./rest-api.sh
+#  - ./profile.sh
+#  - ./rest-api-plugin.sh
+#  - ./web-plugin.sh
+#  - ./web-jboss7.sh
+#  - ./plugin.sh
+before_cache:
+  - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+  - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
+cache:
+  directories:
+    - $HOME/.gradle/caches/
+    - $HOME/.gradle/wrapper/

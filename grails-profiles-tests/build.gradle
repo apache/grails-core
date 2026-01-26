@@ -1,0 +1,122 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.gradle.grails-code-style'
+}
+
+version = projectVersion
+group = 'org.apache.grails.testing'
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+    
+    // Core dependencies for profile testing
+    implementation project(':grails-core')
+    implementation project(':grails-bootstrap')
+    
+    // Testing dependencies
+    testImplementation project(':grails-test-core')
+    testImplementation project(':grails-testing-support-core')
+    
+    // Spock testing framework
+    testImplementation 'org.spockframework:spock-core'
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+    testImplementation 'org.objenesis:objenesis'
+    
+    // JUnit platform
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    
+    // Logging for tests
+    testImplementation 'org.slf4j:slf4j-simple'
+}
+
+// Configure test tasks
+test {
+    useJUnitPlatform()
+    
+    // Enable Geb environment configuration
+    systemProperty 'geb.env', System.getProperty('geb.env', 'chrome')
+    systemProperty 'webdriver.chrome.driver', System.getProperty('webdriver.chrome.driver', '')
+    systemProperty 'webdriver.gecko.driver', System.getProperty('webdriver.gecko.driver', '')
+    
+    // Test reporting configuration
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+        showStandardStreams = true
+    }
+    
+    // Fork settings for isolation
+    maxParallelForks = 1
+    forkEvery = 5
+    
+    // Include only profile test classes
+    include '**/*Profile*Test*'
+    include '**/*Profile*Spec*'
+}
+
+// Custom task to run profile tests with specific configurations
+tasks.register('profileTest', Test) {
+    useJUnitPlatform()
+    systemProperty 'geb.env', 'chromeHeadless'
+    include '**/*Profile*Test*'
+    include '**/*Profile*Spec*'
+    
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+}
+
+// Task to run functional profile tests separately
+tasks.register('functionalProfileTest', Test) {
+    useJUnitPlatform()
+    systemProperty 'geb.env', 'chromeHeadless'
+    include '**/*Functional*Profile*Test*'
+    include '**/*Functional*Profile*Spec*'
+    
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+}

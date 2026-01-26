@@ -1,0 +1,41 @@
+plugins {
+    id "com.energizedwork.webdriver-binaries" version "1.4"
+    id 'groovy'
+}
+
+ext {
+    spockVersion = '1.2-groovy-2.4'
+    gebVersion = '2.3'
+    seleniumVersion = '3.14.0'
+    seleniumSafariDriverVersion='3.14.0'
+    chromeDriverVersion='2.44'
+    geckodriverVersion='0.23.0'
+}
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    testCompile "org.spockframework:spock-core:$spockVersion"
+
+    compile "org.gebish:geb-spock:$gebVersion"
+    compile "org.seleniumhq.selenium:selenium-support:$seleniumVersion"
+
+    testRuntime "org.seleniumhq.selenium:selenium-chrome-driver:$seleniumVersion"
+    testRuntime "org.seleniumhq.selenium:selenium-firefox-driver:$seleniumVersion"
+    testRuntime "org.seleniumhq.selenium:selenium-safari-driver:$seleniumSafariDriverVersion"
+}
+
+webdriverBinaries {
+    chromedriver "$chromeDriverVersion"
+    geckodriver "$geckodriverVersion"
+}
+
+tasks.withType(Test) {
+    systemProperty "geb.env", System.getProperty('geb.env')
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat 'full'
+    }
+}
