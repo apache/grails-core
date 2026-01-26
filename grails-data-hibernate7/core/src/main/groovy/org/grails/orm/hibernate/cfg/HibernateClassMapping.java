@@ -16,7 +16,6 @@
 package org.grails.orm.hibernate.cfg;
 
 import org.grails.datastore.mapping.model.AbstractClassMapping;
-import org.grails.datastore.mapping.model.DatastoreConfigurationException;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -33,17 +32,11 @@ public class HibernateClassMapping extends AbstractClassMapping<Mapping> {
 
     public HibernateClassMapping(PersistentEntity entity, MappingContext context) {
         super(entity, context);
-        try {
-            this.mappedForm = (Mapping) context.getMappingFactory().createMappedForm(entity);
-            for (PropertyConfig propConf : mappedForm.getPropertyConfigs().values()) {
-                if (propConf != null && propConf.getCascade() != null) {
-                    propConf.setExplicitSaveUpdateCascade(CascadeBehavior.isSaveUpdate(propConf.getCascade()));
-                }
+        this.mappedForm = (Mapping) context.getMappingFactory().createMappedForm(entity);
+        for (PropertyConfig propConf : mappedForm.getPropertyConfigs().values()) {
+            if (propConf != null && propConf.getCascade() != null) {
+                propConf.setExplicitSaveUpdateCascade(CascadeBehavior.isSaveUpdate(propConf.getCascade()));
             }
-            MappingCacheHolder.getInstance().cacheMapping(entity.getJavaClass(), mappedForm);
-        } catch (Exception e) {
-            throw new DatastoreConfigurationException("Error evaluating ORM mappings block for domain [" +
-                    entity.getName() + "]:  " + e.getMessage(), e);
         }
     }
 

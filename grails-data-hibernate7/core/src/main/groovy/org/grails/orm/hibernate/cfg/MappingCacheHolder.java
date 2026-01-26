@@ -33,10 +33,10 @@ public class MappingCacheHolder {
     /**
      * Obtains a mapping object for the given domain class nam
      *
-     * @param theClass The domain class in question
+     * @param entity The domain class in question
      */
-    public void cacheMapping(Class<?> theClass, Mapping mapping) {
-        MAPPING_CACHE.put(theClass, mapping);
+    public void cacheMapping(GrailsHibernatePersistentEntity entity) {
+        MAPPING_CACHE.put(entity.getJavaClass(), entity.getMappedForm());
     }
 
     public void clear() {

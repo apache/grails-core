@@ -1090,10 +1090,8 @@ public class GrailsDomainBinder
         }
     }
 
-    private void evaluateMapping(GrailsHibernatePersistentEntity persistentEntity) {
-        Optional.ofNullable(persistentEntity).ifPresent(domainClass -> {
-            domainClass.getMappedForm();
-        });
+    public void evaluateMapping(GrailsHibernatePersistentEntity persistentEntity) {
+        MappingCacheHolder.getInstance().cacheMapping(persistentEntity);
     }
 
 
