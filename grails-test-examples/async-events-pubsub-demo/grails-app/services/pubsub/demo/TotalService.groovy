@@ -34,6 +34,10 @@ class TotalService {
         accumulatedTotalInstance.get()
     }
 
+    void reset() {
+        accumulatedTotalInstance.set(0)
+    }
+
     @Subscriber
     @SuppressWarnings('unused')
     void onSum(int total) {

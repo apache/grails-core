@@ -30,7 +30,12 @@ import java.util.concurrent.ConcurrentLinkedDeque
 @CompileStatic
 class BookSubscriber {
 
-    List<String> newBooks = []
+    List<String> newBooks = Collections.synchronizedList(new ArrayList<String>())
+
+    void reset() {
+        newBooks.clear()
+        insertEvents.clear()
+    }
 
     @Subscriber('newBook')
     @SuppressWarnings('unused')
