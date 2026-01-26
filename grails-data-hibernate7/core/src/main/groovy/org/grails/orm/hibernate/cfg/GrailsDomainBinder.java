@@ -1124,6 +1124,7 @@ public class GrailsDomainBinder
             if (entity != null) {
                 m = entity.getMappedForm();
             }
+            final Mapping finalMapping = m;
             boolean tablePerSubclass = !m.getTablePerHierarchy();
             if (!tablePerSubclass) {
                 // if the root class has children create a discriminator property
@@ -1131,7 +1132,8 @@ public class GrailsDomainBinder
                 bindDiscriminatorProperty(root.getTable(), root, m);
             }
             // bind the sub classes
-            bindSubClasses(entity, root, mappings, sessionFactoryBeanName, m);
+            entity.getChildEntities(dataSourceName)
+                    .forEach(sub -> bindSubClass(sub, root, mappings, sessionFactoryBeanName, finalMapping));
         }
 
         addMultiTenantFilterIfNecessary(entity, root, mappings, sessionFactoryBeanName);
@@ -1187,31 +1189,6 @@ public class GrailsDomainBinder
         }
     }
 
-    /**
-     * Binds the sub classes of a root class using table-per-heirarchy inheritance mapping
-     *
-     * @param domainClass            The root domain class to bind
-     * @param parent                 The parent class instance
-     * @param mappings               The mappings instance
-     * @param sessionFactoryBeanName the session factory bean name
-     * @param m
-     */
-    private void bindSubClasses(GrailsHibernatePersistentEntity domainClass, PersistentClass parent,
-                                InFlightMetadataCollector mappings, String sessionFactoryBeanName, Mapping m) {
-        domainClass.getMappingContext()
-                .getDirectChildEntities(domainClass)
-                .stream()
-                .filter(GrailsHibernatePersistentEntity.class::isInstance)
-                .map(GrailsHibernatePersistentEntity.class::cast)
-                .filter(persistentEntity -> persistentEntity.usesConnectionSource(dataSourceName))
-                .filter(sub -> isChildEntity(sub, domainClass))
-                .forEach( sub -> bindSubClass(sub, parent, mappings, sessionFactoryBeanName, m));
-
-    }
-
-    private boolean isChildEntity(GrailsHibernatePersistentEntity sub, GrailsHibernatePersistentEntity parent) {
-        return sub.getJavaClass().getSuperclass().equals(parent.getJavaClass());
-    }
 
     /**
      * Binds a sub class.
@@ -1285,7 +1262,8 @@ public class GrailsDomainBinder
         final java.util.Collection<PersistentEntity> childEntities = sub.getMappingContext().getDirectChildEntities(sub);
         if (!childEntities.isEmpty()) {
             // bind the sub classes
-            bindSubClasses(sub, subClass, mappings, sessionFactoryBeanName, m);
+            sub.getChildEntities(dataSourceName)
+                    .forEach(sub1 -> bindSubClass(sub1, subClass, mappings, sessionFactoryBeanName, m));
         }
     }
 
