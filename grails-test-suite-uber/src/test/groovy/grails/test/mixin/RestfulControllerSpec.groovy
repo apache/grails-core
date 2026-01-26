@@ -21,6 +21,7 @@ package grails.test.mixin
 import grails.gorm.transactions.Transactional
 import grails.testing.gorm.DomainUnitTest
 import grails.testing.web.controllers.ControllerUnitTest
+import org.grails.web.mime.HttpServletResponseExtension
 
 import static org.springframework.http.HttpStatus.*
 import grails.artefact.Artefact
@@ -31,6 +32,16 @@ import spock.lang.Specification
  * @video Graeme Rocher
  */
 class RestfulControllerSpec extends Specification implements ControllerUnitTest<VideoController>, DomainUnitTest<Video> {
+
+    def setup() {
+        // Clear the static mimeTypes cache to ensure proper test isolation
+        HttpServletResponseExtension.@mimeTypes = null
+    }
+
+    def cleanup() {
+        // Clear the static mimeTypes cache after each test for test isolation
+        HttpServletResponseExtension.@mimeTypes = null
+    }
 
     def populateValidParams(params) {
         assert params != null

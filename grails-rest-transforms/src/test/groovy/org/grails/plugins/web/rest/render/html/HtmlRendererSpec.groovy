@@ -21,6 +21,7 @@ package org.grails.plugins.web.rest.render.html
 import grails.persistence.Entity
 import grails.validation.ValidationErrors
 import grails.web.mime.MimeType
+import org.grails.web.mime.HttpServletResponseExtension
 import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.plugins.web.rest.render.ServletRenderContext
@@ -36,6 +37,15 @@ import spock.lang.Specification
 
 class HtmlRendererSpec extends Specification {
 
+    void setup() {
+        // Clear the static mimeTypes cache to ensure proper test isolation
+        HttpServletResponseExtension.@mimeTypes = null
+    }
+
+    void cleanup() {
+        // Clear the static mimeTypes cache after each test for test isolation
+        HttpServletResponseExtension.@mimeTypes = null
+    }
 
     void "Test that HTML renderer sets a model and view correctly for a domain instance"() {
         when:"A domain instance is rendered"

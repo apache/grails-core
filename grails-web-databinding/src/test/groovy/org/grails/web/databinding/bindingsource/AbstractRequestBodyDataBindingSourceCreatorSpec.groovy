@@ -24,6 +24,7 @@ import grails.databinding.DataBindingSource
 import grails.databinding.SimpleMapDataBindingSource
 import grails.web.http.HttpHeaders
 import grails.web.mime.MimeType
+import org.grails.web.mime.HttpServletResponseExtension
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
 import org.springframework.http.HttpMethod
@@ -48,6 +49,16 @@ class AbstractRequestBodyDataBindingSourceCreatorSpec extends Specification {
 
     @Shared
     ServletContext servletContext = new MockServletContext()
+
+    void setup() {
+        // Clear the static mimeTypes cache to ensure proper test isolation
+        HttpServletResponseExtension.@mimeTypes = null
+    }
+
+    void cleanup() {
+        // Clear the static mimeTypes cache after each test for test isolation
+        HttpServletResponseExtension.@mimeTypes = null
+    }
 
     void setupSpec() {
         bindingSourceCreator = new AbstractRequestBodyDataBindingSourceCreator() {

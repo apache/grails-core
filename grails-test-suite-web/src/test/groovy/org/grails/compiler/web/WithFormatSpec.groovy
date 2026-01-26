@@ -20,9 +20,20 @@ package org.grails.compiler.web
 
 import grails.artefact.Artefact
 import grails.testing.web.controllers.ControllerUnitTest
+import org.grails.web.mime.HttpServletResponseExtension
 import spock.lang.Specification
 
 class WithFormatSpec extends Specification implements ControllerUnitTest<MimeTypesCompiledController> {
+
+    def setup() {
+        // Clear the static mimeTypes cache to ensure proper test isolation
+        HttpServletResponseExtension.@mimeTypes = null
+    }
+
+    def cleanup() {
+        // Clear the static mimeTypes cache after each test for test isolation
+        HttpServletResponseExtension.@mimeTypes = null
+    }
 
     void "Test withFormat method injected at compile time"() {
         when:

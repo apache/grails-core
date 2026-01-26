@@ -19,6 +19,7 @@
 
 package grails.validation
 
+import org.grails.validation.ConstraintEvalUtils
 import spock.lang.Ignore
 import spock.lang.Issue
 import spock.lang.Specification
@@ -42,6 +43,45 @@ import grails.validation.Validateable
  */
 @Issue(['apache/grails-core#9749', 'apache/grails-core#9754'])
 class CommandObjectConstraintGettersSpec extends Specification {
+
+    // Cache the static field helper interface for performance
+    private static final Class<?> STATIC_FIELD_HELPER = Class.forName('grails.validation.Validateable$Trait$StaticFieldHelper')
+
+    def setup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+        clearConstraintsMapCache(SimplePropertiesCommand)
+        clearConstraintsMapCache(InheritedPropertiesCommand)
+        clearConstraintsMapCache(MethodPropertiesCommand)
+        clearConstraintsMapCache(InheritedMethodPropertiesCommand)
+        clearConstraintsMapCache(TraitPropertiesCommand)
+        clearConstraintsMapCache(TraitMethodPropertiesCommand)
+        clearConstraintsMapCache(BoolMethodPropertiesCommand)
+        clearConstraintsMapCache(InheritedBoolMethodPropertiesCommand)
+        clearConstraintsMapCache(TraitBoolMethodPropertiesCommand)
+    }
+
+    def cleanup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+        clearConstraintsMapCache(SimplePropertiesCommand)
+        clearConstraintsMapCache(InheritedPropertiesCommand)
+        clearConstraintsMapCache(MethodPropertiesCommand)
+        clearConstraintsMapCache(InheritedMethodPropertiesCommand)
+        clearConstraintsMapCache(TraitPropertiesCommand)
+        clearConstraintsMapCache(TraitMethodPropertiesCommand)
+        clearConstraintsMapCache(BoolMethodPropertiesCommand)
+        clearConstraintsMapCache(InheritedBoolMethodPropertiesCommand)
+        clearConstraintsMapCache(TraitBoolMethodPropertiesCommand)
+    }
+
+    /**
+     * Clears the private static constraintsMapInternal field in the Validateable trait.
+     */
+    private static void clearConstraintsMapCache(Class<?> clazz) {
+        if (STATIC_FIELD_HELPER.isAssignableFrom(clazz)) {
+            def setterMethod = clazz.getMethod('grails_validation_Validateable__constraintsMapInternal$set', Map)
+            setterMethod.invoke(null, (Map) null)
+        }
+    }
 
     // STANDARD COMMAND OBJECT
 
