@@ -1,6 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import spock.lang.Specification
@@ -14,7 +15,7 @@ class TableNameFetcherSpec extends Specification {
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def fetcher = new TableNameFetcher(namingStrategy)
         def mapping = Mock(Mapping)
-        def persistentEntity = Mock(PersistentEntity) {
+        def persistentEntity = Mock(GrailsHibernatePersistentEntity) {
             getMappedForm() >> mapping
         }
 

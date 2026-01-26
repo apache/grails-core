@@ -4,7 +4,7 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.Embedded;
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.hibernate.MappingException;
@@ -85,7 +85,10 @@ public class CascadeBehaviorFetcher {
     }
 
     private  Mapping getOwnersWrappedForm(Association<?> association) {
-        return GrailsDomainBinder.getMapping(association.getOwner());
+        if (association.getOwner() instanceof GrailsHibernatePersistentEntity) {
+            return ((GrailsHibernatePersistentEntity) association.getOwner()).getMappedForm();
+        }
+        return null;
     }
 
 

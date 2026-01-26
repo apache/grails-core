@@ -1,7 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
 import org.hibernate.MappingException;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.ManyToOne;
 
@@ -11,7 +10,7 @@ import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.datastore.mapping.model.types.OneToOne;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
@@ -62,9 +61,12 @@ public class ManyToOneBinder {
             ,String path) {
         manyToOneValuesBinder.bindManyToOneValues(property, manyToOne);
         PersistentEntity refDomainClass = property instanceof ManyToMany ? property.getOwner() : property.getAssociatedEntity();
-        Mapping mapping = GrailsDomainBinder.getMapping(refDomainClass);
+        Mapping mapping = null;
+        if (refDomainClass instanceof GrailsHibernatePersistentEntity) {
+            mapping = ((GrailsHibernatePersistentEntity) refDomainClass).getMappedForm();
+        }
 
-        boolean isComposite = mapping.hasCompositeIdentifier();
+        boolean isComposite = mapping != null && mapping.hasCompositeIdentifier();
         if (isComposite) {
             CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
             compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(property, manyToOne, ci, refDomainClass, path);
@@ -73,7 +75,7 @@ public class ManyToOneBinder {
             if (property.isCircular() && (property instanceof ManyToMany)) {
                 PropertyConfig pc = persistentPropertyToPropertyConfig.toPropertyConfig(property);
 
-                if (pc.getColumns().isEmpty()) {
+                if (mapping != null && pc.getColumns().isEmpty()) {
                     mapping.getColumns().put(property.getName(), pc);
                 }
                 if (!pc.hasJoinKeyMapping()) {

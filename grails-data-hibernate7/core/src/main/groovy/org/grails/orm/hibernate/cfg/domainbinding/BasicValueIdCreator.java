@@ -15,18 +15,18 @@ import org.hibernate.id.uuid.UuidGenerator;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.RootClass;
 
-import org.grails.orm.hibernate.cfg.HibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Identity;
 
 public class BasicValueIdCreator {
 
     private final JdbcEnvironment jdbcEnvironment;
-    private HibernatePersistentEntity domainClass;
+    private GrailsHibernatePersistentEntity domainClass;
     private final Map<String, BiFunction<GeneratorCreationContext, Identity, Generator>> generatorFactories;
     @SuppressWarnings("unused") // kept for tests that want to provide a prototype BasicValue
     private final BasicValue id;
 
-    public BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext, JdbcEnvironment jdbcEnvironment, HibernatePersistentEntity domainClass, RootClass entity) {
+    public BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext, JdbcEnvironment jdbcEnvironment, GrailsHibernatePersistentEntity domainClass, RootClass entity) {
         // create a prototype BasicValue (table will be set per-entity when creating the actual BasicValue)
         this(jdbcEnvironment, new BasicValue(metadataBuildingContext, entity.getTable()), new HashMap<>());
         this.domainClass = domainClass;

@@ -4,6 +4,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.ManyToMany
 import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -36,7 +37,7 @@ class ColumnBinderSpec extends Specification {
         )
 
         def prop = Mock(ManyToMany)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def mappedForm = Mock(PropertyConfig)
         def column = new Column()
         def table = new Table()
@@ -87,7 +88,7 @@ class ColumnBinderSpec extends Specification {
 
         def prop = Mock(PersistentProperty)
         def parentProp = Mock(PersistentProperty)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
         def propertyConfig = Mock(PropertyConfig)
         def column = new Column("test")
@@ -151,7 +152,7 @@ class ColumnBinderSpec extends Specification {
 
         def prop = Mock(org.grails.datastore.mapping.model.types.OneToOne)
         def inverse = Mock(org.grails.datastore.mapping.model.types.Association)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def mappedForm = Mock(PropertyConfig)
         def column = new Column("pre_existing")
         def table = new Table()
@@ -205,7 +206,7 @@ class ColumnBinderSpec extends Specification {
         )
 
         def prop = Mock(PersistentProperty)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def propertyConfig = Mock(PropertyConfig)
         def column = new Column("test")
         def table = new Table()
@@ -256,7 +257,7 @@ class ColumnBinderSpec extends Specification {
 
         def prop = Mock(org.grails.datastore.mapping.model.types.OneToOne)
         def inverse = Mock(org.grails.datastore.mapping.model.types.Association)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def mappedForm = Mock(PropertyConfig)
         def column = new Column() // name is null so binder should set it
         def table = new Table()
@@ -309,7 +310,7 @@ class ColumnBinderSpec extends Specification {
         )
 
         def prop = Mock(org.grails.datastore.mapping.model.types.ToOne)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def mappedForm = Mock(PropertyConfig)
         def column = new Column()
         def table = new Table()
@@ -359,7 +360,7 @@ class ColumnBinderSpec extends Specification {
         )
 
         def prop = Mock(org.grails.datastore.mapping.model.types.Association)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def mappedForm = Mock(PropertyConfig)
         def column = new Column()
         def table = new Table()
@@ -411,7 +412,7 @@ class ColumnBinderSpec extends Specification {
 
         def prop = Mock(PersistentProperty)
         def parentProp = Mock(PersistentProperty)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def propertyConfig = Mock(PropertyConfig)
         def column = new Column("test")
         def table = new Table()
@@ -462,7 +463,7 @@ class ColumnBinderSpec extends Specification {
 
         def prop = Mock(PersistentProperty)
         def parentProp = Mock(PersistentProperty)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def propertyConfig = Mock(PropertyConfig)
         def column = new Column("test")
         def table = new Table()
@@ -511,7 +512,7 @@ class ColumnBinderSpec extends Specification {
 
         def prop = Mock(PersistentProperty)
         def parentProp = Mock(PersistentProperty)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def propertyConfig = Mock(PropertyConfig)
         def column = new Column("test")
         def table = new Table()
@@ -559,7 +560,7 @@ class ColumnBinderSpec extends Specification {
         )
 
         def prop = Mock(PersistentProperty)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def column = new Column("test")
         def table = new Table()
 
@@ -606,7 +607,7 @@ class ColumnBinderSpec extends Specification {
         )
 
         def prop = Mock(PersistentProperty)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def column = new Column("test")
         def table = new Table()
 
@@ -655,7 +656,7 @@ class ColumnBinderSpec extends Specification {
         )
 
         def prop = Mock(PersistentProperty)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def column = new Column("test")
         def table = new Table()
 
@@ -703,7 +704,7 @@ class ColumnBinderSpec extends Specification {
         )
 
         def prop = Mock(PersistentProperty)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
         def propertyConfig = Mock(PropertyConfig)
         def column = new Column("test")

@@ -1,9 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
-import java.util.Optional;
-
 import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 
@@ -20,7 +18,11 @@ public class TableNameFetcher {
     }
 
     public String getTableName(PersistentEntity domainClass) {
-        var tableName = GrailsDomainBinder.getMapping(domainClass).getTableName();
+        Mapping result = null;
+        if (domainClass instanceof GrailsHibernatePersistentEntity) {
+            result = ((GrailsHibernatePersistentEntity) domainClass).getMappedForm();
+        }
+        var tableName = result != null ? result.getTableName() : null;
         return tableName != null ? tableName  :persistentEntityNamingStrategy.resolveTableName(domainClass);
     }
 }

@@ -1,17 +1,20 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
-import org.grails.orm.hibernate.cfg.HibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Identity;
 import org.hibernate.boot.model.relational.Database;
 import org.hibernate.boot.model.relational.SqlStringGenerationContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
+import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.id.IncrementGenerator;
 import java.util.Properties;
 
 public class GrailsIncrementGenerator extends IncrementGenerator {
 
-    public GrailsIncrementGenerator(GeneratorCreationContext context, Identity mappedId, JdbcEnvironment jdbcEnvironment, HibernatePersistentEntity domainClass) {
+    private boolean initialized = false;
+
+    public GrailsIncrementGenerator(GeneratorCreationContext context, Identity mappedId, JdbcEnvironment jdbcEnvironment, GrailsHibernatePersistentEntity domainClass) {
         Properties params = new Properties();
         if (mappedId != null && mappedId.getProperties() != null) {
             params.putAll(mappedId.getProperties());
@@ -34,6 +37,19 @@ public class GrailsIncrementGenerator extends IncrementGenerator {
 
         // Initialize the internal Hibernate state
         this.configure(context.getType(), params, context.getServiceRegistry());
+    }
+
+    @Override
+    public Object generate(SharedSessionContractImplementor session, Object object) {
+        if (!initialized) {
+            synchronized (this) {
+                if (!initialized) {
+                    this.initialize(session.getFactory().getSqlStringGenerationContext());
+                    initialized = true;
+                }
+            }
+        }
+        return super.generate(session, object);
     }
 
     @Override

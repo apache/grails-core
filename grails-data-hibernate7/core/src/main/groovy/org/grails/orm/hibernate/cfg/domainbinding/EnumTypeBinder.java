@@ -2,7 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.IdentityEnumType;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -40,7 +40,10 @@ public class EnumTypeBinder {
 
     public void bindEnumType(PersistentProperty property, Class<?> propertyType, SimpleValue simpleValue, String columnName) {
         PropertyConfig pc = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
-        Mapping ownerMapping = GrailsDomainBinder.getMapping(property.getOwner());
+        Mapping ownerMapping = null;
+        if (property.getOwner() instanceof GrailsHibernatePersistentEntity) {
+            ownerMapping = ((GrailsHibernatePersistentEntity) property.getOwner()).getMappedForm();
+        }
         String enumType = pc.getEnumType();
         Properties enumProperties = new Properties();
         enumProperties.put(ENUM_CLASS_PROP, propertyType.getName());

@@ -2,13 +2,14 @@ package org.grails.orm.hibernate.query;
 
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.reflect.ClassUtils;
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.orm.hibernate.cfg.MappingCacheHolder;
+
 import org.hibernate.FetchMode;
 import org.hibernate.FlushMode;
 import org.hibernate.query.Query;
@@ -86,7 +87,8 @@ public class GrailsHibernateQueryUtils {
                 addOrderPossiblyNested(query, queryRoot, criteriaBuilder,entity, sort, order, ignoreCase);
             }
         } else if (useDefaultMapping) {
-            Mapping m = GrailsDomainBinder.getMapping(entity.getJavaClass());
+            Class<?> theClass = entity.getJavaClass();
+            Mapping m = MappingCacheHolder.getInstance().getMapping(theClass);
             if (m != null) {
                 Map sortMap = m.getSort().getNamesAndDirections();
                 for (Object sort : sortMap.keySet()) {
@@ -278,7 +280,7 @@ public class GrailsHibernateQueryUtils {
      * @param criteria    The criteria
      */
     private static void cacheCriteriaByMapping(Class<?> targetClass, Query criteria) {
-        Mapping m = GrailsDomainBinder.getMapping(targetClass);
+        Mapping m = MappingCacheHolder.getInstance().getMapping(targetClass);
         if (m != null && m.getCache() != null && m.getCache().getEnabled()) {
             criteria.setCacheable(true);
         }

@@ -1,9 +1,9 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.TenantId
 import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -28,7 +28,7 @@ class SimpleValueBinderSpec extends Specification {
     def "sets type from provider when present and applies type params"() {
         given:
         def prop = Mock(PersistentProperty)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
         def pc = Mock(PropertyConfig)
         def sv = Mock(SimpleValue)
@@ -65,7 +65,7 @@ class SimpleValueBinderSpec extends Specification {
     def "falls back to property type when provider returns null"() {
         given:
         def prop = Mock(PersistentProperty)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
         def pc = Mock(PropertyConfig)
         def sv = Mock(SimpleValue)
@@ -95,7 +95,7 @@ class SimpleValueBinderSpec extends Specification {
         given:
         def prop = Mock(PersistentProperty)
         def tenantProp = Mock(TenantId)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
         def pc = Mock(PropertyConfig)
         def tenantPc = Mock(PropertyConfig)
@@ -135,7 +135,7 @@ class SimpleValueBinderSpec extends Specification {
     def "applies generator and maps sequence param to SequenceStyleGenerator.SEQUENCE_PARAM"() {
         given:
         def prop = Mock(PersistentProperty)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
         def pc = Mock(PropertyConfig)
         def sv = Mock(org.hibernate.mapping.BasicValue)
@@ -150,6 +150,7 @@ class SimpleValueBinderSpec extends Specification {
         pc.getColumns() >> null
         pc.getGenerator() >> 'sequence'
         pc.getTypeParams() >> genProps
+        prop.getType() >> String
 
         when:
         binder.bindSimpleValue(prop, null, sv, null)
@@ -165,7 +166,7 @@ class SimpleValueBinderSpec extends Specification {
         given:
         def prop = Mock(PersistentProperty)
         def parent = Mock(PersistentProperty)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
         def pc = Mock(PropertyConfig)
         def cc1 = new ColumnConfig(name: 'c1')
@@ -181,6 +182,7 @@ class SimpleValueBinderSpec extends Specification {
         pc.getColumns() >> [cc1, cc2]
         prop.isNullable() >> true
         parent.isNullable() >> false
+        prop.getType() >> String
 
         when:
         binder.bindSimpleValue(prop, parent, sv, 'path')

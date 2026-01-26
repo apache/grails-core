@@ -12,7 +12,7 @@ import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.datastore.mapping.model.types.OneToOne;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -119,8 +119,11 @@ public class ColumnBinder {
 
         final PersistentEntity owner = property.getOwner();
         if (!owner.isRoot()) {
-            Mapping mapping = GrailsDomainBinder.getMapping(owner);
-            if (mapping.getTablePerHierarchy()) {
+            Mapping mapping = null;
+            if (owner instanceof GrailsHibernatePersistentEntity) {
+                mapping = ((GrailsHibernatePersistentEntity) owner).getMappedForm();
+            }
+            if (mapping != null && mapping.getTablePerHierarchy()) {
                 if (LOG.isDebugEnabled())
                     LOG.debug("[GrailsDomainBinder] Sub class property [" + property.getName() + "] for column name ["+column.getName()+"] set to nullable");
                 column.setNullable(true);

@@ -190,12 +190,12 @@ public class HibernateMappingContext extends AbstractMappingContext {
         return super.getPersistentEntity(name);
     }
 
-    public Collection<HibernatePersistentEntity> getHibernatePersistentEntities() {
+    public Collection<GrailsHibernatePersistentEntity> getHibernatePersistentEntities() {
         return Optional.ofNullable(persistentEntities)
                 .orElse(new ArrayList<>())
                 .stream()
-                .filter(HibernatePersistentEntity.class::isInstance)
-                .map(HibernatePersistentEntity.class::cast)
+                .filter(GrailsHibernatePersistentEntity.class::isInstance)
+                .map(GrailsHibernatePersistentEntity.class::cast)
                 .toList();
     }
 

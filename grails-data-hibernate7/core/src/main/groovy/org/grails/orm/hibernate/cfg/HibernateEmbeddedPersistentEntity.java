@@ -1,16 +1,33 @@
 package org.grails.orm.hibernate.cfg;
 
-import org.grails.datastore.mapping.model.ClassMapping;
-import org.grails.datastore.mapping.model.EmbeddedPersistentEntity;
-import org.grails.datastore.mapping.model.IdentityMapping;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
+import org.grails.datastore.mapping.model.*;
 
-public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<Mapping> {
+public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<Mapping> implements GrailsHibernatePersistentEntity {
     private final ClassMapping<Mapping> classMapping;
 
     public Mapping getMappedForm() {
         return classMapping.getMappedForm();
+    }
+
+    @Override
+    public boolean forGrailsDomainMapping(String dataSourceName) {
+        return false;
+    }
+
+    @Override
+    public boolean usesConnectionSource(String dataSourceName) {
+        return ConnectionSourcesSupport.usesConnectionSource(this, dataSourceName);
+    }
+
+    @Override
+    public PersistentProperty[] getCompositeIdentity() {
+        return null;
+    }
+
+    @Override
+    public boolean isAbstract() {
+        return false;
     }
 
     public HibernateEmbeddedPersistentEntity(Class type, MappingContext ctx) {

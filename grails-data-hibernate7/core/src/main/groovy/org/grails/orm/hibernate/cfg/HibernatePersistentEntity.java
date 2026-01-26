@@ -28,7 +28,7 @@ import jakarta.persistence.Entity;
  * @author Graeme Rocher
  * @since 5.0
  */
-public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping> {
+public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping> implements GrailsHibernatePersistentEntity {
     private final AbstractClassMapping<Mapping> classMapping;
 
 

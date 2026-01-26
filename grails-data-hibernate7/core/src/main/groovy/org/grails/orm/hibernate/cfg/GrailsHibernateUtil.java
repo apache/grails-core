@@ -220,7 +220,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
 
 
     public static boolean isMappedWithHibernate(PersistentEntity domainClass) {
-        return domainClass instanceof HibernatePersistentEntity;
+        return domainClass instanceof GrailsHibernatePersistentEntity;
     }
 
     public static String qualify(final String prefix, final String name) {

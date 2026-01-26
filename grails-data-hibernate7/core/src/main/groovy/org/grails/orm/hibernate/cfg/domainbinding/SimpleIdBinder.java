@@ -9,9 +9,9 @@ import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.Table;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
-import org.grails.orm.hibernate.cfg.HibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Identity;
+import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 
 import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH;
@@ -22,7 +22,7 @@ public class SimpleIdBinder {
     private final SimpleValueBinder simpleValueBinder;
     private final PropertyBinder propertyBinder;
 
-    public SimpleIdBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment, HibernatePersistentEntity domainClass, RootClass entity)  {
+    public SimpleIdBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment, GrailsHibernatePersistentEntity domainClass, RootClass entity)  {
         this.basicValueIdCreator = new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment, domainClass, entity);
         this.simpleValueBinder =new SimpleValueBinder(namingStrategy);
         this.propertyBinder = new PropertyBinder();
@@ -37,7 +37,11 @@ public class SimpleIdBinder {
 
     public void bindSimpleId(PersistentProperty identifier, RootClass entity, Identity mappedId) {
 
-        boolean useSequence = GrailsDomainBinder.getMapping(identifier.getOwner()).isTablePerConcreteClass();
+        Mapping result = null;
+        if (identifier.getOwner() instanceof GrailsHibernatePersistentEntity) {
+            result = ((GrailsHibernatePersistentEntity) identifier.getOwner()).getMappedForm();
+        }
+        boolean useSequence = result != null && result.isTablePerConcreteClass();
         // create the id value
 
         BasicValue id = basicValueIdCreator.getBasicValueId(entity, mappedId, useSequence);

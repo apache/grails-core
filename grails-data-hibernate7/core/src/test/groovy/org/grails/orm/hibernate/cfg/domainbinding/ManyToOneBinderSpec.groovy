@@ -6,6 +6,7 @@ import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.ManyToMany
 import org.grails.datastore.mapping.model.types.OneToOne
 import org.grails.orm.hibernate.cfg.CompositeIdentity
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.JoinTable
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
@@ -34,7 +35,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def path = "/test"
         def mapping = new Mapping()
-        def refDomainClass = Mock(PersistentEntity) {
+        def refDomainClass = Mock(GrailsHibernatePersistentEntity) {
             getMappedForm() >> mapping
         }
         def propertyConfig = new PropertyConfig()
@@ -72,7 +73,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def mapping = new Mapping()
         mapping.setColumns(new HashMap<String, PropertyConfig>())
-        def ownerEntity = Mock(PersistentEntity) {
+        def ownerEntity = Mock(GrailsHibernatePersistentEntity) {
             getMappedForm() >> mapping
         }
         def propertyConfig = new PropertyConfig()
@@ -109,7 +110,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def property = Mock(OneToOne)
         def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def mapping = new Mapping()
-        def refDomainClass = Mock(PersistentEntity) {
+        def refDomainClass = Mock(GrailsHibernatePersistentEntity) {
             getMappedForm() >> mapping
         }
         def propertyConfig = Mock(PropertyConfig)
@@ -161,7 +162,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def property = Mock(OneToOne)
         def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def mapping = new Mapping()
-        def refDomainClass = Mock(PersistentEntity) {
+        def refDomainClass = Mock(GrailsHibernatePersistentEntity) {
             getMappedForm() >> mapping
         }
         def propertyConfig = new PropertyConfig()

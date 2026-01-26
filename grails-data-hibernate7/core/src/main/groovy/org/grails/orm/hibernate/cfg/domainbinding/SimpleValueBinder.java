@@ -14,7 +14,7 @@ import org.hibernate.mapping.Table;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -65,10 +65,16 @@ public class SimpleValueBinder {
             , String path
     ) {
         PropertyConfig propertyConfig = persistentPropertyToPropertyConfig.toPropertyConfig(property);
-        Mapping mapping = GrailsDomainBinder.getMapping(property.getOwner());
+        Mapping mapping = null;
+        if (property.getOwner() instanceof GrailsHibernatePersistentEntity) {
+            mapping = ((GrailsHibernatePersistentEntity) property.getOwner()).getMappedForm();
+        }
         final String typeName = typeNameProvider.getTypeName(property, mapping);
         if (typeName == null) {
-            simpleValue.setTypeName(property.getType().getName());
+            Class<?> type = property.getType();
+            if (type != null) {
+                simpleValue.setTypeName(type.getName());
+            }
         }
         else {
             simpleValue.setTypeName(typeName);
