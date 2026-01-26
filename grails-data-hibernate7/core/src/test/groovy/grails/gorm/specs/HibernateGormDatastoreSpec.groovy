@@ -6,6 +6,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.orm.hibernate.AbstractHibernateSession
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.cfg.HibernatePersistentEntity
 import org.grails.orm.hibernate.query.HibernateQuery
@@ -45,7 +46,7 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
         ]
     }
 
-    HibernatePersistentEntity createPersistentEntity(GrailsDomainBinder binder
+    GrailsHibernatePersistentEntity createPersistentEntity(GrailsDomainBinder binder
                                                     , String className
                                                      , Map<String, Class> fieldProperties
                                                      , Map<String, String> staticMapping
@@ -71,13 +72,13 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
         createPersistentEntity(clazz, binder)
     }
 
-    HibernatePersistentEntity createPersistentEntity(Class clazz, GrailsDomainBinder binder) {
-        def entity = getMappingContext().addPersistentEntity(clazz) as HibernatePersistentEntity
+    GrailsHibernatePersistentEntity createPersistentEntity(Class clazz, GrailsDomainBinder binder) {
+        def entity = getMappingContext().addPersistentEntity(clazz) as GrailsHibernatePersistentEntity
         binder.evaluateMapping(entity)
         entity
     }
 
-    HibernatePersistentEntity createPersistentEntity(Class clazz) {
+    GrailsHibernatePersistentEntity createPersistentEntity(Class clazz) {
         return createPersistentEntity(clazz, getGrailsDomainBinder())
     }
 
