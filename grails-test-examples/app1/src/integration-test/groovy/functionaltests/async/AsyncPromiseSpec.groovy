@@ -1,0 +1,390 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+package functionaltests.async
+
+import functionaltests.Application
+import functionaltests.services.AsyncProcessingService
+import grails.testing.mixin.integration.Integration
+import grails.gorm.transactions.Rollback
+import groovy.json.JsonSlurper
+import io.micronaut.http.HttpRequest
+import io.micronaut.http.HttpResponse
+import io.micronaut.http.HttpStatus
+import io.micronaut.http.MediaType
+import io.micronaut.http.client.HttpClient
+import spock.lang.Specification
+import spock.lang.Shared
+
+import java.util.concurrent.TimeUnit
+
+/**
+ * Integration tests for async/promise functionality in Grails.
+ * Tests various async patterns including tasks, promises, chaining, and error handling.
+ */
+@Integration(applicationClass = Application)
+@Rollback
+class AsyncPromiseSpec extends Specification {
+
+    @Shared
+    HttpClient client
+
+    AsyncProcessingService asyncProcessingService
+
+    def setup() {
+        client = HttpClient.create(new URL("http://localhost:${serverPort}"))
+    }
+
+    def cleanup() {
+        client?.close()
+    }
+
+    // ========== Basic Async Task Tests ==========
+
+    def "simple async task completes successfully"() {
+        when: "calling simple task endpoint"
+        HttpResponse<String> response = client.toBlocking().exchange(
+            HttpRequest.GET('/asyncTest/simpleTask'),
+            String
+        )
+        def json = new JsonSlurper().parseText(response.body())
+
+        then: "task completes with success status"
+        response.status == HttpStatus.OK
+        json.status == 'completed'
+        json.message == 'Task finished'
+    }
+
+    def "compute task returns calculated value"() {
+        given: "an input value"
+        def value = 7
+
+        when: "calling compute endpoint"
+        HttpResponse<String> response = client.toBlocking().exchange(
+            HttpRequest.GET("/asyncTest/computeTask?value=${value}"),
+            String
+        )
+        def json = new JsonSlurper().parseText(response.body())
+
+        then: "computed result is correct"
+        response.status == HttpStatus.OK
+        json.input == value
+        json.result == value * value
+    }
+
+    def "parallel tasks complete and return all results"() {
+        when: "calling parallel tasks endpoint"
+        HttpResponse<String> response = client.toBlocking().exchange(
+            HttpRequest.GET('/asyncTest/parallelTasks'),
+            String
+        )
+        def json = new JsonSlurper().parseText(response.body())
+
+        then: "all tasks complete"
+        response.status == HttpStatus.OK
+        json.status == 'completed'
+        json.results.size() == 3
+        json.results.contains('Task 1 result')
+        json.results.contains('Task 2 result')
+        json.results.contains('Task 3 result')
+    }
+
+    def "chained tasks process data through multiple stages"() {
+        given: "an input string"
+        def input = 'hello'
+
+        when: "calling chained endpoint"
+        HttpResponse<String> response = client.toBlocking().exchange(
+            HttpRequest.GET("/asyncTest/chainedTasks?input=${input}"),
+            String
+        )
+        def json = new JsonSlurper().parseText(response.body())
+
+        then: "data is processed through all stages"
+        response.status == HttpStatus.OK
+        json.original == input
+        // HELLO reversed is OLLEH
+        json.final == input.toUpperCase().reverse()
+    }
+
+    // ========== Error Handling Tests ==========
+
+    def "async task handles success without error"() {
+        when: "calling task that should succeed"
+        HttpResponse<String> response = client.toBlocking().exchange(
+            HttpRequest.GET('/asyncTest/taskWithError?fail=false'),
+            String
+        )
+        def json = new JsonSlurper().parseText(response.body())
+
+        then: "success response returned"
+        response.status == HttpStatus.OK
+        json.status == 'success'
+        json.result == 'Success'
+    }
+
+    def "async task with timeout completes within time limit"() {
+        when: "calling task with reasonable timeout"
+        HttpResponse<String> response = client.toBlocking().exchange(
+            HttpRequest.GET('/asyncTest/taskWithTimeout?delay=100&timeout=500'),
+            String
+        )
+        def json = new JsonSlurper().parseText(response.body())
+
+        then: "task completes successfully"
+        response.status == HttpStatus.OK
+        json.status == 'completed'
+        json.result == 'Completed in time'
+        json.elapsedMs >= 100
+    }
+
+    // ========== Async Service Tests ==========
+
+    def "async service processes string input"() {
+        given: "an input string"
+        def input = 'test'
+
+        when: "calling async service endpoint"
+        HttpResponse<String> response = client.toBlocking().exchange(
+            HttpRequest.GET("/asyncTest/useAsyncService?input=${input}"),
+            String
+        )
+        def json = new JsonSlurper().parseText(response.body())
+
+        then: "service processes input correctly"
+        response.status == HttpStatus.OK
+        json.input == input
+        json.result == "Processed: ${input.toUpperCase()}"
+    }
+
+    def "async service calculates square"() {
+        given: "a numeric value"
+        def value = 6
+
+        when: "calling async calculation endpoint"
+        HttpResponse<String> response = client.toBlocking().exchange(
+            HttpRequest.GET("/asyncTest/asyncCalculation?value=${value}"),
+            String
+        )
+        def json = new JsonSlurper().parseText(response.body())
+
+        then: "calculation is correct"
+        response.status == HttpStatus.OK
+        json.input == value
+        json.squared == value * value
+    }
+
+    def "async batch processing reverses all items"() {
+        when: "calling batch endpoint with default items"
+        HttpResponse<String> response = client.toBlocking().exchange(
+            HttpRequest.GET('/asyncTest/asyncBatch'),
+            String
+        )
+        def json = new JsonSlurper().parseText(response.body())
+
+        then: "all items are reversed"
+        response.status == HttpStatus.OK
+        json.original.size() == json.processed.size()
+        json.original.eachWithIndex { item, idx ->
+            assert json.processed[idx] == item.reverse()
+        }
+    }
+
+    def "long running operation completes with task info"() {
+        given: "a task ID"
+        def taskId = 'task-123'
+
+        when: "calling long running endpoint"
+        HttpResponse<String> response = client.toBlocking().exchange(
+            HttpRequest.GET("/asyncTest/longRunning?taskId=${taskId}"),
+            String
+        )
+        def json = new JsonSlurper().parseText(response.body())
+
+        then: "operation completes with expected info"
+        response.status == HttpStatus.OK
+        json.taskId == taskId
+        json.status == 'completed'
+        json.durationMs >= 200
+        json.completedAt != null
+    }
+
+    def "CompletableFuture composition combines results"() {
+        given: "two input values"
+        def v1 = 3
+        def v2 = 4
+
+        when: "calling compose endpoint"
+        HttpResponse<String> response = client.toBlocking().exchange(
+            HttpRequest.GET("/asyncTest/composeFutures?v1=${v1}&v2=${v2}"),
+            String
+        )
+        def json = new JsonSlurper().parseText(response.body())
+
+        then: "both futures are combined correctly"
+        response.status == HttpStatus.OK
+        json.value1Squared == v1 * v1  // 9
+        json.value2Squared == v2 * v2  // 16
+        json.sum == (v1 * v1) + (v2 * v2)  // 25
+    }
+
+    // ========== Request Data Processing Tests ==========
+
+    def "async task processes JSON request body"() {
+        given: "JSON request body"
+        def body = '{"name": "test", "value": "hello"}'
+
+        when: "posting to process endpoint"
+        HttpResponse<String> response = client.toBlocking().exchange(
+            HttpRequest.POST('/asyncTest/processRequestData', body)
+                .contentType(MediaType.APPLICATION_JSON),
+            String
+        )
+        def json = new JsonSlurper().parseText(response.body())
+
+        then: "data is processed correctly"
+        response.status == HttpStatus.OK
+        json.original.name == 'test'
+        json.processed.name == 'TEST'
+        json.processed.value == 'HELLO'
+    }
+
+    def "multi-stage process reports all stages"() {
+        when: "calling multi-stage endpoint"
+        HttpResponse<String> response = client.toBlocking().exchange(
+            HttpRequest.GET('/asyncTest/multiStageProcess'),
+            String
+        )
+        def json = new JsonSlurper().parseText(response.body())
+
+        then: "all stages are reported"
+        response.status == HttpStatus.OK
+        json.status == 'completed'
+        json.totalStages == 3
+        json.stages.size() == 3
+        json.stages[0].action == 'initialize'
+        json.stages[1].action == 'process'
+        json.stages[2].action == 'finalize'
+    }
+
+    def "stages execute in correct order"() {
+        when: "calling multi-stage endpoint"
+        HttpResponse<String> response = client.toBlocking().exchange(
+            HttpRequest.GET('/asyncTest/multiStageProcess'),
+            String
+        )
+        def json = new JsonSlurper().parseText(response.body())
+
+        then: "stages have increasing timestamps"
+        response.status == HttpStatus.OK
+        def times = json.stages.collect { it.time as Long }
+        times[0] <= times[1]
+        times[1] <= times[2]
+    }
+
+    // ========== Conditional Execution Tests ==========
+
+    def "conditional async uses async mode when requested"() {
+        given: "input value"
+        def input = 'grails'
+
+        when: "calling with async=true"
+        HttpResponse<String> response = client.toBlocking().exchange(
+            HttpRequest.GET("/asyncTest/conditionalAsync?async=true&input=${input}"),
+            String
+        )
+        def json = new JsonSlurper().parseText(response.body())
+
+        then: "async mode is used"
+        response.status == HttpStatus.OK
+        json.mode == 'async'
+        json.result.contains('Async')
+        json.result.contains(input.toUpperCase())
+    }
+
+    def "conditional async uses sync mode when requested"() {
+        given: "input value"
+        def input = 'grails'
+
+        when: "calling with async=false"
+        HttpResponse<String> response = client.toBlocking().exchange(
+            HttpRequest.GET("/asyncTest/conditionalAsync?async=false&input=${input}"),
+            String
+        )
+        def json = new JsonSlurper().parseText(response.body())
+
+        then: "sync mode is used"
+        response.status == HttpStatus.OK
+        json.mode == 'sync'
+        json.result.contains('Sync')
+        json.result.contains(input.toUpperCase())
+    }
+
+    // ========== Direct Service Tests ==========
+
+    def "asyncProcessingService.processAsync returns correct result"() {
+        given: "an input"
+        def input = 'direct'
+
+        when: "calling service directly"
+        def future = asyncProcessingService.processAsync(input)
+        def result = future.get(5, TimeUnit.SECONDS)
+
+        then: "result is correct"
+        result == "Processed: ${input.toUpperCase()}"
+    }
+
+    def "asyncProcessingService.calculateAsync squares value"() {
+        given: "a numeric value"
+        def value = 8
+
+        when: "calling calculation service"
+        def future = asyncProcessingService.calculateAsync(value)
+        def result = future.get(5, TimeUnit.SECONDS)
+
+        then: "value is squared"
+        result == value * value
+    }
+
+    def "asyncProcessingService.processBatchAsync handles empty list"() {
+        given: "empty list"
+        def items = []
+
+        when: "processing empty batch"
+        def future = asyncProcessingService.processBatchAsync(items)
+        def result = future.get(5, TimeUnit.SECONDS)
+
+        then: "empty result returned"
+        result != null
+        result.isEmpty()
+    }
+
+    def "asyncProcessingService.processBatchAsync handles single item"() {
+        given: "single item list"
+        def items = ['single']
+
+        when: "processing single item batch"
+        def future = asyncProcessingService.processBatchAsync(items)
+        def result = future.get(5, TimeUnit.SECONDS)
+
+        then: "single reversed item returned"
+        result.size() == 1
+        result[0] == 'elgnis'
+    }
+}
