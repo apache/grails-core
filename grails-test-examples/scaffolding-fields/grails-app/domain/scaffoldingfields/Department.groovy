@@ -17,48 +17,25 @@
  *  under the License.
  */
 
-package gorm
-
-import static grails.gorm.hibernate.mapping.MappingBuilder.*
+package scaffoldingfields
 
 /**
- * Enhanced Book domain class with more field types for testing
- * scaffolding and fields plugin rendering.
+ * Department domain class - tests hasMany relationship rendering
+ * in scaffolded views (parent side of one-to-many).
  */
-class Book {
+class Department {
 
-    def testService
-
-    String title
-    String isbn
+    String name
     String description
-    Integer pageCount
-    BigDecimal price
-    Date publicationDate
-    Boolean inStock = true
 
-    // Association - belongsTo Author
-    Author author
-
-    static belongsTo = [author: Author]
+    static hasMany = [employees: Employee]
 
     static constraints = {
-        title blank: false, size: 1..255
-        isbn nullable: true, matches: /^(?:\d{10}|\d{13})$/
-        description nullable: true, maxSize: 1000, widget: 'textarea'
-        pageCount nullable: true, min: 1
-        price nullable: true, min: 0.0
-        publicationDate nullable: true
-        inStock nullable: false
-        author nullable: true
-    }
-
-    static mapping = orm {
-        autowire true
-        description type: 'text'
+        name blank: false, unique: true, size: 1..100
+        description nullable: true, maxSize: 500
     }
 
     String toString() {
-        title
+        name
     }
 }

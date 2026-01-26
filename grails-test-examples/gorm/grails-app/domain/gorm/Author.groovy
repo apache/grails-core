@@ -19,46 +19,33 @@
 
 package gorm
 
-import static grails.gorm.hibernate.mapping.MappingBuilder.*
-
 /**
- * Enhanced Book domain class with more field types for testing
- * scaffolding and fields plugin rendering.
+ * Author domain class demonstrating hasMany relationship to Book.
+ * Used to test scaffolding with one-to-many associations.
  */
-class Book {
+class Author {
 
-    def testService
+    String name
+    String email
+    Date birthDate
+    String biography
+    Boolean active = true
 
-    String title
-    String isbn
-    String description
-    Integer pageCount
-    BigDecimal price
-    Date publicationDate
-    Boolean inStock = true
-
-    // Association - belongsTo Author
-    Author author
-
-    static belongsTo = [author: Author]
+    static hasMany = [books: Book]
 
     static constraints = {
-        title blank: false, size: 1..255
-        isbn nullable: true, matches: /^(?:\d{10}|\d{13})$/
-        description nullable: true, maxSize: 1000, widget: 'textarea'
-        pageCount nullable: true, min: 1
-        price nullable: true, min: 0.0
-        publicationDate nullable: true
-        inStock nullable: false
-        author nullable: true
+        name blank: false, size: 1..100
+        email email: true, unique: true, blank: false
+        birthDate nullable: true
+        biography nullable: true, maxSize: 2000, widget: 'textarea'
+        active nullable: false
     }
 
-    static mapping = orm {
-        autowire true
-        description type: 'text'
+    static mapping = {
+        biography type: 'text'
     }
 
     String toString() {
-        title
+        name
     }
 }

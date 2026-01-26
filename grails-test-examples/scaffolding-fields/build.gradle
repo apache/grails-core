@@ -23,8 +23,9 @@ plugins {
 }
 
 version = '0.1'
-group = 'gorm'
+group = 'scaffoldingfields'
 
+apply plugin: 'cloud.wondrify.asset-pipeline'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
@@ -33,25 +34,17 @@ dependencies {
 
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'com.h2database:h2'
-    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
-        implementation 'org.apache.grails:grails-sitemesh3'
-    }
-    else {
-        implementation 'org.apache.grails:grails-layout'
-    }
-
+    implementation 'org.apache.grails:grails-layout'
     implementation 'org.apache.grails:grails-data-hibernate5'
-    runtimeOnly "org.hibernate:hibernate-ehcache:$hibernate5Version", {
-        // exclude javax variant of hibernate-core
-        exclude group: 'org.hibernate', module: 'hibernate-core'
-    }
-    runtimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
-        // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
-    }
-    implementation 'org.apache.grails:grails-cache'
-
     implementation 'org.apache.grails:grails-scaffolding'
     implementation 'org.apache.grails:grails-fields'
+
+    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
+    testAndDevelopmentOnly 'org.webjars.npm:bootstrap-icons'
+    testAndDevelopmentOnly 'org.webjars.npm:jquery'
+
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
 
     testImplementation 'org.apache.grails:grails-testing-support-web'
@@ -64,5 +57,6 @@ dependencies {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }
