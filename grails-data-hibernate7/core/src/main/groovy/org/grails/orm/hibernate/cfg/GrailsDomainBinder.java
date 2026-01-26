@@ -145,74 +145,6 @@ public class GrailsDomainBinder
     private PersistentEntityNamingStrategy namingStrategy;
     private MetadataBuildingContext metadataBuildingContext;
 
-    /**
-     * Obtains a mapping object for the given domain class nam
-     *
-     * @param theClass The domain class in question
-     * @return A Mapping object or null
-     */
-    public static Mapping getMapping(Class<?> theClass) {
-        return MappingCacheHolder.getInstance().getMapping(theClass);
-    }
-
-    /**
-     * Obtains a mapping object for the given domain class nam
-     *
-     * @param theClass The domain class in question
-     * @return A Mapping object or null
-     */
-    public static Mapping getMappingValidated(Class<?> theClass) {
-        return ofNullable(getMapping(theClass)).orElseThrow();
-    }
-
-    /**
-     * Obtains a mapping object for the given domain class nam
-     *
-     * @param theClass The domain class in question
-     */
-    public static void cacheMapping(Class<?> theClass, Mapping mapping) {
-        MappingCacheHolder.getInstance().cacheMapping(theClass, mapping);
-    }
-
-    /**
-     * Obtains a mapping object for the given domain class nam
-     *
-     * @param domainClass The domain class in question
-     * @return A Mapping object or null
-     */
-    public static Mapping getMapping(PersistentEntity domainClass) {
-        if (domainClass == null) return null;
-        if (domainClass instanceof GrailsHibernatePersistentEntity) {
-            return getMapping((GrailsHibernatePersistentEntity) domainClass);
-        }
-        org.grails.datastore.mapping.config.Entity mappedForm = domainClass.getMappedForm();
-        if (mappedForm instanceof Mapping) {
-            return (Mapping) mappedForm;
-        }
-        return MappingCacheHolder.getInstance().getMapping(domainClass.getJavaClass());
-    }
-
-    /**
-     * Obtains a mapping object for the given domain class nam
-     *
-     * @param domainClass The domain class in question
-     * @return A Mapping object or null
-     */
-    public static Mapping getMapping(GrailsHibernatePersistentEntity domainClass) {
-        if (domainClass == null) return null;
-        return domainClass.getMappedForm();
-    }
-
-
-
-    public static void clearMappingCache() {
-        MappingCacheHolder.getInstance().clear();
-    }
-
-    public static void clearMappingCache(Class<?> theClass) {
-        MappingCacheHolder.getInstance().clear(theClass);
-    }
-
 
     public JdbcEnvironment getJdbcEnvironment() {
         return  metadataBuildingContext.getMetadataCollector().getDatabase().getJdbcEnvironment();
@@ -278,13 +210,8 @@ public class GrailsDomainBinder
         );
 
         hibernateMappingContext.getHibernatePersistentEntities().stream()
-                .filter(this::isForGrailsDomainMapping)
+                .filter(persistentEntity -> persistentEntity.forGrailsDomainMapping(dataSourceName))
                 .forEach(hibernatePersistentEntity -> bindRoot(hibernatePersistentEntity, metadataCollector, sessionFactoryName));
-    }
-
-
-    private boolean isForGrailsDomainMapping(GrailsHibernatePersistentEntity persistentEntity) {
-        return persistentEntity.forGrailsDomainMapping(dataSourceName);
     }
 
 
@@ -420,7 +347,7 @@ public class GrailsDomainBinder
             PersistentClass referenced = mappings.getEntityBinding(entityName);
 
             Class<?> mappedClass = referenced.getMappedClass();
-            Mapping m = getMappingValidated(mappedClass);
+            Mapping m = Optional.ofNullable(MappingCacheHolder.getInstance().getMapping(mappedClass)).orElseThrow();
 
             boolean compositeIdProperty = m.isCompositeIdProperty(property.getInverseSide());
             if (!compositeIdProperty) {
@@ -1166,10 +1093,7 @@ public class GrailsDomainBinder
     private void evaluateMapping(GrailsHibernatePersistentEntity persistentEntity) {
         Optional.ofNullable(persistentEntity).ifPresent(domainClass -> {
             try {
-                Mapping m = null;
-                if (domainClass != null) {
-                    m = domainClass.getMappedForm();
-                }
+                Mapping m = domainClass.getMappedForm();
                 for (PersistentProperty property : domainClass.getPersistentProperties()) {
                     PropertyConfig propConf = m.getPropertyConfig(property.getName());
 

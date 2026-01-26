@@ -41,8 +41,8 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.validation.ValidatorRegistry;
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
+import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 import org.grails.orm.hibernate.cfg.Settings;
 import org.grails.orm.hibernate.connections.HibernateConnectionSource;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory;
@@ -526,7 +526,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
         try {
             super.destroy();
         } finally {
-            GrailsDomainBinder.clearMappingCache();
+            MappingCacheHolder.getInstance().clear();
             try {
                 this.gormEnhancer.close();
             } catch (IOException e) {

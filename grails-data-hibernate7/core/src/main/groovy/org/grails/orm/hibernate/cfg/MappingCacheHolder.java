@@ -30,6 +30,11 @@ public class MappingCacheHolder {
         return theClass == null ? null : MAPPING_CACHE.get(theClass);
     }
 
+    /**
+     * Obtains a mapping object for the given domain class nam
+     *
+     * @param theClass The domain class in question
+     */
     public void cacheMapping(Class<?> theClass, Mapping mapping) {
         MAPPING_CACHE.put(theClass, mapping);
     }
