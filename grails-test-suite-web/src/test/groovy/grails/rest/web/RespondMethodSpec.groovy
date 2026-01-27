@@ -33,7 +33,12 @@ import spock.lang.Specification
 class RespondMethodSpec extends Specification implements ControllerUnitTest<BookController>, DomainUnitTest<Book> {
 
     def setup() {
-        // Clear the static mimeTypes cache to ensure proper test isolation
+        // Access config to ensure grailsApplication is initialized and Holders is populated.
+        // This triggers doWithConfig() which registers the custom MIME types.
+        assert config != null
+        
+        // Clear the static mimeTypes cache to ensure proper test isolation.
+        // This must be done AFTER accessing config to ensure the new config is applied.
         HttpServletResponseExtension.@mimeTypes = null
     }
 

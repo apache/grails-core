@@ -36,8 +36,13 @@ class WithFormatContentTypeSpec extends Specification implements ControllerUnitT
     }}
 
     def setup() {
+        // Access config to ensure grailsApplication is initialized and Holders is populated.
+        // This triggers doWithConfig() which registers the custom MIME types.
+        assert config != null
+        
         // Clear the static mimeTypes cache to ensure proper test isolation.
         // HttpServletResponseExtension caches mime types in a static field.
+        // This must be done AFTER accessing config to ensure the new config is applied.
         HttpServletResponseExtension.@mimeTypes = null
     }
 
