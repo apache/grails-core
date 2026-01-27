@@ -1,8 +1,6 @@
 AttachMethodSpec. Test attach method
 BuiltinUniqueConstraintWorksWithTargetProxiesConstraintsSpec. test unique constraint for the associated child object
 BuiltinUniqueConstraintWorksWithTargetProxiesConstraintsSpec. test unique constraint on root instance
-DirtyCheckingSpec. test relationships not marked dirty when domain objects are used
 JoinPerfSpec. test read performance with join query
 QueryEventsSpec. post-events are fired after queries are run
 QueryEventsSpec. pre-events are fired before queries are run
-SessionCreationEventSpec. test event for new session
