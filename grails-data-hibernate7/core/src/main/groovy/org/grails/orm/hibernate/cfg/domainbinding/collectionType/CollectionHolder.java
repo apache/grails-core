@@ -1,0 +1,27 @@
+package org.grails.orm.hibernate.cfg.domainbinding.collectionType;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedSet;
+
+import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
+
+public record CollectionHolder(Map<Class<?>, CollectionType> map) {
+
+    public CollectionHolder(GrailsDomainBinder binder) {
+        this(Map.ofEntries(
+                Map.entry(Set.class, new SetCollectionType(binder)),
+                Map.entry(SortedSet.class, new SetCollectionType(binder)),
+                Map.entry(List.class, new ListCollectionType(binder)),
+                Map.entry(Collection.class, new BagCollectionType(binder)),
+                Map.entry(Map.class, new MapCollectionType(binder))
+        ));
+    }
+
+    public CollectionType get(Class<?> collectionClass) {
+        return map.get(collectionClass);
+    }
+}
+

@@ -36,7 +36,9 @@ public class MappingCacheHolder {
      * @param entity The domain class in question
      */
     public void cacheMapping(GrailsHibernatePersistentEntity entity) {
-        MAPPING_CACHE.put(entity.getJavaClass(), entity.getMappedForm());
+        if (entity != null) {
+            MAPPING_CACHE.put(entity.getJavaClass(), entity.getMappedForm());
+        }
     }
 
     public void clear() {

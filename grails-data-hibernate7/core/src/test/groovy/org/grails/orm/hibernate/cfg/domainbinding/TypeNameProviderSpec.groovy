@@ -4,6 +4,7 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.grails.orm.hibernate.cfg.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Mapping
+import org.grails.orm.hibernate.cfg.MappingCacheHolder
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.type.descriptor.java.BasicJavaType
 import org.hibernate.type.descriptor.jdbc.JdbcType
@@ -50,7 +51,7 @@ class TypeNameProviderSpec extends HibernateGormDatastoreSpec {
         when:
         def grailsDomainBinder = getGrailsDomainBinder()
         def persistentEntity = getMappingContext().addPersistentEntity(Employee) as HibernatePersistentEntity
-        grailsDomainBinder.evaluateMapping(persistentEntity)
+        MappingCacheHolder.getInstance().cacheMapping(persistentEntity)
         def property = persistentEntity.getPersistentProperties()[0]
         Mapping mapping = new Mapping()
         mapping.setUserTypes([(Salary): SalaryType])

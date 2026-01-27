@@ -36,6 +36,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.PersistentPropertyToPropertyCo
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.TypeNameProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.*;
+import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
+import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
 
 import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
@@ -52,7 +54,6 @@ import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.engine.spi.FilterDefinition;
 import org.hibernate.mapping.Backref;
-import org.hibernate.mapping.Bag;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Column;
@@ -88,14 +89,12 @@ import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Optional;
-import java.util.SortedSet;
 import java.util.StringTokenizer;
 
 import static java.util.Optional.ofNullable;
@@ -132,6 +131,7 @@ public class GrailsDomainBinder
     public static final String JPA_DEFAULT_DISCRIMINATOR_TYPE = "DTYPE";
 
     private final CollectionType CT = new CollectionType(null, this) {
+        @Override
         public Collection create(ToMany property, PersistentClass owner, String path, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
             return null;
         }
@@ -144,6 +144,8 @@ public class GrailsDomainBinder
     private Closure defaultMapping;
     private PersistentEntityNamingStrategy namingStrategy;
     private MetadataBuildingContext metadataBuildingContext;
+    private MappingCacheHolder mappingCacheHolder;
+    private CollectionHolder collectionHolder;
 
 
     public JdbcEnvironment getJdbcEnvironment() {
@@ -158,10 +160,11 @@ public class GrailsDomainBinder
         this.dataSourceName = dataSourceName;
         this.hibernateMappingContext = hibernateMappingContext;
         this.classBinding = classBinding;
-        MappingCacheHolder.getInstance().clear();
+        mappingCacheHolder = MappingCacheHolder.getInstance();
+        this.collectionHolder = new CollectionHolder(this);
         // pre-build mappings
         for (GrailsHibernatePersistentEntity persistentEntity : hibernateMappingContext.getHibernatePersistentEntities()) {
-            evaluateMapping(persistentEntity);
+            mappingCacheHolder.cacheMapping(persistentEntity);
         }
     }
 
@@ -969,8 +972,8 @@ public class GrailsDomainBinder
      * @param mappings   The Hibernate mappings instance
      * @param path
      */
-    private void bindCollection(ToMany property, Collection collection,
-                                  PersistentClass owner, InFlightMetadataCollector mappings, String path, String sessionFactoryBeanName) {
+    public void bindCollection(ToMany property, Collection collection,
+                               PersistentClass owner, InFlightMetadataCollector mappings, String path, String sessionFactoryBeanName) {
 
         // set role
         String propertyName = getNameForPropertyAndPath(property, path);
@@ -1090,9 +1093,7 @@ public class GrailsDomainBinder
         }
     }
 
-    public void evaluateMapping(GrailsHibernatePersistentEntity persistentEntity) {
-        MappingCacheHolder.getInstance().cacheMapping(persistentEntity);
-    }
+
 
 
     /**
@@ -1133,7 +1134,7 @@ public class GrailsDomainBinder
             }
             // bind the sub classes
             entity.getChildEntities(dataSourceName)
-                    .forEach(sub -> bindSubClass(sub, root, mappings, sessionFactoryBeanName, finalMapping));
+                    .forEach(sub -> bindSubClass(sub, root, mappings, sessionFactoryBeanName, finalMapping,mappingCacheHolder ));
         }
 
         addMultiTenantFilterIfNecessary(entity, root, mappings, sessionFactoryBeanName);
@@ -1193,14 +1194,18 @@ public class GrailsDomainBinder
     /**
      * Binds a sub class.
      *
-     * @param sub      The sub domain class instance
-     * @param parent   The parent persistent class instance
-     * @param mappings The mappings instance
-     * @param sessionFactoryBeanName  the session factory bean name
+     * @param sub                    The sub domain class instance
+     * @param parent                 The parent persistent class instance
+     * @param mappings               The mappings instance
+     * @param sessionFactoryBeanName the session factory bean name
+     * @param mappingCacheHolder
      */
-    private void bindSubClass(GrailsHibernatePersistentEntity sub, PersistentClass parent,
-                                InFlightMetadataCollector mappings, String sessionFactoryBeanName,Mapping m) {
-        evaluateMapping(sub);
+    private void bindSubClass(GrailsHibernatePersistentEntity sub,
+                              PersistentClass parent,
+                              InFlightMetadataCollector mappings,
+                              String sessionFactoryBeanName
+                            , Mapping m, MappingCacheHolder mappingCacheHolder) {
+        mappingCacheHolder.cacheMapping(sub);
         Subclass subClass;
         boolean tablePerSubclass = m != null && !m.getTablePerHierarchy() && !m.isTablePerConcreteClass();
         boolean tablePerConcreteClass = m != null && m.isTablePerConcreteClass();
@@ -1263,7 +1268,7 @@ public class GrailsDomainBinder
         if (!childEntities.isEmpty()) {
             // bind the sub classes
             sub.getChildEntities(dataSourceName)
-                    .forEach(sub1 -> bindSubClass(sub1, subClass, mappings, sessionFactoryBeanName, m));
+                    .forEach(sub1 -> bindSubClass(sub1, subClass, mappings, sessionFactoryBeanName, m,mappingCacheHolder ));
         }
     }
 
@@ -1598,7 +1603,7 @@ public class GrailsDomainBinder
             Value value = null;
 
             // see if it's a collection type
-            CollectionType collectionType = CT.collectionTypeForClass(currentGrailsProp.getType());
+            CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
 
             Class<?> userType = getUserType(currentGrailsProp);
 
@@ -1688,7 +1693,7 @@ public class GrailsDomainBinder
         for (Embedded association : embedded) {
             Value value = new Component(metadataBuildingContext, persistentClass);
 
-            bindComponent((Component) value, association, true, mappings, sessionFactoryBeanName);
+            bindComponent((Component) value, association, true, mappings, sessionFactoryBeanName,mappingCacheHolder );
             Property property = createProperty(value, persistentClass, association, mappings);
             persistentClass.addProperty(property);
         }
@@ -1730,21 +1735,22 @@ public class GrailsDomainBinder
     /**
      * Binds a Hibernate component type using the given GrailsDomainClassProperty instance
      *
-     * @param component  The component to bind
-     * @param property   The property
-     * @param isNullable Whether it is nullable or not
-     * @param mappings   The Hibernate Mappings object
-     * @param sessionFactoryBeanName  the session factory bean name
+     * @param component              The component to bind
+     * @param property               The property
+     * @param isNullable             Whether it is nullable or not
+     * @param mappings               The Hibernate Mappings object
+     * @param sessionFactoryBeanName the session factory bean name
+     * @param mappingCacheHolder
      */
     private void bindComponent(Component component, Embedded property,
-                                 boolean isNullable, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+                               boolean isNullable, InFlightMetadataCollector mappings, String sessionFactoryBeanName, MappingCacheHolder mappingCacheHolder) {
         Class<?> type = property.getType();
         String role = qualify(type.getName(), property.getName());
         component.setRoleName(role);
         component.setComponentClassName(type.getName());
 
         GrailsHibernatePersistentEntity domainClass = (GrailsHibernatePersistentEntity) property.getAssociatedEntity();
-        evaluateMapping(domainClass);
+        mappingCacheHolder.cacheMapping(domainClass);
         final List<PersistentProperty> properties = domainClass.getPersistentProperties();
         Table table = component.getOwner().getTable();
         PersistentClass persistentClass = component.getOwner();
@@ -1770,7 +1776,7 @@ public class GrailsDomainBinder
                                          String path, Table table, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         Value value;
         // see if it's a collection type
-        CollectionType collectionType = CT.collectionTypeForClass(currentGrailsProp.getType());
+        CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
         if (collectionType != null) {
             // create collection
             Collection collection = collectionType.create((ToMany) currentGrailsProp, persistentClass,
@@ -1800,7 +1806,7 @@ public class GrailsDomainBinder
         }
         else if (currentGrailsProp instanceof Embedded) {
             value = new Component(metadataBuildingContext, persistentClass);
-            bindComponent((Component) value, (Embedded) currentGrailsProp, true, mappings, sessionFactoryBeanName);
+            bindComponent((Component) value, (Embedded) currentGrailsProp, true, mappings, sessionFactoryBeanName,mappingCacheHolder );
         }
         else {
             if (LOG.isDebugEnabled())
@@ -2070,115 +2076,6 @@ public class GrailsDomainBinder
             bindMapSecondPass(property, mappings, persistentClasses,
                     (org.hibernate.mapping.Map) collection, sessionFactoryBeanName);
         }
-    }
-    /**
-     * A Collection type, for the moment only Set is supported
-     *
-     * @author Graeme
-     */
-    static abstract class CollectionType {
-
-        private final Class<?> clazz;
-        private final GrailsDomainBinder binder;
-        private final MetadataBuildingContext buildingContext;
-
-        private CollectionType SET;
-        private CollectionType LIST;
-        private CollectionType BAG;
-        private CollectionType MAP;
-        private boolean initialized;
-
-        private final Map<Class<?>, CollectionType> INSTANCES = new HashMap<>();
-
-        public abstract Collection create(ToMany property, PersistentClass owner,
-                                          String path, InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException;
-
-        private CollectionType(Class<?> clazz, GrailsDomainBinder binder) {
-            this.clazz = clazz;
-            this.binder = binder;
-            this.buildingContext = binder.getMetadataBuildingContext();
-        }
-
-        @Override
-        public String toString() {
-            return clazz.getName();
-        }
-
-        private void createInstances() {
-
-            if (initialized) {
-                return;
-            }
-
-            initialized = true;
-
-            SET = new CollectionType(Set.class, binder) {
-                @Override
-                public Collection create(ToMany property, PersistentClass owner,
-                                         String path, InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException {
-                    org.hibernate.mapping.Set coll = new org.hibernate.mapping.Set(buildingContext, owner);
-                    coll.setCollectionTable(owner.getTable());
-                    coll.setTypeName(getTypeName(property));
-                    binder.bindCollection(property, coll, owner, mappings, path, sessionFactoryBeanName);
-                    return coll;
-                }
-            };
-            INSTANCES.put(Set.class, SET);
-            INSTANCES.put(SortedSet.class, SET);
-
-            LIST = new CollectionType(List.class, binder) {
-                @Override
-                public Collection create(ToMany property, PersistentClass owner,
-                                         String path, InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException {
-                    org.hibernate.mapping.List coll = new org.hibernate.mapping.List(buildingContext, owner);
-                    coll.setCollectionTable(owner.getTable());
-                    coll.setTypeName(getTypeName(property));
-                    binder.bindCollection(property, coll, owner, mappings, path, sessionFactoryBeanName);
-                    return coll;
-                }
-            };
-            INSTANCES.put(List.class, LIST);
-
-            BAG = new CollectionType(java.util.Collection.class, binder) {
-                @Override
-                public Collection create(ToMany property, PersistentClass owner,
-                                         String path, InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException {
-                    Bag coll = new Bag(buildingContext, owner);
-                    coll.setCollectionTable(owner.getTable());
-                    coll.setTypeName(getTypeName(property));
-                    binder.bindCollection(property, coll, owner, mappings, path, sessionFactoryBeanName);
-                    return coll;
-                }
-            };
-            INSTANCES.put(java.util.Collection.class, BAG);
-
-            MAP = new CollectionType(Map.class, binder) {
-                @Override
-                public Collection create(ToMany property, PersistentClass owner,
-                                         String path, InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException {
-                    org.hibernate.mapping.Map map = new org.hibernate.mapping.Map(buildingContext, owner);
-                    map.setTypeName(getTypeName(property));
-                    binder.bindCollection(property, map, owner, mappings, path, sessionFactoryBeanName);
-                    return map;
-                }
-            };
-            INSTANCES.put(Map.class, MAP);
-        }
-
-        public CollectionType collectionTypeForClass(Class<?> clazz) {
-            createInstances();
-            return INSTANCES.get(clazz);
-        }
-
-        public String getTypeName(ToMany property) {
-            Mapping mapping = null;
-            GrailsHibernatePersistentEntity domainClass = (GrailsHibernatePersistentEntity) property.getOwner();
-            if (domainClass != null) {
-                mapping = domainClass.getMappedForm();
-            }
-            return new TypeNameProvider().getTypeName(property, mapping);
-        }
-
     }
 
 }

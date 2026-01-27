@@ -9,6 +9,7 @@ import org.grails.orm.hibernate.cfg.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.cfg.HibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.MappingCacheHolder
 import org.grails.orm.hibernate.query.HibernateQuery
 
 import org.hibernate.boot.MetadataSources
@@ -74,7 +75,9 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
 
     GrailsHibernatePersistentEntity createPersistentEntity(Class clazz, GrailsDomainBinder binder) {
         def entity = getMappingContext().addPersistentEntity(clazz) as GrailsHibernatePersistentEntity
-        binder.evaluateMapping(entity)
+        if (entity != null) {
+            MappingCacheHolder.getInstance().cacheMapping(entity)
+        }
         entity
     }
 
