@@ -51,12 +51,12 @@ dependencies {
     implementation platform(project(':grails-bom'))
     
     // Core dependencies for profile testing
-    implementation 'org.apache.grails:grails-core'
-    implementation 'org.apache.grails:grails-bootstrap'
+    implementation project(':grails-core')
+    implementation project(':grails-bootstrap')
     
     // Testing dependencies
-    testImplementation 'org.apache.grails:grails-test-core'
-    testImplementation 'org.apache.grails:grails-testing-support-core'
+    testImplementation project(':grails-test-core')
+    testImplementation project(':grails-testing-support-core')
     
     // Spock testing framework
     testImplementation 'org.spockframework:spock-core'
@@ -70,7 +70,7 @@ dependencies {
     testImplementation 'org.slf4j:slf4j-simple'
     
     // Geb testing support
-    testImplementation testFixtures('org.apache.grails:grails-geb')
+    testImplementation testFixtures(project(':grails-geb'))
 }
 
 // Configure test tasks manually to avoid circular dependencies
