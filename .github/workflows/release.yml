@@ -24,7 +24,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GRAILS_PUBLISH_RELEASE: 'true'
   JAVA_DISTRIBUTION: liberica
-  JAVA_VERSION: 17.0.17 # this must be a specific version for reproducible builds, keep it synced with .sdkmanrc and verification container
+  JAVA_VERSION: 17.0.18 # this must be a specific version for reproducible builds, keep it synced with .sdkmanrc and verification container
   PROJECT_DESC: >
     Grails is a powerful Groovy-based web application framework for the JVM,
     built on top of Spring Boot, and supported by a rich ecosystem of plugins

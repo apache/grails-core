@@ -30,7 +30,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ 17, 21 ]
+        java: [ 17, 25 ]
     runs-on: ubuntu-24.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
@@ -198,7 +198,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ 17, 21 ]
+        java: [ 17, 25 ]
         mongodb-version: [ '7.0', '8.0' ] # test with supported versions https://www.mongodb.com/legal/support-policy/lifecycles
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
@@ -232,7 +232,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ 17, 21 ]
+        java: [ 17, 25 ]
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
