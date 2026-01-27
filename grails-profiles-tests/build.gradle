@@ -38,11 +38,11 @@
 
 plugins {
     id 'groovy'
-    id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.compile'
-    id 'org.apache.grails.gradle.grails-code-style'
 }
+
+apply plugin: 'org.apache.grails.gradle.grails-web'
 
 version = projectVersion
 group = 'org.apache.grails.testing'
@@ -51,12 +51,12 @@ dependencies {
     implementation platform(project(':grails-bom'))
     
     // Core dependencies for profile testing
-    implementation project(':grails-core')
-    implementation project(':grails-bootstrap')
+    implementation 'org.apache.grails:grails-core'
+    implementation 'org.apache.grails:grails-bootstrap'
     
     // Testing dependencies
-    testImplementation project(':grails-test-core')
-    testImplementation project(':grails-testing-support-core')
+    testImplementation 'org.apache.grails:grails-test-core'
+    testImplementation 'org.apache.grails:grails-testing-support-core'
     
     // Spock testing framework
     testImplementation 'org.spockframework:spock-core'
@@ -68,55 +68,47 @@ dependencies {
     
     // Logging for tests
     testImplementation 'org.slf4j:slf4j-simple'
+    
+    // Geb testing support
+    testImplementation testFixtures('org.apache.grails:grails-geb')
+}
+
+// Apply standard functional test configuration
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
 }
 
 // Configure test tasks
-test {
-    useJUnitPlatform()
-    
-    // Enable Geb environment configuration
-    systemProperty 'geb.env', System.getProperty('geb.env', 'chrome')
-    systemProperty 'webdriver.chrome.driver', System.getProperty('webdriver.chrome.driver', '')
-    systemProperty 'webdriver.gecko.driver', System.getProperty('webdriver.gecko.driver', '')
-    
-    // Test reporting configuration
-    testLogging {
-        events "passed", "skipped", "failed"
-        exceptionFormat "full"
-        showStandardStreams = true
-    }
-    
-    // Fork settings for isolation
-    maxParallelForks = 1
-    forkEvery = 5
-    
+tasks.withType(Test).configureEach {
     // Include only profile test classes
     include '**/*Profile*Test*'
     include '**/*Profile*Spec*'
+    
+    // Make Geb tests more resilient in CI environments
+    systemProperty('grails.geb.atCheckWaiting.enabled', 'true')
+    systemProperty('grails.geb.recording.mode', 'RECORD_ALL')
+    
+    doLast {
+        // Delete old recording directories to save space
+        def baseDir = file(System.getProperty('grails.geb.recording.directory', 'build/gebContainer/recordings'))
+        if (!baseDir.isDirectory()) return
+        def dirs = (baseDir.listFiles() ?: [])
+                .findAll { it.directory && it.name ==~ /^\d{8}_\d{6}$/ }
+                .sort { it.name }
+        if (dirs.size() > 2) {
+            delete(dirs.dropRight(2)) // keep the two most recent
+        }
+    }
 }
 
 // Custom task to run profile tests with specific configurations
 tasks.register('profileTest', Test) {
-    useJUnitPlatform()
-    systemProperty 'geb.env', 'chromeHeadless'
     include '**/*Profile*Test*'
     include '**/*Profile*Spec*'
-    
-    testLogging {
-        events "passed", "skipped", "failed"
-        exceptionFormat "full"
-    }
 }
 
 // Task to run functional profile tests separately
 tasks.register('functionalProfileTest', Test) {
-    useJUnitPlatform()
-    systemProperty 'geb.env', 'chromeHeadless'
     include '**/*Functional*Profile*Test*'
     include '**/*Functional*Profile*Spec*'
-    
-    testLogging {
-        events "passed", "skipped", "failed"
-        exceptionFormat "full"
-    }
 }

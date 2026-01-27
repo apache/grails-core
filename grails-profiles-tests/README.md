@@ -53,15 +53,14 @@ The tests are organized into several categories:
 ./gradlew functionalProfileTest
 ```
 
-### Run with specific browser:
+### Run with Geb recording:
 ```bash
-./gradlew profileTest -Dgeb.env=chrome
-./gradlew profileTest -Dgeb.env=firefox
+./gradlew profileTest -Dgrails.geb.recording.mode=RECORD_ALL
 ```
 
-### Run in headless mode (CI friendly):
+### Run in CI mode (more resilient):
 ```bash
-./gradlew profileTest -Dgeb.env=chromeHeadless
+./gradlew profileTest -Dgrails.geb.atCheckWaiting.enabled=true
 ```
 
 ## Test Coverage
@@ -95,17 +94,14 @@ The tests cover:
 
 The tests depend on:
 - Grails Forge for application generation
-- Geb and Selenium for functional testing
+- Geb with TestContainers for functional testing
 - Spock testing framework
-- Chrome/Firefox drivers for browser automation
+- Containerized browser environments
 
 ## Configuration
 
-The `GebConfig.groovy` file configures different browser environments:
-- Chrome Headless (default for CI)
-- Chrome with GUI (for debugging)
-- Firefox Headless 
-- Firefox with GUI
+The tests use containerized browsers through TestContainers integration.
+Geb recordings are automatically managed and stored in build directories.
 
 ## Future Enhancements
 
