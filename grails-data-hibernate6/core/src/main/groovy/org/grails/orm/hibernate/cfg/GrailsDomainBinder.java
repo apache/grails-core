@@ -2249,6 +2249,5 @@ public class GrailsDomainBinder implements MetadataContributor {
                     (org.hibernate.mapping.Map) collection, sessionFactoryBeanName);
         }
     }
-    }
 
 }

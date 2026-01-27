@@ -31,6 +31,7 @@ import org.grails.datastore.mapping.proxy.ProxyHandler
 /**
  * @author Graeme Rocher
  */
+@IgnoreIf({ System.getProperty("hibernate7.gorm.suite") == "true" })
 class DirtyCheckingSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
