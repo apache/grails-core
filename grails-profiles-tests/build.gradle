@@ -73,16 +73,20 @@ dependencies {
     testImplementation testFixtures('org.apache.grails:grails-geb')
 }
 
-// Apply standard functional test configuration
-apply {
-    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
-}
-
-// Configure test tasks
+// Configure test tasks manually to avoid circular dependencies
 tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    
     // Include only profile test classes
     include '**/*Profile*Test*'
     include '**/*Profile*Spec*'
+    
+    // Test reporting configuration
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+        showStandardStreams = true
+    }
     
     // Make Geb tests more resilient in CI environments
     systemProperty('grails.geb.atCheckWaiting.enabled', 'true')
