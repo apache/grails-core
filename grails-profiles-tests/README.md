@@ -34,33 +34,15 @@ These tests verify that Grails profiles work correctly by:
 The tests are organized into several categories:
 
 ### Unit/Integration Tests
-- `WebProfileTests.groovy` - Tests for the web profile
-- `PluginProfileTests.groovy` - Tests for the plugin profile
-- `RestApiProfileTests.groovy` - Tests for the REST API profile (to be implemented)
-
-### Functional Tests
-- `FunctionalProfileTests.groovy` - End-to-end testing of generated applications using Geb/Selenium
+- `BasicProfileTests.groovy` - Basic profile functionality tests
+- `ProfileIntegrationTests.groovy` - Integration tests for profile functionality
+- `ProfileEndToEndTests.groovy` - End-to-end tests for profile functionality
 
 ## Running the Tests
 
 ### Run all profile tests:
 ```bash
-./gradlew profileTest
-```
-
-### Run functional tests specifically:
-```bash
-./gradlew functionalProfileTest
-```
-
-### Run with Geb recording:
-```bash
-./gradlew profileTest -Dgrails.geb.recording.mode=RECORD_ALL
-```
-
-### Run in CI mode (more resilient):
-```bash
-./gradlew profileTest -Dgrails.geb.atCheckWaiting.enabled=true
+./gradlew :grails-profiles-tests:test
 ```
 
 ## Test Coverage
@@ -84,33 +66,22 @@ The tests cover:
 - Application packaging
 - Plugin JAR creation
 
-### Functional Testing
+### Integration Testing
 - Application startup
-- Web page accessibility
-- Controller functionality
-- Basic UI interactions
+- Configuration validation
+- Basic functionality verification
 
 ## Dependencies
 
 The tests depend on:
-- Grails Forge for application generation
-- Geb with TestContainers for functional testing
+- Grails Core Framework
 - Spock testing framework
-- Containerized browser environments
+- TestContainers for containerized testing (when needed)
 
 ## Configuration
 
-The tests use containerized browsers through TestContainers integration.
-Geb recordings are automatically managed and stored in build directories.
-
-## Future Enhancements
-
-Planned additions:
-- REST API profile tests
-- Web Plugin profile tests
-- More comprehensive functional test scenarios
-- Performance testing of profile operations
-- Cross-version compatibility testing
+The tests use containerized browsers through TestContainers integration via Geb's container support.
+Geb configurations are located in `src/test/resources/GebConfig.groovy`.
 
 ## Migration from Old Tests
 

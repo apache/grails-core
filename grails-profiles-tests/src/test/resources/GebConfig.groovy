@@ -17,58 +17,34 @@
  *  under the License.
  */
 
-import org.openqa.selenium.chrome.ChromeDriver
-import org.openqa.selenium.chrome.ChromeOptions
-import org.openqa.selenium.firefox.FirefoxDriver
+import geb.report.ReportState
+import geb.report.Reporter
 import org.openqa.selenium.firefox.FirefoxOptions
-import org.openqa.selenium.Dimension
+import org.openqa.selenium.remote.RemoteWebDriver
+import geb.report.ReportingListener
 
-// Geb configuration for profile tests
-waiting {
-    timeout = 10
-    retryInterval = 0.5
+// Configuration for container-based Geb testing.
+// This driver configuration will be used by WebDriverContainerHolder.
+driver = {
+
+    // The remote address will be set by WebDriverContainerHolder via
+    // system property `webdriver.remote.server` before this closure is called.
+    new RemoteWebDriver(new FirefoxOptions().tap {
+        // Add a custom capability that we can test for
+        // to verify our configuration is being used.
+        setCapability('grails:gebConfigUsed', true)
+    })
 }
 
-// Chrome Headless configuration
-environments {
-    chromeHeadless {
-        driver = {
-            ChromeOptions options = new ChromeOptions()
-            options.addArguments('--headless')
-            options.addArguments('--no-sandbox')
-            options.addArguments('--disable-dev-shm-usage')
-            options.addArguments('--window-size=1920,1080')
-            new ChromeDriver(options)
-        }
-    }
-    
-    // Chrome with GUI (for debugging)
-    chrome {
-        driver = {
-            ChromeOptions options = new ChromeOptions()
-            options.addArguments('--window-size=1920,1080')
-            new ChromeDriver(options)
-        }
-    }
-    
-    // Firefox Headless configuration
-    firefoxHeadless {
-        driver = {
-            FirefoxOptions options = new FirefoxOptions()
-            options.addArguments('--headless')
-            options.addArguments('--width=1920')
-            options.addArguments('--height=1080')
-            new FirefoxDriver(options)
-        }
-    }
-    
-    // Firefox with GUI (for debugging)
-    firefox {
-        driver = {
-            FirefoxOptions options = new FirefoxOptions()
-            options.addArguments('--width=1920')
-            options.addArguments('--height=1080')
-            new FirefoxDriver(options)
+// The `containerBrowser` property must match the configured
+// driver in order to start up a matching Selenium browser container.
+containerBrowser = 'firefox'
+
+// Another proof that GebConfig.groovy is being utilized.
+reportingListener = new ReportingListener() {
+    void onReport(Reporter reporter, ReportState reportState, List<File> reportFiles) {
+        reportFiles.each {
+            println "[[ATTACHMENT|$it.absolutePath]]"
         }
     }
 }
