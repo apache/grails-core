@@ -60,12 +60,6 @@ tasks.withType(Test).configureEach {
 
     useJUnitPlatform()
     jvmArgs += java17moduleReflectionCompatibilityArguments
-    develocity {
-        testDistribution {
-            enabled = isCiBuild
-            maxLocalExecutors = configuredTestParallel
-        }
-    }
     testLogging {
         events('passed', 'skipped', 'failed')
         showExceptions = true
