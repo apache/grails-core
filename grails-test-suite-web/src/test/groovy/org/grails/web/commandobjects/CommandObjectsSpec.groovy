@@ -23,6 +23,7 @@ import grails.artefact.Artefact
 import grails.testing.gorm.DataTest
 import grails.testing.web.controllers.ControllerUnitTest
 import grails.validation.Validateable
+import org.grails.validation.ConstraintEvalUtils
 import spock.lang.Issue
 import spock.lang.Specification
 
@@ -37,6 +38,28 @@ class CommandObjectsSpec extends Specification implements ControllerUnitTest<Tes
             isProg inList: ['Emerson', 'Lake', 'Palmer']
         }
     }}
+
+    /**
+     * Clear the static constraints cache for classes that use shared constraints.
+     * This prevents test environment pollution because the Validateable trait caches
+     * constraints in a static field, and constraints may be evaluated before doWithConfig()
+     * has registered the shared constraint 'isProg'.
+     *
+     * Also clear ConstraintEvalUtils.defaultConstraintsMap which caches shared constraints
+     * globally. Without this cleanup, another test's config may have been cached,
+     * causing the 'isProg' shared constraint to not be found.
+     */
+    def setup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+        Artist.clearConstraintsMapCache()
+        ArtistSubclass.clearConstraintsMapCache()
+    }
+
+    def cleanup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+        Artist.clearConstraintsMapCache()
+        ArtistSubclass.clearConstraintsMapCache()
+    }
 
     void "Test command object with date binding"() {
         setup:

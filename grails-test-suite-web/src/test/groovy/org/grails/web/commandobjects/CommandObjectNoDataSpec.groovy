@@ -20,6 +20,7 @@
 package org.grails.web.commandobjects
 
 import grails.testing.web.GrailsWebUnitTest
+import org.grails.validation.ConstraintEvalUtils
 import spock.lang.Specification
 
 class CommandObjectNoDataSpec extends Specification implements GrailsWebUnitTest {
@@ -29,6 +30,26 @@ class CommandObjectNoDataSpec extends Specification implements GrailsWebUnitTest
             isProg inList: ['Emerson', 'Lake', 'Palmer']
         }
     }}
+
+    /**
+     * Clear the static constraints cache for Artist class.
+     * This prevents test environment pollution because the Validateable trait caches
+     * constraints in a static field, and constraints may be evaluated before doWithConfig()
+     * has registered the shared constraint 'isProg'.
+     *
+     * Also clear ConstraintEvalUtils.defaultConstraintsMap which caches shared constraints
+     * globally. Without this cleanup, another test's config may have been cached,
+     * causing the 'isProg' shared constraint to not be found.
+     */
+    def setup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+        Artist.clearConstraintsMapCache()
+    }
+
+    def cleanup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+        Artist.clearConstraintsMapCache()
+    }
 
     void "test shared constraint"() {
         when:
