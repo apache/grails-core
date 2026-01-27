@@ -62,7 +62,7 @@ jobs:
           ./gradlew build
           --continue
           --stacktrace
-          --configuration-cache-problems=warn
+          --rerun-tasks
           -PskipCodeStyle
   build:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
@@ -103,6 +103,38 @@ jobs:
           --stacktrace
           -PonlyCoreTests
           -PskipCodeStyle
+  buildRerunTasks:
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    name: 'Build Grails-Core Rerunning all Tasks'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            java: 17
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: ${{ matrix.java }}
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔨 Build project"
+        run: >
+          ./gradlew build :grails-shell-cli:installDist groovydoc
+          --continue
+          --rerun-tasks
+          --stacktrace
+          -PonlyCoreTests
+          -PskipCodeStyle
   buildForge:
     name: "Build Grails Forge"
     strategy:
@@ -139,8 +171,8 @@ jobs:
         run: >
           ./gradlew build
           --continue
+          --rerun-tasks
           --stacktrace
-          --configuration-cache-problems=warn
           -PskipCodeStyle
       - name: "✅ Verify combined CLI"
         run: |
@@ -184,8 +216,8 @@ jobs:
         run: >
           ./gradlew bootJar check
           --continue
+          --rerun-tasks
           --stacktrace
-          --configuration-cache-problems=warn
           -PgebAtCheckWaiting
           -PonlyFunctionalTests
           -PskipCodeStyle
@@ -220,8 +252,8 @@ jobs:
         run: >
           ./gradlew bootJar check
           --continue
+          --rerun-tasks
           --stacktrace
-          --configuration-cache-problems=warn
           -PonlyMongodbTests
           -PmongodbContainerVersion=${{ matrix.mongodb-version }}
           -PskipCodeStyle
@@ -253,8 +285,8 @@ jobs:
         run: >
           ./gradlew bootJar check
           --continue
+          --rerun-tasks
           --stacktrace
-          --configuration-cache-problems=warn
           -PonlyHibernate5Tests
           -PskipCodeStyle
   publishGradle:
