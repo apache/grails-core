@@ -48,8 +48,6 @@ version = projectVersion
 group = 'org.apache.grails.testing'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
-    
     // Core dependencies for profile testing
     implementation project(':grails-core')
     implementation project(':grails-bootstrap')
