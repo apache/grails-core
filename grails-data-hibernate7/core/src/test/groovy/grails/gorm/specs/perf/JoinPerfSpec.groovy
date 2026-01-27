@@ -50,15 +50,27 @@ class JoinPerfSpec extends Specification {
             datastore.sessionFactory.currentSession.clear()
         }
 
-        for(i in 0..7000) {
-            Author a = Author.get(Math.abs(new Random().nextInt() % 500) + 1)
-            Book b = Book.get(Math.abs(new Random().nextInt() % 1500) + 1)
-            if(a && b) {
-                new BookAuthor(book: b, author: a).save()
+        Set<List<Long>> seen = []
+        int count = 0
+        Random random = new Random()
+        while(count < 7000) {
+            long authorId = Math.abs(random.nextInt() % 500) + 1
+            long bookId = Math.abs(random.nextInt() % 1500) + 1
+            if(seen.add([authorId, bookId])) {
+                Author a = Author.load(authorId)
+                Book b = Book.load(bookId)
+                if(a && b) {
+                    new BookAuthor(book: b, author: a).save()
+                    count++
+                }
+                if(count % 500 == 0) {
+                    datastore.sessionFactory.currentSession.flush()
+                    datastore.sessionFactory.currentSession.clear()
+                }
             }
-            datastore.sessionFactory.currentSession.flush()
-            datastore.sessionFactory.currentSession.clear()
         }
+        datastore.sessionFactory.currentSession.flush()
+        datastore.sessionFactory.currentSession.clear()
     }
 
     void 'test read performance with join query'() {

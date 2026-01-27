@@ -1,4 +1,3 @@
 AttachMethodSpec. Test attach method
 BuiltinUniqueConstraintWorksWithTargetProxiesConstraintsSpec. test unique constraint for the associated child object
 BuiltinUniqueConstraintWorksWithTargetProxiesConstraintsSpec. test unique constraint on root instance
-JoinPerfSpec. test read performance with join query
