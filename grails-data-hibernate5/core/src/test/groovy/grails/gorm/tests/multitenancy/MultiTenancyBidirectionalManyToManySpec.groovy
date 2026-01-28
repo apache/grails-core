@@ -32,12 +32,14 @@ import org.hibernate.dialect.H2Dialect
 import spock.lang.AutoCleanup
 import spock.lang.Ignore
 import spock.lang.Issue
+import spock.util.environment.RestoreSystemProperties
 import spock.lang.Shared
 import spock.lang.Specification
 
 /**
  * Created by puneetbehl on 21/03/2018.
  */
+@RestoreSystemProperties
 class MultiTenancyBidirectionalManyToManySpec extends Specification {
 
     final Map config = [

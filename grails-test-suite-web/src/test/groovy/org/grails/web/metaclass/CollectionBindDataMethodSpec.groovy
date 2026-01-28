@@ -21,9 +21,20 @@ package org.grails.web.metaclass
 
 import grails.artefact.Artefact
 import grails.testing.web.controllers.ControllerUnitTest
+import org.grails.web.mime.HttpServletResponseExtension
 import spock.lang.Specification
 
 class CollectionBindDataMethodSpec extends Specification implements ControllerUnitTest<DemoController> {
+
+    void setup() {
+        // Clear the static mimeTypes cache to prevent test environment pollution
+        HttpServletResponseExtension.@mimeTypes = null
+    }
+
+    void cleanup() {
+        // Clear the static mimeTypes cache after each test for test isolation
+        HttpServletResponseExtension.@mimeTypes = null
+    }
 
     void 'Test bindData with a CollectionDataBindingSource argument using XML'() {
         when:

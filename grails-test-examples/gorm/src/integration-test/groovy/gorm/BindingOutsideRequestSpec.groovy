@@ -26,11 +26,16 @@ import grails.testing.mixin.integration.Integration
  * Created by graemerocher on 31/01/2017.
  */
 import grails.util.GrailsWebMockUtil
+import org.springframework.web.context.request.RequestContextHolder
 import spock.lang.*
 
 @Integration(applicationClass = Application)
 @Rollback
 class BindingOutsideRequestSpec extends Specification {
+
+    void cleanup() {
+        RequestContextHolder.resetRequestAttributes()
+    }
 
     void "Save nested company without webrequest (Quartz/Bpotstrap)"() {
         given:

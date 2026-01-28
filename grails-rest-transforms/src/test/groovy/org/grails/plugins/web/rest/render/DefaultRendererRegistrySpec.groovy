@@ -22,11 +22,22 @@ import grails.rest.render.AbstractRenderer
 import grails.rest.render.RenderContext
 import grails.rest.render.hal.HalJsonCollectionRenderer
 import grails.web.mime.MimeType
+import org.grails.web.mime.HttpServletResponseExtension
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.Errors
 import spock.lang.Specification
 
 class DefaultRendererRegistrySpec extends Specification {
+
+    void setup() {
+        // Clear the static mimeTypes cache to prevent test environment pollution
+        HttpServletResponseExtension.@mimeTypes = null
+    }
+
+    void cleanup() {
+        // Clear the static mimeTypes cache after each test for test isolation
+        HttpServletResponseExtension.@mimeTypes = null
+    }
 
     void "Test that registering a HAL collection renderer works"() {
         given:"A registry with a specific renderer"

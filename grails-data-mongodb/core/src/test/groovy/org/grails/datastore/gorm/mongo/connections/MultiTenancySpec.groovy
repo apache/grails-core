@@ -30,6 +30,7 @@ import org.grails.datastore.mapping.mongo.config.MongoSettings
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import spock.lang.AutoCleanup
+import spock.util.environment.RestoreSystemProperties
 import spock.lang.Shared
 
 import static com.mongodb.client.model.Filters.*
@@ -37,6 +38,7 @@ import static com.mongodb.client.model.Filters.*
 /**
  * Created by graemerocher on 13/07/2016.
  */
+@RestoreSystemProperties
 class MultiTenancySpec extends AutoStartedMongoSpec {
 
     @Shared @AutoCleanup MongoDatastore datastore
@@ -56,7 +58,8 @@ class MultiTenancySpec extends AutoStartedMongoSpec {
     }
 
     void setup() {
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
+        // Ensure tenant property is cleared before each test for test isolation
+        System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
     }
 
 

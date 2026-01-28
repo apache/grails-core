@@ -34,6 +34,7 @@ import jakarta.servlet.http.HttpServletResponse
 import org.grails.buffer.FastStringWriter
 import org.grails.config.PropertySourcesConfig
 import org.grails.core.artefact.ControllerArtefactHandler
+import org.grails.core.artefact.UrlMappingsArtefactHandler
 import org.grails.core.artefact.gsp.TagLibArtefactHandler
 import org.grails.encoder.Encoder
 import org.grails.gsp.GroovyPage
@@ -374,6 +375,12 @@ abstract class AbstractGrailsTagTests {
         GroovySystem.metaClassRegistry.setMetaClassCreationHandle(originalHandler)
 
         onDestroy()
+        
+        // Clear URL mappings artefacts to prevent test environment pollution
+        if (ga instanceof DefaultGrailsApplication) {
+            ((DefaultGrailsApplication) ga).@artefactInfo.remove(UrlMappingsArtefactHandler.TYPE)
+        }
+        
         ga.mainContext.close()
 
         Holders.servletContext = null

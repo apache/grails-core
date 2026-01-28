@@ -204,7 +204,7 @@ To link to reference items you can use a special syntax:
 
 [source,groovy]
 ----
-<<ref-controllers-renderPDF,renderPDF>>
+link:{controllersRef}renderPDF.html[renderPDF]
 ----
 
 In this case the category of the reference item is on the right hand side of the | and the name of the reference item on the left.

@@ -20,11 +20,20 @@ package grails.compiler
 
 import grails.persistence.Entity
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
+import org.grails.validation.ConstraintEvalUtils
 import spock.lang.Ignore
 import spock.lang.Issue
 import spock.lang.Specification
 
 class GrailsCompileStaticCompilationErrorsSpec extends Specification {
+
+    def setup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+    }
+
+    def cleanup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+    }
 
     @Issue('GRAILS-11056')
     void 'Test compiling valid dynamic finder calls'() {

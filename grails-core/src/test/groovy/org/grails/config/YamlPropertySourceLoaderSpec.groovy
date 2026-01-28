@@ -23,12 +23,14 @@ import org.grails.config.yaml.YamlPropertySourceLoader
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
+@RestoreSystemProperties
 class YamlPropertySourceLoaderSpec extends Specification {
 
-    void setup() {
-        // reset environment
-        System.setProperty(Environment.KEY, "")
+    def setup() {
+        System.setProperty(Environment.KEY, Environment.DEVELOPMENT.name)
+        Environment.reset()
     }
 
     def "ensure the config for environment is merged with single environment block"() {

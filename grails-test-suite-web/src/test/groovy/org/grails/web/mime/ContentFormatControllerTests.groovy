@@ -33,6 +33,16 @@ import spock.lang.Specification
  */
 class ContentFormatControllerTests extends Specification implements ControllerUnitTest<ContentController>, DomainUnitTest<Gizmo> {
 
+    def setup() {
+        // Clear the static mimeTypes cache to prevent test environment pollution
+        HttpServletResponseExtension.@mimeTypes = null
+    }
+
+    def cleanup() {
+        // Clear the static mimeTypes cache after each test for test isolation
+        HttpServletResponseExtension.@mimeTypes = null
+    }
+
     Closure doWithConfig() {{ c ->
         c['grails.mime.use.accept.header'] = true
         c['grails.mime.types'] = [html: ['text/html', 'application/xhtml+xml'],

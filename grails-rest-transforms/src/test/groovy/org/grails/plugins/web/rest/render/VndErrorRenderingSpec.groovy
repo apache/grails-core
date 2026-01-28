@@ -34,6 +34,7 @@ import org.grails.support.MockApplicationContext
 import org.grails.web.mapping.DefaultLinkGenerator
 import org.grails.web.mapping.DefaultUrlMappingEvaluator
 import org.grails.web.mapping.DefaultUrlMappingsHolder
+import org.grails.web.mime.HttpServletResponseExtension
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.http.HttpStatus
 import org.springframework.mock.web.MockServletContext
@@ -49,7 +50,14 @@ import spock.lang.Specification
  */
 class VndErrorRenderingSpec extends Specification{
 
+    void setup() {
+        // Clear the static mimeTypes cache to prevent test environment pollution
+        HttpServletResponseExtension.@mimeTypes = null
+    }
+
     void cleanup() {
+        // Clear the static mimeTypes cache after each test for test isolation
+        HttpServletResponseExtension.@mimeTypes = null
         RequestContextHolder.resetRequestAttributes()
     }
 
