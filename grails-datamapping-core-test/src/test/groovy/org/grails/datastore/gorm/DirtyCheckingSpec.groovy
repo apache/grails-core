@@ -21,7 +21,6 @@ import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import grails.testing.spock.IgnoreIf
 
-@IgnoreIf({ System.getProperty("hibernate7.gorm.suite") == "true" })
 class DirtyCheckingSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {

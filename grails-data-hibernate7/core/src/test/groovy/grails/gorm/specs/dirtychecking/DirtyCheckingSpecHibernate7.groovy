@@ -1,3 +1,4 @@
+package grails.gorm.specs.dirtychecking
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
