@@ -50,6 +50,13 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 
 ## Available Skills
 
+> **AI AGENTS - MANDATORY**: Before writing or modifying any code, you **MUST** read the relevant skill file(s) below. Do not write Groovy/Grails code without first loading these instructions:
+> - Writing Grails code → Read `.agents/skills/grails-developer/SKILL.md`
+> - Writing Groovy code → Read `.agents/skills/groovy-developer/SKILL.md`
+> - Writing Java code → Read `.agents/skills/java-developer/SKILL.md`
+>
+> Use your file reading capability to load the skill content before proceeding with any code changes.
+
 | Skill | Path | Use For |
 |-------|------|---------|
 | **grails-developer** | `.agents/skills/grails-developer/SKILL.md` | Grails 7 apps, GORM, controllers, views |
