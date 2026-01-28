@@ -21,6 +21,9 @@ package org.apache.grails.data.testing.tck.tests
 
 import grails.gorm.transactions.Rollback
 import org.apache.grails.data.testing.tck.domains.Country
+import org.apache.grails.data.testing.tck.domains.Face
+import org.apache.grails.data.testing.tck.domains.Location
+import org.apache.grails.data.testing.tck.domains.Nose
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.Pet
 import org.apache.grails.data.testing.tck.domains.PetType
@@ -36,10 +39,9 @@ import spock.lang.Ignore
 class OneToManySpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Owner_Default_Uni_P, Country, Person, Pet, PetType, SimpleCountry])
+        manager.addAllDomainClasses([Owner_Default_Uni_P, ChildPersister, Location, Country, Person, Pet, PetType, SimpleCountry, Face, Nose])
     }
 
-    @Ignore("Something fishy with Entities")
     void "test save and return unidirectional one to many Country "() {
         given:
         Person p = new Person(firstName: "Fred", lastName: "Flinstone")
