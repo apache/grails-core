@@ -25,7 +25,7 @@ ext {
             'ant.version'                   : '1.10.15',
             'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.0',
-            'asset-pipeline-gradle.version' : '5.0.29',
+            'asset-pipeline-gradle.version' : '5.0.30',
             'byte-buddy.version'            : '1.17.7',
             'commons-text.version'          : '1.13.1',
             'directory-watcher.version'     : '0.19.1',
@@ -67,7 +67,7 @@ ext {
     ]
 
     bomDependencyVersions = [
-            'asset-pipeline-bom.version'  : '5.0.29',
+            'asset-pipeline-bom.version'  : '5.0.30',
             'bootstrap-icons.version'     : '1.13.1',
             'bootstrap.version'           : '5.3.8',
             'commons-codec.version'       : '1.18.0',
