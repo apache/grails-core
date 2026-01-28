@@ -19,13 +19,14 @@
 
 package functionaltests.async
 
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+
 import functionaltests.services.AsyncProcessingService
+
 import grails.converters.JSON
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
-
-import static grails.async.web.WebPromises.*
+import static grails.async.web.WebPromises.task
 
 /**
  * Controller demonstrating async request handling patterns in Grails.
@@ -125,13 +126,31 @@ class AsyncTestController {
 
         def startTime = System.currentTimeMillis()
         task {
-            sleep delay
-            return 'Completed in time'
-        }.onComplete { result ->
+            def status = 'completed'
+            def message = 'Completed in time'
+            def completed = new AtomicBoolean(false)
+
+            def workThread = Thread.start {
+                sleep(delay)
+                completed.set(true)
+            }
+            workThread.join(timeout)
+
+            if (!completed.get()) {
+                workThread.interrupt()
+                status = 'timeout'
+                message = "Task exceeded timeout of ${timeout} ms"
+            }
+
+            return [
+                    status: status,
+                    message: message
+            ]
+        }.onComplete { taskResult ->
             def elapsed = System.currentTimeMillis() - startTime
             render([
-                status: 'completed',
-                result: result,
+                status: taskResult.status,
+                result: taskResult.message,
                 elapsedMs: elapsed
             ] as JSON)
         }

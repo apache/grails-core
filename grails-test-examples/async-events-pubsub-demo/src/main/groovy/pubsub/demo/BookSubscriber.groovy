@@ -16,15 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package pubsub.demo
 
-import grails.events.annotation.Subscriber
+import java.util.concurrent.ConcurrentLinkedDeque
+
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.engine.event.PreInsertEvent
+
 import org.springframework.stereotype.Component
 
-import java.util.concurrent.ConcurrentLinkedDeque
+import grails.events.annotation.Subscriber
+import org.grails.datastore.mapping.engine.event.PreInsertEvent
 
 @Component
 @CompileStatic

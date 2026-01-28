@@ -19,6 +19,8 @@
 
 package functionaltests.constraints
 
+import java.math.RoundingMode
+
 /**
  * Domain class demonstrating financial constraints:
  * - Credit card validation
@@ -123,8 +125,8 @@ class PaymentInfo {
         // Tax amount must match calculation
         taxAmount nullable: true, scale: 2, validator: { val, obj ->
             if (val == null || obj.amount == null || obj.taxRate == null) return true
-            def expectedTax = (obj.amount * obj.taxRate / 100).setScale(2, BigDecimal.ROUND_HALF_UP)
-            if (val.setScale(2, BigDecimal.ROUND_HALF_UP) != expectedTax) {
+            def expectedTax = (obj.amount * obj.taxRate / 100).setScale(2, RoundingMode.HALF_UP)
+            if (val.setScale(2, RoundingMode.HALF_UP) != expectedTax) {
                 return 'paymentInfo.taxAmount.doesNotMatchCalculation'
             }
         }
@@ -132,8 +134,8 @@ class PaymentInfo {
         // Total must equal amount + tax
         totalAmount scale: 2, validator: { val, obj ->
             if (val == null || obj.amount == null) return true
-            def expectedTotal = obj.amount + (obj.taxAmount ?: 0)
-            if (val.setScale(2, BigDecimal.ROUND_HALF_UP) != expectedTotal.setScale(2, BigDecimal.ROUND_HALF_UP)) {
+            def expectedTotal = obj.amount + (obj.taxAmount ?: 0) as BigDecimal
+            if (val.setScale(2, RoundingMode.HALF_UP) != expectedTotal.setScale(2, RoundingMode.HALF_UP)) {
                 return 'paymentInfo.totalAmount.doesNotMatchSum'
             }
         }

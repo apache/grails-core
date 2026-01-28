@@ -20,7 +20,6 @@
 package functionaltests.springevents
 
 import grails.converters.JSON
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.beans.factory.annotation.Autowired
 
 /**

@@ -29,7 +29,7 @@ class TimingInterceptor {
     }
 
     boolean before() {
-        InterceptorTestController.executionOrder << "timing:before"
+        InterceptorTestController.executionOrder << 'timing:before'
         request.setAttribute('requestStartTime', System.currentTimeMillis())
         true
     }
@@ -38,7 +38,7 @@ class TimingInterceptor {
         def startTime = request.getAttribute('requestStartTime') as Long
         def endTime = System.currentTimeMillis()
         def duration = endTime - startTime
-        InterceptorTestController.executionOrder << "timing:after:${duration}ms"
+        InterceptorTestController.executionOrder << "timing:after:${duration}ms".toString()
         // Add header without checking if committed
         response.addHeader('X-Request-Duration', "${duration}")
         true

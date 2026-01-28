@@ -241,10 +241,10 @@ class FieldTypesSpec extends ContainerGebSpec {
         $(selector).displayed || true // Graceful if field is optional
 
         where:
-        fieldName           | selector
-        'firstName'         | 'input[name="firstName"]'
-        'lastName'          | 'input[name="lastName"]'
-        'email'             | 'input[name="email"]'
-        'active'            | 'input[name="active"]'
+        fieldName   | selector
+        'firstName' | 'input[name="firstName"]'
+        'lastName'  | 'input[name="lastName"]'
+        'email'     | 'input[name="email"]'
+        'active'    | 'input[name="active"]'
     }
 }

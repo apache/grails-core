@@ -16,14 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functionaltests.gorm
 
-import functionaltests.Application
-import grails.testing.mixin.integration.Integration
-import grails.gorm.transactions.Rollback
 import spock.lang.Specification
-import spock.lang.Shared
+
+import grails.gorm.transactions.Rollback
+import grails.testing.mixin.integration.Integration
 
 /**
  * Integration tests for advanced GORM features:
@@ -34,8 +32,8 @@ import spock.lang.Shared
  * - Named queries
  * - Detached criteria
  */
-@Integration(applicationClass = Application)
 @Rollback
+@Integration
 class GormAdvancedSpec extends Specification {
 
     def setup() {
@@ -43,7 +41,12 @@ class GormAdvancedSpec extends Specification {
         createTestData()
     }
 
-    private void createTestData() {
+    private static void createTestData() {
+
+        if (Author.count() > 0) {
+            return // Test data already exists
+        }
+
         // Author 1: American author with 3 books
         def author1 = new Author(name: 'John Smith', country: 'USA', birthYear: 1970, active: true)
         author1.addToBooks(new GormBook(title: 'The Great Adventure', genre: 'Fiction', price: 19.99, pageCount: 350, publicationYear: 2020, rating: 4.5))

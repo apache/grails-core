@@ -16,14 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package micronaut
 
-import grails.testing.mixin.integration.Integration
-import io.micronaut.context.ApplicationContext
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.ApplicationContextAware
+import bean.injection.NamedService
+import io.micronaut.context.ApplicationContext as MicronautApplicationContext
 import spock.lang.Specification
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.ApplicationContext as SpringApplicationContext
+import org.springframework.context.ApplicationContextAware
+import org.springframework.context.ConfigurableApplicationContext
+
+import grails.testing.mixin.integration.Integration
 
 /**
  * Integration tests for Micronaut context coexistence with Spring/Grails context.
@@ -38,11 +42,11 @@ import spock.lang.Specification
 class MicronautContextSpec extends Specification implements ApplicationContextAware {
 
     @Autowired
-    io.micronaut.context.ApplicationContext micronautContext
+    MicronautApplicationContext micronautContext
 
-    org.springframework.context.ApplicationContext springContext
+    SpringApplicationContext springContext
 
-    void setApplicationContext(org.springframework.context.ApplicationContext applicationContext) {
+    void setApplicationContext(SpringApplicationContext applicationContext) {
         this.springContext = applicationContext
     }
 
@@ -59,7 +63,7 @@ class MicronautContextSpec extends Specification implements ApplicationContextAw
 
     void "micronaut beans can be retrieved from micronaut context"() {
         when:
-        def beans = micronautContext.getBeansOfType(bean.injection.NamedService)
+        def beans = micronautContext.getBeansOfType(NamedService)
 
         then:
         beans != null
@@ -82,7 +86,7 @@ class MicronautContextSpec extends Specification implements ApplicationContextAw
 
     void "both contexts share the same application lifecycle"() {
         expect:
-        micronautContext.isRunning()
-        springContext.isActive()
+        micronautContext.running
+        (springContext as ConfigurableApplicationContext).active
     }
 }

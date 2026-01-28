@@ -19,15 +19,15 @@
 
 package micronaut
 
-import grails.testing.mixin.integration.Integration
-import org.springframework.beans.factory.annotation.Autowired
-import spock.lang.Specification
-
-import bean.injection.NamedService
 import bean.injection.PrimaryNamedService
+import bean.injection.QualifiedNamedService
 import bean.injection.RegularNamedService
 import bean.injection.SpecialNamedService
-import bean.injection.QualifiedNamedService
+import spock.lang.Specification
+
+import org.springframework.beans.factory.annotation.Autowired
+
+import grails.testing.mixin.integration.Integration
 
 /**
  * Integration tests for Micronaut bean qualifiers in Grails context.

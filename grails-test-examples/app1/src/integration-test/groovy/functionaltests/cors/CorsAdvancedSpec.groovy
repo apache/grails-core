@@ -18,17 +18,17 @@
  */
 package functionaltests.cors
 
-import functionaltests.Application
-import grails.testing.mixin.integration.Integration
-import grails.gorm.transactions.Rollback
 import groovy.json.JsonSlurper
+
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.MediaType
 import io.micronaut.http.client.HttpClient
-import spock.lang.Specification
 import spock.lang.Shared
+import spock.lang.Specification
+
+import grails.gorm.transactions.Rollback
+import grails.testing.mixin.integration.Integration
 
 /**
  * Integration tests for CORS (Cross-Origin Resource Sharing) functionality.
@@ -36,26 +36,26 @@ import spock.lang.Shared
  * 
  * Note: CORS is enabled for /api/** in application.yml
  */
-@Integration(applicationClass = Application)
 @Rollback
+@Integration
 class CorsAdvancedSpec extends Specification {
 
     @Shared
     HttpClient client
 
     def setup() {
-        client = HttpClient.create(new URL("http://localhost:${serverPort}"))
+        client = client ?: HttpClient.create(new URL("http://localhost:${serverPort}"))
     }
 
-    def cleanup() {
-        client?.close()
+    def cleanupSpec() {
+        client.close()
     }
 
     // ========== Basic CORS Header Tests ==========
 
     def "GET request to CORS-enabled endpoint includes CORS headers"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/api/cors')
                 .header('Origin', 'http://example.com'),
             String
@@ -69,7 +69,7 @@ class CorsAdvancedSpec extends Specification {
 
     def "OPTIONS preflight request returns appropriate headers"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.OPTIONS('/api/cors/data')
                 .header('Origin', 'http://example.com')
                 .header('Access-Control-Request-Method', 'GET'),
@@ -84,7 +84,7 @@ class CorsAdvancedSpec extends Specification {
 
     def "preflight request for POST method succeeds"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.OPTIONS('/api/cors/items')
                 .header('Origin', 'http://example.com')
                 .header('Access-Control-Request-Method', 'POST')
@@ -100,7 +100,7 @@ class CorsAdvancedSpec extends Specification {
 
     def "preflight request for PUT method succeeds"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.OPTIONS('/api/cors/items/1')
                 .header('Origin', 'http://example.com')
                 .header('Access-Control-Request-Method', 'PUT')
@@ -114,7 +114,7 @@ class CorsAdvancedSpec extends Specification {
 
     def "preflight request for DELETE method succeeds"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.OPTIONS('/api/cors/items/1')
                 .header('Origin', 'http://example.com')
                 .header('Access-Control-Request-Method', 'DELETE'),
@@ -129,7 +129,7 @@ class CorsAdvancedSpec extends Specification {
 
     def "GET request to CORS endpoint returns data"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/api/cors/data')
                 .header('Origin', 'http://example.com'),
             String
@@ -144,7 +144,7 @@ class CorsAdvancedSpec extends Specification {
 
     def "POST request with CORS headers succeeds"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.POST('/api/cors/items', '{"name":"New Item"}')
                 .header('Origin', 'http://example.com')
                 .contentType(MediaType.APPLICATION_JSON),
@@ -160,7 +160,7 @@ class CorsAdvancedSpec extends Specification {
 
     def "PUT request with CORS headers succeeds"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.PUT('/api/cors/items/42', '{"name":"Updated Item"}')
                 .header('Origin', 'http://example.com')
                 .contentType(MediaType.APPLICATION_JSON),
@@ -177,7 +177,7 @@ class CorsAdvancedSpec extends Specification {
 
     def "DELETE request with CORS headers succeeds"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.DELETE('/api/cors/items/99')
                 .header('Origin', 'http://example.com'),
             String
@@ -195,7 +195,7 @@ class CorsAdvancedSpec extends Specification {
 
     def "response with custom headers includes CORS headers"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/api/cors/custom-headers')
                 .header('Origin', 'http://example.com'),
             String
@@ -210,7 +210,7 @@ class CorsAdvancedSpec extends Specification {
 
     def "echo origin endpoint returns received origin"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/api/cors/echo-origin')
                 .header('Origin', 'http://my-app.example.com'),
             String
@@ -226,7 +226,7 @@ class CorsAdvancedSpec extends Specification {
 
     def "authenticated endpoint receives authorization header"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/api/cors/authenticated')
                 .header('Origin', 'http://example.com')
                 .header('Authorization', 'Bearer test-token-123'),
@@ -242,7 +242,7 @@ class CorsAdvancedSpec extends Specification {
 
     def "authenticated endpoint without credentials returns unauthenticated"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/api/cors/authenticated')
                 .header('Origin', 'http://example.com'),
             String
@@ -259,7 +259,7 @@ class CorsAdvancedSpec extends Specification {
 
     def "request from localhost origin succeeds"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/api/cors')
                 .header('Origin', 'http://localhost:3000'),
             String
@@ -273,7 +273,7 @@ class CorsAdvancedSpec extends Specification {
 
     def "request from HTTPS origin succeeds"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/api/cors')
                 .header('Origin', 'https://secure.example.com'),
             String
@@ -287,7 +287,7 @@ class CorsAdvancedSpec extends Specification {
 
     def "request with port in origin succeeds"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/api/cors')
                 .header('Origin', 'http://example.com:8080'),
             String

@@ -16,13 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package gorm
+
+import gorm.pages.AuthorCreatePage
+import gorm.pages.BookCreatePage
+import spock.lang.Stepwise
 
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
-import gorm.pages.*
-import spock.lang.Stepwise
 
 /**
  * Functional tests for fields plugin validation error display in gorm test app.
@@ -30,18 +31,19 @@ import spock.lang.Stepwise
  * Tests that validation errors are rendered correctly by the fields plugin
  * in scaffolded views.
  */
-@Integration
 @Stepwise
+@Integration
 class FieldsValidationSpec extends ContainerGebSpec {
 
+    // TODO: Not fully implemented
     def "author email validation shows error for invalid format"() {
         when: "navigating to create author page"
-        to AuthorCreatePage
+        def page = to AuthorCreatePage
 
         and: "entering invalid email"
-        name = 'Test Author'
-        email = 'not-an-email'
-        createButton.click()
+        page.name = 'Test Author'
+        page.email = 'not-an-email'
+        page.createButton.click()
 
         then: "validation error is displayed"
         waitFor {
@@ -55,14 +57,15 @@ class FieldsValidationSpec extends ContainerGebSpec {
         }
     }
 
+    // TODO: Not fully implemented
     def "author name blank validation shows error"() {
         when: "navigating to create author page"
-        to AuthorCreatePage
+        def page = to AuthorCreatePage
 
         and: "submitting with blank name"
-        name = ''
-        email = 'valid@example.com'
-        createButton.click()
+        page.name = ''
+        page.email = 'valid@example.com'
+        page.createButton.click()
 
         then: "validation error is displayed for name"
         waitFor {
@@ -73,21 +76,22 @@ class FieldsValidationSpec extends ContainerGebSpec {
         }
     }
 
+    // TODO: Not fully implemented
     def "author unique email constraint shows error"() {
         given: "create an author with email"
-        to AuthorCreatePage
+        def page = to AuthorCreatePage
         // Use a unique email with timestamp to avoid conflicts with other tests
         def uniqueEmail = "unique.test.${System.currentTimeMillis()}@example.com"
-        name = 'First Author'
-        email = uniqueEmail
-        createButton.click()
+        page.name = 'First Author'
+        page.email = uniqueEmail
+        page.createButton.click()
         waitFor(10) { currentUrl.contains('/author/show/') || currentUrl.contains('/author/index') }
 
         when: "trying to create another author with same email"
-        to AuthorCreatePage
-        name = 'Second Author'
-        email = uniqueEmail
-        createButton.click()
+        page = to AuthorCreatePage
+        page.name = 'Second Author'
+        page.email = uniqueEmail
+        page.createButton.click()
 
         then: "unique constraint error is displayed - we should stay on create/save page or see errors"
         waitFor(10) {
@@ -105,13 +109,14 @@ class FieldsValidationSpec extends ContainerGebSpec {
         }
     }
 
+    // TODO: Not fully implemented
     def "book title blank validation shows error"() {
         when: "navigating to create book page"
-        to BookCreatePage
+        def page = to BookCreatePage
 
         and: "submitting with blank title"
-        titleField.value('')
-        createButton.click()
+        page.titleField.value('')
+        page.createButton.click()
 
         then: "validation error is displayed"
         waitFor {
@@ -123,16 +128,17 @@ class FieldsValidationSpec extends ContainerGebSpec {
         }
     }
 
+    // TODO: Not fully implemented
     def "book pageCount min validation shows error"() {
         when: "navigating to create book page"
-        to BookCreatePage
+        def page = to BookCreatePage
 
         and: "entering invalid page count"
-        titleField.value('Valid Title')
-        if (pageCount.displayed) {
-            pageCount.value('0')  // min is 1
+        page.titleField.value('Valid Title')
+        if (page.pageCount.displayed) {
+            page.pageCount.value('0')  // min is 1
         }
-        createButton.click()
+        page.createButton.click()
 
         then: "validation error is displayed or book is created (if pageCount nullable)"
         waitFor {
@@ -145,16 +151,17 @@ class FieldsValidationSpec extends ContainerGebSpec {
         }
     }
 
+    // TODO: Not fully implemented
     def "book isbn pattern validation shows error for invalid format"() {
         when: "navigating to create book page"
-        to BookCreatePage
+        def page = to BookCreatePage
 
         and: "entering invalid ISBN"
-        titleField.value('Book With Invalid ISBN')
-        if (isbn.displayed) {
-            isbn.value('invalid-isbn')  // Should match /^(?:\d{10}|\d{13})$/
+        page.titleField.value('Book With Invalid ISBN')
+        if (page.isbn.displayed) {
+            page.isbn.value('invalid-isbn')  // Should match /^(?:\d{10}|\d{13})$/
         }
-        createButton.click()
+        page.createButton.click()
 
         then: "validation error is displayed or book created (isbn nullable)"
         waitFor {
@@ -169,29 +176,29 @@ class FieldsValidationSpec extends ContainerGebSpec {
 
     def "validation errors persist field values on re-display"() {
         when: "navigating to create author page"
-        to AuthorCreatePage
+        def page = to AuthorCreatePage
 
         and: "filling in some fields and triggering validation error"
-        name = 'Preserved Name'
-        email = 'invalid-email'
-        createButton.click()
+        page.name = 'Preserved Name'
+        page.email = 'invalid-email'
+        page.createButton.click()
 
         then: "name field value is preserved"
         waitFor { currentUrl.contains('/author/create') || $('input[name=name]').value() }
         
         // The field should retain its value after validation failure
-        $('input[name=name]').value() == 'Preserved Name' ||
-        $('input[name=name]').value()?.contains('Preserved')
+        $('input[name=name]').value() == 'Preserved Name'
     }
 
+    // TODO: Not fully implemented
     def "multiple validation errors displayed together"() {
         when: "navigating to create author page"
-        to AuthorCreatePage
+        def page = to AuthorCreatePage
 
         and: "submitting with multiple invalid fields"
-        name = ''
-        email = 'not-valid'
-        createButton.click()
+        page.name = ''
+        page.email = 'not-valid'
+        page.createButton.click()
 
         then: "multiple errors should be displayed"
         waitFor {
@@ -202,16 +209,17 @@ class FieldsValidationSpec extends ContainerGebSpec {
         }
     }
 
+    // TODO: Not fully implemented
     def "form retains field values after validation error"() {
         when: "navigating to create book page"
-        to BookCreatePage
+        def page = to BookCreatePage
 
         and: "filling form with some valid and invalid data"
-        titleField.value('')  // Invalid - blank
-        if (description.displayed) {
-            description.value('This is a test description that should be preserved')
+        page.titleField.value('')  // Invalid - blank
+        if (page.description.displayed) {
+            page.description.value('This is a test description that should be preserved')
         }
-        createButton.click()
+        page.createButton.click()
 
         then: "form is re-displayed with preserved values"
         waitFor { currentUrl.contains('/book/create') || currentUrl.contains('/book/save') }
@@ -224,14 +232,15 @@ class FieldsValidationSpec extends ContainerGebSpec {
         }
     }
 
+    // TODO: Not fully implemented
     def "error styling applied to invalid fields"() {
         when: "navigating to create author page"
-        to AuthorCreatePage
+        def page = to AuthorCreatePage
 
         and: "triggering validation error"
-        name.value('')
-        email.value('valid@example.com')
-        createButton.click()
+        page.name.value('')
+        page.email.value('valid@example.com')
+        page.createButton.click()
 
         then: "we stay on create/save page (validation failed) or error styling is applied"
         waitFor { 

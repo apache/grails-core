@@ -16,14 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package pubsub.demo
+
+import java.util.concurrent.atomic.AtomicInteger
+
+import groovy.transform.CompileStatic
 
 import grails.events.Event
 import grails.events.annotation.Subscriber
-import groovy.transform.CompileStatic
-
-import java.util.concurrent.atomic.AtomicInteger
 
 @CompileStatic
 class TotalService {

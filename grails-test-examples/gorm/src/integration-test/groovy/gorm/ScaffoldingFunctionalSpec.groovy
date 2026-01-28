@@ -16,26 +16,32 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package gorm
+
+import gorm.pages.AuthorCreatePage
+import gorm.pages.AuthorListPage
+import gorm.pages.AuthorShowPage
+import gorm.pages.BookCreatePage
+import gorm.pages.BookListPage
+import gorm.pages.BookShowPage
+import spock.lang.Shared
+import spock.lang.Stepwise
 
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
-import gorm.pages.*
-import spock.lang.Stepwise
 
 /**
  * Functional tests for Author and Book scaffolding in the gorm test app.
  * 
  * Tests CRUD operations and relationship handling between Author and Book entities.
  */
-@Integration
 @Stepwise
+@Integration
 class ScaffoldingFunctionalSpec extends ContainerGebSpec {
 
     // Store created entity IDs for use across @Stepwise tests
-    @spock.lang.Shared String authorId
-    @spock.lang.Shared String bookId
+    @Shared String authorId
+    @Shared String bookId
 
     def "author list page displays"() {
         when: "navigating to author list"
@@ -47,14 +53,14 @@ class ScaffoldingFunctionalSpec extends ContainerGebSpec {
 
     def "can create new author"() {
         when: "navigating to create author page"
-        to AuthorCreatePage
+        def page = to AuthorCreatePage
 
         and: "filling in author details"
-        name = 'Jane Austen'
-        email = 'jane.austen@example.com'
+        page.name = 'Jane Austen'
+        page.email = 'jane.austen@example.com'
 
         and: "submitting the form"
-        createButton.click()
+        page.createButton.click()
 
         then: "author is created and show page displayed"
         waitFor {
@@ -107,10 +113,10 @@ class ScaffoldingFunctionalSpec extends ContainerGebSpec {
 
     def "can create new book with author association"() {
         when: "navigating to create book page"
-        to BookCreatePage
+        def page = to BookCreatePage
 
         and: "filling in book details"
-        titleField = 'Pride and Prejudice'
+        page.titleField = 'Pride and Prejudice'
         
         // Select author if dropdown exists
         if ($('select[name="author.id"]').displayed || $('select[name=author]').displayed) {
@@ -121,7 +127,7 @@ class ScaffoldingFunctionalSpec extends ContainerGebSpec {
         }
 
         and: "submitting the form"
-        createButton.click()
+        page.createButton.click()
 
         then: "book is created"
         waitFor {
@@ -166,12 +172,12 @@ class ScaffoldingFunctionalSpec extends ContainerGebSpec {
 
     def "validation errors displayed for invalid author"() {
         when: "navigating to create author page"
-        to AuthorCreatePage
+        def page = to AuthorCreatePage
 
         and: "submitting with empty required fields"
-        name = ''
-        email = 'invalid-email'
-        createButton.click()
+        page.name = ''
+        page.email = 'invalid-email'
+        page.createButton.click()
 
         then: "validation errors are displayed"
         waitFor {
@@ -186,11 +192,11 @@ class ScaffoldingFunctionalSpec extends ContainerGebSpec {
 
     def "validation errors displayed for invalid book"() {
         when: "navigating to create book page"
-        to BookCreatePage
+        def page = to BookCreatePage
 
         and: "submitting with empty required fields"
-        titleField = ''
-        createButton.click()
+        page.titleField = ''
+        page.createButton.click()
 
         then: "validation errors are displayed"
         waitFor {
@@ -205,9 +211,9 @@ class ScaffoldingFunctionalSpec extends ContainerGebSpec {
 
     def "can delete book"() {
         given: "create a book to delete"
-        to BookCreatePage
-        titleField = 'Book To Delete'
-        createButton.click()
+        def page = to BookCreatePage
+        page.titleField = 'Book To Delete'
+        page.createButton.click()
         waitFor { currentUrl.contains('/book/show/') }
 
         when: "clicking delete button"
@@ -229,10 +235,10 @@ class ScaffoldingFunctionalSpec extends ContainerGebSpec {
 
     def "can delete author"() {
         given: "create an author to delete"
-        to AuthorCreatePage
-        name = 'Author To Delete'
-        email = 'delete.me@example.com'
-        createButton.click()
+        def page = to AuthorCreatePage
+        page.name = 'Author To Delete'
+        page.email = 'delete.me@example.com'
+        page.createButton.click()
         waitFor { currentUrl.contains('/author/show/') }
 
         when: "clicking delete button"
@@ -262,21 +268,21 @@ class ScaffoldingFunctionalSpec extends ContainerGebSpec {
 
     def "author hasMany books relationship displayed on show page"() {
         given: "create author with book"
-        to AuthorCreatePage
-        name = 'Charles Dickens'
-        email = 'charles.dickens@example.com'
-        createButton.click()
+        def page = to AuthorCreatePage
+        page.name = 'Charles Dickens'
+        page.email = 'charles.dickens@example.com'
+        page.createButton.click()
         waitFor { currentUrl.contains('/author/show/') }
         def authorShowUrl = currentUrl
 
         and: "create book for this author"
-        to BookCreatePage
-        titleField = 'A Tale of Two Cities'
+        page = to BookCreatePage
+        page.titleField = 'A Tale of Two Cities'
         def authorSelect = $('select[name="author.id"]') ?: $('select[name=author]')
         if (authorSelect?.displayed) {
             authorSelect.find('option').last().click()
         }
-        createButton.click()
+        page.createButton.click()
 
         when: "viewing author show page"
         go authorShowUrl

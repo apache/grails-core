@@ -16,14 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package gorm
+
+import spock.lang.Specification
+import spock.lang.Unroll
+
+import org.springframework.beans.factory.annotation.Autowired
 
 import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
-import org.springframework.beans.factory.annotation.Autowired
-import spock.lang.Specification
-import spock.lang.Unroll
 
 /**
  * Tests for GORM Data Services - abstract class-based services with
@@ -32,8 +33,8 @@ import spock.lang.Unroll
  * Data Services are a powerful feature of GORM that generates
  * service implementations at compile time based on method signatures.
  */
-@Integration(applicationClass = Application)
 @Rollback
+@Integration
 class GormDataServicesSpec extends Specification {
 
     @Autowired
@@ -41,16 +42,16 @@ class GormDataServicesSpec extends Specification {
 
     def setup() {
         // Clean up and create fresh test data
-        Book.executeUpdate("delete from Book")
-        Author.executeUpdate("delete from Author")
+        Book.executeUpdate('delete from Book')
+        Author.executeUpdate('delete from Author')
 
-        def author = new Author(name: "Stephen King", email: "stephen@king.com").save(flush: true)
+        def author = new Author(name: 'Stephen King', email: 'stephen@king.com').save(flush: true)
 
-        new Book(title: "The Stand", isbn: "1234567890", pageCount: 1153, price: 19.99, inStock: true, author: author).save(flush: true)
-        new Book(title: "It", isbn: "0987654321", pageCount: 1138, price: 18.99, inStock: true, author: author).save(flush: true)
-        new Book(title: "The Shining", isbn: "1122334455", pageCount: 447, price: 14.99, inStock: false, author: author).save(flush: true)
-        new Book(title: "Carrie", isbn: "5566778899", pageCount: 199, price: 12.99, inStock: true).save(flush: true)
-        new Book(title: "Salem's Lot", pageCount: 439, price: 15.99, inStock: false).save(flush: true)
+        new Book(title: 'The Stand', isbn: '1234567890', pageCount: 1153, price: 19.99, inStock: true, author: author).save(flush: true)
+        new Book(title: 'It', isbn: '0987654321', pageCount: 1138, price: 18.99, inStock: true, author: author).save(flush: true)
+        new Book(title: 'The Shining', isbn: '1122334455', pageCount: 447, price: 14.99, inStock: false, author: author).save(flush: true)
+        new Book(title: 'Carrie', isbn: '5566778899', pageCount: 199, price: 12.99, inStock: true).save(flush: true)
+        new Book(title: 'Salem\'s Lot', pageCount: 439, price: 15.99, inStock: false).save(flush: true)
     }
 
     // ============================================
@@ -59,15 +60,15 @@ class GormDataServicesSpec extends Specification {
 
     void "test get by id"() {
         given: "an existing book"
-        def book = Book.findByTitle("The Stand")
+        def book = Book.findByTitle('The Stand')
 
         when: "retrieving by id through data service"
         def result = bookDataService.get(book.id)
 
         then: "the book is found"
         result != null
-        result.title == "The Stand"
-        result.isbn == "1234567890"
+        result.title == 'The Stand'
+        result.isbn == '1234567890'
     }
 
     void "test list with pagination"() {
@@ -85,20 +86,20 @@ class GormDataServicesSpec extends Specification {
 
     void "test save new book"() {
         given: "a new book"
-        def book = new Book(title: "Doctor Sleep", pageCount: 531, price: 16.99, inStock: true)
+        def book = new Book(title: 'Doctor Sleep', pageCount: 531, price: 16.99, inStock: true)
 
         when: "saving through data service"
         def saved = bookDataService.save(book)
 
         then: "book is persisted"
         saved.id != null
-        saved.title == "Doctor Sleep"
+        saved.title == 'Doctor Sleep'
         bookDataService.count() == 6
     }
 
     void "test delete"() {
         given: "an existing book"
-        def book = Book.findByTitle("Carrie")
+        def book = Book.findByTitle('Carrie')
         def bookId = book.id
 
         when: "deleting through data service"
@@ -107,7 +108,7 @@ class GormDataServicesSpec extends Specification {
 
         then: "book is removed"
         Book.get(bookId) == null
-        bookDataService.findByTitle("Carrie") == null
+        bookDataService.findByTitle('Carrie') == null
     }
 
     // ============================================
@@ -116,18 +117,18 @@ class GormDataServicesSpec extends Specification {
 
     void "test findByTitle"() {
         expect: "finding by title works"
-        bookDataService.findByTitle("It") != null
-        bookDataService.findByTitle("It").isbn == "0987654321"
-        bookDataService.findByTitle("NonExistent") == null
+        bookDataService.findByTitle('It') != null
+        bookDataService.findByTitle('It').isbn == '0987654321'
+        bookDataService.findByTitle('NonExistent') == null
     }
 
     void "test findAllByTitle"() {
         when: "finding all by title"
-        def results = bookDataService.findAllByTitle("The Stand")
+        def results = bookDataService.findAllByTitle('The Stand')
 
         then: "returns matching books"
         results.size() == 1
-        results[0].title == "The Stand"
+        results[0].title == 'The Stand'
     }
 
     void "test findAllByInStock"() {
@@ -166,29 +167,29 @@ class GormDataServicesSpec extends Specification {
 
     void "test existsByTitle (manual implementation)"() {
         expect: "exists queries work via manual implementation"
-        bookDataService.existsByTitle("It") == true
-        bookDataService.existsByTitle("NonExistent") == false
+        bookDataService.existsByTitle('It') == true
+        bookDataService.existsByTitle('NonExistent') == false
     }
 
     void "test findByIsbnValue for nullable field"() {
         expect: "finding by nullable isbn works via manual HQL"
-        bookDataService.findByIsbnValue("1234567890") != null
-        bookDataService.findByIsbnValue("1234567890").title == "The Stand"
-        bookDataService.findByIsbnValue("0000000000") == null
+        bookDataService.findByIsbnValue('1234567890') != null
+        bookDataService.findByIsbnValue('1234567890').title == 'The Stand'
+        bookDataService.findByIsbnValue('0000000000') == null
         bookDataService.findByIsbnValue(null) == null
     }
 
     void "test countByTitleLike"() {
         expect: "count with like pattern works"
-        bookDataService.countByTitleLike("The%") == 2  // "The Stand", "The Shining"
-        bookDataService.countByTitleLike("%Lot") == 1  // "Salem's Lot"
+        bookDataService.countByTitleLike('The%') == 2  // 'The Stand', 'The Shining'
+        bookDataService.countByTitleLike('%Lot') == 1  // "Salem's Lot"
     }
 
     void "test findByTitleAndOptionalIsbn"() {
         expect: "finding with optional isbn works"
-        bookDataService.findByTitleAndOptionalIsbn("The Stand", "1234567890") != null
-        bookDataService.findByTitleAndOptionalIsbn("The Stand", "wrong-isbn") == null
-        bookDataService.findByTitleAndOptionalIsbn("The Stand", null)?.title == "The Stand"
+        bookDataService.findByTitleAndOptionalIsbn('The Stand', '1234567890') != null
+        bookDataService.findByTitleAndOptionalIsbn('The Stand', 'wrong-isbn') == null
+        bookDataService.findByTitleAndOptionalIsbn('The Stand', null)?.title == 'The Stand'
     }
 
     // ============================================
@@ -197,11 +198,11 @@ class GormDataServicesSpec extends Specification {
 
     void "test findByTitlePattern with regex-like pattern"() {
         when: "searching with pattern"
-        def results = bookDataService.findByTitlePattern("The%")
+        def results = bookDataService.findByTitlePattern('The%')
 
         then: "matching books are found"
         results.size() == 2
-        results*.title.every { it.startsWith("The") }
+        results*.title.every { it.startsWith('The') }
     }
 
     void "test findByPageRange"() {
@@ -219,7 +220,7 @@ class GormDataServicesSpec extends Specification {
 
         then: "matching books are found"
         results.size() == 1  // Only Carrie at 12.99 is in stock and under 15
-        results[0].title == "Carrie"
+        results[0].title == 'Carrie'
     }
 
     // ============================================
@@ -228,13 +229,13 @@ class GormDataServicesSpec extends Specification {
 
     void "test searchByTitleHql"() {
         when: "searching with HQL pattern"
-        def results = bookDataService.searchByTitleHql("The%")
+        def results = bookDataService.searchByTitleHql('The%')
 
         then: "results are found and ordered"
         results.size() == 2
         // Ordered by title
-        results[0].title == "The Shining"
-        results[1].title == "The Stand"
+        results[0].title == 'The Shining'
+        results[1].title == 'The Stand'
     }
 
     void "test countBooksWithAuthor"() {
@@ -248,7 +249,7 @@ class GormDataServicesSpec extends Specification {
 
         then: "all titles returned"
         titles.size() == 5
-        titles.containsAll(["The Stand", "It", "The Shining", "Carrie", "Salem's Lot"])
+        titles.containsAll(['The Stand', 'It', 'The Shining', 'Carrie', 'Salem\'s Lot'])
     }
 
     // ============================================
@@ -257,13 +258,13 @@ class GormDataServicesSpec extends Specification {
 
     void "test updateStockStatus"() {
         given: "an out of stock book"
-        def book = Book.findByTitle("The Shining")
+        def book = Book.findByTitle('The Shining')
         assert book.inStock == false
 
         when: "updating stock status"
         def updated = bookDataService.updateStockStatus(book.id, true)
         Book.withSession { it.flush(); it.clear() }
-        book = Book.findByTitle("The Shining")
+        book = Book.findByTitle('The Shining')
 
         then: "update is applied"
         updated == 1
@@ -276,11 +277,11 @@ class GormDataServicesSpec extends Specification {
 
     void "test deleteByTitle"() {
         when: "deleting by title"
-        def deleted = bookDataService.deleteByTitle("Carrie")
+        def deleted = bookDataService.deleteByTitle('Carrie')
 
         then: "book is deleted"
         deleted == 1
-        Book.findByTitle("Carrie") == null
+        Book.findByTitle('Carrie') == null
         bookDataService.count() == 4
     }
 
@@ -329,9 +330,9 @@ class GormDataServicesSpec extends Specification {
 
         where:
         title           | expectedFound
-        "The Stand"     | true
-        "It"            | true
-        ""              | false
-        "NONEXISTENT"   | false
+        'The Stand'     | true
+        'It'            | true
+        ''              | false
+        'NONEXISTENT'   | false
     }
 }

@@ -16,16 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package gorm
+
+import spock.lang.Specification
+
+import org.springframework.beans.factory.annotation.Autowired
 
 import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
-import org.springframework.beans.factory.annotation.Autowired
-import spock.lang.*
 
-@Integration(applicationClass = Application)
 @Rollback
+@Integration
 class UserSpec extends Specification {
 
     @Autowired
@@ -34,16 +35,16 @@ class UserSpec extends Specification {
     void "Test where query over association id works"() {
         given: "Cities and users are set up"
             // Create test data within the test to ensure it exists
-            def london = City.findByName("London") ?: new City(name: "London")
+            def london = City.findByName('London') ?: new City(name: 'London')
             if (!london.id) {
-                london.addToUsers(name: "Bob")
-                london.addToUsers(name: "Fred")
+                london.addToUsers(name: 'Bob')
+                london.addToUsers(name: 'Fred')
                 london.save(flush: true)
             }
 
-            def paris = City.findByName("Paris") ?: new City(name: "Paris")
+            def paris = City.findByName('Paris') ?: new City(name: 'Paris')
             if (!paris.id) {
-                paris.addToUsers(name: "Joe")
+                paris.addToUsers(name: 'Joe')
                 paris.save(flush: true)
             }
 

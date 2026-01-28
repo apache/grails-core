@@ -33,7 +33,7 @@ class InterceptorTestController {
      * Simple action for testing interceptor before/after execution.
      */
     def index() {
-        executionOrder << "controller:index"
+        executionOrder << 'controller:index'
         render([
             action: 'index',
             executionOrder: new ArrayList<>(executionOrder)
@@ -44,7 +44,7 @@ class InterceptorTestController {
      * Action for testing interceptor ordering.
      */
     def testOrder() {
-        executionOrder << "controller:testOrder"
+        executionOrder << 'controller:testOrder'
         render([
             action: 'testOrder',
             executionOrder: new ArrayList<>(executionOrder)
@@ -55,7 +55,7 @@ class InterceptorTestController {
      * Action that can be blocked by interceptor.
      */
     def blocked() {
-        executionOrder << "controller:blocked"
+        executionOrder << 'controller:blocked'
         render([
             action: 'blocked',
             message: 'This should not be seen if blocked'
@@ -79,7 +79,7 @@ class InterceptorTestController {
      * Action for testing model modification by interceptor.
      */
     def modifyModel() {
-        executionOrder << "controller:modifyModel"
+        executionOrder << 'controller:modifyModel'
         [
             originalValue: 'from controller',
             timestamp: System.currentTimeMillis()
@@ -90,7 +90,7 @@ class InterceptorTestController {
      * Action that returns data to be potentially modified by after interceptor.
      */
     def dataAction() {
-        executionOrder << "controller:dataAction"
+        executionOrder << 'controller:dataAction'
         render([
             data: params.data ?: 'default',
             interceptorModified: false
@@ -142,7 +142,7 @@ class InterceptorTestController {
      * Action for testing afterView interceptor.
      */
     def withView() {
-        executionOrder << "controller:withView"
+        executionOrder << 'controller:withView'
         [message: 'Hello from controller']
     }
 
@@ -152,7 +152,7 @@ class InterceptorTestController {
     def slowAction() {
         def delay = params.int('delay') ?: 100
         Thread.sleep(delay)
-        executionOrder << "controller:slowAction"
+        executionOrder << 'controller:slowAction'
         render([
             action: 'slowAction',
             delay: delay
@@ -163,7 +163,7 @@ class InterceptorTestController {
      * Action for testing conditional interceptor matching.
      */
     def conditionalAction() {
-        executionOrder << "controller:conditionalAction"
+        executionOrder << 'controller:conditionalAction'
         render([
             action: 'conditionalAction',
             param: params.match

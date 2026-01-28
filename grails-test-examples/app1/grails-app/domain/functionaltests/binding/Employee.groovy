@@ -19,7 +19,6 @@
 
 package functionaltests.binding
 
-import grails.databinding.BindInitializer
 import grails.databinding.BindUsing
 import grails.databinding.BindingFormat
 

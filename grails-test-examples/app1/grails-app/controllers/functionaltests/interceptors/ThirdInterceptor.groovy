@@ -32,17 +32,17 @@ class ThirdInterceptor {
     }
 
     boolean before() {
-        InterceptorTestController.executionOrder << "third:before"
+        InterceptorTestController.executionOrder << 'third:before'
         request.setAttribute('thirdInterceptorRan', true)
         true
     }
 
     boolean after() {
-        InterceptorTestController.executionOrder << "third:after"
+        InterceptorTestController.executionOrder << 'third:after'
         true
     }
 
     void afterView() {
-        InterceptorTestController.executionOrder << "third:afterView"
+        InterceptorTestController.executionOrder << 'third:afterView'
     }
 }

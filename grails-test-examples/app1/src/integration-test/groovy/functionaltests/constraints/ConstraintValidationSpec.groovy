@@ -16,21 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functionaltests.constraints
 
-import functionaltests.Application
-import grails.testing.mixin.integration.Integration
-import grails.gorm.transactions.Rollback
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import grails.gorm.transactions.Rollback
+import grails.testing.mixin.integration.Integration
 
 /**
  * Integration tests for GORM constraint validation.
  * Tests built-in constraints, custom validators, and cross-field validation.
  */
-@Integration(applicationClass = Application)
 @Rollback
+@Integration
 class ConstraintValidationSpec extends Specification {
 
     // ========== Product Constraints Tests ==========

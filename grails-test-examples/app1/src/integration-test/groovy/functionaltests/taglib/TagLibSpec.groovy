@@ -16,74 +16,66 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functionaltests.taglib
 
-import functionaltests.Application
-import grails.testing.mixin.integration.Integration
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.client.HttpClient
+import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import grails.testing.mixin.integration.Integration
 
 /**
  * Integration tests for GSP Tag Libraries.
  * Tests both custom tag libraries and built-in Grails tags.
  */
-@Integration(applicationClass = Application)
+@Integration
 class TagLibSpec extends Specification {
 
-    private HttpClient createClient() {
-        HttpClient.create(new URL("http://localhost:$serverPort"))
+    @Shared
+    HttpClient client
+
+    def setup() {
+        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
+    }
+
+    def cleanupSpec() {
+        client.close()
     }
 
     // ========== Custom Tag: hello ==========
 
     def "custom:hello tag renders greeting with name attribute"() {
-        given: "a request with a name parameter"
-        def client = createClient()
-
         when: "calling the hello tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testHelloTag?name=Grails"),
+            HttpRequest.GET('/tagLibTest/testHelloTag?name=Grails'),
             String
         )
 
         then: "greeting is rendered with the name"
         response.status.code == 200
         response.body().contains('Hello, Grails!')
-
-        cleanup:
-        client.close()
     }
 
     def "custom:hello tag uses default name when not provided"() {
-        given: "a request without a name parameter"
-        def client = createClient()
-
         when: "calling the hello tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testHelloTag"),
+            HttpRequest.GET('/tagLibTest/testHelloTag'),
             String
         )
 
         then: "greeting is rendered with default name"
         response.status.code == 200
         response.body().contains('Hello, World!')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Custom Tag: wrapper ==========
 
     def "custom:wrapper tag renders title and body content"() {
-        given: "a request with title and content"
-        def client = createClient()
-
         when: "calling the wrapper tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testWrapperTag?title=My%20Section&content=Section%20content"),
+            HttpRequest.GET('/tagLibTest/testWrapperTag?title=My%20Section&content=Section%20content'),
             String
         )
 
@@ -93,38 +85,26 @@ class TagLibSpec extends Specification {
         body.contains('<div class="wrapper">')
         body.contains('<h2>My Section</h2>')
         body.contains('Section content')
-
-        cleanup:
-        client.close()
     }
 
     def "custom:wrapper tag applies custom CSS class"() {
-        given: "a request with custom CSS class"
-        def client = createClient()
-
         when: "calling the wrapper tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testWrapperTag?title=Test&content=Test&cssClass=custom-wrapper"),
+            HttpRequest.GET('/tagLibTest/testWrapperTag?title=Test&content=Test&cssClass=custom-wrapper'),
             String
         )
 
         then: "custom CSS class is applied"
         response.status.code == 200
         response.body().contains('<div class="custom-wrapper">')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Custom Tag: iterate ==========
 
     def "custom:iterate tag iterates over items"() {
-        given: "a request with items"
-        def client = createClient()
-
         when: "calling the iterate tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testIterateTag?items=A,B,C"),
+            HttpRequest.GET('/tagLibTest/testIterateTag?items=A,B,C'),
             String
         )
 
@@ -134,18 +114,12 @@ class TagLibSpec extends Specification {
         body.contains('Item: A')
         body.contains('Item: B')
         body.contains('Item: C')
-
-        cleanup:
-        client.close()
     }
 
     def "custom:iterate tag uses separator between items"() {
-        given: "a request with separator"
-        def client = createClient()
-
         when: "calling the iterate tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testIterateTag?items=X,Y,Z&separator=-"),
+            HttpRequest.GET('/tagLibTest/testIterateTag?items=X,Y,Z&separator=-'),
             String
         )
 
@@ -153,20 +127,14 @@ class TagLibSpec extends Specification {
         response.status.code == 200
         def body = response.body()
         body.contains('Item: X-Item: Y-Item: Z')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Custom Tag: showIf/hideIf ==========
 
     def "custom:showIf tag shows content when condition is true"() {
-        given: "a request with true condition"
-        def client = createClient()
-
         when: "calling the conditional tags test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testConditionalTags?condition=true"),
+            HttpRequest.GET('/tagLibTest/testConditionalTags?condition=true'),
             String
         )
 
@@ -175,18 +143,12 @@ class TagLibSpec extends Specification {
         def body = response.body()
         body.contains('id="showIf-result">VISIBLE')
         !body.contains('id="hideIf-result">HIDDEN')
-
-        cleanup:
-        client.close()
     }
 
     def "custom:hideIf tag shows content when condition is false"() {
-        given: "a request with false condition"
-        def client = createClient()
-
         when: "calling the conditional tags test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testConditionalTags?condition=false"),
+            HttpRequest.GET('/tagLibTest/testConditionalTags?condition=false'),
             String
         )
 
@@ -195,18 +157,12 @@ class TagLibSpec extends Specification {
         def body = response.body()
         !body.contains('id="showIf-result">VISIBLE')
         body.contains('id="hideIf-result">HIDDEN')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Custom Tag: formatted ==========
 
     @Unroll
     def "custom:formatted tag formats value as #format"() {
-        given: "a request with format parameters"
-        def client = createClient()
-
         when: "calling the formatted tag test endpoint"
         def response = client.toBlocking().exchange(
             HttpRequest.GET("/tagLibTest/testFormattedTag?value=${value}&format=${format}&decimals=${decimals}"),
@@ -216,9 +172,6 @@ class TagLibSpec extends Specification {
         then: "value is formatted correctly"
         response.status.code == 200
         response.body().contains(expected)
-
-        cleanup:
-        client.close()
 
         where:
         value    | format       | decimals | expected
@@ -230,12 +183,9 @@ class TagLibSpec extends Specification {
     // ========== Custom Tag: list ==========
 
     def "custom:list tag renders unordered list by default"() {
-        given: "a request with items"
-        def client = createClient()
-
         when: "calling the list tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testListTag?items=Apple,Banana,Cherry"),
+            HttpRequest.GET('/tagLibTest/testListTag?items=Apple,Banana,Cherry'),
             String
         )
 
@@ -247,18 +197,12 @@ class TagLibSpec extends Specification {
         body.contains('<li>Banana</li>')
         body.contains('<li>Cherry</li>')
         body.contains('</ul>')
-
-        cleanup:
-        client.close()
     }
 
     def "custom:list tag renders ordered list when type is ordered"() {
-        given: "a request with ordered type"
-        def client = createClient()
-
         when: "calling the list tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testListTag?items=First,Second,Third&type=ordered"),
+            HttpRequest.GET('/tagLibTest/testListTag?items=First,Second,Third&type=ordered'),
             String
         )
 
@@ -267,20 +211,14 @@ class TagLibSpec extends Specification {
         def body = response.body()
         body.contains('<ol>')
         body.contains('</ol>')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Custom Tag: panel ==========
 
     def "custom:panel tag renders panel with title and body"() {
-        given: "a request with panel parameters"
-        def client = createClient()
-
         when: "calling the panel tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testPanelTag?title=Info%20Panel&type=info&content=Panel%20content"),
+            HttpRequest.GET('/tagLibTest/testPanelTag?title=Info%20Panel&type=info&content=Panel%20content'),
             String
         )
 
@@ -292,36 +230,24 @@ class TagLibSpec extends Specification {
         body.contains('<h3>Info Panel</h3>')
         body.contains('class="panel-body"')
         body.contains('Panel content')
-
-        cleanup:
-        client.close()
     }
 
     def "custom:panel tag renders collapse button when collapsible"() {
-        given: "a request with collapsible panel"
-        def client = createClient()
-
         when: "calling the panel tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testPanelTag?title=Collapsible&collapsible=true"),
+            HttpRequest.GET('/tagLibTest/testPanelTag?title=Collapsible&collapsible=true'),
             String
         )
 
         then: "collapse button is rendered"
         response.status.code == 200
         response.body().contains('class="collapse-btn"')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Custom Tag: badge ==========
 
     @Unroll
     def "custom:badge tag renders badge with type=#type and size=#size"() {
-        given: "a request with badge parameters"
-        def client = createClient()
-
         when: "calling the badge tag test endpoint"
         def response = client.toBlocking().exchange(
             HttpRequest.GET("/tagLibTest/testBadgeTag?type=${type}&size=${size}&content=${content}"),
@@ -335,9 +261,6 @@ class TagLibSpec extends Specification {
         body.contains("badge-${size}")
         body.contains(">${content}<")
 
-        cleanup:
-        client.close()
-
         where:
         type      | size    | content
         'success' | 'small' | '10'
@@ -348,12 +271,9 @@ class TagLibSpec extends Specification {
     // ========== Custom Tag: progress ==========
 
     def "custom:progress tag renders progress bar with percentage"() {
-        given: "a request with progress parameters"
-        def client = createClient()
-
         when: "calling the progress tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testProgressTag?value=75&max=100"),
+            HttpRequest.GET('/tagLibTest/testProgressTag?value=75&max=100'),
             String
         )
 
@@ -364,18 +284,12 @@ class TagLibSpec extends Specification {
         body.contains('class="progress-bar"')
         body.contains('style="width: 75%"')
         body.contains('75%')
-
-        cleanup:
-        client.close()
     }
 
     def "custom:progress tag hides label when showLabel is false"() {
-        given: "a request with showLabel=false"
-        def client = createClient()
-
         when: "calling the progress tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testProgressTag?value=50&max=100&showLabel=false"),
+            HttpRequest.GET('/tagLibTest/testProgressTag?value=50&max=100&showLabel=false'),
             String
         )
 
@@ -384,20 +298,14 @@ class TagLibSpec extends Specification {
         def body = response.body()
         body.contains('class="progress-bar"')
         !body.contains('>50%<')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Custom Tag: repeat ==========
 
     def "custom:repeat tag repeats body content specified times"() {
-        given: "a request with times parameter"
-        def client = createClient()
-
         when: "calling the repeat tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testRepeatTag?times=3"),
+            HttpRequest.GET('/tagLibTest/testRepeatTag?times=3'),
             String
         )
 
@@ -407,58 +315,40 @@ class TagLibSpec extends Specification {
         body.contains('Repeat #1')
         body.contains('Repeat #2')
         body.contains('Repeat #3')
-
-        cleanup:
-        client.close()
     }
 
     def "custom:repeat tag uses separator between repetitions"() {
-        given: "a request with separator"
-        def client = createClient()
-
         when: "calling the repeat tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testRepeatTag?times=2&separator=%20-%20"),
+            HttpRequest.GET('/tagLibTest/testRepeatTag?times=2&separator=%20-%20'),
             String
         )
 
         then: "repetitions are separated"
         response.status.code == 200
         response.body().contains('Repeat #1 - Repeat #2')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Custom Tag: raw ==========
 
     def "custom:raw tag outputs unescaped HTML content"() {
-        given: "a request with HTML content"
-        def client = createClient()
-
         when: "calling the raw tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testRawTag"),
+            HttpRequest.GET('/tagLibTest/testRawTag'),
             String
         )
 
         then: "HTML content is not escaped"
         response.status.code == 200
         response.body().contains('<strong>Bold Text</strong>')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Custom Tag: definitionList ==========
 
     def "custom:definitionList tag renders definition list from map"() {
-        given: "a request to test definition list"
-        def client = createClient()
-
         when: "calling the definition list tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testDefinitionListTag"),
+            HttpRequest.GET('/tagLibTest/testDefinitionListTag'),
             String
         )
 
@@ -471,78 +361,54 @@ class TagLibSpec extends Specification {
         body.contains('<dt>age</dt>')
         body.contains('<dd>30</dd>')
         body.contains('</dl>')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Custom Tag: requestInfo ==========
 
     def "custom:requestInfo tag retrieves request attributes"() {
-        given: "a request to test request info"
-        def client = createClient()
-
         when: "calling the request info tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testRequestInfoTag?attr=method"),
+            HttpRequest.GET('/tagLibTest/testRequestInfoTag?attr=method'),
             String
         )
 
         then: "request attribute is output"
         response.status.code == 200
         response.body().contains('GET')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Custom Tag: sessionValue ==========
 
     def "custom:sessionValue tag displays default when session value not set"() {
-        given: "a request without session value"
-        def client = createClient()
-
         when: "calling the session value tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testSessionValueTag?key=nonexistent&default=DefaultUser"),
+            HttpRequest.GET('/tagLibTest/testSessionValueTag?key=nonexistent&default=DefaultUser'),
             String
         )
 
         then: "default value is displayed"
         response.status.code == 200
         response.body().contains('DefaultUser')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Custom Tag: setVar ==========
 
     def "custom:setVar tag sets pageScope variable"() {
-        given: "a request to set a variable"
-        def client = createClient()
-
         when: "calling the setVar tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testSetVarTag?varName=testVar&varValue=TestValue"),
+            HttpRequest.GET('/tagLibTest/testSetVarTag?varName=testVar&varValue=TestValue'),
             String
         )
 
         then: "variable is set and accessible"
         response.status.code == 200
         response.body().contains('Variable testVar = TestValue')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Custom Tag: alert ==========
 
     @Unroll
     def "custom:alert tag renders #type alert"() {
-        given: "a request with alert parameters"
-        def client = createClient()
-
         when: "calling the alert tag test endpoint"
         def response = client.toBlocking().exchange(
             HttpRequest.GET("/tagLibTest/testAlertTag?type=${type}&message=${URLEncoder.encode(message, 'UTF-8')}"),
@@ -555,9 +421,6 @@ class TagLibSpec extends Specification {
         body.contains("alert-${type}")
         body.contains(message)
 
-        cleanup:
-        client.close()
-
         where:
         type      | message
         'info'    | 'InfoMessage'
@@ -567,12 +430,9 @@ class TagLibSpec extends Specification {
     }
 
     def "custom:alert tag renders dismissible button when dismissible=true"() {
-        given: "a request with dismissible alert"
-        def client = createClient()
-
         when: "calling the alert tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testAlertTag?type=info&dismissible=true"),
+            HttpRequest.GET('/tagLibTest/testAlertTag?type=info&dismissible=true'),
             String
         )
 
@@ -581,40 +441,28 @@ class TagLibSpec extends Specification {
         def body = response.body()
         body.contains('alert-dismissible')
         body.contains('class="close"')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Custom Tag: join ==========
 
     def "custom:join tag joins items with separator"() {
-        given: "a request with items to join"
-        def client = createClient()
-
         when: "calling the join tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testJoinTag?items=red,green,blue&separator=-"),
+            HttpRequest.GET('/tagLibTest/testJoinTag?items=red,green,blue&separator=-'),
             String
         )
 
         then: "items are joined with separator"
         response.status.code == 200
         response.body().contains('red-green-blue')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Custom Tag: cssClass ==========
 
     def "custom:cssClass tag builds class string from boolean attributes"() {
-        given: "a request with CSS class parameters"
-        def client = createClient()
-
         when: "calling the cssClass tag test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testCssClassTag?base=btn&active=true&disabled=false&highlighted=true"),
+            HttpRequest.GET('/tagLibTest/testCssClassTag?base=btn&active=true&disabled=false&highlighted=true'),
             String
         )
 
@@ -625,20 +473,14 @@ class TagLibSpec extends Specification {
         body.contains('active')
         body.contains('highlighted')
         !body.contains('disabled')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:if ==========
 
     def "g:if tag shows content when condition is true"() {
-        given: "a request with a value greater than 5"
-        def client = createClient()
-
         when: "calling the built-in if test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInIf?value=10"),
+            HttpRequest.GET('/tagLibTest/testBuiltInIf?value=10'),
             String
         )
 
@@ -647,38 +489,26 @@ class TagLibSpec extends Specification {
         def body = response.body()
         body.contains('Greater than 5')
         !body.contains('Less than 5')
-
-        cleanup:
-        client.close()
     }
 
     def "g:elseif and g:else work correctly"() {
-        given: "a request with a value of 30"
-        def client = createClient()
-
         when: "calling the built-in if test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInIf?value=30"),
+            HttpRequest.GET('/tagLibTest/testBuiltInIf?value=30'),
             String
         )
 
         then: "elseif content is shown"
         response.status.code == 200
         response.body().contains('Over 20')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:each ==========
 
     def "g:each tag iterates over collection"() {
-        given: "a request with items"
-        def client = createClient()
-
         when: "calling the built-in each test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInEach?items=A,B,C"),
+            HttpRequest.GET('/tagLibTest/testBuiltInEach?items=A,B,C'),
             String
         )
 
@@ -688,18 +518,12 @@ class TagLibSpec extends Specification {
         body.contains('[A]')
         body.contains('[B]')
         body.contains('[C]')
-
-        cleanup:
-        client.close()
     }
 
     def "g:each tag provides status variable"() {
-        given: "a request with items"
-        def client = createClient()
-
         when: "calling the built-in each test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInEach?items=X,Y,Z"),
+            HttpRequest.GET('/tagLibTest/testBuiltInEach?items=X,Y,Z'),
             String
         )
 
@@ -709,20 +533,14 @@ class TagLibSpec extends Specification {
         body.contains('0:X')
         body.contains('1:Y')
         body.contains('2:Z')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:collect ==========
 
     def "g:collect tag transforms items"() {
-        given: "a request with items"
-        def client = createClient()
-
         when: "calling the built-in collect test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInCollect?items=apple,banana"),
+            HttpRequest.GET('/tagLibTest/testBuiltInCollect?items=apple,banana'),
             String
         )
 
@@ -731,20 +549,14 @@ class TagLibSpec extends Specification {
         def body = response.body()
         body.contains('APPLE')
         body.contains('BANANA')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:findAll ==========
 
     def "g:findAll tag filters items"() {
-        given: "a request with threshold"
-        def client = createClient()
-
         when: "calling the built-in findAll test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInFindAll?threshold=7"),
+            HttpRequest.GET('/tagLibTest/testBuiltInFindAll?threshold=7'),
             String
         )
 
@@ -755,20 +567,14 @@ class TagLibSpec extends Specification {
         body.contains('9')
         body.contains('10')
         !body.contains('7 ')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:link ==========
 
     def "g:link tag creates link with controller and action"() {
-        given: "a request to create a link"
-        def client = createClient()
-
         when: "calling the built-in link test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInLink?targetController=book&targetAction=show&targetId=42&linkText=View"),
+            HttpRequest.GET('/tagLibTest/testBuiltInLink?targetController=book&targetAction=show&targetId=42&linkText=View'),
             String
         )
 
@@ -778,40 +584,28 @@ class TagLibSpec extends Specification {
         body.contains('<a href=')
         body.contains('/book/show/42')
         body.contains('>View</a>')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:createLink ==========
 
     def "g:createLink tag creates URL string"() {
-        given: "a request to create a link URL"
-        def client = createClient()
-
         when: "calling the built-in createLink test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInCreateLink?targetController=book&targetAction=list"),
+            HttpRequest.GET('/tagLibTest/testBuiltInCreateLink?targetController=book&targetAction=list'),
             String
         )
 
         then: "URL is rendered"
         response.status.code == 200
         response.body().contains('/book/list')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:form ==========
 
     def "g:form tag creates form with action"() {
-        given: "a request to create a form"
-        def client = createClient()
-
         when: "calling the built-in form test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInForm?targetController=book&targetAction=save"),
+            HttpRequest.GET('/tagLibTest/testBuiltInForm?targetController=book&targetAction=save'),
             String
         )
 
@@ -822,40 +616,28 @@ class TagLibSpec extends Specification {
         body.contains('action=')
         body.contains('/book/save')
         body.contains('method="post"')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:message ==========
 
     def "g:message tag renders message with default"() {
-        given: "a request with message code"
-        def client = createClient()
-
         when: "calling the built-in message test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInMessage?code=nonexistent.key&default=Default%20Message"),
+            HttpRequest.GET('/tagLibTest/testBuiltInMessage?code=nonexistent.key&default=Default%20Message'),
             String
         )
 
         then: "default message is rendered"
         response.status.code == 200
         response.body().contains('Default Message')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:formatDate ==========
 
     def "g:formatDate tag formats date"() {
-        given: "a request with date"
-        def client = createClient()
-
         when: "calling the built-in formatDate test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInFormatDate"),
+            HttpRequest.GET('/tagLibTest/testBuiltInFormatDate'),
             String
         )
 
@@ -863,20 +645,14 @@ class TagLibSpec extends Specification {
         response.status.code == 200
         // Just verify it rendered something in date format
         response.body() =~ /\d{4}-\d{2}-\d{2}/
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:formatNumber ==========
 
     def "g:formatNumber tag formats number"() {
-        given: "a request with number"
-        def client = createClient()
-
         when: "calling the built-in formatNumber test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInFormatNumber?number=1234567.89"),
+            HttpRequest.GET('/tagLibTest/testBuiltInFormatNumber?number=1234567.89'),
             String
         )
 
@@ -884,20 +660,14 @@ class TagLibSpec extends Specification {
         response.status.code == 200
         // Should contain formatted number (locale-dependent)
         response.body() =~ /1.*234.*567/
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:set ==========
 
     def "g:set tag sets and updates variables"() {
-        given: "a request to test variable setting"
-        def client = createClient()
-
         when: "calling the built-in set test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInSet?initialValue=First&newValue=Second"),
+            HttpRequest.GET('/tagLibTest/testBuiltInSet?initialValue=First&newValue=Second'),
             String
         )
 
@@ -906,80 +676,56 @@ class TagLibSpec extends Specification {
         def body = response.body()
         body.contains('id="set-initial">First')
         body.contains('id="set-updated">Second')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:join ==========
 
     def "g:join tag joins items with delimiter"() {
-        given: "a request with items"
-        def client = createClient()
-
         when: "calling the built-in join test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInJoin?items=red,green,blue&delimiter=%20-%20"),
+            HttpRequest.GET('/tagLibTest/testBuiltInJoin?items=red,green,blue&delimiter=%20-%20'),
             String
         )
 
         then: "items are joined"
         response.status.code == 200
         response.body().contains('red - green - blue')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:include ==========
 
     def "g:include tag includes content from another action"() {
-        given: "a request to test include"
-        def client = createClient()
-
         when: "calling the built-in include test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInInclude?message=Test%20Message"),
+            HttpRequest.GET('/tagLibTest/testBuiltInInclude?message=Test%20Message'),
             String
         )
 
         then: "included content is rendered"
         response.status.code == 200
         response.body().contains('Included content: Test Message')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:render ==========
 
     def "g:render tag renders template with model"() {
-        given: "a request to test template rendering"
-        def client = createClient()
-
         when: "calling the built-in render test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInRender?text=Hello%20Template"),
+            HttpRequest.GET('/tagLibTest/testBuiltInRender?text=Hello%20Template'),
             String
         )
 
         then: "template is rendered"
         response.status.code == 200
         response.body().contains('Template content: Hello Template')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:while ==========
 
     def "g:while tag loops while condition is true"() {
-        given: "a request with count"
-        def client = createClient()
-
         when: "calling the built-in while test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInWhile?count=3"),
+            HttpRequest.GET('/tagLibTest/testBuiltInWhile?count=3'),
             String
         )
 
@@ -990,20 +736,14 @@ class TagLibSpec extends Specification {
         body.contains('Count: 2')
         body.contains('Count: 3')
         !body.contains('Count: 4')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:uploadForm ==========
 
     def "g:uploadForm tag creates multipart form"() {
-        given: "a request to create upload form"
-        def client = createClient()
-
         when: "calling the built-in uploadForm test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInUploadForm"),
+            HttpRequest.GET('/tagLibTest/testBuiltInUploadForm'),
             String
         )
 
@@ -1012,20 +752,14 @@ class TagLibSpec extends Specification {
         def body = response.body()
         body.contains('<form')
         body.contains('enctype="multipart/form-data"')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:select ==========
 
     def "g:select tag creates select element with options"() {
-        given: "a request to create select"
-        def client = createClient()
-
         when: "calling the built-in select test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInSelect?selected=2"),
+            HttpRequest.GET('/tagLibTest/testBuiltInSelect?selected=2'),
             String
         )
 
@@ -1035,20 +769,14 @@ class TagLibSpec extends Specification {
         body.contains('<select')
         body.contains('<option')
         body.contains('value="2" selected')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:radio ==========
 
     def "g:radio tag creates radio buttons"() {
-        given: "a request to create radio buttons"
-        def client = createClient()
-
         when: "calling the built-in radio test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInRadio?selected=Option%20B"),
+            HttpRequest.GET('/tagLibTest/testBuiltInRadio?selected=Option%20B'),
             String
         )
 
@@ -1057,20 +785,14 @@ class TagLibSpec extends Specification {
         def body = response.body()
         body.contains('type="radio"')
         body.contains('checked="checked"')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:checkBox ==========
 
     def "g:checkBox tag creates checkbox"() {
-        given: "a request to create checkbox"
-        def client = createClient()
-
         when: "calling the built-in checkbox test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInCheckBox?checked=true"),
+            HttpRequest.GET('/tagLibTest/testBuiltInCheckBox?checked=true'),
             String
         )
 
@@ -1079,20 +801,14 @@ class TagLibSpec extends Specification {
         def body = response.body()
         body.contains('type="checkbox"')
         body.contains('checked="checked"')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:textArea ==========
 
     def "g:textArea tag creates textarea"() {
-        given: "a request to create textarea"
-        def client = createClient()
-
         when: "calling the built-in textarea test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInTextArea?value=Test%20Content&rows=5&cols=40"),
+            HttpRequest.GET('/tagLibTest/testBuiltInTextArea?value=Test%20Content&rows=5&cols=40'),
             String
         )
 
@@ -1103,20 +819,14 @@ class TagLibSpec extends Specification {
         body.contains('rows="5"')
         body.contains('cols="40"')
         body.contains('Test Content')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:textField ==========
 
     def "g:textField tag creates text input"() {
-        given: "a request to create text field"
-        def client = createClient()
-
         when: "calling the built-in textField test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInTextField?value=Test%20Value&maxlength=50"),
+            HttpRequest.GET('/tagLibTest/testBuiltInTextField?value=Test%20Value&maxlength=50'),
             String
         )
 
@@ -1126,40 +836,28 @@ class TagLibSpec extends Specification {
         body.contains('type="text"')
         body.contains('value="Test Value"')
         body.contains('maxlength="50"')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:passwordField ==========
 
     def "g:passwordField tag creates password input"() {
-        given: "a request to create password field"
-        def client = createClient()
-
         when: "calling the built-in passwordField test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInPasswordField"),
+            HttpRequest.GET('/tagLibTest/testBuiltInPasswordField'),
             String
         )
 
         then: "password field is rendered"
         response.status.code == 200
         response.body().contains('type="password"')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:hiddenField ==========
 
     def "g:hiddenField tag creates hidden input"() {
-        given: "a request to create hidden field"
-        def client = createClient()
-
         when: "calling the built-in hiddenField test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInHiddenField?value=secret-value"),
+            HttpRequest.GET('/tagLibTest/testBuiltInHiddenField?value=secret-value'),
             String
         )
 
@@ -1168,40 +866,28 @@ class TagLibSpec extends Specification {
         def body = response.body()
         body.contains('type="hidden"')
         body.contains('value="secret-value"')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:fieldValue ==========
 
     def "g:fieldValue tag extracts bean field value"() {
-        given: "a request with a bean"
-        def client = createClient()
-
         when: "calling the built-in fieldValue test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInFieldValue?field=title"),
+            HttpRequest.GET('/tagLibTest/testBuiltInFieldValue?field=title'),
             String
         )
 
         then: "field value is extracted"
         response.status.code == 200
         response.body().contains('Grails in Action')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:sortableColumn ==========
 
     def "g:sortableColumn tag creates sortable table header"() {
-        given: "a request to create sortable columns"
-        def client = createClient()
-
         when: "calling the built-in sortableColumn test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInSortableColumn"),
+            HttpRequest.GET('/tagLibTest/testBuiltInSortableColumn'),
             String
         )
 
@@ -1211,20 +897,14 @@ class TagLibSpec extends Specification {
         body.contains('<th')
         body.contains('Title')
         body.contains('Author')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Built-in Tag: g:paginate ==========
 
     def "g:paginate tag creates pagination links"() {
-        given: "a request for pagination"
-        def client = createClient()
-
         when: "calling the built-in paginate test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBuiltInPaginate?total=100&max=10&offset=0"),
+            HttpRequest.GET('/tagLibTest/testBuiltInPaginate?total=100&max=10&offset=0'),
             String
         )
 
@@ -1233,20 +913,14 @@ class TagLibSpec extends Specification {
         def body = response.body()
         // Pagination should contain some links
         body.contains('class=')
-
-        cleanup:
-        client.close()
     }
 
     // ========== Complex/Combined Tests ==========
 
     def "nested custom tags render correctly"() {
-        given: "a request for nested tags"
-        def client = createClient()
-
         when: "calling the nested tags test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testNestedTags"),
+            HttpRequest.GET('/tagLibTest/testNestedTags'),
             String
         )
 
@@ -1255,18 +929,12 @@ class TagLibSpec extends Specification {
         def body = response.body()
         body.contains('<ul>')
         body.contains('class="badge')
-
-        cleanup:
-        client.close()
     }
 
     def "tags work with complex model data"() {
-        given: "a request with complex model"
-        def client = createClient()
-
         when: "calling the tags with model test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testTagsWithModel"),
+            HttpRequest.GET('/tagLibTest/testTagsWithModel'),
             String
         )
 
@@ -1280,18 +948,12 @@ class TagLibSpec extends Specification {
         body.contains('Charlie')
         body.contains('Admin')
         body.contains('User')
-
-        cleanup:
-        client.close()
     }
 
     def "encoding tags properly escape content"() {
-        given: "a request with content to encode"
-        def client = createClient()
-
         when: "calling the encoding tags test endpoint"
         def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testEncodingTags"),
+            HttpRequest.GET('/tagLibTest/testEncodingTags'),
             String
         )
 
@@ -1302,8 +964,5 @@ class TagLibSpec extends Specification {
         body.contains('&lt;script&gt;')
         // Raw content should preserve HTML
         body.contains('id="raw-content">')
-
-        cleanup:
-        client.close()
     }
 }

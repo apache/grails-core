@@ -37,6 +37,9 @@ class EmployeeListPage extends ScaffoldListPage {
         firstNameColumn { tableHeaders.find { it.text().contains('First Name') } }
         lastNameColumn { tableHeaders.find { it.text().contains('Last Name') } }
         emailColumn { tableHeaders.find { it.text().contains('Email') } }
+        sortLink { String columnName ->
+            employeeTable.find('th', text: columnName).find('a')
+        }
     }
 }
 

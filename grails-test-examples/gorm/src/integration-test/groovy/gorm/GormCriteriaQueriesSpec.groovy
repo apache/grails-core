@@ -16,14 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package gorm
+
+import spock.lang.Specification
+import spock.lang.Unroll
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
-import spock.lang.Specification
-import spock.lang.Unroll
 
 /**
  * Tests for GORM Criteria Queries - both createCriteria() and DetachedCriteria.
@@ -31,34 +31,34 @@ import spock.lang.Unroll
  * Criteria queries provide a type-safe, programmatic way to build
  * complex queries without writing HQL strings.
  */
-@Integration(applicationClass = Application)
 @Rollback
+@Integration
 class GormCriteriaQueriesSpec extends Specification {
 
     def setup() {
         // Clean up and create fresh test data
-        Book.executeUpdate("delete from Book")
-        Author.executeUpdate("delete from Author")
+        Book.executeUpdate('delete from Book')
+        Author.executeUpdate('delete from Author')
 
-        def kingAuthor = new Author(name: "Stephen King", email: "stephen@king.com").save(flush: true)
-        def clancyAuthor = new Author(name: "Tom Clancy", email: "tom@clancy.com").save(flush: true)
-        def grishamAuthor = new Author(name: "John Grisham", email: "john@grisham.com").save(flush: true)
+        def kingAuthor = new Author(name: 'Stephen King', email: 'stephen@king.com').save(flush: true)
+        def clancyAuthor = new Author(name: 'Tom Clancy', email: 'tom@clancy.com').save(flush: true)
+        def grishamAuthor = new Author(name: 'John Grisham', email: 'john@grisham.com').save(flush: true)
 
         // Stephen King books
-        new Book(title: "The Stand", isbn: "1234567890", pageCount: 1153, price: 19.99, inStock: true, author: kingAuthor).save(flush: true)
-        new Book(title: "It", isbn: "0987654321", pageCount: 1138, price: 18.99, inStock: true, author: kingAuthor).save(flush: true)
-        new Book(title: "The Shining", isbn: "1122334455", pageCount: 447, price: 14.99, inStock: false, author: kingAuthor).save(flush: true)
+        new Book(title: 'The Stand', isbn: '1234567890', pageCount: 1153, price: 19.99, inStock: true, author: kingAuthor).save(flush: true)
+        new Book(title: 'It', isbn: '0987654321', pageCount: 1138, price: 18.99, inStock: true, author: kingAuthor).save(flush: true)
+        new Book(title: 'The Shining', isbn: '1122334455', pageCount: 447, price: 14.99, inStock: false, author: kingAuthor).save(flush: true)
 
         // Tom Clancy books
-        new Book(title: "The Hunt for Red October", isbn: "2233445566", pageCount: 387, price: 16.99, inStock: true, author: clancyAuthor).save(flush: true)
-        new Book(title: "Patriot Games", isbn: "3344556677", pageCount: 540, price: 15.99, inStock: false, author: clancyAuthor).save(flush: true)
+        new Book(title: 'The Hunt for Red October', isbn: '2233445566', pageCount: 387, price: 16.99, inStock: true, author: clancyAuthor).save(flush: true)
+        new Book(title: 'Patriot Games', isbn: '3344556677', pageCount: 540, price: 15.99, inStock: false, author: clancyAuthor).save(flush: true)
 
         // John Grisham books
-        new Book(title: "The Firm", isbn: "4455667788", pageCount: 421, price: 13.99, inStock: true, author: grishamAuthor).save(flush: true)
-        new Book(title: "A Time to Kill", isbn: "5566778899", pageCount: 515, price: 14.99, inStock: true, author: grishamAuthor).save(flush: true)
+        new Book(title: 'The Firm', isbn: '4455667788', pageCount: 421, price: 13.99, inStock: true, author: grishamAuthor).save(flush: true)
+        new Book(title: 'A Time to Kill', isbn: '5566778899', pageCount: 515, price: 14.99, inStock: true, author: grishamAuthor).save(flush: true)
 
         // Book without author
-        new Book(title: "Anonymous Work", pageCount: 100, price: 9.99, inStock: true).save(flush: true)
+        new Book(title: 'Anonymous Work', pageCount: 100, price: 9.99, inStock: true).save(flush: true)
     }
 
     // ============================================
@@ -83,7 +83,7 @@ class GormCriteriaQueriesSpec extends Specification {
 
         then: "exact match found"
         results.size() == 1
-        results[0].title == "The Stand"
+        results[0].title == 'The Stand'
     }
 
     void "test criteria with like restriction"() {
@@ -94,7 +94,7 @@ class GormCriteriaQueriesSpec extends Specification {
 
         then: "matching books found"
         results.size() == 4  // The Stand, The Shining, The Hunt..., The Firm
-        results.every { it.title.startsWith("The") }
+        results.every { it.title.startsWith('The') }
     }
 
     void "test criteria with ilike (case insensitive)"() {
@@ -148,7 +148,7 @@ class GormCriteriaQueriesSpec extends Specification {
 
         then: "books without ISBN found"
         results.size() == 1
-        results[0].title == "Anonymous Work"
+        results[0].title == 'Anonymous Work'
     }
 
     void "test criteria with isNotNull"() {
@@ -499,7 +499,7 @@ class GormCriteriaQueriesSpec extends Specification {
     void "test HQL with named parameters"() {
         when: "executing HQL with named params"
         def results = Book.executeQuery(
-            "from Book b where b.price > :minPrice and b.inStock = :stock",
+            'from Book b where b.price > :minPrice and b.inStock = :stock',
             [minPrice: 15.00, stock: true]
         )
 
@@ -510,19 +510,19 @@ class GormCriteriaQueriesSpec extends Specification {
     void "test HQL with positional parameters"() {
         when: "executing HQL with named parameter as alternative to positional"
         def results = Book.executeQuery(
-            "from Book b where b.title like :pattern",
+            'from Book b where b.title like :pattern',
             [pattern: 'The%']
         )
 
         then: "results match"
         results.size() == 4
-        results.every { it.title.startsWith("The") }
+        results.every { it.title.startsWith('The') }
     }
 
     void "test HQL with pagination"() {
         when: "executing paginated HQL"
         def results = Book.executeQuery(
-            "from Book b order by b.title",
+            'from Book b order by b.title',
             [max: 3, offset: 0]
         )
 
@@ -533,7 +533,7 @@ class GormCriteriaQueriesSpec extends Specification {
     void "test HQL join query"() {
         when: "executing HQL join"
         def results = Book.executeQuery(
-            "select b from Book b join b.author a where a.name = :authorName",
+            'select b from Book b join b.author a where a.name = :authorName',
             [authorName: 'Stephen King']
         )
 
@@ -545,7 +545,7 @@ class GormCriteriaQueriesSpec extends Specification {
     void "test HQL aggregate functions"() {
         when: "executing HQL aggregates"
         def result = Book.executeQuery(
-            "select count(b), avg(b.price), max(b.pageCount) from Book b"
+            'select count(b), avg(b.price), max(b.pageCount) from Book b'
         )[0]
 
         then: "aggregates calculated"
@@ -557,7 +557,7 @@ class GormCriteriaQueriesSpec extends Specification {
     void "test HQL group by"() {
         when: "executing HQL group by"
         def results = Book.executeQuery(
-            "select a.name, count(b) from Book b join b.author a group by a.name order by count(b) desc"
+            'select a.name, count(b) from Book b join b.author a group by a.name order by count(b) desc'
         )
 
         then: "grouped results"
@@ -569,7 +569,7 @@ class GormCriteriaQueriesSpec extends Specification {
     void "test executeUpdate for bulk operations"() {
         when: "executing bulk update"
         int updated = Book.executeUpdate(
-            "update Book b set b.price = b.price * 1.1 where b.inStock = true"
+            'update Book b set b.price = b.price * 1.1 where b.inStock = true'
         )
 
         then: "bulk update applied"

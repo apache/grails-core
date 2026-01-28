@@ -19,27 +19,26 @@
 
 package functionaltests.async
 
-import functionaltests.Application
-import functionaltests.services.AsyncProcessingService
-import grails.testing.mixin.integration.Integration
-import grails.gorm.transactions.Rollback
+import java.util.concurrent.TimeUnit
+
 import groovy.json.JsonSlurper
+
+import functionaltests.services.AsyncProcessingService
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.MediaType
 import io.micronaut.http.client.HttpClient
-import spock.lang.Specification
 import spock.lang.Shared
+import spock.lang.Specification
+import spock.lang.Unroll
 
-import java.util.concurrent.TimeUnit
+import grails.testing.mixin.integration.Integration
 
 /**
  * Integration tests for async/promise functionality in Grails.
  * Tests various async patterns including tasks, promises, chaining, and error handling.
  */
-@Integration(applicationClass = Application)
-@Rollback
+@Integration
 class AsyncPromiseSpec extends Specification {
 
     @Shared
@@ -48,18 +47,18 @@ class AsyncPromiseSpec extends Specification {
     AsyncProcessingService asyncProcessingService
 
     def setup() {
-        client = HttpClient.create(new URL("http://localhost:${serverPort}"))
+        client = client ?: HttpClient.create(new URL("http://localhost:${serverPort}"))
     }
 
-    def cleanup() {
-        client?.close()
+    def cleanupSpec() {
+        client.close()
     }
 
     // ========== Basic Async Task Tests ==========
 
     def "simple async task completes successfully"() {
         when: "calling simple task endpoint"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/asyncTest/simpleTask'),
             String
         )
@@ -76,7 +75,7 @@ class AsyncPromiseSpec extends Specification {
         def value = 7
 
         when: "calling compute endpoint"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET("/asyncTest/computeTask?value=${value}"),
             String
         )
@@ -90,7 +89,7 @@ class AsyncPromiseSpec extends Specification {
 
     def "parallel tasks complete and return all results"() {
         when: "calling parallel tasks endpoint"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/asyncTest/parallelTasks'),
             String
         )
@@ -110,7 +109,7 @@ class AsyncPromiseSpec extends Specification {
         def input = 'hello'
 
         when: "calling chained endpoint"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET("/asyncTest/chainedTasks?input=${input}"),
             String
         )
@@ -127,7 +126,7 @@ class AsyncPromiseSpec extends Specification {
 
     def "async task handles success without error"() {
         when: "calling task that should succeed"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/asyncTest/taskWithError?fail=false'),
             String
         )
@@ -139,19 +138,25 @@ class AsyncPromiseSpec extends Specification {
         json.result == 'Success'
     }
 
-    def "async task with timeout completes within time limit"() {
+    @Unroll
+    def "async task with timeout completes within time limit"(int delay, int timeout, int elapsedMin, String status, String result) {
         when: "calling task with reasonable timeout"
-        HttpResponse<String> response = client.toBlocking().exchange(
-            HttpRequest.GET('/asyncTest/taskWithTimeout?delay=100&timeout=500'),
+        def response = client.toBlocking().exchange(
+            HttpRequest.GET("/asyncTest/taskWithTimeout?delay=$delay&timeout=$timeout"),
             String
         )
         def json = new JsonSlurper().parseText(response.body())
 
-        then: "task completes successfully"
+        then: "task completes as expected"
         response.status == HttpStatus.OK
-        json.status == 'completed'
-        json.result == 'Completed in time'
-        json.elapsedMs >= 100
+        json.status == status
+        json.result.startsWith(result)
+        json.elapsedMs >= elapsedMin
+
+        where:
+        delay | timeout | elapsedMin | status      | result
+        100   | 500     | 100        | 'completed' | 'Completed in time'
+        100   | 10      | 10         | 'timeout'   | 'Task exceeded timeout of '
     }
 
     // ========== Async Service Tests ==========
@@ -161,7 +166,7 @@ class AsyncPromiseSpec extends Specification {
         def input = 'test'
 
         when: "calling async service endpoint"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET("/asyncTest/useAsyncService?input=${input}"),
             String
         )
@@ -178,7 +183,7 @@ class AsyncPromiseSpec extends Specification {
         def value = 6
 
         when: "calling async calculation endpoint"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET("/asyncTest/asyncCalculation?value=${value}"),
             String
         )
@@ -192,7 +197,7 @@ class AsyncPromiseSpec extends Specification {
 
     def "async batch processing reverses all items"() {
         when: "calling batch endpoint with default items"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/asyncTest/asyncBatch'),
             String
         )
@@ -211,7 +216,7 @@ class AsyncPromiseSpec extends Specification {
         def taskId = 'task-123'
 
         when: "calling long running endpoint"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET("/asyncTest/longRunning?taskId=${taskId}"),
             String
         )
@@ -231,7 +236,7 @@ class AsyncPromiseSpec extends Specification {
         def v2 = 4
 
         when: "calling compose endpoint"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET("/asyncTest/composeFutures?v1=${v1}&v2=${v2}"),
             String
         )
@@ -251,7 +256,7 @@ class AsyncPromiseSpec extends Specification {
         def body = '{"name": "test", "value": "hello"}'
 
         when: "posting to process endpoint"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.POST('/asyncTest/processRequestData', body)
                 .contentType(MediaType.APPLICATION_JSON),
             String
@@ -267,7 +272,7 @@ class AsyncPromiseSpec extends Specification {
 
     def "multi-stage process reports all stages"() {
         when: "calling multi-stage endpoint"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/asyncTest/multiStageProcess'),
             String
         )
@@ -285,7 +290,7 @@ class AsyncPromiseSpec extends Specification {
 
     def "stages execute in correct order"() {
         when: "calling multi-stage endpoint"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/asyncTest/multiStageProcess'),
             String
         )
@@ -305,7 +310,7 @@ class AsyncPromiseSpec extends Specification {
         def input = 'grails'
 
         when: "calling with async=true"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET("/asyncTest/conditionalAsync?async=true&input=${input}"),
             String
         )
@@ -323,7 +328,7 @@ class AsyncPromiseSpec extends Specification {
         def input = 'grails'
 
         when: "calling with async=false"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET("/asyncTest/conditionalAsync?async=false&input=${input}"),
             String
         )
