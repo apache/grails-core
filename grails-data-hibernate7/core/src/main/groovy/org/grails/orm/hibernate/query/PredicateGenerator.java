@@ -19,6 +19,7 @@ import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
+import org.hibernate.query.criteria.JpaFunction;
 import org.hibernate.query.criteria.JpaInPredicate;
 import org.hibernate.query.criteria.JpaPredicate;
 import org.hibernate.query.sqm.tree.domain.SqmPath;
@@ -131,7 +132,13 @@ public class PredicateGenerator {
                         } else if (criterion instanceof Query.ILike c) {
                             return cb.ilike(fullyQualifiedPath, c.getValue().toString());
                         } else if (criterion instanceof Query.RLike c) {
-                            return cb.like(fullyQualifiedPath, c.getPattern(), '\\');
+                            String pattern = c.getPattern();
+                            pattern = pattern.replaceAll("^/|/$", "");
+                            return cb.equal(cb.function(
+                                    GrailsRLikeFunctionContributor.RLIKE,           // The name we registered
+                                    Boolean.class,     // Expected return type
+                                    fullyQualifiedPath, // The property path
+                                    cb.literal(pattern)), true);
                         } else if (criterion instanceof Query.Like c) {
                             return cb.like(fullyQualifiedPath, c.getValue().toString());
                         } else if (criterion instanceof Query.In c) {

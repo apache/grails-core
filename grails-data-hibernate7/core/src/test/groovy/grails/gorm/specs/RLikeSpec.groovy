@@ -23,13 +23,11 @@ import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Ignore
 
-//TODO Rlike Needs to be implemented for Hibernate 6
 class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.addAllDomainClasses([RlikeFoo])
     }
 
-    @Ignore
     void "test rlike works with H2"() {
         given:
         new RlikeFoo(name: "ABC").save(flush: true)

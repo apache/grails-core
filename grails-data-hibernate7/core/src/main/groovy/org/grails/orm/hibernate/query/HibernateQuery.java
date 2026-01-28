@@ -316,7 +316,8 @@ public class HibernateQuery extends Query {
 
     @Override
     public Query rlike(String property, String expr) {
-        throw new UnsupportedOperationException("Needs RLIKE extension");
+        detachedCriteria.rlike(property,expr);
+        return this;
     }
 
     @Override

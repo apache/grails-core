@@ -207,11 +207,10 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         oldBob == newBob
     }
 
-    @Ignore("Must add custom functionality")
     def rlike() {
         given:
         new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
-        hibernateQuery.rlike("firstName", "/Bob*/")
+        hibernateQuery.rlike("firstName", "Bob.*")
         when:
         def newBob = hibernateQuery.singleResult()
         then:
