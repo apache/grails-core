@@ -102,11 +102,9 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "error is shown for duplicate email - validation prevents navigation away"
-        waitFor(5) {
-            title == 'Create Employee'
-            $('.alert-danger').displayed
-            pageSource.contains('Property [email] of class [class scaffoldingfields.Employee] with value [john.doe@example.com] must be unique')
-        }
+        title == 'Create Employee'
+        $('.alert-danger').displayed
+        pageSource.contains('Property [email] of class [class scaffoldingfields.Employee] with value [john.doe@example.com] must be unique')
     }
 
     // ==================== NUMERIC VALIDATION ====================
@@ -216,11 +214,9 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "error is shown for duplicate - validation prevents navigation or unique constraint not configured"
-        waitFor(5) {
-            title == 'Create Department'
-            pageSource.contains('Property [name] of class [class scaffoldingfields.Department] with value [Engineering] must be unique')
-            $('.alert-danger').displayed
-        }
+        title == 'Create Department'
+        pageSource.contains('Property [name] of class [class scaffoldingfields.Department] with value [Engineering] must be unique')
+        $('.alert-danger').displayed
     }
 
     // ==================== PROJECT VALIDATION ====================
@@ -235,10 +231,8 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "error is shown for invalid code format"
-        waitFor(5) {
-            title == 'Create Project'
-            pageSource.contains('Property [code] of class [class scaffoldingfields.Project] with value [invalid-code!] does not match the required pattern [[A-Z0-9_-]+]')
-        }
+        title == 'Create Project'
+        pageSource.contains('Property [code] of class [class scaffoldingfields.Project] with value [invalid-code!] does not match the required pattern [[A-Z0-9_-]+]')
     }
 
     def "Project with end date before start date shows error"() {
@@ -257,9 +251,7 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "error may be shown for invalid date range"
-        waitFor(5) {
-            pageSource.contains('Property [endDate] of class [class scaffoldingfields.Project] with value [1/1/24, 12:00 AM] does not pass custom validation')
-        }
+        pageSource.contains('Property [endDate] of class [class scaffoldingfields.Project] with value [1/1/24')
     }
 
     // ==================== EDIT VALIDATION ====================

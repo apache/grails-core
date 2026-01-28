@@ -65,8 +65,8 @@ class RelationshipsFunctionalSpec extends ContainerGebSpec {
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "employee is created successfully"
-        !title.contains('Create')
-        title.contains('Show Employee')
+        title == 'Show Employee'
+        pageSource.contains('Engineering')
     }
 
     def "Show page displays belongsTo association"() {
