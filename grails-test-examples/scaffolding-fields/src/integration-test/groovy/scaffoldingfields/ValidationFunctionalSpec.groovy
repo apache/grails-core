@@ -235,8 +235,10 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "error is shown for invalid code format"
-        title == 'Create Project'
-        pageSource.contains('Property [code] of class [class scaffoldingfields.Project] with value [invalid-code!] does not match the required pattern [[A-Z0-9_-]+]')
+        waitFor(5) {
+            title == 'Create Project'
+            pageSource.contains('Property [code] of class [class scaffoldingfields.Project] with value [invalid-code!] does not match the required pattern [[A-Z0-9_-]+]')
+        }
     }
 
     def "Project with end date before start date shows error"() {
@@ -255,7 +257,9 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "error may be shown for invalid date range"
-        pageSource.contains('Property [endDate] of class [class scaffoldingfields.Project] with value [1/1/24, 12:00 AM] does not pass custom validation')
+        waitFor(5) {
+            pageSource.contains('Property [endDate] of class [class scaffoldingfields.Project] with value [1/1/24, 12:00 AM] does not pass custom validation')
+        }
     }
 
     // ==================== EDIT VALIDATION ====================
