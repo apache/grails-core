@@ -102,9 +102,11 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "error is shown for duplicate email - validation prevents navigation away"
-        title == 'Create Employee'
-        $('.alert-danger').displayed
-        pageSource.contains('Property [email] of class [class scaffoldingfields.Employee] with value [john.doe@example.com] must be unique')
+        waitFor(5) {
+            title == 'Create Employee'
+            $('.alert-danger').displayed
+            pageSource.contains('Property [email] of class [class scaffoldingfields.Employee] with value [john.doe@example.com] must be unique')
+        }
     }
 
     // ==================== NUMERIC VALIDATION ====================
@@ -159,7 +161,9 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "error is shown if salary was provided"
-        pageSource.contains('Property [salary] of class [class scaffoldingfields.Employee] with value [-1,000] is less than minimum value [0]')
+        waitFor(5) {
+            pageSource.contains('Property [salary] of class [class scaffoldingfields.Employee] with value [-1,000] is less than minimum value [0]')
+        }
     }
 
     // ==================== SIZE CONSTRAINT VALIDATION ====================
@@ -214,9 +218,11 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "error is shown for duplicate - validation prevents navigation or unique constraint not configured"
-        title == 'Create Department'
-        pageSource.contains('Property [name] of class [class scaffoldingfields.Department] with value [Engineering] must be unique')
-        $('.alert-danger').displayed
+        waitFor(5) {
+            title == 'Create Department'
+            pageSource.contains('Property [name] of class [class scaffoldingfields.Department] with value [Engineering] must be unique')
+            $('.alert-danger').displayed
+        }
     }
 
     // ==================== PROJECT VALIDATION ====================
@@ -231,8 +237,10 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "error is shown for invalid code format"
-        title == 'Create Project'
-        pageSource.contains('Property [code] of class [class scaffoldingfields.Project] with value [invalid-code!] does not match the required pattern [[A-Z0-9_-]+]')
+        waitFor(5) {
+            title == 'Create Project'
+            pageSource.contains('Property [code] of class [class scaffoldingfields.Project] with value [invalid-code!] does not match the required pattern [[A-Z0-9_-]+]')
+        }
     }
 
     def "Project with end date before start date shows error"() {
@@ -251,7 +259,9 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "error may be shown for invalid date range"
-        pageSource.contains('Property [endDate] of class [class scaffoldingfields.Project] with value [1/1/24')
+        waitFor(5) {
+            pageSource.contains('Property [endDate] of class [class scaffoldingfields.Project] with value [1/1/24')
+        }
     }
 
     // ==================== EDIT VALIDATION ====================
