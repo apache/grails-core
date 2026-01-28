@@ -31,7 +31,7 @@ import org.springframework.validation.DataBinder
  */
 @CompileStatic
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
-class Identity extends Property {
+class Identity extends Property implements HibernateIdentity {
     /**
      * The generator to use
      */

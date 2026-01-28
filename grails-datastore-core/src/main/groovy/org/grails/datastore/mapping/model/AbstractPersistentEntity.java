@@ -300,7 +300,11 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
     }
 
     public boolean isIdentityName(String propertyName) {
-        return getIdentity().getName().equals(propertyName);
+        PersistentProperty identity = getIdentity();
+        if (identity != null) {
+            return identity.getName().equals(propertyName);
+        }
+        return GormProperties.IDENTITY.equals(propertyName);
     }
 
     public PersistentEntity getParentEntity() {

@@ -31,4 +31,10 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
                 .toList();
     }
 
+    default boolean isComponentPropertyNullable(PersistentProperty embeddedProperty) {
+        if (embeddedProperty == null) return false;
+        final Mapping mapping = getMappedForm();
+        return !isRoot() && (mapping == null || mapping.isTablePerHierarchy()) || embeddedProperty.isNullable();
+    }
+
 }

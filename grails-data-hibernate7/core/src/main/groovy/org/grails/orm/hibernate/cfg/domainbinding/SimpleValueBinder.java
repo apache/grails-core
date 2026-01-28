@@ -21,6 +21,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 public class SimpleValueBinder {
 
+    private final PersistentEntityNamingStrategy namingStrategy;
     private final ColumnConfigToColumnBinder columnConfigToColumnBinder ;
     private final ColumnBinder columnBinder;
     private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
@@ -30,17 +31,23 @@ public class SimpleValueBinder {
     private static final String SEQUENCE_KEY = "sequence";
 
     public SimpleValueBinder(PersistentEntityNamingStrategy namingStrategy) {
-        this.columnConfigToColumnBinder = new ColumnConfigToColumnBinder();
-        this.columnBinder = new ColumnBinder(namingStrategy);
-        this.persistentPropertyToPropertyConfig = new PersistentPropertyToPropertyConfig();
-        this.typeNameProvider = new TypeNameProvider();
-
+        this(namingStrategy, new PersistentPropertyToPropertyConfig());
     }
 
-    protected SimpleValueBinder(ColumnConfigToColumnBinder columnConfigToColumnBinder
-            , ColumnBinder columnBinder
-            , PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig
-    ,TypeNameProvider typeNameProvider) {
+    protected SimpleValueBinder(PersistentEntityNamingStrategy namingStrategy, PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig) {
+        this.namingStrategy = namingStrategy;
+        this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
+        this.columnConfigToColumnBinder = new ColumnConfigToColumnBinder();
+        this.columnBinder = new ColumnBinder(namingStrategy);
+        this.typeNameProvider = new TypeNameProvider();
+    }
+
+    protected SimpleValueBinder(PersistentEntityNamingStrategy namingStrategy,
+                                ColumnConfigToColumnBinder columnConfigToColumnBinder,
+                                ColumnBinder columnBinder,
+                                PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig,
+                                TypeNameProvider typeNameProvider) {
+        this.namingStrategy = namingStrategy;
         this.columnConfigToColumnBinder = columnConfigToColumnBinder;
         this.columnBinder = columnBinder;
         this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;

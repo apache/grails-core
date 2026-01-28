@@ -18,7 +18,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
     JdbcEnvironment jdbcEnvironment
     def simpleValueBinder
     def propertyBinder
-    def basicValueIdcreator
+    def basicValueIdCreator
 
     def simpleIdBinder
 
@@ -27,8 +27,8 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         jdbcEnvironment = getGrailsDomainBinder().getJdbcEnvironment()
 
         // Use a Mock for BasicValueIdCreator and return a BasicValue based on the RootClass table
-        basicValueIdcreator = Mock(BasicValueIdCreator)
-        basicValueIdcreator.getBasicValueId(*_) >> { RootClass rc, Identity id, boolean useSeq ->
+        basicValueIdCreator = Mock(BasicValueIdCreator)
+        basicValueIdCreator.getBasicValueId(*_) >> { RootClass rc, Identity id, boolean useSeq ->
             new BasicValue(metadataBuildingContext, rc.getTable())
         }
 
@@ -36,7 +36,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         simpleValueBinder = Mock(SimpleValueBinder)
         propertyBinder = Mock(PropertyBinder)
 
-        simpleIdBinder = new SimpleIdBinder(basicValueIdcreator, simpleValueBinder, propertyBinder)
+        simpleIdBinder = new SimpleIdBinder(basicValueIdCreator, simpleValueBinder, propertyBinder)
     }
 
     def "bindSimpleId with identity generator"() {

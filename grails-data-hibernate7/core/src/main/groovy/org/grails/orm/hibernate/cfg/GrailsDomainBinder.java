@@ -141,6 +141,9 @@ public class GrailsDomainBinder
     private final String dataSourceName;
     private final HibernateMappingContext hibernateMappingContext;
     private final ClassBinder classBinding;
+    private final EnumTypeBinder enumTypeBinder;
+    private final PropertyFromValueCreator propertyFromValueCreator;
+    private ComponentPropertyBinder componentPropertyBinder;
     private Closure defaultMapping;
     private PersistentEntityNamingStrategy namingStrategy;
     private MetadataBuildingContext metadataBuildingContext;
@@ -155,13 +158,17 @@ public class GrailsDomainBinder
     public GrailsDomainBinder(String dataSourceName
                             , String sessionFactoryName
                             , HibernateMappingContext hibernateMappingContext
-                            , ClassBinder classBinding) {
+                            , ClassBinder classBinding
+                            , EnumTypeBinder enumTypeBinder) {
         this.sessionFactoryName = sessionFactoryName;
         this.dataSourceName = dataSourceName;
         this.hibernateMappingContext = hibernateMappingContext;
         this.classBinding = classBinding;
-        mappingCacheHolder = MappingCacheHolder.getInstance();
+        this.enumTypeBinder = enumTypeBinder;
+        this.propertyFromValueCreator = new PropertyFromValueCreator();
+        this.mappingCacheHolder = MappingCacheHolder.getInstance();
         this.collectionHolder = new CollectionHolder(this);
+        this.componentPropertyBinder = new ComponentPropertyBinder(null, null, mappingCacheHolder, collectionHolder, enumTypeBinder, propertyFromValueCreator);
         // pre-build mappings
         for (GrailsHibernatePersistentEntity persistentEntity : hibernateMappingContext.getHibernatePersistentEntities()) {
             mappingCacheHolder.cacheMapping(persistentEntity);
@@ -179,6 +186,7 @@ public class GrailsDomainBinder
                 , sessionFactoryName
                 , hibernateMappingContext
                 , new ClassBinder()
+                , new EnumTypeBinder()
         );
 
     }
@@ -211,6 +219,7 @@ public class GrailsDomainBinder
                 metadataCollector
                 , rootMappingDefaults
         );
+        this.componentPropertyBinder = new ComponentPropertyBinder(metadataBuildingContext, getNamingStrategy(), getMappingCacheHolder(), getCollectionHolder(), enumTypeBinder, propertyFromValueCreator);
 
         hibernateMappingContext.getHibernatePersistentEntities().stream()
                 .filter(persistentEntity -> persistentEntity.forGrailsDomainMapping(dataSourceName))
@@ -349,10 +358,7 @@ public class GrailsDomainBinder
 
             PersistentClass referenced = mappings.getEntityBinding(entityName);
 
-            Class<?> mappedClass = referenced.getMappedClass();
-            Mapping m = Optional.ofNullable(MappingCacheHolder.getInstance().getMapping(mappedClass)).orElseThrow();
-
-            boolean compositeIdProperty = m.isCompositeIdProperty(property.getInverseSide());
+            boolean compositeIdProperty = property.getInverseSide().isCompositeIdProperty();
             if (!compositeIdProperty) {
                 Backref prop = new Backref();
                 final PersistentEntity owner = property.getOwner();
@@ -1499,69 +1505,16 @@ public class GrailsDomainBinder
 
 
 
-    private void bindIdentity(
+    public void bindIdentity(
             GrailsHibernatePersistentEntity domainClass,
             RootClass root,
             InFlightMetadataCollector mappings,
             Mapping gormMapping,
             String sessionFactoryBeanName) {
 
-        PersistentProperty identifierProp = domainClass.getIdentity();
-        if (gormMapping == null) {
-            if(identifierProp != null) {
-                SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext,namingStrategy, getJdbcEnvironment(), domainClass, root);
-                simpleIdBinder.bindSimpleId(identifierProp, root, null);
-
-            }
-            return;
-        }
-
-        Object id = gormMapping.getIdentity();
-        if (id instanceof CompositeIdentity) {
-            bindCompositeId(domainClass, root, (CompositeIdentity) id, mappings, sessionFactoryBeanName);
-        } else {
-            final Identity identity = (Identity) id;
-            String propertyName = identity.getName();
-                if (propertyName != null && !propertyName.equals(domainClass.getName())) {
-                PersistentProperty namedIdentityProp = domainClass.getPropertyByName(propertyName);
-                if (namedIdentityProp == null) {
-                    throw new MappingException("Mapping specifies an identifier property name that doesn't exist ["+propertyName+"]");
-                }
-                if (!namedIdentityProp.equals(identifierProp)) {
-                    identifierProp = namedIdentityProp;
-                }
-            }
-            SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext,namingStrategy, getJdbcEnvironment(), domainClass, root);
-            simpleIdBinder.bindSimpleId(identifierProp, root, identity);
-
-        }
-    }
-
-    private void bindCompositeId(PersistentEntity domainClass, RootClass root,
-                                   CompositeIdentity compositeIdentity, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
-        GrailsHibernatePersistentEntity hibernatePersistentEntity = (GrailsHibernatePersistentEntity) domainClass;
-        Component id = new Component(metadataBuildingContext, root);
-        id.setNullValue("undefined");
-        root.setIdentifier(id);
-        root.setIdentifierMapper(id);
-        root.setEmbeddedIdentifier(true);
-        id.setComponentClassName(domainClass.getName());
-        id.setKey(true);
-        id.setEmbedded(true);
-
-        String path = qualify(root.getEntityName(), "id");
-
-        id.setRoleName(path);
-
-        final PersistentProperty[] composite = hibernatePersistentEntity.getCompositeIdentity();
-        for (PersistentProperty property : composite) {
-            if (property == null) {
-                throw new MappingException("Property referenced in composite-id mapping of class [" + domainClass.getName() +
-                        "] is not a valid property!");
-            }
-
-            bindComponentProperty(id, null, property, root, "", root.getTable(), mappings, sessionFactoryBeanName);
-        }
+        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentPropertyBinder);
+        new IdentityBinder(metadataBuildingContext, getNamingStrategy(), getJdbcEnvironment(), compositeIdBinder)
+                .bindIdentity(domainClass, root, mappings, gormMapping, sessionFactoryBeanName);
     }
 
     /**
@@ -1586,8 +1539,8 @@ public class GrailsDomainBinder
         final List<PersistentProperty> persistentProperties = domainClass.getPersistentProperties()
                 .stream()
                 .filter(persistentProperty -> persistentProperty.getMappedForm() != null)
-                .filter(persistentProperty -> !gormMapping.isCompositeIdProperty(persistentProperty))
-                .filter(persistentProperty -> !gormMapping.isIdentityProperty(persistentProperty))
+                .filter(persistentProperty -> !persistentProperty.isCompositeIdProperty())
+                .filter(persistentProperty -> !persistentProperty.isIdentityProperty())
                 .filter(persistentProperty -> !persistentProperty.getName().equals(GormProperties.VERSION) )
                 .filter(persistentProperty -> !persistentProperty.isInherited())
                 .toList();
@@ -1633,7 +1586,8 @@ public class GrailsDomainBinder
             }
             else if (currentGrailsProp.getType().isEnum()) {
                 value = new BasicValue(metadataBuildingContext, table);
-                bindEnumType(currentGrailsProp, (SimpleValue) value, EMPTY_PATH, sessionFactoryBeanName);
+                String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, EMPTY_PATH, null);
+                enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), (SimpleValue) value, columnName);
             }
             else if(currentGrailsProp instanceof Association) {
                 Association association = (Association) currentGrailsProp;
@@ -1656,12 +1610,12 @@ public class GrailsDomainBinder
                     }
                     else if (((Association) currentGrailsProp).canBindOneToOneWithSingleColumnAndForeignKey()) {
                         value = new OneToOne(metadataBuildingContext, table, persistentClass);
-                        bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, EMPTY_PATH, sessionFactoryBeanName);
+                        new OneToOneBinder(namingStrategy).bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, EMPTY_PATH);
                     }
                     else {
                         if (isHasOne && association.isBidirectional()) {
                             value = new OneToOne(metadataBuildingContext, table, persistentClass);
-                            bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, EMPTY_PATH, sessionFactoryBeanName);
+                            new OneToOneBinder(namingStrategy).bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, EMPTY_PATH);
                         }
                         else {
                             value = new ManyToOne(metadataBuildingContext, table);
@@ -1685,7 +1639,7 @@ public class GrailsDomainBinder
             }
 
             if (value != null) {
-                Property property = createProperty(value, persistentClass, currentGrailsProp, mappings);
+                Property property = propertyFromValueCreator.createProperty(value, currentGrailsProp);
                 persistentClass.addProperty(property);
             }
         }
@@ -1693,8 +1647,8 @@ public class GrailsDomainBinder
         for (Embedded association : embedded) {
             Value value = new Component(metadataBuildingContext, persistentClass);
 
-            bindComponent((Component) value, association, true, mappings, sessionFactoryBeanName,mappingCacheHolder );
-            Property property = createProperty(value, persistentClass, association, mappings);
+            componentPropertyBinder.bindComponent((Component) value, association, true, mappings, sessionFactoryBeanName);
+            Property property = propertyFromValueCreator.createProperty(value, association);
             persistentClass.addProperty(property);
         }
         new NaturalIdentifierBinder().bindNaturalIdentifier(gormMapping, persistentClass);
@@ -1702,11 +1656,17 @@ public class GrailsDomainBinder
 
 
 
-    private void bindEnumType(PersistentProperty property, SimpleValue simpleValue,
-                                String path, String sessionFactoryBeanName) {
-        Class<?> propertyType = property.getType();
-        String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(property, path, null);
-        new EnumTypeBinder().bindEnumType(property, propertyType, simpleValue, columnName);
+    private void bindOneToMany(org.grails.datastore.mapping.model.types.OneToMany currentGrailsProp, OneToMany one, InFlightMetadataCollector mappings) {
+        one.setReferencedEntityName(currentGrailsProp.getAssociatedEntity().getName());
+        one.setIgnoreNotFound(true);
+    }
+
+    private String getIndexColumnName(PersistentProperty property, String sessionFactoryBeanName) {
+        PropertyConfig pc = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
+        if (pc.getIndexColumn() != null && pc.getIndexColumn().getColumn() != null) {
+            return pc.getIndexColumn().getColumn();
+        }
+        return getNamingStrategy().resolveColumnName(property.getName()) + UNDERSCORE + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
     }
 
     private Class<?> getUserType(PersistentProperty currentGrailsProp) {
@@ -1732,188 +1692,7 @@ public class GrailsDomainBinder
         return userType;
     }
 
-    /**
-     * Binds a Hibernate component type using the given GrailsDomainClassProperty instance
-     *
-     * @param component              The component to bind
-     * @param property               The property
-     * @param isNullable             Whether it is nullable or not
-     * @param mappings               The Hibernate Mappings object
-     * @param sessionFactoryBeanName the session factory bean name
-     * @param mappingCacheHolder
-     */
-    private void bindComponent(Component component, Embedded property,
-                               boolean isNullable, InFlightMetadataCollector mappings, String sessionFactoryBeanName, MappingCacheHolder mappingCacheHolder) {
-        Class<?> type = property.getType();
-        String role = qualify(type.getName(), property.getName());
-        component.setRoleName(role);
-        component.setComponentClassName(type.getName());
-
-        GrailsHibernatePersistentEntity domainClass = (GrailsHibernatePersistentEntity) property.getAssociatedEntity();
-        mappingCacheHolder.cacheMapping(domainClass);
-        final List<PersistentProperty> properties = domainClass.getPersistentProperties();
-        Table table = component.getOwner().getTable();
-        PersistentClass persistentClass = component.getOwner();
-        String path = property.getName();
-        Class<?> propertyType = property.getOwner().getJavaClass();
-
-        for (PersistentProperty currentGrailsProp : properties) {
-            if (currentGrailsProp.equals(domainClass.getIdentity())) continue;
-            if (currentGrailsProp.getName().equals(GormProperties.VERSION)) continue;
-
-            if (currentGrailsProp.getType().equals(propertyType)) {
-                component.setParentProperty(currentGrailsProp.getName());
-                continue;
-            }
-
-            bindComponentProperty(component, property, currentGrailsProp, persistentClass, path,
-                    table, mappings, sessionFactoryBeanName);
-        }
-    }
-
-    private void bindComponentProperty(Component component, PersistentProperty componentProperty,
-                                         PersistentProperty currentGrailsProp, PersistentClass persistentClass,
-                                         String path, Table table, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
-        Value value;
-        // see if it's a collection type
-        CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
-        if (collectionType != null) {
-            // create collection
-            Collection collection = collectionType.create((ToMany) currentGrailsProp, persistentClass,
-                    path, mappings, sessionFactoryBeanName);
-            mappings.addCollectionBinding(collection);
-            value = collection;
-        }
-        // work out what type of relationship it is and bind value
-        else if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.ManyToOne) {
-            if (LOG.isDebugEnabled())
-                LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as ManyToOne");
-
-            value = new ManyToOne(metadataBuildingContext, table);
-            new ManyToOneBinder(namingStrategy).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
-        } else if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.OneToOne) {
-            if (LOG.isDebugEnabled())
-                LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
-
-            if (((Association) currentGrailsProp).canBindOneToOneWithSingleColumnAndForeignKey()) {
-                value = new OneToOne(metadataBuildingContext, table, persistentClass);
-                bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, path, sessionFactoryBeanName);
-            }
-            else {
-                value = new ManyToOne(metadataBuildingContext, table);
-                new ManyToOneBinder(namingStrategy).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
-            }
-        }
-        else if (currentGrailsProp instanceof Embedded) {
-            value = new Component(metadataBuildingContext, persistentClass);
-            bindComponent((Component) value, (Embedded) currentGrailsProp, true, mappings, sessionFactoryBeanName,mappingCacheHolder );
-        }
-        else {
-            if (LOG.isDebugEnabled())
-                LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as SimpleValue");
-
-            value = new BasicValue(metadataBuildingContext, table);
-            if (currentGrailsProp.getType().isEnum()) {
-                bindEnumType(currentGrailsProp, (SimpleValue) value, path, sessionFactoryBeanName);
-            }
-            else {
-                // set type
-                new SimpleValueBinder(namingStrategy).bindSimpleValue(currentGrailsProp, componentProperty, (SimpleValue) value, path);
-            }
-        }
-
-        if (value != null) {
-            Property persistentProperty = createProperty(value, persistentClass, currentGrailsProp, mappings);
-            component.addProperty(persistentProperty);
-            if (isComponentPropertyNullable(componentProperty)) {
-                final Iterator<?> columnIterator = value.getColumns().iterator();
-                while (columnIterator.hasNext()) {
-                    Column c = (Column) columnIterator.next();
-                    c.setNullable(true);
-                }
-            }
-        }
-    }
-
-    private boolean isComponentPropertyNullable(PersistentProperty componentProperty) {
-        if (componentProperty == null) return false;
-        final PersistentEntity domainClass = componentProperty.getOwner();
-        Mapping mapping = null;
-        if (domainClass != null) {
-            mapping = ((GrailsHibernatePersistentEntity) domainClass).getMappedForm();
-        }
-        return !domainClass.isRoot() && (mapping == null || mapping.isTablePerHierarchy()) || componentProperty.isNullable();
-    }
-
-    /*
-     * Creates a persistent class property based on the GrailDomainClassProperty instance.
-     */
-    private Property createProperty(Value value, PersistentClass persistentClass, PersistentProperty grailsProperty, InFlightMetadataCollector mappings) {
-        // set type
-        value.setTypeUsingReflection(grailsProperty.getOwner().getJavaClass().getName(), grailsProperty.getName());
-
-        if (value.getTable() != null) {
-            value.createForeignKey();
-        }
-
-        Property prop = new Property();
-        prop.setValue(value);
-        new PropertyBinder().bindProperty(grailsProperty, prop);
-        return prop;
-    }
-
-    private void bindOneToMany(org.grails.datastore.mapping.model.types.OneToMany currentGrailsProp, OneToMany one, InFlightMetadataCollector mappings) {
-        one.setReferencedEntityName(currentGrailsProp.getAssociatedEntity().getName());
-        one.setIgnoreNotFound(true);
-    }
-
-    // each property may consist of one or many columns (due to composite ids) so in order to get the
-    // number of columns required for a column key we have to perform the calculation here
-
-    private void bindOneToOne(final org.grails.datastore.mapping.model.types.OneToOne property, OneToOne oneToOne,
-                                String path, String sessionFactoryBeanName) {
-        PropertyConfig config = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
-        final Association otherSide = property.getInverseSide();
-
-        final boolean hasOne = otherSide.isHasOne();
-        oneToOne.setConstrained(hasOne);
-        oneToOne.setForeignKeyType(oneToOne.isConstrained() ?
-                ForeignKeyDirection.FROM_PARENT :
-                ForeignKeyDirection.TO_PARENT);
-        oneToOne.setAlternateUniqueKey(true);
-
-        if (config != null && config.getFetchMode() != null) {
-            oneToOne.setFetchMode(config.getFetchMode());
-        }
-        else {
-            oneToOne.setFetchMode(FetchMode.DEFAULT);
-        }
-
-        oneToOne.setReferencedEntityName(otherSide.getOwner().getName());
-        oneToOne.setPropertyName(property.getName());
-        oneToOne.setReferenceToPrimaryKey(false);
-
-        //no-op, for subclasses to extend
-
-        if (hasOne) {
-            //TODO NOT TESTED
-            // set type
-            new SimpleValueBinder(namingStrategy).bindSimpleValue(property, null, oneToOne, path);
-        }
-        else {
-            oneToOne.setReferencedPropertyName(otherSide.getName());
-        }
-    }
-
-    private String getIndexColumnName(PersistentProperty property, String sessionFactoryBeanName) {
-        PropertyConfig pc = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
-        if (pc.getIndexColumn() != null && pc.getIndexColumn().getColumn() != null) {
-            return pc.getIndexColumn().getColumn();
-        }
-        return getNamingStrategy().resolveColumnName(property.getName()) + UNDERSCORE + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
-    }
-
-        private String getIndexColumnType(PersistentProperty property, String defaultType) {
+    private String getIndexColumnType(PersistentProperty property, String defaultType) {
 
             PropertyConfig pc = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
 
@@ -1957,6 +1736,14 @@ public class GrailsDomainBinder
 
     public MetadataBuildingContext getMetadataBuildingContext() {
         return metadataBuildingContext;
+    }
+
+    public MappingCacheHolder getMappingCacheHolder() {
+        return mappingCacheHolder;
+    }
+
+    public CollectionHolder getCollectionHolder() {
+        return collectionHolder;
     }
 
     @Override

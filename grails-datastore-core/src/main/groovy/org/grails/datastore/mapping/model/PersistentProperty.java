@@ -131,4 +131,33 @@ public interface PersistentProperty<T extends Property> {
         return SortedSet.class.isAssignableFrom(this.getType());
     }
 
+    /**
+     * @return Whether this property is part of a composite identifier
+     */
+    default boolean isCompositeIdProperty() {
+        PersistentProperty[] compositeId = getOwner().getCompositeIdentity();
+        if (compositeId != null) {
+            for (PersistentProperty p : compositeId) {
+                if (p.getName().equals(getName())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @return Whether this property is the identity
+     */
+    default boolean isIdentityProperty() {
+        return getOwner().isIdentityName(getName());
+    }
+
+    default String getOwnerClassName() {
+        return ofNullable(getOwner())
+                .map(PersistentEntity::getJavaClass)
+                .map(Class::getName)
+                .orElseThrow(() -> new IllegalMappingException("Property [" + getName() + "] has no owner entity defined"));
+    }
+
 }

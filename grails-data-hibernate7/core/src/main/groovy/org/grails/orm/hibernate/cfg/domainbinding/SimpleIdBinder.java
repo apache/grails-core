@@ -18,33 +18,46 @@ import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH;
 
 public class SimpleIdBinder {
 
-    private final BasicValueIdCreator basicValueIdCreator;
+    private final MetadataBuildingContext metadataBuildingContext;
+    private final JdbcEnvironment jdbcEnvironment;
     private final SimpleValueBinder simpleValueBinder;
     private final PropertyBinder propertyBinder;
+    private final BasicValueIdCreator basicValueIdCreator;
 
-    public SimpleIdBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment, GrailsHibernatePersistentEntity domainClass, RootClass entity)  {
-        this.basicValueIdCreator = new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment, domainClass, entity);
-        this.simpleValueBinder =new SimpleValueBinder(namingStrategy);
-        this.propertyBinder = new PropertyBinder();
+    public SimpleIdBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment)  {
+        this(metadataBuildingContext, jdbcEnvironment, new SimpleValueBinder(namingStrategy), new PropertyBinder(), null);
     }
 
-    protected SimpleIdBinder(BasicValueIdCreator basicValueIdCreate, SimpleValueBinder simpleValueBinder, PropertyBinder propertyBinder) {
-        this.basicValueIdCreator = basicValueIdCreate;
+    public SimpleIdBinder(BasicValueIdCreator basicValueIdCreator, SimpleValueBinder simpleValueBinder, PropertyBinder propertyBinder) {
+        this.metadataBuildingContext = null;
+        this.jdbcEnvironment = null;
         this.simpleValueBinder = simpleValueBinder;
         this.propertyBinder = propertyBinder;
+        this.basicValueIdCreator = basicValueIdCreator;
+    }
+
+    protected SimpleIdBinder(MetadataBuildingContext metadataBuildingContext, JdbcEnvironment jdbcEnvironment, SimpleValueBinder simpleValueBinder, PropertyBinder propertyBinder, BasicValueIdCreator basicValueIdCreator) {
+        this.metadataBuildingContext = metadataBuildingContext;
+        this.jdbcEnvironment = jdbcEnvironment;
+        this.simpleValueBinder = simpleValueBinder;
+        this.propertyBinder = propertyBinder;
+        this.basicValueIdCreator = basicValueIdCreator;
     }
 
 
     public void bindSimpleId(PersistentProperty identifier, RootClass entity, Identity mappedId) {
 
         Mapping result = null;
+        GrailsHibernatePersistentEntity domainClass = null;
         if (identifier.getOwner() instanceof GrailsHibernatePersistentEntity) {
-            result = ((GrailsHibernatePersistentEntity) identifier.getOwner()).getMappedForm();
+            domainClass = (GrailsHibernatePersistentEntity) identifier.getOwner();
+            result = domainClass.getMappedForm();
         }
         boolean useSequence = result != null && result.isTablePerConcreteClass();
         // create the id value
 
-        BasicValue id = basicValueIdCreator.getBasicValueId(entity, mappedId, useSequence);
+        BasicValueIdCreator idCreator = this.basicValueIdCreator != null ? this.basicValueIdCreator : new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment, domainClass, entity);
+        BasicValue id = idCreator.getBasicValueId(entity, mappedId, useSequence);
 
         Property idProperty  = new Property();
         idProperty.setName(identifier.getName());

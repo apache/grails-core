@@ -30,7 +30,7 @@ import org.grails.datastore.mapping.config.Property
 @AutoClone
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 @CompileStatic
-class CompositeIdentity extends Property {
+class CompositeIdentity extends Property implements HibernateIdentity {
     /**
      * The property names that make up the custom identity
      */

@@ -19,11 +19,11 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         def mapping = (Mapping) entity.getMappedForm()
         def property = entity.getPropertyByName(propertyName)
 
-        when: "The method is called on the mapping object"
-        def result = mapping.isCompositeIdProperty(property)
+        when: "The method is called on the property itself"
+        def resultProperty = property.isCompositeIdProperty()
 
-        then: "The result is as expected"
-        result == expectedResult
+        then: "The results are as expected"
+        resultProperty == expectedResult
 
         where:
         description                               | domainClass       | propertyName | expectedResult
@@ -31,6 +31,27 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         "another property in the composite id"      | CompositeIdBook   | 'author'     | true
         "a property not in the composite id"        | CompositeIdBook   | 'pageCount'  | false
         "a property from a simple id class"         | SimpleIdBook      | 'title'      | false
+    }
+
+    @Unroll
+    void "test isIdentityProperty should return #expectedResult for #description"() {
+        given: "A persistent entity and its property"
+        def binder = grailsDomainBinder
+        def entity = createPersistentEntity(domainClass, binder)
+        def property = entity.getPropertyByName(propertyName)
+
+        when: "The method is called on the property itself"
+        def resultProperty = property.isIdentityProperty()
+
+        then: "The result is as expected"
+        resultProperty == expectedResult
+
+        where:
+        description                        | domainClass     | propertyName | expectedResult
+        "the identity property"            | SimpleIdBook    | 'id'         | true
+        "a non-identity property"          | SimpleIdBook    | 'title'      | false
+        "the identity in composite entity" | CompositeIdBook | 'id'         | true
+        "a property in composite identity" | CompositeIdBook | 'title'      | false
     }
 
 }

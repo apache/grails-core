@@ -1,0 +1,163 @@
+package org.grails.orm.hibernate.cfg.domainbinding;
+
+import java.util.Iterator;
+import java.util.List;
+
+import org.hibernate.FetchMode;
+import org.hibernate.boot.spi.InFlightMetadataCollector;
+import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.mapping.BasicValue;
+import org.hibernate.mapping.Collection;
+import org.hibernate.mapping.Column;
+import org.hibernate.mapping.Component;
+import org.hibernate.mapping.ManyToOne;
+import org.hibernate.mapping.OneToOne;
+import org.hibernate.mapping.PersistentClass;
+import org.hibernate.mapping.Property;
+import org.hibernate.mapping.SimpleValue;
+import org.hibernate.mapping.Table;
+import org.hibernate.mapping.Value;
+import org.hibernate.type.ForeignKeyDirection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToMany;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
+import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.orm.hibernate.cfg.MappingCacheHolder;
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
+import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
+import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
+
+import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH;
+
+public class ComponentPropertyBinder {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ComponentPropertyBinder.class);
+
+    private final MetadataBuildingContext metadataBuildingContext;
+    private final PersistentEntityNamingStrategy namingStrategy;
+    private final MappingCacheHolder mappingCacheHolder;
+    private final CollectionHolder collectionHolder;
+    private final EnumTypeBinder enumTypeBinder;
+    private final PropertyFromValueCreator propertyFromValueCreator;
+    private final ComponentBinder componentBinder;
+    private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
+
+    public ComponentPropertyBinder(MetadataBuildingContext metadataBuildingContext,
+                                   PersistentEntityNamingStrategy namingStrategy,
+                                   MappingCacheHolder mappingCacheHolder,
+                                   CollectionHolder collectionHolder,
+                                   EnumTypeBinder enumTypeBinder,
+                                   PropertyFromValueCreator propertyFromValueCreator) {
+        this(metadataBuildingContext, namingStrategy, mappingCacheHolder, collectionHolder,
+                enumTypeBinder, propertyFromValueCreator, null, new PersistentPropertyToPropertyConfig());
+    }
+
+    protected ComponentPropertyBinder(MetadataBuildingContext metadataBuildingContext,
+                                   PersistentEntityNamingStrategy namingStrategy,
+                                   MappingCacheHolder mappingCacheHolder,
+                                   CollectionHolder collectionHolder,
+                                   EnumTypeBinder enumTypeBinder,
+                                   PropertyFromValueCreator propertyFromValueCreator,
+                                   ComponentBinder componentBinder,
+                                   PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig) {
+        this.metadataBuildingContext = metadataBuildingContext;
+        this.namingStrategy = namingStrategy;
+        this.mappingCacheHolder = mappingCacheHolder;
+        this.collectionHolder = collectionHolder;
+        this.enumTypeBinder = enumTypeBinder;
+        this.propertyFromValueCreator = propertyFromValueCreator;
+        this.componentBinder = componentBinder != null ? componentBinder : new ComponentBinder(mappingCacheHolder, this);
+        this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
+    }
+
+    protected ComponentPropertyBinder() {
+        this.metadataBuildingContext = null;
+        this.namingStrategy = null;
+        this.mappingCacheHolder = null;
+        this.collectionHolder = null;
+        this.enumTypeBinder = null;
+        this.propertyFromValueCreator = null;
+        this.componentBinder = null;
+        this.persistentPropertyToPropertyConfig = null;
+    }
+
+    public void bindComponentProperty(Component component, PersistentProperty componentProperty,
+                                       PersistentProperty currentGrailsProp, PersistentClass persistentClass,
+                                       String path, Table table, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+        Value value;
+        // see if it's a collection type
+        CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
+        if (collectionType != null) {
+            // create collection
+            Collection collection = collectionType.create((ToMany) currentGrailsProp, persistentClass,
+                    path, mappings, sessionFactoryBeanName);
+            mappings.addCollectionBinding(collection);
+            value = collection;
+        }
+        // work out what type of relationship it is and bind value
+        else if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.ManyToOne) {
+            if (LOG.isDebugEnabled())
+                LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as ManyToOne");
+
+            value = new ManyToOne(metadataBuildingContext, table);
+            new ManyToOneBinder(namingStrategy, persistentPropertyToPropertyConfig).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
+        } else if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.OneToOne) {
+            if (LOG.isDebugEnabled())
+                LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
+
+            if (((Association) currentGrailsProp).canBindOneToOneWithSingleColumnAndForeignKey()) {
+                value = new OneToOne(metadataBuildingContext, table, persistentClass);
+                new OneToOneBinder(namingStrategy, persistentPropertyToPropertyConfig).bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, path);
+            }
+            else {
+                value = new ManyToOne(metadataBuildingContext, table);
+                new ManyToOneBinder(namingStrategy, persistentPropertyToPropertyConfig).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
+            }
+        }
+        else if (currentGrailsProp instanceof Embedded) {
+            value = new Component(metadataBuildingContext, persistentClass);
+            componentBinder.bindComponent((Component) value, (Embedded) currentGrailsProp, true, mappings, sessionFactoryBeanName);
+        }
+        else {
+            if (LOG.isDebugEnabled())
+                LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as SimpleValue");
+
+            value = new BasicValue(metadataBuildingContext, table);
+            if (currentGrailsProp.getType().isEnum()) {
+                String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy, persistentPropertyToPropertyConfig, 
+                        new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()).getColumnNameForPropertyAndPath(currentGrailsProp, path, null);
+                enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), (SimpleValue) value, columnName);
+            }
+            else {
+                // set type
+                new SimpleValueBinder(namingStrategy, persistentPropertyToPropertyConfig).bindSimpleValue(currentGrailsProp, componentProperty, (SimpleValue) value, path);
+            }
+        }
+
+        if (value != null) {
+            Property persistentProperty = propertyFromValueCreator.createProperty(value, currentGrailsProp);
+            component.addProperty(persistentProperty);
+            if (componentProperty != null && componentProperty.getOwner() instanceof GrailsHibernatePersistentEntity ghpe && ghpe.isComponentPropertyNullable(componentProperty)) {
+                final Iterator<?> columnIterator = value.getColumns().iterator();
+                while (columnIterator.hasNext()) {
+                    Column c = (Column) columnIterator.next();
+                    c.setNullable(true);
+                }
+            }
+        }
+    }
+
+    public void bindComponent(Component component, Embedded property,
+                               boolean isNullable, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+        componentBinder.bindComponent(component, property, isNullable, mappings, sessionFactoryBeanName);
+    }
+}

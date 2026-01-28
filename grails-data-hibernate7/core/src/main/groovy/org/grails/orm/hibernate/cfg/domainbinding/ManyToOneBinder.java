@@ -28,10 +28,14 @@ public class ManyToOneBinder {
     private final SimpleValueColumnFetcher simpleValueColumnFetcher;
 
     public ManyToOneBinder(PersistentEntityNamingStrategy namingStrategy) {
+        this(namingStrategy, new PersistentPropertyToPropertyConfig());
+    }
+
+    protected ManyToOneBinder(PersistentEntityNamingStrategy namingStrategy, PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig) {
         this.namingStrategy = namingStrategy;
-        this.simpleValueBinder = new SimpleValueBinder(namingStrategy);
-        this.persistentPropertyToPropertyConfig = new PersistentPropertyToPropertyConfig();
-        this.manyToOneValuesBinder = new ManyToOneValuesBinder();
+        this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
+        this.simpleValueBinder = new SimpleValueBinder(namingStrategy, persistentPropertyToPropertyConfig);
+        this.manyToOneValuesBinder = new ManyToOneValuesBinder(persistentPropertyToPropertyConfig);
         this.compositeIdentifierToManyToOneBinder = new CompositeIdentifierToManyToOneBinder(namingStrategy);
         this.simpleValueColumnFetcher = new SimpleValueColumnFetcher();
     }

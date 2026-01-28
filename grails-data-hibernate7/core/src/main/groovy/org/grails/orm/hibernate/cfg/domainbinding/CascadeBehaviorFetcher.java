@@ -66,8 +66,7 @@ public class CascadeBehaviorFetcher {
             if ( association.isCorrectlyOwned() && !association.isCircular()) {
                 return ALL;
             }
-            else if (getOwnersWrappedForm(association)
-                    .isCompositeIdProperty(association)) {
+            else if (association.isCompositeIdProperty()) {
                 return ALL;
             } else {
                 return NONE;
