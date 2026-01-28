@@ -75,6 +75,19 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 | Gradle | 8.14.x |
 | Jakarta EE | 10 |
 
+## Project Structure
+
+This repository contains multiple independent Gradle projects:
+
+| Project | Description | Build Command |
+|---------|-------------|---------------|
+| **grails-core** (root) | Main framework with 60+ modules | `./gradlew build` |
+| **build-logic/** | Gradle convention plugins for the build | `cd build-logic && ../gradlew build` |
+| **grails-gradle/** | Grails Gradle plugins | `cd grails-gradle && ./gradlew build` |
+| **grails-forge/** | Application generator (like Spring Initializr) | `cd grails-forge && ./gradlew build` |
+
+Each project has its own `settings.gradle` and independent build. When working on a specific project, run Gradle commands from that project's directory.
+
 ## Key Modules
 
 **Core**: `grails-core`, `grails-bootstrap`, `grails-spring`, `grails-common`
@@ -203,6 +216,25 @@ class MyService { }
 | `chore/`, `refactor/`, `test/`, `ci/`, `perf/`, `build/` | maintenance |
 | `deps/` | deps |
 
+## Pull Request Guidelines
+
+1. **Fork & branch** from the target release branch (e.g., `7.0.x`)
+2. **Run tests** before submitting: `./gradlew build --rerun-tasks`
+3. **Run code style checks**: `./gradlew codeStyle`
+4. **Squash commits** into a single meaningful commit message
+5. **Reference issues** in PR description (e.g., "Fixes #1234")
+
+### Review Process
+
+| Change Type | Review Policy | Reviewers | Wait Period |
+|-------------|---------------|-----------|-------------|
+| Build/CI changes | Commit then Review | - | - |
+| Documentation | Commit then Review (obvious fixes) | 1 minimum | - |
+| Groovy/Spring dependency changes | Review then Commit | 2-3 required | 3 days (weekend) / 1 day (weekday) |
+| All other changes | Review then Commit | 1 required | - |
+
+See `CONTRIBUTING.md` for full details.
+
 ## Common Issues
 
 | Problem | Solution |
@@ -213,9 +245,10 @@ class MyService { }
 | Cache issues | `./gradlew --rerun-tasks` |
 | Deprecation details | `./gradlew <task> --warning-mode all` |
 
-## Security
 
-Report vulnerabilities to: `security@grails.org` (NOT public issues)
+### Reporting Vulnerabilities
+
+Please see the page of the [ASF Security Team](https://www.apache.org/security/) for further information and contact information.
 
 ## Resources
 
