@@ -22,6 +22,7 @@ import grails.artefact.Interceptor
 import grails.util.Environment
 import grails.web.mapping.UrlMappingInfo
 import spock.lang.Issue
+import spock.util.environment.RestoreSystemProperties
 import spock.lang.Specification
 
 class UrlMappingMatcherSpec extends Specification {
@@ -39,6 +40,7 @@ class UrlMappingMatcherSpec extends Specification {
         !matcher.doesMatch('/demo/index', mappingInfo)
     }
 
+    @RestoreSystemProperties
     @Issue("https://github.com/apache/grails-core/issues/9208")
     void "test caching of results in production"() {
         given:
@@ -52,10 +54,8 @@ class UrlMappingMatcherSpec extends Specification {
         def matcher = new UrlMappingMatcher(Mock(Interceptor))
         matcher.matches(controller: controller)
 
-
         then:
         matcher.doesMatch(url, info)
-
 
         when:
         matcher = new UrlMappingMatcher(Mock(Interceptor))
@@ -63,8 +63,5 @@ class UrlMappingMatcherSpec extends Specification {
 
         then:
         !matcher.doesMatch(url, info)
-
-        cleanup:
-        System.setProperty(Environment.KEY, "test")
     }
 }

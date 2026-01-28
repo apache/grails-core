@@ -149,7 +149,7 @@ tasks.withType(Test).configureEach {
     }
     useJUnitPlatform()
     maxParallelForks = configuredTestParallel
-    forkEvery = isCiBuild ? 25 : 100
+    forkEvery = isCiBuild ? 50 : 100
     maxHeapSize = isCiBuild ? '768m' : '1024m'
     jvmArgs('--add-opens=java.base/java.lang=ALL-UNNAMED', '--add-opens=java.base/java.util=ALL-UNNAMED')
 }

@@ -24,16 +24,37 @@ import grails.plugin.json.view.test.JsonRenderResult
 import grails.plugin.json.view.test.JsonViewTest
 import grails.validation.Validateable
 import org.grails.testing.GrailsUnitTest
+import org.grails.validation.ConstraintEvalUtils
 import spock.lang.Shared
 import spock.lang.Specification
 
 class JsonApiSpec extends Specification implements JsonViewTest, GrailsUnitTest {
 
+    // Cache the static field helper interface for performance
+    private static final Class<?> STATIC_FIELD_HELPER = Class.forName('grails.validation.Validateable$Trait$StaticFieldHelper')
+
     @Shared
     ObjectMapper objectMapper = new ObjectMapper()
 
     void setup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+        clearConstraintsMapCache(SuperHero)
         mappingContext.addPersistentEntities(Widget, Author, Book, ResearchPaper)
+    }
+
+    void cleanup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+        clearConstraintsMapCache(SuperHero)
+    }
+
+    /**
+     * Clears the private static constraintsMapInternal field in the Validateable trait.
+     */
+    private static void clearConstraintsMapCache(Class<?> clazz) {
+        if (STATIC_FIELD_HELPER.isAssignableFrom(clazz)) {
+            def setterMethod = clazz.getMethod('grails_validation_Validateable__constraintsMapInternal$set', Map)
+            setterMethod.invoke(null, (Map) null)
+        }
     }
 
     void 'test simple case'() {

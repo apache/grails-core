@@ -26,11 +26,13 @@ import org.grails.datastore.mapping.mongo.config.MongoSettings
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import spock.lang.AutoCleanup
+import spock.util.environment.RestoreSystemProperties
 import spock.lang.Shared
 
 /**
  * Created by graemerocher on 14/07/2016.
  */
+@RestoreSystemProperties
 class SchemaBasedMultiTenancySpec extends AutoStartedMongoSpec {
 
     @Shared @AutoCleanup MongoDatastore datastore
@@ -50,7 +52,8 @@ class SchemaBasedMultiTenancySpec extends AutoStartedMongoSpec {
     }
 
     void setup() {
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
+        // Ensure tenant property is cleared before each test for test isolation
+        System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
     }
 
     void "Test no tenant id"() {

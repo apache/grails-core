@@ -50,14 +50,22 @@ import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.WebApplicationContext
+import org.grails.web.mime.HttpServletResponseExtension
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.support.GenericWebApplicationContext
 import spock.lang.Specification
 
 abstract class BaseDomainClassRendererSpec extends Specification {
 
+    void setup() {
+        // Clear the static mimeTypes cache to prevent test environment pollution
+        HttpServletResponseExtension.@mimeTypes = null
+    }
+
     void cleanup() {
         RequestContextHolder.resetRequestAttributes()
+        // Clear the static mimeTypes cache after each test for test isolation
+        HttpServletResponseExtension.@mimeTypes = null
     }
 
     protected abstract Renderer getRenderer()

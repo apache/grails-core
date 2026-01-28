@@ -24,9 +24,12 @@ import org.grails.cli.profile.Profile
 import org.spockframework.util.StringMessagePrintStream
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
+
 /**
  * Created by Jim on 7/18/2016.
  */
+@RestoreSystemProperties
 class CreateAppCommandSpec extends Specification {
 
     @Shared
@@ -42,7 +45,6 @@ class CreateAppCommandSpec extends Specification {
     }
 
     void cleanup() {
-        System.setProperty("org.fusesource.jansi.Ansi.disable", "false")
         GrailsConsole.instance.out = originalOut
     }
 

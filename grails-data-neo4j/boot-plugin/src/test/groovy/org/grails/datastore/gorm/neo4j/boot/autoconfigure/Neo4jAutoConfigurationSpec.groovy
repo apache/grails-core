@@ -28,10 +28,12 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
 /**
  * Created by graemerocher on 23/11/15.
  */
+@RestoreSystemProperties
 class Neo4jDbGormAutoConfigurationSpec extends Specification{
 
     protected AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();

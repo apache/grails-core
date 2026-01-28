@@ -21,9 +21,33 @@ package org.grails.web.binding.json
 import grails.artefact.Artefact
 import grails.testing.web.controllers.ControllerUnitTest
 import org.grails.databinding.bindingsource.DataBindingSourceCreationException
+import org.grails.validation.ConstraintEvalUtils
 import spock.lang.Specification
 
 class JsonBindingWithExceptionHandlerSpec extends Specification implements ControllerUnitTest<BindingWithExceptionHandlerMethodController> {
+
+    // Cache the static field helper interface for performance
+    private static final Class<?> STATIC_FIELD_HELPER = Class.forName('grails.validation.Validateable$Trait$StaticFieldHelper')
+
+    def setup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+        clearConstraintsMapCache(SomeCommandObject)
+    }
+
+    def cleanup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+        clearConstraintsMapCache(SomeCommandObject)
+    }
+
+    /**
+     * Clears the private static constraintsMapInternal field in the Validateable trait.
+     */
+    private static void clearConstraintsMapCache(Class<?> clazz) {
+        if (STATIC_FIELD_HELPER.isAssignableFrom(clazz)) {
+            def setterMethod = clazz.getMethod('grails_validation_Validateable__constraintsMapInternal$set', Map)
+            setterMethod.invoke(null, (Map) null)
+        }
+    }
 
     void 'test binding malformed JSON'() {
         given:

@@ -29,13 +29,14 @@ import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import spock.lang.AutoCleanup
 import spock.lang.Ignore
 import spock.lang.IgnoreIf
+import spock.util.environment.RestoreSystemProperties
 import spock.lang.Shared
 import spock.lang.Specification
 
 /**
  * Created by graemerocher on 05/04/2017.
  */
-
+@RestoreSystemProperties
 class DatabasePerTenantSpec extends Specification {
 
     @Shared @AutoCleanup SimpleMapDatastore datastore = new SimpleMapDatastore(

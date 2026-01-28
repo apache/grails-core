@@ -91,19 +91,6 @@ tasks.named('jar', Jar) {
     exclude('testapp/**/**')
 }
 
-tasks.withType(Test).configureEach {
-    develocity.testRetry {
-        if (isCiBuild) {
-            maxRetries = 2
-            maxFailures = 20
-            failOnPassedAfterRetry = true
-            filter {
-                excludeClasses.add('*.GroovyChangeLogSpec')
-            }
-        }
-    }
-}
-
 apply {
     from rootProject.layout.projectDirectory.file('gradle/hibernate5-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')

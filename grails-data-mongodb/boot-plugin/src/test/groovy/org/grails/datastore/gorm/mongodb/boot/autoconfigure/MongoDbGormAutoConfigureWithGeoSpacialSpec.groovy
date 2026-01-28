@@ -30,10 +30,12 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
 /**
  * Created by graemerocher on 20/03/14.
  */
+@RestoreSystemProperties
 class MongoDbGormAutoConfigureWithGeoSpacialSpec extends AutoStartedMongoSpec {
 
     protected AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();

@@ -30,6 +30,7 @@ import org.hibernate.resource.jdbc.spi.JdbcSessionOwner
 import org.springframework.orm.hibernate5.SessionHolder
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.AutoCleanup
+import spock.util.environment.RestoreSystemProperties
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -38,7 +39,9 @@ import java.sql.Connection
 /**
  * Created by graemerocher on 20/07/2016.
  */
+@RestoreSystemProperties
 class SchemaMultiTenantSpec extends Specification {
+
     void "Test a database per tenant multi tenancy"() {
         given:"A configuration for multiple data sources"
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
