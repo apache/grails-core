@@ -16,19 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs
+package org.apache.grails.data.testing.tck.tests
 
 import grails.gorm.annotation.Entity
-import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Ignore
+import spock.lang.IgnoreIf
 
-class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
+@IgnoreIf({ System.getProperty("hibernate7.gorm.suite") == "true" })
+class RLikeSpec extends GrailsDataTckSpec {
     void setupSpec() {
         manager.addAllDomainClasses([RlikeFoo])
     }
 
-    void "test rlike works with H2"() {
+    void "test rlike works"() {
         given:
         new RlikeFoo(name: "ABC").save(flush: true)
         new RlikeFoo(name: "ABCDEF").save(flush: true)
