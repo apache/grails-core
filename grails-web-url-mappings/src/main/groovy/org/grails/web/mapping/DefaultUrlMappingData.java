@@ -47,6 +47,7 @@ public class DefaultUrlMappingData implements UrlMappingData {
     private List<Boolean> optionalTokens = new ArrayList<>();
     private boolean hasOptionalExtension;
     private boolean hasGreedyExtensionParam;
+    private int greedyTokenIndex = -1;
 
     public DefaultUrlMappingData(String urlPattern) {
         Assert.hasLength(urlPattern, "Argument [urlPattern] cannot be null or blank");
@@ -69,6 +70,11 @@ public class DefaultUrlMappingData implements UrlMappingData {
     @Override
     public boolean hasGreedyExtensionParam() {
         return hasGreedyExtensionParam;
+    }
+
+    @Override
+    public int getGreedyTokenIndex() {
+        return greedyTokenIndex;
     }
 
     private String[] tokenizeUrlPattern(String urlPattern) {
@@ -105,6 +111,8 @@ public class DefaultUrlMappingData implements UrlMappingData {
                 // Can be either (*)+ for required greedy or (*)+? for optional greedy
                 if (beforeExtension.endsWith("+") || beforeExtension.endsWith("+?")) {
                     hasGreedyExtensionParam = true;
+                    // The greedy token is the last token (before extension is stripped)
+                    greedyTokenIndex = tokens.length - 1;
                     // Remove the + (keep ? if it follows)
                     if (beforeExtension.endsWith("+?")) {
                         // (*)+? -> (*)?  (optional greedy)
