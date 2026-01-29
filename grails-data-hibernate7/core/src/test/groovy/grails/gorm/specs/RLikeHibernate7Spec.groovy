@@ -19,6 +19,7 @@
 package grails.gorm.specs
 
 import org.testcontainers.oracle.OracleContainer
+import spock.lang.Requires
 
 import grails.gorm.annotation.Entity
 import org.testcontainers.containers.MariaDBContainer
@@ -29,6 +30,17 @@ import spock.lang.Shared
 import spock.lang.Unroll
 
 @Testcontainers
+import org.testcontainers.dockerclient.DockerClientProviderStrategy
+
+// In your Spock @Requires or @IgnoreIf closure:
+@Requires({
+    try {
+        DockerClientProviderStrategy.getFirstValidStrategy()
+        return true
+    } catch (Exception e) {
+        return false
+    }
+})
 class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
 
     @Shared postgres = new PostgreSQLContainer("postgres:16")
