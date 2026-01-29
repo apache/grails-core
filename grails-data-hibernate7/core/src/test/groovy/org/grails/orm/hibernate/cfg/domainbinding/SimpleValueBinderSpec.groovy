@@ -20,7 +20,8 @@ class SimpleValueBinderSpec extends Specification {
     def persistentPropertyToPropertyConfig = Mock(PersistentPropertyToPropertyConfig)
     def typeNameProvider = Mock(TypeNameProvider)
 
-    def binder = new SimpleValueBinder(columnConfigToColumnBinder,
+    def binder = new SimpleValueBinder(namingStrategy,
+            columnConfigToColumnBinder,
             columnBinder,
             persistentPropertyToPropertyConfig,
             typeNameProvider)
