@@ -997,8 +997,8 @@ public class GrailsDomainBinder implements MetadataContributor {
      * @param mappings   The Hibernate mappings instance
      * @param path
      */
-    private void bindCollection(ToMany property, Collection collection,
-                                  PersistentClass owner, InFlightMetadataCollector mappings, String path, String sessionFactoryBeanName) {
+    public void bindCollection(ToMany property, Collection collection,
+                               PersistentClass owner, InFlightMetadataCollector mappings, String path, String sessionFactoryBeanName) {
 
         // set role
         String propertyName = getNameForPropertyAndPath(property, path);
