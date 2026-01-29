@@ -198,8 +198,9 @@ class RelationshipsFunctionalSpec extends ContainerGebSpec {
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "entity is created"
-        !title.contains('Create')
-        title.contains('Employee')
+        waitFor(5) {
+            title == 'Show Employee'
+        }
     }
 
     def "Show page displays embedded object properties"() {
@@ -232,8 +233,9 @@ class RelationshipsFunctionalSpec extends ContainerGebSpec {
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "employee was created"
-        !title.contains('Create')
-        title.contains('Employee')
+        waitFor(5) {
+            title == 'Show Employee'
+        }
     }
 
     // ==================== NULL ASSOCIATION HANDLING ====================
@@ -252,8 +254,9 @@ class RelationshipsFunctionalSpec extends ContainerGebSpec {
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "entity is created without association"
-        !title.contains('Create')
-        title.contains('Employee')
+        waitFor(5) {
+            title == 'Show Employee'
+        }
     }
 
     def "Show page handles null associations gracefully"() {
@@ -261,8 +264,9 @@ class RelationshipsFunctionalSpec extends ContainerGebSpec {
         go '/employee/show/3' // Bob Wilson has no projects
 
         then: "page renders without errors"
-        title.contains('Employee')
-        title.contains('Show')
-        $('body').text().contains('Wilson')
+        waitFor(5) {
+            title == 'Show Employee'
+            $('body').text().contains('Wilson')
+        }
     }
 }
