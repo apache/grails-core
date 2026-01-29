@@ -81,7 +81,8 @@ dependencies {
         exclude group:'xml-apis', module:'xml-apis'
     }
 
-    testImplementation platform('org.testcontainers:testcontainers-bom:2.0.3')
+    testImplementation platform('org.testcontainers:testcontainers-bom:1.20.4')
+    testImplementation 'org.testcontainers:testcontainers'
     testImplementation 'org.postgresql:postgresql:42.7.5'
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'com.mysql:mysql-connector-j:9.2.0'
