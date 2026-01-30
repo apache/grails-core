@@ -65,27 +65,6 @@ echo "Using Java at ..."
 which java
 java -version
 
-echo "Writing Gradle init script to use staging repo"
-echo """
-  allprojects {
-      buildscript {
-          repositories {
-              mavenCentral()
-              maven { url = 'https://repo.grails.org/grails/restricted' }
-              maven { url = 'https://repository.apache.org/content/groups/staging' }
-          }
-      }
-
-      repositories {
-          mavenCentral()
-          maven { url = 'https://repo.grails.org/grails/restricted' }
-          maven { url = 'https://repository.apache.org/content/groups/staging' }
-      }
-  }
-
-""" > "${DOWNLOAD_LOCATION}/use-staging-repo.gradle"
-echo "✅ Gradle staging repo init script written"
-
 echo "Determining Gradle on PATH ..."
 if GRADLE_CMD="$(command -v gradlew 2>/dev/null)"; then
     :   # found the wrapper on PATH
@@ -114,13 +93,20 @@ set -e
 echo "✅ Reproducible Build Verified"
 
 echo "Manual verification steps:"
-echo "☑️   1. Verify running the wrapper shell-created app: cd ${DOWNLOAD_LOCATION}/apache-grails-wrapper-${VERSION}-bin/ShellApp && ./gradlew bootRun --init-script ${DOWNLOAD_LOCATION}/use-staging-repo.gradle"
-echo "☑️   2. Verify running the wrapper forge-created app: cd ${DOWNLOAD_LOCATION}/apache-grails-wrapper-${VERSION}-bin/ForgeApp && ./gradlew bootRun --init-script ${DOWNLOAD_LOCATION}/use-staging-repo.gradle"
-echo "☑️   3. Verify running the cli shell-created app: cd ${DOWNLOAD_LOCATION}/apache-grails-${VERSION}-bin/bin/ShellApp && ./gradlew bootRun --init-script ${DOWNLOAD_LOCATION}/use-staging-repo.gradle"
-echo "☑️   4. Verify running the cli forge-created app: cd ${DOWNLOAD_LOCATION}/apache-grails-${VERSION}-bin/bin/ForgeApp && ./gradlew bootRun --init-script ${DOWNLOAD_LOCATION}/use-staging-repo.gradle"
-echo "☑️   5. Set the override repo to staging: 'export GRAILS_REPO_URL=https://repository.apache.org/content/groups/staging'"
-echo "☑️   6.1. Run './grailsw help' inside that app directory."
-echo "☑️   6.2. Verify that the scaffolding commands (e.g. 'generate-*') are listed."
-echo "          This confirms that dynamic command resolution is working correctly."
-
+echo
+echo "☑️ 1 | Verify that the generated applications start correctly"
+echo "     1.1 | Wrapper Shell App:"
+echo "           cd ${DOWNLOAD_LOCATION}/apache-grails-wrapper-${VERSION}-bin/ShellApp && ./gradlew bootRun"
+echo "     1.2 | Wrapper Forge App:"
+echo "           cd ${DOWNLOAD_LOCATION}/apache-grails-wrapper-${VERSION}-bin/ForgeApp && ./gradlew bootRun"
+echo "     1.3 | CLI Shell App:"
+echo "           cd ${DOWNLOAD_LOCATION}/apache-grails-${VERSION}-bin/bin/ShellApp && ./gradlew bootRun"
+echo "     1.4 | CLI Forge App:"
+echo "           cd ${DOWNLOAD_LOCATION}/apache-grails-${VERSION}-bin/bin/ForgeApp && ./gradlew bootRun"
+echo
+echo "☑️ 2 | Verify Grails command resolution"
+echo "     2.1 | Run './grailsw help' inside any of the app directories above."
+echo "     2.2 | Confirm that scaffolding commands (e.g. 'generate-*') are listed."
+echo "           This verifies that dynamic command resolution is working correctly."
+echo
 echo "✅✅✅ Automatic verification finished. See above instructions for remaining manual testing."
