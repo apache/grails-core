@@ -39,6 +39,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.*;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
 import org.hibernate.boot.ResourceStreamLocator;
@@ -1533,104 +1534,107 @@ public class GrailsDomainBinder
 
 
         for (PersistentProperty<?> currentGrailsProp : persistentProperties) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("[GrailsDomainBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
-            }
-
-            Value value = null;
-
-            // see if it's a collection type
-            CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
-
-            Class<?> userType = getUserType(currentGrailsProp);
-
-            if (userType != null && !UserCollectionType.class.isAssignableFrom(userType)) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as SimpleValue");
-                }
-                value = new BasicValue(metadataBuildingContext, table);
-                // set type
-                new SimpleValueBinder(namingStrategy).bindSimpleValue(currentGrailsProp, null, (SimpleValue) value, EMPTY_PATH);
-            }
-            else if (collectionType != null) {
-                String typeName = new TypeNameProvider().getTypeName(currentGrailsProp, gormMapping);
-                if ("serializable".equals(typeName)) {
-                    value = new BasicValue(metadataBuildingContext, table);
-                    boolean nullable = currentGrailsProp.isNullable();
-                    String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, EMPTY_PATH, null);
-                    new SimpleValueColumnBinder().bindSimpleValue((SimpleValue) value, typeName, columnName, nullable);
-                }
-                else {
-                    // create collection
-                    Collection collection = collectionType.create((ToMany) currentGrailsProp, persistentClass,
-                            EMPTY_PATH, mappings, sessionFactoryBeanName);
-                    mappings.addCollectionBinding(collection);
-                    value = collection;
-                }
-            }
-            else if (currentGrailsProp.getType().isEnum()) {
-                value = new BasicValue(metadataBuildingContext, table);
-                String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, EMPTY_PATH, null);
-                enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), (SimpleValue) value, columnName);
-            }
-            else if(currentGrailsProp instanceof Association) {
-                Association association = (Association) currentGrailsProp;
-                if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.ManyToOne) {
-                    if (LOG.isDebugEnabled())
-                        LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as ManyToOne");
-
-                    value = new ManyToOne(metadataBuildingContext, table);
-                    new ManyToOneBinder(namingStrategy).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, EMPTY_PATH);
-                }
-                else if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.OneToOne && userType == null) {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
-                    }
-
-                    final boolean isHasOne = association.isHasOne();
-                    if (isHasOne && !association.isBidirectional()) {
-                        throw new MappingException("hasOne property [" + currentGrailsProp.getOwner().getName() +
-                                "." + currentGrailsProp.getName() + "] is not bidirectional. Specify the other side of the relationship!");
-                    }
-                    else if (((Association) currentGrailsProp).canBindOneToOneWithSingleColumnAndForeignKey()) {
-                        value = new OneToOne(metadataBuildingContext, table, persistentClass);
-                        new OneToOneBinder(namingStrategy).bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, EMPTY_PATH);
-                    }
-                    else {
-                        if (isHasOne && association.isBidirectional()) {
-                            value = new OneToOne(metadataBuildingContext, table, persistentClass);
-                            new OneToOneBinder(namingStrategy).bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, EMPTY_PATH);
-                        }
-                        else {
-                            value = new ManyToOne(metadataBuildingContext, table);
-                            new ManyToOneBinder(namingStrategy).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, EMPTY_PATH);
-                        }
-                    }
-                }
-                else if (currentGrailsProp instanceof Embedded) {
-                    value = new Component(metadataBuildingContext, persistentClass);
-                    componentPropertyBinder.bindComponent((Component) value, (Embedded) currentGrailsProp, true, mappings, sessionFactoryBeanName);
-                }
-            }
-            // work out what type of relationship it is and bind value
-            else {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as SimpleValue");
-                }
-                value = new BasicValue(metadataBuildingContext, table);
-                // set type
-                new SimpleValueBinder(namingStrategy).bindSimpleValue(currentGrailsProp, null, (SimpleValue) value, EMPTY_PATH);
-            }
-
-            if (value != null) {
-                Property property = propertyFromValueCreator.createProperty(value, currentGrailsProp);
-                persistentClass.addProperty(property);
-            }
+            bindProperty(persistentClass, mappings, sessionFactoryBeanName, currentGrailsProp, table, gormMapping);
         }
 
         new NaturalIdentifierBinder().bindNaturalIdentifier(gormMapping, persistentClass);
     }
 
+    private void bindProperty(PersistentClass persistentClass, @NonNull InFlightMetadataCollector mappings, String sessionFactoryBeanName, PersistentProperty<?> currentGrailsProp, Table table, Mapping gormMapping) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[GrailsDomainBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
+        }
+
+        Value value = null;
+
+        // see if it's a collection type
+        CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
+
+        Class<?> userType = getUserType(currentGrailsProp);
+
+        if (userType != null && !UserCollectionType.class.isAssignableFrom(userType)) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as SimpleValue");
+            }
+            value = new BasicValue(metadataBuildingContext, table);
+            // set type
+            new SimpleValueBinder(namingStrategy).bindSimpleValue(currentGrailsProp, null, (SimpleValue) value, EMPTY_PATH);
+        }
+        else if (collectionType != null) {
+            String typeName = new TypeNameProvider().getTypeName(currentGrailsProp, gormMapping);
+            if ("serializable".equals(typeName)) {
+                value = new BasicValue(metadataBuildingContext, table);
+                boolean nullable = currentGrailsProp.isNullable();
+                String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, EMPTY_PATH, null);
+                new SimpleValueColumnBinder().bindSimpleValue((SimpleValue) value, typeName, columnName, nullable);
+            }
+            else {
+                // create collection
+                Collection collection = collectionType.create((ToMany) currentGrailsProp, persistentClass,
+                        EMPTY_PATH, mappings, sessionFactoryBeanName);
+                mappings.addCollectionBinding(collection);
+                value = collection;
+            }
+        }
+        else if (currentGrailsProp.getType().isEnum()) {
+            value = new BasicValue(metadataBuildingContext, table);
+            String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, EMPTY_PATH, null);
+            enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), (SimpleValue) value, columnName);
+        }
+        else if(currentGrailsProp instanceof Association) {
+            Association association = (Association) currentGrailsProp;
+            if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.ManyToOne) {
+                if (LOG.isDebugEnabled())
+                    LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as ManyToOne");
+
+                value = new ManyToOne(metadataBuildingContext, table);
+                new ManyToOneBinder(namingStrategy).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, EMPTY_PATH);
+            }
+            else if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.OneToOne && userType == null) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
+                }
+
+                final boolean isHasOne = association.isHasOne();
+                if (isHasOne && !association.isBidirectional()) {
+                    throw new MappingException("hasOne property [" + currentGrailsProp.getOwner().getName() +
+                            "." + currentGrailsProp.getName() + "] is not bidirectional. Specify the other side of the relationship!");
+                }
+                else if (((Association) currentGrailsProp).canBindOneToOneWithSingleColumnAndForeignKey()) {
+                    value = new OneToOne(metadataBuildingContext, table, persistentClass);
+                    new OneToOneBinder(namingStrategy).bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, EMPTY_PATH);
+                }
+                else {
+                    if (isHasOne && association.isBidirectional()) {
+                        value = new OneToOne(metadataBuildingContext, table, persistentClass);
+                        new OneToOneBinder(namingStrategy).bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, EMPTY_PATH);
+                    }
+                    else {
+                        value = new ManyToOne(metadataBuildingContext, table);
+                        new ManyToOneBinder(namingStrategy).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, EMPTY_PATH);
+                    }
+                }
+            }
+            else if (currentGrailsProp instanceof Embedded) {
+                value = new Component(metadataBuildingContext, persistentClass);
+                componentPropertyBinder.bindComponent((Component) value, (Embedded) currentGrailsProp, true, mappings, sessionFactoryBeanName);
+            }
+        }
+        // work out what type of relationship it is and bind value
+        else {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as SimpleValue");
+            }
+            value = new BasicValue(metadataBuildingContext, table);
+            // set type
+            new SimpleValueBinder(namingStrategy).bindSimpleValue(currentGrailsProp, null, (SimpleValue) value, EMPTY_PATH);
+        }
+
+        if (value != null) {
+            Property property = propertyFromValueCreator.createProperty(value, currentGrailsProp);
+            persistentClass.addProperty(property);
+        }
+    }
 
 
     private void bindOneToMany(org.grails.datastore.mapping.model.types.OneToMany currentGrailsProp, OneToMany one, @Nonnull InFlightMetadataCollector mappings) {
