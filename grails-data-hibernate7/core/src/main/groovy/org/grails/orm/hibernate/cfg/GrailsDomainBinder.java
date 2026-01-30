@@ -1117,17 +1117,9 @@ public class GrailsDomainBinder
             LOG.info("[GrailsDomainBinder] Class [" + entity.getName() + "] is already mapped, skipping.. ");
             return;
         }
-        RootClass root = new RootClass(this.metadataBuildingContext);
-        root.setAbstract(entity.isAbstract());
-        classBinding.bindClass(entity, root, mappings);
-        bindRootPersistentClassCommonValues(entity, root, mappings, sessionFactoryBeanName);
-
         var children = entity.getChildEntities(dataSourceName);
-
-        if (children.isEmpty()) {
-            root.setPolymorphic(false);
-        } else {
-            root.setPolymorphic(true);
+        RootClass root = bindRootPersistentClassCommonValues(entity, children, mappings, sessionFactoryBeanName);
+        if (root.isPolymorphic()) {
             Mapping m = entity.getMappedForm();
             final Mapping finalMapping = m;
             boolean tablePerSubclass = !m.getTablePerHierarchy();
@@ -1444,8 +1436,14 @@ public class GrailsDomainBinder
     /*
      * Binds a persistent classes to the table representation and binds the class properties
      */
-    private void bindRootPersistentClassCommonValues(@Nonnull GrailsHibernatePersistentEntity domainClass,
-                                                       RootClass root, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+    private RootClass bindRootPersistentClassCommonValues(@Nonnull GrailsHibernatePersistentEntity domainClass,
+                                                       @Nonnull java.util.Collection<GrailsHibernatePersistentEntity> children,
+                                                       @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+
+        RootClass root = new RootClass(this.metadataBuildingContext);
+        root.setAbstract(domainClass.isAbstract());
+        root.setPolymorphic(!children.isEmpty());
+        classBinding.bindClass(domainClass, root, mappings);
 
         // get the schema and catalog names from the configuration
         Mapping gormMapping = domainClass.getMappedForm();
@@ -1491,6 +1489,8 @@ public class GrailsDomainBinder
         new VersionBinder(metadataBuildingContext, namingStrategy).bindVersion(domainClass.getVersion(), root);
         root.createPrimaryKey();
         createClassProperties(domainClass, root, mappings, sessionFactoryBeanName);
+
+        return root;
     }
 
 
