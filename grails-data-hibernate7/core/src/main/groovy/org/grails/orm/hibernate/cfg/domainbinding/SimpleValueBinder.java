@@ -18,6 +18,7 @@ import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum;
 
 public class SimpleValueBinder {
 
@@ -28,7 +29,7 @@ public class SimpleValueBinder {
     private final TypeNameProvider typeNameProvider;
 
 
-    private static final String SEQUENCE_KEY = "sequence";
+    private static final String SEQUENCE_KEY = GrailsSequenceGeneratorEnum.SEQUENCE.toString();
 
     public SimpleValueBinder(PersistentEntityNamingStrategy namingStrategy) {
         this(namingStrategy, new PersistentPropertyToPropertyConfig());
@@ -101,13 +102,14 @@ public class SimpleValueBinder {
                 generatorProps.put(SequenceStyleGenerator.SEQUENCE_PARAM, generatorProps.getProperty(SEQUENCE_KEY));
             }
 
-            switch (generator) {
-                case "identity" -> basicValue.setCustomIdGeneratorCreator(context -> {
+            if (GrailsSequenceGeneratorEnum.IDENTITY.toString().equals(generator)) {
+                basicValue.setCustomIdGeneratorCreator(context -> {
                     var gen = new org.hibernate.id.IdentityGenerator();
                     context.getProperty().getValue().getColumns().get(0).setIdentity(true);
                     return gen;
                 });
-                case "sequence", "sequence-identity" -> basicValue.setCustomIdGeneratorCreator(context -> {
+            } else if (GrailsSequenceGeneratorEnum.SEQUENCE.toString().equals(generator) || GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString().equals(generator)) {
+                basicValue.setCustomIdGeneratorCreator(context -> {
                     var gen = new org.hibernate.id.enhanced.SequenceStyleGenerator();
                     gen.configure(context.getType(), generatorProps, context.getServiceRegistry());
                     return gen;

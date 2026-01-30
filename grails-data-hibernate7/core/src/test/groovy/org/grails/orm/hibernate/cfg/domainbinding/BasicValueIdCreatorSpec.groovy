@@ -1,5 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
+
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.Identity
 import org.hibernate.boot.spi.MetadataBuildingContext
@@ -10,23 +12,29 @@ import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
 import spock.lang.Unroll
 
-import java.util.function.BiFunction
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
 
 class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
 
     MetadataBuildingContext metadataBuildingContext
     BasicValueIdCreator creator
+    BasicValue basicValue
     RootClass entity
     Table table
-    Map<String, BiFunction<GeneratorCreationContext, Identity, Generator>> generatorFactories
+    GrailsSequenceWrapper grailsSequenceWrapper
+    JdbcEnvironment jdbcEnvironment
 
     def setup() {
         metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
-        generatorFactories = [:]
-        creator = new BasicValueIdCreator(metadataBuildingContext, getGrailsDomainBinder().getJdbcEnvironment(), generatorFactories)
+        jdbcEnvironment = Mock(JdbcEnvironment)
+        grailsSequenceWrapper = Mock(GrailsSequenceWrapper)
         entity = new RootClass(metadataBuildingContext)
         table = new Table("test_table")
         entity.setTable(table)
+        // Use a real BasicValue to test that the generator creator lambda is correctly set and executable
+        basicValue = new BasicValue(metadataBuildingContext, table)
+        creator = new BasicValueIdCreator(jdbcEnvironment, basicValue, grailsSequenceWrapper)
     }
 
     @Unroll
@@ -35,80 +43,75 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         Identity mappedId = new Identity()
         mappedId.setGenerator(generatorName)
         def mockGenerator = Mock(Generator)
-        generatorFactories.put(generatorName, { ctx, mid -> mockGenerator } as BiFunction)
+        def context = Mock(GeneratorCreationContext)
 
         when:
         BasicValue id = creator.getBasicValueId(entity, mappedId, useSequence)
         def generatorCreator = id.getCustomIdGeneratorCreator()
-        Generator generator = generatorCreator.createGenerator(Mock(GeneratorCreationContext))
+        Generator generator = generatorCreator.createGenerator(context)
 
         then:
+        1 * grailsSequenceWrapper.getGenerator(generatorName, context, mappedId, _, jdbcEnvironment) >> mockGenerator
         generator == mockGenerator
 
         where:
-        generatorName       | useSequence
-        "identity"          | false
-        "sequence"          | true
-        "sequence-identity" | true
-        "increment"         | false
-        "uuid"              | false
-        "uuid2"             | false
-        "assigned"          | false
-        "table"             | false
-        "enhanced-table"    | false
-        "hilo"              | false
+        generatorName                                            | useSequence
+        GrailsSequenceGeneratorEnum.IDENTITY.toString()          | false
+        GrailsSequenceGeneratorEnum.SEQUENCE.toString()          | true
+        GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString() | true
+        GrailsSequenceGeneratorEnum.INCREMENT.toString()         | false
+        GrailsSequenceGeneratorEnum.UUID.toString()              | false
+        GrailsSequenceGeneratorEnum.UUID2.toString()             | false
+        GrailsSequenceGeneratorEnum.ASSIGNED.toString()          | false
+        GrailsSequenceGeneratorEnum.TABLE.toString()             | false
+        GrailsSequenceGeneratorEnum.ENHANCED_TABLE.toString()    | false
+        GrailsSequenceGeneratorEnum.HILO.toString()              | false
     }
 
     def "should default to native generator when mappedId is null"() {
         given:
-        // Native generator is the default, not in the map passed to constructor usually, 
-        // but here we are testing the logic inside getBasicValueId that selects the key.
-        // If mappedId is null and useSequence is false, it selects "native".
-        // "native" is NOT in the map by default in my test setup (empty map).
-        // So it falls back to default lambda in getBasicValueId: (ctx, mid) -> new GrailsNativeGenerator(ctx)
-        // We can't easily mock the default lambda unless we change the code to look up "native" in the map too.
-        // The code uses getOrDefault(generator, default).
-        // If generator is "native", and "native" is NOT in map, it uses default.
-        // Let's put "native" in the map to verify it selects "native".
         def mockGenerator = Mock(Generator)
-        generatorFactories.put("native", { ctx, mid -> mockGenerator } as BiFunction)
+        def context = Mock(GeneratorCreationContext)
 
         when:
         BasicValue id = creator.getBasicValueId(entity, null, false)
         def generatorCreator = id.getCustomIdGeneratorCreator()
-        Generator generator = generatorCreator.createGenerator(Mock(GeneratorCreationContext))
+        Generator generator = generatorCreator.createGenerator(context)
 
         then:
+        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.NATIVE.toString(), context, null, _, jdbcEnvironment) >> mockGenerator
         generator == mockGenerator
     }
 
     def "should default to sequence-identity when mappedId is null and useSequence is true"() {
         given:
         def mockGenerator = Mock(Generator)
-        generatorFactories.put("sequence-identity", { ctx, mid -> mockGenerator } as BiFunction)
+        def context = Mock(GeneratorCreationContext)
 
         when:
         BasicValue id = creator.getBasicValueId(entity, null, true)
         def generatorCreator = id.getCustomIdGeneratorCreator()
-        Generator generator = generatorCreator.createGenerator(Mock(GeneratorCreationContext))
+        Generator generator = generatorCreator.createGenerator(context)
 
         then:
+        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString(), context, null, _, jdbcEnvironment) >> mockGenerator
         generator == mockGenerator
     }
 
     def "should use sequence-identity when generator is native and useSequence is true"() {
         given:
         Identity mappedId = new Identity()
-        mappedId.setGenerator("native")
+        mappedId.setGenerator(GrailsSequenceGeneratorEnum.NATIVE.toString())
         def mockGenerator = Mock(Generator)
-        generatorFactories.put("sequence-identity", { ctx, mid -> mockGenerator } as BiFunction)
+        def context = Mock(GeneratorCreationContext)
 
         when:
         BasicValue id = creator.getBasicValueId(entity, mappedId, true)
         def generatorCreator = id.getCustomIdGeneratorCreator()
-        Generator generator = generatorCreator.createGenerator(Mock(GeneratorCreationContext))
+        Generator generator = generatorCreator.createGenerator(context)
 
         then:
+        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString(), context, mappedId, _, jdbcEnvironment) >> mockGenerator
         generator == mockGenerator
     }
 
@@ -116,18 +119,27 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         given:
         Identity mappedId = new Identity()
         mappedId.setGenerator("custom")
-        Identity capturedId = null
-        generatorFactories.put("custom", { ctx, mid -> 
-            capturedId = mid
-            return Mock(Generator) 
-        } as BiFunction)
+        def context = Mock(GeneratorCreationContext)
 
         when:
         BasicValue id = creator.getBasicValueId(entity, mappedId, false)
         def generatorCreator = id.getCustomIdGeneratorCreator()
-        generatorCreator.createGenerator(Mock(GeneratorCreationContext))
+        generatorCreator.createGenerator(context)
 
         then:
-        capturedId == mappedId
+        1 * grailsSequenceWrapper.getGenerator("custom", context, mappedId, _, jdbcEnvironment) >> Mock(Generator)
+    }
+
+    def "should set entity name on mappedId if it is null"() {
+        given:
+        Identity mappedId = new Identity()
+        mappedId.setGenerator(GrailsSequenceGeneratorEnum.IDENTITY.toString())
+        entity.setEntityName("MyEntity")
+
+        when:
+        creator.getBasicValueId(entity, mappedId, false)
+
+        then:
+        mappedId.getName() == "MyEntity"
     }
 }
