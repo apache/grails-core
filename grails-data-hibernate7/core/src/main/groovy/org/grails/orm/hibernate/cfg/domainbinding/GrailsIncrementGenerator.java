@@ -2,7 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding;
 
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Identity;
-import org.hibernate.boot.model.relational.Database;
+
 import org.hibernate.boot.model.relational.SqlStringGenerationContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
@@ -39,7 +39,7 @@ public class GrailsIncrementGenerator extends IncrementGenerator {
     private String resolvedColumnName;
     private Class<?> resolvedReturnClass;
 
-    public GrailsIncrementGenerator(GeneratorCreationContext context, Identity mappedId, JdbcEnvironment jdbcEnvironment, GrailsHibernatePersistentEntity domainClass) {
+    public GrailsIncrementGenerator(GeneratorCreationContext context, Identity mappedId, GrailsHibernatePersistentEntity domainClass) {
         Properties params = new Properties();
         if (mappedId != null && mappedId.getProperties() != null) {
             params.putAll(mappedId.getProperties());
