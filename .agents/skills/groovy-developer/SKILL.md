@@ -93,8 +93,8 @@ def greet = { name -> "Hello, $name" }
 println greet("World")
 
 // Implicit 'it' parameter
-def double = { it * 2 }
-println [1, 2, 3].collect(double)
+def twice = { it * 2 }
+println [1, 2, 3].collect(twice)
 
 // Closure with delegate (for DSLs)
 def configure = {
@@ -174,7 +174,7 @@ if (number) { }    // True if not 0
 def items = getItems() ?: []  // Default to empty list
 ```
 
-### Records (Incubating)
+### Records
 ```groovy
 // Immutable data class
 record Point(int x, int y) {}
@@ -242,7 +242,7 @@ import grails.compiler.GrailsCompileStatic
 @GrailsCompileStatic
 class BookController {
     def show(Long id) {
-        respond Book.get(id)  // Works with static compilation
+        respond Book.findByIdAndActive(id, true)  // Dynamic finder works with @GrailsCompileStatic
     }
 }
 ```
@@ -283,7 +283,7 @@ def email = Email.builder()
 
 ### @Delegate
 ```groovy
-import groovy.transform.Delegate
+import groovy.lang.Delegate
 
 class EnhancedList<T> {
     @Delegate List<T> list = []
@@ -301,7 +301,7 @@ println enhanced.secondLast()  // "a"
 
 ### @Singleton
 ```groovy
-import groovy.transform.Singleton
+import groovy.lang.Singleton
 
 @Singleton
 class ConfigManager {
@@ -497,24 +497,25 @@ sql.execute("INSERT INTO books (title) VALUES ($title)")
 - Use GStrings for string interpolation.
 - Prefer traits over inheritance for mixins.
 - Use explicit types for public APIs, `def` for local variables.
+- Always use parentheses in method calls for clarity.
 
 ### Grails-Specific
-- Use `@GrailsCompileStatic` instead of `@CompileStatic` in Grails classes.
+- Use `@GrailsCompileStatic` instead of `@CompileStatic` in Grails artefact classes if needed.
 - Leverage GORM dynamic finders and where queries.
 - Use command objects for form binding and validation.
 - Follow convention over configuration.
 
 ## Common Pitfalls
 
-- **`==` vs `is`**: `==` calls `equals()`, use `is` for identity comparison.
-- **GString in maps**: Use `"key".toString()` as map keys if needed.
+- **`==` vs `is`**: `==` calls `equals()`, use `is` for identity comparison (same as Java).
+- **GString in maps**: GStrings don't work as map keys; use `"key$idx".toString()` if needed.
 - **Closure scope**: Understand `delegate`, `owner`, and `this` in closures.
-- **Optional parentheses**: Can cause ambiguity; use parentheses when unclear.
-- **Static imports**: Groovy may not find statically imported methods without explicit import.
+- **Optional parentheses**: Can cause ambiguity; always use parentheses for clarity.
+- **Static imports**: Always use explicit imports for statically imported methods.
 
 ## Resources
 
 - **Groovy 4 Documentation**: https://docs.groovy-lang.org/docs/groovy-4.0.30/html/documentation/
 - **Groovy Style Guide**: https://groovy-lang.org/style-guide.html
-- **GORM Documentation**: https://gorm.grails.org/latest/
+- **GORM Documentation**: https://grails.apache.org/docs/latest/grails-data/
 - **Spock Framework**: https://spockframework.org/spock/docs/2.3/all_in_one.html
