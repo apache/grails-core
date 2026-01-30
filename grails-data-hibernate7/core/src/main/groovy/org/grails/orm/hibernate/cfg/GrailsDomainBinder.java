@@ -29,7 +29,6 @@ import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.orm.hibernate.cfg.domainbinding.ClassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ColumnConfigToColumnBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesConsumer;
 import org.grails.orm.hibernate.cfg.domainbinding.EnumTypeBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.NamingStrategyProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.PersistentPropertyToPropertyConfig;
@@ -80,7 +79,6 @@ import org.hibernate.mapping.UnionSubclass;
 import org.hibernate.mapping.Value;
 import org.hibernate.metamodel.mapping.JdbcMapping;
 import org.hibernate.service.ServiceRegistry;
-import org.hibernate.type.ForeignKeyDirection;
 import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
 import org.hibernate.usertype.UserCollectionType;
@@ -484,7 +482,7 @@ public class GrailsDomainBinder
 
         final boolean isManyToMany = property instanceof ManyToMany;
         if(referenced != null && !isManyToMany && referenced.isMultiTenant()) {
-            String filterCondition = getMultiTenantFilterCondition(sessionFactoryBeanName, referenced);
+            String filterCondition = getMultiTenantFilterCondition(referenced);
             if(filterCondition != null) {
                 if (property.isUnidirectionalOneToMany()) {
                     collection.addManyToManyFilter(GormProperties.TENANT_IDENTITY, filterCondition, true, Collections.emptyMap(), Collections.emptyMap());
@@ -555,7 +553,7 @@ public class GrailsDomainBinder
         }
     }
 
-    private String getMultiTenantFilterCondition(String sessionFactoryBeanName, PersistentEntity referenced) {
+    private String getMultiTenantFilterCondition(PersistentEntity referenced) {
         TenantId tenantId = referenced.getTenantId();
         if(tenantId != null) {
 
@@ -1161,7 +1159,7 @@ public class GrailsDomainBinder
             TenantId tenantId = entity.getTenantId();
 
             if (tenantId != null) {
-                String filterCondition = getMultiTenantFilterCondition(sessionFactoryBeanName, entity);
+                String filterCondition = getMultiTenantFilterCondition(entity);
 
                 persistentClass.addFilter(
                         GormProperties.TENANT_IDENTITY,
@@ -1202,61 +1200,11 @@ public class GrailsDomainBinder
                               String sessionFactoryBeanName
                             , Mapping m, MappingCacheHolder mappingCacheHolder) {
         mappingCacheHolder.cacheMapping(sub);
-        Subclass subClass;
-        boolean tablePerSubclass = !m.getTablePerHierarchy() && !m.isTablePerConcreteClass();
-        boolean tablePerConcreteClass = m.isTablePerConcreteClass();
-        final String fullName = sub.getName();
-        if (tablePerSubclass) {
-            subClass = new JoinedSubclass( parent, this.metadataBuildingContext);
-        }
-        else if(tablePerConcreteClass) {
-            subClass = new UnionSubclass(parent, this.metadataBuildingContext);
-        }
-        else {
-            subClass = new SingleTableSubclass(parent, this.metadataBuildingContext);
-            // set the descriminator value as the name of the class. This is the
-            // value used by Hibernate to decide what the type of the class is
-            // to perform polymorphic queries
-            Mapping subMapping = null;
-            if (sub != null) {
-                subMapping = sub.getMappedForm();
-            }
-            DiscriminatorConfig discriminatorConfig = subMapping.getDiscriminator();
+        Subclass subClass = createSubclassMapping(sub, parent, mappings, sessionFactoryBeanName, m);
 
-            subClass.setDiscriminatorValue(discriminatorConfig != null && discriminatorConfig.getValue() != null ? discriminatorConfig.getValue() : fullName);
-            configureDerivedProperties(sub, subMapping);
-
-        }
-        Integer bs = (m == null) ? null : m.getBatchSize();
-        if (bs != null) {
-            subClass.setBatchSize(bs);
-        }
-
-        if (m != null && m.getDynamicUpdate()) {
-            subClass.setDynamicUpdate(true);
-        }
-        if (m != null && m.getDynamicInsert()) {
-            subClass.setDynamicInsert(true);
-        }
-
-        subClass.setCached(parent.isCached());
-
-        subClass.setAbstract(sub.isAbstract());
-        subClass.setEntityName(fullName);
-        subClass.setJpaEntityName(unqualify(fullName));
 
         parent.addSubclass(subClass);
         mappings.addEntityBinding(subClass);
-
-        if (tablePerSubclass) {
-            bindJoinedSubClass(sub, (JoinedSubclass) subClass, mappings, m, sessionFactoryBeanName);
-        }
-        else if( tablePerConcreteClass) {
-            bindUnionSubclass(sub, (UnionSubclass) subClass, mappings, sessionFactoryBeanName);
-        }
-        else {
-            bindSubClass(sub, subClass, mappings, sessionFactoryBeanName);
-        }
 
         addMultiTenantFilterIfNecessary(sub, subClass, mappings, sessionFactoryBeanName);
 
@@ -1265,6 +1213,32 @@ public class GrailsDomainBinder
             // bind the sub classes
             children.forEach(sub1 -> bindSubClass(sub1, subClass, mappings, sessionFactoryBeanName, m,mappingCacheHolder ));
         }
+    }
+
+    private @NonNull Subclass createSubclassMapping(@NonNull GrailsHibernatePersistentEntity subEntity, PersistentClass parent, @NonNull InFlightMetadataCollector mappings, String sessionFactoryBeanName, Mapping m) {
+        Subclass subClass;
+        subEntity.configureDerivedProperties();
+        if (!m.getTablePerHierarchy() && !m.isTablePerConcreteClass()) {
+            subClass = new JoinedSubclass(parent, this.metadataBuildingContext);
+            bindJoinedSubClass(subEntity, (JoinedSubclass) subClass, mappings, m, sessionFactoryBeanName);
+        }
+        else if(m.isTablePerConcreteClass()) {
+            subClass = new UnionSubclass(parent, this.metadataBuildingContext);
+            bindUnionSubclass(subEntity, (UnionSubclass) subClass, mappings, sessionFactoryBeanName);
+        }
+        else {
+            subClass = new SingleTableSubclass(parent, this.metadataBuildingContext);
+            subClass.setDiscriminatorValue(subEntity.getDiscriminatorValue());
+            bindSubClass(subEntity, subClass, mappings, sessionFactoryBeanName);
+        }
+        subClass.setBatchSize(Optional.ofNullable(m.getBatchSize()).orElse(-1));
+        subClass.setDynamicUpdate(m.getDynamicUpdate());
+        subClass.setDynamicInsert(m.getDynamicInsert());
+        subClass.setCached(parent.isCached());
+        subClass.setAbstract(subEntity.isAbstract());
+        subClass.setEntityName(subEntity.getName());
+        subClass.setJpaEntityName(unqualify(subEntity.getName()));
+        return subClass;
     }
 
 
@@ -1430,10 +1404,6 @@ public class GrailsDomainBinder
         entity.setPolymorphic(true);
     }
 
-    private void configureDerivedProperties(PersistentEntity domainClass, Mapping m) {
-        domainClass.getPersistentProperties().forEach(new ConfigureDerivedPropertiesConsumer( m));
-    }
-
     /*
      * Binds a persistent classes to the table representation and binds the class properties
      */
@@ -1449,7 +1419,7 @@ public class GrailsDomainBinder
         // get the schema and catalog names from the configuration
         Mapping gormMapping = domainClass.getMappedForm();
 
-        configureDerivedProperties(domainClass, gormMapping);
+        domainClass.configureDerivedProperties();
         CacheConfig cc = gormMapping.getCache();
         if (cc != null && cc.getEnabled()) {
             root.setCacheConcurrencyStrategy(cc.getUsage());
