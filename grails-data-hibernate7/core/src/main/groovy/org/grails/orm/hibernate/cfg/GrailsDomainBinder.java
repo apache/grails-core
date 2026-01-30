@@ -1122,8 +1122,7 @@ public class GrailsDomainBinder
         classBinding.bindClass(entity, root, mappings);
         bindRootPersistentClassCommonValues(entity, root, mappings, sessionFactoryBeanName);
 
-        var children = entity.getMappingContext()
-                .getDirectChildEntities(entity);
+        var children = entity.getChildEntities(dataSourceName);
 
         if (children.isEmpty()) {
             root.setPolymorphic(false);
@@ -1138,8 +1137,7 @@ public class GrailsDomainBinder
                 bindDiscriminatorProperty(root.getTable(), root, m);
             }
             // bind the sub classes
-            entity.getChildEntities(dataSourceName)
-                    .forEach(sub -> bindSubClass(sub, root, mappings, sessionFactoryBeanName, finalMapping,mappingCacheHolder ));
+            children.forEach(sub -> bindSubClass(sub, root, mappings, sessionFactoryBeanName, finalMapping,mappingCacheHolder ));
         }
 
         addMultiTenantFilterIfNecessary(entity, root, mappings, sessionFactoryBeanName);
@@ -1212,8 +1210,8 @@ public class GrailsDomainBinder
                             , Mapping m, MappingCacheHolder mappingCacheHolder) {
         mappingCacheHolder.cacheMapping(sub);
         Subclass subClass;
-        boolean tablePerSubclass = m != null && !m.getTablePerHierarchy() && !m.isTablePerConcreteClass();
-        boolean tablePerConcreteClass = m != null && m.isTablePerConcreteClass();
+        boolean tablePerSubclass = !m.getTablePerHierarchy() && !m.isTablePerConcreteClass();
+        boolean tablePerConcreteClass = m.isTablePerConcreteClass();
         final String fullName = sub.getName();
         if (tablePerSubclass) {
             subClass = new JoinedSubclass( parent, this.metadataBuildingContext);
@@ -1269,23 +1267,19 @@ public class GrailsDomainBinder
 
         addMultiTenantFilterIfNecessary(sub, subClass, mappings, sessionFactoryBeanName);
 
-        final java.util.Collection<PersistentEntity> childEntities = sub.getMappingContext().getDirectChildEntities(sub);
-        if (!childEntities.isEmpty()) {
+        var children = sub.getChildEntities(dataSourceName);
+        if (!children.isEmpty()) {
             // bind the sub classes
-            sub.getChildEntities(dataSourceName)
-                    .forEach(sub1 -> bindSubClass(sub1, subClass, mappings, sessionFactoryBeanName, m,mappingCacheHolder ));
+            children.forEach(sub1 -> bindSubClass(sub1, subClass, mappings, sessionFactoryBeanName, m,mappingCacheHolder ));
         }
     }
 
 
-    private void bindUnionSubclass(GrailsHibernatePersistentEntity subClass, UnionSubclass unionSubclass,
-                                  InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException {
+    private void bindUnionSubclass(@Nonnull GrailsHibernatePersistentEntity subClass, UnionSubclass unionSubclass,
+                                  @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException {
         classBinding.bindClass(subClass, unionSubclass, mappings);
 
-        Mapping subMapping = null;
-        if (subClass != null) {
-            subMapping = subClass.getMappedForm();
-        }
+        Mapping subMapping = subClass.getMappedForm();
 
         //TODO Verify if needed at all
 //        if ( unionSubclass.getEntityPersisterClass() == null ) {
@@ -1401,7 +1395,7 @@ public class GrailsDomainBinder
     private void bindDiscriminatorProperty(Table table, RootClass entity, Mapping someMapping) {
         SimpleValue d = new BasicValue(metadataBuildingContext, table);
         entity.setDiscriminator(d);
-        DiscriminatorConfig discriminatorConfig = someMapping != null ? someMapping.getDiscriminator() : null;
+        DiscriminatorConfig discriminatorConfig = someMapping.getDiscriminator();
 
         boolean hasDiscriminatorConfig = discriminatorConfig != null;
         entity.setDiscriminatorValue(hasDiscriminatorConfig ? discriminatorConfig.getValue() : entity.getClassName());
