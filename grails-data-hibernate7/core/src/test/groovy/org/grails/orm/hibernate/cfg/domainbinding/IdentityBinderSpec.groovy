@@ -7,23 +7,27 @@ import org.grails.orm.hibernate.cfg.Identity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.hibernate.boot.spi.InFlightMetadataCollector
 import org.hibernate.mapping.RootClass
-import spock.lang.Specification
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import spock.lang.Subject
 
-class IdentityBinderSpec extends Specification {
+class IdentityBinderSpec extends HibernateGormDatastoreSpec {
 
     def simpleIdBinder = Mock(SimpleIdBinder)
     def compositeIdBinder = Mock(CompositeIdBinder)
 
     @Subject
-    IdentityBinder binder = new IdentityBinder(simpleIdBinder, compositeIdBinder)
+    IdentityBinder binder
+
+    def setup() {
+        binder = new IdentityBinder(simpleIdBinder, compositeIdBinder)
+    }
 
     def "should delegate to simpleIdBinder when mapping is null and domainClass has simple identity"() {
         given:
-        def domainClass = GroovyMock(GrailsHibernatePersistentEntity)
-        def root = GroovyMock(RootClass)
-        def mappings = GroovyMock(InFlightMetadataCollector)
-        def identifierProp = GroovyMock(PersistentProperty)
+        def domainClass = Mock(GrailsHibernatePersistentEntity)
+        def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        def mappings = Mock(InFlightMetadataCollector)
+        def identifierProp = Mock(PersistentProperty)
         domainClass.getIdentity() >> identifierProp
         domainClass.getCompositeIdentity() >> null
 
@@ -36,10 +40,10 @@ class IdentityBinderSpec extends Specification {
 
     def "should delegate to compositeIdBinder when mapping is null and domainClass has composite identity"() {
         given:
-        def domainClass = GroovyMock(GrailsHibernatePersistentEntity)
-        def root = GroovyMock(RootClass)
-        def mappings = GroovyMock(InFlightMetadataCollector)
-        def compositeProps = [GroovyMock(PersistentProperty)] as PersistentProperty[]
+        def domainClass = Mock(GrailsHibernatePersistentEntity)
+        def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        def mappings = Mock(InFlightMetadataCollector)
+        def compositeProps = [Mock(PersistentProperty)] as PersistentProperty[]
         domainClass.getCompositeIdentity() >> compositeProps
 
         when:
@@ -51,11 +55,11 @@ class IdentityBinderSpec extends Specification {
 
     def "should delegate to compositeIdBinder when mapping specifies composite identity"() {
         given:
-        def domainClass = GroovyMock(GrailsHibernatePersistentEntity)
-        def root = GroovyMock(RootClass)
-        def mappings = GroovyMock(InFlightMetadataCollector)
-        def gormMapping = GroovyMock(Mapping)
-        def compositeIdentity = GroovyMock(CompositeIdentity)
+        def domainClass = Mock(GrailsHibernatePersistentEntity)
+        def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        def mappings = Mock(InFlightMetadataCollector)
+        def gormMapping = Mock(Mapping)
+        def compositeIdentity = Mock(CompositeIdentity)
         gormMapping.getIdentity() >> compositeIdentity
 
         when:
@@ -67,13 +71,13 @@ class IdentityBinderSpec extends Specification {
 
     def "should delegate to simpleIdBinder when mapping specifies simple identity"() {
         given:
-        def domainClass = GroovyMock(GrailsHibernatePersistentEntity)
-        def root = GroovyMock(RootClass)
-        def mappings = GroovyMock(InFlightMetadataCollector)
-        def gormMapping = GroovyMock(Mapping)
+        def domainClass = Mock(GrailsHibernatePersistentEntity)
+        def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        def mappings = Mock(InFlightMetadataCollector)
+        def gormMapping = Mock(Mapping)
         def identity = new Identity(name: "foo")
         gormMapping.getIdentity() >> identity
-        def identifierProp = GroovyMock(PersistentProperty)
+        def identifierProp = Mock(PersistentProperty)
         domainClass.getPropertyByName("foo") >> identifierProp
         domainClass.getIdentity() >> identifierProp
         domainClass.getName() >> "MyEntity"
@@ -87,10 +91,10 @@ class IdentityBinderSpec extends Specification {
 
     def "should throw MappingException when mapping specifies a non-existent identifier property"() {
         given:
-        def domainClass = GroovyMock(GrailsHibernatePersistentEntity)
-        def root = GroovyMock(RootClass)
-        def mappings = GroovyMock(InFlightMetadataCollector)
-        def gormMapping = GroovyMock(Mapping)
+        def domainClass = Mock(GrailsHibernatePersistentEntity)
+        def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        def mappings = Mock(InFlightMetadataCollector)
+        def gormMapping = Mock(Mapping)
         def identity = new Identity(name: "nonExistent")
         gormMapping.getIdentity() >> identity
         domainClass.getName() >> "MyEntity"
@@ -105,13 +109,13 @@ class IdentityBinderSpec extends Specification {
 
     def "should not lookup property by name if identity name matches domain class name"() {
         given:
-        def domainClass = GroovyMock(GrailsHibernatePersistentEntity)
-        def root = GroovyMock(RootClass)
-        def mappings = GroovyMock(InFlightMetadataCollector)
-        def gormMapping = GroovyMock(Mapping)
+        def domainClass = Mock(GrailsHibernatePersistentEntity)
+        def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        def mappings = Mock(InFlightMetadataCollector)
+        def gormMapping = Mock(Mapping)
         def identity = new Identity(name: "MyEntity")
         gormMapping.getIdentity() >> identity
-        def identifierProp = GroovyMock(PersistentProperty)
+        def identifierProp = Mock(PersistentProperty)
         domainClass.getIdentity() >> identifierProp
         domainClass.getName() >> "MyEntity"
 
@@ -120,6 +124,27 @@ class IdentityBinderSpec extends Specification {
 
         then:
         0 * domainClass.getPropertyByName(_)
+        1 * simpleIdBinder.bindSimpleId(identifierProp, root, identity)
+    }
+
+    def "should set entity name on identity if it is null"() {
+        given:
+        def domainClass = Mock(GrailsHibernatePersistentEntity)
+        def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        root.setEntityName("MyEntity")
+        def mappings = Mock(InFlightMetadataCollector)
+        def gormMapping = Mock(Mapping)
+        def identity = new Identity()
+        gormMapping.getIdentity() >> identity
+        def identifierProp = Mock(PersistentProperty)
+        domainClass.getIdentity() >> identifierProp
+        domainClass.getName() >> "MyEntity"
+
+        when:
+        binder.bindIdentity(domainClass, root, mappings, gormMapping, "sessionFactory")
+
+        then:
+        identity.getName() == "MyEntity"
         1 * simpleIdBinder.bindSimpleId(identifierProp, root, identity)
     }
 }

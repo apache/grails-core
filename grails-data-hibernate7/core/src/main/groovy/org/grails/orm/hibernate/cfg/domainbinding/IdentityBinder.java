@@ -60,6 +60,9 @@ public class IdentityBinder {
                         identifierProp = namedIdentityProp;
                     }
                 }
+                if (identity.getName() == null) {
+                    identity.setName(root.getEntityName());
+                }
                 simpleIdBinder.bindSimpleId(identifierProp, root, identity);
             }
         } else {
