@@ -41,12 +41,9 @@ public class BasicValueIdCreator {
     }
 
 
-    public BasicValue getBasicValueId(RootClass entity, Identity mappedId, boolean useSequence) {
+    public BasicValue getBasicValueId(Identity mappedId, boolean useSequence) {
         // create a BasicValue for the specific entity table (do not reuse the prototype directly because table differs)
         String generatorName = determineGeneratorName(mappedId, useSequence);
-        if (mappedId != null && mappedId.getName() == null) {
-            mappedId.setName(entity.getEntityName());
-        }
         id.setCustomIdGeneratorCreator(context -> createGenerator(mappedId, context, generatorName));
         return id;
     }

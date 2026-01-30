@@ -46,7 +46,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.getBasicValueId(entity, mappedId, useSequence)
+        BasicValue id = creator.getBasicValueId(mappedId, useSequence)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         Generator generator = generatorCreator.createGenerator(context)
 
@@ -74,7 +74,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.getBasicValueId(entity, null, false)
+        BasicValue id = creator.getBasicValueId(null, false)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         Generator generator = generatorCreator.createGenerator(context)
 
@@ -89,7 +89,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.getBasicValueId(entity, null, true)
+        BasicValue id = creator.getBasicValueId(null, true)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         Generator generator = generatorCreator.createGenerator(context)
 
@@ -106,7 +106,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.getBasicValueId(entity, mappedId, true)
+        BasicValue id = creator.getBasicValueId(mappedId, true)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         Generator generator = generatorCreator.createGenerator(context)
 
@@ -122,24 +122,11 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.getBasicValueId(entity, mappedId, false)
+        BasicValue id = creator.getBasicValueId(mappedId, false)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         generatorCreator.createGenerator(context)
 
         then:
         1 * grailsSequenceWrapper.getGenerator("custom", context, mappedId, _, jdbcEnvironment) >> Mock(Generator)
-    }
-
-    def "should set entity name on mappedId if it is null"() {
-        given:
-        Identity mappedId = new Identity()
-        mappedId.setGenerator(GrailsSequenceGeneratorEnum.IDENTITY.toString())
-        entity.setEntityName("MyEntity")
-
-        when:
-        creator.getBasicValueId(entity, mappedId, false)
-
-        then:
-        mappedId.getName() == "MyEntity"
     }
 }

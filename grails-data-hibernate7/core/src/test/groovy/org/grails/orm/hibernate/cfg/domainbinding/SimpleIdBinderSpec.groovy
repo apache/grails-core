@@ -11,6 +11,7 @@ import org.hibernate.mapping.PrimaryKey
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
 import spock.lang.Unroll
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
 
 class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
 
@@ -19,6 +20,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
     def simpleValueBinder
     def propertyBinder
     def basicValueIdCreator
+    Table currentTable
 
     def simpleIdBinder
 
@@ -26,10 +28,10 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         jdbcEnvironment = getGrailsDomainBinder().getJdbcEnvironment()
 
-        // Use a Mock for BasicValueIdCreator and return a BasicValue based on the RootClass table
+        // Use a Mock for BasicValueIdCreator and return a BasicValue based on the currentTable
         basicValueIdCreator = Mock(BasicValueIdCreator)
-        basicValueIdCreator.getBasicValueId(*_) >> { RootClass rc, Identity id, boolean useSeq ->
-            new BasicValue(metadataBuildingContext, rc.getTable())
+        basicValueIdCreator.getBasicValueId(*_) >> { Identity id, boolean useSeq ->
+            new BasicValue(metadataBuildingContext, currentTable)
         }
 
         // Mock the collaborators that can be safely mocked
@@ -51,11 +53,11 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
             }
         }
         def rootClass = new RootClass(metadataBuildingContext)
-        def table = new Table("TEST_TABLE")
-        rootClass.setTable(table)
+        currentTable = new Table("TEST_TABLE")
+        rootClass.setTable(currentTable)
 
         when:
-        simpleIdBinder.bindSimpleId(testProperty, rootClass, new Identity(generator: 'identity'))
+        simpleIdBinder.bindSimpleId(testProperty, rootClass, new Identity(generator: GrailsSequenceGeneratorEnum.IDENTITY.toString()))
 
         then:
         1 * simpleValueBinder.bindSimpleValue(testProperty, null, _, "")
@@ -79,11 +81,11 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
             }
         }
         def rootClass = new RootClass(metadataBuildingContext)
-        def table = new Table("TEST_TABLE")
-        rootClass.setTable(table)
+        currentTable = new Table("TEST_TABLE")
+        rootClass.setTable(currentTable)
 
         when:
-        simpleIdBinder.bindSimpleId(testProperty, rootClass, new Identity(generator: 'sequence', params: [sequence: 'SEQ_TEST']))
+        simpleIdBinder.bindSimpleId(testProperty, rootClass, new Identity(generator: GrailsSequenceGeneratorEnum.SEQUENCE.toString(), params: [sequence: 'SEQ_TEST']))
 
         then:
         1 * simpleValueBinder.bindSimpleValue(testProperty, null, _, "")
