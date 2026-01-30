@@ -314,7 +314,7 @@ docsTask.configure { Sync it ->
 }
 
 tasks.register('dist', Zip).configure { Zip it ->
-    it.dependsOn(docsTask)
+    it.dependsOn(docsTask, tasks.named('groovydoc'))
     it.from(outputDir)
 }
 
