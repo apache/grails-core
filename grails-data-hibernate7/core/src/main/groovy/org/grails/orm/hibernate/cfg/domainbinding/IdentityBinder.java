@@ -14,6 +14,8 @@ import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 
+import jakarta.annotation.Nonnull;
+
 public class IdentityBinder {
 
     private final SimpleIdBinder simpleIdBinder;
@@ -37,9 +39,9 @@ public class IdentityBinder {
     }
 
     public void bindIdentity(
-            GrailsHibernatePersistentEntity domainClass,
+            @Nonnull GrailsHibernatePersistentEntity domainClass,
             RootClass root,
-            InFlightMetadataCollector mappings,
+            @Nonnull InFlightMetadataCollector mappings,
             Mapping gormMapping,
             String sessionFactoryBeanName) {
 

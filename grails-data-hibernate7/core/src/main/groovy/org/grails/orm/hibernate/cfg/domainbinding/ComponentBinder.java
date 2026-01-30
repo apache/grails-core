@@ -14,6 +14,8 @@ import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 
+import jakarta.annotation.Nonnull;
+
 public class ComponentBinder {
 
     private final MappingCacheHolder mappingCacheHolder;
@@ -30,7 +32,7 @@ public class ComponentBinder {
     }
 
     public void bindComponent(Component component, Embedded property,
-                               boolean isNullable, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+                               boolean isNullable, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         Class<?> type = property.getType();
         String role = GrailsHibernateUtil.qualify(type.getName(), property.getName());
         component.setRoleName(role);

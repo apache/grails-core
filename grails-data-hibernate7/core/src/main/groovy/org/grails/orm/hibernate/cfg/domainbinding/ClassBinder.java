@@ -5,6 +5,8 @@ import org.grails.orm.hibernate.cfg.Mapping;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.PersistentClass;
 
+import jakarta.annotation.Nonnull;
+
 import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.unqualify;
 
 public class ClassBinder {
@@ -17,7 +19,7 @@ public class ClassBinder {
      * @param persistentClass The persistant class
      * @param collector        Existing collector
      */
-    public void bindClass(PersistentEntity persistentEntity, PersistentClass persistentClass, InFlightMetadataCollector collector) {
+    public void bindClass(@Nonnull PersistentEntity persistentEntity, PersistentClass persistentClass, @Nonnull InFlightMetadataCollector collector) {
         persistentClass.setLazy(true);
         var entityName = persistentEntity.getName();
         persistentClass.setEntityName(entityName);

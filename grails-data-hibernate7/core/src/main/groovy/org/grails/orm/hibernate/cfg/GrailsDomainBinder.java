@@ -97,6 +97,8 @@ import java.util.Set;
 import java.util.Optional;
 import java.util.StringTokenizer;
 
+import jakarta.annotation.Nonnull;
+
 import static java.util.Optional.ofNullable;
 import static org.hibernate.boot.model.naming.Identifier.toIdentifier;
 
@@ -252,7 +254,7 @@ public class GrailsDomainBinder
         NAMING_STRATEGY_PROVIDER.configureNamingStrategy(datasourceName, strategy);
     }
 
-    private void bindMapSecondPass(ToMany property, InFlightMetadataCollector mappings,
+    private void bindMapSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
                                      Map<?, ?> persistentClasses, org.hibernate.mapping.Map map, String sessionFactoryBeanName) {
         bindCollectionSecondPass(property, mappings, persistentClasses, map, sessionFactoryBeanName);
 
@@ -321,7 +323,7 @@ public class GrailsDomainBinder
      * @param list
      * @param sessionFactoryBeanName
      */
-    private void bindListSecondPass(ToMany property, InFlightMetadataCollector mappings,
+    private void bindListSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
                                       Map<?, ?> persistentClasses, org.hibernate.mapping.List list, String sessionFactoryBeanName) {
 
         bindCollectionSecondPass(property, mappings, persistentClasses, list, sessionFactoryBeanName);
@@ -399,7 +401,7 @@ public class GrailsDomainBinder
         }
     }
 
-    private void bindCollectionSecondPass(ToMany property, InFlightMetadataCollector mappings,
+    private void bindCollectionSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
                                             Map<?, ?> persistentClasses, Collection collection, String sessionFactoryBeanName) {
 
         PersistentClass associatedClass = null;
@@ -694,7 +696,7 @@ public class GrailsDomainBinder
     }
 
     private void bindCollectionWithJoinTable(ToMany property,
-                                               InFlightMetadataCollector mappings, Collection collection, PropertyConfig config, String sessionFactoryBeanName) {
+                                               @Nonnull InFlightMetadataCollector mappings, Collection collection, PropertyConfig config, String sessionFactoryBeanName) {
 
 //        PhysicalNamingStrategy namingStrategy = getPhysicalNamingStrategy(sessionFactoryBeanName);
 
@@ -816,7 +818,7 @@ public class GrailsDomainBinder
      * @param sessionFactoryBeanName The name of the session factory
      */
     private void bindDependentKeyValue(PersistentProperty property, DependantValue key,
-                                         InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+                                         @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("[GrailsDomainBinder] binding  [" + property.getName() + "] with dependant key");
@@ -848,7 +850,7 @@ public class GrailsDomainBinder
      * @param persistentClasses
      * @return The DependantValue (key)
      */
-    private DependantValue createPrimaryKeyValue(InFlightMetadataCollector mappings, PersistentProperty property,
+    private DependantValue createPrimaryKeyValue(@Nonnull InFlightMetadataCollector mappings, PersistentProperty property,
                                                    Collection collection, Map<?, ?> persistentClasses) {
         KeyValue keyValue;
         DependantValue key;
@@ -881,7 +883,7 @@ public class GrailsDomainBinder
      * @param mappings
      * @param collection
      */
-    private void bindUnidirectionalOneToMany(org.grails.datastore.mapping.model.types.OneToMany property, InFlightMetadataCollector mappings, Collection collection) {
+    private void bindUnidirectionalOneToMany(org.grails.datastore.mapping.model.types.OneToMany property, @Nonnull InFlightMetadataCollector mappings, Collection collection) {
         Value v = collection.getElement();
         v.createForeignKey();
         String entityName;
@@ -952,7 +954,7 @@ public class GrailsDomainBinder
      * @param mappings The mappings
      */
     private void bindManyToMany(Association property, ManyToOne element,
-                                  InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+                                  @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         new ManyToOneBinder(namingStrategy).bindManyToOne(property, element, EMPTY_PATH);
         element.setReferencedEntityName(property.getOwner().getName());
     }
@@ -979,7 +981,7 @@ public class GrailsDomainBinder
      * @param path
      */
     public void bindCollection(ToMany property, Collection collection,
-                               PersistentClass owner, InFlightMetadataCollector mappings, String path, String sessionFactoryBeanName) {
+                               PersistentClass owner, @Nonnull InFlightMetadataCollector mappings, String path, String sessionFactoryBeanName) {
 
         // set role
         String propertyName = getNameForPropertyAndPath(property, path);
@@ -1052,7 +1054,7 @@ public class GrailsDomainBinder
         return property.getName();
     }
 
-    private void bindCollectionTable(ToMany property, InFlightMetadataCollector mappings,
+    private void bindCollectionTable(ToMany property, @Nonnull InFlightMetadataCollector mappings,
                                        Collection collection, Table ownerTable, String sessionFactoryBeanName) {
 
         String owningTableSchema = ownerTable.getSchema();
@@ -1091,7 +1093,7 @@ public class GrailsDomainBinder
      * @param sessionFactoryBeanName  the session factory bean name
      * @throws MappingException Thrown if the domain class uses inheritance which is not supported
      */
-    public void bindClass(PersistentEntity entity, InFlightMetadataCollector mappings, String sessionFactoryBeanName)
+    public void bindClass(@Nonnull PersistentEntity entity, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName)
             throws MappingException {
         //if (domainClass.getClazz().getSuperclass() == Object.class) {
         if (entity.isRoot()) {
@@ -1110,7 +1112,7 @@ public class GrailsDomainBinder
      * @param mappings    The Hibernate Mappings object
      * @param sessionFactoryBeanName  the session factory bean name
      */
-    protected void bindRoot(GrailsHibernatePersistentEntity entity, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+    protected void bindRoot(@Nonnull GrailsHibernatePersistentEntity entity,@Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         if (mappings.getEntityBinding(entity.getName()) != null) {
             LOG.info("[GrailsDomainBinder] Class [" + entity.getName() + "] is already mapped, skipping.. ");
             return;
@@ -1127,10 +1129,7 @@ public class GrailsDomainBinder
             root.setPolymorphic(false);
         } else {
             root.setPolymorphic(true);
-            Mapping m = null;
-            if (entity != null) {
-                m = entity.getMappedForm();
-            }
+            Mapping m = entity.getMappedForm();
             final Mapping finalMapping = m;
             boolean tablePerSubclass = !m.getTablePerHierarchy();
             if (!tablePerSubclass) {
@@ -1164,8 +1163,8 @@ public class GrailsDomainBinder
      * @param sessionFactoryBeanName the session factory bean name
      */
     private void addMultiTenantFilterIfNecessary(
-            GrailsHibernatePersistentEntity entity, PersistentClass persistentClass,
-            InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+            @Nonnull GrailsHibernatePersistentEntity entity, PersistentClass persistentClass,
+            @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
 
         if (entity.isMultiTenant()) {
             TenantId tenantId = entity.getTenantId();
@@ -1206,9 +1205,9 @@ public class GrailsDomainBinder
      * @param sessionFactoryBeanName the session factory bean name
      * @param mappingCacheHolder
      */
-    private void bindSubClass(GrailsHibernatePersistentEntity sub,
+    private void bindSubClass(@Nonnull GrailsHibernatePersistentEntity sub,
                               PersistentClass parent,
-                              InFlightMetadataCollector mappings,
+                              @Nonnull InFlightMetadataCollector mappings,
                               String sessionFactoryBeanName
                             , Mapping m, MappingCacheHolder mappingCacheHolder) {
         mappingCacheHolder.cacheMapping(sub);
@@ -1379,7 +1378,7 @@ public class GrailsDomainBinder
      * @param subClass The Hibernate SubClass instance
      * @param mappings The mappings instance
      */
-    private void bindSubClass(GrailsHibernatePersistentEntity sub, Subclass subClass, InFlightMetadataCollector mappings,
+    private void bindSubClass(@Nonnull GrailsHibernatePersistentEntity sub, Subclass subClass, @Nonnull InFlightMetadataCollector mappings,
                                 String sessionFactoryBeanName) {
         classBinding.bindClass(sub, subClass, mappings);
 
@@ -1451,14 +1450,11 @@ public class GrailsDomainBinder
     /*
      * Binds a persistent classes to the table representation and binds the class properties
      */
-    private void bindRootPersistentClassCommonValues(GrailsHibernatePersistentEntity domainClass,
-                                                       RootClass root, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+    private void bindRootPersistentClassCommonValues(@Nonnull GrailsHibernatePersistentEntity domainClass,
+                                                       RootClass root, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
 
         // get the schema and catalog names from the configuration
-        Mapping gormMapping = null;
-        if (domainClass != null) {
-            gormMapping = domainClass.getMappedForm();
-        }
+        Mapping gormMapping = domainClass.getMappedForm();
 
         configureDerivedProperties(domainClass, gormMapping);
         CacheConfig cc = gormMapping.getCache();
@@ -1506,9 +1502,9 @@ public class GrailsDomainBinder
 
 
     public void bindIdentity(
-            GrailsHibernatePersistentEntity domainClass,
+            @Nonnull GrailsHibernatePersistentEntity domainClass,
             RootClass root,
-            InFlightMetadataCollector mappings,
+            @Nonnull InFlightMetadataCollector mappings,
             Mapping gormMapping,
             String sessionFactoryBeanName) {
 
@@ -1526,14 +1522,10 @@ public class GrailsDomainBinder
      * @param mappings        The Hibernate Mappings instance
      * @param sessionFactoryBeanName  the session factory bean name
      */
-    private void createClassProperties(GrailsHibernatePersistentEntity domainClass, PersistentClass persistentClass,
-                                         InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+    private void createClassProperties(@Nonnull GrailsHibernatePersistentEntity domainClass, PersistentClass persistentClass,
+                                         @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
 
-        Mapping result = null;
-        if (domainClass != null) {
-            result = domainClass.getMappedForm();
-        }
-        Mapping gormMapping = result;
+        Mapping gormMapping = domainClass.getMappedForm();
         Table table = persistentClass.getTable();
         table.setComment(gormMapping.getComment());
         final List<PersistentProperty> persistentProperties = domainClass.getPersistentProperties()
@@ -1656,7 +1648,7 @@ public class GrailsDomainBinder
 
 
 
-    private void bindOneToMany(org.grails.datastore.mapping.model.types.OneToMany currentGrailsProp, OneToMany one, InFlightMetadataCollector mappings) {
+    private void bindOneToMany(org.grails.datastore.mapping.model.types.OneToMany currentGrailsProp, OneToMany one, @Nonnull InFlightMetadataCollector mappings) {
         one.setReferencedEntityName(currentGrailsProp.getAssociatedEntity().getName());
         one.setIgnoreNotFound(true);
     }
@@ -1769,11 +1761,11 @@ public class GrailsDomainBinder
         private static final long serialVersionUID = -5540526942092611348L;
 
         ToMany property;
-        InFlightMetadataCollector mappings;
+        @Nonnull InFlightMetadataCollector mappings;
         Collection collection;
         String sessionFactoryBeanName;
 
-        public GrailsCollectionSecondPass(ToMany property, InFlightMetadataCollector mappings,
+        public GrailsCollectionSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
                                           Collection coll,  String sessionFactoryBeanName) {
             this.property = property;
             this.mappings = mappings;
@@ -1824,7 +1816,7 @@ public class GrailsDomainBinder
     class ListSecondPass extends GrailsCollectionSecondPass {
         private static final long serialVersionUID = -3024674993774205193L;
 
-        public ListSecondPass(ToMany property, InFlightMetadataCollector mappings,
+        public ListSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
                               Collection coll, String sessionFactoryBeanName) {
             super(property, mappings, coll, sessionFactoryBeanName);
         }
@@ -1846,7 +1838,7 @@ public class GrailsDomainBinder
     class MapSecondPass extends GrailsCollectionSecondPass {
         private static final long serialVersionUID = -3244991685626409031L;
 
-        public MapSecondPass(ToMany property, InFlightMetadataCollector mappings,
+        public MapSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
                              Collection coll, String sessionFactoryBeanName) {
             super(property, mappings, coll, sessionFactoryBeanName);
         }

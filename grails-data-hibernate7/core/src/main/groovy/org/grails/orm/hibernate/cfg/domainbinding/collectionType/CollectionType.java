@@ -13,6 +13,8 @@ import org.hibernate.mapping.Bag;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.PersistentClass;
 
+import jakarta.annotation.Nonnull;
+
 import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
@@ -35,7 +37,7 @@ public abstract class CollectionType {
     private final Map<Class<?>, CollectionType> INSTANCES = new HashMap<>();
 
     public abstract Collection create(ToMany property, PersistentClass owner,
-                                      String path, InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException;
+                                      String path, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException;
 
     protected CollectionType(Class<?> clazz, GrailsDomainBinder binder) {
         this.clazz = clazz;
@@ -71,11 +73,8 @@ public abstract class CollectionType {
     }
 
     public String getTypeName(ToMany property) {
-        Mapping mapping = null;
         GrailsHibernatePersistentEntity domainClass = (GrailsHibernatePersistentEntity) property.getOwner();
-        if (domainClass != null) {
-            mapping = domainClass.getMappedForm();
-        }
+        Mapping mapping = domainClass.getMappedForm();
         return new TypeNameProvider().getTypeName(property, mapping);
     }
 

@@ -87,14 +87,6 @@ class NamespaceNameExtractorSpec extends Specification {
         "the schema identifier" | 'schema'
     }
 
-    def "getSchemaName should return null when the input mappings object is null"() {
-        when: "the extractor is called with a null input"
-        def result = extractor.getSchemaName(null)
-
-        then: "the result is null"
-        result == null
-    }
-
     // --- Tests for getCatalogName ---
 
     def "should return the catalog name when the full object graph exists"() {
@@ -159,14 +151,6 @@ class NamespaceNameExtractorSpec extends Specification {
         "the default namespace"  | 'namespace'
         "the namespace name"     | 'name'
         "the catalog identifier" | 'catalog'
-    }
-
-    def "getCatalogName should return null when the input mappings object is null"() {
-        when: "the extractor is called with a null input"
-        def result = extractor.getCatalogName(null)
-
-        then: "the result is null"
-        result == null
     }
 
 }

@@ -36,6 +36,8 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
 
+import jakarta.annotation.Nonnull;
+
 import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH;
 
 public class ComponentPropertyBinder {
@@ -92,7 +94,7 @@ public class ComponentPropertyBinder {
 
     public void bindComponentProperty(Component component, PersistentProperty componentProperty,
                                        PersistentProperty currentGrailsProp, PersistentClass persistentClass,
-                                       String path, Table table, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+                                       String path, Table table, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         Value value;
         // see if it's a collection type
         CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
@@ -157,7 +159,7 @@ public class ComponentPropertyBinder {
     }
 
     public void bindComponent(Component component, Embedded property,
-                               boolean isNullable, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+                               boolean isNullable, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         componentBinder.bindComponent(component, property, isNullable, mappings, sessionFactoryBeanName);
     }
 }

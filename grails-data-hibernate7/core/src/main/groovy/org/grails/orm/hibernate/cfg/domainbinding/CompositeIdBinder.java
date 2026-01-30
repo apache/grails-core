@@ -12,6 +12,8 @@ import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 
+import jakarta.annotation.Nonnull;
+
 public class CompositeIdBinder {
 
     private final MetadataBuildingContext metadataBuildingContext;
@@ -27,13 +29,13 @@ public class CompositeIdBinder {
         this.componentPropertyBinder = null;
     }
 
-    public void bindCompositeId(PersistentEntity domainClass, RootClass root,
-                                 CompositeIdentity compositeIdentity, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+    public void bindCompositeId(@Nonnull PersistentEntity domainClass, RootClass root,
+                                 CompositeIdentity compositeIdentity, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         bindCompositeId(domainClass, (GrailsHibernatePersistentEntity) domainClass, root, compositeIdentity, mappings, sessionFactoryBeanName);
     }
 
-    public void bindCompositeId(PersistentEntity domainClass, GrailsHibernatePersistentEntity hibernatePersistentEntity, RootClass root,
-                                 CompositeIdentity compositeIdentity, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+    public void bindCompositeId(@Nonnull PersistentEntity domainClass, @Nonnull GrailsHibernatePersistentEntity hibernatePersistentEntity, RootClass root,
+                                 CompositeIdentity compositeIdentity, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         Component id = new Component(metadataBuildingContext, root);
         id.setNullValue("undefined");
         root.setIdentifier(id);
