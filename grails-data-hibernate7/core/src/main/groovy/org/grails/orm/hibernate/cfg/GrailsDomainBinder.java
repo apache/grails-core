@@ -1532,8 +1532,6 @@ public class GrailsDomainBinder
                 .toList();
 
 
-        List<Embedded> embedded = new ArrayList<>();
-
         for (PersistentProperty<?> currentGrailsProp : persistentProperties) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("[GrailsDomainBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
@@ -1610,8 +1608,8 @@ public class GrailsDomainBinder
                     }
                 }
                 else if (currentGrailsProp instanceof Embedded) {
-                    embedded.add((Embedded)currentGrailsProp);
-                    continue;
+                    value = new Component(metadataBuildingContext, persistentClass);
+                    componentPropertyBinder.bindComponent((Component) value, (Embedded) currentGrailsProp, true, mappings, sessionFactoryBeanName);
                 }
             }
             // work out what type of relationship it is and bind value
@@ -1630,13 +1628,6 @@ public class GrailsDomainBinder
             }
         }
 
-        for (Embedded association : embedded) {
-            Value value = new Component(metadataBuildingContext, persistentClass);
-
-            componentPropertyBinder.bindComponent((Component) value, association, true, mappings, sessionFactoryBeanName);
-            Property property = propertyFromValueCreator.createProperty(value, association);
-            persistentClass.addProperty(property);
-        }
         new NaturalIdentifierBinder().bindNaturalIdentifier(gormMapping, persistentClass);
     }
 
