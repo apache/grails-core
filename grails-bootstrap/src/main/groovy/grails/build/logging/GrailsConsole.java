@@ -39,6 +39,7 @@ import org.jline.reader.Completer;
 import org.jline.reader.History;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.impl.LineReaderImpl;
 import org.jline.reader.impl.completer.AggregateCompleter;
 import org.jline.reader.impl.history.DefaultHistory;
 import org.jline.terminal.Terminal;
@@ -193,8 +194,24 @@ public class GrailsConsole implements ConsoleLogger {
             terminal = createTerminal();
             history = prepareHistory();
             reader = createLineReader(terminal, history);
+            initializeHistory();
         } else if (isActivateTerminal()) {
             terminal = createTerminal();
+        }
+    }
+
+    /**
+     * Initializes history by attaching it to the reader and loading existing entries.
+     * This must be called after the LineReader is fully constructed.
+     */
+    private void initializeHistory() {
+        if (history instanceof DefaultHistory && reader != null) {
+            DefaultHistory defaultHistory = (DefaultHistory) history;
+            try {
+                defaultHistory.attach(reader);
+            } catch (Exception e) {
+                // History initialization failed, continue without persistent history
+            }
         }
     }
 
@@ -263,39 +280,31 @@ public class GrailsConsole implements ConsoleLogger {
 
     public void resetCompleters() {
         completers.clear();
-        rebuildLineReader();
+        updateCompleter();
     }
 
     public void addCompleter(Completer completer) {
         if (completer != null) {
             completers.add(completer);
-            rebuildLineReader();
+            updateCompleter();
         }
     }
 
     /**
-     * Rebuilds the LineReader with all registered completers using an AggregateCompleter.
-     * This is necessary because JLine 3 LineReader is immutable once created.
+     * Updates the LineReader completer using an AggregateCompleter when needed.
      */
-    private void rebuildLineReader() {
-        if (terminal != null) {
-            try {
-                LineReaderBuilder builder = LineReaderBuilder.builder()
-                        .terminal(terminal)
-                        .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true);
-
-                if (!completers.isEmpty()) {
-                    builder.completer(new AggregateCompleter(completers));
-                }
-
-                if (history != null) {
-                    builder.variable(LineReader.HISTORY_FILE, new File(System.getProperty("user.home"), HISTORYFILE).toPath());
-                    builder.history(history);
-                }
-                reader = builder.build();
-            } catch (Exception e) {
-                // ignore
-            }
+    private void updateCompleter() {
+        if (reader == null) {
+            return;
+        }
+        if (!(reader instanceof LineReaderImpl)) {
+            return;
+        }
+        LineReaderImpl lineReader = (LineReaderImpl) reader;
+        if (completers.isEmpty()) {
+            lineReader.setCompleter(null);
+        } else {
+            lineReader.setCompleter(new AggregateCompleter(completers));
         }
     }
 

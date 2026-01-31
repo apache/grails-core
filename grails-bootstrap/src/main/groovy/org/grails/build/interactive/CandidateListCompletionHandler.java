@@ -50,6 +50,26 @@ public class CandidateListCompletionHandler implements Completer {
         if (delegate != null) {
             delegate.complete(reader, line, candidates);
         }
+
+        if (reader == null) {
+            return;
+        }
+
+        String commonPrefix = getUnambiguousCompletions(candidates);
+        if (commonPrefix == null) {
+            return;
+        }
+
+        String current = line != null ? line.word() : "";
+        if (current == null) {
+            current = "";
+        }
+
+        if (commonPrefix.startsWith(current) && !commonPrefix.equals(current)) {
+            String suffix = commonPrefix.substring(current.length());
+            reader.getBuffer().write(suffix);
+            reader.callWidget(LineReader.REDRAW_LINE);
+        }
     }
 
     /**

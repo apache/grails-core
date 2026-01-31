@@ -29,6 +29,7 @@ import org.jline.reader.Completer
 import org.jline.reader.EndOfFileException
 import org.jline.reader.UserInterruptException
 import org.jline.reader.impl.completer.ArgumentCompleter
+import org.jline.terminal.Terminal
 import org.gradle.tooling.BuildActionExecuter
 import org.gradle.tooling.BuildCancelledException
 import org.gradle.tooling.ProjectConnection
@@ -42,6 +43,7 @@ import grails.util.Environment
 import org.grails.build.parsing.CommandLine
 import org.grails.build.parsing.CommandLineParser
 import org.grails.build.parsing.DefaultCommandLine
+import org.grails.build.interactive.CandidateListCompletionHandler
 import org.grails.cli.gradle.ClasspathBuildAction
 import org.grails.cli.gradle.GradleAsyncInvoker
 import org.grails.cli.gradle.cache.MapReadingCachedGradleOperation
@@ -79,8 +81,6 @@ class GrailsCli {
 
     static final String ARG_SPLIT_PATTERN = /(?<!\\)\s+/
     public static final String DEFAULT_PROFILE_NAME = ProfileRepository.DEFAULT_PROFILE_NAME
-    private static final int KEYPRESS_CTRL_C = 3
-    private static final int KEYPRESS_ESC = 27
     private static final String USAGE_MESSAGE = 'create-app [NAME] --profile=web'
     private static final String PLUGIN_USAGE_MESSAGE = 'create-plugin [NAME] --profile=web-plugin'
 
@@ -402,7 +402,7 @@ class GrailsCli {
         )
 
         completers.addAll((profile.getCompleters(projectContext) ?: []) as Collection<Completer>)
-        console.addCompleter(aggregateCompleter)
+        console.addCompleter(new CandidateListCompletionHandler(aggregateCompleter))
         return console
     }
 
@@ -447,18 +447,33 @@ class GrailsCli {
     private Boolean handleCommandWithCancellationSupport(GrailsConsole console, String commandLine, ExecutorService commandExecutor) {
         ExecutionContext executionContext = createExecutionContext(cliParser.parseString(commandLine))
         Future<?> commandFuture = commandExecutor.submit({ handleCommand(executionContext) } as Callable<Boolean>)
-        def terminal = console.terminal
+        
+        Terminal.SignalHandler previousHandler = null
         try {
+            // Use JLine 3's signal handling for CTRL+C instead of polling input
+            if (console?.terminal) {
+                previousHandler = console.terminal.handle(Terminal.Signal.INT) { signal ->
+                    executionContext.console.log('  ')
+                    executionContext.console.updateStatus('Stopping build. Please wait...')
+                    executionContext.cancel()
+                }
+            }
+            
+            // Wait for command completion
             while (!commandFuture.done) {
-                // In JLine 3, we handle interrupts differently
-                // The terminal handles CTRL+C via signal handling
                 Thread.sleep(100)
             }
         } catch (InterruptedException e) {
             executionContext.console.log('  ')
             executionContext.console.updateStatus('Stopping build. Please wait...')
             executionContext.cancel()
+        } finally {
+            // Restore previous signal handler
+            if (previousHandler != null && console?.terminal) {
+                console.terminal.handle(Terminal.Signal.INT, previousHandler)
+            }
         }
+        
         if (!commandFuture.isCancelled()) {
             try {
                 return commandFuture.get()
