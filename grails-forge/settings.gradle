@@ -38,7 +38,7 @@ def isLocal = !isCI
 def isReproducibleBuild = System.getenv('SOURCE_DATE_EPOCH') != null
 
 develocity {
-    server = 'https://ge.grails.org'
+    server = 'https://develocity.apache.org'
     buildScan {
         tag('grails')
         tag('grails-forge')

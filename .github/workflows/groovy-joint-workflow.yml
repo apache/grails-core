@@ -89,7 +89,7 @@ jobs:
           echo "VALUE<<EOF" >> $GITHUB_OUTPUT
           echo "def isAuthenticated = System.getenv('GRAILS_DEVELOCITY_ACCESS_KEY ') != null" >> $GITHUB_OUTPUT
           echo "develocity {" >> $GITHUB_OUTPUT
-          echo "    server = 'https://ge.grails.org'" >> $GITHUB_OUTPUT
+          echo "    server = 'https://develocity.apache.org'" >> $GITHUB_OUTPUT
           echo "    buildScan {" >> $GITHUB_OUTPUT
           echo "        tag('groovy')" >> $GITHUB_OUTPUT
           echo "        tag('grails-core')" >> $GITHUB_OUTPUT
