@@ -121,12 +121,7 @@ grails [environment]* [target] [arguments]*'
         String buffer = line.word()
 
         for (cmd in allCommands) {
-            if (buffer) {
-                if (cmd.startsWith(buffer)) {
-                    candidates.add(new Candidate(cmd))
-                }
-            }
-            else {
+            if (!buffer || cmd.startsWith(buffer)) {
                 candidates.add(new Candidate(cmd))
             }
         }
