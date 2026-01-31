@@ -102,6 +102,9 @@ class UrlMappings {
         "/api/cors/authenticated"(controller: 'corsTest', action: 'authenticated')
         "/api/cors/slow"(controller: 'corsTest', action: 'slowRequest')
 
+        // === Advanced Interceptor Matching Test Routes ===
+        "/api/advancedMatching/$action?/$id?"(controller: 'advancedMatching', namespace: 'api')
+
         "/"(view:"/index")
         "500"(view:'/error')
         "404"(controller:"errors", action:"notFound")
