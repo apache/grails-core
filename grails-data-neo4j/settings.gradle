@@ -23,7 +23,7 @@ plugins {
 }
 
 gradleEnterprise {
-    server = 'https://ge.grails.org'
+    server = 'https://develocity.apache.org'
     buildScan {
         publishAlwaysIf(System.getenv('CI') == 'true')
         publishIfAuthenticated()
@@ -39,7 +39,7 @@ buildCache {
     remote(HttpBuildCache) {
         push = System.getenv('CI') == 'true'
         enabled = true
-        url = 'https://ge.grails.org/cache/'
+        url = 'https://develocity.apache.org/cache/'
         credentials {
             username = System.getenv('GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER')
             password = System.getenv('GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY')
