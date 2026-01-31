@@ -67,15 +67,15 @@ public class SimpleValueBinder {
      */
 
     public void bindSimpleValue(
-            PersistentProperty property
+            @jakarta.annotation.Nonnull PersistentProperty property
             , PersistentProperty parentProperty
             , SimpleValue simpleValue
             , String path
     ) {
         PropertyConfig propertyConfig = persistentPropertyToPropertyConfig.toPropertyConfig(property);
         Mapping mapping = null;
-        if (property.getOwner() instanceof GrailsHibernatePersistentEntity) {
-            mapping = ((GrailsHibernatePersistentEntity) property.getOwner()).getMappedForm();
+        if (property.getOwner() instanceof GrailsHibernatePersistentEntity persistentEntity) {
+            mapping = persistentEntity.getMappedForm();
         }
         final String typeName = typeNameProvider.getTypeName(property, mapping);
         if (typeName == null) {

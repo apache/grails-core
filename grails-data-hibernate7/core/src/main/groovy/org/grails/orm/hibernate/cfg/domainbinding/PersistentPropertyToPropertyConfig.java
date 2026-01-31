@@ -10,7 +10,7 @@ import jakarta.annotation.Nonnull;
 
 public class PersistentPropertyToPropertyConfig  {
     @Nonnull public PropertyConfig toPropertyConfig(PersistentProperty persistentProperty) {
-        return Optional.ofNullable(persistentProperty)
+        return Optional.of(persistentProperty)
                 .map(PersistentProperty::getMappedForm)
                 .map(PropertyConfig.class::cast)
                 .orElseThrow(() -> new MappingException("No PropertyConfig found for property"));

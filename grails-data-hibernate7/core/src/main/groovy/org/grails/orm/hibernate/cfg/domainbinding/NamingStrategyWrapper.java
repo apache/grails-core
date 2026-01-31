@@ -62,7 +62,7 @@ public class NamingStrategyWrapper implements PersistentEntityNamingStrategy {
 
     @Override
     public String resolveForeignKeyForPropertyDomainClass(PersistentProperty property) {
-        return Optional.ofNullable(property)
+        return Optional.of(property)
                 .map(PersistentProperty::getOwner)
                 .map(PersistentEntity::getJavaClass)
                 .map(Class::getSimpleName)

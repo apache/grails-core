@@ -5,13 +5,14 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
+import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 
 public class TypeNameProvider {
 
-    public String getTypeName( PersistentProperty property
+    public String getTypeName(@jakarta.annotation.Nonnull PersistentProperty property
             , @NotNull Mapping mapping) {
-        return ofNullable(property)
+        return of(property)
                 .map(PersistentProperty::getMappedForm)
                 .map(PropertyConfig.class::cast)
                 .map(PropertyConfig::getType)

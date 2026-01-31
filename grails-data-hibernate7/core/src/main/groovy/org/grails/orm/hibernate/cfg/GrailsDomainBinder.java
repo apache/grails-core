@@ -92,6 +92,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Optional;
 import java.util.StringTokenizer;
@@ -1495,6 +1496,7 @@ public class GrailsDomainBinder
         table.setComment(gormMapping.getComment());
         final List<PersistentProperty> persistentProperties = domainClass.getPersistentProperties()
                 .stream()
+                .filter(Objects::nonNull)
                 .filter(persistentProperty -> persistentProperty.getMappedForm() != null)
                 .filter(persistentProperty -> !persistentProperty.isCompositeIdProperty())
                 .filter(persistentProperty -> !persistentProperty.isIdentityProperty())
@@ -1510,7 +1512,12 @@ public class GrailsDomainBinder
         new NaturalIdentifierBinder().bindNaturalIdentifier(gormMapping, persistentClass);
     }
 
-    private void bindProperty(PersistentClass persistentClass, @NonNull InFlightMetadataCollector mappings, String sessionFactoryBeanName, PersistentProperty<?> currentGrailsProp, Table table, Mapping gormMapping) {
+    private void bindProperty(PersistentClass persistentClass
+            , @NonNull InFlightMetadataCollector mappings
+            , String sessionFactoryBeanName
+            , @Nonnull  PersistentProperty<?> currentGrailsProp
+            , Table table
+            , Mapping gormMapping) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("[GrailsDomainBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
         }
@@ -1643,15 +1650,14 @@ public class GrailsDomainBinder
         return userType;
     }
 
-    private String getIndexColumnType(PersistentProperty property, String defaultType) {
+    private String getIndexColumnType(@Nonnull PersistentProperty property, String defaultType) {
 
             PropertyConfig pc = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
 
             if (pc.getIndexColumn() != null && pc.getIndexColumn().getType() != null) {
 
                 Mapping mapping = null;
-                GrailsHibernatePersistentEntity domainClass = (GrailsHibernatePersistentEntity) property.getOwner();
-                if (domainClass != null) {
+                if (property.getOwner() instanceof GrailsHibernatePersistentEntity domainClass) {
                     mapping = domainClass.getMappedForm();
                 }
 
