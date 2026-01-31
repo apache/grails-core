@@ -45,7 +45,7 @@ if (isReproducibleBuild) {
 }
 
 develocity {
-    server = 'https://ge.grails.org'
+    server = 'https://develocity.apache.org'
     buildScan {
         tag('grails')
         tag('grails-core')
