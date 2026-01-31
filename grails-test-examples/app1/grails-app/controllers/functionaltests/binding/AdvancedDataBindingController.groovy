@@ -28,14 +28,24 @@ import grails.web.RequestParameter
  * Controller for testing advanced data binding features.
  */
 class AdvancedDataBindingController {
-    
+
     def grailsWebDataBinder
-    
+
+    /**
+     * Field lists for explicit data binding.
+     * Each domain type has its own field list to control which properties can be bound.
+     */
+    def employeeBindParamsBasic = ['firstName', 'lastName', 'email', 'salary', 'homeAddress']
+    def employeeBindParamsFull = ['firstName', 'lastName', 'email', 'salary', 'homeAddress', 'hireDate', 'birthDate']
+    def employeeBindParamsMinimal = ['firstName', 'lastName']
+    def teamBindParams = ['name', 'members']
+    def projectBindParams = ['name', 'description', 'contributors']
+
     /**
      * Test basic map-based binding with nested objects.
      */
     def bindEmployee() {
-        def employee = new Employee(params)
+        def employee = new Employee(params.subMap(employeeBindParamsBasic))
         render([
             firstName: employee.firstName,
             lastName: employee.lastName,
@@ -53,7 +63,7 @@ class AdvancedDataBindingController {
      * Test @BindUsing annotation - email should be lowercased.
      */
     def bindWithBindUsing() {
-        def employee = new Employee(params)
+        def employee = new Employee(params.subMap(employeeBindParamsFull))
         render([
             email: employee.email,
             originalEmail: params.email
@@ -64,7 +74,7 @@ class AdvancedDataBindingController {
      * Test @BindingFormat annotation for dates.
      */
     def bindWithDateFormat() {
-        def employee = new Employee(params)
+        def employee = new Employee(params.subMap(employeeBindParamsFull))
         render([
             hireDate: employee.hireDate?.format('yyyy-MM-dd'),
             birthDate: employee.birthDate?.format('yyyy-MM-dd'),
@@ -77,7 +87,7 @@ class AdvancedDataBindingController {
      * Test collection binding to List.
      */
     def bindTeamWithMembers() {
-        def team = new Team(params)
+        def team = new Team(params.subMap(teamBindParams))
         render([
             name: team.name,
             members: team.members?.findAll { it != null }?.collect { [name: it.name, role: it.role] } ?: []
@@ -88,11 +98,7 @@ class AdvancedDataBindingController {
      * Test Map-based collection binding.
      */
     def bindProjectWithContributors() {
-        def project = new Project(params)
-        def contributorsMap = [:]
-        project.contributors?.each { key, contributor ->
-            contributorsMap[key] = [name: contributor.name, expertise: contributor.expertise]
-        }
+        def project = new Project(params.subMap(projectBindParams))
         render([
             name: project.name,
             contributors: contributorsMap
@@ -118,9 +124,7 @@ class AdvancedDataBindingController {
      * Test bindData method with include/exclude.
      */
     def bindWithIncludeExclude() {
-        def employee = new Employee()
-        // Only bind firstName and lastName, exclude email
-        bindData(employee, params, [include: ['firstName', 'lastName']])
+        def employee = new Employee(params.subMap(employeeBindParamsMinimal))
         render([
             firstName: employee.firstName,
             lastName: employee.lastName,
@@ -228,7 +232,7 @@ class AdvancedDataBindingController {
      * Test empty string to null conversion.
      */
     def bindEmptyStrings() {
-        def employee = new Employee(params)
+        def employee = new Employee(params.subMap(employeeBindParamsFull))
         render([
             firstName: employee.firstName,
             firstNameIsNull: employee.firstName == null,
@@ -241,7 +245,7 @@ class AdvancedDataBindingController {
      * Test string trimming during binding.
      */
     def bindWithTrimming() {
-        def employee = new Employee(params)
+        def employee = new Employee(params.subMap(employeeBindParamsFull))
         render([
             firstName: employee.firstName,
             firstNameLength: employee.firstName?.length() ?: 0,
