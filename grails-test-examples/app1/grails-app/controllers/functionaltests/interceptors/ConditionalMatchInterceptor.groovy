@@ -32,10 +32,10 @@ class ConditionalMatchInterceptor {
     boolean before() {
         // Only add to execution order if 'match' param is 'yes'
         if (params.match == 'yes') {
-            InterceptorTestController.executionOrder << "conditional:before:matched"
+            InterceptorTestController.executionOrder << 'conditional:before:matched'
             request.setAttribute('conditionalMatched', true)
         } else {
-            InterceptorTestController.executionOrder << "conditional:before:notmatched"
+            InterceptorTestController.executionOrder << 'conditional:before:notmatched'
             request.setAttribute('conditionalMatched', false)
         }
         true
@@ -43,9 +43,9 @@ class ConditionalMatchInterceptor {
 
     boolean after() {
         if (params.match == 'yes') {
-            InterceptorTestController.executionOrder << "conditional:after:matched"
+            InterceptorTestController.executionOrder << 'conditional:after:matched'
         } else {
-            InterceptorTestController.executionOrder << "conditional:after:notmatched"
+            InterceptorTestController.executionOrder << 'conditional:after:notmatched'
         }
         true
     }

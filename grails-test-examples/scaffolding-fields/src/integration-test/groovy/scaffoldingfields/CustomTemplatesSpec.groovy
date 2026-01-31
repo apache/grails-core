@@ -82,13 +82,13 @@ class CustomTemplatesSpec extends ContainerGebSpec {
 
     def "custom email template shows validation error with custom styling"() {
         given: "navigating to employee create page"
-        to EmployeeCreatePage
+        def page = to EmployeeCreatePage
 
         when: "submitting with invalid email"
-        firstNameField.value('John')
-        lastNameField.value('Doe')
-        emailField.value('invalid-email')
-        createButton.click()
+        page.firstNameField.value('John')
+        page.lastNameField.value('Doe')
+        page.emailField.value('invalid-email')
+        page.createButton.click()
 
         then: "custom validation error styling is shown or we stay on form"
         waitFor {
@@ -104,18 +104,18 @@ class CustomTemplatesSpec extends ContainerGebSpec {
 
     def "custom biography template shows errors with custom styling"() {
         given: "navigating to employee create page"
-        to EmployeeCreatePage
+        def page = to EmployeeCreatePage
 
         and: "fill in required fields"
-        firstNameField.value('Jane')
-        lastNameField.value('Smith')
-        emailField.value('jane@example.com')
+        page.firstNameField.value('Jane')
+        page.lastNameField.value('Smith')
+        page.emailField.value('jane@example.com')
 
         when: "entering very long biography exceeding constraints"
         // The biography field has maxSize: 5000 constraint
         // We need to trigger a validation error another way since textarea doesn't enforce easily
         // Instead, test that the custom wrapper renders correctly
-        createButton.click()
+        page.createButton.click()
 
         then: "form is submitted (biography is nullable so no error expected)"
         // This verifies the template is functional during form submission

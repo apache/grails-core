@@ -16,14 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package pubsub.demo
+
+import jakarta.inject.Inject
+
+import spock.lang.Specification
+import spock.util.concurrent.PollingConditions
 
 import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
-import jakarta.inject.Inject
-import spock.lang.Specification
-import spock.util.concurrent.PollingConditions
 
 /**
  * Additional integration tests for async events functionality.
@@ -50,7 +51,7 @@ class AsyncEventsSpec extends Specification {
         totalService.reset()
         bookSubscriber.reset()
         // Small delay to let any in-flight events complete
-        Thread.sleep(100)
+        sleep(100)
     }
 
     void "multiple sum events accumulate correctly"() {
@@ -105,12 +106,9 @@ class AsyncEventsSpec extends Specification {
         def book3 = bookService.saveBook('Book Three')
 
         then: "all books are saved"
-        book1 != null
-        book2 != null
-        book3 != null
-        book1.id != null
-        book2.id != null
-        book3.id != null
+        book1?.id != null
+        book2?.id != null
+        book3?.id != null
     }
 
     void "book events are received after save"() {

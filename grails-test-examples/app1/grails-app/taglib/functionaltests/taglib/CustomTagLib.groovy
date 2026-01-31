@@ -25,7 +25,7 @@ package functionaltests.taglib
  */
 class CustomTagLib {
 
-    static namespace = "custom"
+    static namespace = 'custom'
 
     // Use 'none' encoding for tags that output HTML structure
     // Individual tags can use encodeAsHTML() where needed

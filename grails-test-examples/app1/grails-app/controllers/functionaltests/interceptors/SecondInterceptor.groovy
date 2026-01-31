@@ -32,17 +32,17 @@ class SecondInterceptor {
     }
 
     boolean before() {
-        InterceptorTestController.executionOrder << "second:before"
+        InterceptorTestController.executionOrder << 'second:before'
         request.setAttribute('secondInterceptorRan', true)
         true
     }
 
     boolean after() {
-        InterceptorTestController.executionOrder << "second:after"
+        InterceptorTestController.executionOrder << 'second:after'
         true
     }
 
     void afterView() {
-        InterceptorTestController.executionOrder << "second:afterView"
+        InterceptorTestController.executionOrder << 'second:afterView'
     }
 }

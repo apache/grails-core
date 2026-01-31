@@ -18,38 +18,38 @@
  */
 package functionaltests.fileupload
 
-import functionaltests.Application
-import grails.testing.mixin.integration.Integration
-import grails.gorm.transactions.Rollback
 import groovy.json.JsonSlurper
+
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.MediaType
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.exceptions.HttpClientResponseException
 import io.micronaut.http.client.multipart.MultipartBody
-import spock.lang.Specification
 import spock.lang.Shared
+import spock.lang.Specification
+
+import grails.gorm.transactions.Rollback
+import grails.testing.mixin.integration.Integration
 
 /**
  * Integration tests for file upload functionality in Grails.
  * Tests various file upload patterns including single file, multiple files,
  * file validation, and metadata extraction.
  */
-@Integration(applicationClass = Application)
 @Rollback
+@Integration
 class FileUploadSpec extends Specification {
 
     @Shared
     HttpClient client
 
     def setup() {
-        client = HttpClient.create(new URL("http://localhost:${serverPort}"))
+        client = client ?: HttpClient.create(new URL("http://localhost:${serverPort}"))
     }
 
-    def cleanup() {
-        client?.close()
+    def cleanupSpec() {
+        client.close()
     }
 
     // ========== Single File Upload Tests ==========
@@ -62,7 +62,7 @@ class FileUploadSpec extends Specification {
             .build()
 
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.POST('/fileUploadTest/uploadSingle', body)
                 .contentType(MediaType.MULTIPART_FORM_DATA_TYPE),
             String
@@ -104,7 +104,7 @@ class FileUploadSpec extends Specification {
             .build()
 
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.POST('/fileUploadTest/uploadWithMetadata', body)
                 .contentType(MediaType.MULTIPART_FORM_DATA_TYPE),
             String
@@ -129,7 +129,7 @@ class FileUploadSpec extends Specification {
             .build()
 
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.POST('/fileUploadTest/uploadMultiple', body)
                 .contentType(MediaType.MULTIPART_FORM_DATA_TYPE),
             String
@@ -157,7 +157,7 @@ This is a longer line with more words'''
             .build()
 
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.POST('/fileUploadTest/uploadTextFile', body)
                 .contentType(MediaType.MULTIPART_FORM_DATA_TYPE),
             String
@@ -180,7 +180,7 @@ This is a longer line with more words'''
             .build()
 
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.POST('/fileUploadTest/uploadAndEcho', body)
                 .contentType(MediaType.MULTIPART_FORM_DATA_TYPE),
             String
@@ -202,7 +202,7 @@ This is a longer line with more words'''
             .build()
 
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.POST('/fileUploadTest/uploadWithValidation', body)
                 .contentType(MediaType.MULTIPART_FORM_DATA_TYPE),
             String
@@ -222,7 +222,7 @@ This is a longer line with more words'''
             .build()
 
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.POST('/fileUploadTest/uploadWithExtensionValidation', body)
                 .contentType(MediaType.MULTIPART_FORM_DATA_TYPE),
             String
@@ -244,7 +244,7 @@ This is a longer line with more words'''
             .build()
 
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.POST('/fileUploadTest/uploadWithExtensionValidation', body)
                 .contentType(MediaType.MULTIPART_FORM_DATA_TYPE),
             String
@@ -266,7 +266,7 @@ This is a longer line with more words'''
             .build()
 
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.POST('/fileUploadTest/getFileInfo', body)
                 .contentType(MediaType.MULTIPART_FORM_DATA_TYPE),
             String
@@ -289,7 +289,7 @@ This is a longer line with more words'''
             .build()
 
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.POST('/fileUploadTest/getFileInfo', body)
                 .contentType(MediaType.MULTIPART_FORM_DATA_TYPE),
             String
@@ -312,7 +312,7 @@ This is a longer line with more words'''
             .build()
 
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.POST('/fileUploadTest/uploadViaParams', body)
                 .contentType(MediaType.MULTIPART_FORM_DATA_TYPE),
             String
@@ -336,7 +336,7 @@ This is a longer line with more words'''
             .build()
 
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.POST('/fileUploadTest/uploadSingle', body)
                 .contentType(MediaType.MULTIPART_FORM_DATA_TYPE),
             String
@@ -357,7 +357,7 @@ This is a longer line with more words'''
             .build()
 
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.POST('/fileUploadTest/uploadAndEcho', body)
                 .contentType(MediaType.MULTIPART_FORM_DATA_TYPE),
             String
@@ -379,7 +379,7 @@ This is a longer line with more words'''
             .build()
 
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.POST('/fileUploadTest/uploadAndEcho', body)
                 .contentType(MediaType.MULTIPART_FORM_DATA_TYPE),
             String

@@ -19,16 +19,18 @@
 
 package functionaltests.caching
 
-import functionaltests.Application
-import grails.testing.mixin.integration.Integration
 import groovy.json.JsonSlurper
+
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
-import org.springframework.beans.factory.annotation.Autowired
 import spock.lang.Narrative
+import spock.lang.Shared
 import spock.lang.Specification
+
+import org.springframework.beans.factory.annotation.Autowired
+
+import grails.testing.mixin.integration.Integration
 
 /**
  * Integration tests for Grails caching with @Cacheable, @CacheEvict, @CachePut.
@@ -40,7 +42,7 @@ import spock.lang.Specification
  * counting method invocations, since @Cacheable proxies prevent method body
  * execution on cache hits.
  */
-@Integration(applicationClass = Application)
+@Integration
 @Narrative('''
 Grails caching provides method-level caching via annotations @Cacheable,
 @CacheEvict, and @CachePut. This allows expensive operations to be cached
@@ -51,15 +53,20 @@ class CachingSpec extends Specification {
     @Autowired
     CacheTestService cacheTestService
 
-    private HttpClient createClient() {
-        HttpClient.create(new URL("http://localhost:$serverPort"))
-    }
+    @Shared
+    HttpClient client
 
     def setup() {
+        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
+
         // Evict all caches before each test to ensure clean state
         cacheTestService.evictBasicCache()
         cacheTestService.evictAllFromParamCache()
         cacheTestService.evictAllKeyedCache()
+    }
+
+    def cleanupSpec() {
+        client.close()
     }
 
     // ========== Basic @Cacheable Tests - Data Consistency ==========
@@ -71,7 +78,7 @@ class CachingSpec extends Specification {
 
         then: "same result is returned (proving caching works)"
         result1 == result2
-        result1.startsWith("Basic data:")
+        result1.startsWith('Basic data:')
     }
 
     def "cached method returns different result after eviction"() {
@@ -86,8 +93,8 @@ class CachingSpec extends Specification {
 
         then: "new result is generated (timestamps differ)"
         result1 != result2
-        result1.startsWith("Basic data:")
-        result2.startsWith("Basic data:")
+        result1.startsWith('Basic data:')
+        result2.startsWith('Basic data:')
     }
 
     def "multiple eviction and fetch cycles work correctly"() {
@@ -208,13 +215,13 @@ class CachingSpec extends Specification {
     def "CachePut updates cache with new value using key closure"() {
         given: "existing cached value for a key"
         def original = cacheTestService.getByKey('mykey')
-        original.startsWith("Value for mykey:")
+        original.startsWith('Value for mykey:')
 
         when: "updating cache with new value"
-        def updated = cacheTestService.updateByKey('mykey', "New value for mykey")
+        def updated = cacheTestService.updateByKey('mykey', 'New value for mykey')
 
         then: "updated value is returned"
-        updated == "New value for mykey"
+        updated == 'New value for mykey'
         
         when: "getting by key again"
         def afterUpdate = cacheTestService.getByKey('mykey')
@@ -225,25 +232,25 @@ class CachingSpec extends Specification {
 
     def "CachePut can be called multiple times"() {
         when: "updating cache multiple times"
-        cacheTestService.updateByKey('testkey', "Value 1")
-        cacheTestService.updateByKey('testkey', "Value 2")
-        def finalValue = cacheTestService.updateByKey('testkey', "Value 3")
+        cacheTestService.updateByKey('testkey', 'Value 1')
+        cacheTestService.updateByKey('testkey', 'Value 2')
+        def finalValue = cacheTestService.updateByKey('testkey', 'Value 3')
 
         then: "last update wins"
-        finalValue == "Value 3"
-        cacheTestService.getByKey('testkey') == "Value 3"
+        finalValue == 'Value 3'
+        cacheTestService.getByKey('testkey') == 'Value 3'
     }
 
     def "CachePut for one key does not affect other keys"() {
         given: "two different cached keys"
-        def key1Original = cacheTestService.getByKey('key1')
+        cacheTestService.getByKey('key1')
         def key2Original = cacheTestService.getByKey('key2')
 
         when: "updating only key1"
-        cacheTestService.updateByKey('key1', "Updated key1")
+        cacheTestService.updateByKey('key1', 'Updated key1')
 
         then: "key1 is updated, key2 is unchanged"
-        cacheTestService.getByKey('key1') == "Updated key1"
+        cacheTestService.getByKey('key1') == 'Updated key1'
         cacheTestService.getByKey('key2') == key2Original
     }
 
@@ -272,18 +279,15 @@ class CachingSpec extends Specification {
     // ========== HTTP Endpoint Tests ==========
 
     def "basic cache works via HTTP"() {
-        given:
-        def client = createClient()
-        
         // Evict cache to start fresh
         client.toBlocking().exchange(HttpRequest.GET('/cacheTest/evictBasic'), String)
 
         when: "calling endpoint twice"
-        HttpResponse<String> response1 = client.toBlocking().exchange(
+        def response1 = client.toBlocking().exchange(
             HttpRequest.GET('/cacheTest/basicData'),
             String
         )
-        HttpResponse<String> response2 = client.toBlocking().exchange(
+        def response2 = client.toBlocking().exchange(
             HttpRequest.GET('/cacheTest/basicData'),
             String
         )
@@ -296,24 +300,18 @@ class CachingSpec extends Specification {
         def json2 = new JsonSlurper().parseText(response2.body())
         
         json1.data == json2.data
-
-        cleanup:
-        client.close()
     }
 
     def "parameter cache works via HTTP"() {
-        given:
-        def client = createClient()
-        
         // Evict cache
         client.toBlocking().exchange(HttpRequest.GET('/cacheTest/evictAllParam'), String)
 
         when: "calling with same ID twice"
-        HttpResponse<String> response1 = client.toBlocking().exchange(
+        def response1 = client.toBlocking().exchange(
             HttpRequest.GET('/cacheTest/dataById?id=42'),
             String
         )
-        HttpResponse<String> response2 = client.toBlocking().exchange(
+        def response2 = client.toBlocking().exchange(
             HttpRequest.GET('/cacheTest/dataById?id=42'),
             String
         )
@@ -323,24 +321,21 @@ class CachingSpec extends Specification {
         def json2 = new JsonSlurper().parseText(response2.body())
         
         json1.data == json2.data
-
-        cleanup:
-        client.close()
     }
 
     def "eviction works via HTTP"() {
-        given:
-        def client = createClient()
-        
         // Evict cache and populate it
         client.toBlocking().exchange(HttpRequest.GET('/cacheTest/evictBasic'), String)
-        def firstCall = client.toBlocking().exchange(HttpRequest.GET('/cacheTest/basicData'), String)
+        def firstCall = client.toBlocking().exchange(
+                HttpRequest.GET('/cacheTest/basicData'),
+                String
+        )
         def firstData = new JsonSlurper().parseText(firstCall.body()).data
 
         when: "evicting via HTTP then calling again after delay"
         client.toBlocking().exchange(HttpRequest.GET('/cacheTest/evictBasic'), String)
         Thread.sleep(10) // Ensure timestamp changes
-        HttpResponse<String> afterEvict = client.toBlocking().exchange(
+        def afterEvict = client.toBlocking().exchange(
             HttpRequest.GET('/cacheTest/basicData'),
             String
         )
@@ -348,14 +343,10 @@ class CachingSpec extends Specification {
         then: "new data generated after eviction"
         def afterEvictData = new JsonSlurper().parseText(afterEvict.body()).data
         firstData != afterEvictData
-
-        cleanup:
-        client.close()
     }
 
     def "different IDs return different cached values via HTTP"() {
         given:
-        def client = createClient()
         client.toBlocking().exchange(HttpRequest.GET('/cacheTest/evictAllParam'), String)
 
         when: "fetching different IDs"
@@ -370,15 +361,9 @@ class CachingSpec extends Specification {
         
         json1.data != json2.data
         json1.data == json3.data
-
-        cleanup:
-        client.close()
     }
 
     def "complex data endpoint works with caching"() {
-        given:
-        def client = createClient()
-
         when: "fetching complex data"
         def response1 = client.toBlocking().exchange(
             HttpRequest.GET('/cacheTest/complexData?category=electronics&page=3'),
@@ -396,15 +381,9 @@ class CachingSpec extends Specification {
         json1.data == json2.data
         json1.data.category == 'electronics'
         json1.data.page == 3
-
-        cleanup:
-        client.close()
     }
 
     def "CachePut works via HTTP with key closure"() {
-        given:
-        def client = createClient()
-        
         // Evict keyed cache and get initial value
         client.toBlocking().exchange(HttpRequest.GET('/cacheTest/evictAllKeyed'), String)
         def initial = new JsonSlurper().parseText(
@@ -412,16 +391,16 @@ class CachingSpec extends Specification {
         ).data
 
         when: "updating via HTTP"
-        client.toBlocking().exchange(HttpRequest.GET('/cacheTest/updateByKey?key=httpkey&value=HTTPUpdated'), String)
+        client.toBlocking().exchange(
+                HttpRequest.GET('/cacheTest/updateByKey?key=httpkey&value=HTTPUpdated'),
+                String
+        )
         def afterUpdate = new JsonSlurper().parseText(
             client.toBlocking().exchange(HttpRequest.GET('/cacheTest/byKey?key=httpkey'), String).body()
         ).data
 
         then: "cache contains updated value"
-        afterUpdate == "HTTPUpdated"
+        afterUpdate == 'HTTPUpdated'
         afterUpdate != initial
-
-        cleanup:
-        client.close()
     }
 }

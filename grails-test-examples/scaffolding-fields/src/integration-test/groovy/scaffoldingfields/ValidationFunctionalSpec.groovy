@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package scaffoldingfields
 
 import grails.gorm.transactions.Rollback
@@ -27,12 +26,13 @@ import grails.testing.mixin.integration.Integration
  * Functional tests for form validation error display.
  * Tests that validation errors are properly rendered in scaffolded views.
  */
-@Integration(applicationClass = Application)
 @Rollback
+@Integration
 class ValidationFunctionalSpec extends ContainerGebSpec {
 
     // ==================== REQUIRED FIELD VALIDATION ====================
 
+    // TODO: Not fully implemented
     def "Blank required field shows error message"() {
         given: "navigating to the employee create page"
         go '/employee/create'
@@ -52,6 +52,7 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         }
     }
 
+    // TODO: Not fully implemented
     def "Blank first name shows specific error"() {
         given: "navigating to the employee create page"
         go '/employee/create'
@@ -70,7 +71,7 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
     }
 
     // ==================== EMAIL VALIDATION ====================
-
+    // TODO: Not fully implemented
     def "Invalid email format shows error message"() {
         given: "navigating to the employee create page"
         go '/employee/create'
@@ -102,16 +103,15 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
 
         then: "error is shown for duplicate email - validation prevents navigation away"
         waitFor(5) {
-            title == 'Create Employee' ||
-            currentUrl.contains('/employee/create') ||
-            $('.errors, .alert-danger, .invalid-feedback').displayed ||
-            // If unique constraint not configured, may go to show page - still valid test
-            currentUrl.contains('/employee/show/')
+            title == 'Create Employee'
+            $('.alert-danger').displayed
+            pageSource.contains('Property [email] of class [class scaffoldingfields.Employee] with value [john.doe@example.com] must be unique')
         }
     }
 
     // ==================== NUMERIC VALIDATION ====================
 
+    // TODO: Not fully implemented
     def "Age below minimum shows error"() {
         given: "navigating to the employee create page"
         go '/employee/create'
@@ -121,9 +121,7 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         $('input[name="lastName"]').value('Person')
         $('input[name="email"]').value('young.person@example.com')
         def ageField = $('input[name="age"]')
-        if (ageField.displayed) {
-            ageField.value('10')
-        }
+        ageField.value('10')
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "error is shown if age was provided"
@@ -131,6 +129,7 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         true
     }
 
+    // TODO: Not fully implemented
     def "Age above maximum shows error"() {
         given: "navigating to the employee create page"
         go '/employee/create'
@@ -158,17 +157,18 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         $('input[name="lastName"]').value('Salary')
         $('input[name="email"]').value('negative.salary@example.com')
         def salaryField = $('input[name="salary"]')
-        if (salaryField.displayed) {
-            salaryField.value('-1000')
-        }
+        salaryField.value('-1000')
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "error is shown if salary was provided"
-        true
+        waitFor(5) {
+            pageSource.contains('Property [salary] of class [class scaffoldingfields.Employee] with value [-1,000] is less than minimum value [0]')
+        }
     }
 
     // ==================== SIZE CONSTRAINT VALIDATION ====================
 
+    // TODO: Not fully implemented
     def "First name exceeding max size shows error"() {
         given: "navigating to the employee create page"
         go '/employee/create'
@@ -190,7 +190,7 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
     }
 
     // ==================== DEPARTMENT VALIDATION ====================
-
+    // TODO: Not fully implemented
     def "Department with blank name shows error"() {
         given: "navigating to the department create page"
         go '/department/create'
@@ -207,6 +207,7 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         }
     }
 
+
     def "Department with duplicate name shows error"() {
         given: "navigating to the department create page"
         go '/department/create'
@@ -218,11 +219,9 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
 
         then: "error is shown for duplicate - validation prevents navigation or unique constraint not configured"
         waitFor(5) {
-            title == 'Create Department' ||
-            currentUrl.contains('/department/create') ||
-            $('.errors, .alert-danger, .invalid-feedback').displayed ||
-            // If unique constraint not configured, may go to show page - still valid
-            currentUrl.contains('/department/show/')
+            title == 'Create Department'
+            pageSource.contains('Property [name] of class [class scaffoldingfields.Department] with value [Engineering] must be unique')
+            $('.alert-danger').displayed
         }
     }
 
@@ -235,15 +234,13 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         when: "submitting with invalid code format (lowercase, special chars)"
         $('input[name="name"]').value('Test Project')
         $('input[name="code"]').value('invalid-code!')
-        def startDateField = $('input[name="startDate"]')
-        if (startDateField.displayed) {
-            // Set a valid date
-            startDateField.value('2024-01-01')
-        }
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "error is shown for invalid code format"
-        title == 'Create Project'
+        waitFor(5) {
+            title == 'Create Project'
+            pageSource.contains('Property [code] of class [class scaffoldingfields.Project] with value [invalid-code!] does not match the required pattern [[A-Z0-9_-]+]')
+        }
     }
 
     def "Project with end date before start date shows error"() {
@@ -253,21 +250,23 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         when: "submitting with end date before start date"
         $('input[name="name"]').value('Invalid Dates Project')
         $('input[name="code"]').value('INVALID')
-        def startDateField = $('input[name="startDate"]')
-        def endDateField = $('input[name="endDate"]')
-        if (startDateField.displayed && endDateField.displayed) {
-            startDateField.value('2024-12-01')
-            endDateField.value('2024-01-01')
-        }
+        $('select[name="startDate_day"]').value('1')
+        $('select[name="startDate_month"]').value('12')
+        $('select[name="startDate_year"]').value('2024')
+        $('select[name="endDate_day"]').value('1')
+        $('select[name="endDate_month"]').value('1')
+        $('select[name="endDate_year"]').value('2024')
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "error may be shown for invalid date range"
-        // This depends on the custom validator implementation
-        true
+        waitFor(5) {
+            pageSource.contains('Property [endDate] of class [class scaffoldingfields.Project] with value [1/1/24')
+        }
     }
 
     // ==================== EDIT VALIDATION ====================
 
+    // TODO: Not fully implemented
     def "Edit with invalid data shows errors"() {
         given: "navigating to an existing employee edit page"
         go '/employee/edit/1'
@@ -278,11 +277,13 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         $('input[type="submit"], button[type="submit"]').click()
 
         then: "error is shown and still on edit page"
-        title.contains('Edit') || title.contains('Employee')
+        title.contains('Edit')
+        title.contains('Employee')
     }
 
     // ==================== ERROR MESSAGE DISPLAY ====================
 
+    // TODO: Not fully implemented
     def "Error messages are visible and readable"() {
         given: "navigating to the employee create page"
         go '/employee/create'
@@ -295,6 +296,7 @@ class ValidationFunctionalSpec extends ContainerGebSpec {
         errors.size() > 0 || title == 'Create Employee'
     }
 
+    // TODO: Not fully implemented
     def "Error styling is applied to invalid fields"() {
         given: "navigating to the employee create page"
         go '/employee/create'

@@ -16,13 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package gorm
+
+import spock.lang.Specification
+import spock.lang.Unroll
 
 import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
-import spock.lang.Specification
-import spock.lang.Unroll
+import grails.validation.ValidationException
 
 /**
  * Comprehensive tests for GORM validation constraints.
@@ -39,8 +40,8 @@ import spock.lang.Unroll
  * - range: Tests numeric/date range constraints
  * - custom validators: Tests custom validation logic
  */
-@Integration(applicationClass = Application)
 @Rollback
+@Integration
 class ValidationConstraintsSpec extends Specification {
 
     // ============================================
@@ -145,11 +146,11 @@ class ValidationConstraintsSpec extends Specification {
         isValid == expectedValid
 
         where:
-        name                                                                                                          || expectedValid
-        'A'                                                                                                           || true   // Min length 1
-        'John Doe'                                                                                                    || true   // Normal length
-        'A' * 100                                                                                                     || true   // Max length 100
-        'A' * 101                                                                                                     || false  // Over max length
+        name       || expectedValid
+        'A'        || true   // Min length 1
+        'John Doe' || true   // Normal length
+        'A' * 100  || true   // Max length 100
+        'A' * 101  || false  // Over max length
     }
 
     // ============================================
@@ -174,14 +175,14 @@ class ValidationConstraintsSpec extends Specification {
         }
 
         where:
-        email                    || expectedValid
-        'valid@example.com'      || true
-        'user.name@domain.org'   || true
-        'user+tag@domain.com'    || true
-        'invalid-email'          || false
-        'missing@domain'         || false  // Missing TLD might fail
-        '@nodomain.com'          || false
-        ''                       || false  // Blank also fails
+        email                  || expectedValid
+        'valid@example.com'    || true
+        'user.name@domain.org' || true
+        'user+tag@domain.com'  || true
+        'invalid-email'        || false
+        'missing@domain'       || false  // Missing TLD might fail
+        '@nodomain.com'        || false
+        ''                     || false  // Blank also fails
     }
 
     // ============================================
@@ -256,14 +257,14 @@ class ValidationConstraintsSpec extends Specification {
         }
 
         where:
-        isbn              || expectedValid
-        null              || true   // nullable: true
-        '1234567890'      || true   // 10 digits
-        '1234567890123'   || true   // 13 digits
-        '123456789'       || false  // 9 digits - too short
-        '12345678901234'  || false  // 14 digits - too long
-        '123-456-789'     || false  // Has dashes
-        'ABCDEFGHIJ'      || false  // Letters
+        isbn             || expectedValid
+        null             || true   // nullable: true
+        '1234567890'     || true   // 10 digits
+        '1234567890123'  || true   // 13 digits
+        '123456789'      || false  // 9 digits - too short
+        '12345678901234' || false  // 14 digits - too long
+        '123-456-789'    || false  // Has dashes
+        'ABCDEFGHIJ'     || false  // Letters
     }
 
     // ============================================
@@ -441,7 +442,7 @@ class ValidationConstraintsSpec extends Specification {
         author.save(failOnError: true)
 
         then: "exception is thrown"
-        thrown(grails.validation.ValidationException)
+        thrown(ValidationException)
     }
 
     void "test save with validate false skips validation"() {

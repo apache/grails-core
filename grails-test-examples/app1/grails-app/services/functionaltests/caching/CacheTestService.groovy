@@ -19,10 +19,11 @@
 
 package functionaltests.caching
 
-import grails.plugin.cache.Cacheable
+import groovy.transform.CompileStatic
+
 import grails.plugin.cache.CacheEvict
 import grails.plugin.cache.CachePut
-import groovy.transform.CompileStatic
+import grails.plugin.cache.Cacheable
 
 /**
  * Service demonstrating Grails caching features.

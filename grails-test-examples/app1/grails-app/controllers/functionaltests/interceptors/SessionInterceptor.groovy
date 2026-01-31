@@ -29,7 +29,7 @@ class SessionInterceptor {
     }
 
     boolean before() {
-        InterceptorTestController.executionOrder << "session:before"
+        InterceptorTestController.executionOrder << 'session:before'
         session.setAttribute('interceptorSessionData', [
             setAt: System.currentTimeMillis(),
             message: 'Session data from interceptor'
@@ -38,7 +38,7 @@ class SessionInterceptor {
     }
 
     boolean after() {
-        InterceptorTestController.executionOrder << "session:after"
+        InterceptorTestController.executionOrder << 'session:after'
         true
     }
 }

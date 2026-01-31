@@ -19,11 +19,11 @@
 
 package functionaltests.events
 
-import functionaltests.Application
-import grails.testing.mixin.integration.Integration
-import grails.gorm.transactions.Rollback
-import spock.lang.Specification
 import spock.lang.Narrative
+import spock.lang.Specification
+
+import grails.gorm.transactions.Rollback
+import grails.testing.mixin.integration.Integration
 
 /**
  * Integration tests for GORM domain lifecycle events.
@@ -32,8 +32,8 @@ import spock.lang.Narrative
  * beforeDelete, afterDelete, beforeValidate, afterLoad events,
  * auto-timestamping, dirty checking, and event veto capabilities.
  */
-@Integration(applicationClass = Application)
 @Rollback
+@Integration
 @Narrative('''
 GORM provides lifecycle event hooks that are triggered during domain object
 persistence operations. These events allow for automatic auditing, validation,
@@ -91,7 +91,7 @@ class DomainEventsSpec extends Specification {
         def insertIndex = entity.eventLog.indexOf('beforeInsert')
         def afterIndex = entity.eventLog.indexOf('afterInsert')
         insertIndex >= 0
-        afterIndex >= 0
+        afterIndex > 0
         insertIndex < afterIndex
     }
 
@@ -136,8 +136,8 @@ class DomainEventsSpec extends Specification {
         then: "modified audit fields are updated"
         entity.modifiedAt != null
         entity.modifiedBy == 'system'
-        // modifiedAt should be different from original (which was null)
-        entity.modifiedAt != originalModifiedAt
+        // modifiedAt should be larger than original
+        entity.modifiedAt > originalModifiedAt
     }
 
     def "update events do not fire when entity is unchanged"() {
@@ -191,7 +191,7 @@ class DomainEventsSpec extends Specification {
         def beforeIndex = entity.eventLog.indexOf('beforeDelete')
         def afterIndex = entity.eventLog.indexOf('afterDelete')
         beforeIndex >= 0
-        afterIndex >= 0
+        afterIndex > 0
         beforeIndex < afterIndex
     }
 
@@ -230,6 +230,7 @@ class DomainEventsSpec extends Specification {
 
         then: "beforeValidate was triggered"
         entity.eventLog.contains('beforeValidate')
+
         and: "name was trimmed"
         entity.name == 'Trim On Save'
     }
@@ -288,7 +289,7 @@ class DomainEventsSpec extends Specification {
         entity.save(flush: true)
 
         then: "lastUpdated is updated"
-        entity.lastUpdated >= originalLastUpdated
+        entity.lastUpdated > originalLastUpdated
     }
 
     def "dateCreated remains unchanged on update"() {
@@ -296,7 +297,8 @@ class DomainEventsSpec extends Specification {
         def entity = new AuditedEntity(name: 'DateCreated Test').save(flush: true)
         def originalDateCreated = entity.dateCreated
 
-        when: "the entity is updated"
+        when: "the entity is updated after a brief pause"
+        sleep(10)
         entity.description = 'Modified'
         entity.save(flush: true)
 
@@ -550,10 +552,8 @@ class DomainEventsSpec extends Specification {
         def afterInsertIndex = entity.eventLog.indexOf('afterInsert')
         
         validateIndex >= 0
-        insertIndex >= 0
-        afterInsertIndex >= 0
-        // beforeValidate should come before beforeInsert
-        validateIndex < insertIndex || insertIndex < afterInsertIndex
+        insertIndex > validateIndex
+        afterInsertIndex > insertIndex
     }
 
     def "multiple entities have independent event logs"() {

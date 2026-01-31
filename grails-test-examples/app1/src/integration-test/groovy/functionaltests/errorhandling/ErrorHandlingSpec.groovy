@@ -18,265 +18,119 @@
  */
 package functionaltests.errorhandling
 
-import functionaltests.Application
-import grails.testing.mixin.integration.Integration
-import grails.gorm.transactions.Rollback
 import groovy.json.JsonSlurper
+
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.exceptions.HttpClientResponseException
-import spock.lang.Specification
 import spock.lang.Shared
+import spock.lang.Specification
 import spock.lang.Unroll
+
+import grails.gorm.transactions.Rollback
+import grails.testing.mixin.integration.Integration
 
 /**
  * Integration tests for error handling patterns in Grails controllers.
  * Tests various HTTP status codes, JSON error responses, exception handling,
  * and error response headers.
  */
-@Integration(applicationClass = Application)
 @Rollback
+@Integration
 class ErrorHandlingSpec extends Specification {
 
     @Shared
     HttpClient client
 
     def setup() {
-        client = HttpClient.create(new URL("http://localhost:${serverPort}"))
+        client = client ?: HttpClient.create(new URL("http://localhost:${serverPort}"))
     }
 
-    def cleanup() {
-        client?.close()
+    def cleanupSpec() {
+        client.close()
     }
 
     // ========== HTTP Status Code Tests ==========
 
-    def "render 404 Not Found status"() {
+    @Unroll
+    def "render #statusMsg status"(String action, HttpStatus status, String statusMsg) {
         when:
         client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/renderNotFound'),
+            HttpRequest.GET("/errorHandlingTest/$action"),
             String
         )
 
         then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.NOT_FOUND
-    }
+        def e = thrown(HttpClientResponseException)
+        e.status == status
 
-    def "render 400 Bad Request status"() {
-        when:
-        client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/renderBadRequest'),
-            String
-        )
-
-        then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.BAD_REQUEST
-    }
-
-    def "render 401 Unauthorized status"() {
-        when:
-        client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/renderUnauthorized'),
-            String
-        )
-
-        then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.UNAUTHORIZED
-    }
-
-    def "render 403 Forbidden status"() {
-        when:
-        client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/renderForbidden'),
-            String
-        )
-
-        then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.FORBIDDEN
-    }
-
-    def "render 405 Method Not Allowed status"() {
-        when:
-        client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/renderMethodNotAllowed'),
-            String
-        )
-
-        then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.METHOD_NOT_ALLOWED
-    }
-
-    def "render 409 Conflict status"() {
-        when:
-        client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/renderConflict'),
-            String
-        )
-
-        then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.CONFLICT
-    }
-
-    def "render 410 Gone status"() {
-        when:
-        client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/renderGone'),
-            String
-        )
-
-        then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.GONE
-    }
-
-    def "render 422 Unprocessable Entity status"() {
-        when:
-        client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/renderUnprocessableEntity'),
-            String
-        )
-
-        then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.UNPROCESSABLE_ENTITY
-    }
-
-    def "render 429 Too Many Requests status"() {
-        when:
-        client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/renderTooManyRequests'),
-            String
-        )
-
-        then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.TOO_MANY_REQUESTS
-    }
-
-    def "render 500 Internal Server Error status"() {
-        when:
-        client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/renderInternalServerError'),
-            String
-        )
-
-        then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.INTERNAL_SERVER_ERROR
-    }
-
-    def "render 503 Service Unavailable status"() {
-        when:
-        client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/renderServiceUnavailable'),
-            String
-        )
-
-        then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.SERVICE_UNAVAILABLE
+        where:
+        action                      | status                           | statusMsg
+        'renderNotFound'            | HttpStatus.NOT_FOUND             | '404 Not Found'
+        'renderBadRequest'          | HttpStatus.BAD_REQUEST           | '400 Bad Request'
+        'renderUnauthorized'        | HttpStatus.UNAUTHORIZED          | '401 Unauthorized'
+        'renderForbidden'           | HttpStatus.FORBIDDEN             | '403 Forbidden'
+        'renderMethodNotAllowed'    | HttpStatus.METHOD_NOT_ALLOWED    | '405 Method Not Allowed'
+        'renderConflict'            | HttpStatus.CONFLICT              | '409 Conflict'
+        'renderGone'                | HttpStatus.GONE                  | '410 Gone'
+        'renderUnprocessableEntity' | HttpStatus.UNPROCESSABLE_ENTITY  | '422 Unprocessable Entity'
+        'renderTooManyRequests'     | HttpStatus.TOO_MANY_REQUESTS     | '429 Too Many Requests'
+        'renderInternalServerError' | HttpStatus.INTERNAL_SERVER_ERROR | '500 Internal Server Error'
+        'renderServiceUnavailable'  | HttpStatus.SERVICE_UNAVAILABLE   | '503 Service Unavailable'
     }
 
     // ========== JSON Error Response Tests ==========
 
-    def "JSON 404 error response contains proper structure"() {
+    @Unroll
+    def "JSON #statusCode.code error response #assertion"(String action, HttpStatus statusCode, String assertion) {
         when:
         client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/jsonNotFound').accept('application/json'),
+            HttpRequest.GET("/errorHandlingTest/$action")
+                    .accept('application/json'),
             String
         )
 
         then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.NOT_FOUND
-    }
+        def e = thrown(HttpClientResponseException)
+        e.status == statusCode
 
-    def "JSON 400 error response with validation details"() {
-        when:
-        client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/jsonBadRequest').accept('application/json'),
-            String
-        )
-
-        then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.BAD_REQUEST
-    }
-
-    def "JSON 422 validation error with multiple field errors"() {
-        when:
-        client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/jsonValidationError').accept('application/json'),
-            String
-        )
-
-        then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.UNPROCESSABLE_ENTITY
-    }
-
-    def "JSON 500 error response includes request ID"() {
-        when:
-        client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/jsonServerError').accept('application/json'),
-            String
-        )
-
-        then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.INTERNAL_SERVER_ERROR
+        where:
+        action                | statusCode                       | assertion
+        'jsonNotFound'        | HttpStatus.NOT_FOUND             | 'contains proper structure'
+        'jsonBadRequest'      | HttpStatus.BAD_REQUEST           | 'with validation details'
+        'jsonValidationError' | HttpStatus.UNPROCESSABLE_ENTITY  | 'with multiple field errors'
+        'jsonServerError'     | HttpStatus.INTERNAL_SERVER_ERROR | 'includes request ID'
     }
 
     // ========== Conditional Error Handling Tests ==========
 
-    def "conditional error returns 404 when condition is notfound"() {
+    @Unroll
+    def "conditional error returns #status.code when condition is #condition"(String condition, HttpStatus status) {
         when:
         client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/conditionalError?condition=notfound').accept('application/json'),
+            HttpRequest.GET("/errorHandlingTest/conditionalError?condition=$condition")
+                    .accept('application/json'),
             String
         )
 
         then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.NOT_FOUND
-    }
+        def e = thrown(HttpClientResponseException)
+        e.status == status
 
-    def "conditional error returns 400 when condition is badrequest"() {
-        when:
-        client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/conditionalError?condition=badrequest').accept('application/json'),
-            String
-        )
-
-        then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.BAD_REQUEST
-    }
-
-    def "conditional error returns 403 when condition is forbidden"() {
-        when:
-        client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/conditionalError?condition=forbidden').accept('application/json'),
-            String
-        )
-
-        then:
-        HttpClientResponseException e = thrown()
-        e.status == HttpStatus.FORBIDDEN
+        where:
+        condition     | status
+        'notfound'    | HttpStatus.NOT_FOUND
+        'badrequest'  | HttpStatus.BAD_REQUEST
+        'forbidden'   | HttpStatus.FORBIDDEN
     }
 
     def "conditional error returns success for unknown condition"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/conditionalError?condition=normal').accept('application/json'),
+        def response = client.toBlocking().exchange(
+            HttpRequest.GET('/errorHandlingTest/conditionalError?condition=normal')
+                    .accept('application/json'),
             String
         )
 
@@ -299,7 +153,7 @@ class ErrorHandlingSpec extends Specification {
         )
 
         then:
-        HttpClientResponseException e = thrown()
+        def e = thrown(HttpClientResponseException)
         e.status == HttpStatus.TOO_MANY_REQUESTS
 
         and:
@@ -318,7 +172,7 @@ class ErrorHandlingSpec extends Specification {
         )
 
         then:
-        HttpClientResponseException e = thrown()
+        def e = thrown(HttpClientResponseException)
         e.status == HttpStatus.NOT_FOUND
 
         and: "suggestion header is present"

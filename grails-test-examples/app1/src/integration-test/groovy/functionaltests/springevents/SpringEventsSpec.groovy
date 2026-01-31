@@ -16,20 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functionaltests.springevents
 
-import functionaltests.Application
-import grails.testing.mixin.integration.Integration
 import groovy.json.JsonSlurper
+
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
-import io.micronaut.http.MediaType
 import io.micronaut.http.client.HttpClient
-import org.springframework.beans.factory.annotation.Autowired
 import spock.lang.Narrative
+import spock.lang.Shared
 import spock.lang.Specification
+
+import org.springframework.beans.factory.annotation.Autowired
+
+import grails.testing.mixin.integration.Integration
 
 /**
  * Integration tests for Spring application events in Grails.
@@ -37,7 +37,7 @@ import spock.lang.Specification
  * Tests event publishing, listening, conditional handling,
  * ordered listeners, and event payloads.
  */
-@Integration(applicationClass = Application)
+@Integration
 @Narrative('''
 Spring's ApplicationEvent mechanism allows decoupled communication between
 components. Grails integrates with Spring events via @EventListener annotations
@@ -51,31 +51,35 @@ class SpringEventsSpec extends Specification {
     @Autowired
     EventPublisherService eventPublisherService
 
-    private HttpClient createClient() {
-        HttpClient.create(new URL("http://localhost:$serverPort"))
-    }
+    @Shared
+    HttpClient client
 
     def setup() {
+        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
         eventListenerService.clearEvents()
+    }
+
+    def cleanupSpec() {
+        client.close()
     }
 
     // ========== Basic Event Publishing ==========
 
     def "custom event is published and received"() {
         when: "publishing a custom event"
-        eventPublisherService.publishCustomEvent("Test Message", [key: "value"])
+        eventPublisherService.publishCustomEvent('Test Message', [key: 'value'])
 
         then: "event is received by listener"
         eventListenerService.eventCount == 1
         eventListenerService.customEvents.size() == 1
-        eventListenerService.customEvents[0].message == "Test Message"
-        eventListenerService.customEvents[0].payload.key == "value"
+        eventListenerService.customEvents[0].message == 'Test Message'
+        eventListenerService.customEvents[0].payload.key == 'value'
     }
 
     def "event createdAt is set"() {
         when: "publishing an event"
         def before = new Date()
-        eventPublisherService.publishCustomEvent("Timestamp Test")
+        eventPublisherService.publishCustomEvent('Timestamp Test')
         def after = new Date()
 
         then: "createdAt is within expected range"
@@ -85,13 +89,13 @@ class SpringEventsSpec extends Specification {
 
     def "user action event is published and received"() {
         when: "publishing a user action event"
-        eventPublisherService.publishUserAction("user-123", "LOGIN", [ip: "192.168.1.1"])
+        eventPublisherService.publishUserAction('user-123', 'LOGIN', [ip: '192.168.1.1'])
 
         then: "event is received with correct data"
         eventListenerService.userActionEvents.size() == 1
-        eventListenerService.userActionEvents[0].userId == "user-123"
-        eventListenerService.userActionEvents[0].action == "LOGIN"
-        eventListenerService.userActionEvents[0].metadata.ip == "192.168.1.1"
+        eventListenerService.userActionEvents[0].userId == 'user-123'
+        eventListenerService.userActionEvents[0].action == 'LOGIN'
+        eventListenerService.userActionEvents[0].metadata.ip == '192.168.1.1'
     }
 
     // ========== Multiple Events ==========
@@ -105,16 +109,16 @@ class SpringEventsSpec extends Specification {
         eventListenerService.customEvents.size() == 5
         
         and: "events have correct sequence"
-        eventListenerService.customEvents[0].message == "Event #1"
-        eventListenerService.customEvents[4].message == "Event #5"
+        eventListenerService.customEvents[0].message == 'Event #1'
+        eventListenerService.customEvents[4].message == 'Event #5'
     }
 
     def "events from different types are tracked separately"() {
         when: "publishing different event types"
-        eventPublisherService.publishCustomEvent("Custom 1")
-        eventPublisherService.publishUserAction("user1", "ACTION1")
-        eventPublisherService.publishCustomEvent("Custom 2")
-        eventPublisherService.publishUserAction("user2", "ACTION2")
+        eventPublisherService.publishCustomEvent('Custom 1')
+        eventPublisherService.publishUserAction('user1', 'ACTION1')
+        eventPublisherService.publishCustomEvent('Custom 2')
+        eventPublisherService.publishUserAction('user2', 'ACTION2')
 
         then: "events are tracked by type"
         eventListenerService.customEvents.size() == 2
@@ -126,41 +130,38 @@ class SpringEventsSpec extends Specification {
 
     def "event listeners are executed in order"() {
         when: "publishing a priority event"
-        eventPublisherService.publishPriorityEvent(1, "test")
+        eventPublisherService.publishPriorityEvent(1, 'test')
 
         then: "listeners execute in @Order sequence"
         eventListenerService.orderedResults.size() == 3
-        eventListenerService.orderedResults[0] == "first-test"
-        eventListenerService.orderedResults[1] == "second-test"
-        eventListenerService.orderedResults[2] == "third-test"
+        eventListenerService.orderedResults[0] == 'first-test'
+        eventListenerService.orderedResults[1] == 'second-test'
+        eventListenerService.orderedResults[2] == 'third-test'
     }
 
     // ========== Conditional Event Listeners ==========
 
     def "conditional listener handles matching events"() {
         when: "publishing event that matches condition"
-        eventPublisherService.publishCustomEvent("IMPORTANT: Critical Alert", [:])
+        eventPublisherService.publishCustomEvent('IMPORTANT: Critical Alert', [:])
 
         then: "conditional handler is triggered"
-        eventListenerService.conditionalResults.any { it.startsWith("CONDITIONAL:IMPORTANT") }
+        eventListenerService.conditionalResults.any { it.startsWith('CONDITIONAL:IMPORTANT') }
     }
 
     def "conditional listener ignores non-matching events"() {
         when: "publishing event that doesn't match condition"
-        eventPublisherService.publishCustomEvent("NORMAL: Regular message", [:])
+        eventPublisherService.publishCustomEvent('NORMAL: Regular message', [:])
 
         then: "conditional handler is not triggered"
-        !eventListenerService.conditionalResults.any { it.startsWith("CONDITIONAL:") }
+        !eventListenerService.conditionalResults.any { it.startsWith('CONDITIONAL:') }
     }
 
     // ========== Event Publishing via HTTP ==========
 
     def "event can be published via HTTP endpoint"() {
-        given:
-        def client = createClient()
-
         when: "calling publish endpoint"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/springEvent/publishCustom?message=HTTP+Event'),
             String
         )
@@ -169,18 +170,12 @@ class SpringEventsSpec extends Specification {
         response.status == HttpStatus.OK
         def json = new JsonSlurper().parseText(response.body())
         json.published == true
-        json.message == "HTTP Event"
-
-        cleanup:
-        client.close()
+        json.message == 'HTTP Event'
     }
 
     def "user action event can be published via HTTP"() {
-        given:
-        def client = createClient()
-
         when: "calling user action publish endpoint"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/springEvent/publishUserAction?userId=web-user&userAction=CLICK'),
             String
         )
@@ -189,19 +184,13 @@ class SpringEventsSpec extends Specification {
         response.status == HttpStatus.OK
         def json = new JsonSlurper().parseText(response.body())
         json.published == true
-        json.userId == "web-user"
-        json.userAction == "CLICK"
-
-        cleanup:
-        client.close()
+        json.userId == 'web-user'
+        json.userAction == 'CLICK'
     }
 
     def "priority event ordering works via HTTP"() {
-        given:
-        def client = createClient()
-
         when: "calling priority publish endpoint"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/springEvent/publishPriority?data=http-test'),
             String
         )
@@ -210,18 +199,12 @@ class SpringEventsSpec extends Specification {
         response.status == HttpStatus.OK
         def json = new JsonSlurper().parseText(response.body())
         json.orderedResults.size() == 3
-        json.orderedResults[0] == "first-http-test"
-
-        cleanup:
-        client.close()
+        json.orderedResults[0] == 'first-http-test'
     }
 
     def "multiple events can be published via HTTP"() {
-        given:
-        def client = createClient()
-
         when: "calling multiple publish endpoint"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/springEvent/publishMultiple?count=3'),
             String
         )
@@ -231,17 +214,11 @@ class SpringEventsSpec extends Specification {
         def json = new JsonSlurper().parseText(response.body())
         json.count == 3
         json.receivedCount == 3
-
-        cleanup:
-        client.close()
     }
 
     def "conditional event works via HTTP for matching message"() {
-        given:
-        def client = createClient()
-
         when: "publishing important message"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/springEvent/publishConditional?important=true'),
             String
         )
@@ -249,18 +226,12 @@ class SpringEventsSpec extends Specification {
         then: "conditional handler triggers"
         response.status == HttpStatus.OK
         def json = new JsonSlurper().parseText(response.body())
-        json.conditionalResults.any { it.startsWith("CONDITIONAL:") }
-
-        cleanup:
-        client.close()
+        json.conditionalResults.any { it.startsWith('CONDITIONAL:') }
     }
 
     def "conditional event skipped via HTTP for non-matching message"() {
-        given:
-        def client = createClient()
-
         when: "publishing normal message"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/springEvent/publishConditional?important=false'),
             String
         )
@@ -268,23 +239,19 @@ class SpringEventsSpec extends Specification {
         then: "conditional handler does not trigger"
         response.status == HttpStatus.OK
         def json = new JsonSlurper().parseText(response.body())
-        !json.conditionalResults.any { it.toString().startsWith("CONDITIONAL:") }
-
-        cleanup:
-        client.close()
+        !json.conditionalResults.any { it.toString().startsWith('CONDITIONAL:') }
     }
 
     // ========== Event Stats ==========
 
     def "event stats are accessible via HTTP"() {
         given:
-        def client = createClient()
-        eventPublisherService.publishCustomEvent("Stats Test 1")
-        eventPublisherService.publishCustomEvent("Stats Test 2")
-        eventPublisherService.publishUserAction("user", "action")
+        eventPublisherService.publishCustomEvent('Stats Test 1')
+        eventPublisherService.publishCustomEvent('Stats Test 2')
+        eventPublisherService.publishUserAction('user', 'action')
 
         when: "getting stats"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/springEvent/stats'),
             String
         )
@@ -295,20 +262,16 @@ class SpringEventsSpec extends Specification {
         json.totalEvents == 3
         json.customEvents == 2
         json.userActionEvents == 1
-
-        cleanup:
-        client.close()
     }
 
     // ========== Clear Events ==========
 
     def "events can be cleared via HTTP"() {
         given:
-        def client = createClient()
-        eventPublisherService.publishCustomEvent("To be cleared")
+        eventPublisherService.publishCustomEvent('To be cleared')
 
         when: "clearing events"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/springEvent/clearEvents'),
             String
         )
@@ -316,19 +279,13 @@ class SpringEventsSpec extends Specification {
         then: "events are cleared"
         response.status == HttpStatus.OK
         eventListenerService.eventCount == 0
-
-        cleanup:
-        client.close()
     }
 
     // ========== Transactional Event Publishing ==========
 
     def "event can be published in transactional context"() {
-        given:
-        def client = createClient()
-
         when: "publishing transactional event"
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = client.toBlocking().exchange(
             HttpRequest.GET('/springEvent/publishTransactional?message=tx-test'),
             String
         )
@@ -339,10 +296,7 @@ class SpringEventsSpec extends Specification {
         json.published == true
         
         and: "event is received"
-        eventListenerService.customEvents.any { it.message.contains("tx-test") }
-
-        cleanup:
-        client.close()
+        eventListenerService.customEvents.any { it.message.contains('tx-test') }
     }
 
     // ========== Event Payload Tests ==========
@@ -354,22 +308,22 @@ class SpringEventsSpec extends Specification {
                 list: [1, 2, 3],
                 map: [a: 'b', c: 'd']
             ],
-            string: "value",
+            string: 'value',
             number: 42
         ]
-        eventPublisherService.publishCustomEvent("Complex Payload", payload)
+        eventPublisherService.publishCustomEvent('Complex Payload', payload)
 
         then: "payload is preserved"
         def event = eventListenerService.customEvents[0]
         event.payload.nested.list == [1, 2, 3]
         event.payload.nested.map.a == 'b'
-        event.payload.string == "value"
+        event.payload.string == 'value'
         event.payload.number == 42
     }
 
     def "event payload handles null values"() {
         when: "publishing event with null in payload"
-        eventPublisherService.publishCustomEvent("Null Payload", [key: null])
+        eventPublisherService.publishCustomEvent('Null Payload', [key: null])
 
         then: "null is preserved"
         def event = eventListenerService.customEvents[0]

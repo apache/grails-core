@@ -19,11 +19,11 @@
 
 package functionaltests.i18n
 
-import grails.converters.JSON
 import org.springframework.context.MessageSource
 import org.springframework.context.i18n.LocaleContextHolder
 import org.springframework.web.servlet.LocaleResolver
-import org.springframework.web.servlet.support.RequestContextUtils
+
+import grails.converters.JSON
 
 /**
  * Controller for testing internationalization (i18n) features.
@@ -32,7 +32,6 @@ import org.springframework.web.servlet.support.RequestContextUtils
 class I18nTestController {
 
     MessageSource messageSource
-    LocaleResolver localeResolver
 
     /**
      * Get a simple message using the current locale.

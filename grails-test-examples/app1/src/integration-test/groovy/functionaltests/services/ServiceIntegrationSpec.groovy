@@ -16,23 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functionaltests.services
 
-import functionaltests.Application
-import grails.testing.mixin.integration.Integration
-import grails.gorm.transactions.Rollback
-import org.springframework.beans.factory.annotation.Autowired
 import spock.lang.Specification
-import spock.lang.Stepwise
+
+import org.springframework.beans.factory.annotation.Autowired
+
+import grails.gorm.transactions.Rollback
+import grails.testing.mixin.integration.Integration
 
 /**
  * Integration tests for Grails services.
  * Tests transactional behavior, rollback scenarios, async operations,
  * and service dependency injection.
  */
-@Integration(applicationClass = Application)
-@Rollback
+@Integration
 class ServiceIntegrationSpec extends Specification {
 
     @Autowired
@@ -46,18 +44,22 @@ class ServiceIntegrationSpec extends Specification {
 
     // ========== Transactional Service Tests ==========
 
+    @Rollback
     def "service can add and retrieve product"() {
         when: "adding a product through the service"
         inventoryService.addProduct('SKU-001', 'Test Product', 29.99, 100)
 
-        then: "product can be retrieved"
+        and: "retrieving the product"
         def product = inventoryService.findBySku('SKU-001')
+
+        then: "the product was retrieved"
         product != null
         product.name == 'Test Product'
         product.price == 29.99
         product.quantity == 100
     }
 
+    @Rollback
     def "read-only transaction returns correct data"() {
         given: "multiple products exist"
         inventoryService.addProduct('CHEAP-001', 'Cheap Item', 5.00, 50)
@@ -72,6 +74,7 @@ class ServiceIntegrationSpec extends Specification {
         expensiveItems[0].sku == 'EXPENSIVE-001'
     }
 
+    // Do not use @Rollback here to test actual rollback behavior
     def "runtime exception causes transaction rollback"() {
         given: "initial count"
         def initialCount = inventoryService.countAll()
@@ -81,13 +84,10 @@ class ServiceIntegrationSpec extends Specification {
 
         then: "exception is thrown"
         thrown(RuntimeException)
-
-        // Note: Under @Rollback, the outer test transaction encompasses everything,
-        // so we verify the exception was thrown (which marks the transaction for rollback).
-        // The actual rollback happens at the end of the test method.
-        // To verify the service's rollback behavior in isolation, we'd need REQUIRES_NEW.
+        initialCount == inventoryService.countAll()
     }
 
+    @Rollback
     def "checked exception does NOT rollback by default"() {
         given: "initial count"
         def initialCount = inventoryService.countAll()
@@ -101,21 +101,23 @@ class ServiceIntegrationSpec extends Specification {
         and: "transaction is committed - product IS saved (default behavior)"
         // Note: This test documents default Spring behavior
         // Checked exceptions don't trigger rollback unless configured
-        inventoryService.countAll() >= initialCount
+        inventoryService.countAll() > initialCount
     }
 
+    // Do not use @Rollback here to test actual rollback behavior
     def "rollbackFor configuration causes rollback on checked exception"() {
+        given: "initial count"
+        def initialCount = inventoryService.countAll()
+
         when: "adding product with rollbackFor configured"
         inventoryService.addProductRollbackOnCheckedException('ROLLBACK-001', 'Should Rollback', 20.00, 7)
 
         then: "exception is thrown"
         thrown(Exception)
-
-        // Note: The rollbackFor annotation marks the transaction for rollback.
-        // Under @Rollback test context, the actual rollback happens at end of test.
-        // This test verifies the exception is properly thrown, which triggers the rollback.
+        inventoryService.countAll() == initialCount
     }
 
+    @Rollback
     def "update within transaction works correctly"() {
         given: "an existing product"
         inventoryService.addProduct('UPDATE-001', 'Update Test', 50.00, 100)
@@ -124,20 +126,22 @@ class ServiceIntegrationSpec extends Specification {
         def result = inventoryService.updateQuantity('UPDATE-001', 75)
 
         then: "update succeeds"
-        result == true
+        result
 
         and: "new quantity is persisted"
         inventoryService.findBySku('UPDATE-001').quantity == 75
     }
 
+    @Rollback
     def "update non-existent product returns false"() {
         when: "updating non-existent product"
         def result = inventoryService.updateQuantity('NONEXISTENT', 50)
 
         then: "update returns false"
-        result == false
+        !result
     }
 
+    @Rollback
     def "multi-entity transaction commits atomically"() {
         given: "two products with initial quantities"
         inventoryService.addProduct('FROM-001', 'Source Product', 10.00, 100)
@@ -151,6 +155,7 @@ class ServiceIntegrationSpec extends Specification {
         inventoryService.findBySku('TO-001').quantity == 80
     }
 
+    @Rollback
     def "multi-entity transaction rolls back on failure"() {
         given: "two products"
         inventoryService.addProduct('TRANSFER-FROM', 'Source', 10.00, 20)
@@ -167,6 +172,7 @@ class ServiceIntegrationSpec extends Specification {
         inventoryService.findBySku('TRANSFER-TO').quantity == 10
     }
 
+    @Rollback
     def "batch insert processes multiple items"() {
         given: "a list of items to insert"
         def items = [
@@ -185,6 +191,7 @@ class ServiceIntegrationSpec extends Specification {
         inventoryService.findBySku('BATCH-003') != null
     }
 
+    @Rollback
     def "delete removes product"() {
         given: "an existing product"
         inventoryService.addProduct('DELETE-001', 'To Delete', 5.00, 1)
@@ -194,12 +201,13 @@ class ServiceIntegrationSpec extends Specification {
         def result = inventoryService.deleteProduct('DELETE-001')
 
         then: "delete succeeds"
-        result == true
+        result
 
         and: "product no longer exists"
         inventoryService.findBySku('DELETE-001') == null
     }
 
+    @Rollback
     def "total inventory value calculation"() {
         given: "products with known values"
         inventoryService.addProduct('VALUE-001', 'Item 1', 10.00, 5)   // 50.00
@@ -221,6 +229,7 @@ class ServiceIntegrationSpec extends Specification {
         orderService.applicationContext != null
     }
 
+    @Rollback
     def "order service uses inventory service"() {
         given: "product in inventory"
         inventoryService.addProduct('ORDER-001', 'Orderable Item', 49.99, 50)
@@ -239,6 +248,7 @@ class ServiceIntegrationSpec extends Specification {
         inventoryService.findBySku('ORDER-001').quantity == 45
     }
 
+    @Rollback
     def "order fails for non-existent product"() {
         when: "ordering non-existent product"
         def result = orderService.placeOrder('NONEXISTENT', 1)
@@ -248,6 +258,7 @@ class ServiceIntegrationSpec extends Specification {
         result.error == 'Product not found'
     }
 
+    @Rollback
     def "order fails for insufficient stock"() {
         given: "product with limited stock"
         inventoryService.addProduct('LIMITED-001', 'Limited Stock', 100.00, 3)
@@ -262,6 +273,7 @@ class ServiceIntegrationSpec extends Specification {
         result.requested == 10
     }
 
+    @Rollback
     def "get quote returns pricing without modifying inventory"() {
         given: "product in inventory"
         inventoryService.addProduct('QUOTE-001', 'Quotable Item', 75.00, 20)
@@ -281,9 +293,9 @@ class ServiceIntegrationSpec extends Specification {
 
     def "service can check bean availability"() {
         expect: "known services are available"
-        orderService.isServiceAvailable('inventoryService') == true
-        orderService.isServiceAvailable('asyncProcessingService') == true
-        orderService.isServiceAvailable('nonExistentService') == false
+        orderService.isServiceAvailable('inventoryService')
+        orderService.isServiceAvailable('asyncProcessingService')
+        !orderService.isServiceAvailable('nonExistentService')
     }
 
     def "service can retrieve beans dynamically"() {
@@ -325,6 +337,7 @@ class ServiceIntegrationSpec extends Specification {
         result == ['cba', 'fed', 'ihg']
     }
 
+    @Rollback
     def "async method can access database"() {
         given: "products in database"
         inventoryService.addProduct('ASYNC-001', 'Async Test 1', 10.00, 5)

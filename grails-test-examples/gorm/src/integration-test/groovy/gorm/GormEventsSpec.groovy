@@ -16,12 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package gorm
+
+import spock.lang.Specification
 
 import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
-import spock.lang.Specification
 
 /**
  * Tests for GORM Event Listeners.
@@ -37,12 +37,12 @@ import spock.lang.Specification
  * Note: These tests focus on entity state changes rather than static event logs
  * to avoid test isolation issues with parallel test execution.
  */
-@Integration(applicationClass = Application)
 @Rollback
+@Integration
 class GormEventsSpec extends Specification {
 
     def setup() {
-        AuditedEntity.executeUpdate("delete from AuditedEntity")
+        AuditedEntity.executeUpdate('delete from AuditedEntity')
     }
 
     // ============================================
@@ -51,24 +51,24 @@ class GormEventsSpec extends Specification {
 
     void "test beforeValidate is called during validation"() {
         given: "an entity with untrimmed name"
-        def entity = new AuditedEntity(name: "  Test Entity  ")
+        def entity = new AuditedEntity(name: '  Test Entity  ')
 
         when: "validating the entity"
         entity.validate()
 
         then: "beforeValidate was called and name was trimmed"
         entity.wasValidated == true
-        entity.name == "Test Entity"
+        entity.name == 'Test Entity'
     }
 
     void "test beforeValidate is called before save validation"() {
         when: "saving an entity"
-        def entity = new AuditedEntity(name: "  BeforeValidate Test  ")
+        def entity = new AuditedEntity(name: '  BeforeValidate Test  ')
         entity.save(flush: true)
 
         then: "beforeValidate was called"
         entity.wasValidated == true
-        entity.name == "BeforeValidate Test"  // Trimmed
+        entity.name == 'BeforeValidate Test'  // Trimmed
     }
 
     // ============================================
@@ -77,14 +77,14 @@ class GormEventsSpec extends Specification {
 
     void "test beforeInsert sets audit fields"() {
         when: "saving a new entity"
-        def entity = new AuditedEntity(name: "Insert Test")
+        def entity = new AuditedEntity(name: 'Insert Test')
         entity.save(flush: true)
 
         then: "beforeInsert set the audit fields"
         entity.dateCreated != null
         entity.lastUpdated != null
-        entity.createdBy == "test-user"
-        entity.updatedBy == "test-user"
+        entity.createdBy == 'test-user'
+        entity.updatedBy == 'test-user'
     }
 
     void "test beforeInsert and afterInsert event order"() {
@@ -95,13 +95,13 @@ class GormEventsSpec extends Specification {
         then: "entity was persisted with ID (proving events fired)"
         entity.id != null
         entity.dateCreated != null
-        entity.createdBy == "test-user"
+        entity.createdBy == 'test-user'
         entity.wasValidated == true
     }
 
     void "test afterInsert is called after entity is persisted"() {
         when: "saving a new entity"
-        def entity = new AuditedEntity(name: "AfterInsert")
+        def entity = new AuditedEntity(name: 'AfterInsert')
         entity.save(flush: true)
 
         then: "entity was persisted"
@@ -115,13 +115,13 @@ class GormEventsSpec extends Specification {
 
     void "test beforeUpdate sets lastUpdated"() {
         given: "an existing entity"
-        def entity = new AuditedEntity(name: "Update Test")
+        def entity = new AuditedEntity(name: 'Update Test')
         entity.save(flush: true)
         def originalUpdated = entity.lastUpdated
 
         when: "updating the entity"
         sleep(10)  // Ensure time difference
-        entity.description = "Updated description"
+        entity.description = 'Updated description'
         entity.save(flush: true)
 
         then: "beforeUpdate updated lastUpdated"
@@ -131,35 +131,35 @@ class GormEventsSpec extends Specification {
 
     void "test beforeUpdate and afterUpdate event order"() {
         given: "an existing entity"
-        def entity = new AuditedEntity(name: "UpdateOrder")
+        def entity = new AuditedEntity(name: 'UpdateOrder')
         entity.save(flush: true)
         def originalUpdated = entity.lastUpdated
 
         when: "updating the entity"
         sleep(10)
-        entity.description = "Changed"
+        entity.description = 'Changed'
         entity.save(flush: true)
 
         then: "events fired - lastUpdated was modified by beforeUpdate"
         entity.lastUpdated > originalUpdated
         entity.updateCount == 1
-        entity.updatedBy == "test-user"
+        entity.updatedBy == 'test-user'
     }
 
     void "test beforeUpdate can cancel update by returning false"() {
         given: "an entity marked as DELETED"
-        def entity = new AuditedEntity(name: "Deleted Entity", status: "DELETED")
+        def entity = new AuditedEntity(name: 'Deleted Entity', status: 'DELETED')
         entity.save(flush: true)
         def originalDescription = entity.description
         def originalUpdateCount = entity.updateCount
 
         when: "attempting to update DELETED entity"
-        entity.description = "Trying to change"
+        entity.description = 'Trying to change'
         entity.save(flush: true)
 
         // Clear session to reload
         AuditedEntity.withSession { it.flush(); it.clear() }
-        def reloaded = AuditedEntity.findByName("Deleted Entity")
+        def reloaded = AuditedEntity.findByName('Deleted Entity')
 
         then: "update was cancelled - description unchanged"
         reloaded.description == originalDescription
@@ -168,18 +168,18 @@ class GormEventsSpec extends Specification {
 
     void "test updateCount increments on each update"() {
         given: "a new entity"
-        def entity = new AuditedEntity(name: "MultiUpdate")
+        def entity = new AuditedEntity(name: 'MultiUpdate')
         entity.save(flush: true)
         assert entity.updateCount == 0
 
         when: "updating multiple times"
-        entity.description = "First update"
+        entity.description = 'First update'
         entity.save(flush: true)
 
-        entity.description = "Second update"
+        entity.description = 'Second update'
         entity.save(flush: true)
 
-        entity.description = "Third update"
+        entity.description = 'Third update'
         entity.save(flush: true)
 
         then: "updateCount tracks all updates"
@@ -192,7 +192,7 @@ class GormEventsSpec extends Specification {
 
     void "test beforeDelete is called before deletion"() {
         given: "an existing entity"
-        def entity = new AuditedEntity(name: "Delete Test")
+        def entity = new AuditedEntity(name: 'Delete Test')
         entity.save(flush: true)
         def entityId = entity.id
 
@@ -205,7 +205,7 @@ class GormEventsSpec extends Specification {
 
     void "test afterDelete is called after deletion"() {
         given: "an existing entity"
-        def entity = new AuditedEntity(name: "AfterDelete")
+        def entity = new AuditedEntity(name: 'AfterDelete')
         entity.save(flush: true)
         def entityId = entity.id
 
@@ -218,7 +218,7 @@ class GormEventsSpec extends Specification {
 
     void "test delete removes entity from database"() {
         given: "an existing entity"
-        def entity = new AuditedEntity(name: "DeleteOrder")
+        def entity = new AuditedEntity(name: 'DeleteOrder')
         entity.save(flush: true)
         def entityId = entity.id
 
@@ -227,7 +227,7 @@ class GormEventsSpec extends Specification {
 
         then: "entity is gone"
         AuditedEntity.get(entityId) == null
-        AuditedEntity.findByName("DeleteOrder") == null
+        AuditedEntity.findByName('DeleteOrder') == null
     }
 
     // ============================================
@@ -236,7 +236,7 @@ class GormEventsSpec extends Specification {
 
     void "test entity can be loaded from database"() {
         given: "a persisted entity"
-        def entity = new AuditedEntity(name: "Load Test")
+        def entity = new AuditedEntity(name: 'Load Test')
         entity.save(flush: true)
         def entityId = entity.id
 
@@ -248,15 +248,15 @@ class GormEventsSpec extends Specification {
 
         then: "entity is loaded correctly"
         loaded != null
-        loaded.name == "Load Test"
+        loaded.name == 'Load Test'
         loaded.id == entityId
     }
 
     void "test list loads multiple entities from database"() {
         given: "multiple persisted entities"
-        new AuditedEntity(name: "Load1").save(flush: true)
-        new AuditedEntity(name: "Load2").save(flush: true)
-        new AuditedEntity(name: "Load3").save(flush: true)
+        new AuditedEntity(name: 'Load1').save(flush: true)
+        new AuditedEntity(name: 'Load2').save(flush: true)
+        new AuditedEntity(name: 'Load3').save(flush: true)
 
         // Clear session to force reload
         AuditedEntity.withSession { it.flush(); it.clear() }
@@ -266,7 +266,7 @@ class GormEventsSpec extends Specification {
 
         then: "all entities are loaded"
         entities.size() == 3
-        entities*.name.containsAll(["Load1", "Load2", "Load3"])
+        entities*.name.containsAll(['Load1', 'Load2', 'Load3'])
     }
 
     // ============================================
@@ -275,19 +275,19 @@ class GormEventsSpec extends Specification {
 
     void "test full entity lifecycle"() {
         when: "creating an entity"
-        def entity = new AuditedEntity(name: "Lifecycle")
+        def entity = new AuditedEntity(name: 'Lifecycle')
         entity.save(flush: true)
 
         then: "insert lifecycle completed"
         entity.id != null
         entity.dateCreated != null
-        entity.createdBy == "test-user"
+        entity.createdBy == 'test-user'
         entity.wasValidated == true
 
         when: "updating the entity"
         def originalUpdated = entity.lastUpdated
         sleep(10)
-        entity.description = "Updated"
+        entity.description = 'Updated'
         entity.save(flush: true)
 
         then: "update lifecycle completed"
@@ -304,7 +304,7 @@ class GormEventsSpec extends Specification {
 
     void "test event firing does not occur for failed validation"() {
         given: "an invalid entity (blank name)"
-        def entity = new AuditedEntity(name: "")
+        def entity = new AuditedEntity(name: '')
 
         when: "attempting to save"
         def saved = entity.save()
@@ -316,15 +316,15 @@ class GormEventsSpec extends Specification {
 
     void "test multiple entities can be saved"() {
         when: "saving multiple entities"
-        def e1 = new AuditedEntity(name: "Entity1").save(flush: true)
-        def e2 = new AuditedEntity(name: "Entity2").save(flush: true)
-        def e3 = new AuditedEntity(name: "Entity3").save(flush: true)
+        def e1 = new AuditedEntity(name: 'Entity1').save(flush: true)
+        def e2 = new AuditedEntity(name: 'Entity2').save(flush: true)
+        def e3 = new AuditedEntity(name: 'Entity3').save(flush: true)
 
         then: "all entities saved with audit fields"
         e1.id != null
         e2.id != null
         e3.id != null
-        [e1, e2, e3].every { it.dateCreated != null && it.createdBy == "test-user" }
+        [e1, e2, e3].every { it.dateCreated != null && it.createdBy == 'test-user' }
     }
 
     // ============================================
@@ -333,26 +333,26 @@ class GormEventsSpec extends Specification {
 
     void "test audit fields are automatically populated on insert"() {
         when: "saving a new entity"
-        def entity = new AuditedEntity(name: "Audit Test")
+        def entity = new AuditedEntity(name: 'Audit Test')
         entity.save(flush: true)
 
         then: "all audit fields are set"
         entity.dateCreated != null
         entity.lastUpdated != null
-        entity.createdBy == "test-user"
-        entity.updatedBy == "test-user"
+        entity.createdBy == 'test-user'
+        entity.updatedBy == 'test-user'
     }
 
     void "test audit fields are updated on update"() {
         given: "an existing entity"
-        def entity = new AuditedEntity(name: "Audit Update")
+        def entity = new AuditedEntity(name: 'Audit Update')
         entity.save(flush: true)
         def originalCreated = entity.dateCreated
         def originalUpdated = entity.lastUpdated
 
         when: "updating the entity"
         sleep(10)
-        entity.description = "Changed"
+        entity.description = 'Changed'
         entity.save(flush: true)
 
         then: "dateCreated unchanged, lastUpdated modified"
@@ -362,16 +362,16 @@ class GormEventsSpec extends Specification {
 
     void "test name trimming in beforeValidate"() {
         when: "saving entities with various whitespace"
-        def e1 = new AuditedEntity(name: "  leading spaces")
-        def e2 = new AuditedEntity(name: "trailing spaces  ")
-        def e3 = new AuditedEntity(name: "  both sides  ")
+        def e1 = new AuditedEntity(name: '  leading spaces')
+        def e2 = new AuditedEntity(name: 'trailing spaces  ')
+        def e3 = new AuditedEntity(name: '  both sides  ')
         e1.save(flush: true)
         e2.save(flush: true)
         e3.save(flush: true)
 
         then: "all names are trimmed"
-        e1.name == "leading spaces"
-        e2.name == "trailing spaces"
-        e3.name == "both sides"
+        e1.name == 'leading spaces'
+        e2.name == 'trailing spaces'
+        e3.name == 'both sides'
     }
 }

@@ -27,8 +27,6 @@ import static grails.gorm.hibernate.mapping.MappingBuilder.*
  */
 class Book {
 
-    def testService
-
     String title
     String isbn
     String description

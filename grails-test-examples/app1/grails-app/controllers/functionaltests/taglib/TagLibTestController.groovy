@@ -19,6 +19,8 @@
 
 package functionaltests.taglib
 
+import jakarta.servlet.http.Cookie
+
 /**
  * Controller for testing GSP Tag Libraries.
  * Provides actions that render GSP views using both custom and built-in tags.
@@ -217,7 +219,7 @@ class TagLibTestController {
 
     def testBuiltInCookie() {
         if (params.setCookie) {
-            response.addCookie(new jakarta.servlet.http.Cookie('testCookie', params.setCookie))
+            response.addCookie(new Cookie('testCookie', params.setCookie))
         }
         [cookieName: params.cookieName ?: 'testCookie', defaultValue: params.default ?: 'no cookie']
     }

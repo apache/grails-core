@@ -16,14 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package pubsub.demo
+
+import jakarta.inject.Inject
+
+import spock.lang.Specification
+import spock.util.concurrent.PollingConditions
 
 import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
-import jakarta.inject.Inject
-import spock.lang.Specification
-import spock.util.concurrent.PollingConditions
 
 /**
  * Created by graemerocher on 03/04/2017.
@@ -42,7 +43,7 @@ class PubSubSpec extends Specification {
         totalService.reset()
         bookSubscriber.reset()
         // Small delay to let any in-flight events from other tests complete
-        Thread.sleep(100)
+        sleep(100)
     }
 
     void 'Test event bus within Grails'() {

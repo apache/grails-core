@@ -16,14 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package scaffoldingfields
+
+import scaffoldingfields.pages.DepartmentListPage
+import scaffoldingfields.pages.EmployeeListPage
+import spock.lang.Stepwise
 
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
-import scaffoldingfields.pages.EmployeeListPage
-import scaffoldingfields.pages.DepartmentListPage
-import spock.lang.Stepwise
 
 /**
  * Functional tests for scaffolded list pagination and sorting.
@@ -35,26 +35,23 @@ import spock.lang.Stepwise
  * 4. Sort state is preserved across page navigation
  * 5. Item count and page info are displayed correctly
  */
-@Integration
 @Stepwise
+@Integration
 class PaginationSpec extends ContainerGebSpec {
 
-    def setupSpec() {
-        // Bootstrap data should create enough records for pagination
-    }
-
+    // TODO: Not fully implemented
     def "employee list displays pagination when records exceed page size"() {
         when: "navigating to employee list"
-        to EmployeeListPage
+        def page = to EmployeeListPage
 
         then: "list page is displayed"
         at EmployeeListPage
 
         and: "table with data is shown"
-        dataTable.displayed
+        page.dataTable.displayed
 
         and: "rows are present"
-        tableRows.size() > 0
+        page.tableRows.size() > 0
     }
 
     def "employee list shows sortable column headers"() {
@@ -67,54 +64,46 @@ class PaginationSpec extends ContainerGebSpec {
         $('th', text: contains('First')).displayed
     }
 
+    // TODO: Not fully implemented
     def "clicking column header sorts ascending"() {
         given: "on employee list page"
-        to EmployeeListPage
+        def page = to EmployeeListPage
 
         when: "clicking on a sortable column header"
-        def sortLink = $('th a').find { it.text()?.toLowerCase()?.contains('first') || it.text()?.toLowerCase()?.contains('last') }
-        if (sortLink) {
-            sortLink.click()
-            waitFor { currentUrl.contains('sort=') || tableRows.size() > 0 }
-        }
+        page.sortLink('First Name').click()
 
         then: "page reloads with sorted data"
         at EmployeeListPage
-        tableRows.size() > 0
+        currentUrl.contains('sort=')
+        page.tableRows.size() > 0
     }
 
+    // TODO: Not fully implemented
     def "clicking same column header again sorts descending"() {
         given: "on employee list page with ascending sort"
-        to EmployeeListPage
-        def sortLink = $('th a').find { it.text()?.toLowerCase()?.contains('first') || it.text()?.toLowerCase()?.contains('last') }
-        if (sortLink) {
-            sortLink.click()
-            waitFor { tableRows.size() > 0 }
-        }
+        def page = to EmployeeListPage
+        page.sortLink('First Name').click()
 
         when: "clicking the same column header again"
-        sortLink = $('th a').find { it.text()?.toLowerCase()?.contains('first') || it.text()?.toLowerCase()?.contains('last') }
-        if (sortLink) {
-            sortLink.click()
-            waitFor { tableRows.size() > 0 }
-        }
+        page.sortLink('First Name').click()
 
         then: "sort order changes"
         at EmployeeListPage
-        tableRows.size() > 0
+        page.tableRows.size() > 0
     }
 
+    // TODO: Not fully implemented
     def "pagination links navigate between pages"() {
         given: "on employee list page"
-        to EmployeeListPage
-        def initialRowCount = tableRows.size()
+        def page = to EmployeeListPage
+        //def initialRowCount = page.tableRows.size()
 
         when: "checking for pagination controls"
         def nextLink = $('a.step', text: contains('Next')) ?: $('a', text: contains('Next')) ?: $('a.nextLink')
         def paginationExists = nextLink?.displayed ?: $('nav.pagination').displayed ?: $('ul.pagination').displayed
 
         then: "list is displayed"
-        tableRows.size() > 0
+        page.tableRows.size() > 0
 
         // Pagination may or may not be present depending on data volume
         // If pagination exists, we test it; otherwise we just verify the list works
@@ -122,37 +111,41 @@ class PaginationSpec extends ContainerGebSpec {
 
     def "department list displays records"() {
         when: "navigating to department list"
-        to DepartmentListPage
+        def page = to DepartmentListPage
 
         then: "list page is displayed"
         at DepartmentListPage
 
         and: "table with data is shown"
-        dataTable.displayed
+        page.dataTable.displayed
 
         and: "rows are present from bootstrap data"
-        tableRows.size() > 0
+        page.tableRows.size() > 0
     }
 
     def "department list shows department names"() {
         when: "navigating to department list"
-        to DepartmentListPage
+        def page = to DepartmentListPage
 
         then: "department names are visible"
-        tableRows.find { it.text()?.contains('Engineering') || it.text()?.contains('Marketing') || it.text()?.contains('Sales') }
+        page.tableRows.find {
+            it.text()?.contains('Engineering') || it.text()?.contains('Marketing') || it.text()?.contains('Sales')
+        }
     }
 
+    // TODO: Not fully implemented
     def "list shows correct record count information"() {
         when: "navigating to employee list"
-        to EmployeeListPage
+        def page = to EmployeeListPage
 
         then: "page displays records"
-        tableRows.size() > 0
+        page.tableRows.size() > 0
 
         // Record count info may be displayed in various formats
         // Just verify the page is functional
     }
 
+    // TODO: Not fully implemented
     def "empty search results show appropriate message"() {
         when: "navigating to employee list with filter that matches nothing"
         go '/employee/index?firstName=NONEXISTENT_12345'
@@ -163,45 +156,48 @@ class PaginationSpec extends ContainerGebSpec {
         // Either shows empty table or no results message
     }
 
+    // TODO: Not fully implemented
     def "list maintains state across browser refresh"() {
         given: "on sorted employee list"
-        to EmployeeListPage
+        def page = to EmployeeListPage
 
         when: "sorting by a column"
         def sortLink = $('th a').first()
         if (sortLink?.displayed) {
             sortLink.click()
-            waitFor { tableRows.size() > 0 }
+            waitFor { page.tableRows.size() > 0 }
         }
         def currentUrlBeforeRefresh = currentUrl
 
         and: "refreshing the page"
         driver.navigate().refresh()
-        waitFor { tableRows.size() > 0 }
+        waitFor { page.tableRows.size() > 0 }
 
         then: "sort parameters are preserved in URL or list is still functional"
         at EmployeeListPage
-        tableRows.size() > 0
+        page.tableRows.size() > 0
     }
 
+    // TODO: Not fully implemented
     def "pagination works with sorting applied"() {
         given: "on employee list page"
-        to EmployeeListPage
+        def page = to EmployeeListPage
 
         when: "applying a sort"
         def sortLink = $('th a').first()
         if (sortLink?.displayed) {
             sortLink.click()
-            waitFor { tableRows.size() > 0 }
+            waitFor { page.tableRows.size() > 0 }
         }
 
         then: "sorted list is displayed"
-        tableRows.size() > 0
+        page.tableRows.size() > 0
 
         // If pagination is available with current data set, verify it works with sort
         // This ensures sort and pagination don't conflict
     }
 
+    // TODO: Not fully implemented
     def "max parameter limits displayed records"() {
         when: "navigating with max parameter"
         go '/employee/index?max=2'
@@ -212,6 +208,7 @@ class PaginationSpec extends ContainerGebSpec {
         // The max parameter should limit results (if there's data)
     }
 
+    // TODO: Not fully implemented
     def "offset parameter skips records"() {
         when: "navigating with offset parameter"
         go '/employee/index?offset=1'
@@ -222,6 +219,7 @@ class PaginationSpec extends ContainerGebSpec {
         // The offset parameter should skip initial records
     }
 
+    // TODO: Not fully implemented
     def "combined max and offset parameters work together"() {
         when: "navigating with both max and offset"
         go '/employee/index?max=5&offset=0'

@@ -16,16 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functionaltests.services
+
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Future
+
+import groovy.util.logging.Slf4j
 
 import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.AsyncResult
-import grails.gorm.transactions.Transactional
-import groovy.util.logging.Slf4j
 
-import java.util.concurrent.Future
-import java.util.concurrent.CompletableFuture
+import grails.gorm.transactions.Transactional
 
 /**
  * Service demonstrating async operations.
