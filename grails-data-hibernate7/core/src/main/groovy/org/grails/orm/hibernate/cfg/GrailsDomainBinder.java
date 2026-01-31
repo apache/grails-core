@@ -33,7 +33,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.EnumTypeBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.NamingStrategyProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.PersistentPropertyToPropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.TypeNameProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.*;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
@@ -285,7 +284,7 @@ public class GrailsDomainBinder
             if (domainClass != null) {
                 mapping = domainClass.getMappedForm();
             }
-            String typeName = new TypeNameProvider().getTypeName(property, mapping);
+            String typeName = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName(mapping) : null;
             if (typeName == null ) {
 
                 if(property instanceof Basic) {
@@ -738,8 +737,7 @@ public class GrailsDomainBinder
                 if (domainClass != null) {
                     mapping = domainClass.getMappedForm();
                 }
-                ;
-                String typeName = new TypeNameProvider().getTypeName(property, mapping);
+                String typeName = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName(mapping) : null;
                 if (typeName == null) {
                     Type type = mappings.getTypeConfiguration().getBasicTypeRegistry().getRegisteredType(className);
                     if (type != null) {
@@ -1538,7 +1536,7 @@ public class GrailsDomainBinder
             new SimpleValueBinder(namingStrategy).bindSimpleValue(currentGrailsProp, null, (SimpleValue) value, EMPTY_PATH);
         }
         else if (collectionType != null) {
-            String typeName = new TypeNameProvider().getTypeName(currentGrailsProp, gormMapping);
+            String typeName = currentGrailsProp instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName(gormMapping) : null;
             if ("serializable".equals(typeName)) {
                 value = new BasicValue(metadataBuildingContext, table);
                 boolean nullable = currentGrailsProp.isNullable();
@@ -1661,7 +1659,7 @@ public class GrailsDomainBinder
                     mapping = domainClass.getMappedForm();
                 }
 
-                return new TypeNameProvider().getTypeName(property, mapping);
+                return property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName(mapping) : null;
 
             }
 

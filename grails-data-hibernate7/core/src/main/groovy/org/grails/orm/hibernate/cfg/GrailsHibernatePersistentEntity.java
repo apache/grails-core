@@ -30,6 +30,11 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     boolean isAbstract();
 
 
+    @SuppressWarnings("unchecked")
+    default List<GrailsHibernatePersistentProperty> getHibernatePersistentProperties() {
+        return (List) getPersistentProperties();
+    }
+
     default List<GrailsHibernatePersistentEntity> getChildEntities(String dataSourceName) {
         return getMappingContext()
                 .getDirectChildEntities(this)

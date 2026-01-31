@@ -66,7 +66,7 @@ public interface PersistentProperty<T extends Property> {
     */
     PropertyMapping<T> getMapping();
 
-    default T getMappedForm() {
+    default T  getMappedForm() {
         return Optional.of(getMapping())
                 .map(PropertyMapping::getMappedForm)
                 .orElse(null);

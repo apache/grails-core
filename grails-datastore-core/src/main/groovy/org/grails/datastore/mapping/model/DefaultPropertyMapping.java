@@ -21,22 +21,30 @@ package org.grails.datastore.mapping.model;
 import org.grails.datastore.mapping.config.Property;
 
 /**
+ * Default implementation of the {@link PropertyMapping} interface
+ *
+ * @param <T> The mapped form type
+ *
  * @author Graeme Rocher
  * @since 1.0
  */
-public interface IdentityMapping<T extends Property> extends PropertyMapping<T> {
+public class DefaultPropertyMapping<T extends Property> implements PropertyMapping<T> {
 
-    /**
-     * The identifier property name(s). Usually there is just one identifier
-     * name, however in the case of a composite or natural identifier there
-     * may be serveral.
-     *
-     * @return identifier names that make up the key
-     */
-    String[] getIdentifierName();
+    private final ClassMapping classMapping;
+    private final T mappedForm;
 
-    /**
-     * @return The type of value generated used
-     */
-    ValueGenerator getGenerator();
+    public DefaultPropertyMapping(ClassMapping classMapping, T mappedForm) {
+        this.classMapping = classMapping;
+        this.mappedForm = mappedForm;
+    }
+
+    @Override
+    public ClassMapping getClassMapping() {
+        return classMapping;
+    }
+
+    @Override
+    public T getMappedForm() {
+        return mappedForm;
+    }
 }

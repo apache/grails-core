@@ -23,14 +23,17 @@ import org.grails.datastore.gorm.GormEntity;
 import org.grails.datastore.mapping.config.AbstractGormMappingFactory;
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.config.groovy.MappingConfigurationBuilder;
+import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
 import org.grails.datastore.mapping.model.*;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.config.JpaMappingConfigurationStrategy;
+import org.grails.datastore.mapping.model.types.*;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 import org.springframework.validation.Errors;
 
+import java.beans.PropertyDescriptor;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -207,6 +210,101 @@ public class HibernateMappingContext extends AbstractMappingContext {
         @Override
         protected MappingConfigurationBuilder createConfigurationBuilder(PersistentEntity entity, Mapping mapping) {
             return new HibernateMappingBuilder(mapping, entity.getName(), defaultConstraints);
+        }
+
+        @Override
+        public org.grails.datastore.mapping.model.types.Identity<PropertyConfig> createIdentity(PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
+            HibernateIdentityProperty identity = new HibernateIdentityProperty(owner, context, pd);
+            identity.setMapping(createPropertyMapping(identity, owner));
+            return identity;
+        }
+
+        @Override
+        public org.grails.datastore.mapping.model.types.TenantId<PropertyConfig> createTenantId(PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
+            HibernateTenantIdProperty tenantId = new HibernateTenantIdProperty(owner, context, pd);
+            tenantId.setMapping(createDerivedPropertyMapping(tenantId, owner));
+            return tenantId;
+        }
+
+        @Override
+        public org.grails.datastore.mapping.model.types.Custom<PropertyConfig> createCustom(PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
+            final Class<?> propertyType = pd.getPropertyType();
+            CustomTypeMarshaller customTypeMarshaller = findCustomType(context, propertyType);
+            if (customTypeMarshaller == null && propertyType.isEnum()) {
+                customTypeMarshaller = findCustomType(context, Enum.class);
+            }
+            HibernateCustomProperty custom = new HibernateCustomProperty(owner, context, pd, customTypeMarshaller);
+            custom.setMapping(createPropertyMapping(custom, owner));
+            return custom;
+        }
+
+        @Override
+        public org.grails.datastore.mapping.model.types.Simple<PropertyConfig> createSimple(PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
+            HibernateSimpleProperty simple = new HibernateSimpleProperty(owner, context, pd);
+            simple.setMapping(createPropertyMapping(simple, owner));
+            return simple;
+        }
+
+        @Override
+        public org.grails.datastore.mapping.model.types.ToOne createOneToOne(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+            HibernateOneToOneProperty oneToOne = new HibernateOneToOneProperty(entity, context, property);
+            oneToOne.setMapping(createPropertyMapping(oneToOne, entity));
+            return oneToOne;
+        }
+
+        @Override
+        public org.grails.datastore.mapping.model.types.ToOne createManyToOne(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+            HibernateManyToOneProperty manyToOne = new HibernateManyToOneProperty(entity, context, property);
+            manyToOne.setMapping(createPropertyMapping(manyToOne, entity));
+            return manyToOne;
+        }
+
+        @Override
+        public org.grails.datastore.mapping.model.types.OneToMany createOneToMany(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+            HibernateOneToManyProperty oneToMany = new HibernateOneToManyProperty(entity, context, property);
+            oneToMany.setMapping(createPropertyMapping(oneToMany, entity));
+            return oneToMany;
+        }
+
+        @Override
+        public org.grails.datastore.mapping.model.types.ManyToMany createManyToMany(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+            HibernateManyToManyProperty manyToMany = new HibernateManyToManyProperty(entity, context, property);
+            manyToMany.setMapping(createPropertyMapping(manyToMany, entity));
+            return manyToMany;
+        }
+
+        @Override
+        public org.grails.datastore.mapping.model.types.Embedded createEmbedded(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+            HibernateEmbeddedProperty embedded = new HibernateEmbeddedProperty(entity, context, property);
+            embedded.setMapping(createPropertyMapping(embedded, entity));
+            return embedded;
+        }
+
+        @Override
+        public org.grails.datastore.mapping.model.types.EmbeddedCollection createEmbeddedCollection(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+            HibernateEmbeddedCollectionProperty embedded = new HibernateEmbeddedCollectionProperty(entity, context, property);
+            embedded.setMapping(createPropertyMapping(embedded, entity));
+            return embedded;
+        }
+
+        @Override
+        public org.grails.datastore.mapping.model.types.Basic createBasicCollection(PersistentEntity entity, MappingContext context, PropertyDescriptor property, Class collectionType) {
+            HibernateBasicProperty basic = new HibernateBasicProperty(entity, context, property);
+            basic.setMapping(createPropertyMapping(basic, entity));
+
+            CustomTypeMarshaller customTypeMarshaller = findCustomType(context, property.getPropertyType());
+            if (collectionType != null && collectionType.isEnum()) {
+                customTypeMarshaller = findCustomType(context, collectionType);
+                if (customTypeMarshaller == null) {
+                    customTypeMarshaller = findCustomType(context, Enum.class);
+                }
+            }
+
+            if (customTypeMarshaller != null) {
+                basic.setCustomTypeMarshaller(customTypeMarshaller);
+            }
+
+            return basic;
         }
 
         @Override

@@ -15,6 +15,7 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -26,7 +27,6 @@ public class SimpleValueBinder {
     private final ColumnConfigToColumnBinder columnConfigToColumnBinder ;
     private final ColumnBinder columnBinder;
     private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
-    private final TypeNameProvider typeNameProvider;
 
 
     private static final String SEQUENCE_KEY = GrailsSequenceGeneratorEnum.SEQUENCE.toString();
@@ -40,19 +40,16 @@ public class SimpleValueBinder {
         this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
         this.columnConfigToColumnBinder = new ColumnConfigToColumnBinder();
         this.columnBinder = new ColumnBinder(namingStrategy);
-        this.typeNameProvider = new TypeNameProvider();
     }
 
     protected SimpleValueBinder(PersistentEntityNamingStrategy namingStrategy,
                                 ColumnConfigToColumnBinder columnConfigToColumnBinder,
                                 ColumnBinder columnBinder,
-                                PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig,
-                                TypeNameProvider typeNameProvider) {
+                                PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig) {
         this.namingStrategy = namingStrategy;
         this.columnConfigToColumnBinder = columnConfigToColumnBinder;
         this.columnBinder = columnBinder;
         this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
-        this.typeNameProvider = typeNameProvider;
     }
 
 
@@ -77,7 +74,7 @@ public class SimpleValueBinder {
         if (property.getOwner() instanceof GrailsHibernatePersistentEntity persistentEntity) {
             mapping = persistentEntity.getMappedForm();
         }
-        final String typeName = typeNameProvider.getTypeName(property, mapping);
+        final String typeName = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName(mapping) : null;
         if (typeName == null) {
             Class<?> type = property.getType();
             if (type != null) {

@@ -18,8 +18,8 @@ import jakarta.annotation.Nonnull;
 import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.domainbinding.TypeNameProvider;
 
 /**
  * A Collection type, for the moment only Set is supported
@@ -72,10 +72,10 @@ public abstract class CollectionType {
         return INSTANCES.get(clazz);
     }
 
-    public String getTypeName(ToMany property) {
+    public String getTypeName(ToMany<?> property) {
         GrailsHibernatePersistentEntity domainClass = (GrailsHibernatePersistentEntity) property.getOwner();
         Mapping mapping = domainClass.getMappedForm();
-        return new TypeNameProvider().getTypeName(property, mapping);
+        return property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName(mapping) : null;
     }
 
 }

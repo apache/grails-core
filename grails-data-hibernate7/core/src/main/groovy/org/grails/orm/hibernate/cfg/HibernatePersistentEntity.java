@@ -67,5 +67,11 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
                 && isRoot();
     }
 
+    @Override
+    @SuppressWarnings("unchecked")
+    public java.util.List<GrailsHibernatePersistentProperty> getHibernatePersistentProperties() {
+        return (java.util.List) persistentProperties;
+    }
+
 
 }
