@@ -71,11 +71,13 @@ class AdvancedCachingService {
 
     /**
      * Cacheable method returning a List.
+     * Includes a UUID to verify cache eviction works (data changes after eviction).
      */
     @Cacheable('listCache')
     List<String> getListData(String category) {
         collectionInvocationCounter++
-        ["Item 1 for ${category}", "Item 2 for ${category}", "Item 3 for ${category}"]
+        def uuid = UUID.randomUUID().toString().substring(0, 8)
+        ["Item 1 for ${category} (${uuid})", "Item 2 for ${category} (${uuid})", "Item 3 for ${category} (${uuid})"]
     }
 
     /**

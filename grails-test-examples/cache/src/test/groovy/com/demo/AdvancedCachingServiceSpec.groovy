@@ -149,7 +149,7 @@ class AdvancedCachingServiceSpec extends Specification implements ServiceUnitTes
 
         then: 'method is invoked'
         result1.size() == 3
-        result1[0] == 'Item 1 for books'
+        result1[0].startsWith('Item 1 for books')
         service.collectionInvocationCounter == 1
 
         when: 'calling again with same category'
@@ -166,8 +166,8 @@ class AdvancedCachingServiceSpec extends Specification implements ServiceUnitTes
         def movies = service.getListData('movies')
 
         then: 'both methods are invoked'
-        books[0] == 'Item 1 for books'
-        movies[0] == 'Item 1 for movies'
+        books[0].startsWith('Item 1 for books')
+        movies[0].startsWith('Item 1 for movies')
         service.collectionInvocationCounter == 2
 
         when: 'calling both again'

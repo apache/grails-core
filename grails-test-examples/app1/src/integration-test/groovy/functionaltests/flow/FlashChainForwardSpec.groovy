@@ -18,9 +18,12 @@
  */
 package functionaltests.flow
 
+import groovy.json.JsonSlurper
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
+import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
+import io.micronaut.http.client.DefaultHttpClientConfiguration
+import io.micronaut.http.client.exceptions.HttpClientResponseException
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -32,6 +35,9 @@ import grails.testing.mixin.integration.Integration
  * - chain() for model accumulation across actions
  * - forward() for same-request dispatch
  * - redirect() variations
+ *
+ * Uses manual redirect handling with session cookie propagation to properly test
+ * flash scope and chain model which rely on HTTP session state.
  */
 @Integration
 class FlashChainForwardSpec extends Specification {
@@ -39,43 +45,123 @@ class FlashChainForwardSpec extends Specification {
     @Shared
     HttpClient client
 
+    @Shared
+    HttpClient noRedirectClient
+
     def setup() {
         client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
+        if (!noRedirectClient) {
+            def config = new DefaultHttpClientConfiguration()
+            config.setFollowRedirects(false)
+            noRedirectClient = HttpClient.create(new URL("http://localhost:$serverPort"), config)
+        }
     }
 
     def cleanupSpec() {
-        client.close()
+        client?.close()
+        noRedirectClient?.close()
+    }
+
+    /**
+     * Helper to extract session cookie from Set-Cookie header.
+     */
+    private String extractSessionCookie(String setCookieHeader) {
+        if (!setCookieHeader) return null
+        setCookieHeader.split(';')[0]
+    }
+
+    /**
+     * Helper to follow redirect manually with session cookie.
+     */
+    private Map followRedirectWithSession(String path) {
+        // First request - get redirect and session cookie
+        def response1 = noRedirectClient.toBlocking().exchange(
+            HttpRequest.GET(path),
+            String
+        )
+        
+        def sessionCookie = extractSessionCookie(response1.header('Set-Cookie'))
+        def location = response1.header('Location')
+        
+        if (!location) {
+            // Not a redirect, parse body
+            return new JsonSlurper().parseText(response1.body())
+        }
+        
+        // Follow redirect with session cookie
+        def redirectPath = location.startsWith('http') ? 
+            new URL(location).path + (new URL(location).query ? "?${new URL(location).query}" : '') : 
+            location
+        
+        def request2 = HttpRequest.GET(redirectPath)
+        if (sessionCookie) {
+            request2 = request2.header('Cookie', sessionCookie)
+        }
+        
+        def response2 = client.toBlocking().exchange(request2, String)
+        new JsonSlurper().parseText(response2.body())
+    }
+
+    /**
+     * Helper to follow chain redirects with session cookie (handles multiple redirects).
+     */
+    private Map followChainWithSession(String path) {
+        String sessionCookie = null
+        String currentPath = path
+        int maxRedirects = 10
+        int redirectCount = 0
+        
+        while (redirectCount < maxRedirects) {
+            def request = HttpRequest.GET(currentPath)
+            if (sessionCookie) {
+                request = request.header('Cookie', sessionCookie)
+            }
+            
+            def response = noRedirectClient.toBlocking().exchange(request, String)
+            
+            // Update session cookie if new one provided
+            def newCookie = extractSessionCookie(response.header('Set-Cookie'))
+            if (newCookie) {
+                sessionCookie = newCookie
+            }
+            
+            def location = response.header('Location')
+            if (!location) {
+                // No more redirects, return parsed body
+                return new JsonSlurper().parseText(response.body())
+            }
+            
+            // Follow to next location
+            currentPath = location.startsWith('http') ? 
+                new URL(location).path + (new URL(location).query ? "?${new URL(location).query}" : '') : 
+                location
+            redirectCount++
+        }
+        
+        throw new RuntimeException("Too many redirects following chain")
     }
 
     // ========== Flash Scope Tests ==========
 
     def "test flash message survives redirect"() {
-        when: "setting flash and redirecting"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/flow/setFlashAndRedirect'),
-            Map
-        )
+        when: "setting flash and redirecting with session cookie propagation"
+        def result = followRedirectWithSession('/flow/setFlashAndRedirect')
 
         then: "flash values are available after redirect"
-        response.status.code == 200
-        response.body().message == 'This is a flash message'
-        response.body().type == 'success'
+        result.message == 'This is a flash message'
+        result.type == 'success'
     }
 
     def "test multiple flash values with different types"() {
-        when: "setting multiple typed flash values"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/flow/setMultipleFlashValues'),
-            Map
-        )
+        when: "setting multiple typed flash values with redirect"
+        def result = followRedirectWithSession('/flow/setMultipleFlashValues')
 
         then: "all types preserved"
-        response.status.code == 200
-        response.body().stringValue == 'Hello'
-        response.body().intValue == 42
-        response.body().listValue == ['a', 'b', 'c']
-        response.body().mapValue.key == 'value'
-        response.body().mapValue.nested.x == 1
+        result.stringValue == 'Hello'
+        result.intValue == 42
+        result.listValue == ['a', 'b', 'c']
+        result.mapValue.key == 'value'
+        result.mapValue.nested.x == 1
     }
 
     def "test flash.now for same-request values"() {
@@ -93,71 +179,65 @@ class FlashChainForwardSpec extends Specification {
 
     def "test flash is cleared after being read"() {
         when: "first request sets flash"
-        client.toBlocking().exchange(
+        def response1 = noRedirectClient.toBlocking().exchange(
             HttpRequest.GET('/flow/setFlashOnly?message=TestMessage'),
-            Map
+            String
         )
+        def sessionCookie = extractSessionCookie(response1.header('Set-Cookie'))
 
-        and: "second request reads flash"
-        def response1 = client.toBlocking().exchange(
-            HttpRequest.GET('/flow/readFlash'),
-            Map
-        )
+        and: "second request reads flash with same session"
+        def request2 = HttpRequest.GET('/flow/readFlash')
+        if (sessionCookie) {
+            request2 = request2.header('Cookie', sessionCookie)
+        }
+        def response2 = client.toBlocking().exchange(request2, String)
+        def json2 = new JsonSlurper().parseText(response2.body())
 
-        and: "third request tries to read again"
-        def response2 = client.toBlocking().exchange(
-            HttpRequest.GET('/flow/readFlash'),
-            Map
-        )
+        and: "third request tries to read again with same session"
+        def request3 = HttpRequest.GET('/flow/readFlash')
+        if (sessionCookie) {
+            request3 = request3.header('Cookie', sessionCookie)
+        }
+        def response3 = client.toBlocking().exchange(request3, String)
+        def json3 = new JsonSlurper().parseText(response3.body())
 
-        then: "flash available in second request but cleared in third"
-        // Note: Without session cookies, each request is independent
-        // This test documents the expected behavior with sessions
-        response1.status.code == 200
-        response2.status.code == 200
+        then: "flash available in second request"
+        json2.message == 'TestMessage'
+
+        and: "flash cleared in third request"
+        json3.message == null
     }
 
     // ========== Chain Tests ==========
+    // Chain uses redirects internally, so we need to handle session cookies
 
     def "test chain accumulates model across actions"() {
-        when: "chaining through three actions"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/flow/chainFirst'),
-            Map
-        )
+        when: "chaining through three actions with session propagation"
+        def result = followChainWithSession('/flow/chainFirst')
 
         then: "all model values accumulated"
-        response.status.code == 200
-        response.body().first == 'value1'
-        response.body().second == 'value2'
-        response.body().third == 'value3'
-        response.body().totalSteps == 3
+        result.first == 'value1'
+        result.second == 'value2'
+        result.third == 'value3'
+        result.totalSteps == 3
     }
 
     def "test chain preserves params"() {
-        when: "chain with params"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/flow/chainWithParams?id=123&name=test'),
-            Map
-        )
+        when: "chain with params and session propagation"
+        def result = followChainWithSession('/flow/chainWithParams?id=123&name=test')
 
         then: "both chainModel and params available"
-        response.status.code == 200
-        response.body().fromChain == true
-        response.body().extraParam == 'extra'
+        result.fromChain == true
+        result.extraParam == 'extra'
     }
 
     def "test chain to different controller"() {
-        when: "chaining to another controller"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/flow/chainToOtherController'),
-            Map
-        )
+        when: "chaining to another controller with session propagation"
+        def result = followChainWithSession('/flow/chainToOtherController')
 
         then: "chain model available in target controller"
-        response.status.code == 200
-        response.body().controller == 'flowTarget'
-        response.body().source == 'flowController'
+        result.controller == 'flowTarget'
+        result.source == 'flowController'
     }
 
     // ========== Forward Tests ==========

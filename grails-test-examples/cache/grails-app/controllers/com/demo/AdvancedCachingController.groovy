@@ -19,6 +19,8 @@
 
 package com.demo
 
+import grails.converters.JSON
+
 import org.springframework.beans.factory.annotation.Autowired
 
 /**
@@ -34,13 +36,10 @@ class AdvancedCachingController {
     def dataOrNull(String input) {
         try {
             def data = advancedCachingService.getDataOrNull(input)
-            render(contentType: 'application/json') {
-                [data: data]
-            }
+            render([data: data] as JSON)
         } catch (Exception e) {
-            render(status: 500, contentType: 'application/json') {
-                [error: e.message]
-            }
+            response.status = 500
+            render([error: e.message] as JSON)
         }
     }
 
@@ -49,13 +48,10 @@ class AdvancedCachingController {
     def dataOrThrow(String input) {
         try {
             def data = advancedCachingService.getDataOrThrow(input)
-            render(contentType: 'application/json') {
-                [data: data]
-            }
+            render([data: data] as JSON)
         } catch (Exception e) {
-            render(status: 500, contentType: 'application/json') {
-                [error: e.message]
-            }
+            response.status = 500
+            render([error: e.message] as JSON)
         }
     }
 
@@ -64,26 +60,20 @@ class AdvancedCachingController {
     def listData(String category) {
         try {
             def data = advancedCachingService.getListData(category)
-            render(contentType: 'application/json') {
-                [data: data]
-            }
+            render([data: data] as JSON)
         } catch (Exception e) {
-            render(status: 500, contentType: 'application/json') {
-                [error: e.message]
-            }
+            response.status = 500
+            render([error: e.message] as JSON)
         }
     }
 
     def mapData(String key) {
         try {
             def data = advancedCachingService.getMapData(key)
-            render(contentType: 'application/json') {
-                [data: data]
-            }
+            render([data: data] as JSON)
         } catch (Exception e) {
-            render(status: 500, contentType: 'application/json') {
-                [error: e.message]
-            }
+            response.status = 500
+            render([error: e.message] as JSON)
         }
     }
 
@@ -92,13 +82,10 @@ class AdvancedCachingController {
     def getDataByKey(String key) {
         try {
             def data = advancedCachingService.getDataByKey(key)
-            render(contentType: 'application/json') {
-                [data: data]
-            }
+            render([data: data] as JSON)
         } catch (Exception e) {
-            render(status: 500, contentType: 'application/json') {
-                [error: e.message]
-            }
+            response.status = 500
+            render([error: e.message] as JSON)
         }
     }
 
@@ -106,43 +93,31 @@ class AdvancedCachingController {
 
     def evictNullCache() {
         advancedCachingService.evictNullCache()
-        render(contentType: 'application/json') {
-            [status: 'evicted']
-        }
+        render([status: 'evicted'] as JSON)
     }
 
     def evictExceptionCache() {
         advancedCachingService.evictExceptionCache()
-        render(contentType: 'application/json') {
-            [status: 'evicted']
-        }
+        render([status: 'evicted'] as JSON)
     }
 
     def evictListCache() {
         advancedCachingService.evictListCache()
-        render(contentType: 'application/json') {
-            [status: 'evicted']
-        }
+        render([status: 'evicted'] as JSON)
     }
 
     def evictMapCache() {
         advancedCachingService.evictMapCache()
-        render(contentType: 'application/json') {
-            [status: 'evicted']
-        }
+        render([status: 'evicted'] as JSON)
     }
 
     def evictByKey(String key) {
         advancedCachingService.evictByKey(key)
-        render(contentType: 'application/json') {
-            [status: 'evicted']
-        }
+        render([status: 'evicted'] as JSON)
     }
 
     def evictAllKeyCache() {
         advancedCachingService.evictAllKeyCache()
-        render(contentType: 'application/json') {
-            [status: 'evicted']
-        }
+        render([status: 'evicted'] as JSON)
     }
 }

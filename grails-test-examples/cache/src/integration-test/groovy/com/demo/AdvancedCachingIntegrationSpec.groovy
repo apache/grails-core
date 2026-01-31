@@ -87,7 +87,7 @@ class AdvancedCachingIntegrationSpec extends ContainerGebSpec {
         def json2 = new JsonSlurper().parseText(response2.body())
         json1.data == json2.data
         json1.data.size() == 3
-        json1.data[0] == 'Item 1 for books'
+        json1.data[0].startsWith('Item 1 for books')
 
         cleanup:
         client?.close()
@@ -141,8 +141,8 @@ class AdvancedCachingIntegrationSpec extends ContainerGebSpec {
         def books = new JsonSlurper().parseText(booksResponse.body())
         def movies = new JsonSlurper().parseText(moviesResponse.body())
         books.data != movies.data
-        books.data[0] == 'Item 1 for books'
-        movies.data[0] == 'Item 1 for movies'
+        books.data[0].startsWith('Item 1 for books')
+        movies.data[0].startsWith('Item 1 for movies')
 
         cleanup:
         client?.close()
