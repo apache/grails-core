@@ -46,6 +46,7 @@ jobs:
           remove-haskell: 'true' # Remove Haskell (~1 GB savings)
           remove-codeql: 'true'  # Remove CodeQL (~500 MB savings)
           remove-docker-images: 'false'  # Prune Docker if used (~1-2 GB savings)
+          build-mount-path: '/home/runner'
       - name: "📥 Checkout repository"
         uses: actions/checkout@v5
         with:
