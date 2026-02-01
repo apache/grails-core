@@ -16,21 +16,26 @@
 name: "Publish Documentation"
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 7.0.0)'
+        required: true
+        type: string
 permissions: { }
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   JAVA_DISTRIBUTION: liberica
   JAVA_VERSION: 17.0.18
-  REF: ${{ github.ref_name }}
-  VERSION: will be computed
+  TARGET_BRANCH: ${{ github.ref_name }}
+  VERSION: ${{ inputs.version }}
 jobs:
   docs:
     environment: docs
     name: "Publish Documentation"
     runs-on: ubuntu-24.04
     steps:
-      - name: "📝 Establish release version"
-        run: echo "VERSION=${REF#v}" >> "$GITHUB_ENV"
+      - name: "📝 Store release version"
+        run: echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
       - name: "⚙️ Maximize build space"
         uses: easimon/maximize-build-space@c28619d8999a147d5e09c1199f84ff6af6ad5794
         with:
@@ -60,7 +65,7 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "📖 Generate Documentation"
-        run: ./gradlew grails-doc:build -PgithubBranch=${REF}
+        run: ./gradlew grails-doc:build -PgithubBranch=${TARGET_BRANCH}
       - name: "🚀 Publish to GitHub Pages"
         uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
