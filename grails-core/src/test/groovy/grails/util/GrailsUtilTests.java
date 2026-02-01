@@ -33,7 +33,7 @@ public class GrailsUtilTests {
 
     @Test
     public void testGrailsVersion() {
-        assertEquals("7.0.7-SNAPSHOT", GrailsUtil.getGrailsVersion());
+        assertEquals("7.0.8-SNAPSHOT", GrailsUtil.getGrailsVersion());
     }
 
     @AfterEach
