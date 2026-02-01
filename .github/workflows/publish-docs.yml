@@ -16,22 +16,12 @@
 name: "Publish Documentation"
 on:
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Release tag (e.g., v7.0.0)'
-        required: true
-        type: string
-      target_branch:
-        description: 'Target branch (e.g., 7.0.x)'
-        required: true
-        type: string
 permissions: { }
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   JAVA_DISTRIBUTION: liberica
   JAVA_VERSION: 17.0.18
-  TAG: ${{ inputs.tag }}
-  TARGET_BRANCH: ${{ inputs.target_branch }}
+  REF: ${{ github.ref_name }}
   VERSION: will be computed
 jobs:
   docs:
@@ -40,7 +30,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: "📝 Establish release version"
-        run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+        run: echo "VERSION=${REF#v}" >> "$GITHUB_ENV"
       - name: "⚙️ Maximize build space"
         uses: easimon/maximize-build-space@c28619d8999a147d5e09c1199f84ff6af6ad5794
         with:
@@ -57,7 +47,7 @@ jobs:
           fetch-depth: 0 # needed for docs release dropdown, (fetch-tags: true with fetch-depth: 1 does not work; https://github.com/actions/checkout/issues/1471)
           filter: tree:0 # limit size, keeping tags for docs release dropdown
           token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ env.TAG }}
+          ref: ${{ github.ref }}
       - name: "📅 Ensure Common Build Date" # to ensure a reproducible build
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
@@ -70,7 +60,7 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "📖 Generate Documentation"
-        run: ./gradlew grails-doc:build -PgithubBranch=${TARGET_BRANCH}
+        run: ./gradlew grails-doc:build -PgithubBranch=${REF}
       - name: "🚀 Publish to GitHub Pages"
         uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
