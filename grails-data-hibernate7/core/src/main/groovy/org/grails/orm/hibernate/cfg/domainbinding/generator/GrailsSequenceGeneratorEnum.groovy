@@ -68,21 +68,18 @@ enum GrailsSequenceGeneratorEnum {
         switch (sequenceGeneratorEnum) {
             case IDENTITY:
                 return new GrailsIdentityGenerator(context, mappedId)
-            case SEQUENCE:
-            case SEQUENCE_IDENTITY:
-            case HILO:
+            case [SEQUENCE, SEQUENCE_IDENTITY, HILO]:
                 return new GrailsSequenceStyleGenerator(context, mappedId, jdbcEnvironment)
             case INCREMENT:
                 return new GrailsIncrementGenerator(context, mappedId, domainClass)
-            case UUID:
-            case UUID2:
+            case [UUID, UUID2]:
                 return new UuidGenerator(context.getType().getReturnedClass())
             case ASSIGNED:
                 return new Assigned()
-            case TABLE:
-            case ENHANCED_TABLE:
+            case [TABLE, ENHANCED_TABLE]:
                 return new GrailsTableGenerator(context, mappedId, jdbcEnvironment)
             case NATIVE:
+                return new GrailsNativeGenerator(context)
             default:
                 return new GrailsNativeGenerator(context)
         }
