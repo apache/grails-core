@@ -90,11 +90,5 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
         return (GrailsHibernatePersistentProperty) version;
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public java.util.List<GrailsHibernatePersistentProperty> getHibernatePersistentProperties() {
-        return (java.util.List) persistentProperties;
-    }
-
 
 }
