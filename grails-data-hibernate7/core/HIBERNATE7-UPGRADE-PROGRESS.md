@@ -6,9 +6,26 @@ This document summarizes the approaches taken, challenges encountered, and futur
 ## Resolved Challenges
 
 
-## Hibernate 7 Key Constraints & Best Practices
-- **Proxy Behavior Persistence**: A key lesson from `HibernateProxyHandler7Spec` is that once a class is loaded by Hibernate as a proxy, Hibernate will keep using that proxy instance within the session context even after it has been initialized. Unwrapping is necessary to get to the underlying implementation if needed.
-- **Initialization State**: In Hibernate 7, getting a truly uninitialized proxy via `getReference` or `load` requires strict session isolation. If an entity is already in the persistence context (even from a previous transaction if not properly cleared), Hibernate may return the initialized instance instead of a new proxy.
+
+## New Regressions After Rollback (Feb 1, 2026)
+
+
+
+
+
+
+
+### 4. Functional Regressions (Attach/Associations) [PENDING]
+
+
+
+*   **Symptom**: `IllegalArgumentException: Given entity is not associated with the persistence context` in `AttachMethodSpec`. `OneToManySpec` failures where collections are empty.
+
+
+
+*   **Status**: On hold per user request.
+
+---
 
 ## Strategy for GrailsDomainBinder Refactoring
 - **Refactoring Approach**: When modifications to `GrailsDomainBinder` are required, follow this pattern:
@@ -26,7 +43,6 @@ This document summarizes the approaches taken, challenges encountered, and futur
 - **Observation**: Even with a new session, Hibernate 7 seems to return an initialized instance if the entity was persisted earlier in the same test run, possibly due to session factory level caching or improper session disposal in the TCK manager.
 
 ## Future Steps
-- Fix the `GrailsIncrementGenerator` NPE by ensuring table names are properly resolved in Hibernate 7's new initialization phase.
 - Fix `UpdateWithProxyPresentSpec` by ensuring a clean state for proxy loading.
 - Address remaining TCK failures (approx. 16) in the `hibernate 7` module.
 # Important

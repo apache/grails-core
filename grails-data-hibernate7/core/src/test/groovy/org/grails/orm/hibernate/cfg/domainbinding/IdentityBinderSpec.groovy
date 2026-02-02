@@ -1,6 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Identity
@@ -27,7 +28,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         def domainClass = Mock(GrailsHibernatePersistentEntity)
         def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def mappings = Mock(InFlightMetadataCollector)
-        def identifierProp = Mock(PersistentProperty)
+        def identifierProp = Mock(GrailsHibernatePersistentProperty)
         domainClass.getIdentity() >> identifierProp
         domainClass.getCompositeIdentity() >> null
 
@@ -43,7 +44,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         def domainClass = Mock(GrailsHibernatePersistentEntity)
         def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def mappings = Mock(InFlightMetadataCollector)
-        def compositeProps = [Mock(PersistentProperty)] as PersistentProperty[]
+        def compositeProps = [Mock(GrailsHibernatePersistentProperty)] as GrailsHibernatePersistentProperty[]
         domainClass.getCompositeIdentity() >> compositeProps
 
         when:
@@ -77,7 +78,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         def gormMapping = Mock(Mapping)
         def identity = new Identity(name: "foo")
         gormMapping.getIdentity() >> identity
-        def identifierProp = Mock(PersistentProperty)
+        def identifierProp = Mock(GrailsHibernatePersistentProperty)
         domainClass.getPropertyByName("foo") >> identifierProp
         domainClass.getIdentity() >> identifierProp
         domainClass.getName() >> "MyEntity"
@@ -115,7 +116,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         def gormMapping = Mock(Mapping)
         def identity = new Identity(name: "MyEntity")
         gormMapping.getIdentity() >> identity
-        def identifierProp = Mock(PersistentProperty)
+        def identifierProp = Mock(GrailsHibernatePersistentProperty)
         domainClass.getIdentity() >> identifierProp
         domainClass.getName() >> "MyEntity"
 
@@ -136,7 +137,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         def gormMapping = Mock(Mapping)
         def identity = new Identity()
         gormMapping.getIdentity() >> identity
-        def identifierProp = Mock(PersistentProperty)
+        def identifierProp = Mock(GrailsHibernatePersistentProperty)
         domainClass.getIdentity() >> identifierProp
         domainClass.getName() >> "MyEntity"
 

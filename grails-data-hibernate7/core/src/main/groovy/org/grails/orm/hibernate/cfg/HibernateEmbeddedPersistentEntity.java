@@ -11,6 +11,21 @@ public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<
     }
 
     @Override
+    public GrailsHibernatePersistentProperty getIdentity() {
+        return (GrailsHibernatePersistentProperty) super.getIdentity();
+    }
+
+    @Override
+    public GrailsHibernatePersistentProperty[] getCompositeIdentity() {
+        return null;
+    }
+
+    @Override
+    public GrailsHibernatePersistentProperty getVersion() {
+        return (GrailsHibernatePersistentProperty) super.getVersion();
+    }
+
+    @Override
     public boolean forGrailsDomainMapping(String dataSourceName) {
         return false;
     }
@@ -18,11 +33,6 @@ public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<
     @Override
     public boolean usesConnectionSource(String dataSourceName) {
         return ConnectionSourcesSupport.usesConnectionSource(this, dataSourceName);
-    }
-
-    @Override
-    public PersistentProperty[] getCompositeIdentity() {
-        return null;
     }
 
     @Override

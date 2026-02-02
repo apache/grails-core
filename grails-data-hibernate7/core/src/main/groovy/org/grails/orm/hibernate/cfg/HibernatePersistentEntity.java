@@ -53,6 +53,24 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
         return Optional.ofNullable(getMapping()).map(ClassMapping::getMappedForm).orElse(null);
     }
 
+    @Override
+    public GrailsHibernatePersistentProperty getIdentity() {
+        return (GrailsHibernatePersistentProperty) identity;
+    }
+
+    @Override
+    public GrailsHibernatePersistentProperty[] getCompositeIdentity() {
+        PersistentProperty[] compositeIdentity = super.getCompositeIdentity();
+        if (compositeIdentity == null) {
+            return null;
+        }
+        GrailsHibernatePersistentProperty[] result = new GrailsHibernatePersistentProperty[compositeIdentity.length];
+        for (int i = 0; i < compositeIdentity.length; i++) {
+            result[i] = (GrailsHibernatePersistentProperty) compositeIdentity[i];
+        }
+        return result;
+    }
+
     private boolean isAnnotatedEntity() {
         return getJavaClass().isAnnotationPresent(Entity.class);
     }
@@ -65,6 +83,11 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
         return !isAnnotatedEntity()
                 && usesConnectionSource(dataSourceName)
                 && isRoot();
+    }
+
+    @Override
+    public GrailsHibernatePersistentProperty getVersion() {
+        return (GrailsHibernatePersistentProperty) version;
     }
 
     @Override

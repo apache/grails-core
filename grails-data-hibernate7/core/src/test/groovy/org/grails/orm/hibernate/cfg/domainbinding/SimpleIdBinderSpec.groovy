@@ -2,6 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Identity
 import org.hibernate.boot.spi.MetadataBuildingContext
@@ -46,7 +47,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         def mapping = Mock(org.grails.orm.hibernate.cfg.Mapping) {
             isTablePerConcreteClass() >> false
         }
-        def testProperty = Mock(PersistentProperty) {
+        def testProperty = Mock(GrailsHibernatePersistentProperty) {
             getName() >> "id"
             getOwner() >> Mock(GrailsHibernatePersistentEntity) {
                 getMappedForm() >> mapping
@@ -74,7 +75,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         def mapping = Mock(org.grails.orm.hibernate.cfg.Mapping) {
             isTablePerConcreteClass() >> true
         }
-        def testProperty = Mock(PersistentProperty) {
+        def testProperty = Mock(GrailsHibernatePersistentProperty) {
             getName() >> "id"
             getOwner() >> Mock(GrailsHibernatePersistentEntity) {
                 getMappedForm() >> mapping

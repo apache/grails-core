@@ -2,6 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.hibernate.boot.spi.InFlightMetadataCollector
@@ -31,9 +32,9 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
         
         def compositeIdentity = new CompositeIdentity(propertyNames: ['prop1', 'prop2'] as String[])
         
-        def prop1 = GroovyMock(PersistentProperty)
-        def prop2 = GroovyMock(PersistentProperty)
-        def identifierProp = GroovyMock(PersistentProperty)
+        def prop1 = GroovyMock(GrailsHibernatePersistentProperty)
+        def prop2 = GroovyMock(GrailsHibernatePersistentProperty)
+        def identifierProp = GroovyMock(GrailsHibernatePersistentProperty)
         domainClass.getPropertyByName("prop1") >> prop1
         domainClass.getPropertyByName("prop2") >> prop2
         domainClass.getIdentity() >> identifierProp
@@ -60,9 +61,9 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
         root.setEntityName("MyEntity")
         def mappings = metadataBuildingContext.getMetadataCollector()
         
-        def prop1 = GroovyMock(PersistentProperty)
-        def identifierProp = GroovyMock(PersistentProperty)
-        domainClass.getCompositeIdentity() >> ([prop1] as PersistentProperty[])
+        def prop1 = GroovyMock(GrailsHibernatePersistentProperty)
+        def identifierProp = GroovyMock(GrailsHibernatePersistentProperty)
+        domainClass.getCompositeIdentity() >> ([prop1] as GrailsHibernatePersistentProperty[])
         domainClass.getIdentity() >> identifierProp
         domainClass.getName() >> "MyEntity"
         

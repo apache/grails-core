@@ -13,8 +13,14 @@ import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesCons
 public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     Mapping getMappedForm();
 
+    @Override
+    GrailsHibernatePersistentProperty getIdentity();
+
+    @Override
+    GrailsHibernatePersistentProperty[] getCompositeIdentity();
+
     default String getDiscriminatorValue() {
-       return Optional.ofNullable(getMappedForm())
+        return Optional.ofNullable(getMappedForm())
                 .map(Mapping::getDiscriminator)
                 .map(DiscriminatorConfig::getValue)
                 .orElse(getName());
@@ -25,8 +31,6 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
 
     boolean usesConnectionSource(String dataSourceName);
 
-    PersistentProperty[] getCompositeIdentity();
-
     boolean isAbstract();
 
 
@@ -34,6 +38,9 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     default List<GrailsHibernatePersistentProperty> getHibernatePersistentProperties() {
         return (List) getPersistentProperties();
     }
+
+    @Override
+    GrailsHibernatePersistentProperty getVersion();
 
     default List<GrailsHibernatePersistentEntity> getChildEntities(String dataSourceName) {
         return getMappingContext()
