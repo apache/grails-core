@@ -1,6 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
 import org.hibernate.mapping.Column;
+import org.hibernate.mapping.Formula;
 import org.hibernate.mapping.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,38 +22,62 @@ public class ColumnBinder {
 
     private static final Logger LOG = LoggerFactory.getLogger(ColumnBinder.class);
 
-   private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
-   private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
-   private final StringColumnConstraintsBinder stringColumnConstraintsBinder;
-   private final NumericColumnConstraintsBinder numericColumnConstraintsBinder;
-   private final CreateKeyForProps createKeyForProps;
-   private final UserTypeFetcher userTypeFetcher;
-   private final IndexBinder indexBinder;
+    private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
+    private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
+    private final StringColumnConstraintsBinder stringColumnConstraintsBinder;
+    private final NumericColumnConstraintsBinder numericColumnConstraintsBinder;
+    private final CreateKeyForProps createKeyForProps;
+    private final UserTypeFetcher userTypeFetcher;
+    private final IndexBinder indexBinder;
 
-   public ColumnBinder(PersistentEntityNamingStrategy namingStrategy) {
-       this.columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy);
-       this.persistentPropertyToPropertyConfig = new PersistentPropertyToPropertyConfig();
-       this.stringColumnConstraintsBinder = new StringColumnConstraintsBinder();
-       this.numericColumnConstraintsBinder = new NumericColumnConstraintsBinder();
-       this.createKeyForProps = new CreateKeyForProps(columnNameForPropertyAndPathFetcher);
-       this.userTypeFetcher = new UserTypeFetcher();
-       this.indexBinder = new IndexBinder();
-   }
-   protected ColumnBinder(ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher
-   , PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig
-   , StringColumnConstraintsBinder stringColumnConstraintsBinder
-   , NumericColumnConstraintsBinder numericColumnConstraintsBinder
-   , CreateKeyForProps createKeyForProps
-   , UserTypeFetcher userTypeFetcher
-   , IndexBinder indexBinder) {
-       this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
-       this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
-       this.stringColumnConstraintsBinder = stringColumnConstraintsBinder;
-       this.numericColumnConstraintsBinder =  numericColumnConstraintsBinder;
-       this.createKeyForProps = createKeyForProps;
-       this.userTypeFetcher = userTypeFetcher;
-       this.indexBinder = indexBinder;
-   }
+    /**
+     * Public constructor that accepts all collaborators.
+     */
+    public ColumnBinder(
+            ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
+            PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig,
+            StringColumnConstraintsBinder stringColumnConstraintsBinder,
+            NumericColumnConstraintsBinder numericColumnConstraintsBinder,
+            CreateKeyForProps createKeyForProps,
+            UserTypeFetcher userTypeFetcher,
+            IndexBinder indexBinder) {
+        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
+        this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
+        this.stringColumnConstraintsBinder = stringColumnConstraintsBinder;
+        this.numericColumnConstraintsBinder = numericColumnConstraintsBinder;
+        this.createKeyForProps = createKeyForProps;
+        this.userTypeFetcher = userTypeFetcher;
+        this.indexBinder = indexBinder;
+    }
+
+    /**
+     * Convenience constructor for backward compatibility.
+     */
+    public ColumnBinder(PersistentEntityNamingStrategy namingStrategy) {
+        this(
+                new ColumnNameForPropertyAndPathFetcher(namingStrategy),
+                new PersistentPropertyToPropertyConfig(),
+                new StringColumnConstraintsBinder(),
+                new NumericColumnConstraintsBinder(),
+                new CreateKeyForProps(new ColumnNameForPropertyAndPathFetcher(namingStrategy)),
+                new UserTypeFetcher(),
+                new IndexBinder()
+        );
+    }
+
+    /**
+     * Protected constructor for testing purposes.
+     */
+    protected ColumnBinder() {
+        this.columnNameForPropertyAndPathFetcher = null;
+        this.persistentPropertyToPropertyConfig = null;
+        this.stringColumnConstraintsBinder = null;
+        this.numericColumnConstraintsBinder = null;
+        this.createKeyForProps = null;
+        this.userTypeFetcher = null;
+        this.indexBinder = null;
+    }
+
     /**
      * Binds a Column instance to the Hibernate meta model
      *
@@ -81,23 +106,18 @@ public class ColumnBinder {
             }
             if (property instanceof ManyToMany) {
                 column.setNullable(false);
-            }
-            else if (property instanceof OneToOne && association.isBidirectional() && !association.isOwningSide()) {
+            } else if (property instanceof OneToOne && association.isBidirectional() && !association.isOwningSide()) {
                 if (association.getInverseSide().isHasOne()) {
                     column.setNullable(false);
-                }
-                else {
+                } else {
                     column.setNullable(true);
                 }
-            }
-            else if ((property instanceof ToOne) && association.isCircular()) {
+            } else if ((property instanceof ToOne) && association.isCircular()) {
                 column.setNullable(true);
-            }
-            else {
+            } else {
                 column.setNullable(property.isNullable());
             }
-        }
-        else {
+        } else {
             column.setName(columnName);
             column.setNullable(property.isNullable() || (parentProperty != null && parentProperty.isNullable()));
             // We'll reuse the same PropertyConfig for any constraints and uniqueness
@@ -120,12 +140,12 @@ public class ColumnBinder {
         final PersistentEntity owner = property.getOwner();
         if (!owner.isRoot()) {
             Mapping mapping = null;
-            if (owner instanceof GrailsHibernatePersistentEntity) {
-                mapping = ((GrailsHibernatePersistentEntity) owner).getMappedForm();
+            if (owner instanceof GrailsHibernatePersistentEntity persistentEntity) {
+                mapping = persistentEntity.getMappedForm();
             }
             if (mapping != null && mapping.getTablePerHierarchy()) {
                 if (LOG.isDebugEnabled())
-                    LOG.debug("[GrailsDomainBinder] Sub class property [" + property.getName() + "] for column name ["+column.getName()+"] set to nullable");
+                    LOG.debug("[GrailsDomainBinder] Sub class property [" + property.getName() + "] for column name [" + column.getName() + "] set to nullable");
                 column.setNullable(true);
             } else {
                 column.setNullable(property.isNullable());
@@ -137,6 +157,6 @@ public class ColumnBinder {
         column.setUnique(mappedFormFinal.isUnique() && !mappedFormFinal.isUniqueWithinGroup());
 
         if (LOG.isDebugEnabled())
-            LOG.debug("[GrailsDomainBinder] bound property [" + property.getName() + "] to column name ["+column.getName()+"] in table ["+table.getName()+"]");
+            LOG.debug("[GrailsDomainBinder] bound property [" + property.getName() + "] to column name [" + column.getName() + "] in table [" + table.getName() + "]");
     }
 }

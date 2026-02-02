@@ -9,6 +9,18 @@ import java.util.Optional;
 public class SimpleValueColumnBinder {
 
     /**
+     * Public constructor.
+     */
+    public SimpleValueColumnBinder() {
+    }
+
+    /**
+     * Protected constructor for testing purposes.
+     */
+    protected SimpleValueColumnBinder(Object... ignore) {
+    }
+
+    /**
      * Binds a value for the specified parameters to the meta model.
      *
      * @param simpleValue The simple value instance
@@ -18,7 +30,7 @@ public class SimpleValueColumnBinder {
      */
     public void bindSimpleValue(SimpleValue simpleValue, String type, String columnName, boolean nullable) {
         Optional.ofNullable(simpleValue.getTable())
-                .ifPresentOrElse( table -> {
+                .ifPresentOrElse(table -> {
                     var column = new Column();
                     column.setNullable(nullable);
                     column.setValue(simpleValue);
@@ -26,6 +38,8 @@ public class SimpleValueColumnBinder {
                     table.addColumn(column);
                     simpleValue.addColumn(column);
                     simpleValue.setTypeName(type);
-                }, () -> { throw new MappingException("SimpleValue must have a table");});
+                }, () -> {
+                    throw new MappingException("SimpleValue must have a table");
+                });
     }
 }

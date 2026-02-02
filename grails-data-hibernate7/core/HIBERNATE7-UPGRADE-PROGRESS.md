@@ -27,6 +27,43 @@ This document summarizes the approaches taken, challenges encountered, and futur
 
 ---
 
+## Classes in `domainbinding` missing direct specs
+(All direct specs have been generated and added to the test directory)
+
+---
+
+## Refactoring Tasks
+
+### 1. Refactor `SimpleValueBinder` [DONE]
+- **Goal**: Refactor `SimpleValueBinder` to fully follow the refactoring strategy (proper collaborator injection and constructors).
+- **Steps**:
+    - Rename current `SimpleValueBinder` to `LegacySimpleValueBinder`.
+    - Created new `SimpleValueBinder` with all collaborators injected via public constructor.
+    - Provided protected constructor for testing.
+    - Added convenience constructors for backward compatibility.
+    - Verified with `SimpleValueBinderSpec`.
+
+### 2. Refactor `SimpleValueColumnBinder` [DONE]
+- **Goal**: Follow same strategy as `SimpleValueBinder`.
+- **Steps**:
+    - Rename current `SimpleValueColumnBinder` to `LegacySimpleValueColumnBinder`.
+    - Created new `SimpleValueColumnBinder` with strategy-compliant constructors.
+    - Verified with `SimpleValueColumnBinderSpec`.
+
+### 3. Refactor `ColumnBinder` [IN PROGRESS]
+- **Goal**: Follow same strategy as `SimpleValueBinder`.
+
+---
+
+## Identified Issues (Post-Refactoring)
+
+### 5. Compilation Failures in `hibernate7-dbmigration` [PENDING]
+*   **Symptom**: `unable to resolve class org.grails.plugins.databasemigration.DatabaseMigrationException`, `NoopVisitor`, `EnvironmentAwareCodeGenConfig`.
+*   **Root Cause**: It appears the `dbmigration` subproject is missing the source directory where these classes are defined or the classes are not being correctly picked up during compilation of commands.
+*   **Status**: Investigating.
+
+---
+
 ## Strategy for GrailsDomainBinder Refactoring
 - **Refactoring Approach**: When modifications to `GrailsDomainBinder` are required, follow this pattern:
     - Identify the specific methods/logic requiring changes.

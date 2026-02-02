@@ -1,0 +1,45 @@
+package org.grails.orm.hibernate.cfg.domainbinding.collectionType
+
+import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.grails.datastore.mapping.model.types.ToMany
+import org.grails.orm.hibernate.cfg.GrailsDomainBinder
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
+import org.hibernate.boot.spi.InFlightMetadataCollector
+import org.hibernate.mapping.Bag
+import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.Table
+import spock.lang.Subject
+
+class BagCollectionTypeSpec extends HibernateGormDatastoreSpec {
+
+    def "should create a Bag and delegate to binder"() {
+        given:
+        def binder = Mock(GrailsDomainBinder)
+        def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
+        binder.getMetadataBuildingContext() >> metadataBuildingContext
+        
+        @Subject
+        def collectionType = new BagCollectionType(binder)
+        
+        def property = Mock(ToMany)
+        def owner = new RootClass(metadataBuildingContext)
+        def table = new Table("test_table")
+        owner.setTable(table)
+        
+        def domainClass = Mock(GrailsHibernatePersistentEntity)
+        property.getOwner() >> domainClass
+        domainClass.getMappedForm() >> null
+        
+        def mappings = Mock(InFlightMetadataCollector)
+        def path = "testPath"
+        def sessionFactoryBeanName = "sessionFactory"
+
+        when:
+        def result = collectionType.create(property, owner, path, mappings, sessionFactoryBeanName)
+
+        then:
+        result instanceof Bag
+        result.getCollectionTable() == table
+        1 * binder.bindCollection(property, _ as Bag, owner, mappings, path, sessionFactoryBeanName)
+    }
+}

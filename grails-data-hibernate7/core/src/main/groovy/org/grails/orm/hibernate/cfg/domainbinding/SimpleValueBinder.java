@@ -24,71 +24,75 @@ import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGenera
 public class SimpleValueBinder {
 
     private final PersistentEntityNamingStrategy namingStrategy;
-    private final ColumnConfigToColumnBinder columnConfigToColumnBinder ;
+    private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
     private final ColumnBinder columnBinder;
     private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
 
-
     private static final String SEQUENCE_KEY = GrailsSequenceGeneratorEnum.SEQUENCE.toString();
 
+    /**
+     * Convenience constructor for namingStrategy and persistentPropertyToPropertyConfig.
+     */
+    public SimpleValueBinder(PersistentEntityNamingStrategy namingStrategy, PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig) {
+        this(namingStrategy, new ColumnConfigToColumnBinder(), new ColumnBinder(namingStrategy), persistentPropertyToPropertyConfig);
+    }
+
+    /**
+     * Convenience constructor for namingStrategy.
+     */
     public SimpleValueBinder(PersistentEntityNamingStrategy namingStrategy) {
-        this(namingStrategy, new PersistentPropertyToPropertyConfig());
+        this(namingStrategy, new ColumnConfigToColumnBinder(), new ColumnBinder(namingStrategy), new PersistentPropertyToPropertyConfig());
     }
 
-    protected SimpleValueBinder(PersistentEntityNamingStrategy namingStrategy, PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig) {
-        this.namingStrategy = namingStrategy;
-        this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
-        this.columnConfigToColumnBinder = new ColumnConfigToColumnBinder();
-        this.columnBinder = new ColumnBinder(namingStrategy);
-    }
-
-    protected SimpleValueBinder(PersistentEntityNamingStrategy namingStrategy,
-                                ColumnConfigToColumnBinder columnConfigToColumnBinder,
-                                ColumnBinder columnBinder,
-                                PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig) {
+    /**
+     * Public constructor that accepts all collaborators.
+     */
+    public SimpleValueBinder(
+            PersistentEntityNamingStrategy namingStrategy,
+            ColumnConfigToColumnBinder columnConfigToColumnBinder,
+            ColumnBinder columnBinder,
+            PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig) {
         this.namingStrategy = namingStrategy;
         this.columnConfigToColumnBinder = columnConfigToColumnBinder;
         this.columnBinder = columnBinder;
         this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
     }
 
-
     /**
-     * Binds a simple value to the Hibernate metamodel. A simple value is
-     * any type within the Hibernate type system
-     *
-     * @param property
-     * @param parentProperty
-     * @param simpleValue    The simple value to bind
-     * @param path
+     * Protected constructor for testing purposes.
      */
+    protected SimpleValueBinder() {
+        this.namingStrategy = null;
+        this.columnConfigToColumnBinder = null;
+        this.columnBinder = null;
+        this.persistentPropertyToPropertyConfig = null;
+    }
 
     public void bindSimpleValue(
-            @jakarta.annotation.Nonnull PersistentProperty property
-            , PersistentProperty parentProperty
-            , SimpleValue simpleValue
-            , String path
-    ) {
+            @jakarta.annotation.Nonnull PersistentProperty property,
+            PersistentProperty parentProperty,
+            SimpleValue simpleValue,
+            String path) {
+        
         PropertyConfig propertyConfig = persistentPropertyToPropertyConfig.toPropertyConfig(property);
         Mapping mapping = null;
         if (property.getOwner() instanceof GrailsHibernatePersistentEntity persistentEntity) {
             mapping = persistentEntity.getMappedForm();
         }
+        
         final String typeName = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName(mapping) : null;
         if (typeName == null) {
             Class<?> type = property.getType();
             if (type != null) {
                 simpleValue.setTypeName(type.getName());
             }
-        }
-        else {
+        } else {
             simpleValue.setTypeName(typeName);
             simpleValue.setTypeParameters(propertyConfig.getTypeParams());
         }
 
         String generator = propertyConfig.getGenerator();
-        if (generator != null && simpleValue instanceof BasicValue) {
-            BasicValue basicValue = (BasicValue) simpleValue;
+        if (generator != null && simpleValue instanceof BasicValue basicValue) {
             Properties params = propertyConfig.getTypeParams();
             final Properties generatorProps = new Properties();
             if (params != null) {
@@ -114,25 +118,19 @@ public class SimpleValueBinder {
             }
         }
 
-        if ( propertyConfig.isDerived() && !(property instanceof TenantId)) {
+        if (propertyConfig.isDerived() && !(property instanceof TenantId)) {
             Formula formula = new Formula();
             formula.setFormula(propertyConfig.getFormula());
             simpleValue.addFormula(formula);
         } else {
             Table table = simpleValue.getTable();
 
-
-
-            // Add the column definitions for this value/property. Note that
-            // not all custom mapped properties will have column definitions,
-            // in which case we still need to create a Hibernate column for
-            // this value.
-            Optional.ofNullable(propertyConfig.getColumns()).
-                    filter(list-> !list.isEmpty())
-                    .orElse(Arrays.asList(new ColumnConfig[] { null }))
-                    .forEach( cc -> {
+            Optional.ofNullable(propertyConfig.getColumns())
+                    .filter(list -> !list.isEmpty())
+                    .orElse(Arrays.asList(new ColumnConfig[]{null}))
+                    .forEach(cc -> {
                         Column column = new Column();
-                        columnConfigToColumnBinder.bindColumnConfigToColumn(column,cc,propertyConfig);
+                        columnConfigToColumnBinder.bindColumnConfigToColumn(column, cc, propertyConfig);
                         columnBinder.bindColumn(property, parentProperty, column, cc, path, table);
                         if (table != null) {
                             table.addColumn(column);

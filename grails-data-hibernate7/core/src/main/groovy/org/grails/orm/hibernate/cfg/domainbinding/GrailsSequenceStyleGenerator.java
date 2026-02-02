@@ -24,7 +24,9 @@ public class GrailsSequenceStyleGenerator extends SequenceStyleGenerator {
 
         if (jdbcEnvironment != null) {
             var database = context.getDatabase();
-            this.registerExportables(database);
+            if (getDatabaseStructure() != null) {
+                this.registerExportables(database);
+            }
 
             var physicalName = database.getDefaultNamespace().getPhysicalName();
 
