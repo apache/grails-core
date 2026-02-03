@@ -28,6 +28,7 @@ import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
@@ -132,11 +133,11 @@ public class ComponentPropertyBinder {
             value = new BasicValue(metadataBuildingContext, table);
             if (currentGrailsProp.getType().isEnum()) {
                 String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, path, null);
-                enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), (SimpleValue) value, columnName);
+                enumTypeBinder.bindEnumType((GrailsHibernatePersistentProperty) currentGrailsProp, currentGrailsProp.getType(), (SimpleValue) value, columnName);
             }
             else {
                 // set type
-                new SimpleValueBinder(namingStrategy).bindSimpleValue(currentGrailsProp, componentProperty, (SimpleValue) value, path);
+                new SimpleValueBinder(namingStrategy).bindSimpleValue((GrailsHibernatePersistentProperty) currentGrailsProp, componentProperty, (SimpleValue) value, path);
             }
         }
 

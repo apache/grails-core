@@ -6,6 +6,7 @@ import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 import org.hibernate.boot.spi.AccessType;
 import org.hibernate.mapping.Property;
@@ -39,7 +40,10 @@ public class PropertyBinder {
     public void bindProperty(PersistentProperty<?> persistentProperty, Property prop) {
         // set the property name
         prop.setName(persistentProperty.getName());
-        var config = ((GrailsHibernatePersistentProperty) persistentProperty).getMappedForm();
+        PropertyConfig config = persistentProperty instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : null;
+        if (config == null) {
+            config = new PropertyConfig();
+        }
 
         if (bidirectionalManyToOneWithListMapping.isBidirectionalManyToOneWithListMapping(persistentProperty, prop)) {
             prop.setInsertable(false);

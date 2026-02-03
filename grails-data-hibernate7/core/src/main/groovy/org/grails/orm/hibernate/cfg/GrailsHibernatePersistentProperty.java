@@ -10,14 +10,11 @@ import java.util.Optional;
 public interface GrailsHibernatePersistentProperty extends PersistentProperty<PropertyConfig> {
 
     /**
-     * @param config The property config
-     * @param mapping The mapping
      * @return The type name
      */
-    default String getTypeName(PropertyConfig config, Mapping mapping) {
-        return Optional.ofNullable(config.getType())
-                .map(typeObj -> typeObj instanceof Class<?> clazz ? clazz.getName() : typeObj.toString())
-                .orElseGet(() -> mapping != null ? mapping.getTypeName(getType()) : null);
+    default String getTypeName() {
+        GrailsHibernatePersistentEntity owner = getHibernateOwner();
+        return getTypeName(owner != null ? owner.getMappedForm() : null);
     }
 
     /**
@@ -29,18 +26,25 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
     }
 
     /**
+     * @param config The property config
+     * @param mapping The mapping
      * @return The type name
      */
-    default String getTypeName() {
-        return getTypeName(getHibernateOwner().getMappedForm());
+    default String getTypeName(PropertyConfig config, Mapping mapping) {
+        return Optional.ofNullable(config)
+                .map(PropertyConfig::getType)
+                .map(typeObj -> typeObj instanceof Class<?> clazz ? clazz.getName() : typeObj.toString())
+                .orElseGet(() -> mapping != null ? mapping.getTypeName(getType()) : null);
     }
 
-    default HibernatePersistentEntity getHibernateOwner() {
-        return (HibernatePersistentEntity) getOwner();
+    default GrailsHibernatePersistentEntity getHibernateOwner() {
+        return getOwner() instanceof GrailsHibernatePersistentEntity ghpe ? ghpe : null;
     }
 
     default Class<?> getUserType() {
-        Object typeObj = getMappedForm().getType();
+        PropertyConfig config = getMappedForm();
+        if (config == null) return null;
+        Object typeObj = config.getType();
         Class<?> userType = null;
         if (typeObj instanceof Class<?>) {
             userType = (Class<?>)typeObj;
@@ -53,5 +57,5 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
             }
         }
         return userType;
-    };
+    }
 }

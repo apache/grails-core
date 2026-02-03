@@ -46,14 +46,14 @@ public class CompositeIdentifierToManyToOneBinder {
         this.simpleValueBinder = simpleValueBinder;
     }
 
-    public void bindCompositeIdentifierToManyToOne(Association property,
+    public void bindCompositeIdentifierToManyToOne(GrailsHibernatePersistentProperty property,
                                                     SimpleValue value, 
                                                    CompositeIdentity compositeId, 
                                                    PersistentEntity refDomainClass,
                                                     String path) {
         String[] propertyNames = compositeId.getPropertyNames();
 
-        List<ColumnConfig> columns = ((GrailsHibernatePersistentProperty) property).getMappedForm().getColumns();
+        List<ColumnConfig> columns = property.getMappedForm().getColumns();
         int i = columns.size();
         int expectedForeignKeyColumnLength = foreignKeyColumnCountCalculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames);
         if (i != expectedForeignKeyColumnLength) {

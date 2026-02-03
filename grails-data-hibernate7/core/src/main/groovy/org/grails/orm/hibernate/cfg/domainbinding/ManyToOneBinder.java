@@ -66,7 +66,7 @@ public class ManyToOneBinder {
         boolean isComposite = mapping != null && mapping.hasCompositeIdentifier();
         if (isComposite) {
             CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
-            compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(property, manyToOne, ci, refDomainClass, path);
+            compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne((GrailsHibernatePersistentProperty) property, manyToOne, ci, refDomainClass, path);
         }
         else {
             if (property.isCircular() && (property instanceof ManyToMany)) {

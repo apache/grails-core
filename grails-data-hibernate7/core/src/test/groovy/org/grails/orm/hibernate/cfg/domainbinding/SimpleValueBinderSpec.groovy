@@ -45,7 +45,7 @@ class SimpleValueBinderSpec extends Specification {
         prop.getMappedForm() >> pc
         prop.getOwner() >> owner
         owner.getMappedForm() >> mapping
-        prop.getTypeName(mapping) >> "custom.Type"
+        prop.getTypeName() >> "custom.Type"
         pc.getTypeParams() >> props
         pc.isDerived() >> false
         pc.getColumns() >> null
@@ -80,7 +80,7 @@ class SimpleValueBinderSpec extends Specification {
         prop.getMappedForm() >> pc
         prop.getOwner() >> owner
         owner.getMappedForm() >> mapping
-        prop.getTypeName(mapping) >> null
+        prop.getTypeName() >> null
         pc.isDerived() >> false
         pc.getColumns() >> null
         prop.getType() >> Integer
@@ -113,7 +113,7 @@ class SimpleValueBinderSpec extends Specification {
         prop.getOwner() >> owner
         tenantProp.getOwner() >> owner
         owner.getMappedForm() >> mapping
-        prop.getTypeName(_) >> 'X'
+        prop.getTypeName() >> 'X'
 
         pc.isDerived() >> true
         pc.getFormula() >> 'x+y'
@@ -151,7 +151,7 @@ class SimpleValueBinderSpec extends Specification {
         prop.getMappedForm() >> pc
         prop.getOwner() >> owner
         owner.getMappedForm() >> mapping
-        prop.getTypeName(mapping) >> 'Y'
+        prop.getTypeName() >> 'Y'
         pc.isDerived() >> false
         pc.getColumns() >> null
         pc.getGenerator() >> 'sequence'
@@ -183,7 +183,7 @@ class SimpleValueBinderSpec extends Specification {
         prop.getMappedForm() >> pc
         prop.getOwner() >> owner
         owner.getMappedForm() >> mapping
-        prop.getTypeName(mapping) >> 'Z'
+        prop.getTypeName() >> 'Z'
         pc.isDerived() >> false
         pc.getColumns() >> [cc1, cc2]
         prop.isNullable() >> true

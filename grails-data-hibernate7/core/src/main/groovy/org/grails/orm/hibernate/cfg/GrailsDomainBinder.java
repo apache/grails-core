@@ -260,7 +260,7 @@ public class GrailsDomainBinder
         String type = getIndexColumnType(property, STRING_TYPE);
         String columnName1 = getIndexColumnName(property, sessionFactoryBeanName);
         new SimpleValueColumnBinder().bindSimpleValue(value, type, columnName1, true);
-        PropertyConfig mappedForm = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+        PropertyConfig mappedForm = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
         if (mappedForm.getIndexColumn() != null) {
             Column column = new SimpleValueColumnFetcher().getColumnForSimpleValue(value);
             ColumnConfig columnConfig = getSingleColumnConfig(mappedForm.getIndexColumn());
@@ -409,7 +409,7 @@ public class GrailsDomainBinder
                     + " -> "
                     + collection.getCollectionTable().getName());
 
-        PropertyConfig propConfig = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+        PropertyConfig propConfig = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
 
         PersistentEntity referenced = property.getAssociatedEntity();
         if (StringUtils.hasText(propConfig.getSort())) {
@@ -494,25 +494,53 @@ public class GrailsDomainBinder
             collection.setSorted(true);
         }
 
-        // setup the primary key references
-        DependantValue key = createPrimaryKeyValue(mappings, property, collection, persistentClasses);
+                // setup the primary key references
 
-        // link a bidirectional relationship
-        if (property.isBidirectional()) {
-            Association otherSide = property.getInverseSide();
-            if ((otherSide instanceof org.grails.datastore.mapping.model.types.ToOne) && shouldBindCollectionWithForeignKey(property)) {
-                linkBidirectionalOneToMany(collection, associatedClass, key, otherSide);
-            } else if ((otherSide instanceof ManyToMany) || Map.class.isAssignableFrom(property.getType())) {
-                bindDependentKeyValue(property, key, mappings, sessionFactoryBeanName);
-            }
-        } else {
-            if (propConfig.hasJoinKeyMapping()) {
-                String columnName = propConfig.getJoinTable().getKey().getName();
-                new SimpleValueColumnBinder().bindSimpleValue(key, "long", columnName, false);
-            } else {
-                bindDependentKeyValue(property, key, mappings, sessionFactoryBeanName);
-            }
-        }
+                DependantValue key = createPrimaryKeyValue(mappings, (GrailsHibernatePersistentProperty) property, collection, persistentClasses);
+
+        
+
+                        // link a bidirectional relationship
+
+        
+
+                        if (property.isBidirectional()) {
+
+        
+
+                            GrailsHibernatePersistentProperty otherSide = (GrailsHibernatePersistentProperty) property.getInverseSide();
+
+        
+
+                            if ((otherSide instanceof org.grails.datastore.mapping.model.types.ToOne) && shouldBindCollectionWithForeignKey(property)) {
+
+        
+
+                                linkBidirectionalOneToMany(collection, associatedClass, key, otherSide);
+
+        
+
+                            } else if ((otherSide instanceof ManyToMany) || Map.class.isAssignableFrom(property.getType())) {
+
+                        bindDependentKeyValue((GrailsHibernatePersistentProperty) property, key, mappings, sessionFactoryBeanName);
+
+                    }
+
+                } else {
+
+                    if (propConfig.hasJoinKeyMapping()) {
+
+                        String columnName = propConfig.getJoinTable().getKey().getName();
+
+                        new SimpleValueColumnBinder().bindSimpleValue(key, "long", columnName, false);
+
+                    } else {
+
+                        bindDependentKeyValue((GrailsHibernatePersistentProperty) property, key, mappings, sessionFactoryBeanName);
+
+                    }
+
+                }
         collection.setKey(key);
 
         // get cache config
@@ -726,7 +754,7 @@ public class GrailsDomainBinder
             }
 
             if (isEnum) {
-                new EnumTypeBinder().bindEnumType(property, referencedType, element, columnName);
+                new EnumTypeBinder().bindEnumType((GrailsHibernatePersistentProperty) property, referencedType, element, columnName);
             }
             else {
 
@@ -751,7 +779,7 @@ public class GrailsDomainBinder
                 if (joinColumnMappingOptional.isPresent()) {
                     Column column = new SimpleValueColumnFetcher().getColumnForSimpleValue(element);
                     ColumnConfig columnConfig = joinColumnMappingOptional.get();
-                    final PropertyConfig mappedForm = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+                    final PropertyConfig mappedForm = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
                     new ColumnConfigToColumnBinder().bindColumnConfigToColumn(column, columnConfig, mappedForm);
                 }
             }
@@ -762,9 +790,9 @@ public class GrailsDomainBinder
             if (domainClass != null) {
                 m = ((GrailsHibernatePersistentEntity) domainClass).getMappedForm();
             }
-            if (m.hasCompositeIdentifier()) {
+            if (m != null && m.hasCompositeIdentifier()) {
                 CompositeIdentity ci = (CompositeIdentity) m.getIdentity();
-                new CompositeIdentifierToManyToOneBinder(namingStrategy).bindCompositeIdentifierToManyToOne(property, element, ci, domainClass, EMPTY_PATH);
+                new CompositeIdentifierToManyToOneBinder(namingStrategy).bindCompositeIdentifierToManyToOne((GrailsHibernatePersistentProperty) property, element, ci, domainClass, EMPTY_PATH);
             }
             else {
                 if (joinColumnMappingOptional.isPresent()) {
@@ -789,7 +817,7 @@ public class GrailsDomainBinder
      * @param manyToOne The inverse side
      */
     private void bindUnidirectionalOneToManyInverseValues(ToMany property, ManyToOne manyToOne) {
-        PropertyConfig config = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+        PropertyConfig config = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
         manyToOne.setIgnoreNotFound(config.getIgnoreNotFound());
         final FetchMode fetch = config.getFetchMode();
         if(!fetch.equals(FetchMode.JOIN)) {
@@ -813,7 +841,7 @@ public class GrailsDomainBinder
      * @param mappings The mappings
      * @param sessionFactoryBeanName The name of the session factory
      */
-    private void bindDependentKeyValue(PersistentProperty property, DependantValue key,
+    private void bindDependentKeyValue(GrailsHibernatePersistentProperty property, DependantValue key,
                                          @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
 
         if (LOG.isDebugEnabled()) {
@@ -822,14 +850,14 @@ public class GrailsDomainBinder
 
         PersistentEntity refDomainClass = property.getOwner();
         Mapping mapping = null;
-        if (refDomainClass != null) {
-            mapping = ((GrailsHibernatePersistentEntity) refDomainClass).getMappedForm();
+        if (refDomainClass instanceof GrailsHibernatePersistentEntity persistentEntity) {
+            mapping = persistentEntity.getMappedForm();
         }
-        boolean hasCompositeIdentifier = mapping.hasCompositeIdentifier();
+        boolean hasCompositeIdentifier = mapping != null && mapping.hasCompositeIdentifier();
         if ((new ShouldCollectionBindWithJoinColumn().apply((ToMany) property) && hasCompositeIdentifier) ||
                 (hasCompositeIdentifier && ( property instanceof ManyToMany))) {
             CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
-            new CompositeIdentifierToManyToOneBinder(namingStrategy).bindCompositeIdentifierToManyToOne((Association) property, key, ci, refDomainClass, EMPTY_PATH);
+            new CompositeIdentifierToManyToOneBinder(namingStrategy).bindCompositeIdentifierToManyToOne((GrailsHibernatePersistentProperty) property, key, ci, refDomainClass, EMPTY_PATH);
         }
         else {
             // set type
@@ -983,7 +1011,7 @@ public class GrailsDomainBinder
         String propertyName = getNameForPropertyAndPath(property, path);
         collection.setRole(qualify(property.getOwner().getName(), propertyName));
 
-        PropertyConfig pc = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+        PropertyConfig pc = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
         // configure eager fetching
         final FetchMode fetchMode = pc.getFetchMode();
         if (fetchMode == FetchMode.JOIN) {
@@ -1054,7 +1082,7 @@ public class GrailsDomainBinder
                                        Collection collection, Table ownerTable, String sessionFactoryBeanName) {
 
         String owningTableSchema = ownerTable.getSchema();
-        PropertyConfig config = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+        PropertyConfig config = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
         JoinTable jt = config.getJoinTable();
 
         String s = new TableForManyCalculator(namingStrategy).calculateTableForMany(property, sessionFactoryBeanName);
@@ -1620,7 +1648,7 @@ public class GrailsDomainBinder
     }
 
     private String getIndexColumnName(PersistentProperty property, String sessionFactoryBeanName) {
-        PropertyConfig pc = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+        PropertyConfig pc = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
         if (pc.getIndexColumn() != null && pc.getIndexColumn().getColumn() != null) {
             return pc.getIndexColumn().getColumn();
         }
@@ -1629,7 +1657,7 @@ public class GrailsDomainBinder
 
     private String getIndexColumnType(@Nonnull PersistentProperty property, String defaultType) {
 
-        PropertyConfig pc = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+        PropertyConfig pc = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
 
             if (pc.getIndexColumn() != null && pc.getIndexColumn().getType() != null) {
 
@@ -1638,7 +1666,9 @@ public class GrailsDomainBinder
                     mapping = domainClass.getMappedForm();
                 }
 
-                return ((GrailsHibernatePersistentProperty) property).getTypeName(pc.getIndexColumn(), mapping);
+                if (property instanceof GrailsHibernatePersistentProperty ghpp) {
+                    return ghpp.getTypeName(pc.getIndexColumn(), mapping);
+                }
 
             }
 
@@ -1647,7 +1677,7 @@ public class GrailsDomainBinder
         }
 
     private String getMapElementName(PersistentProperty property, String sessionFactoryBeanName) {
-        PropertyConfig pc = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+        PropertyConfig pc = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
 
         if (hasJoinTableColumnNameMapping(pc)) {
             return pc.getJoinTable().getColumn().getName();

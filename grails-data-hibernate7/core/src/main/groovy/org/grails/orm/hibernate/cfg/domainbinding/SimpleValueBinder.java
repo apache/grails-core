@@ -69,7 +69,7 @@ public class SimpleValueBinder {
             mapping = persistentEntity.getMappedForm();
         }
         
-        final String typeName = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName(mapping) : null;
+        final String typeName = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName() : null;
         if (typeName == null) {
             Class<?> type = property.getType();
             if (type != null) {

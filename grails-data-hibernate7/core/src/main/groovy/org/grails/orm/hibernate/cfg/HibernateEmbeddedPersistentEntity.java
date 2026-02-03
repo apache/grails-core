@@ -12,7 +12,7 @@ public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<
 
     @Override
     public GrailsHibernatePersistentProperty getIdentity() {
-        return (GrailsHibernatePersistentProperty) super.getIdentity();
+        return super.getIdentity() instanceof GrailsHibernatePersistentProperty ghpp ? ghpp : null;
     }
 
     @Override
@@ -22,7 +22,7 @@ public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<
 
     @Override
     public GrailsHibernatePersistentProperty getVersion() {
-        return (GrailsHibernatePersistentProperty) super.getVersion();
+        return super.getVersion() instanceof GrailsHibernatePersistentProperty ghpp ? ghpp : null;
     }
 
     @Override

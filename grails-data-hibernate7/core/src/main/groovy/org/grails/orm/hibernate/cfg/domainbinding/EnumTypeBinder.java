@@ -39,16 +39,16 @@ public class EnumTypeBinder {
 
     private static final Logger LOG = LoggerFactory.getLogger(EnumTypeBinder.class);
 
-    public void bindEnumType(PersistentProperty property, Class<?> propertyType, SimpleValue simpleValue, String columnName) {
-        PropertyConfig pc = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+    public void bindEnumType(GrailsHibernatePersistentProperty property, Class<?> propertyType, SimpleValue simpleValue, String columnName) {
+        PropertyConfig pc = property.getMappedForm();
         Mapping ownerMapping = null;
-        if (property.getOwner() instanceof GrailsHibernatePersistentEntity) {
-            ownerMapping = ((GrailsHibernatePersistentEntity) property.getOwner()).getMappedForm();
+        if (property.getOwner() instanceof GrailsHibernatePersistentEntity persistentEntity) {
+            ownerMapping = persistentEntity.getMappedForm();
         }
         String enumType = pc.getEnumType();
         Properties enumProperties = new Properties();
         enumProperties.put(ENUM_CLASS_PROP, propertyType.getName());
-        String typeName = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName() : null;
+        String typeName = property.getTypeName(ownerMapping);
         if (typeName != null) {
             simpleValue.setTypeName(typeName);
         } else {
