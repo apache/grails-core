@@ -31,7 +31,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.ClassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.EnumTypeBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.NamingStrategyProvider;
-import org.grails.orm.hibernate.cfg.domainbinding.PersistentPropertyToPropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.*;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
@@ -91,7 +90,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.Optional;
 import java.util.StringTokenizer;
@@ -262,7 +260,7 @@ public class GrailsDomainBinder
         String type = getIndexColumnType(property, STRING_TYPE);
         String columnName1 = getIndexColumnName(property, sessionFactoryBeanName);
         new SimpleValueColumnBinder().bindSimpleValue(value, type, columnName1, true);
-        PropertyConfig mappedForm = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
+        PropertyConfig mappedForm = ((GrailsHibernatePersistentProperty) property).getMappedForm();
         if (mappedForm.getIndexColumn() != null) {
             Column column = new SimpleValueColumnFetcher().getColumnForSimpleValue(value);
             ColumnConfig columnConfig = getSingleColumnConfig(mappedForm.getIndexColumn());
@@ -411,7 +409,7 @@ public class GrailsDomainBinder
                     + " -> "
                     + collection.getCollectionTable().getName());
 
-        PropertyConfig propConfig = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
+        PropertyConfig propConfig = ((GrailsHibernatePersistentProperty) property).getMappedForm();
 
         PersistentEntity referenced = property.getAssociatedEntity();
         if (StringUtils.hasText(propConfig.getSort())) {
@@ -753,7 +751,7 @@ public class GrailsDomainBinder
                 if (joinColumnMappingOptional.isPresent()) {
                     Column column = new SimpleValueColumnFetcher().getColumnForSimpleValue(element);
                     ColumnConfig columnConfig = joinColumnMappingOptional.get();
-                    final PropertyConfig mappedForm = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
+                    final PropertyConfig mappedForm = ((GrailsHibernatePersistentProperty) property).getMappedForm();
                     new ColumnConfigToColumnBinder().bindColumnConfigToColumn(column, columnConfig, mappedForm);
                 }
             }
@@ -791,7 +789,7 @@ public class GrailsDomainBinder
      * @param manyToOne The inverse side
      */
     private void bindUnidirectionalOneToManyInverseValues(ToMany property, ManyToOne manyToOne) {
-        PropertyConfig config = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
+        PropertyConfig config = ((GrailsHibernatePersistentProperty) property).getMappedForm();
         manyToOne.setIgnoreNotFound(config.getIgnoreNotFound());
         final FetchMode fetch = config.getFetchMode();
         if(!fetch.equals(FetchMode.JOIN)) {
@@ -985,7 +983,7 @@ public class GrailsDomainBinder
         String propertyName = getNameForPropertyAndPath(property, path);
         collection.setRole(qualify(property.getOwner().getName(), propertyName));
 
-        PropertyConfig pc = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
+        PropertyConfig pc = ((GrailsHibernatePersistentProperty) property).getMappedForm();
         // configure eager fetching
         final FetchMode fetchMode = pc.getFetchMode();
         if (fetchMode == FetchMode.JOIN) {
@@ -1056,7 +1054,7 @@ public class GrailsDomainBinder
                                        Collection collection, Table ownerTable, String sessionFactoryBeanName) {
 
         String owningTableSchema = ownerTable.getSchema();
-        PropertyConfig config = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
+        PropertyConfig config = ((GrailsHibernatePersistentProperty) property).getMappedForm();
         JoinTable jt = config.getJoinTable();
 
         String s = new TableForManyCalculator(namingStrategy).calculateTableForMany(property, sessionFactoryBeanName);
@@ -1489,33 +1487,32 @@ public class GrailsDomainBinder
     private void createClassProperties(@Nonnull GrailsHibernatePersistentEntity domainClass, PersistentClass persistentClass,
                                          @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
 
-        Mapping gormMapping = domainClass.getMappedForm();
-        Table table = persistentClass.getTable();
-        table.setComment(gormMapping.getComment());
+
 
         for (GrailsHibernatePersistentProperty currentGrailsProp : domainClass.getPersistentPropertiesToBind()) {
-            bindProperty(persistentClass, mappings, sessionFactoryBeanName, currentGrailsProp, table, gormMapping);
+            bindProperty(persistentClass, mappings, sessionFactoryBeanName, currentGrailsProp);
         }
 
-        new NaturalIdentifierBinder().bindNaturalIdentifier(gormMapping, persistentClass);
+        new NaturalIdentifierBinder().bindNaturalIdentifier(domainClass.getMappedForm(), persistentClass);
     }
 
     private void bindProperty(PersistentClass persistentClass
             , @NonNull InFlightMetadataCollector mappings
             , String sessionFactoryBeanName
-            , @Nonnull  GrailsHibernatePersistentProperty currentGrailsProp
-            , Table table
-            , Mapping gormMapping) {
+            , @Nonnull  GrailsHibernatePersistentProperty currentGrailsProp) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("[GrailsDomainBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
         }
+        Mapping gormMapping =  currentGrailsProp.getHibernateOwner().getMappedForm();
+        Table table = persistentClass.getTable();
+        table.setComment(gormMapping.getComment());
 
         Value value = null;
 
         // see if it's a collection type
         CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
 
-        Class<?> userType = getUserType(currentGrailsProp);
+        Class<?> userType = currentGrailsProp.getUserType();
 
         // 1. Create Value
         if (userType != null && !UserCollectionType.class.isAssignableFrom(userType)) {
@@ -1623,39 +1620,16 @@ public class GrailsDomainBinder
     }
 
     private String getIndexColumnName(PersistentProperty property, String sessionFactoryBeanName) {
-        PropertyConfig pc = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
+        PropertyConfig pc = ((GrailsHibernatePersistentProperty) property).getMappedForm();
         if (pc.getIndexColumn() != null && pc.getIndexColumn().getColumn() != null) {
             return pc.getIndexColumn().getColumn();
         }
         return getNamingStrategy().resolveColumnName(property.getName()) + UNDERSCORE + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
     }
 
-    private Class<?> getUserType(PersistentProperty currentGrailsProp) {
-        Class<?> userType = null;
-        PropertyConfig config = new PersistentPropertyToPropertyConfig().toPropertyConfig(currentGrailsProp);
-        Object typeObj = config.getType();
-        if (typeObj instanceof Class<?>) {
-            userType = (Class<?>)typeObj;
-        } else if (typeObj != null) {
-            String typeName = typeObj.toString();
-            try {
-                userType = Class.forName(typeName, true, Thread.currentThread().getContextClassLoader());
-            } catch (ClassNotFoundException e) {
-                // only print a warning if the user type is in a package this excludes basic
-                // types like string, int etc.
-                if (typeName.indexOf(".")>-1) {
-                    if (LOG.isWarnEnabled()) {
-                        LOG.warn("UserType not found ", e);
-                    }
-                }
-            }
-        }
-        return userType;
-    }
-
     private String getIndexColumnType(@Nonnull PersistentProperty property, String defaultType) {
 
-            PropertyConfig pc = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
+        PropertyConfig pc = ((GrailsHibernatePersistentProperty) property).getMappedForm();
 
             if (pc.getIndexColumn() != null && pc.getIndexColumn().getType() != null) {
 
@@ -1673,7 +1647,7 @@ public class GrailsDomainBinder
         }
 
     private String getMapElementName(PersistentProperty property, String sessionFactoryBeanName) {
-        PropertyConfig pc = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
+        PropertyConfig pc = ((GrailsHibernatePersistentProperty) property).getMappedForm();
 
         if (hasJoinTableColumnNameMapping(pc)) {
             return pc.getJoinTable().getColumn().getName();

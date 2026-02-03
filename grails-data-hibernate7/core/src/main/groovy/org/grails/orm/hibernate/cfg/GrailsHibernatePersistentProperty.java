@@ -18,4 +18,24 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
                 .map(typeObj -> typeObj instanceof Class<?> clazz ? clazz.getName() : typeObj.toString())
                 .orElseGet(() -> mapping != null ? mapping.getTypeName(getType()) : null);
     }
+
+    default HibernatePersistentEntity getHibernateOwner() {
+        return (HibernatePersistentEntity) getOwner();
+    }
+
+    default Class<?> getUserType() {
+        Object typeObj = getMappedForm().getType();
+        Class<?> userType = null;
+        if (typeObj instanceof Class<?>) {
+            userType = (Class<?>)typeObj;
+        } else if (typeObj != null) {
+            String typeName = typeObj.toString();
+            try {
+                userType = Class.forName(typeName, true, Thread.currentThread().getContextClassLoader());
+            } catch (ClassNotFoundException e) {
+
+            }
+        }
+        return userType;
+    };
 }

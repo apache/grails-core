@@ -3,6 +3,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -16,22 +17,20 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
     def "when ColumnConfig is null and mapping has explicit column then it is used"() {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def defaultColumnFetcher = Mock(DefaultColumnNameFetcher)
         def fetcher = new ColumnNameForPropertyAndPathFetcher(
                 namingStrategy,
-                propToConfig,
                 defaultColumnFetcher,
                 backticksRemover
         )
 
-        def grailsProp = Mock(PersistentProperty)
+        def grailsProp = Mock(GrailsHibernatePersistentProperty)
         def owner = Mock(PersistentEntity)
         def mapping = Mock(Mapping)
         def pc = Mock(PropertyConfig)
 
         grailsProp.supportsJoinColumnMapping() >> false
-        propToConfig.toPropertyConfig(grailsProp) >> pc
+        grailsProp.getMappedForm() >> pc
         pc.getColumn() >> "explicit_col"
 
         when:
@@ -44,23 +43,21 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
     def "when ColumnConfig provided and join key mapping exists then join key name is used"() {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def defaultColumnFetcher = Mock(DefaultColumnNameFetcher)
         def fetcher = new ColumnNameForPropertyAndPathFetcher(
                 namingStrategy,
-                propToConfig,
                 defaultColumnFetcher,
                 backticksRemover
         )
 
-        def grailsProp = Mock(PersistentProperty)
+        def grailsProp = Mock(GrailsHibernatePersistentProperty)
         def providedColumn = new ColumnConfig(name: "ignored_when_join_key")
         def pc = Mock(PropertyConfig)
         def joinTable = Mock(org.grails.orm.hibernate.cfg.JoinTable)
         def key = new ColumnConfig(name: "join_key_name")
 
         grailsProp.supportsJoinColumnMapping() >> true
-        propToConfig.toPropertyConfig(grailsProp) >> pc
+        grailsProp.getMappedForm() >> pc
         pc.hasJoinKeyMapping() >> true
         pc.getJoinTable() >> joinTable
         joinTable.getKey() >> key
@@ -76,11 +73,9 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
     def "when no explicit column then builds from path '#path' and default column '#defaultCol' with backticks removed"() {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def defaultColumnFetcher = Mock(DefaultColumnNameFetcher)
         def fetcher = new ColumnNameForPropertyAndPathFetcher(
                 namingStrategy,
-                propToConfig,
                 defaultColumnFetcher,
                 backticksRemover
         )
@@ -108,11 +103,9 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
     def "when path is empty falls back to default column name only"() {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def defaultColumnFetcher = Mock(DefaultColumnNameFetcher)
         def fetcher = new ColumnNameForPropertyAndPathFetcher(
                 namingStrategy,
-                propToConfig,
                 defaultColumnFetcher,
                 backticksRemover
         )

@@ -1,10 +1,11 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import org.grails.datastore.mapping.model.PersistentEntity
+
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.ManyToMany
 import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -18,7 +19,6 @@ class ColumnBinderSpec extends Specification {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
@@ -28,7 +28,6 @@ class ColumnBinderSpec extends Specification {
         def binder = new ColumnBinder(
 
                 columnNameFetcher,
-                propToConfig,
                 stringBinder,
                 numericBinder,
                 keyCreator,
@@ -36,7 +35,7 @@ class ColumnBinderSpec extends Specification {
                 indexBinder
         )
 
-        def prop = Mock(ManyToMany)
+        def prop = Mock(ManyToMany, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def owner = Mock(GrailsHibernatePersistentEntity)
         def mappedForm = Mock(PropertyConfig)
         def column = new Column()
@@ -48,7 +47,7 @@ class ColumnBinderSpec extends Specification {
         prop.isNullable() >> false
         prop.getOwner() >> owner
         owner.isRoot() >> true // skip subclass nullable logic
-        propToConfig.toPropertyConfig(prop) >> mappedForm
+        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >> mappedForm
         mappedForm.isUnique() >> false
         mappedForm.isUniqueWithinGroup() >> false
 
@@ -68,7 +67,6 @@ class ColumnBinderSpec extends Specification {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
@@ -78,7 +76,6 @@ class ColumnBinderSpec extends Specification {
         def binder = new ColumnBinder(
 
                 columnNameFetcher,
-                propToConfig,
                 stringBinder,
                 numericBinder,
                 keyCreator,
@@ -86,7 +83,7 @@ class ColumnBinderSpec extends Specification {
                 indexBinder
         )
 
-        def prop = Mock(PersistentProperty)
+        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def parentProp = Mock(PersistentProperty)
         def owner = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
@@ -105,7 +102,7 @@ class ColumnBinderSpec extends Specification {
         owner.isRoot() >> false
         owner.getMappedForm() >> mapping
         mapping.getTablePerHierarchy() >> true // forces nullable true for subclass
-        propToConfig.toPropertyConfig(prop) >>> [propertyConfig, propertyConfig] // called twice in code
+        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >>> [propertyConfig, propertyConfig] // called twice in code
         // numeric constraints applied
         // unique settings
         propertyConfig.isUnique() >> true
@@ -132,7 +129,6 @@ class ColumnBinderSpec extends Specification {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
@@ -142,7 +138,6 @@ class ColumnBinderSpec extends Specification {
         def binder = new ColumnBinder(
 
                 columnNameFetcher,
-                propToConfig,
                 stringBinder,
                 numericBinder,
                 keyCreator,
@@ -150,7 +145,7 @@ class ColumnBinderSpec extends Specification {
                 indexBinder
         )
 
-        def prop = Mock(org.grails.datastore.mapping.model.types.OneToOne)
+        def prop = Mock(org.grails.datastore.mapping.model.types.OneToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def inverse = Mock(org.grails.datastore.mapping.model.types.Association)
         def owner = Mock(GrailsHibernatePersistentEntity)
         def mappedForm = Mock(PropertyConfig)
@@ -167,7 +162,7 @@ class ColumnBinderSpec extends Specification {
         inverse.isHasOne() >> true
         prop.getOwner() >> owner
         owner.isRoot() >> true
-        propToConfig.toPropertyConfig(prop) >> mappedForm
+        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >> mappedForm
         mappedForm.isUnique() >> false
         mappedForm.isUniqueWithinGroup() >> false
 
@@ -187,7 +182,6 @@ class ColumnBinderSpec extends Specification {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
@@ -197,7 +191,6 @@ class ColumnBinderSpec extends Specification {
         def binder = new ColumnBinder(
 
                 columnNameFetcher,
-                propToConfig,
                 stringBinder,
                 numericBinder,
                 keyCreator,
@@ -205,7 +198,7 @@ class ColumnBinderSpec extends Specification {
                 indexBinder
         )
 
-        def prop = Mock(PersistentProperty)
+        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def owner = Mock(GrailsHibernatePersistentEntity)
         def propertyConfig = Mock(PropertyConfig)
         def column = new Column("test")
@@ -217,7 +210,7 @@ class ColumnBinderSpec extends Specification {
         prop.isNullable() >> true
         prop.getOwner() >> owner
         owner.isRoot() >> true
-        propToConfig.toPropertyConfig(prop) >>> [propertyConfig, propertyConfig]
+        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >>> [propertyConfig, propertyConfig]
         propertyConfig.isUnique() >> false
         propertyConfig.isUniqueWithinGroup() >> false
 
@@ -237,7 +230,6 @@ class ColumnBinderSpec extends Specification {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
@@ -247,7 +239,6 @@ class ColumnBinderSpec extends Specification {
         def binder = new ColumnBinder(
 
                 columnNameFetcher,
-                propToConfig,
                 stringBinder,
                 numericBinder,
                 keyCreator,
@@ -255,7 +246,7 @@ class ColumnBinderSpec extends Specification {
                 indexBinder
         )
 
-        def prop = Mock(org.grails.datastore.mapping.model.types.OneToOne)
+        def prop = Mock(org.grails.datastore.mapping.model.types.OneToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def inverse = Mock(org.grails.datastore.mapping.model.types.Association)
         def owner = Mock(GrailsHibernatePersistentEntity)
         def mappedForm = Mock(PropertyConfig)
@@ -271,7 +262,7 @@ class ColumnBinderSpec extends Specification {
         inverse.isHasOne() >> false
         prop.getOwner() >> owner
         owner.isRoot() >> true
-        propToConfig.toPropertyConfig(prop) >> mappedForm
+        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >> mappedForm
         mappedForm.isUnique() >> false
         mappedForm.isUniqueWithinGroup() >> false
 
@@ -291,7 +282,6 @@ class ColumnBinderSpec extends Specification {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
@@ -301,7 +291,6 @@ class ColumnBinderSpec extends Specification {
         def binder = new ColumnBinder(
 
                 columnNameFetcher,
-                propToConfig,
                 stringBinder,
                 numericBinder,
                 keyCreator,
@@ -309,7 +298,7 @@ class ColumnBinderSpec extends Specification {
                 indexBinder
         )
 
-        def prop = Mock(org.grails.datastore.mapping.model.types.ToOne)
+        def prop = Mock(org.grails.datastore.mapping.model.types.ToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def owner = Mock(GrailsHibernatePersistentEntity)
         def mappedForm = Mock(PropertyConfig)
         def column = new Column()
@@ -321,7 +310,7 @@ class ColumnBinderSpec extends Specification {
         prop.isCircular() >> true
         prop.getOwner() >> owner
         owner.isRoot() >> true
-        propToConfig.toPropertyConfig(prop) >> mappedForm
+        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >> mappedForm
         mappedForm.isUnique() >> false
         mappedForm.isUniqueWithinGroup() >> false
 
@@ -341,7 +330,6 @@ class ColumnBinderSpec extends Specification {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
@@ -351,7 +339,6 @@ class ColumnBinderSpec extends Specification {
         def binder = new ColumnBinder(
 
                 columnNameFetcher,
-                propToConfig,
                 stringBinder,
                 numericBinder,
                 keyCreator,
@@ -359,7 +346,7 @@ class ColumnBinderSpec extends Specification {
                 indexBinder
         )
 
-        def prop = Mock(org.grails.datastore.mapping.model.types.Association)
+        def prop = Mock(org.grails.datastore.mapping.model.types.Association, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def owner = Mock(GrailsHibernatePersistentEntity)
         def mappedForm = Mock(PropertyConfig)
         def column = new Column()
@@ -372,7 +359,7 @@ class ColumnBinderSpec extends Specification {
         owner.isRoot() >> true
         // ensure we don't hit special branches
         // Spock will not have methods isBidirectional, isOwningSide on Association base; not needed since code checks only if OneToOne or ToOne/circular
-        propToConfig.toPropertyConfig(prop) >> mappedForm
+        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >> mappedForm
         mappedForm.isUnique() >> false
         mappedForm.isUniqueWithinGroup() >> false
 
@@ -392,7 +379,6 @@ class ColumnBinderSpec extends Specification {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
@@ -402,7 +388,6 @@ class ColumnBinderSpec extends Specification {
         def binder = new ColumnBinder(
 
                 columnNameFetcher,
-                propToConfig,
                 stringBinder,
                 numericBinder,
                 keyCreator,
@@ -410,7 +395,7 @@ class ColumnBinderSpec extends Specification {
                 indexBinder
         )
 
-        def prop = Mock(PersistentProperty)
+        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def parentProp = Mock(PersistentProperty)
         def owner = Mock(GrailsHibernatePersistentEntity)
         def propertyConfig = Mock(PropertyConfig)
@@ -423,7 +408,7 @@ class ColumnBinderSpec extends Specification {
         parentProp.isNullable() >> false
         prop.getOwner() >> owner
         owner.isRoot() >> true
-        propToConfig.toPropertyConfig(prop) >>> [propertyConfig, propertyConfig]
+        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >>> [propertyConfig, propertyConfig]
         propertyConfig.isUnique() >> false
         propertyConfig.isUniqueWithinGroup() >> false
 
@@ -443,7 +428,6 @@ class ColumnBinderSpec extends Specification {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
@@ -453,7 +437,6 @@ class ColumnBinderSpec extends Specification {
         def binder = new ColumnBinder(
 
                 columnNameFetcher,
-                propToConfig,
                 stringBinder,
                 numericBinder,
                 keyCreator,
@@ -461,7 +444,7 @@ class ColumnBinderSpec extends Specification {
                 indexBinder
         )
 
-        def prop = Mock(PersistentProperty)
+        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def parentProp = Mock(PersistentProperty)
         def owner = Mock(GrailsHibernatePersistentEntity)
         def propertyConfig = Mock(PropertyConfig)
@@ -474,7 +457,7 @@ class ColumnBinderSpec extends Specification {
         parentProp.isNullable() >> true
         prop.getOwner() >> owner
         owner.isRoot() >> true
-        propToConfig.toPropertyConfig(prop) >>> [propertyConfig, propertyConfig]
+        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >>> [propertyConfig, propertyConfig]
         propertyConfig.isUnique() >> false
         propertyConfig.isUniqueWithinGroup() >> false
 
@@ -492,7 +475,6 @@ class ColumnBinderSpec extends Specification {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
@@ -502,7 +484,6 @@ class ColumnBinderSpec extends Specification {
         def binder = new ColumnBinder(
 
                 columnNameFetcher,
-                propToConfig,
                 stringBinder,
                 numericBinder,
                 keyCreator,
@@ -510,7 +491,7 @@ class ColumnBinderSpec extends Specification {
                 indexBinder
         )
 
-        def prop = Mock(PersistentProperty)
+        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def parentProp = Mock(PersistentProperty)
         def owner = Mock(GrailsHibernatePersistentEntity)
         def propertyConfig = Mock(PropertyConfig)
@@ -523,7 +504,7 @@ class ColumnBinderSpec extends Specification {
         parentProp.isNullable() >> false
         prop.getOwner() >> owner
         owner.isRoot() >> true
-        propToConfig.toPropertyConfig(prop) >>> [propertyConfig, propertyConfig]
+        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >>> [propertyConfig, propertyConfig]
         propertyConfig.isUnique() >> false
         propertyConfig.isUniqueWithinGroup() >> false
 
@@ -541,7 +522,6 @@ class ColumnBinderSpec extends Specification {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
@@ -551,7 +531,6 @@ class ColumnBinderSpec extends Specification {
         def binder = new ColumnBinder(
 
                 columnNameFetcher,
-                propToConfig,
                 stringBinder,
                 numericBinder,
                 keyCreator,
@@ -559,7 +538,7 @@ class ColumnBinderSpec extends Specification {
                 indexBinder
         )
 
-        def prop = Mock(PersistentProperty)
+        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def owner = Mock(GrailsHibernatePersistentEntity)
         def column = new Column("test")
         def table = new Table()
@@ -574,7 +553,7 @@ class ColumnBinderSpec extends Specification {
         when:
         // Unique true, withinGroup false => unique true
         def pc1 = Mock(PropertyConfig)
-        propToConfig.toPropertyConfig(prop) >>> [pc1, pc1]
+        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >>> [pc1, pc1]
         pc1.isUnique() >> true
         pc1.isUniqueWithinGroup() >> false
         binder.bindColumn(prop, null, column, null, null, table)
@@ -588,7 +567,6 @@ class ColumnBinderSpec extends Specification {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
@@ -598,7 +576,6 @@ class ColumnBinderSpec extends Specification {
         def binder = new ColumnBinder(
 
                 columnNameFetcher,
-                propToConfig,
                 stringBinder,
                 numericBinder,
                 keyCreator,
@@ -606,7 +583,7 @@ class ColumnBinderSpec extends Specification {
                 indexBinder
         )
 
-        def prop = Mock(PersistentProperty)
+        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def owner = Mock(GrailsHibernatePersistentEntity)
         def column = new Column("test")
         def table = new Table()
@@ -623,7 +600,7 @@ class ColumnBinderSpec extends Specification {
         // Unique true, withinGroup true => unique false
         def column2 = new Column("test2")
         def pc2 = Mock(PropertyConfig)
-        propToConfig.toPropertyConfig(prop) >> pc2
+        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >> pc2
         pc2.isUnique() >> true
         pc2.isUniqueWithinGroup() >> true
         binder.bindColumn(prop, null, column2, null, null, table)
@@ -637,7 +614,6 @@ class ColumnBinderSpec extends Specification {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
@@ -647,7 +623,6 @@ class ColumnBinderSpec extends Specification {
         def binder = new ColumnBinder(
 
                 columnNameFetcher,
-                propToConfig,
                 stringBinder,
                 numericBinder,
                 keyCreator,
@@ -655,7 +630,7 @@ class ColumnBinderSpec extends Specification {
                 indexBinder
         )
 
-        def prop = Mock(PersistentProperty)
+        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def owner = Mock(GrailsHibernatePersistentEntity)
         def column = new Column("test")
         def table = new Table()
@@ -672,7 +647,7 @@ class ColumnBinderSpec extends Specification {
         // Unique false => unique false
         def column3 = new Column("test3")
         def pc3 = Mock(PropertyConfig)
-        propToConfig.toPropertyConfig(prop) >>> [pc3, pc3]
+        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >>> [pc3, pc3]
         pc3.isUnique() >> false
         pc3.isUniqueWithinGroup() >> false
         binder.bindColumn(prop, null, column3, null, null, table)
@@ -685,7 +660,6 @@ class ColumnBinderSpec extends Specification {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def propToConfig = Mock(PersistentPropertyToPropertyConfig)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
@@ -695,7 +669,6 @@ class ColumnBinderSpec extends Specification {
         def binder = new ColumnBinder(
 
                 columnNameFetcher,
-                propToConfig,
                 stringBinder,
                 numericBinder,
                 keyCreator,
@@ -703,7 +676,7 @@ class ColumnBinderSpec extends Specification {
                 indexBinder
         )
 
-        def prop = Mock(PersistentProperty)
+        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def owner = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
         def propertyConfig = Mock(PropertyConfig)
@@ -718,7 +691,7 @@ class ColumnBinderSpec extends Specification {
         owner.isRoot() >> false
         owner.getMappedForm() >> mapping
         mapping.getTablePerHierarchy() >> false
-        propToConfig.toPropertyConfig(prop) >>> [propertyConfig, propertyConfig]
+        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >>> [propertyConfig, propertyConfig]
         propertyConfig.isUnique() >> false
         propertyConfig.isUniqueWithinGroup() >> false
 

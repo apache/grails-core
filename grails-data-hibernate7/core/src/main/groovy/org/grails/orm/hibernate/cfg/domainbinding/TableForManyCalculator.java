@@ -8,6 +8,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.datastore.mapping.model.types.ToMany;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -21,7 +22,6 @@ public class TableForManyCalculator {
     private final BackticksRemover backticksRemover;
     private final ShouldCollectionBindWithJoinColumn shouldCollectionBindWithJoinColumn;
     private final BackTigsTrimmer backTigsTrimmer;
-    private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
 
     public TableForManyCalculator(PersistentEntityNamingStrategy namingStrategy) {
         this.namingStrategy = namingStrategy;
@@ -29,21 +29,18 @@ public class TableForManyCalculator {
         backticksRemover = new BackticksRemover();
         shouldCollectionBindWithJoinColumn = new ShouldCollectionBindWithJoinColumn();
         backTigsTrimmer = new BackTigsTrimmer();
-        persistentPropertyToPropertyConfig = new PersistentPropertyToPropertyConfig();
     }
 
     protected TableForManyCalculator(PersistentEntityNamingStrategy namingStrategy
              , TableNameFetcher tableNameFetcher
             , BackticksRemover backticksRemover
     , ShouldCollectionBindWithJoinColumn shouldCollectionBindWithJoinColumn
-    , BackTigsTrimmer backTigsTrimmer
-    , PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig) {
+    , BackTigsTrimmer backTigsTrimmer) {
         this.namingStrategy = namingStrategy;
         this.tableNameFetcher = tableNameFetcher;
         this.backticksRemover = backticksRemover;
         this.shouldCollectionBindWithJoinColumn = shouldCollectionBindWithJoinColumn;
         this.backTigsTrimmer = backTigsTrimmer;
-        this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
     }
 
 
@@ -56,7 +53,7 @@ public class TableForManyCalculator {
     public String calculateTableForMany(ToMany property, String sessionFactoryBeanName) {
         String propertyColumnName = namingStrategy.resolveColumnName(property.getName());
         //fix for GRAILS-5895
-        PropertyConfig config = persistentPropertyToPropertyConfig.toPropertyConfig(property);
+        PropertyConfig config = ((GrailsHibernatePersistentProperty) property).getMappedForm();
         JoinTable jt = config.getJoinTable();
         boolean hasJoinTableMapping = jt != null && jt.getName() != null;
         PersistentEntity domainClass1 = property.getOwner();

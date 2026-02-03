@@ -6,21 +6,23 @@ import org.hibernate.FetchMode;
 import org.hibernate.mapping.ManyToOne;
 
 import org.grails.datastore.mapping.model.types.Association;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 public class ManyToOneValuesBinder {
-    private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
+
+
+
+
 
     public ManyToOneValuesBinder() {
-        this.persistentPropertyToPropertyConfig = new PersistentPropertyToPropertyConfig();
+
     }
 
-    protected ManyToOneValuesBinder(PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig) {
-        this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
-    }
+
 
     public void bindManyToOneValues(Association property, ManyToOne manyToOne) {
-        PropertyConfig config = persistentPropertyToPropertyConfig.toPropertyConfig(property);
+        PropertyConfig config = ((GrailsHibernatePersistentProperty) property).getMappedForm();
 
         var fetchMode = Optional.ofNullable(config.getFetchMode()).orElse(FetchMode.DEFAULT);
         manyToOne.setFetchMode(fetchMode);

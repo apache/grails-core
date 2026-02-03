@@ -5,36 +5,29 @@ import org.hibernate.mapping.OneToOne;
 import org.hibernate.type.ForeignKeyDirection;
 
 import org.grails.datastore.mapping.model.types.Association;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 public class OneToOneBinder {
 
     private final PersistentEntityNamingStrategy namingStrategy;
-    private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
     private final SimpleValueBinder simpleValueBinder;
 
     public OneToOneBinder(PersistentEntityNamingStrategy namingStrategy) {
-        this(namingStrategy, new PersistentPropertyToPropertyConfig());
-    }
-
-    protected OneToOneBinder(PersistentEntityNamingStrategy namingStrategy, PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig) {
         this.namingStrategy = namingStrategy;
-        this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
-        this.simpleValueBinder = new SimpleValueBinder(namingStrategy, persistentPropertyToPropertyConfig);
+        this.simpleValueBinder = new SimpleValueBinder(namingStrategy);
     }
 
     protected OneToOneBinder(PersistentEntityNamingStrategy namingStrategy,
-                             PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig,
                              SimpleValueBinder simpleValueBinder) {
         this.namingStrategy = namingStrategy;
-        this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
         this.simpleValueBinder = simpleValueBinder;
     }
 
     public void bindOneToOne(final org.grails.datastore.mapping.model.types.OneToOne property, OneToOne oneToOne,
                               String path) {
-        PropertyConfig config = persistentPropertyToPropertyConfig.toPropertyConfig(property);
+        PropertyConfig config = ((GrailsHibernatePersistentProperty) property).getMappedForm();
         final Association otherSide = property.getInverseSide();
 
         final boolean hasOne = otherSide.isHasOne();

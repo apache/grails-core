@@ -5,6 +5,7 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.CompositeIdentity
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.mapping.SimpleValue
@@ -19,15 +20,14 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         def tableNameFetcher = Stub(TableNameFetcher)
         def namingStrategy = Stub(PersistentEntityNamingStrategy)
         def columnNameFetcher = Stub(DefaultColumnNameFetcher)
-        def propertyConfigConverter = Stub(PersistentPropertyToPropertyConfig)
         def backticksRemover = Stub(BackticksRemover)
         def simpleValueBinder = Mock(SimpleValueBinder) // Use Mock to verify interaction
 
         // Instantiate the binder with stubs
-        def binder = new CompositeIdentifierToManyToOneBinder(calculator, tableNameFetcher, namingStrategy, columnNameFetcher, propertyConfigConverter, backticksRemover, simpleValueBinder)
+        def binder = new CompositeIdentifierToManyToOneBinder(calculator, tableNameFetcher, namingStrategy, columnNameFetcher, backticksRemover, simpleValueBinder)
 
         // 2. Set up stubs for the method arguments
-        def association = Stub(ToOne)
+        def association = Stub(ToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def value = Stub(SimpleValue)
         def refDomainClass = Stub(PersistentEntity)
         def path = "/test"
@@ -39,7 +39,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
 
         // 3. Define the nested composite key scenario
         def propertyConfig = new PropertyConfig()
-        propertyConfigConverter.toPropertyConfig(association) >> propertyConfig
+        association.getMappedForm() >> propertyConfig
 
         calculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames) >> 2
 
@@ -65,7 +65,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         backticksRemover.apply(_) >> { String s -> s }
 
         when:
-        binder.bindCompositeIdentifierToManyToOne(association, value, compositeId, refDomainClass, path)
+        binder.bindCompositeIdentifierToManyToOne(association as ToOne, value, compositeId, refDomainClass, path)
 
         then:
         // 5. Verify the final generated column names
@@ -75,7 +75,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         finalColumns[1].getName() == "ref_table_nested_entity_col_part_b_col"
 
         and: // 6. Verify the call to the simple value binder
-        1 * simpleValueBinder.bindSimpleValue(association, null, value, path)
+        1 * simpleValueBinder.bindSimpleValue(association as PersistentProperty, null, value, path)
     }
 
     def "Test bindCompositeIdentifierToManyToOne when column count matches"() {
@@ -85,14 +85,13 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         def tableNameFetcher = Mock(TableNameFetcher)
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(DefaultColumnNameFetcher)
-        def propertyConfigConverter = Stub(PersistentPropertyToPropertyConfig)
         def backticksRemover = Mock(BackticksRemover)
         def simpleValueBinder = Mock(SimpleValueBinder)
 
-        def binder = new CompositeIdentifierToManyToOneBinder(calculator, tableNameFetcher, namingStrategy, columnNameFetcher, propertyConfigConverter, backticksRemover, simpleValueBinder)
+        def binder = new CompositeIdentifierToManyToOneBinder(calculator, tableNameFetcher, namingStrategy, columnNameFetcher, backticksRemover, simpleValueBinder)
 
         // 2. Set up arguments
-        def association = Stub(ToOne)
+        def association = Stub(ToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def value = Stub(SimpleValue)
         def compositeId = new CompositeIdentity()
         compositeId.setPropertyNames(["prop1", "prop2"] as String[])
@@ -103,13 +102,13 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         def propertyConfig = new PropertyConfig()
         propertyConfig.getColumns().add(new ColumnConfig())
         propertyConfig.getColumns().add(new ColumnConfig())
-        propertyConfigConverter.toPropertyConfig(association) >> propertyConfig
+        association.getMappedForm() >> propertyConfig
 
         // The calculated length is the same as the number of columns already in the config
         calculator.calculateForeignKeyColumnCount(refDomainClass, _ as String[]) >> 2
 
         when:
-        binder.bindCompositeIdentifierToManyToOne(association, value, compositeId, refDomainClass, path)
+        binder.bindCompositeIdentifierToManyToOne(association as ToOne, value, compositeId, refDomainClass, path)
 
         then:
         // 4. Verify the column name generation logic is skipped
@@ -119,6 +118,6 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         0 * backticksRemover._
 
         and: // 5. Verify the simple value binder is still called
-        1 * simpleValueBinder.bindSimpleValue(association, null, value, path)
+        1 * simpleValueBinder.bindSimpleValue(association as PersistentProperty, null, value, path)
     }
 }

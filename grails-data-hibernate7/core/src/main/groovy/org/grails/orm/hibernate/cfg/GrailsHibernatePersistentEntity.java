@@ -29,6 +29,8 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
 
     }
 
+
+
     boolean forGrailsDomainMapping(String dataSourceName);
 
     boolean usesConnectionSource(String dataSourceName);

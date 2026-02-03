@@ -1,5 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.TenantId
 import org.grails.orm.hibernate.cfg.ColumnConfig
@@ -8,22 +10,26 @@ import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
-import org.hibernate.id.enhanced.SequenceStyleGenerator
+
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.SimpleValue
 import spock.lang.Specification
 
 class SimpleValueBinderSpec extends Specification {
 
+    abstract static class TestTenantId extends TenantId<PropertyConfig> implements GrailsHibernatePersistentProperty {
+        TestTenantId(PersistentEntity owner, MappingContext context, String name, Class type) {
+            super(owner, context, name, type)
+        }
+    }
+
     def namingStrategy = Mock(PersistentEntityNamingStrategy)
     def columnConfigToColumnBinder = Mock(ColumnConfigToColumnBinder)
     def columnBinder = Mock(ColumnBinder)
-    def persistentPropertyToPropertyConfig = Mock(PersistentPropertyToPropertyConfig)
 
     def binder = new SimpleValueBinder(namingStrategy,
             columnConfigToColumnBinder,
-            columnBinder,
-            persistentPropertyToPropertyConfig)
+            columnBinder)
 
     def "sets type from provider when present and applies type params"() {
         given:
@@ -36,7 +42,7 @@ class SimpleValueBinderSpec extends Specification {
         def props = new Properties(); props.setProperty('p1','v1')
 
         // stubs
-        persistentPropertyToPropertyConfig.toPropertyConfig(prop) >> pc
+        prop.getMappedForm() >> pc
         prop.getOwner() >> owner
         owner.getMappedForm() >> mapping
         prop.getTypeName(mapping) >> "custom.Type"
@@ -71,7 +77,7 @@ class SimpleValueBinderSpec extends Specification {
         def sv = Mock(SimpleValue)
         sv.getTable() >> null
 
-        persistentPropertyToPropertyConfig.toPropertyConfig(prop) >> pc
+        prop.getMappedForm() >> pc
         prop.getOwner() >> owner
         owner.getMappedForm() >> mapping
         prop.getTypeName(mapping) >> null
@@ -94,7 +100,7 @@ class SimpleValueBinderSpec extends Specification {
     def "derived property adds no columns but adds formula, except TenantId"() {
         given:
         def prop = Mock(GrailsHibernatePersistentProperty)
-        def tenantProp = Mock(TenantId)
+        def tenantProp = Mock(TestTenantId)
         def owner = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
         def pc = Mock(PropertyConfig)
@@ -102,8 +108,8 @@ class SimpleValueBinderSpec extends Specification {
         def sv = Mock(SimpleValue)
         def sv2 = Mock(SimpleValue)
 
-        persistentPropertyToPropertyConfig.toPropertyConfig(prop) >> pc
-        persistentPropertyToPropertyConfig.toPropertyConfig(tenantProp) >> tenantPc
+        prop.getMappedForm() >> pc
+        tenantProp.getMappedForm() >> tenantPc
         prop.getOwner() >> owner
         tenantProp.getOwner() >> owner
         owner.getMappedForm() >> mapping
@@ -122,7 +128,7 @@ class SimpleValueBinderSpec extends Specification {
         0 * columnBinder.bindColumn(_, _, _, _, _, _)
 
         when:
-        binder.bindSimpleValue(tenantProp, null, sv2, null)
+        binder.bindSimpleValue(tenantProp as PersistentProperty, null, sv2, null)
 
         then:
         0 * sv2.addFormula(_)
@@ -142,7 +148,7 @@ class SimpleValueBinderSpec extends Specification {
         sv.getTable() >> null
         def genProps = new Properties(); genProps.setProperty('sequence','seq_name'); genProps.setProperty('foo','bar')
 
-        persistentPropertyToPropertyConfig.toPropertyConfig(prop) >> pc
+        prop.getMappedForm() >> pc
         prop.getOwner() >> owner
         owner.getMappedForm() >> mapping
         prop.getTypeName(mapping) >> 'Y'
@@ -174,7 +180,7 @@ class SimpleValueBinderSpec extends Specification {
         def sv = Mock(SimpleValue)
         sv.getTable() >> null
 
-        persistentPropertyToPropertyConfig.toPropertyConfig(prop) >> pc
+        prop.getMappedForm() >> pc
         prop.getOwner() >> owner
         owner.getMappedForm() >> mapping
         prop.getTypeName(mapping) >> 'Z'

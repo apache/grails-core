@@ -5,6 +5,7 @@ import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.hibernate.MappingException;
@@ -38,7 +39,7 @@ public class CascadeBehaviorFetcher {
     }
 
     private Optional<CascadeBehavior> getDefinedBehavior(PersistentProperty<?> grailsProperty) {
-        return Optional.ofNullable(new PersistentPropertyToPropertyConfig().toPropertyConfig(grailsProperty))
+        return Optional.ofNullable(((GrailsHibernatePersistentProperty) grailsProperty).getMappedForm())
                 .map(PropertyConfig::getCascade)
                 .map(CascadeBehavior::fromString);
     }

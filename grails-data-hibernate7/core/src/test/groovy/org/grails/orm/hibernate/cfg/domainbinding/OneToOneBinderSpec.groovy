@@ -3,6 +3,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.types.OneToOne as GormOneToOne
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.FetchMode
 import org.hibernate.mapping.OneToOne as HibernateOneToOne
@@ -15,11 +16,10 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
     @Subject
     OneToOneBinder binder
 
-    PersistentPropertyToPropertyConfig mockConfigReader = Mock(PersistentPropertyToPropertyConfig)
     SimpleValueBinder mockSimpleValueBinder = Mock(SimpleValueBinder)
 
     def setup() {
-        binder = new OneToOneBinder(getGrailsDomainBinder().getNamingStrategy(), mockConfigReader, mockSimpleValueBinder)
+        binder = new OneToOneBinder(getGrailsDomainBinder().getNamingStrategy(), mockSimpleValueBinder)
     }
 
     def "should bind one-to-one mapping with defaults"() {
@@ -28,10 +28,10 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         def ownerRoot = new RootClass(metadataBuildingContext)
         def hibernateOneToOne = new HibernateOneToOne(metadataBuildingContext, null, ownerRoot)
         
-        def gormOneToOne = GroovyMock(GormOneToOne)
-        def otherSide = GroovyMock(GormOneToOne)
-        def owner = GroovyMock(PersistentEntity)
-        def otherOwner = GroovyMock(PersistentEntity)
+        def gormOneToOne = Mock(GormOneToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
+        def otherSide = Mock(GormOneToOne)
+        def owner = Mock(PersistentEntity)
+        def otherOwner = Mock(PersistentEntity)
 
         gormOneToOne.getInverseSide() >> otherSide
         gormOneToOne.getName() >> "myOneToOne"
@@ -43,10 +43,10 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         
         otherOwner.getName() >> "OtherEntity"
 
-        mockConfigReader.toPropertyConfig(gormOneToOne) >> new PropertyConfig()
+        ((GrailsHibernatePersistentProperty)gormOneToOne).getMappedForm() >> new PropertyConfig()
 
         when:
-        binder.bindOneToOne(gormOneToOne, hibernateOneToOne, "")
+        binder.bindOneToOne(gormOneToOne as GormOneToOne, hibernateOneToOne, "")
 
         then:
         !hibernateOneToOne.isConstrained()
@@ -64,10 +64,10 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         def ownerRoot = new RootClass(metadataBuildingContext)
         def hibernateOneToOne = new HibernateOneToOne(metadataBuildingContext, null, ownerRoot)
         
-        def gormOneToOne = GroovyMock(GormOneToOne)
-        def otherSide = GroovyMock(GormOneToOne)
-        def owner = GroovyMock(PersistentEntity)
-        def otherOwner = GroovyMock(PersistentEntity)
+        def gormOneToOne = Mock(GormOneToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
+        def otherSide = Mock(GormOneToOne)
+        def owner = Mock(PersistentEntity)
+        def otherOwner = Mock(PersistentEntity)
 
         gormOneToOne.getInverseSide() >> otherSide
         gormOneToOne.getName() >> "myOneToOne"
@@ -79,11 +79,10 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         otherOwner.getName() >> "OtherEntity"
 
         def propertyConfig = new PropertyConfig()
-        mockConfigReader.toPropertyConfig(gormOneToOne) >> propertyConfig
-        mockConfigReader.toPropertyConfig(otherSide) >> propertyConfig // In case SimpleValueBinder needs it too
+        ((GrailsHibernatePersistentProperty)gormOneToOne).getMappedForm() >> propertyConfig
 
         when:
-        binder.bindOneToOne(gormOneToOne, hibernateOneToOne, "")
+        binder.bindOneToOne(gormOneToOne as GormOneToOne, hibernateOneToOne, "")
 
         then:
         hibernateOneToOne.isConstrained()
@@ -97,10 +96,10 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         def ownerRoot = new RootClass(metadataBuildingContext)
         def hibernateOneToOne = new HibernateOneToOne(metadataBuildingContext, null, ownerRoot)
         
-        def gormOneToOne = GroovyMock(GormOneToOne)
-        def otherSide = GroovyMock(GormOneToOne)
-        def owner = GroovyMock(PersistentEntity)
-        def otherOwner = GroovyMock(PersistentEntity)
+        def gormOneToOne = Mock(GormOneToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
+        def otherSide = Mock(GormOneToOne)
+        def owner = Mock(PersistentEntity)
+        def otherOwner = Mock(PersistentEntity)
         
         def propertyConfig = new PropertyConfig()
         propertyConfig.setFetch("join")
@@ -110,10 +109,10 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         otherSide.getOwner() >> otherOwner
         otherSide.isHasOne() >> false
         
-        mockConfigReader.toPropertyConfig(gormOneToOne) >> propertyConfig
+        ((GrailsHibernatePersistentProperty)gormOneToOne).getMappedForm() >> propertyConfig
 
         when:
-        binder.bindOneToOne(gormOneToOne, hibernateOneToOne, "")
+        binder.bindOneToOne(gormOneToOne as GormOneToOne, hibernateOneToOne, "")
 
         then:
         hibernateOneToOne.getFetchMode() == FetchMode.JOIN

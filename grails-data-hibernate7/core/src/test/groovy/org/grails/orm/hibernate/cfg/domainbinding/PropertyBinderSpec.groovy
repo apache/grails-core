@@ -2,8 +2,11 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.persistence.Entity
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.mapping.Property
 import spock.lang.Unroll
@@ -12,24 +15,27 @@ import org.hibernate.mapping.Value
 
 class PropertyBinderSpec extends HibernateGormDatastoreSpec {
 
-
+    abstract static class TestAssociation extends Association<PropertyConfig> implements GrailsHibernatePersistentProperty {
+        TestAssociation(PersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
+            super(owner, context, descriptor)
+        }
+    }
 
     @Unroll("test property binding for #propertyName")
     void "test property binding"() {
         given:
-        def persistentPropertyToPropertyConfig = Mock(PersistentPropertyToPropertyConfig)
         def cascadeBehaviorFetcher = Mock(CascadeBehaviorFetcher)
         def bidirectionalManyToOneWithListMapping = Mock(BidirectionalManyToOneWithListMapping)
-        def binder = new PropertyBinder(persistentPropertyToPropertyConfig, cascadeBehaviorFetcher, bidirectionalManyToOneWithListMapping)
+        def binder = new PropertyBinder(cascadeBehaviorFetcher, bidirectionalManyToOneWithListMapping)
 
-        def persistentProperty = Mock(PersistentProperty)
+        def persistentProperty = Mock(GrailsHibernatePersistentProperty)
         def property = new Property()
         def value = Mock(Value)
         property.setValue(value)
         def config = Mock(PropertyConfig)
 
         when:
-        persistentPropertyToPropertyConfig.toPropertyConfig(persistentProperty) >> config
+        persistentProperty.getMappedForm() >> config
         bidirectionalManyToOneWithListMapping.isBidirectionalManyToOneWithListMapping(persistentProperty, property) >> isBidirectional
         config.getInsertable() >> insertable
         config.getUpdatable() >> updateable
@@ -63,39 +69,38 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
 
     void "test cascade behavior binding"() {
         given:
-        def persistentPropertyToPropertyConfig = Mock(PersistentPropertyToPropertyConfig)
         def cascadeBehaviorFetcher = Mock(CascadeBehaviorFetcher)
         def bidirectionalManyToOneWithListMapping = Mock(BidirectionalManyToOneWithListMapping)
-        def binder = new PropertyBinder(persistentPropertyToPropertyConfig, cascadeBehaviorFetcher, bidirectionalManyToOneWithListMapping)
+        def binder = new PropertyBinder(cascadeBehaviorFetcher, bidirectionalManyToOneWithListMapping)
 
-        def association = Mock(Association)
+        def association = Mock(TestAssociation)
         def property = new Property()
         def config = Mock(PropertyConfig)
 
         when:
-        persistentPropertyToPropertyConfig.toPropertyConfig(association) >> config
+        association.getMappedForm() >> config
         config.getAccessType() >> AccessType.PROPERTY
-        cascadeBehaviorFetcher.getCascadeBehaviour(association) >> "all-delete-orphan"
-        binder.bindProperty(association, property)
+        cascadeBehaviorFetcher.getCascadeBehaviour(association as Association) >> "all-delete-orphan"
+        binder.bindProperty(association as Association, property)
 
         then:
         property.getCascade() == "all-delete-orphan"
     }
 
-    void "test property accessor name with real persistent property"() {
+    void "test property accessor name with mocked persistent property"() {
         given:
-        def persistentPropertyToPropertyConfig = Mock(PersistentPropertyToPropertyConfig)
         def cascadeBehaviorFetcher = Mock(CascadeBehaviorFetcher)
         def bidirectionalManyToOneWithListMapping = Mock(BidirectionalManyToOneWithListMapping)
-        def binder = new PropertyBinder(persistentPropertyToPropertyConfig, cascadeBehaviorFetcher, bidirectionalManyToOneWithListMapping)
+        def binder = new PropertyBinder(cascadeBehaviorFetcher, bidirectionalManyToOneWithListMapping)
 
-        def persistentProperty = createPersistentEntity(PropertyBinderSpecEntity).getPropertyByName("name")
+        def persistentProperty = Mock(GrailsHibernatePersistentProperty)
+        persistentProperty.getName() >> "name"
         def property = new Property()
-        def config = Mock(PropertyConfig)
+        def config = new PropertyConfig()
+        config.setAccessType(jakarta.persistence.AccessType.PROPERTY)
+        persistentProperty.getMappedForm() >> config
 
         when:
-        persistentPropertyToPropertyConfig.toPropertyConfig(persistentProperty) >> config
-        config.getAccessType() >> AccessType.PROPERTY
         binder.bindProperty(persistentProperty, property)
 
         then:

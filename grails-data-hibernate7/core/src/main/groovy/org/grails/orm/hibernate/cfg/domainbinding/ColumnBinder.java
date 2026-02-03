@@ -1,7 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
 import org.hibernate.mapping.Column;
-import org.hibernate.mapping.Formula;
 import org.hibernate.mapping.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +13,7 @@ import org.grails.datastore.mapping.model.types.OneToOne;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -23,7 +23,6 @@ public class ColumnBinder {
     private static final Logger LOG = LoggerFactory.getLogger(ColumnBinder.class);
 
     private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
-    private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
     private final StringColumnConstraintsBinder stringColumnConstraintsBinder;
     private final NumericColumnConstraintsBinder numericColumnConstraintsBinder;
     private final CreateKeyForProps createKeyForProps;
@@ -35,14 +34,12 @@ public class ColumnBinder {
      */
     public ColumnBinder(
             ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
-            PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig,
             StringColumnConstraintsBinder stringColumnConstraintsBinder,
             NumericColumnConstraintsBinder numericColumnConstraintsBinder,
             CreateKeyForProps createKeyForProps,
             UserTypeFetcher userTypeFetcher,
             IndexBinder indexBinder) {
         this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
-        this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
         this.stringColumnConstraintsBinder = stringColumnConstraintsBinder;
         this.numericColumnConstraintsBinder = numericColumnConstraintsBinder;
         this.createKeyForProps = createKeyForProps;
@@ -56,7 +53,6 @@ public class ColumnBinder {
     public ColumnBinder(PersistentEntityNamingStrategy namingStrategy) {
         this(
                 new ColumnNameForPropertyAndPathFetcher(namingStrategy),
-                new PersistentPropertyToPropertyConfig(),
                 new StringColumnConstraintsBinder(),
                 new NumericColumnConstraintsBinder(),
                 new CreateKeyForProps(new ColumnNameForPropertyAndPathFetcher(namingStrategy)),
@@ -70,7 +66,6 @@ public class ColumnBinder {
      */
     protected ColumnBinder() {
         this.columnNameForPropertyAndPathFetcher = null;
-        this.persistentPropertyToPropertyConfig = null;
         this.stringColumnConstraintsBinder = null;
         this.numericColumnConstraintsBinder = null;
         this.createKeyForProps = null;
@@ -126,10 +121,10 @@ public class ColumnBinder {
             // the column's length, precision, and scale
             Class<?> type = property.getType();
             if (type != null && (String.class.isAssignableFrom(type) || byte[].class.isAssignableFrom(type))) {
-                mappedForm = persistentPropertyToPropertyConfig.toPropertyConfig(property);
+                mappedForm = ((GrailsHibernatePersistentProperty) property).getMappedForm();
                 stringColumnConstraintsBinder.bindStringColumnConstraints(column, mappedForm);
             } else if (type != null && Number.class.isAssignableFrom(type)) {
-                mappedForm = persistentPropertyToPropertyConfig.toPropertyConfig(property);
+                mappedForm = ((GrailsHibernatePersistentProperty) property).getMappedForm();
                 numericColumnConstraintsBinder.bindNumericColumnConstraints(column, cc, mappedForm);
             }
         }
@@ -153,7 +148,7 @@ public class ColumnBinder {
         }
 
         // Apply uniqueness last to ensure it isn't overridden by downstream binders
-        PropertyConfig mappedFormFinal = persistentPropertyToPropertyConfig.toPropertyConfig(property);
+        PropertyConfig mappedFormFinal = ((GrailsHibernatePersistentProperty) property).getMappedForm();
         column.setUnique(mappedFormFinal.isUnique() && !mappedFormFinal.isUniqueWithinGroup());
 
         if (LOG.isDebugEnabled())

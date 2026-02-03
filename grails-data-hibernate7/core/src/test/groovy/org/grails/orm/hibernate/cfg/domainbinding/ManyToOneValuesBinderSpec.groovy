@@ -3,6 +3,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Association
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.FetchMode
 import org.hibernate.mapping.ManyToOne
@@ -14,11 +15,10 @@ class ManyToOneValuesBinderSpec extends HibernateGormDatastoreSpec {
     def "Test bindManyToOneValues with #scenario"() {
         given:
         // 1. Mock the dependency and use the protected constructor
-        def propertyConfigConverter = Mock(PersistentPropertyToPropertyConfig)
-        def binder = new ManyToOneValuesBinder(propertyConfigConverter)
+        def binder = new ManyToOneValuesBinder()
 
         // 2. Set up mocks for the method arguments
-        def association = Mock(Association)
+        def association = Mock(Association, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(),null)
         def associatedEntity = Mock(PersistentEntity)
 
@@ -31,12 +31,12 @@ class ManyToOneValuesBinderSpec extends HibernateGormDatastoreSpec {
         config.setIgnoreNotFound(testIgnoreNotFound)
 
         // 4. Define mock behaviors
-        propertyConfigConverter.toPropertyConfig(association) >> config
+        ((GrailsHibernatePersistentProperty)association).getMappedForm() >> config
         association.getAssociatedEntity() >> associatedEntity
         associatedEntity.getName() >> "AssociatedEntityName"
 
         when:
-        binder.bindManyToOneValues(association, manyToOne)
+        binder.bindManyToOneValues(association as Association, manyToOne)
 
         then:
         // 5. Verify that the correct values were set on the ManyToOne object

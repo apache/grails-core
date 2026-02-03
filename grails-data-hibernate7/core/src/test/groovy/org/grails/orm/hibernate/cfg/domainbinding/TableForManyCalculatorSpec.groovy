@@ -4,6 +4,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.model.types.ManyToMany
 import org.grails.datastore.mapping.model.types.ToMany
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.JoinTable
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -21,13 +22,12 @@ class TableForManyCalculatorSpec extends Specification {
         def backticksRemover = Stub(BackticksRemover)
         def shouldBind = Stub(ShouldCollectionBindWithJoinColumn)
         def trimmer = Stub(BackTigsTrimmer)
-        def configConverter = Stub(PersistentPropertyToPropertyConfig)
 
         // 2. Instantiate the calculator with mocks
-        def calculator = new TableForManyCalculator(namingStrategy, tableNameFetcher, backticksRemover, shouldBind, trimmer, configConverter)
+        def calculator = new TableForManyCalculator(namingStrategy, tableNameFetcher, backticksRemover, shouldBind, trimmer)
 
         // 3. Set up stubs for the property and entities
-        def property = Stub(mockClass)
+        def property = Stub(mockClass, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def ownerEntity = Stub(PersistentEntity)
         def associatedEntity = Stub(PersistentEntity)
         def config = new PropertyConfig()
@@ -46,19 +46,19 @@ class TableForManyCalculatorSpec extends Specification {
             ((ManyToMany)property).getInversePropertyName() >> "inverseProp"
         }
 
-        configConverter.toPropertyConfig(property) >> config
+        ((GrailsHibernatePersistentProperty)property).getMappedForm() >> config
         namingStrategy.resolveColumnName("myProp") >> "my_prop_col"
         namingStrategy.resolveColumnName("inverseProp") >> "inverse_prop_col"
         tableNameFetcher.getTableName(ownerEntity) >> "owner_table"
         tableNameFetcher.getTableName(associatedEntity) >> "associated_table"
-        shouldBind.apply(property) >> shouldBindWithJoinColumn
+        shouldBind.apply(property as ToMany) >> shouldBindWithJoinColumn
 
         // Make removers and trimmers pass through values for simplicity
         backticksRemover.apply(_) >> { String s -> s }
         trimmer.trimBackTigs(_) >> { String s -> s }
 
         when:
-        def result = calculator.calculateTableForMany(property, "default")
+        def result = calculator.calculateTableForMany(property as ToMany, "default")
 
         then:
         result == expectedTableName

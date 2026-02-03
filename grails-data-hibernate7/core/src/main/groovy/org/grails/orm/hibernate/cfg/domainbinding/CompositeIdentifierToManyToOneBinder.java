@@ -10,6 +10,7 @@ import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 
 import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.UNDERSCORE;
@@ -19,7 +20,6 @@ public class CompositeIdentifierToManyToOneBinder {
     private final TableNameFetcher tableNameFetcher;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final DefaultColumnNameFetcher defaultColumnNameFetcher;
-    private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
     private final BackticksRemover backticksRemover;
     private final SimpleValueBinder simpleValueBinder;
 
@@ -28,7 +28,6 @@ public class CompositeIdentifierToManyToOneBinder {
         this.tableNameFetcher = new TableNameFetcher(namingStrategy);
         this.namingStrategy = namingStrategy;
         this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy);
-        this.persistentPropertyToPropertyConfig = new PersistentPropertyToPropertyConfig();
         this.backticksRemover = new BackticksRemover();
         this.simpleValueBinder = new SimpleValueBinder(namingStrategy);
 
@@ -38,13 +37,11 @@ public class CompositeIdentifierToManyToOneBinder {
     , TableNameFetcher tableNameFetcher
     , PersistentEntityNamingStrategy namingStrategy
     , DefaultColumnNameFetcher defaultColumnNameFetcher
-    , PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig
     , BackticksRemover backticksRemover, SimpleValueBinder simpleValueBinder) {
         this.foreignKeyColumnCountCalculator = foreignKeyColumnCountCalculator;
         this.tableNameFetcher =tableNameFetcher;
         this.namingStrategy = namingStrategy;
         this.defaultColumnNameFetcher = defaultColumnNameFetcher;
-        this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
         this.backticksRemover = backticksRemover;
         this.simpleValueBinder = simpleValueBinder;
     }
@@ -56,7 +53,7 @@ public class CompositeIdentifierToManyToOneBinder {
                                                     String path) {
         String[] propertyNames = compositeId.getPropertyNames();
 
-        List<ColumnConfig> columns = persistentPropertyToPropertyConfig.toPropertyConfig(property).getColumns();
+        List<ColumnConfig> columns = ((GrailsHibernatePersistentProperty) property).getMappedForm().getColumns();
         int i = columns.size();
         int expectedForeignKeyColumnLength = foreignKeyColumnCountCalculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames);
         if (i != expectedForeignKeyColumnLength) {

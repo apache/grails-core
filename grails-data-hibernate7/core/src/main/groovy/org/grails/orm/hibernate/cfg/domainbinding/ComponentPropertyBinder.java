@@ -51,7 +51,6 @@ public class ComponentPropertyBinder {
     private final EnumTypeBinder enumTypeBinder;
     private final PropertyFromValueCreator propertyFromValueCreator;
     private final ComponentBinder componentBinder;
-    private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
 
     public ComponentPropertyBinder(MetadataBuildingContext metadataBuildingContext,
                                    PersistentEntityNamingStrategy namingStrategy,
@@ -60,7 +59,7 @@ public class ComponentPropertyBinder {
                                    EnumTypeBinder enumTypeBinder,
                                    PropertyFromValueCreator propertyFromValueCreator) {
         this(metadataBuildingContext, namingStrategy, mappingCacheHolder, collectionHolder,
-                enumTypeBinder, propertyFromValueCreator, null, new PersistentPropertyToPropertyConfig());
+                enumTypeBinder, propertyFromValueCreator, null);
     }
 
     protected ComponentPropertyBinder(MetadataBuildingContext metadataBuildingContext,
@@ -69,8 +68,7 @@ public class ComponentPropertyBinder {
                                    CollectionHolder collectionHolder,
                                    EnumTypeBinder enumTypeBinder,
                                    PropertyFromValueCreator propertyFromValueCreator,
-                                   ComponentBinder componentBinder,
-                                   PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig) {
+                                   ComponentBinder componentBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.mappingCacheHolder = mappingCacheHolder;
@@ -78,7 +76,6 @@ public class ComponentPropertyBinder {
         this.enumTypeBinder = enumTypeBinder;
         this.propertyFromValueCreator = propertyFromValueCreator;
         this.componentBinder = componentBinder != null ? componentBinder : new ComponentBinder(mappingCacheHolder, this);
-        this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
     }
 
     protected ComponentPropertyBinder() {
@@ -89,7 +86,6 @@ public class ComponentPropertyBinder {
         this.enumTypeBinder = null;
         this.propertyFromValueCreator = null;
         this.componentBinder = null;
-        this.persistentPropertyToPropertyConfig = null;
     }
 
     public void bindComponentProperty(Component component, PersistentProperty componentProperty,
@@ -111,18 +107,18 @@ public class ComponentPropertyBinder {
                 LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as ManyToOne");
 
             value = new ManyToOne(metadataBuildingContext, table);
-            new ManyToOneBinder(namingStrategy, persistentPropertyToPropertyConfig).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
+            new ManyToOneBinder(namingStrategy).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
         } else if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.OneToOne) {
             if (LOG.isDebugEnabled())
                 LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
 
             if (((Association) currentGrailsProp).canBindOneToOneWithSingleColumnAndForeignKey()) {
                 value = new OneToOne(metadataBuildingContext, table, persistentClass);
-                new OneToOneBinder(namingStrategy, persistentPropertyToPropertyConfig).bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, path);
+                new OneToOneBinder(namingStrategy).bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, path);
             }
             else {
                 value = new ManyToOne(metadataBuildingContext, table);
-                new ManyToOneBinder(namingStrategy, persistentPropertyToPropertyConfig).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
+                new ManyToOneBinder(namingStrategy).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
             }
         }
         else if (currentGrailsProp instanceof Embedded) {
@@ -135,13 +131,12 @@ public class ComponentPropertyBinder {
 
             value = new BasicValue(metadataBuildingContext, table);
             if (currentGrailsProp.getType().isEnum()) {
-                String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy, persistentPropertyToPropertyConfig, 
-                        new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()).getColumnNameForPropertyAndPath(currentGrailsProp, path, null);
+                String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, path, null);
                 enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), (SimpleValue) value, columnName);
             }
             else {
                 // set type
-                new SimpleValueBinder(namingStrategy, persistentPropertyToPropertyConfig).bindSimpleValue(currentGrailsProp, componentProperty, (SimpleValue) value, path);
+                new SimpleValueBinder(namingStrategy).bindSimpleValue(currentGrailsProp, componentProperty, (SimpleValue) value, path);
             }
         }
 

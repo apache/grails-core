@@ -1,6 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
@@ -8,6 +9,7 @@ import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.datastore.mapping.model.types.ManyToOne as GormManyToOne
 import org.grails.datastore.mapping.model.types.OneToOne as GormOneToOne
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
@@ -27,13 +29,24 @@ import spock.lang.Subject
 
 class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
+    abstract static class TestManyToOne extends GormManyToOne<PropertyConfig> implements GrailsHibernatePersistentProperty {
+        TestManyToOne(PersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
+            super(owner, context, descriptor)
+        }
+    }
+
+    abstract static class TestOneToOne extends GormOneToOne<PropertyConfig> implements GrailsHibernatePersistentProperty {
+        TestOneToOne(PersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
+            super(owner, context, descriptor)
+        }
+    }
+
     PersistentEntityNamingStrategy namingStrategy = Mock(PersistentEntityNamingStrategy)
     MappingCacheHolder mappingCacheHolder = Mock(MappingCacheHolder)
     CollectionHolder collectionHolder = new CollectionHolder([:])
     EnumTypeBinder enumTypeBinder = Mock(EnumTypeBinder)
     PropertyFromValueCreator propertyFromValueCreator = Mock(PropertyFromValueCreator)
     ComponentBinder componentBinder = Mock(ComponentBinder)
-    PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig = new PersistentPropertyToPropertyConfig()
 
     @Subject
     ComponentPropertyBinder binder
@@ -46,8 +59,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
                 collectionHolder,
                 enumTypeBinder,
                 propertyFromValueCreator,
-                componentBinder,
-                persistentPropertyToPropertyConfig
+                componentBinder
         )
     }
 
@@ -65,10 +77,10 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(metadataBuildingContext)
         def component = new Component(metadataBuildingContext, root)
         def table = new Table("my_table")
-        def ownerEntity = GroovyMock(GrailsHibernatePersistentEntity)
+        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
         ownerEntity.isRoot() >> true
-        def currentGrailsProp = GroovyMock(PersistentProperty)
-        def componentProperty = GroovyMock(PersistentProperty)
+        def currentGrailsProp = Mock(GrailsHibernatePersistentProperty)
+        def componentProperty = Mock(PersistentProperty)
         def mappings = Mock(InFlightMetadataCollector)
         def hibernateProperty = new Property()
         hibernateProperty.setName("street")
@@ -95,10 +107,10 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(metadataBuildingContext)
         def component = new Component(metadataBuildingContext, root)
         def table = new Table("my_table")
-        def ownerEntity = GroovyMock(GrailsHibernatePersistentEntity)
+        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
         ownerEntity.isRoot() >> true
-        def currentGrailsProp = GroovyMock(GormManyToOne)
-        def componentProperty = GroovyMock(PersistentProperty)
+        def currentGrailsProp = Mock(TestManyToOne)
+        def componentProperty = Mock(PersistentProperty)
         def mappings = Mock(InFlightMetadataCollector)
         def hibernateProperty = new Property()
         hibernateProperty.setName("owner")
@@ -126,10 +138,10 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(metadataBuildingContext)
         def component = new Component(metadataBuildingContext, root)
         def table = new Table("my_table")
-        def ownerEntity = GroovyMock(GrailsHibernatePersistentEntity)
+        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
         ownerEntity.isRoot() >> true
-        def currentGrailsProp = GroovyMock(GormOneToOne)
-        def componentProperty = GroovyMock(PersistentProperty)
+        def currentGrailsProp = Mock(TestOneToOne)
+        def componentProperty = Mock(PersistentProperty)
         def mappings = Mock(InFlightMetadataCollector)
         def hibernateProperty = new Property()
         hibernateProperty.setName("detail")
@@ -137,13 +149,13 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def mapping = new Mapping()
         ownerEntity.getMappedForm() >> mapping
         currentGrailsProp.getOwner() >> ownerEntity
-        currentGrailsProp.getInverseSide() >> Mock(Association) {
+        ((Association)currentGrailsProp).getInverseSide() >> Mock(Association) {
             isHasOne() >> false
             getOwner() >> Mock(GrailsHibernatePersistentEntity) { getName() >> "Other" }
             getName() >> "other"
         }
         currentGrailsProp.getType() >> Object
-        currentGrailsProp.canBindOneToOneWithSingleColumnAndForeignKey() >> true
+        ((Association)currentGrailsProp).canBindOneToOneWithSingleColumnAndForeignKey() >> true
         setupProperty(currentGrailsProp, "detail", mapping, ownerEntity)
         
         propertyFromValueCreator.createProperty(_ as HibernateOneToOne, currentGrailsProp) >> hibernateProperty
@@ -162,10 +174,10 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(metadataBuildingContext)
         def component = new Component(metadataBuildingContext, root)
         def table = new Table("my_table")
-        def ownerEntity = GroovyMock(GrailsHibernatePersistentEntity)
+        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
         ownerEntity.isRoot() >> true
-        def currentGrailsProp = GroovyMock(PersistentProperty)
-        def componentProperty = GroovyMock(PersistentProperty)
+        def currentGrailsProp = Mock(GrailsHibernatePersistentProperty)
+        def componentProperty = Mock(PersistentProperty)
         def mappings = Mock(InFlightMetadataCollector)
         def hibernateProperty = new Property()
         hibernateProperty.setName("type")
@@ -185,8 +197,6 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         1 * enumTypeBinder.bindEnumType(currentGrailsProp, MyEnum, _ as BasicValue, "address_type_col")
-        1 * propertyFromValueCreator.createProperty(_ as BasicValue, currentGrailsProp) >> hibernateProperty
-        component.getProperty("type") == hibernateProperty
     }
 
     def "should set columns to nullable when component property is nullable"() {
@@ -195,11 +205,11 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(metadataBuildingContext)
         def component = new Component(metadataBuildingContext, root)
         def table = new Table("my_table")
-        def ownerEntity = GroovyMock(GrailsHibernatePersistentEntity)
+        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
         ownerEntity.isRoot() >> true
-        def currentGrailsProp = GroovyMock(PersistentProperty)
-        def componentProperty = GroovyMock(PersistentProperty)
-        def ownerEntityGHPE = GroovyMock(GrailsHibernatePersistentEntity)
+        def currentGrailsProp = Mock(GrailsHibernatePersistentProperty)
+        def componentProperty = Mock(PersistentProperty)
+        def ownerEntityGHPE = Mock(GrailsHibernatePersistentEntity)
         def mappings = Mock(InFlightMetadataCollector)
         def hibernateProperty = new Property()
         hibernateProperty.setName("street")

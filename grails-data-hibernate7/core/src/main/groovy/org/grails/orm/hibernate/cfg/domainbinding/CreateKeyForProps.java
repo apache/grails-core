@@ -10,30 +10,27 @@ import org.hibernate.mapping.Table;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 public class CreateKeyForProps {
 
     private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
     private final UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator;
-    private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
 
     public CreateKeyForProps(ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher) {
         this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
         this.uniqueKeyForColumnsCreator = new UniqueKeyForColumnsCreator();
-        this.persistentPropertyToPropertyConfig = new PersistentPropertyToPropertyConfig();
     }
     protected CreateKeyForProps(ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher
-            , UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator
-    , PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig) {
+            , UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator) {
         this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
         this.uniqueKeyForColumnsCreator = uniqueKeyForColumnsCreator;
-        this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
     }
 
     public void createKeyForProps(PersistentProperty grailsProp, String path, Table table,
                                    String columnName) {
-        PropertyConfig mappedForm = persistentPropertyToPropertyConfig.toPropertyConfig(grailsProp);
+        PropertyConfig mappedForm = ((GrailsHibernatePersistentProperty) grailsProp).getMappedForm();
 
         if (mappedForm.isUnique() && mappedForm.isUniqueWithinGroup()) {
 

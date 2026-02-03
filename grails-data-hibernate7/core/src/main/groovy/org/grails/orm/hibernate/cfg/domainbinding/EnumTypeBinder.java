@@ -40,7 +40,7 @@ public class EnumTypeBinder {
     private static final Logger LOG = LoggerFactory.getLogger(EnumTypeBinder.class);
 
     public void bindEnumType(PersistentProperty property, Class<?> propertyType, SimpleValue simpleValue, String columnName) {
-        PropertyConfig pc = new PersistentPropertyToPropertyConfig().toPropertyConfig(property);
+        PropertyConfig pc = ((GrailsHibernatePersistentProperty) property).getMappedForm();
         Mapping ownerMapping = null;
         if (property.getOwner() instanceof GrailsHibernatePersistentEntity) {
             ownerMapping = ((GrailsHibernatePersistentEntity) property.getOwner()).getMappedForm();

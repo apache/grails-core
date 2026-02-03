@@ -4,6 +4,7 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.ManyToMany;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 
 public class DefaultColumnNameFetcher {
@@ -30,7 +31,7 @@ public class DefaultColumnNameFetcher {
         if (property instanceof Association) {
             Association association = (Association) property;
             boolean isBasic = property instanceof Basic;
-            if (isBasic && (new PersistentPropertyToPropertyConfig().toPropertyConfig(property)).getType() != null) {
+            if (isBasic && (((GrailsHibernatePersistentProperty) property).getMappedForm()).getType() != null) {
                 return columnName;
             }
 

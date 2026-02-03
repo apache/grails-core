@@ -26,22 +26,14 @@ public class SimpleValueBinder {
     private final PersistentEntityNamingStrategy namingStrategy;
     private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
     private final ColumnBinder columnBinder;
-    private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
 
     private static final String SEQUENCE_KEY = GrailsSequenceGeneratorEnum.SEQUENCE.toString();
-
-    /**
-     * Convenience constructor for namingStrategy and persistentPropertyToPropertyConfig.
-     */
-    public SimpleValueBinder(PersistentEntityNamingStrategy namingStrategy, PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig) {
-        this(namingStrategy, new ColumnConfigToColumnBinder(), new ColumnBinder(namingStrategy), persistentPropertyToPropertyConfig);
-    }
 
     /**
      * Convenience constructor for namingStrategy.
      */
     public SimpleValueBinder(PersistentEntityNamingStrategy namingStrategy) {
-        this(namingStrategy, new ColumnConfigToColumnBinder(), new ColumnBinder(namingStrategy), new PersistentPropertyToPropertyConfig());
+        this(namingStrategy, new ColumnConfigToColumnBinder(), new ColumnBinder(namingStrategy));
     }
 
     /**
@@ -50,12 +42,10 @@ public class SimpleValueBinder {
     public SimpleValueBinder(
             PersistentEntityNamingStrategy namingStrategy,
             ColumnConfigToColumnBinder columnConfigToColumnBinder,
-            ColumnBinder columnBinder,
-            PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig) {
+            ColumnBinder columnBinder) {
         this.namingStrategy = namingStrategy;
         this.columnConfigToColumnBinder = columnConfigToColumnBinder;
         this.columnBinder = columnBinder;
-        this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
     }
 
     /**
@@ -65,7 +55,6 @@ public class SimpleValueBinder {
         this.namingStrategy = null;
         this.columnConfigToColumnBinder = null;
         this.columnBinder = null;
-        this.persistentPropertyToPropertyConfig = null;
     }
 
     public void bindSimpleValue(
@@ -73,8 +62,8 @@ public class SimpleValueBinder {
             PersistentProperty parentProperty,
             SimpleValue simpleValue,
             String path) {
-        
-        PropertyConfig propertyConfig = persistentPropertyToPropertyConfig.toPropertyConfig(property);
+
+        PropertyConfig propertyConfig = ((GrailsHibernatePersistentProperty) property).getMappedForm();
         Mapping mapping = null;
         if (property.getOwner() instanceof GrailsHibernatePersistentEntity persistentEntity) {
             mapping = persistentEntity.getMappedForm();

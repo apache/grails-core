@@ -4,25 +4,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 public class UserTypeFetcher {
-
-    private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
 
     private static final Logger LOG = LoggerFactory.getLogger(UserTypeFetcher.class);
 
 
     public UserTypeFetcher() {
-        this.persistentPropertyToPropertyConfig = new PersistentPropertyToPropertyConfig();
     }
 
-    protected UserTypeFetcher(PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig) {
-        this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
-    }
     public Class<?> getUserType(PersistentProperty currentGrailsProp) {
         Class<?> userType = null;
-        PropertyConfig config = persistentPropertyToPropertyConfig.toPropertyConfig(currentGrailsProp);
+        PropertyConfig config = ((GrailsHibernatePersistentProperty) currentGrailsProp).getMappedForm();
         Object typeObj = config.getType();
         if (typeObj instanceof Class<?>) {
             userType = (Class<?>)typeObj;

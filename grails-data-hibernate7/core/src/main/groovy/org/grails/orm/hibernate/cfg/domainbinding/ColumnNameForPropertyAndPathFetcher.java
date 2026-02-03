@@ -2,6 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -9,24 +10,20 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 public class ColumnNameForPropertyAndPathFetcher {
 
     private final PersistentEntityNamingStrategy namingStrategy;
-    private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
     private final DefaultColumnNameFetcher defaultColumnNameFetcher;
     private final BackticksRemover backticksRemover;
 
     public ColumnNameForPropertyAndPathFetcher(PersistentEntityNamingStrategy namingStrategy
     ) {
         this.namingStrategy = namingStrategy;
-        this.persistentPropertyToPropertyConfig = new PersistentPropertyToPropertyConfig();
         this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy);
         this.backticksRemover = new BackticksRemover();
     }
 
     protected ColumnNameForPropertyAndPathFetcher(PersistentEntityNamingStrategy namingStrategy
-            , PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig
     , DefaultColumnNameFetcher defaultColumnNameFetcher
     , BackticksRemover backticksRemover) {
         this.namingStrategy = namingStrategy;
-        this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
         this.defaultColumnNameFetcher = defaultColumnNameFetcher;
         this.backticksRemover = backticksRemover;
 
@@ -43,7 +40,7 @@ public class ColumnNameForPropertyAndPathFetcher {
             // No column config given, attempt to obtain the property config directly from the property
             PropertyConfig c = null;
             try {
-                c = persistentPropertyToPropertyConfig.toPropertyConfig(grailsProp);
+                c = ((GrailsHibernatePersistentProperty) grailsProp).getMappedForm();
             } catch (Exception ignore) {
                 // If we cannot resolve a PropertyConfig, treat as absent and fall back later
             }
@@ -57,7 +54,7 @@ public class ColumnNameForPropertyAndPathFetcher {
         }
         else {
             if (grailsProp.supportsJoinColumnMapping()) {
-                PropertyConfig pc = persistentPropertyToPropertyConfig.toPropertyConfig(grailsProp);
+                PropertyConfig pc = ((GrailsHibernatePersistentProperty) grailsProp).getMappedForm();
                 if (pc.hasJoinKeyMapping()) {
                     columnName = pc.getJoinTable().getKey().getName();
                 }
