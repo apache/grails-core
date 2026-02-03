@@ -39,7 +39,7 @@ jobs:
           distribution: liberica
           java-version: 17
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Core Projects"
@@ -66,7 +66,7 @@ jobs:
           distribution: liberica
           java-version: 17
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Gradle Plugin Projects"
@@ -94,7 +94,7 @@ jobs:
           distribution: liberica
           java-version: 17
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Forge Projects"
