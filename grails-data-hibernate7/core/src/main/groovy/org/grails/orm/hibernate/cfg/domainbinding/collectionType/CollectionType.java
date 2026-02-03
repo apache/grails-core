@@ -50,27 +50,7 @@ public abstract class CollectionType {
         return clazz.getName();
     }
 
-    private void createInstances() {
 
-        if (initialized) {
-            return;
-        }
-
-        initialized = true;
-
-        CollectionType set = new SetCollectionType(binder);
-        INSTANCES.put(Set.class, set);
-        INSTANCES.put(SortedSet.class, set);
-
-        INSTANCES.put(List.class, new ListCollectionType(binder));
-        INSTANCES.put(java.util.Collection.class, new BagCollectionType(binder));
-        INSTANCES.put(Map.class, new MapCollectionType(binder));
-    }
-
-    public CollectionType collectionTypeForClass(Class<?> clazz) {
-        createInstances();
-        return INSTANCES.get(clazz);
-    }
 
     public String getTypeName(ToMany<?> property) {
         return property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName() : null;

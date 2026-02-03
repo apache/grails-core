@@ -14,6 +14,7 @@
  */
 package org.grails.orm.hibernate.cfg;
 
+import org.grails.orm.hibernate.cfg.domainbinding.GrailsPropertyCreator;
 import groovy.lang.Closure;
 import jakarta.persistence.Entity;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
@@ -153,6 +154,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     private Closure defaultMapping;
     private PersistentEntityNamingStrategy namingStrategy;
     private MetadataBuildingContext metadataBuildingContext;
+    private GrailsPropertyCreator grailsPropertyCreator;
 
 
     public JdbcEnvironment getJdbcEnvironment() {
@@ -214,6 +216,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 metadataCollector.getMetadataBuildingOptions(),
                 metadataCollector
         );
+        this.grailsPropertyCreator = new GrailsPropertyCreator(metadataCollector, new PropertyBinder());
 
         filterHibernateEntities(hibernateMappingContext.getHibernatePersistentEntities())
                     .forEach(hibernatePersistentEntity -> bindRoot(hibernatePersistentEntity, metadataCollector, sessionFactoryName));
@@ -1939,17 +1942,7 @@ public class GrailsDomainBinder implements MetadataContributor {
      * Creates a persistent class property based on the GrailDomainClassProperty instance.
      */
     private Property createProperty(Value value, PersistentClass persistentClass, PersistentProperty grailsProperty, InFlightMetadataCollector mappings) {
-        // set type
-        value.setTypeUsingReflection(persistentClass.getClassName(), grailsProperty.getName());
-
-        if (value.getTable() != null) {
-            value.createForeignKey();
-        }
-
-        Property prop = new Property();
-        prop.setValue(value);
-        new PropertyBinder().bindProperty(grailsProperty, prop);
-        return prop;
+        return this.grailsPropertyCreator.createProperty(value, persistentClass, grailsProperty);
     }
 
     private void bindOneToMany(org.grails.datastore.mapping.model.types.OneToMany currentGrailsProp, OneToMany one, InFlightMetadataCollector mappings) {
