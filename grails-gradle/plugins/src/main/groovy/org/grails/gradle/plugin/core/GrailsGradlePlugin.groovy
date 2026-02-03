@@ -184,8 +184,13 @@ class GrailsGradlePlugin extends GroovyPlugin {
     private void configureGroovyCompiler(Project project) {
         Provider<RegularFile> groovyCompilerConfigFile = project.layout.buildDirectory.file('grailsGroovyCompilerConfig.groovy')
 
+        GrailsExtension grailsExtension = project.extensions.findByType(GrailsExtension)
+
         project.tasks.withType(GroovyCompile).configureEach { GroovyCompile c ->
             c.outputs.file(groovyCompilerConfigFile)
+
+            // Configure indy option from GrailsExtension
+            c.groovyOptions.optimizationOptions.indy = grailsExtension?.indy?.getOrElse(false) ?: false
 
             Closure<String> userScriptGenerator = getGroovyCompilerScript(c, project)
             c.doFirst {
@@ -214,6 +219,14 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 """
                 combinedFile.write(combinedScripts)
                 c.groovyOptions.configurationScript = combinedFile
+            }
+        }
+
+        // Log indy status once per project after evaluation
+        project.afterEvaluate {
+            if (!grailsExtension?.indy?.getOrElse(false)) {
+                project.logger.lifecycle('Grails: Groovy invokedynamic (indy) is disabled to improve performance (see issue #15293).')
+                project.logger.lifecycle('        To enable invokedynamic: grails { indy = true } in build.gradle')
             }
         }
     }
