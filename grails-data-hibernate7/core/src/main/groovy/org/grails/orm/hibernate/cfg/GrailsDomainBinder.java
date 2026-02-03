@@ -282,7 +282,7 @@ public class GrailsDomainBinder
             if (domainClass != null) {
                 mapping = domainClass.getMappedForm();
             }
-            String typeName = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName(mapping) : null;
+            String typeName = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName() : null;
             if (typeName == null ) {
 
                 if(property instanceof Basic) {
@@ -735,7 +735,7 @@ public class GrailsDomainBinder
                 if (domainClass != null) {
                     mapping = domainClass.getMappedForm();
                 }
-                String typeName = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName(mapping) : null;
+                String typeName = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName() : null;
                 if (typeName == null) {
                     Type type = mappings.getTypeConfiguration().getBasicTypeRegistry().getRegisteredType(className);
                     if (type != null) {
@@ -1519,7 +1519,7 @@ public class GrailsDomainBinder
             value = new BasicValue(metadataBuildingContext, table);
         }
         else if (collectionType != null) {
-            String typeName = currentGrailsProp.getTypeName(gormMapping);
+            String typeName = currentGrailsProp.getTypeName();
             if ("serializable".equals(typeName)) {
                 value = new BasicValue(metadataBuildingContext, table);
             }
@@ -1593,8 +1593,8 @@ public class GrailsDomainBinder
                 String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, EMPTY_PATH, null);
                 enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), simpleValue, columnName);
             }
-            else if (collectionType != null && "serializable".equals(currentGrailsProp.getTypeName(gormMapping))) {
-                String typeName = currentGrailsProp.getTypeName(gormMapping);
+            else if (collectionType != null && "serializable".equals(currentGrailsProp.getTypeName())) {
+                String typeName = currentGrailsProp.getTypeName();
                 boolean nullable = currentGrailsProp.isNullable();
                 String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, EMPTY_PATH, null);
                 new SimpleValueColumnBinder().bindSimpleValue(simpleValue, typeName, columnName, nullable);
@@ -1638,7 +1638,7 @@ public class GrailsDomainBinder
                     mapping = domainClass.getMappedForm();
                 }
 
-                return property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName(mapping) : null;
+                return ((GrailsHibernatePersistentProperty) property).getTypeName(pc.getIndexColumn(), mapping);
 
             }
 

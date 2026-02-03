@@ -46,15 +46,10 @@ class CollectionTypeSpec extends HibernateGormDatastoreSpec {
 
     def "getTypeName should return type name from GrailsHibernatePersistentProperty"() {
         given:
-        def mapping = Mock(org.grails.orm.hibernate.cfg.Mapping)
-        
         // Use HibernateOneToManyProperty which implements both ToMany and GrailsHibernatePersistentProperty
         def hibernateProp = Mock(HibernateOneToManyProperty)
-        def domainClass = Mock(GrailsHibernatePersistentEntity)
         
-        hibernateProp.getOwner() >> domainClass
-        domainClass.getMappedForm() >> mapping
-        hibernateProp.getTypeName(mapping) >> "my.custom.Type"
+        hibernateProp.getTypeName() >> "my.custom.Type"
 
         expect:
         collectionType.getTypeName(hibernateProp) == "my.custom.Type"

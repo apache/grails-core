@@ -73,9 +73,7 @@ public abstract class CollectionType {
     }
 
     public String getTypeName(ToMany<?> property) {
-        GrailsHibernatePersistentEntity domainClass = (GrailsHibernatePersistentEntity) property.getOwner();
-        Mapping mapping = domainClass.getMappedForm();
-        return property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName(mapping) : null;
+        return property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName() : null;
     }
 
 }

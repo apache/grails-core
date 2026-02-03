@@ -48,7 +48,7 @@ public class EnumTypeBinder {
         String enumType = pc.getEnumType();
         Properties enumProperties = new Properties();
         enumProperties.put(ENUM_CLASS_PROP, propertyType.getName());
-        String typeName = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName(ownerMapping) : null;
+        String typeName = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName() : null;
         if (typeName != null) {
             simpleValue.setTypeName(typeName);
         } else {
