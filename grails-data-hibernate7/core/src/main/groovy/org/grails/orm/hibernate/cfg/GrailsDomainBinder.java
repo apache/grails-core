@@ -119,7 +119,7 @@ public class GrailsDomainBinder
 
     public static final String ENUM_TYPE_CLASS = org.grails.orm.hibernate.HibernateLegacyEnumType.class.getName();
     public static final String ENUM_CLASS_PROP = "enumClass";
-    private static final Logger LOG = LoggerFactory.getLogger(GrailsDomainBinder.class);
+    public static final Logger LOG = LoggerFactory.getLogger(GrailsDomainBinder.class);
 
 
 
@@ -148,6 +148,7 @@ public class GrailsDomainBinder
     private MetadataBuildingContext metadataBuildingContext;
     private MappingCacheHolder mappingCacheHolder;
     private CollectionHolder collectionHolder;
+    private GrailsPropertyBinder grailsPropertyBinder;
 
 
     public JdbcEnvironment getJdbcEnvironment() {
@@ -219,6 +220,7 @@ public class GrailsDomainBinder
                 , rootMappingDefaults
         );
         this.componentPropertyBinder = new ComponentPropertyBinder(metadataBuildingContext, getNamingStrategy(), getMappingCacheHolder(), getCollectionHolder(), enumTypeBinder, propertyFromValueCreator);
+        this.grailsPropertyBinder = new GrailsPropertyBinder(metadataBuildingContext, getNamingStrategy(), getCollectionHolder(), enumTypeBinder, componentPropertyBinder, propertyFromValueCreator);
 
         hibernateMappingContext.getHibernatePersistentEntities().stream()
                 .filter(persistentEntity -> persistentEntity.forGrailsDomainMapping(dataSourceName))
@@ -251,7 +253,7 @@ public class GrailsDomainBinder
         NAMING_STRATEGY_PROVIDER.configureNamingStrategy(datasourceName, strategy);
     }
 
-    private void bindMapSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
+    public void bindMapSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
                                      Map<?, ?> persistentClasses, org.hibernate.mapping.Map map, String sessionFactoryBeanName) {
         bindCollectionSecondPass(property, mappings, persistentClasses, map, sessionFactoryBeanName);
 
@@ -320,8 +322,8 @@ public class GrailsDomainBinder
      * @param list
      * @param sessionFactoryBeanName
      */
-    private void bindListSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
-                                      Map<?, ?> persistentClasses, org.hibernate.mapping.List list, String sessionFactoryBeanName) {
+    public void bindListSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
+                                   Map<?, ?> persistentClasses, org.hibernate.mapping.List list, String sessionFactoryBeanName) {
 
         bindCollectionSecondPass(property, mappings, persistentClasses, list, sessionFactoryBeanName);
 
@@ -398,10 +400,9 @@ public class GrailsDomainBinder
         }
     }
 
-    private void bindCollectionSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
-                                            Map<?, ?> persistentClasses, Collection collection, String sessionFactoryBeanName) {
-
-        PersistentClass associatedClass = null;
+        public void bindCollectionSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
+                                             Map<?, ?> persistentClasses, Collection collection, String sessionFactoryBeanName) {
+            PersistentClass associatedClass = null;
 
         if (LOG.isDebugEnabled())
             LOG.debug("Mapping collection: "
@@ -1518,129 +1519,11 @@ public class GrailsDomainBinder
 
 
         for (GrailsHibernatePersistentProperty currentGrailsProp : domainClass.getPersistentPropertiesToBind()) {
-            bindProperty(persistentClass, mappings, sessionFactoryBeanName, currentGrailsProp);
+            grailsPropertyBinder.bindProperty(persistentClass, mappings, sessionFactoryBeanName, currentGrailsProp);
         }
 
         new NaturalIdentifierBinder().bindNaturalIdentifier(domainClass.getMappedForm(), persistentClass);
     }
-
-    private void bindProperty(PersistentClass persistentClass
-            , @NonNull InFlightMetadataCollector mappings
-            , String sessionFactoryBeanName
-            , @Nonnull  GrailsHibernatePersistentProperty currentGrailsProp) {
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("[GrailsDomainBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
-        }
-        Mapping gormMapping =  currentGrailsProp.getHibernateOwner().getMappedForm();
-        Table table = persistentClass.getTable();
-        table.setComment(gormMapping.getComment());
-
-        Value value = null;
-
-        // see if it's a collection type
-        CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
-
-        Class<?> userType = currentGrailsProp.getUserType();
-
-        // 1. Create Value
-        if (userType != null && !UserCollectionType.class.isAssignableFrom(userType)) {
-            value = new BasicValue(metadataBuildingContext, table);
-        }
-        else if (collectionType != null) {
-            String typeName = currentGrailsProp.getTypeName();
-            if ("serializable".equals(typeName)) {
-                value = new BasicValue(metadataBuildingContext, table);
-            }
-            else {
-                // create collection
-                Collection collection = collectionType.create((ToMany) currentGrailsProp, persistentClass,
-                        EMPTY_PATH, mappings, sessionFactoryBeanName);
-                mappings.addCollectionBinding(collection);
-                value = collection;
-            }
-        }
-        else if (currentGrailsProp.getType().isEnum()) {
-            value = new BasicValue(metadataBuildingContext, table);
-        }
-        else if(currentGrailsProp instanceof Association) {
-            Association association = (Association) currentGrailsProp;
-            if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.ManyToOne) {
-                value = new ManyToOne(metadataBuildingContext, table);
-            }
-            else if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.OneToOne && userType == null) {
-                final boolean isHasOne = association.isHasOne();
-                if (isHasOne && !association.isBidirectional()) {
-                    throw new MappingException("hasOne property [" + currentGrailsProp.getOwner().getName() +
-                            "." + currentGrailsProp.getName() + "] is not bidirectional. Specify the other side of the relationship!");
-                }
-                else if (((Association) currentGrailsProp).canBindOneToOneWithSingleColumnAndForeignKey()) {
-                    value = new OneToOne(metadataBuildingContext, table, persistentClass);
-                }
-                else {
-                    if (isHasOne && association.isBidirectional()) {
-                        value = new OneToOne(metadataBuildingContext, table, persistentClass);
-                    }
-                    else {
-                        value = new ManyToOne(metadataBuildingContext, table);
-                    }
-                }
-            }
-            else if (currentGrailsProp instanceof Embedded) {
-                value = new Component(metadataBuildingContext, persistentClass);
-            }
-        }
-        // work out what type of relationship it is and bind value
-        else {
-            value = new BasicValue(metadataBuildingContext, table);
-        }
-
-        // 2. Give the value to the binder
-        if (value instanceof Component component && currentGrailsProp instanceof Embedded embedded) {
-            componentPropertyBinder.bindComponent(component, embedded, true, mappings, sessionFactoryBeanName);
-        }
-        else if (value instanceof OneToOne oneToOne && currentGrailsProp instanceof org.grails.datastore.mapping.model.types.OneToOne oneToOneProp) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
-            }
-            new OneToOneBinder(namingStrategy).bindOneToOne(oneToOneProp, oneToOne, EMPTY_PATH);
-        }
-        else if (value instanceof ManyToOne manyToOne && currentGrailsProp instanceof Association association) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as ManyToOne");
-            }
-            new ManyToOneBinder(namingStrategy).bindManyToOne(association, manyToOne, EMPTY_PATH);
-        }
-        else if (value instanceof SimpleValue simpleValue) {
-            if (userType != null && !UserCollectionType.class.isAssignableFrom(userType)) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as SimpleValue");
-                }
-                new SimpleValueBinder(namingStrategy).bindSimpleValue(currentGrailsProp, null, simpleValue, EMPTY_PATH);
-            }
-            else if (currentGrailsProp.getType().isEnum()) {
-                String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, EMPTY_PATH, null);
-                enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), simpleValue, columnName);
-            }
-            else if (collectionType != null && "serializable".equals(currentGrailsProp.getTypeName())) {
-                String typeName = currentGrailsProp.getTypeName();
-                boolean nullable = currentGrailsProp.isNullable();
-                String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, EMPTY_PATH, null);
-                new SimpleValueColumnBinder().bindSimpleValue(simpleValue, typeName, columnName, nullable);
-            }
-            else {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as SimpleValue");
-                }
-                new SimpleValueBinder(namingStrategy).bindSimpleValue(currentGrailsProp, null, simpleValue, EMPTY_PATH);
-            }
-        }
-
-        if (value != null) {
-            Property property = propertyFromValueCreator.createProperty(value, currentGrailsProp);
-            persistentClass.addProperty(property);
-        }
-    }
-
 
     private void bindOneToMany(org.grails.datastore.mapping.model.types.OneToMany currentGrailsProp, OneToMany one, @Nonnull InFlightMetadataCollector mappings) {
         one.setReferencedEntityName(currentGrailsProp.getAssociatedEntity().getName());
@@ -1710,6 +1593,22 @@ public class GrailsDomainBinder
         return collectionHolder;
     }
 
+    public EnumTypeBinder getEnumTypeBinder() {
+        return enumTypeBinder;
+    }
+
+    public ComponentPropertyBinder getComponentPropertyBinder() {
+        return componentPropertyBinder;
+    }
+
+    public PropertyFromValueCreator getPropertyFromValueCreator() {
+        return propertyFromValueCreator;
+    }
+
+    public GrailsPropertyBinder getGrailsPropertyBinder() {
+        return grailsPropertyBinder;
+    }
+
     @Override
     public String getContributorName() {
         return "GORM";
@@ -1728,7 +1627,7 @@ public class GrailsDomainBinder
      *
      * @author Graeme
      */
-    class GrailsCollectionSecondPass implements org.hibernate.boot.spi.SecondPass {
+    public class GrailsCollectionSecondPass implements org.hibernate.boot.spi.SecondPass {
 
         private static final long serialVersionUID = -5540526942092611348L;
 
@@ -1785,7 +1684,7 @@ public class GrailsDomainBinder
     }
 
 
-    class ListSecondPass extends GrailsCollectionSecondPass {
+    public class ListSecondPass extends GrailsCollectionSecondPass {
         private static final long serialVersionUID = -3024674993774205193L;
 
         public ListSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
@@ -1807,7 +1706,7 @@ public class GrailsDomainBinder
         }
     }
 
-    class MapSecondPass extends GrailsCollectionSecondPass {
+    public class MapSecondPass extends GrailsCollectionSecondPass {
         private static final long serialVersionUID = -3244991685626409031L;
 
         public MapSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,

@@ -51,6 +51,9 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
                                                     , String className
                                                      , Map<String, Class> fieldProperties
                                                      , Map<String, String> staticMapping
+                                                     , List<String> embeddedProps = []
+                                                     , Map<String, Class> hasManyMap = [:]
+                                                     , Map<String, Class> belongsToMap = [:]
 
     ) {
         def classLoader = new GroovyClassLoader()
@@ -61,7 +64,11 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
         @Entity
         class ${className} implements HibernateEntity<${className}> {
 
-            ${fieldProperties.collect { name, type -> "${type.simpleName} ${name}" }.join('\n            ')}
+            ${fieldProperties.collect { name, type -> "${(type instanceof Class ? type : type.javaClass).name} ${name}" }.join('\n            ')}
+
+            static embedded = ${embeddedProps.inspect()}
+            static hasMany = [${hasManyMap.collect { name, type -> "${name}: ${(type instanceof Class ? type : type.javaClass).name}" }.join(', ')}]
+            static belongsTo = [${belongsToMap.collect { name, type -> "${name}: ${(type instanceof Class ? type : type.javaClass).name}" }.join(', ')}]
 
             static mapping = {
                 ${staticMapping.collect { name, value -> "${name} ${value}" }.join('\n            ')}

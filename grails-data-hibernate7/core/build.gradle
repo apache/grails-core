@@ -122,6 +122,7 @@ dependencies {
     testRuntimeOnly 'org.slf4j:slf4j-simple'
     testRuntimeOnly 'org.slf4j:jcl-over-slf4j'
     testRuntimeOnly 'org.springframework:spring-aop'
+    testRuntimeOnly 'org.mockito:mockito-inline:5.2.0'
 
 }
 

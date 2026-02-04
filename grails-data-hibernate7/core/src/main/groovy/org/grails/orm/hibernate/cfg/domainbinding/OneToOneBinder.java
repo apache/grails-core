@@ -30,7 +30,7 @@ public class OneToOneBinder {
         PropertyConfig config = ((GrailsHibernatePersistentProperty) property).getMappedForm();
         final Association otherSide = property.getInverseSide();
 
-        final boolean hasOne = otherSide.isHasOne();
+        final boolean hasOne = otherSide != null && otherSide.isHasOne();
         oneToOne.setConstrained(hasOne);
         oneToOne.setForeignKeyType(oneToOne.isConstrained() ?
                 ForeignKeyDirection.FROM_PARENT :
@@ -44,11 +44,11 @@ public class OneToOneBinder {
             oneToOne.setFetchMode(FetchMode.DEFAULT);
         }
 
-        oneToOne.setReferencedEntityName(otherSide.getOwner().getName());
+        oneToOne.setReferencedEntityName(otherSide != null ? otherSide.getOwner().getName() : property.getAssociatedEntity().getName());
         oneToOne.setPropertyName(property.getName());
         oneToOne.setReferenceToPrimaryKey(false);
 
-        if (hasOne) {
+        if (hasOne || otherSide == null) {
             simpleValueBinder.bindSimpleValue(property, null, oneToOne, path);
         }
         else {
