@@ -68,8 +68,6 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         property.isEmbedded()
     }
 
-
-
     void "test getTypeName()"() {
         given:
         PersistentEntity entity = createPersistentEntity(TestEntityWithTypeName)
@@ -79,6 +77,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         property.getTypeName() == "string"
     }
 }
+
 
 enum TestEnum {
     A, B

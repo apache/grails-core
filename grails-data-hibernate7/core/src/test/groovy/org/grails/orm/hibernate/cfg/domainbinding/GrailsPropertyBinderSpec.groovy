@@ -13,14 +13,14 @@ import org.hibernate.mapping.SimpleValue
 
 class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
-//    void setupSpec() {
-//        manager.addAllDomainClasses([
-//            org.apache.grails.data.testing.tck.domains.Pet,
-//            org.apache.grails.data.testing.tck.domains.Person,
-//            org.apache.grails.data.testing.tck.domains.PetType,
-//            org.apache.grails.data.testing.tck.domains.PersonWithCompositeKey
-//        ])
-//    }
+    void setupSpec() {
+        manager.addAllDomainClasses([
+            org.apache.grails.data.testing.tck.domains.Pet,
+            org.apache.grails.data.testing.tck.domains.Person,
+            org.apache.grails.data.testing.tck.domains.PetType,
+            org.apache.grails.data.testing.tck.domains.PersonWithCompositeKey
+        ])
+    }
 
     void "Test bind simple property"() {
         given:

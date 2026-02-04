@@ -315,7 +315,6 @@ public class GrailsDomainBinder
     }
 
     /**
-     * @TODO NOT TESTED
      * @param property
      * @param mappings
      * @param persistentClasses
