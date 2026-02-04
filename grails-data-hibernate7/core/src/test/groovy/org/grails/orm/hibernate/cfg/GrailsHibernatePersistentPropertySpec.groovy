@@ -68,6 +68,8 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         property.isEmbedded()
     }
 
+
+
     void "test getTypeName()"() {
         given:
         PersistentEntity entity = createPersistentEntity(TestEntityWithTypeName)
@@ -134,13 +136,23 @@ class TestEntityWithSerializable {
 }
 
 @Entity
+
 class TestEntityWithEmbedded {
+
     Long id
+
     Address address
+
     static embedded = ['address']
+
 }
 
+
+
 @Entity
+
 class Address {
+
     String city
+
 }
