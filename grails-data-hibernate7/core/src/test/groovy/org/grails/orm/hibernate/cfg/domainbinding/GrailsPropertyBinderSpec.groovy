@@ -13,14 +13,14 @@ import org.hibernate.mapping.SimpleValue
 
 class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
-    void setupSpec() {
-        manager.addAllDomainClasses([
-            org.apache.grails.data.testing.tck.domains.Pet,
-            org.apache.grails.data.testing.tck.domains.Person,
-            org.apache.grails.data.testing.tck.domains.PetType,
-            org.apache.grails.data.testing.tck.domains.PersonWithCompositeKey
-        ])
-    }
+//    void setupSpec() {
+//        manager.addAllDomainClasses([
+//            org.apache.grails.data.testing.tck.domains.Pet,
+//            org.apache.grails.data.testing.tck.domains.Person,
+//            org.apache.grails.data.testing.tck.domains.PetType,
+//            org.apache.grails.data.testing.tck.domains.PersonWithCompositeKey
+//        ])
+//    }
 
     void "Test bind simple property"() {
         given:
@@ -299,6 +299,19 @@ class BookForOneToOne { // Added 'static'
 class Address {
     String city
     String zip
+}
+
+@Entity
+class TestEntityWithSerializableCollection {
+    Long id
+    List<SerializableObject> serializableObjects
+    static mapping = {
+        serializableObjects type: 'serializable'
+    }
+}
+
+class SerializableObject {
+    String data
 }
 
 @Entity

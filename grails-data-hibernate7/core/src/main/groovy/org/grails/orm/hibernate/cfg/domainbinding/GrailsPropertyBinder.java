@@ -69,10 +69,9 @@ public class GrailsPropertyBinder {
         // see if it's a collection type
         CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
 
-        Class<?> userType = currentGrailsProp.getUserType();
 
         // 1. Create Value and apply binders (consolidated block)
-        if (userType != null && !UserCollectionType.class.isAssignableFrom(userType)) {
+        if (currentGrailsProp.isUserButNotCollectionType()) {
             value = new BasicValue(metadataBuildingContext, table);
             // No specific binder call needed for this case per original logic
             new SimpleValueBinder(namingStrategy).bindSimpleValue(currentGrailsProp, null,(SimpleValue) value, EMPTY_PATH);
