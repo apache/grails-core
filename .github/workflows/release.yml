@@ -24,7 +24,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GRAILS_PUBLISH_RELEASE: 'true'
   JAVA_DISTRIBUTION: liberica
-  JAVA_VERSION: 17.0.17 # this must be a specific version for reproducible builds, keep it synced with .sdkmanrc and verification container
+  JAVA_VERSION: 17.0.18 # this must be a specific version for reproducible builds, keep it synced with .sdkmanrc and verification container
   PROJECT_DESC: >
     Grails is a powerful Groovy-based web application framework for the JVM,
     built on top of Spring Boot, and supported by a rich ecosystem of plugins
@@ -37,6 +37,9 @@ env:
   TAG: ${{ github.event.release.tag_name }}
   TARGET_BRANCH: ${{ github.event.release.target_commitish }}
   VERSION: will be computed in each job
+concurrency:
+  group: release-pipeline
+  cancel-in-progress: false
 jobs:
   publish:
     name: "Stage Jar Files"
@@ -545,15 +548,17 @@ jobs:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
       - name: "⚙️ Maximize build space"
-        uses: easimon/maximize-build-space@c28619d8999a147d5e09c1199f84ff6af6ad5794
-        with:
-          root-reserve-mb: 3072  # Leave ~3 GB on root FS
-          swap-size-mb: 2048     # Allocate 2 GB swap (default: 4 GB; reduce if not needed)
-          remove-dotnet: 'true'  # Remove .NET SDK (~3-4 GB savings)
-          remove-android: 'true' # Remove Android tools (~2 GB savings)
-          remove-haskell: 'true' # Remove Haskell (~1 GB savings)
-          remove-codeql: 'true'  # Remove CodeQL (~500 MB savings)
-          remove-docker-images: 'false'  # Prune Docker if used (~1-2 GB savings)
+        run: |
+          echo "-- Dotnet"
+          sudo rm -rf /usr/share/dotnet
+          echo "-- Android"
+          sudo rm -rf /usr/local/lib/android
+          echo "-- Haskell"
+          sudo rm -rf /opt/ghc
+          echo "-- CodeQL"
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+
+          df -h
       - name: "📥 Checkout repository"
         uses: actions/checkout@v5
         with:

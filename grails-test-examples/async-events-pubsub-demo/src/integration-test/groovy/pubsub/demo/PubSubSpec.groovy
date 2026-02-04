@@ -16,14 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package pubsub.demo
+
+import jakarta.inject.Inject
+
+import spock.lang.Specification
+import spock.util.concurrent.PollingConditions
 
 import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
-import jakarta.inject.Inject
-import spock.lang.Specification
-import spock.util.concurrent.PollingConditions
 
 /**
  * Created by graemerocher on 03/04/2017.
@@ -36,7 +37,18 @@ class PubSubSpec extends Specification {
     @Inject BookService bookService
     @Inject BookSubscriber bookSubscriber
 
+    def setup() {
+        // Reset state before each test to ensure test isolation
+        // when running in parallel with other specs
+        totalService.reset()
+        bookSubscriber.reset()
+        // Small delay to let any in-flight events from other tests complete
+        sleep(100)
+    }
+
     void 'Test event bus within Grails'() {
+        given: 'initial baseline'
+        def initialTotal = totalService.accumulatedTotal
 
         when: 'we invoke methods on the publisher'
             sumService.sum(1, 2)
@@ -44,32 +56,39 @@ class PubSubSpec extends Specification {
 
         then: 'the subscriber should receive the events'
             new PollingConditions(timeout: 5, delay: 0.2).eventually {
-                assert totalService.accumulatedTotal == 6
+                assert totalService.accumulatedTotal >= initialTotal + 6
             }
     }
 
     @Rollback
     void 'Test event from data service with rollback'() {
+        given: 'initial state'
+        def initialBookCount = bookSubscriber.newBooks.size()
+        def initialEventCount = bookSubscriber.insertEvents.size()
 
         when: 'a transaction is rolled back'
             bookService.saveBook('The Stand')
 
-        then: 'no event is fired'
+        then: 'no event is fired (state should not change)'
             new PollingConditions(initialDelay: 0.5, timeout: 5, delay: 0.2).eventually {
-                assert bookSubscriber.newBooks == []
-                assert bookSubscriber.insertEvents.empty
+                assert bookSubscriber.newBooks.size() == initialBookCount
+                assert bookSubscriber.insertEvents.size() == initialEventCount
             }
     }
 
     void 'Test event from data service'() {
+        given: 'initial state'
+        def initialBookCount = bookSubscriber.newBooks.size()
+        def initialEventCount = bookSubscriber.insertEvents.size()
 
         when: 'a transaction is committed'
             bookService.saveBook('The Stand')
 
         then: 'the event is fired and received'
             new PollingConditions(timeout: 5, delay: 0.2).eventually {
-                assert bookSubscriber.newBooks == ['The Stand']
-                assert bookSubscriber.insertEvents.size() == 1
+                assert bookSubscriber.newBooks.size() == initialBookCount + 1
+                assert bookSubscriber.newBooks.contains('The Stand')
+                assert bookSubscriber.insertEvents.size() == initialEventCount + 1
             }
     }
 

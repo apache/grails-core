@@ -39,7 +39,21 @@ tasks.named('compileGroovy') {
     options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
 }
 
+// Disable build cache for Groovy compilation in CI to ensure AST transformations are always applied.
+// AST transformers are applied at compile time, and Gradle's incremental compilation might not detect
+// when a transformer itself changes, leading to stale bytecode.
+// This applies to:
+// - compileGroovy
+// - compileTestGroovy
+// - compileGroovyPlugins (if present)
+tasks.withType(GroovyCompile).configureEach {
+    outputs.cacheIf { !isCiBuild }
+}
+
 tasks.withType(Test).configureEach {
+    // Disable build cache for tests in CI to ensure they always run
+    outputs.cacheIf { !isCiBuild }
+
     systemProperty('spock.iKnowWhatImDoing.disableGroovyVersionCheck', 'true')
     onlyIf {
         ![
@@ -55,13 +69,6 @@ tasks.withType(Test).configureEach {
 
     useJUnitPlatform()
     jvmArgs += java17moduleReflectionCompatibilityArguments
-    develocity {
-        testRetry {
-            maxRetries = configuredTestParallel == 1 ? 1 : 2
-            maxFailures = 20
-            failOnPassedAfterRetry = true
-        }
-    }
     testLogging {
         events('passed', 'skipped', 'failed')
         showExceptions = true
@@ -72,7 +79,7 @@ tasks.withType(Test).configureEach {
     excludes = ['**/*TestCase.class', '**/*$*.class']
     maxParallelForks = configuredTestParallel
     maxHeapSize = isCiBuild ? '768m' : '1024m'
-    forkEvery = hasProperty('forkEveryUnitTest') ? getProperty('forkEveryUnitTest') as long : (isCiBuild ? 20 : 100)
+    forkEvery = hasProperty('forkEveryUnitTest') ? getProperty('forkEveryUnitTest') as long : (isCiBuild ? 50 : 100)
     if (System.getProperty('debug.tests')) {
         jvmArgs += debugArguments
     }

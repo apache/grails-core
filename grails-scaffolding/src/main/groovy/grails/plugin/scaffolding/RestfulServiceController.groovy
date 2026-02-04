@@ -25,6 +25,33 @@ import grails.gorm.transactions.ReadOnly
 import grails.rest.RestfulController
 import org.grails.datastore.gorm.GormEntity
 
+/**
+ * Restful controller that delegates all operations to a scaffold service.
+ *
+ * <p>This controller is datastore-agnostic and works with any {@link ScaffoldService}
+ * implementation (GORM, JPA, JDBC, REST, custom, etc.). It uses the service interface
+ * rather than concrete implementations, allowing different backends to be swapped.</p>
+ *
+ * <p>Read-only protection is handled by the service layer - services with {@code readOnly=true}
+ * will silently ignore mutation operations (no-op behavior).</p>
+ *
+ * <h3>Example Usage</h3>
+ * <pre>{@code
+ * @Scaffold(RestfulServiceController<Car>)
+ * class CarController {}
+ * }</pre>
+ *
+ * <p>The controller will automatically locate and inject the corresponding service
+ * (e.g., {@code CarService}) using {@link DomainServiceLocator}.</p>
+ *
+ * @param <T> The domain/entity type
+ *
+ * @author Scott Murphy Heiberg
+ * @since 7.1.0
+ *
+ * @see ScaffoldService
+ * @see DomainServiceLocator
+ */
 @Artefact('Controller')
 @ReadOnly
 @CompileStatic
@@ -34,7 +61,12 @@ class RestfulServiceController<T extends GormEntity<T>> extends RestfulControlle
         super(resource, readOnly)
     }
 
-    protected GormService<T> getService() {
+    /**
+     * Get the scaffold service for this controller.
+     *
+     * @return The scaffold service (resolved via {@link DomainServiceLocator})
+     */
+    protected ScaffoldService<T, Serializable> getService() {
         DomainServiceLocator.<T>resolve(resource)
     }
 

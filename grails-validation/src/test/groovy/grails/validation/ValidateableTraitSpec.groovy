@@ -36,6 +36,20 @@ import java.lang.reflect.Method
  */
 class ValidateableTraitSpec extends Specification {
 
+    /**
+     * Clear the static constraints cache for classes that use shared constraints.
+     * This prevents test environment pollution because the Validateable trait caches
+     * constraints in a static field, and constraints may be evaluated before configuration
+     * has registered the shared constraints.
+     */
+    void setup() {
+        SharedConstraintsValidateable.clearConstraintsMapCache()
+    }
+
+    void cleanup() {
+        SharedConstraintsValidateable.clearConstraintsMapCache()
+    }
+
     void 'Test validate can be invoked in a unit test with no special configuration'() {
         when: 'an object is valid'
         def validateable = new MyValidateable(name: 'Kirk', age: 47, town: 'STL')

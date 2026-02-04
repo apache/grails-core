@@ -24,6 +24,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.classgen.GeneratorContext
 import org.codehaus.groovy.control.SourceUnit
@@ -38,7 +39,7 @@ import org.grails.io.support.GrailsResourceUtils
 import org.grails.plugins.web.rest.transform.ResourceTransform
 
 /**
- * Transformation that turns a service into a scaffolding service at compile time if '@ScaffoldService'
+ * Transformation that turns a service into a scaffolding service at compile time if '@Scaffold'
  * is specified
  *
  * @author Scott Murphy Heiberg
@@ -66,13 +67,26 @@ class ScaffoldingServiceInjector implements GrailsArtefactClassInjector {
     void performInjectionOnAnnotatedClass(SourceUnit source, ClassNode classNode) {
         def annotationNode = classNode.getAnnotations(ClassHelper.make(Scaffold)).find()
         if (annotationNode) {
-            ClassNode serviceClassNode = annotationNode?.getMember('value')?.type
-            ClassNode superClassNode = ClassHelper.make(serviceClassNode?.getTypeClass() ?: GormService).getPlainNodeReference()
+            ClassNode valueClassNode = annotationNode?.getMember('value')?.type
+            ClassNode superClassNode = ClassHelper.make(GormService).getPlainNodeReference()
             ClassNode currentSuperClass = classNode.getSuperClass()
             if (currentSuperClass.equals(GrailsASTUtils.OBJECT_CLASS_NODE)) {
                 def domainClass = annotationNode.getMember('domain')?.type
                 if (!domainClass) {
-                    domainClass = ScaffoldingControllerInjector.extractGenericDomainClass(serviceClassNode)
+                    def genericsTypes = valueClassNode?.genericsTypes
+                    boolean hasGenerics = genericsTypes != null && genericsTypes.length > 0
+
+                    if (hasGenerics) {
+                        domainClass = ScaffoldingControllerInjector.extractGenericDomainClass(valueClassNode)
+                        if (domainClass) {
+                            annotationNode.addMember('domain', new ClassExpression(domainClass))
+                        }
+                        superClassNode = valueClassNode.getPlainNodeReference()
+                    } else if (valueClassNode) {
+                        domainClass = valueClassNode
+                        annotationNode.addMember('domain', new ClassExpression(domainClass))
+                        annotationNode.setMember('value', new ClassExpression(superClassNode))
+                    }
                 }
                 if (!domainClass) {
                     GrailsASTUtils.error(source, classNode, "Scaffolded service (${classNode.name}) with @Scaffold does not have domain class set.", true)

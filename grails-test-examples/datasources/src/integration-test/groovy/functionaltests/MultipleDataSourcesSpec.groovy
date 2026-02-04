@@ -32,6 +32,13 @@ class MultipleDataSourcesSpec extends Specification {
 
 
     void "Test multiple data source persistence"() {
+        given: "initial counts"
+            def initialPrimaryCount = Book.count()
+            def initialSecondaryCount
+            SecondBook.withTransaction {
+                initialSecondaryCount = SecondBook.count()
+            }
+            
         when:
             new Book(title:"One").save(flush:true)
             new Book(title:"Two").save(flush:true)
@@ -40,8 +47,8 @@ class MultipleDataSourcesSpec extends Specification {
             }
             
         then:
-            Book.count() == 2
-            SecondBook.withTransaction { SecondBook.count() } == 1
-            SecondBook.secondary.withTransaction { SecondBook.secondary.count() } == 1
+            Book.count() == initialPrimaryCount + 2
+            SecondBook.withTransaction { SecondBook.count() } == initialSecondaryCount + 1
+            SecondBook.secondary.withTransaction { SecondBook.secondary.count() } == initialSecondaryCount + 1
     }
 }

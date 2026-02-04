@@ -1,0 +1,79 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "Release - Publish Documentation"
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 7.0.0)'
+        required: true
+        type: string
+permissions: { }
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  JAVA_DISTRIBUTION: liberica
+  JAVA_VERSION: 17.0.18
+  TARGET_BRANCH: ${{ github.ref_name }}
+  VERSION: ${{ inputs.version }}
+jobs:
+  docs:
+    environment: docs
+    name: "Publish Documentation"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "⚙️ Maximize build space"
+        run: |
+          echo "-- Dotnet"
+          sudo rm -rf /usr/share/dotnet
+          echo "-- Android"
+          sudo rm -rf /usr/local/lib/android
+          echo "-- Haskell"
+          sudo rm -rf /opt/ghc
+          echo "-- CodeQL"
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          
+          df -h
+      - name: "📝 Store release version"
+        run: echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # needed for docs release dropdown, (fetch-tags: true with fetch-depth: 1 does not work; https://github.com/actions/checkout/issues/1471)
+          filter: tree:0 # limit size, keeping tags for docs release dropdown
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+      - name: "📅 Ensure Common Build Date" # to ensure a reproducible build
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v5
+        with:
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
+      - name: "📖 Generate Documentation"
+        run: ./gradlew grails-doc:build -PgithubBranch=${TARGET_BRANCH}
+      - name: "🚀 Publish to GitHub Pages"
+        uses: apache/grails-github-actions/deploy-github-pages@asf
+        env:
+          GH_TOKEN: ${{ secrets.GRAILS_GHTOKEN }} # To be able to push to grails-website repo
+          GRADLE_PUBLISH_RELEASE: 'true'
+          SOURCE_FOLDER: grails-doc/build/docs
+          TARGET_REPOSITORY: apache/grails-website
+          TARGET_FOLDER: docs
+          DOCUMENTATION_BRANCH: asf-site-production

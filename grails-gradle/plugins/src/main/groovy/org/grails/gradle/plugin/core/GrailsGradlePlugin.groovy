@@ -18,18 +18,20 @@
  */
 package org.grails.gradle.plugin.core
 
-import javax.inject.Inject
+import java.util.zip.ZipFile
 
+import grails.util.BuildSettings
+import grails.util.Environment
+import grails.util.GrailsNameUtils
+import grails.util.Metadata
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-
-import org.gradle.api.DefaultTask
-import org.gradle.api.attributes.AttributeMatchingStrategy
-
 import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
 import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
+import org.apache.grails.gradle.common.PropertyFileUtils
 import org.apache.tools.ant.filters.EscapeUnicode
 import org.apache.tools.ant.filters.ReplaceTokens
+import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Plugin
@@ -39,11 +41,11 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.attributes.AttributeMatchingStrategy
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.ExtraPropertiesExtension
-import org.gradle.api.plugins.GroovyPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.AbstractCopyTask
 import org.gradle.api.tasks.JavaExec
@@ -56,18 +58,6 @@ import org.gradle.api.tasks.testing.Test
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.process.JavaForkOptions
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
-
-import org.springframework.boot.gradle.dsl.SpringBootExtension
-import org.springframework.boot.gradle.plugin.ResolveMainClassName
-import org.springframework.boot.gradle.plugin.SpringBootPlugin
-import org.springframework.boot.gradle.tasks.bundling.BootArchive
-import org.springframework.boot.gradle.tasks.run.BootRun
-
-import grails.util.BuildSettings
-import grails.util.Environment
-import grails.util.GrailsNameUtils
-import grails.util.Metadata
-import org.apache.grails.gradle.common.PropertyFileUtils
 import org.grails.build.parsing.CommandLineParser
 import org.grails.gradle.plugin.commands.ApplicationContextCommandTask
 import org.grails.gradle.plugin.commands.ApplicationContextScriptTask
@@ -78,6 +68,13 @@ import org.grails.gradle.plugin.model.GrailsClasspathToolingModelBuilder
 import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
 import org.grails.io.support.FactoriesLoaderSupport
+import org.springframework.boot.gradle.dsl.SpringBootExtension
+import org.springframework.boot.gradle.plugin.ResolveMainClassName
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+import org.springframework.boot.gradle.tasks.bundling.BootArchive
+import org.springframework.boot.gradle.tasks.run.BootRun
+
+import javax.inject.Inject
 
 /**
  * The main Grails gradle plugin implementation
@@ -86,7 +83,7 @@ import org.grails.io.support.FactoriesLoaderSupport
  * @author Graeme Rocher
  */
 @CompileStatic
-class GrailsGradlePlugin extends GroovyPlugin {
+class GrailsGradlePlugin implements Plugin<Project> {
 
     public static final String APPLICATION_CONTEXT_COMMAND_CLASS = 'grails.dev.commands.ApplicationCommand'
 
@@ -101,6 +98,9 @@ class GrailsGradlePlugin extends GroovyPlugin {
     }
 
     void apply(Project project) {
+
+        project.pluginManager.apply('groovy')
+
         // validate that only an app or a plugin is registered, and never both
         OnlyOneGrailsPlugin marker = (OnlyOneGrailsPlugin) project.getExtensions().findByName(OnlyOneGrailsPlugin.name)
         if (marker) {
@@ -110,10 +110,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
         // reset the environment to ensure it is resolved again for each invocation
         Environment.reset()
-
-        if (!project.tasks.names.contains('compileGroovy')) {
-            super.apply(project)
-        }
 
         excludeDependencies(project)
 
@@ -224,17 +220,72 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     protected Closure<String> getGroovyCompilerScript(GroovyCompile compile, Project project) {
         GrailsExtension grails = project.extensions.findByType(GrailsExtension)
-        if (!grails.importJavaTime) {
+
+        // Start with user-configured imports
+        Set<String> starImports = new LinkedHashSet<>(grails.starImports)
+
+        // Add java.time if enabled
+        if (grails.importJavaTime) {
+            starImports.add('java.time')
+        }
+
+        // Add Grails annotation packages and common validation annotations if enabled
+        if (grails.importGrailsCommonAnnotations) {
+            // Always add jakarta.validation.constraints
+            starImports.add('jakarta.validation.constraints')
+
+            // Check for grails.gorm.annotation.* classes on classpath
+            if (isClassOnClasspath(compile.classpath, 'grails.gorm.annotation.CreatedDate')) {
+                starImports.add('grails.gorm.annotation')
+            }
+
+            // Check for grails.plugin.scaffolding.annotation.* classes on classpath
+            if (isClassOnClasspath(compile.classpath, 'grails.plugin.scaffolding.annotation.Scaffold')) {
+                starImports.add('grails.plugin.scaffolding.annotation')
+            }
+        }
+
+        // Return null if no imports are needed
+        if (starImports.isEmpty()) {
             return null
         }
 
+        // Build the import statements
         return { ->
-            '''withConfig(configuration) {
+            def importStatements = starImports.collect { pkg -> "                        star '$pkg'" }.join('\n')
+            """withConfig(configuration) {
                     imports {
-                        star 'java.time'
+${importStatements}
                     }
                 }
-            '''
+            """
+        }
+    }
+
+    /**
+     * Check if a class exists on the given classpath.
+     * This detects classes from any source: direct dependencies, transitive dependencies, or local jars.
+     *
+     * @param classpath The FileCollection representing the classpath to search
+     * @param className The fully qualified class name to look for (e.g., 'grails.gorm.annotation.CreatedDate')
+     * @return true if the class is found on the classpath
+     */
+    private static boolean isClassOnClasspath(FileCollection classpath, String className) {
+        def classEntry = className.replace('.', '/') + '.class'
+        classpath.files.any { f ->
+            try {
+                if (f.file && f.name.endsWith('.jar')) {
+                    new ZipFile(f).withCloseable { zip ->
+                        zip.getEntry(classEntry) != null
+                    }
+                } else if (f.directory) {
+                    new File(f, classEntry).exists()
+                } else {
+                    false
+                }
+            } catch (Exception ignored) {
+                false
+            }
         }
     }
 
@@ -310,7 +361,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
         dme.imports({
             mavenBom("org.apache.grails:grails-bom:${project.properties['grailsVersion']}")
         })
-        dme.setApplyMavenExclusions(false)
     }
 
     protected String getDefaultProfile() {

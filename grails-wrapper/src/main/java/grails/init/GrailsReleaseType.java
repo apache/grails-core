@@ -41,7 +41,7 @@ public enum GrailsReleaseType {
      */
     public LinkedHashSet<GrailsReleaseType> upTo() {
         return new LinkedHashSet<>(Arrays.stream(GrailsReleaseType.values())
-                .filter(e -> e.ordinal() <= this.ordinal())
-                .collect(Collectors.toList()));
+            .filter(e -> e.ordinal() <= this.ordinal())
+            .collect(Collectors.toList()));
     }
 }

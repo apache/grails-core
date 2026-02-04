@@ -24,9 +24,13 @@ import java.lang.reflect.Method
 import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 
+import grails.gorm.validation.DisplayType
 import grails.util.GrailsClassUtils
 import org.grails.datastore.mapping.config.Property
+import org.grails.datastore.mapping.config.Settings
+import org.grails.datastore.mapping.model.AuditMetadataUtils
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Embedded
@@ -44,6 +48,9 @@ class DomainModelServiceImpl implements DomainModelService {
     @Autowired
     DomainPropertyFactory domainPropertyFactory
 
+    @Value('${' + Settings.SETTING_AUTO_TIMESTAMP_CACHE_ANNOTATIONS + ':true}')
+    boolean cacheAutoTimestampAnnotations
+
     private static Method derivedMethod
 
     static {
@@ -57,9 +64,12 @@ class DomainModelServiceImpl implements DomainModelService {
     /**
      * <p>Retrieves persistent properties and excludes:<ul>
      * <li>Any properties listed in the {@code static scaffold = [exclude: []]} property on the domain class
-     * <li>Any properties that have the constraint {@code [display: false]}
+     * <li>Any properties that have the constraint {@code [display: false]} or {@code [display: DisplayType.NONE]}
+     * <li>Any properties that have {@code [display: DisplayType.INPUT_ONLY]} (output views only)
      * <li>Any properties whose name exist in the blackList
      * </ul><p>
+     *
+     * <p>Properties with {@code [display: DisplayType.ALL]} or {@code [display: DisplayType.OUTPUT_ONLY]} will override the blacklist.</p>
      *
      * @see {@link DomainModelService#getInputProperties}
      * @param domainClass The persistent entity
@@ -82,13 +92,119 @@ class DomainModelServiceImpl implements DomainModelService {
         }
 
         properties.removeAll {
-            if (it.name in blacklist) {
-                return true
-            }
             Constrained constrained = it.constrained
-            if (constrained && !constrained.display) {
+            DisplayType displayType = constrained?.displayType
+
+            if (displayType == DisplayType.ALL || displayType == DisplayType.OUTPUT_ONLY) {
+                // Explicit DisplayType overrides blacklist and all other checks
+                return false
+            } else if (displayType == DisplayType.NONE || displayType == DisplayType.INPUT_ONLY) {
                 return true
+            } else {
+                if (it.name in blacklist) {
+                    return true
+                }
+                if (constrained && !constrained.display) {
+                    return true
+                }
             }
+
+            if (derivedMethod != null) {
+                Property property = it.mapping?.mappedForm
+                if (property != null && derivedMethod.invoke(property, (Object[]) null)) {
+                    return true
+                }
+            }
+
+            false
+        }
+        properties.sort()
+        properties
+    }
+
+    /**
+     * <p>Blacklist:<ul>
+     * <li>version
+     * <li>dateCreated
+     * <li>lastUpdated
+     * <li>Any properties with @CreatedDate, @LastModifiedDate, or @AutoTimestamp annotations (if excludeAnnotatedTimestamps is true)
+     * </ul><p>
+     *
+     * @see {@link DomainModelServiceImpl#getProperties}
+     * @param domainClass The persistent entity
+     * @param blackList Custom blacklist (optional)
+     * @param excludeAnnotatedTimestamps If true, exclude @CreatedDate/@LastModifiedDate/@AutoTimestamp properties
+     */
+    @Override
+    List<DomainProperty> getInputProperties(PersistentEntity domainClass, List<String> blackList, boolean excludeAnnotatedTimestamps) {
+        getInputPropertiesInternal(domainClass, new ArrayList<>(blackList ?: ['version', 'dateCreated', 'lastUpdated']), excludeAnnotatedTimestamps)
+    }
+
+    /**
+     * <p>Blacklist:<ul>
+     * <li>version
+     * <li>dateCreated
+     * <li>lastUpdated
+     * <li>Any properties with @CreatedDate, @LastModifiedDate, or @AutoTimestamp annotations
+     * </ul><p>
+     *
+     * @see {@link DomainModelServiceImpl#getProperties}
+     * @param domainClass The persistent entity
+     */
+    @Override
+    List<DomainProperty> getInputProperties(PersistentEntity domainClass, List blackList = null) {
+        getInputProperties(domainClass, blackList, true)
+    }
+
+    /**
+     * Internal method that checks for auto-timestamp annotations and adds them to the blacklist
+     */
+    protected List<DomainProperty> getInputPropertiesInternal(PersistentEntity domainClass, List<String> blacklist, boolean excludeAnnotatedTimestamps) {
+        List<DomainProperty> properties = domainClass.persistentProperties.collect {
+            domainPropertyFactory.build(it)
+        }
+
+        // Add properties with audit metadata annotations to blacklist only if excludeAnnotatedTimestamps is true
+        if (excludeAnnotatedTimestamps) {
+            properties.each { DomainProperty property ->
+                if (AuditMetadataUtils.hasAuditMetadataAnnotation(property.persistentProperty, cacheAutoTimestampAnnotations)) {
+                    if (!blacklist.contains(property.name)) {
+                        blacklist.add(property.name)
+                    }
+                }
+            }
+        }
+
+        Object scaffoldProp = GrailsClassUtils.getStaticPropertyValue(domainClass.javaClass, 'scaffold')
+        if (scaffoldProp instanceof Map) {
+            Map scaffold = (Map) scaffoldProp
+            if (scaffold.containsKey('exclude')) {
+                if (scaffold.exclude instanceof Collection) {
+                    blacklist.addAll((Collection) scaffold.exclude)
+                } else if (scaffold.exclude instanceof String) {
+                    blacklist.add((String) scaffold.exclude)
+                }
+            }
+        }
+
+        properties.removeAll {
+            Constrained constrained = it.constrained
+            DisplayType displayType = constrained?.displayType
+
+            if (displayType == DisplayType.ALL || displayType == DisplayType.INPUT_ONLY) {
+                // Explicit DisplayType overrides blacklist and all other checks
+                return false
+            } else if (displayType == DisplayType.NONE || displayType == DisplayType.OUTPUT_ONLY) {
+                return true
+            } else {
+                if (it.name in blacklist) {
+                    return true
+                }
+                if (constrained && !constrained.display) {
+                    return true
+                }
+            }
+
             if (derivedMethod != null) {
                 Property property = it.mapping.mappedForm
                 if (derivedMethod.invoke(property, (Object[]) null)) {
@@ -105,20 +221,6 @@ class DomainModelServiceImpl implements DomainModelService {
     /**
      * <p>Blacklist:<ul>
      * <li>version
-     * <li>dateCreated
-     * <li>lastUpdated
-     * </ul><p>
-     *
-     * @see {@link DomainModelServiceImpl#getProperties}
-     * @param domainClass The persistent entity
-     */
-    List<DomainProperty> getInputProperties(PersistentEntity domainClass, List<String> blackList = null) {
-        getProperties(domainClass, new ArrayList<>(blackList ?: ['version', 'dateCreated', 'lastUpdated']))
-    }
-
-    /**
-     * <p>Blacklist:<ul>
-     * <li>version
      * </ul><p>
      *
      * @see {@link DomainModelServiceImpl#getProperties}
@@ -126,6 +228,18 @@ class DomainModelServiceImpl implements DomainModelService {
      */
     List<DomainProperty> getOutputProperties(PersistentEntity domainClass) {
         getProperties(domainClass, ['version'])
+    }
+
+    /**
+     * <p>Retrieves output properties with a custom blacklist.</p>
+     *
+     * @see {@link DomainModelServiceImpl#getProperties}
+     * @param domainClass The persistent entity
+     * @param blackList Custom blacklist of property names to exclude
+     */
+    @Override
+    List<DomainProperty> getOutputProperties(PersistentEntity domainClass, List<String> blackList) {
+        getProperties(domainClass, new ArrayList<>(blackList ?: ['version']))
     }
 
     /**

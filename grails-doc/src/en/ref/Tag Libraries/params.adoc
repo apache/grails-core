@@ -34,20 +34,18 @@ A mutable multi-dimensional map (hash) of request (CGI) parameters.
 To obtain a request parameter called `id`:
 [source,groovy]
 ----
-class BookController {
-    def show() {
-        def book = Book.get(params.id)
+class ExamplesTagLib {
+
+    def showParameter = {
+        out << "Parameter id has the value ${params['id']}"
     }
+
 }
 ----
 
-To perform data binding (see link:{guidePath}theWebLayer.html#dataBinding[data binding] in the user guide):
-
-[source,groovy]
+[source,xml]
 ----
-def save() {
-    def book = new Book(params) // bind request parameters onto properties of book
-}
+<g:showParameter />
 ----
 
 
@@ -59,16 +57,8 @@ The standard Servlet API provides access to parameters with the `HttpServletRequ
 The `params` object can be indexed into using the array index operator or de-reference operator, so given the URL `/hello?foo=bar` you can access `foo` with
 
 ----
-println params.foo
+params['id']
 ----
 
 The params object can also be used to bind request parameters onto the properties of a domain class using either the constructor or the link:{domainClassesRefFromRef}properties.html[properties] property:
 
-[source,groovy]
-----
-def book = new Book(params)
-book = Book.get(1)
-book.properties = params
-----
-
-For further reading see link:{guidePath}theWebLayer.html#dataBinding[data binding] in the user guide.

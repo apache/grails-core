@@ -58,5 +58,13 @@ gradlePlugin {
             id = 'org.apache.grails.buildsrc.properties'
             implementationClass = 'org.apache.grails.buildsrc.SharedPropertyPlugin'
         }
+        register('grailsCodeStyle') {
+            id = 'org.apache.grails.gradle.grails-code-style'
+            implementationClass = 'org.apache.grails.buildsrc.GrailsCodeStylePlugin'
+        }
+        register('grailsRepoSettings') {
+            id = 'org.apache.grails.buildsrc.repo'
+            implementationClass = 'org.apache.grails.buildsrc.GrailsRepoSettingsPlugin'
+        }
     }
 }

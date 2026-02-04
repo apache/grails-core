@@ -33,7 +33,7 @@ import org.grails.datastore.gorm.GormEntity;
 /**
  * Resolves the appropriate service bean for a given domain class by:
  *   - Scanning only beans of type GormService
- *   - Matching via: ((GormEntity<?>) service.getResource()).instanceOf(domainClass)
+ *   - Matching via: domainClass.isAssignableFrom(service.getResource())
  *
  * Keeps a single shared cache for the whole app.
  */
@@ -72,28 +72,25 @@ public final class DomainServiceLocator {
 
         for (String name : names) {
             GormService<?> gs = (GormService<?>) ctx.getBean(name);
-            Object resource = gs.getResource();
-            if (resource instanceof GormEntity) {
-                GormEntity<?> ge = (GormEntity<?>) resource;
-                if (ge.instanceOf(domainClass)) {
-                    matchingBeanNames.add(name);
-                    if (match != null) {
-                        throw new IllegalStateException(
-                            "Multiple GormService beans match domain " + domainClass.getName() +
-                            ": " + matchingBeanNames
-                        );
-                    }
-                    @SuppressWarnings("unchecked")
-                    GormService<T> svc = (GormService<T>) gs;
-                    match = svc;
+            Class<?> resourceClass = gs.getResource();
+            if (resourceClass != null && domainClass.isAssignableFrom(resourceClass)) {
+                matchingBeanNames.add(name);
+                if (match != null) {
+                    throw new IllegalStateException(
+                        "Multiple GormService beans match domain " + domainClass.getName() +
+                        ": " + matchingBeanNames
+                    );
                 }
+                @SuppressWarnings("unchecked")
+                GormService<T> svc = (GormService<T>) gs;
+                match = svc;
             }
         }
 
         if (match == null) {
             throw new IllegalStateException(
                 "No GormService bean found for domain " + domainClass.getName() +
-                " using resource.instanceOf(..). Scanned " + names.length + " GormService beans."
+                ". Scanned " + names.length + " GormService beans."
             );
         }
 

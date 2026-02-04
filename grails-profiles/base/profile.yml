@@ -17,12 +17,14 @@ skeleton:
     executable: ["**/gradlew*", "**/grailsw*"]
     binaryExtensions: ['png','gif','jpg','jpeg','ico','icns','pdf','zip','jar','class']
 repositories:
+    - "mavenCentral()"
     - "https://repo.grails.org/grails/restricted"
 features:
   defaults:
     - events
 build:
     repositories:
+        - "mavenCentral()"
         - "https://repo.grails.org/grails/restricted"
     plugins:
         - eclipse

@@ -43,4 +43,14 @@ class CoordinateVersionHolder extends CoordinateHolder {
 
         "$groupId:$artifactId:$version" as String
     }
+    
+    static CoordinateVersionHolder create(String coordinates) {
+        coordinates.split(':').with { String[] parts ->
+            new CoordinateVersionHolder(
+                groupId: parts[0],
+                artifactId: parts[1],
+                version: parts[2]
+            )
+        }
+    }
 }

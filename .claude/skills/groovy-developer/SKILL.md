@@ -1,0 +1,1 @@
+../../../.agents/skills/groovy-developer/SKILL.md

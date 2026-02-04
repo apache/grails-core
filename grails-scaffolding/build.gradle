@@ -25,6 +25,7 @@ plugins {
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
 
 version = projectVersion
@@ -41,10 +42,16 @@ dependencies {
     api project(':grails-rest-transforms')
 
     compileOnly 'jline:jline'
+
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation project(':grails-web-gsp')
+    testImplementation project(':grails-core')
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'org.springframework:spring-web'
+    testImplementation 'net.bytebuddy:byte-buddy'
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')

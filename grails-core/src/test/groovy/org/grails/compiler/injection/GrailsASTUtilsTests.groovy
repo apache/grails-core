@@ -36,14 +36,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals
  */
 class GrailsASTUtilsTests {
 
+    private String originalGrailsVersion
+
     @BeforeEach
     protected void setUp() throws Exception {
+        originalGrailsVersion = System.getProperty("grails.version")
         System.setProperty("grails.version", "3.0.0")
     }
 
     @AfterEach
     protected void tearDown() throws Exception {
-        System.setProperty("grails.version", "")
+        if (originalGrailsVersion != null) {
+            System.setProperty("grails.version", originalGrailsVersion)
+        } else {
+            System.clearProperty("grails.version")
+        }
     }
 
     @Test

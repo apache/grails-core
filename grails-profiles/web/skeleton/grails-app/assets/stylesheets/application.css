@@ -7,8 +7,8 @@
 * You're free to add application-wide styles to this file and they'll appear at the top of the
 * compiled file, but it's generally better to create a new file per style scope.
 *
-*= require webjars/dist/css/bootstrap.css
-*= require webjars/font/bootstrap-icons.css
+*= require webjars/bootstrap/%/dist/css/bootstrap.css
+*= require webjars/bootstrap-icons/%/font/bootstrap-icons.css
 *= require grails.css
 *= require_self
 */

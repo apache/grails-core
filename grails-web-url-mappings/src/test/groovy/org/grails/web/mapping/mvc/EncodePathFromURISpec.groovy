@@ -23,9 +23,14 @@ import grails.core.DefaultGrailsApplication
 import grails.util.GrailsWebMockUtil
 import grails.web.Action
 import grails.web.mapping.AbstractUrlMappingsSpec
+import org.springframework.web.context.request.RequestContextHolder
 import spock.lang.Issue
 
 class EncodePathFromURISpec extends AbstractUrlMappingsSpec {
+
+    void cleanup() {
+        RequestContextHolder.resetRequestAttributes()
+    }
 
     @Issue('#10936')
     void 'The id parameter in a Path is not encoded as a URL but a URI'() {

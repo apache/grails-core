@@ -26,7 +26,7 @@ import groovy.transform.ToString
 @EqualsAndHashCode(includes = ['groupId', 'artifactId'])
 @CompileStatic
 @ToString
-class CoordinateHolder {
+class CoordinateHolder implements Serializable {
 
     String groupId
     String artifactId

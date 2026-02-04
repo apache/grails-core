@@ -33,13 +33,13 @@ and then access those variables later in the page:
 
 Within the scope of a GSP there are a number of pre-defined variables, including:
 
-* `application` - The {javaee}javax/servlet/ServletContext.html[javax.servlet.ServletContext] instance
+* `application` - The {jakartaee}jakarta/servlet/ServletContext.html[javax.servlet.ServletContext] instance
 * `applicationContext` The Spring {springapi}org/springframework/context/ApplicationContext.html[ApplicationContext] instance
 * `flash` - The link:{controllersRef}flash.html[flash] object
 * `grailsApplication` - The link:{api}grails/core/GrailsApplication.html[GrailsApplication] instance
 * `out` - The response writer for writing to the output stream
 * `params` - The link:{controllersRef}params.html[params] object for retrieving request parameters
-* `request` - The {javaee}javax/servlet/http/HttpServletRequest.html[HttpServletRequest] instance
-* `response` - The {javaee}javax/servlet/http/HttpServletResponse.html[HttpServletResponse] instance
-* `session` - The {javaee}javax/servlet/http/HttpSession.html[HttpSession] instance
+* `request` - The {jakartaee}jakarta/servlet/http/HttpServletRequest.html[HttpServletRequest] instance
+* `response` - The {jakartaee}jakarta/servlet/http/HttpServletResponse.html[HttpServletResponse] instance
+* `session` - The {jakartaee}jakarta/servlet/http/HttpSession.html[HttpSession] instance
 * `webRequest` - The link:{api}org/grails/web/servlet/mvc/GrailsWebRequest.html[GrailsWebRequest] instance

@@ -50,7 +50,7 @@ dependencies {
 
 def defaultTestConfig = {
     maxParallelForks = configuredTestParallel
-    forkEvery = isCiBuild ? 10 : 100
+    forkEvery = isCiBuild ? 50 : 100
     excludes = ['**/*TestCase.class', '**/*$*.class']
 }
 

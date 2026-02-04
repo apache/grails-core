@@ -1,0 +1,96 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "Release - Close"
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 7.0.0)'
+        required: true
+        type: string
+permissions: { }
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  PROJECT_NAME: Apache Grails
+  TAG: v${{ inputs.version }}
+  TARGET_BRANCH: ${{ github.ref_name }}
+  VERSION: ${{ inputs.version }}
+jobs:
+  close:
+    name: "Close Release"
+    environment: release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # required for gradle.properties revert
+      issues: write # required for milestone closing
+      pull-requests: write # to open PR
+      actions: write # in case there are pending changes to release.yml in the target branch
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: "⚙️ Run post-release"
+        uses: apache/grails-github-actions/post-release@asf
+        env:
+          RELEASE_SCRIPT_PATH: '.github/scripts/setSnapshotGrailsVersion.sh'
+      - name: "🌎 MANUAL - Create Blog Post"
+        run: |
+          echo "::group::Blog Post Creation - MANUAL"
+          echo "Publish a blog post on https://grails.apache.org/blog/ about the new release [${VERSION}] using"
+          echo "the repo: https://github.com/apache/grails-static-website"
+          echo "::endgroup::"
+      - name: "🌎 MANUAL - Merge Close Release PR"
+        run: |
+          echo "::group::Merge Close Release PR - MANUAL"
+          echo "The last step in the grails-core release workflow will create a merge branch for the original tag"
+          echo "with version number and then open a PR to merge back into the next branch."
+          echo "You will need to merge this PR into the branch after correcting any merge conflict."
+          echo "::endgroup::"
+      - name: "🌎 MANUAL - deploy the new SNAPSHOT to Forge"
+        run: |
+          echo "::group::Deploy the new SNAPSHOT to Forge - MANUAL"
+          echo "After the Close Release PR is merged, deploy the new SNAPSHOT to Forge via:"
+          echo "https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml"
+          echo "::endgroup::"
+      - name: "🌎 MANUAL - Add version to the Grails Website"
+        run: |
+          echo "::group::Add version to the Grails Website - MANUAL"
+          echo "Add the released version [${VERSION}] to the Grails Website by running the Release workflow:"
+          echo "https://github.com/apache/grails-static-website/actions/workflows/release.yml"
+          echo "Republish Grails Website by running the Publish workflow:"
+          echo "https://github.com/apache/grails-static-website/actions/workflows/publish.yml"
+          echo "::endgroup::"
+      - name: '📧 Announcement Email'
+        run: |
+          echo "::group::Announcement Email"
+          echo ""
+          echo "TO:"
+          echo "*************************************************"
+          echo "announce@apache.org, dev@grails.apache.org, users@grails.apache.org"
+          echo "*************************************************"
+          echo ""
+          echo "Subject:"
+          echo "*************************************************"
+          echo "[ANNOUNCE] ${PROJECT_NAME} ${VERSION}"
+          echo "*************************************************"
+          echo ""
+          echo "Body:"
+          echo "*************************************************"
+          cat .github/vote_templates/announce.txt | envsubst
+          echo "*************************************************"
+          echo "::endgroup::"

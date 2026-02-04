@@ -24,6 +24,7 @@ plugins {
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
 
 version = projectVersion
@@ -113,6 +114,12 @@ gradlePlugin {
             id = 'org.apache.grails.gradle.grails-exploded'
             implementationClass = 'org.grails.gradle.plugin.exploded.GrailsExplodedPlugin'
         }
+        grailsIntegrationTest {
+            displayName = 'Grails Integration Test Plugin'
+            description = 'A plugin that adds support for the Grails `integration` test phase.'
+            id = 'org.apache.grails.gradle.grails-integration-test'
+            implementationClass = 'org.grails.gradle.plugin.core.IntegrationTestGradlePlugin'
+        }
     }
 }
 
@@ -123,6 +130,5 @@ tasks.withType(Copy) {
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
 }
