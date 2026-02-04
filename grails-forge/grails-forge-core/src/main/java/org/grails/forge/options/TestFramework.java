@@ -44,13 +44,15 @@ public enum TestFramework {
     public String getSourcePath(String path, Language language) {
         switch (this) {
             case SPOCK:
-                return Language.GROOVY.getTestSrcDir() + path + getTestFrameworkSuffix() + Language.GROOVY.getExtension();
+                return Language.GROOVY.getTestSrcDir() + path + getTestFrameworkSuffix()
+                        + Language.GROOVY.getExtension();
             case JUNIT:
             default:
                 if (language != null) {
-                    return language.getTestSrcDir() + path + getTestFrameworkSuffix()  + language.getExtension();
+                    return language.getTestSrcDir() + path + getTestFrameworkSuffix() + language.getExtension();
                 } else {
-                    return Language.GROOVY.getTestSrcDir() + path + getTestFrameworkSuffix() + Language.GROOVY.getExtension();
+                    return Language.GROOVY.getTestSrcDir() + path + getTestFrameworkSuffix()
+                            + Language.GROOVY.getExtension();
                 }
         }
     }
@@ -58,13 +60,15 @@ public enum TestFramework {
     public String getIntegrationSourcePath(String path, Language language) {
         switch (this) {
             case SPOCK:
-                return Language.GROOVY.getIntegrationSrcDir() + path + getTestFrameworkSuffix() + Language.GROOVY.getExtension();
+                return Language.GROOVY.getIntegrationSrcDir() + path + getTestFrameworkSuffix()
+                        + Language.GROOVY.getExtension();
             case JUNIT:
             default:
                 if (language != null) {
-                    return language.getIntegrationSrcDir() + path + getTestFrameworkSuffix()  + language.getExtension();
+                    return language.getIntegrationSrcDir() + path + getTestFrameworkSuffix() + language.getExtension();
                 } else {
-                    return Language.GROOVY.getIntegrationSrcDir() + path + getTestFrameworkSuffix() + Language.GROOVY.getExtension();
+                    return Language.GROOVY.getIntegrationSrcDir() + path + getTestFrameworkSuffix()
+                            + Language.GROOVY.getExtension();
                 }
         }
     }
@@ -109,9 +113,11 @@ public enum TestFramework {
     }
 
     public org.grails.forge.options.TestFramework toTestFramework() {
-        return switch (this) {
-            case SPOCK -> TestFramework.SPOCK;
-            default -> TestFramework.JUNIT;
-        };
+        switch (this) {
+            case SPOCK:
+                return TestFramework.SPOCK;
+            default:
+                return TestFramework.JUNIT;
+        }
     }
 }
