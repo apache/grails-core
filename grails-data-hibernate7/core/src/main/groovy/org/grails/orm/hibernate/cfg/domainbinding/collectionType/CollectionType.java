@@ -32,9 +32,6 @@ public abstract class CollectionType {
     protected final GrailsDomainBinder binder;
     protected final MetadataBuildingContext buildingContext;
 
-    private boolean initialized;
-
-    private final Map<Class<?>, CollectionType> INSTANCES = new HashMap<>();
 
     public abstract Collection create(ToMany property, PersistentClass owner,
                                       String path, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException;

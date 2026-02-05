@@ -77,8 +77,7 @@ public class GrailsPropertyBinder {
             new SimpleValueBinder(namingStrategy).bindSimpleValue(currentGrailsProp, null,(SimpleValue) value, EMPTY_PATH);
         }
         else if (collectionType != null) {
-            String typeName = currentGrailsProp.getTypeName();
-            if ("serializable".equals(typeName)) {
+            if (currentGrailsProp.isSerializableType()) {
                 value = new BasicValue(metadataBuildingContext, table);
                 new SimpleValueBinder(namingStrategy).bindSimpleValue(currentGrailsProp, null,(SimpleValue) value, EMPTY_PATH);// No specific binder call needed
             }
