@@ -19,14 +19,7 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
      */
     default String getTypeName() {
         GrailsHibernatePersistentEntity owner = getHibernateOwner();
-        return getTypeName(owner != null ? owner.getMappedForm() : null);
-    }
-
-    /**
-     * @param mapping The mapping
-     * @return The type name
-     */
-    default String getTypeName(Mapping mapping) {
+        Mapping mapping = owner != null ? owner.getMappedForm() : null;
         return getTypeName(getMappedForm(), mapping);
     }
 
@@ -109,5 +102,10 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
 
     default boolean isSerializableType() {
         return "serializable".equals(getTypeName());
+    }
+
+    default boolean isTablePerHierarchySubclass() {
+        Mapping ownerMapping = getHibernateOwner().getMappedForm();
+        return !getHibernateOwner().isRoot() && (ownerMapping == null || ownerMapping.getTablePerHierarchy());
     }
 }
