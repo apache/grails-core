@@ -76,6 +76,23 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         expect:
         property.getTypeName() == "string"
     }
+
+    void "test getIndexColumnType()"() {
+        given:
+        createPersistentEntity(MapValue)
+        PersistentEntity entityWithDefaultMap = createPersistentEntity(EntityWithMap)
+        PersistentEntity entityWithCustomMap = createPersistentEntity(EntityWithCustomMapIndex)
+        PersistentEntity entityWithList = createPersistentEntity(EntityWithList)
+
+        GrailsHibernatePersistentProperty defaultMapProp = (GrailsHibernatePersistentProperty) entityWithDefaultMap.getPropertyByName("tags")
+        GrailsHibernatePersistentProperty customMapProp = (GrailsHibernatePersistentProperty) entityWithCustomMap.getPropertyByName("tags")
+        GrailsHibernatePersistentProperty listProp = (GrailsHibernatePersistentProperty) entityWithList.getPropertyByName("items")
+
+        expect:
+        defaultMapProp.getIndexColumnType("string") == "string"
+        customMapProp.getIndexColumnType("long") == "long"
+        listProp.getIndexColumnType("integer") == "integer"
+    }
 }
 
 
@@ -149,9 +166,38 @@ class TestEntityWithEmbedded {
 
 
 @Entity
-
 class Address {
 
     String city
 
+}
+
+@Entity
+class EntityWithMap {
+    Long id
+    Map<String, MapValue> tags
+    static hasMany = [tags: MapValue]
+}
+
+@Entity
+class MapValue {
+    Long id
+    String name
+}
+
+@Entity
+class EntityWithCustomMapIndex {
+    Long id
+    Map<Long, MapValue> tags
+    static hasMany = [tags: MapValue]
+    static mapping = {
+        tags indexColumn: [type: 'long']
+    }
+}
+
+@Entity
+class EntityWithList {
+    Long id
+    List<String> items
+    static hasMany = [items: String]
 }

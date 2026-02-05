@@ -23,7 +23,6 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
-import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.model.types.ToMany;
@@ -64,7 +63,6 @@ import org.hibernate.mapping.JoinedSubclass;
 import org.hibernate.mapping.KeyValue;
 import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.OneToMany;
-import org.hibernate.mapping.OneToOne;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.RootClass;
@@ -79,7 +77,6 @@ import org.hibernate.metamodel.mapping.JdbcMapping;
 import org.hibernate.service.ServiceRegistry;
 import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
-import org.hibernate.usertype.UserCollectionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
@@ -259,7 +256,7 @@ public class GrailsDomainBinder
 
         SimpleValue value = new BasicValue(metadataBuildingContext, map.getCollectionTable());
 
-        String type = getIndexColumnType(property, STRING_TYPE);
+        String type = ((GrailsHibernatePersistentProperty) property).getIndexColumnType("string");
         String columnName1 = getIndexColumnName(property, sessionFactoryBeanName);
         new SimpleValueColumnBinder().bindSimpleValue(value, type, columnName1, true);
         PropertyConfig mappedForm = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
@@ -336,8 +333,9 @@ public class GrailsDomainBinder
 
         Table collectionTable = list.getCollectionTable();
         SimpleValue iv = new BasicValue(metadataBuildingContext, collectionTable);
-        new SimpleValueColumnBinder().bindSimpleValue(iv, "integer", columnName, true);
-        iv.setTypeName("integer");
+        String type = ((GrailsHibernatePersistentProperty) property).getIndexColumnType("integer");
+        new SimpleValueColumnBinder().bindSimpleValue(iv, type, columnName, true);
+        iv.setTypeName(type);
         list.setIndex(iv);
         list.setBaseIndex(0);
         list.setInverse(false);
@@ -1536,27 +1534,6 @@ public class GrailsDomainBinder
         }
         return getNamingStrategy().resolveColumnName(property.getName()) + UNDERSCORE + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
     }
-
-    private String getIndexColumnType(@Nonnull PersistentProperty property, String defaultType) {
-
-        PropertyConfig pc = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
-
-            if (pc.getIndexColumn() != null && pc.getIndexColumn().getType() != null) {
-
-                Mapping mapping = null;
-                if (property.getOwner() instanceof GrailsHibernatePersistentEntity domainClass) {
-                    mapping = domainClass.getMappedForm();
-                }
-
-                if (property instanceof GrailsHibernatePersistentProperty ghpp) {
-                    return ghpp.getTypeName(pc.getIndexColumn(), mapping);
-                }
-
-            }
-
-            return defaultType;
-
-        }
 
     private String getMapElementName(PersistentProperty property, String sessionFactoryBeanName) {
         PropertyConfig pc = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
