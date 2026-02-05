@@ -233,11 +233,29 @@ public abstract class AbstractConstraint implements Constraint {
                 return messageSource.getMessage(code, null, LocaleContextHolder.getLocale());
             }
 
-            return ConstrainedProperty.DEFAULT_MESSAGES.get(code);
+            return getDefaultMessageFromBundle(code);
         }
         catch (Exception e) {
-            return ConstrainedProperty.DEFAULT_MESSAGES.get(code);
+            return getDefaultMessageFromBundle(code);
         }
+    }
+
+    /**
+     * Gets the default message from the static map or directly from the resource bundle.
+     * This provides a robust fallback for Groovy 5 where interface static initialization
+     * order may differ.
+     */
+    private String getDefaultMessageFromBundle(String code) {
+        String message = ConstrainedProperty.DEFAULT_MESSAGES.get(code);
+        if (message == null) {
+            try {
+                message = ConstrainedProperty.MESSAGE_BUNDLE.getString(code);
+            }
+            catch (java.util.MissingResourceException ignored) {
+                // Code not found in bundle
+            }
+        }
+        return message;
     }
 
     protected abstract void processValidate(Object target, Object propertyValue, Errors errors);

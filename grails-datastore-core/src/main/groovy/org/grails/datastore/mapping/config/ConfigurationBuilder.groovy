@@ -28,6 +28,7 @@ import groovy.transform.builder.SimpleStrategy
 import groovy.util.logging.Slf4j
 
 import org.springframework.core.convert.ConversionFailedException
+import org.springframework.core.convert.ConverterNotFoundException
 import org.springframework.core.env.PropertyResolver
 import org.springframework.util.ReflectionUtils
 
@@ -167,9 +168,11 @@ abstract class ConfigurationBuilder<B, C> {
                     continue
                 }
                 else if (!hasBuilderPrefix &&
-                        ((org.grails.datastore.mapping.reflect.ReflectionUtils.isGetter(methodName, parameterTypes) && method.returnType.getAnnotation(Builder) == null) ||
+                        ((org.grails.datastore.mapping.reflect.ReflectionUtils.isGetter(methodName, parameterTypes) &&
+                                method.returnType.getAnnotation(Builder) == null && !isLikelyBuilderType(method.returnType)) ||
                                 org.grails.datastore.mapping.reflect.ReflectionUtils.isSetter(methodName, parameterTypes))) {
                     // don't process getters or setters, unless the getter returns a builder
+                    // Note: @Builder annotation has SOURCE retention so we also check isLikelyBuilderType
                     continue
                 }
                 else {
@@ -241,8 +244,13 @@ abstract class ConfigurationBuilder<B, C> {
                         }
                     }
 
+                    // Check if this type should be treated as a builder type
+                    // Note: @Builder annotation has SOURCE retention so we can't detect it at runtime
+                    // Instead we check if the type is a likely configuration object (has no-arg constructor,
+                    // isn't a primitive/wrapper/collection/etc.)
                     Builder builderAnnotation = argType.getAnnotation(Builder)
-                    if (builderAnnotation != null && builderAnnotation.builderStrategy() == SimpleStrategy) {
+                    if (builderAnnotation != null && builderAnnotation.builderStrategy() == SimpleStrategy ||
+                            isLikelyBuilderType(argType)) {
                         Method existingGetter = ReflectionUtils.findMethod(builderClass, NameUtils.getGetterName(methodName))
                         def newBuilder
                         if (existingGetter != null) {
@@ -301,7 +309,8 @@ abstract class ConfigurationBuilder<B, C> {
                         continue
                     }
                 } else if (methodName.startsWith('get') && parameterTypes.length == 0) {
-                    if (method.returnType.getAnnotation(Builder)) {
+                    // Note: @Builder annotation has SOURCE retention so we can't detect it at runtime
+                    if (method.returnType.getAnnotation(Builder) || isLikelyBuilderType(method.returnType)) {
                         def childBuilder = method.invoke(builder)
                         if (childBuilder != null) {
                             Object fallBackChildConfig = null
@@ -363,23 +372,11 @@ abstract class ConfigurationBuilder<B, C> {
                         try {
                             value = propertyResolver.getProperty(propertyPathForArg, argType, fallBackValue)
                         } catch (ConversionFailedException e) {
-                            if (argType.isEnum()) {
-                                value = propertyResolver.getProperty(propertyPathForArg, String)
-                                if (value != null) {
-                                    try {
-                                        value = Enum.valueOf((Class) argType, value.toUpperCase())
-                                    } catch (Throwable e2) {
-                                        // ignore e2 and throw original
-                                        throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
-                                    }
-                                }
-                                else {
-                                    throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
-                                }
-                            }
-                            else {
-                                throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
-                            }
+                            value = handleConversionException(e, argType, propertyPathForArg)
+                        } catch (ConverterNotFoundException e) {
+                            // Groovy 5 / Spring 6 - handle types with @Builder(builderStrategy = SimpleStrategy)
+                            // where Spring can't auto-convert from Map
+                            value = handleConverterNotFoundException(e, argType, propertyPathForArg, fallBackValue)
                         }
                         if (value != null) {
                             log.debug('Resolved value [{}] for setting [{}]', value, propertyPathForArg)
@@ -432,5 +429,111 @@ abstract class ConfigurationBuilder<B, C> {
      */
     protected void startBuild(Object builder, String configurationPath) {
         // no-op
+    }
+
+    /**
+     * Handle ConversionFailedException - for enums, try case-insensitive conversion
+     */
+    private Object handleConversionException(ConversionFailedException e, Class argType, String propertyPathForArg) {
+        if (argType.isEnum()) {
+            def value = propertyResolver.getProperty(propertyPathForArg, String)
+            if (value != null) {
+                try {
+                    return Enum.valueOf((Class) argType, value.toUpperCase())
+                } catch (Throwable e2) {
+                    // ignore e2 and throw original
+                    throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
+                }
+            }
+            else {
+                throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
+            }
+        }
+        else {
+            throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
+        }
+    }
+
+    /**
+     * Handle ConverterNotFoundException - for nested configuration types,
+     * try to instantiate and populate from Map. This handles Groovy 5 / Spring 6 compatibility where
+     * Spring can't auto-convert from LinkedHashMap to these types.
+     *
+     * Note: @Builder annotation has SOURCE retention, so we can't check for it at runtime.
+     * Instead we try instantiation for any type that has a no-arg constructor.
+     */
+    @CompileDynamic
+    private Object handleConverterNotFoundException(ConverterNotFoundException e, Class argType, String propertyPathForArg, Object fallBackValue) {
+        // Try to get the raw Map value and populate the target type
+        try {
+            def mapValue = propertyResolver.getProperty(propertyPathForArg, Map)
+            if (mapValue != null && !mapValue.isEmpty()) {
+                try {
+                    def instance = argType.getDeclaredConstructor().newInstance()
+                    mapValue.each { key, val ->
+                        if (instance.hasProperty(key as String)) {
+                            instance[key as String] = val
+                        }
+                    }
+                    return instance
+                } catch (Throwable e2) {
+                    log.debug("Failed to instantiate {} from Map: {}", argType, e2.message)
+                }
+            }
+        } catch (Throwable e3) {
+            log.debug("Failed to get Map value for {}: {}", propertyPathForArg, e3.message)
+        }
+
+        // If we have a fallback value, return it
+        if (fallBackValue != null) {
+            return fallBackValue
+        }
+
+        // Try to instantiate the type with default constructor
+        try {
+            return argType.getDeclaredConstructor().newInstance()
+        } catch (Throwable e4) {
+            log.debug("Failed to instantiate {} with default constructor: {}", argType, e4.message)
+        }
+
+        throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
+    }
+
+    /**
+     * Check if a type is likely a builder/configuration type that should be recursively processed.
+     * This is needed because @Builder annotation has SOURCE retention and can't be detected at runtime.
+     *
+     * A type is considered a likely builder type if:
+     * - It has a public no-arg constructor
+     * - It's not a primitive, wrapper, String, enum, collection, map, or closure
+     * - It's in an org.grails package (to avoid false positives with third-party types)
+     */
+    private static boolean isLikelyBuilderType(Class<?> type) {
+        if (type == null) return false
+
+        // Skip primitives, wrappers, common types
+        if (type.isPrimitive()) return false
+        if (type == String || type == CharSequence) return false
+        if (Number.isAssignableFrom(type)) return false
+        if (type == Boolean || type == Character) return false
+        if (type.isEnum()) return false
+        if (Collection.isAssignableFrom(type)) return false
+        if (Map.isAssignableFrom(type)) return false
+        if (Closure.isAssignableFrom(type)) return false
+        if (type.isArray()) return false
+        if (Class.isAssignableFrom(type)) return false
+
+        // Check if it's in a Grails package (to avoid false positives)
+        String packageName = type.getPackage()?.getName()
+        if (packageName == null) return false
+        if (!packageName.startsWith('org.grails') && !packageName.startsWith('grails.')) return false
+
+        // Check if it has a public no-arg constructor
+        try {
+            type.getDeclaredConstructor()
+            return true
+        } catch (NoSuchMethodException e) {
+            return false
+        }
     }
 }

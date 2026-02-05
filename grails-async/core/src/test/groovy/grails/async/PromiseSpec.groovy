@@ -19,7 +19,6 @@
 package grails.async
 
 import grails.async.decorator.PromiseDecorator
-import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 
@@ -146,10 +145,6 @@ class PromiseSpec extends Specification {
             }
     }
 
-    @PendingFeatureIf({
-        // Cannot cast object '4' with class 'java.lang.Integer' to class 'java.lang.Throwable'
-        GroovySystem.version.startsWith('5')
-    })
     void 'Test promise chaining'() {
 
         when: 'a promise is chained'

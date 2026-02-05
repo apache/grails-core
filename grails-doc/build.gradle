@@ -293,7 +293,7 @@ createReleaseDropdownTask.configure {
 
 def docsTask = tasks.register('docs', Sync)
 docsTask.configure { Sync it ->
-    it.dependsOn(combinedGroovydoc, createReleaseDropdownTask, ':grails-data-docs-stage:docs')
+    it.dependsOn(combinedGroovydoc, createReleaseDropdownTask, ':grails-data-docs-stage:docs', ':grails-data-docs-stage:groovydoc')
     it.group = 'documentation'
 
     def manualDocsDir = project.layout.buildDirectory.dir('modified-guide')

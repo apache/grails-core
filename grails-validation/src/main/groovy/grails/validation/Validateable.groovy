@@ -91,7 +91,10 @@ trait Validateable {
     static Map<String, Constrained> getConstraintsMap() {
         if (constraintsMapInternal == null) {
             org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator evaluator = findConstraintsEvaluator()
-            Map<String, ConstrainedProperty> evaluatedConstraints = evaluator.evaluate(this, this.defaultNullable())
+            // In Groovy 5, calling this.defaultNullable() from a static trait method resolves to the trait's
+            // version instead of the implementing class's override. Use the metaclass to invoke the correct method.
+            boolean isDefaultNullable = this.metaClass.invokeStaticMethod(this, 'defaultNullable', null) as boolean
+            Map<String, ConstrainedProperty> evaluatedConstraints = evaluator.evaluate(this, isDefaultNullable)
 
             Map<String, Constrained> finalConstraints = [:]
             for (entry in evaluatedConstraints) {
@@ -199,7 +202,10 @@ trait Validateable {
         boolean shouldInherit = Boolean.valueOf(params?.inherit?.toString() ?: 'true')
         org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator evaluator = findConstraintsEvaluator()
 
-        Map<String, ConstrainedProperty> constraints = evaluator.evaluate(this.class, this.defaultNullable(), !shouldInherit, adHocConstraintsClosures)
+        // In Groovy 5, calling this.defaultNullable() from a trait method resolves to the trait's
+        // version instead of the implementing class's override. Use the metaclass to invoke the correct method.
+        boolean isDefaultNullable = this.class.metaClass.invokeStaticMethod(this.class, 'defaultNullable', null) as boolean
+        Map<String, ConstrainedProperty> constraints = evaluator.evaluate(this.class, isDefaultNullable, !shouldInherit, adHocConstraintsClosures)
 
         ValidationErrors localErrors = doValidate(constraints, fieldsToValidate)
 

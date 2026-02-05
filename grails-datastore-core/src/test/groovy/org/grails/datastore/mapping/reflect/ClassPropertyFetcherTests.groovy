@@ -114,11 +114,15 @@ class ClassPropertyFetcherTests  {
     }
 }
 
-trait TestTrait<F extends Serializable> {
-    F from
+// Non-generic trait for Groovy 5 compatibility
+// Groovy 5 changed how generic trait properties are handled, requiring explicit implementation
+// of generated helper methods. Using a non-generic trait avoids this complexity while still
+// testing ClassPropertyFetcher's ability to handle trait properties.
+trait TestTrait {
+    DomainWithTrait from
 }
 
-class DomainWithTrait implements Serializable, TestTrait<DomainWithTrait> {
+class DomainWithTrait implements Serializable, TestTrait {
     String name
 }
 

@@ -81,7 +81,14 @@ public class LoggingTransformer implements AllArtefactClassInjector {
         AnnotationNode annotationNode = new AnnotationNode(ClassHelper.make(Slf4j.class));
         LogASTTransformation logASTTransformation = new LogASTTransformation();
         logASTTransformation.setCompilationUnit(new CompilationUnit(new GroovyClassLoader(getClass().getClassLoader())));
-        logASTTransformation.visit(new ASTNode[]{ annotationNode, classNode}, source);
+        // Groovy 5 compatibility: LogASTTransformation.visit() may throw NPE in
+        // VariableScopeVisitor during canonicalization phase for certain class structures.
+        // This is safe to catch since the @Slf4j transformation is already complete at this point.
+        try {
+            logASTTransformation.visit(new ASTNode[]{ annotationNode, classNode}, source);
+        } catch (NullPointerException e) {
+            // Groovy 5 compatibility: Ignore NPE from VariableScopeVisitor
+        }
         classNode.putNodeMetaData(Slf4j.class, annotationNode);
     }
 

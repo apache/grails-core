@@ -26,7 +26,6 @@ import groovy.lang.GroovyObject;
 import org.springframework.validation.Errors;
 
 import grails.gorm.annotation.Entity;
-import grails.gorm.hibernate.HibernateEntity;
 import org.grails.datastore.gorm.GormEntity;
 import org.grails.datastore.mapping.config.AbstractGormMappingFactory;
 import org.grails.datastore.mapping.config.Property;
@@ -56,6 +55,20 @@ import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 public class HibernateMappingContext extends AbstractMappingContext {
 
     private static final String[] DEFAULT_IDENTITY_MAPPING = new String[] {GormProperties.IDENTITY};
+    
+    // Loaded via reflection to avoid requiring Java stubs for the Groovy trait during joint compilation
+    // This is necessary for Groovy 5 compatibility - traits with static methods that return generic
+    // type parameters generate invalid Java stubs
+    private static final Class<?> HIBERNATE_ENTITY_CLASS;
+    static {
+        Class<?> clazz = null;
+        try {
+            clazz = Class.forName("grails.gorm.hibernate.HibernateEntity");
+        } catch (ClassNotFoundException e) {
+            // Should not happen in normal usage
+        }
+        HIBERNATE_ENTITY_CLASS = clazz;
+    }
     private final HibernateMappingFactory mappingFactory;
     private final MappingConfigurationStrategy syntaxStrategy;
 
@@ -127,7 +140,8 @@ public class HibernateMappingContext extends AbstractMappingContext {
 
     @Override
     protected boolean isValidMappingStrategy(Class javaClass, Object mappingStrategy) {
-        return HibernateEntity.class.isAssignableFrom(javaClass) || super.isValidMappingStrategy(javaClass, mappingStrategy);
+        return (HIBERNATE_ENTITY_CLASS != null && HIBERNATE_ENTITY_CLASS.isAssignableFrom(javaClass)) 
+                || super.isValidMappingStrategy(javaClass, mappingStrategy);
     }
 
     @Override
