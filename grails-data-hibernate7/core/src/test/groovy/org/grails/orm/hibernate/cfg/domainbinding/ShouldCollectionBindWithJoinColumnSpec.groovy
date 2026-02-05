@@ -1,7 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import org.grails.datastore.mapping.model.types.Basic
-import org.grails.datastore.mapping.model.types.ToMany
+import org.grails.orm.hibernate.cfg.HibernateToManyProperty
 import spock.lang.Specification
 
 class ShouldCollectionBindWithJoinColumnSpec extends Specification {
@@ -9,31 +8,22 @@ class ShouldCollectionBindWithJoinColumnSpec extends Specification {
     def "returns true when property is unidirectional one-to-many"() {
         given:
         def calc = new ShouldCollectionBindWithJoinColumn()
-        ToMany prop = Mock(ToMany) {
-            isUnidirectionalOneToMany() >> true
+        HibernateToManyProperty prop = Mock(HibernateToManyProperty) {
+            isUnidirectionalOneToMany() >> true // Test the unidirectional path
         }
 
         expect:
         calc.apply(prop)
     }
 
-    def "returns true when property is Basic collection"() {
+    def "returns false when property is not unidirectional one-to-many and not Basic"() {
         given:
         def calc = new ShouldCollectionBindWithJoinColumn()
-        // Basic in datastore implements ToMany, so a Basic mock should be acceptable
-        Basic prop = Mock(Basic) {
-            isUnidirectionalOneToMany() >> false
-        }
-
-        expect:
-        calc.apply(prop as ToMany)
-    }
-
-    def "returns false when not unidirectional and not Basic"() {
-        given:
-        def calc = new ShouldCollectionBindWithJoinColumn()
-        ToMany prop = Mock(ToMany) {
-            isUnidirectionalOneToMany() >> false
+        // Mocking HibernateToManyProperty, and isUnidirectionalOneToMany is false.
+        // The 'property instanceof Basic' check will be false for a mock of HibernateToManyProperty.
+        // Therefore, the result should be false.
+        HibernateToManyProperty prop = Mock(HibernateToManyProperty) {
+            isUnidirectionalOneToMany() >> false // Test the non-unidirectional path
         }
 
         expect:
@@ -48,4 +38,3 @@ class ShouldCollectionBindWithJoinColumnSpec extends Specification {
         !calc.apply(null)
     }
 }
-

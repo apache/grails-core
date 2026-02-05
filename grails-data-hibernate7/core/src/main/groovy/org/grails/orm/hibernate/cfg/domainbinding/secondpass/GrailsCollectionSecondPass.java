@@ -34,8 +34,11 @@ public class GrailsCollectionSecondPass implements org.hibernate.boot.spi.Second
     Collection collection;
     String sessionFactoryBeanName;
 
-    public GrailsCollectionSecondPass(GrailsDomainBinder grailsDomainBinder, HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
-                                      Collection coll, String sessionFactoryBeanName) {
+    public GrailsCollectionSecondPass(GrailsDomainBinder grailsDomainBinder,
+                                      HibernateToManyProperty property,
+                                      @Nonnull InFlightMetadataCollector mappings,
+                                      Collection coll,
+                                      String sessionFactoryBeanName) {
         this.grailsDomainBinder = grailsDomainBinder;
         this.property = property;
         this.mappings = mappings;

@@ -32,9 +32,19 @@ public abstract class CollectionType {
     protected final GrailsDomainBinder binder;
     protected final MetadataBuildingContext buildingContext;
 
+    public abstract Collection createCollection(PersistentClass owner);
 
-    public abstract Collection create(HibernateToManyProperty property, PersistentClass owner,
-                                      String path, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException;
+
+    public Collection create(HibernateToManyProperty property
+            , PersistentClass owner
+            ,  String path
+            , @Nonnull InFlightMetadataCollector mappings
+            , String sessionFactoryBeanName) throws MappingException {
+        Collection coll = createCollection(owner);
+        coll.setCollectionTable(owner.getTable());
+        coll.setTypeName(getTypeName(property));
+        return coll;
+    }
 
     protected CollectionType(Class<?> clazz, GrailsDomainBinder binder) {
         this.clazz = clazz;

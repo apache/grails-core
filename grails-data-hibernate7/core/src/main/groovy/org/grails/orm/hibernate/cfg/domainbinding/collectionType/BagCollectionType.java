@@ -1,30 +1,20 @@
 package org.grails.orm.hibernate.cfg.domainbinding.collectionType;
 
-import org.hibernate.MappingException;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.mapping.Bag;
-import org.hibernate.mapping.Collection;
+import java.util.Collection;
+
 import org.hibernate.mapping.PersistentClass;
 
-import jakarta.annotation.Nonnull;
-
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
-import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
 
 public class BagCollectionType extends CollectionType {
 
     public BagCollectionType(GrailsDomainBinder binder) {
-        super(java.util.Collection.class, binder);
+        super(Collection.class, binder);
     }
 
     @Override
-    public Collection create(HibernateToManyProperty property, PersistentClass owner,
-                             String path, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException {
-        Bag coll = new Bag(buildingContext, owner);
-        coll.setCollectionTable(owner.getTable());
-        coll.setTypeName(getTypeName(property));
-        binder.bindCollection(property, coll, owner, mappings, path, sessionFactoryBeanName);
-        return coll;
+    public org.hibernate.mapping.Collection createCollection(PersistentClass owner) {
+        return new org.hibernate.mapping.Bag(buildingContext, owner);
     }
 
 }

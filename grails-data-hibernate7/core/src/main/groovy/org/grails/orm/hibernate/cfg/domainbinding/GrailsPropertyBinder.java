@@ -36,6 +36,7 @@ public class GrailsPropertyBinder {
     private final CollectionHolder collectionHolder;
     private final EnumTypeBinder enumTypeBinder;
     private final ComponentPropertyBinder componentPropertyBinder;
+    private final CollectionBinder collectionBinder;
     private final PropertyFromValueCreator propertyFromValueCreator;
 
     public GrailsPropertyBinder(
@@ -44,12 +45,14 @@ public class GrailsPropertyBinder {
             CollectionHolder collectionHolder,
             EnumTypeBinder enumTypeBinder,
             ComponentPropertyBinder componentPropertyBinder,
+            CollectionBinder collectionBinder,
             PropertyFromValueCreator propertyFromValueCreator) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.collectionHolder = collectionHolder;
         this.enumTypeBinder = enumTypeBinder;
         this.componentPropertyBinder = componentPropertyBinder;
+        this.collectionBinder = collectionBinder;
         this.propertyFromValueCreator = propertyFromValueCreator;
     }
 
@@ -84,6 +87,7 @@ public class GrailsPropertyBinder {
             else { // Actual Collection
                 Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass,
                         EMPTY_PATH, mappings, sessionFactoryBeanName);
+                collectionBinder.bindCollection((HibernateToManyProperty) currentGrailsProp, collection, persistentClass, mappings, EMPTY_PATH, sessionFactoryBeanName);
                 mappings.addCollectionBinding(collection);
                 value = collection;
                 // No specific binder for Collection itself in Block 2 originally.

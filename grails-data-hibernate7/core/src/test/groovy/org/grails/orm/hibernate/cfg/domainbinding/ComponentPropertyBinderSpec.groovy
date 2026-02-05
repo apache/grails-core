@@ -45,6 +45,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
     MappingCacheHolder mappingCacheHolder = Mock(MappingCacheHolder)
     CollectionHolder collectionHolder = new CollectionHolder([:])
     EnumTypeBinder enumTypeBinder = Mock(EnumTypeBinder)
+    CollectionBinder collectionBinder = Mock(CollectionBinder)
     PropertyFromValueCreator propertyFromValueCreator = Mock(PropertyFromValueCreator)
     ComponentBinder componentBinder = Mock(ComponentBinder)
 
@@ -58,6 +59,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
                 mappingCacheHolder,
                 collectionHolder,
                 enumTypeBinder,
+                collectionBinder,
                 propertyFromValueCreator,
                 componentBinder
         )

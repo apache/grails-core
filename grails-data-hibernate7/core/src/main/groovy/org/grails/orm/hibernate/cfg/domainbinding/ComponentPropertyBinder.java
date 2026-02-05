@@ -50,6 +50,7 @@ public class ComponentPropertyBinder {
     private final MappingCacheHolder mappingCacheHolder;
     private final CollectionHolder collectionHolder;
     private final EnumTypeBinder enumTypeBinder;
+    private final CollectionBinder collectionBinder;
     private final PropertyFromValueCreator propertyFromValueCreator;
     private final ComponentBinder componentBinder;
 
@@ -58,9 +59,10 @@ public class ComponentPropertyBinder {
                                    MappingCacheHolder mappingCacheHolder,
                                    CollectionHolder collectionHolder,
                                    EnumTypeBinder enumTypeBinder,
+                                   CollectionBinder collectionBinder,
                                    PropertyFromValueCreator propertyFromValueCreator) {
         this(metadataBuildingContext, namingStrategy, mappingCacheHolder, collectionHolder,
-                enumTypeBinder, propertyFromValueCreator, null);
+                enumTypeBinder, collectionBinder, propertyFromValueCreator, null);
     }
 
     protected ComponentPropertyBinder(MetadataBuildingContext metadataBuildingContext,
@@ -68,6 +70,7 @@ public class ComponentPropertyBinder {
                                    MappingCacheHolder mappingCacheHolder,
                                    CollectionHolder collectionHolder,
                                    EnumTypeBinder enumTypeBinder,
+                                   CollectionBinder collectionBinder,
                                    PropertyFromValueCreator propertyFromValueCreator,
                                    ComponentBinder componentBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
@@ -75,6 +78,7 @@ public class ComponentPropertyBinder {
         this.mappingCacheHolder = mappingCacheHolder;
         this.collectionHolder = collectionHolder;
         this.enumTypeBinder = enumTypeBinder;
+        this.collectionBinder = collectionBinder;
         this.propertyFromValueCreator = propertyFromValueCreator;
         this.componentBinder = componentBinder != null ? componentBinder : new ComponentBinder(mappingCacheHolder, this);
     }
@@ -85,6 +89,7 @@ public class ComponentPropertyBinder {
         this.mappingCacheHolder = null;
         this.collectionHolder = null;
         this.enumTypeBinder = null;
+        this.collectionBinder = null;
         this.propertyFromValueCreator = null;
         this.componentBinder = null;
     }
@@ -99,6 +104,7 @@ public class ComponentPropertyBinder {
             // create collection
             Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass,
                     path, mappings, sessionFactoryBeanName);
+            collectionBinder.bindCollection((HibernateToManyProperty) currentGrailsProp, collection, persistentClass, mappings, path, sessionFactoryBeanName);
             mappings.addCollectionBinding(collection);
             value = collection;
         }
