@@ -15,10 +15,10 @@ import org.hibernate.mapping.PersistentClass;
 
 import jakarta.annotation.Nonnull;
 
-import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
 
 /**
@@ -33,7 +33,7 @@ public abstract class CollectionType {
     protected final MetadataBuildingContext buildingContext;
 
 
-    public abstract Collection create(ToMany property, PersistentClass owner,
+    public abstract Collection create(HibernateToManyProperty property, PersistentClass owner,
                                       String path, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException;
 
     protected CollectionType(Class<?> clazz, GrailsDomainBinder binder) {
@@ -49,8 +49,8 @@ public abstract class CollectionType {
 
 
 
-    public String getTypeName(ToMany<?> property) {
-        return property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName() : null;
+    public String getTypeName(HibernateToManyProperty property) {
+        return property.getTypeName();
     }
 
 }

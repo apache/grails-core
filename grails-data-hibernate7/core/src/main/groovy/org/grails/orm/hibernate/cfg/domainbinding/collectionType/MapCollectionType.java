@@ -9,8 +9,8 @@ import org.hibernate.mapping.PersistentClass;
 
 import jakarta.annotation.Nonnull;
 
-import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
 
 public class MapCollectionType extends CollectionType {
 
@@ -19,7 +19,7 @@ public class MapCollectionType extends CollectionType {
     }
 
     @Override
-    public Collection create(ToMany property, PersistentClass owner,
+    public Collection create(HibernateToManyProperty property, PersistentClass owner,
                              String path, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException {
         org.hibernate.mapping.Map map = new org.hibernate.mapping.Map(buildingContext, owner);
         map.setTypeName(getTypeName(property));

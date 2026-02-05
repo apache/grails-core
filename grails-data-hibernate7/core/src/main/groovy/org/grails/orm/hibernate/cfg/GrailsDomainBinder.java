@@ -25,7 +25,6 @@ import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.datastore.mapping.model.types.TenantId;
-import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.orm.hibernate.cfg.domainbinding.ClassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.EnumTypeBinder;
@@ -128,7 +127,7 @@ public class GrailsDomainBinder
 
     private final CollectionType CT = new CollectionType(null, this) {
         @Override
-        public Collection create(ToMany property, PersistentClass owner, String path, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+        public Collection create(HibernateToManyProperty property, PersistentClass owner, String path, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
             return null;
         }
     };
@@ -250,7 +249,7 @@ public class GrailsDomainBinder
         NAMING_STRATEGY_PROVIDER.configureNamingStrategy(datasourceName, strategy);
     }
 
-    public void bindMapSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
+    public void bindMapSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
                                      Map<?, ?> persistentClasses, org.hibernate.mapping.Map map, String sessionFactoryBeanName) {
         bindCollectionSecondPass(property, mappings, persistentClasses, map, sessionFactoryBeanName);
 
@@ -259,7 +258,7 @@ public class GrailsDomainBinder
         String type = ((GrailsHibernatePersistentProperty) property).getIndexColumnType("string");
         String columnName1 = getIndexColumnName(property, sessionFactoryBeanName);
         new SimpleValueColumnBinder().bindSimpleValue(value, type, columnName1, true);
-        PropertyConfig mappedForm = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
+        PropertyConfig mappedForm = property.getMappedForm();
         if (mappedForm.getIndexColumn() != null) {
             Column column = new SimpleValueColumnFetcher().getColumnForSimpleValue(value);
             ColumnConfig columnConfig = getSingleColumnConfig(mappedForm.getIndexColumn());
@@ -281,7 +280,7 @@ public class GrailsDomainBinder
             if (domainClass != null) {
                 mapping = domainClass.getMappedForm();
             }
-            String typeName = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName() : null;
+            String typeName = property.getTypeName();
             if (typeName == null ) {
 
                 if(property instanceof Basic) {
@@ -318,7 +317,7 @@ public class GrailsDomainBinder
      * @param list
      * @param sessionFactoryBeanName
      */
-    public void bindListSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
+    public void bindListSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
                                    Map<?, ?> persistentClasses, org.hibernate.mapping.List list, String sessionFactoryBeanName) {
 
         bindCollectionSecondPass(property, mappings, persistentClasses, list, sessionFactoryBeanName);
@@ -397,9 +396,8 @@ public class GrailsDomainBinder
         }
     }
 
-        public void bindCollectionSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
-                                             Map<?, ?> persistentClasses, Collection collection, String sessionFactoryBeanName) {
-            PersistentClass associatedClass = null;
+            public void bindCollectionSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
+                                                    Map<?, ?> persistentClasses, Collection collection, String sessionFactoryBeanName) {            PersistentClass associatedClass = null;
 
         if (LOG.isDebugEnabled())
             LOG.debug("Mapping collection: "
@@ -407,7 +405,7 @@ public class GrailsDomainBinder
                     + " -> "
                     + collection.getCollectionTable().getName());
 
-        PropertyConfig propConfig = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
+        PropertyConfig propConfig = property.getMappedForm();
 
         PersistentEntity referenced = property.getAssociatedEntity();
         if (StringUtils.hasText(propConfig.getSort())) {
@@ -718,7 +716,7 @@ public class GrailsDomainBinder
         return theSet;
     }
 
-    private void bindCollectionWithJoinTable(ToMany property,
+    private void bindCollectionWithJoinTable(HibernateToManyProperty property,
                                                @Nonnull InFlightMetadataCollector mappings, Collection collection, PropertyConfig config, String sessionFactoryBeanName) {
 
 //        PhysicalNamingStrategy namingStrategy = getPhysicalNamingStrategy(sessionFactoryBeanName);
@@ -761,7 +759,7 @@ public class GrailsDomainBinder
                 if (domainClass != null) {
                     mapping = domainClass.getMappedForm();
                 }
-                String typeName = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName() : null;
+                String typeName = property.getTypeName();
                 if (typeName == null) {
                     Type type = mappings.getTypeConfiguration().getBasicTypeRegistry().getRegisteredType(className);
                     if (type != null) {
@@ -777,7 +775,7 @@ public class GrailsDomainBinder
                 if (joinColumnMappingOptional.isPresent()) {
                     Column column = new SimpleValueColumnFetcher().getColumnForSimpleValue(element);
                     ColumnConfig columnConfig = joinColumnMappingOptional.get();
-                    final PropertyConfig mappedForm = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
+                    final PropertyConfig mappedForm = property.getMappedForm();
                     new ColumnConfigToColumnBinder().bindColumnConfigToColumn(column, columnConfig, mappedForm);
                 }
             }
@@ -814,8 +812,8 @@ public class GrailsDomainBinder
      * @param property The property to bind
      * @param manyToOne The inverse side
      */
-    private void bindUnidirectionalOneToManyInverseValues(ToMany property, ManyToOne manyToOne) {
-        PropertyConfig config = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
+    private void bindUnidirectionalOneToManyInverseValues(HibernateToManyProperty property, ManyToOne manyToOne) {
+        PropertyConfig config = property.getMappedForm();
         manyToOne.setIgnoreNotFound(config.getIgnoreNotFound());
         final FetchMode fetch = config.getFetchMode();
         if(!fetch.equals(FetchMode.JOIN)) {
@@ -852,7 +850,7 @@ public class GrailsDomainBinder
             mapping = persistentEntity.getMappedForm();
         }
         boolean hasCompositeIdentifier = mapping != null && mapping.hasCompositeIdentifier();
-        if ((new ShouldCollectionBindWithJoinColumn().apply((ToMany) property) && hasCompositeIdentifier) ||
+        if ((new ShouldCollectionBindWithJoinColumn().apply((HibernateToManyProperty) property) && hasCompositeIdentifier) ||
                 (hasCompositeIdentifier && ( property instanceof ManyToMany))) {
             CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
             new CompositeIdentifierToManyToOneBinder(namingStrategy).bindCompositeIdentifierToManyToOne((GrailsHibernatePersistentProperty) property, key, ci, refDomainClass, EMPTY_PATH);
@@ -1002,14 +1000,14 @@ public class GrailsDomainBinder
      * @param mappings   The Hibernate mappings instance
      * @param path
      */
-    public void bindCollection(ToMany property, Collection collection,
+    public void bindCollection(HibernateToManyProperty property, Collection collection,
                                PersistentClass owner, @Nonnull InFlightMetadataCollector mappings, String path, String sessionFactoryBeanName) {
 
         // set role
         String propertyName = getNameForPropertyAndPath(property, path);
         collection.setRole(qualify(property.getOwner().getName(), propertyName));
 
-        PropertyConfig pc = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
+        PropertyConfig pc = property.getMappedForm();
         // configure eager fetching
         final FetchMode fetchMode = pc.getFetchMode();
         if (fetchMode == FetchMode.JOIN) {
@@ -1061,7 +1059,7 @@ public class GrailsDomainBinder
      * We bind collections with foreign keys if specified in the mapping and only if
      * it is a unidirectional one-to-many that is.
      */
-    private boolean shouldBindCollectionWithForeignKey(ToMany property) {
+    private boolean shouldBindCollectionWithForeignKey(HibernateToManyProperty property) {
         return ((property instanceof org.grails.datastore.mapping.model.types.OneToMany) && property.isBidirectional() ||
                 !(boolean) new ShouldCollectionBindWithJoinColumn().apply(property)) &&
                 !Map.class.isAssignableFrom(property.getType()) &&
@@ -1076,11 +1074,11 @@ public class GrailsDomainBinder
         return property.getName();
     }
 
-    private void bindCollectionTable(ToMany property, @Nonnull InFlightMetadataCollector mappings,
+    private void bindCollectionTable(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
                                        Collection collection, Table ownerTable, String sessionFactoryBeanName) {
 
         String owningTableSchema = ownerTable.getSchema();
-        PropertyConfig config = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
+        PropertyConfig config = property.getMappedForm();
         JoinTable jt = config.getJoinTable();
 
         String s = new TableForManyCalculator(namingStrategy).calculateTableForMany(property, sessionFactoryBeanName);
@@ -1607,12 +1605,12 @@ public class GrailsDomainBinder
 
         private static final long serialVersionUID = -5540526942092611348L;
 
-        ToMany property;
+        HibernateToManyProperty property;
         @Nonnull InFlightMetadataCollector mappings;
         Collection collection;
         String sessionFactoryBeanName;
 
-        public GrailsCollectionSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
+        public GrailsCollectionSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
                                           Collection coll,  String sessionFactoryBeanName) {
             this.property = property;
             this.mappings = mappings;
@@ -1663,7 +1661,7 @@ public class GrailsDomainBinder
     public class ListSecondPass extends GrailsCollectionSecondPass {
         private static final long serialVersionUID = -3024674993774205193L;
 
-        public ListSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
+        public ListSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
                               Collection coll, String sessionFactoryBeanName) {
             super(property, mappings, coll, sessionFactoryBeanName);
         }
@@ -1685,7 +1683,7 @@ public class GrailsDomainBinder
     public class MapSecondPass extends GrailsCollectionSecondPass {
         private static final long serialVersionUID = -3244991685626409031L;
 
-        public MapSecondPass(ToMany property, @Nonnull InFlightMetadataCollector mappings,
+        public MapSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
                              Collection coll, String sessionFactoryBeanName) {
             super(property, mappings, coll, sessionFactoryBeanName);
         }

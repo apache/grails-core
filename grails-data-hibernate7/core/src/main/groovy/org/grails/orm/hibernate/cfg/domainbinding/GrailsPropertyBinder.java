@@ -3,8 +3,8 @@ package org.grails.orm.hibernate.cfg.domainbinding;
 import jakarta.annotation.Nonnull;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
-import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
@@ -82,7 +82,7 @@ public class GrailsPropertyBinder {
                 new SimpleValueBinder(namingStrategy).bindSimpleValue(currentGrailsProp, null,(SimpleValue) value, EMPTY_PATH);// No specific binder call needed
             }
             else { // Actual Collection
-                Collection collection = collectionType.create((ToMany) currentGrailsProp, persistentClass,
+                Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass,
                         EMPTY_PATH, mappings, sessionFactoryBeanName);
                 mappings.addCollectionBinding(collection);
                 value = collection;
@@ -92,10 +92,9 @@ public class GrailsPropertyBinder {
         else if (currentGrailsProp.getType().isEnum()) {
             value = new BasicValue(metadataBuildingContext, table);
             // Apply enumTypeBinder if the created value is a SimpleValue
-            if (value instanceof SimpleValue simpleValue) {
-                String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, EMPTY_PATH, null);
-                enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), simpleValue, columnName);
-            }
+            SimpleValue simpleValue = (SimpleValue) value;
+            String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, EMPTY_PATH, null);
+            enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), simpleValue, columnName);
         }
         else if (currentGrailsProp.isHibernateOneToOne()) {
             value = new OneToOne(metadataBuildingContext, table, persistentClass);

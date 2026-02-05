@@ -8,14 +8,14 @@ import org.hibernate.MappingException;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.Collection;
 
-import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
 
 public class MapSecondPass extends GrailsCollectionSecondPass {
     private static final long serialVersionUID = -3244991685626409031L;
 
 
-    public MapSecondPass(GrailsDomainBinder grailsDomainBinder, ToMany property, @Nonnull InFlightMetadataCollector mappings,
+    public MapSecondPass(GrailsDomainBinder grailsDomainBinder, HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
                          Collection coll, String sessionFactoryBeanName) {
         super(grailsDomainBinder, property, mappings, coll, sessionFactoryBeanName);
     }

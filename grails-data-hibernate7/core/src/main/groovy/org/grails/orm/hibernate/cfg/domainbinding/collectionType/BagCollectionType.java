@@ -8,8 +8,8 @@ import org.hibernate.mapping.PersistentClass;
 
 import jakarta.annotation.Nonnull;
 
-import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
 
 public class BagCollectionType extends CollectionType {
 
@@ -18,7 +18,7 @@ public class BagCollectionType extends CollectionType {
     }
 
     @Override
-    public Collection create(ToMany property, PersistentClass owner,
+    public Collection create(HibernateToManyProperty property, PersistentClass owner,
                              String path, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException {
         Bag coll = new Bag(buildingContext, owner);
         coll.setCollectionTable(owner.getTable());

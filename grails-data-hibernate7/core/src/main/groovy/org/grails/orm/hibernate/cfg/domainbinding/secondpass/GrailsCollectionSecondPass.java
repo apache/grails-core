@@ -13,8 +13,8 @@ import org.hibernate.mapping.OneToMany;
 import org.hibernate.mapping.Selectable;
 import org.hibernate.mapping.Value;
 
-import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
 
 /**
  * Second pass class for grails relationships. This is required as all
@@ -28,13 +28,13 @@ public class GrailsCollectionSecondPass implements org.hibernate.boot.spi.Second
     private static final long serialVersionUID = -5540526942092611348L;
 
     protected final GrailsDomainBinder grailsDomainBinder;
-    ToMany property;
+    HibernateToManyProperty property;
     @Nonnull
     InFlightMetadataCollector mappings;
     Collection collection;
     String sessionFactoryBeanName;
 
-    public GrailsCollectionSecondPass(GrailsDomainBinder grailsDomainBinder, ToMany property, @Nonnull InFlightMetadataCollector mappings,
+    public GrailsCollectionSecondPass(GrailsDomainBinder grailsDomainBinder, HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
                                       Collection coll, String sessionFactoryBeanName) {
         this.grailsDomainBinder = grailsDomainBinder;
         this.property = property;

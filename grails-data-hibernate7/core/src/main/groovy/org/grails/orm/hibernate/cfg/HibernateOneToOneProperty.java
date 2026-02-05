@@ -9,7 +9,7 @@ import java.beans.PropertyDescriptor;
 /**
  * Hibernate implementation of {@link org.grails.datastore.mapping.model.types.OneToOne}
  */
-public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfig> implements GrailsHibernatePersistentProperty {
+public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfig> implements HibernateToManyProperty {
     public HibernateOneToOneProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
     }

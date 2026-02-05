@@ -26,10 +26,10 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
-import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
+import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
@@ -97,7 +97,7 @@ public class ComponentPropertyBinder {
         CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
         if (collectionType != null) {
             // create collection
-            Collection collection = collectionType.create((ToMany) currentGrailsProp, persistentClass,
+            Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass,
                     path, mappings, sessionFactoryBeanName);
             mappings.addCollectionBinding(collection);
             value = collection;
