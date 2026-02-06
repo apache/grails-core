@@ -38,6 +38,10 @@ public class GrailsPropertyBinder {
     private final ComponentPropertyBinder componentPropertyBinder;
     private final CollectionBinder collectionBinder;
     private final PropertyFromValueCreator propertyFromValueCreator;
+    private final SimpleValueBinder simpleValueBinder;
+    private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
+    private final OneToOneBinder oneToOneBinder;
+    private final ManyToOneBinder manyToOneBinder;
 
     public GrailsPropertyBinder(
             MetadataBuildingContext metadataBuildingContext,
@@ -47,6 +51,31 @@ public class GrailsPropertyBinder {
             ComponentPropertyBinder componentPropertyBinder,
             CollectionBinder collectionBinder,
             PropertyFromValueCreator propertyFromValueCreator) {
+        this(metadataBuildingContext,
+                namingStrategy,
+                collectionHolder,
+                enumTypeBinder,
+                componentPropertyBinder,
+                collectionBinder,
+                propertyFromValueCreator,
+                new SimpleValueBinder(namingStrategy),
+                new ColumnNameForPropertyAndPathFetcher(namingStrategy),
+                new OneToOneBinder(namingStrategy),
+                new ManyToOneBinder(namingStrategy));
+    }
+
+    protected GrailsPropertyBinder(
+            MetadataBuildingContext metadataBuildingContext,
+            PersistentEntityNamingStrategy namingStrategy,
+            CollectionHolder collectionHolder,
+            EnumTypeBinder enumTypeBinder,
+            ComponentPropertyBinder componentPropertyBinder,
+            CollectionBinder collectionBinder,
+            PropertyFromValueCreator propertyFromValueCreator,
+            SimpleValueBinder simpleValueBinder,
+            ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
+            OneToOneBinder oneToOneBinder,
+            ManyToOneBinder manyToOneBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.collectionHolder = collectionHolder;
@@ -54,6 +83,10 @@ public class GrailsPropertyBinder {
         this.componentPropertyBinder = componentPropertyBinder;
         this.collectionBinder = collectionBinder;
         this.propertyFromValueCreator = propertyFromValueCreator;
+        this.simpleValueBinder = simpleValueBinder;
+        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
+        this.oneToOneBinder = oneToOneBinder;
+        this.manyToOneBinder = manyToOneBinder;
     }
 
     public void bindProperty(PersistentClass persistentClass
@@ -77,12 +110,12 @@ public class GrailsPropertyBinder {
         if (currentGrailsProp.isUserButNotCollectionType()) {
             value = new BasicValue(metadataBuildingContext, table);
             // No specific binder call needed for this case per original logic
-            new SimpleValueBinder(namingStrategy).bindSimpleValue(currentGrailsProp, null,(SimpleValue) value, EMPTY_PATH);
+            simpleValueBinder.bindSimpleValue(currentGrailsProp, null,(SimpleValue) value, EMPTY_PATH);
         }
         else if (collectionType != null) {
             if (currentGrailsProp.isSerializableType()) {
                 value = new BasicValue(metadataBuildingContext, table);
-                new SimpleValueBinder(namingStrategy).bindSimpleValue(currentGrailsProp, null,(SimpleValue) value, EMPTY_PATH);// No specific binder call needed
+                simpleValueBinder.bindSimpleValue(currentGrailsProp, null,(SimpleValue) value, EMPTY_PATH);// No specific binder call needed
             }
             else { // Actual Collection
                 Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass,
@@ -97,17 +130,17 @@ public class GrailsPropertyBinder {
             value = new BasicValue(metadataBuildingContext, table);
             // Apply enumTypeBinder if the created value is a SimpleValue
             SimpleValue simpleValue = (SimpleValue) value;
-            String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, EMPTY_PATH, null);
+            String columnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(currentGrailsProp, EMPTY_PATH, null);
             enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), simpleValue, columnName);
         }
         else if (currentGrailsProp.isHibernateOneToOne()) {
             value = new OneToOne(metadataBuildingContext, table, persistentClass);
             // Apply OneToOneBinder logic
-            new OneToOneBinder(namingStrategy).bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne)currentGrailsProp, (OneToOne)value, EMPTY_PATH);
+            oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne)currentGrailsProp, (OneToOne)value, EMPTY_PATH);
         } else if(currentGrailsProp.isHibernateManyToOne()) {
             value = new ManyToOne(metadataBuildingContext, table);
             // Apply ManyToOneBinder logic
-            new ManyToOneBinder(namingStrategy).bindManyToOne((Association)currentGrailsProp, (ManyToOne)value, EMPTY_PATH);
+            manyToOneBinder.bindManyToOne((Association)currentGrailsProp, (ManyToOne)value, EMPTY_PATH);
         }
         else if (currentGrailsProp instanceof Embedded) {
             value = new Component(metadataBuildingContext, persistentClass);
@@ -117,7 +150,7 @@ public class GrailsPropertyBinder {
         // work out what type of relationship it is and bind value
         else { // Default BasicValue
             value = new BasicValue(metadataBuildingContext, table);
-            new SimpleValueBinder(namingStrategy).bindSimpleValue(currentGrailsProp, null,(SimpleValue) value, EMPTY_PATH);
+            simpleValueBinder.bindSimpleValue(currentGrailsProp, null,(SimpleValue) value, EMPTY_PATH);
         }
 
         // After creating the value and applying binders (where applicable), create and add the property.

@@ -278,6 +278,58 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         oneToOne.referencedEntityName == bookEntity.name
     }
 
+    void "should use binders from protected constructor"() {
+        given:
+        def metadataBuildingContext = Mock(org.hibernate.boot.spi.MetadataBuildingContext)
+        def namingStrategy = Mock(org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy)
+        // CollectionHolder is a Java record (final), so we instantiate it
+        def collectionHolder = new org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder(new HashMap<Class<?>, org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType>())
+        def enumTypeBinder = Mock(EnumTypeBinder)
+        def componentPropertyBinder = Mock(ComponentPropertyBinder)
+        def collectionBinder = Mock(CollectionBinder)
+        def propertyFromValueCreator = Mock(PropertyFromValueCreator)
+        def simpleValueBinder = Mock(SimpleValueBinder)
+        def columnNameForPropertyAndPathFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+        def oneToOneBinder = Mock(OneToOneBinder)
+        def manyToOneBinder = Mock(ManyToOneBinder)
+
+        def propertyBinder = new GrailsPropertyBinder(
+                metadataBuildingContext,
+                namingStrategy,
+                collectionHolder,
+                enumTypeBinder,
+                componentPropertyBinder,
+                collectionBinder,
+                propertyFromValueCreator,
+                simpleValueBinder,
+                columnNameForPropertyAndPathFetcher,
+                oneToOneBinder,
+                manyToOneBinder
+        )
+
+        def mappings = Mock(org.hibernate.boot.spi.InFlightMetadataCollector)
+        metadataBuildingContext.getMetadataCollector() >> mappings
+
+        def rootClass = new RootClass(metadataBuildingContext)
+        def currentGrailsProp = Mock(GrailsHibernatePersistentProperty)
+        def table = new org.hibernate.mapping.Table("TEST_TABLE")
+        rootClass.setTable(table)
+        def owner = Mock(org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity)
+
+        currentGrailsProp.getHibernateOwner() >> owner
+        owner.getMappedForm() >> new org.grails.orm.hibernate.cfg.Mapping()
+        currentGrailsProp.getType() >> String.class
+        currentGrailsProp.getName() >> "title"
+
+        propertyFromValueCreator.createProperty(_ as org.hibernate.mapping.Value, currentGrailsProp) >> new Property()
+
+        when:
+        propertyBinder.bindProperty(rootClass, mappings, "sessionFactory", currentGrailsProp)
+
+        then:
+        1 * simpleValueBinder.bindSimpleValue(currentGrailsProp, null, _ as SimpleValue, "")
+    }
+
 
 }
 
