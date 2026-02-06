@@ -694,7 +694,8 @@ public class GrailsDomainBinder
 
 
         for (GrailsHibernatePersistentProperty currentGrailsProp : domainClass.getPersistentPropertiesToBind()) {
-            grailsPropertyBinder.bindProperty(persistentClass, mappings, sessionFactoryBeanName, currentGrailsProp);
+           var value = grailsPropertyBinder.bindProperty(persistentClass, mappings, sessionFactoryBeanName, currentGrailsProp);
+            persistentClass.addProperty(propertyFromValueCreator.createProperty(value, currentGrailsProp));
         }
 
         new NaturalIdentifierBinder().bindNaturalIdentifier(domainClass.getMappedForm(), persistentClass);

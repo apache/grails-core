@@ -17,7 +17,6 @@ import org.hibernate.mapping.Component;
 import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.OneToOne;
 import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Property;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
@@ -31,12 +30,10 @@ public class GrailsPropertyBinder {
     private static final Logger LOG = LoggerFactory.getLogger(GrailsPropertyBinder.class);
 
     private final MetadataBuildingContext metadataBuildingContext;
-    private final PersistentEntityNamingStrategy namingStrategy;
     private final CollectionHolder collectionHolder;
     private final EnumTypeBinder enumTypeBinder;
     private final ComponentPropertyBinder componentPropertyBinder;
     private final CollectionBinder collectionBinder;
-    private final PropertyFromValueCreator propertyFromValueCreator;
     private final SimpleValueBinder simpleValueBinder;
     private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
     private final OneToOneBinder oneToOneBinder;
@@ -56,7 +53,6 @@ public class GrailsPropertyBinder {
                 enumTypeBinder,
                 componentPropertyBinder,
                 collectionBinder,
-                propertyFromValueCreator,
                 new SimpleValueBinder(namingStrategy),
                 new ColumnNameForPropertyAndPathFetcher(namingStrategy),
                 new OneToOneBinder(namingStrategy),
@@ -70,25 +66,22 @@ public class GrailsPropertyBinder {
             EnumTypeBinder enumTypeBinder,
             ComponentPropertyBinder componentPropertyBinder,
             CollectionBinder collectionBinder,
-            PropertyFromValueCreator propertyFromValueCreator,
             SimpleValueBinder simpleValueBinder,
             ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
             OneToOneBinder oneToOneBinder,
             ManyToOneBinder manyToOneBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
-        this.namingStrategy = namingStrategy;
         this.collectionHolder = collectionHolder;
         this.enumTypeBinder = enumTypeBinder;
         this.componentPropertyBinder = componentPropertyBinder;
         this.collectionBinder = collectionBinder;
-        this.propertyFromValueCreator = propertyFromValueCreator;
         this.simpleValueBinder = simpleValueBinder;
         this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
         this.oneToOneBinder = oneToOneBinder;
         this.manyToOneBinder = manyToOneBinder;
     }
 
-    public void bindProperty(PersistentClass persistentClass
+    public Value bindProperty(PersistentClass persistentClass
             , @Nonnull InFlightMetadataCollector mappings
             , String sessionFactoryBeanName
             , @Nonnull GrailsHibernatePersistentProperty currentGrailsProp) {
@@ -154,7 +147,7 @@ public class GrailsPropertyBinder {
 
         // After creating the value and applying binders (where applicable), create and add the property.
         // This is now done once at the end of the consolidated block.
-        Property property = propertyFromValueCreator.createProperty(value, currentGrailsProp);
-        persistentClass.addProperty(property);
+
+        return value;
     }
 }
