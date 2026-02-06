@@ -36,7 +36,6 @@ import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.DependantValue;
-import org.hibernate.mapping.Formula;
 import org.hibernate.mapping.IndexBackref;
 import org.hibernate.mapping.IndexedCollection;
 import org.hibernate.mapping.KeyValue;
@@ -123,7 +122,7 @@ public class CollectionBinder {
             collection.setElement(oneToMany);
             bindOneToMany((org.grails.datastore.mapping.model.types.OneToMany) property, oneToMany, mappings);
         } else {
-            bindCollectionTable(property, mappings, collection, owner.getTable(), sessionFactoryBeanName);
+            bindCollectionTable(property, mappings, collection, owner.getTable());
 
             if (!property.isOwningSide()) {
                 collection.setInverse(true);
@@ -320,7 +319,7 @@ public class CollectionBinder {
 
         bindCollectionSecondPass(property, mappings, persistentClasses, list, sessionFactoryBeanName);
 
-        String columnName = getIndexColumnName(property, sessionFactoryBeanName);
+        String columnName = getIndexColumnName(property);
         final boolean isManyToMany = property instanceof ManyToMany;
 
         if (isManyToMany && !property.isOwningSide()) {
@@ -401,7 +400,7 @@ public class CollectionBinder {
         SimpleValue value = new BasicValue(metadataBuildingContext, map.getCollectionTable());
 
         String type = ((GrailsHibernatePersistentProperty) property).getIndexColumnType("string");
-        String columnName1 = getIndexColumnName(property, sessionFactoryBeanName);
+        String columnName1 = getIndexColumnName(property);
         new SimpleValueColumnBinder().bindSimpleValue(value, type, columnName1, true);
         PropertyConfig mappedForm = property.getMappedForm();
         if (mappedForm.getIndexColumn() != null) {
@@ -480,13 +479,13 @@ public class CollectionBinder {
     }
 
     private void bindCollectionTable(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
-                                     Collection collection, Table ownerTable, String sessionFactoryBeanName) {
+                                     Collection collection, Table ownerTable) {
 
         String owningTableSchema = ownerTable.getSchema();
         PropertyConfig config = property.getMappedForm();
         JoinTable jt = config.getJoinTable();
 
-        String s = new TableForManyCalculator(namingStrategy).calculateTableForMany(property, sessionFactoryBeanName);
+        String s = new TableForManyCalculator(namingStrategy).calculateTableForMany(property);
         String tableName = (jt != null && jt.getName() != null ? jt.getName() : namingStrategy.resolveTableName(s));
 
         String schemaName = new NamespaceNameExtractor().getSchemaName(mappings);
@@ -509,7 +508,7 @@ public class CollectionBinder {
                 tableName, null, false, metadataBuildingContext));
     }
 
-    private String getIndexColumnName(PersistentProperty property, String sessionFactoryBeanName) {
+    private String getIndexColumnName(PersistentProperty property) {
         PropertyConfig pc = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
         if (pc.getIndexColumn() != null && pc.getIndexColumn().getColumn() != null) {
             return pc.getIndexColumn().getColumn();

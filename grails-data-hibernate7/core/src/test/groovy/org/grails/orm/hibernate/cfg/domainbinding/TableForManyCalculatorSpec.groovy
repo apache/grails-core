@@ -1,11 +1,10 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import org.grails.datastore.mapping.model.PersistentEntity
+
 import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.model.types.ManyToMany
 import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.JoinTable
 import org.grails.orm.hibernate.cfg.Mapping
@@ -57,7 +56,7 @@ class TableForManyCalculatorSpec extends Specification {
         trimmer.trimBackTigs(_) >> { String s -> s }
 
         when:
-        def result = calculator.calculateTableForMany(property, "default")
+        def result = calculator.calculateTableForMany(property)
 
         then:
         result == expectedTableName

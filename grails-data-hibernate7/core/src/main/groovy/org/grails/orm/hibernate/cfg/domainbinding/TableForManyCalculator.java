@@ -7,7 +7,6 @@ import org.hibernate.MappingException;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.ManyToMany;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
@@ -50,7 +49,7 @@ public class TableForManyCalculator {
      * the relationship has to "own" the relationship so that there is not a situation
      * where you have two mapping tables for left_right and right_left
      */
-    public String calculateTableForMany(HibernateToManyProperty property, String sessionFactoryBeanName) {
+    public String calculateTableForMany(HibernateToManyProperty property) {
         String propertyColumnName = namingStrategy.resolveColumnName(property.getName());
         //fix for GRAILS-5895
         PropertyConfig config = property.getMappedForm();

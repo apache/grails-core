@@ -1,9 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
 import java.util.Iterator;
-import java.util.List;
 
-import org.hibernate.FetchMode;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.BasicValue;
@@ -17,29 +15,21 @@ import org.hibernate.mapping.Property;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
-import org.hibernate.type.ForeignKeyDirection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
-import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
 
 import jakarta.annotation.Nonnull;
-
-import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH;
 
 public class ComponentPropertyBinder {
 
@@ -102,8 +92,8 @@ public class ComponentPropertyBinder {
         CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
         if (collectionType != null) {
             // create collection
-            Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass,
-                    path, mappings, sessionFactoryBeanName);
+            Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass
+            );
             collectionBinder.bindCollection((HibernateToManyProperty) currentGrailsProp, collection, persistentClass, mappings, path, sessionFactoryBeanName);
             mappings.addCollectionBinding(collection);
             value = collection;

@@ -35,7 +35,7 @@ class ListCollectionTypeSpec extends HibernateGormDatastoreSpec {
         def sessionFactoryBeanName = "sessionFactory"
 
         when:
-        def result = collectionType.create(property, owner, path, mappings, sessionFactoryBeanName)
+        def result = collectionType.create(property, owner)
 
         then:
         result instanceof HibernateList

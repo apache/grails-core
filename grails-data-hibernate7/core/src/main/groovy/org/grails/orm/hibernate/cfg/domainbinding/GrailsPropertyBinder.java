@@ -21,7 +21,6 @@ import org.hibernate.mapping.Property;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
-import org.hibernate.usertype.UserCollectionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,8 +117,8 @@ public class GrailsPropertyBinder {
                 simpleValueBinder.bindSimpleValue(currentGrailsProp, null,(SimpleValue) value, EMPTY_PATH);// No specific binder call needed
             }
             else { // Actual Collection
-                Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass,
-                        EMPTY_PATH, mappings, sessionFactoryBeanName);
+                Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass
+                );
                 collectionBinder.bindCollection((HibernateToManyProperty) currentGrailsProp, collection, persistentClass, mappings, EMPTY_PATH, sessionFactoryBeanName);
                 mappings.addCollectionBinding(collection);
                 value = collection;
@@ -155,9 +154,7 @@ public class GrailsPropertyBinder {
 
         // After creating the value and applying binders (where applicable), create and add the property.
         // This is now done once at the end of the consolidated block.
-        if (value != null) {
-            Property property = propertyFromValueCreator.createProperty(value, currentGrailsProp);
-            persistentClass.addProperty(property);
-        }
+        Property property = propertyFromValueCreator.createProperty(value, currentGrailsProp);
+        persistentClass.addProperty(property);
     }
 }
