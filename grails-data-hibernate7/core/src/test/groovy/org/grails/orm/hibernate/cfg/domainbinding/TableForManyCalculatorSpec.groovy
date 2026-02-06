@@ -21,10 +21,9 @@ class TableForManyCalculatorSpec extends Specification {
         def namingStrategy = Stub(PersistentEntityNamingStrategy)
         def tableNameFetcher = Stub(TableNameFetcher)
         def backticksRemover = Stub(BackticksRemover)
-        def shouldBind = Stub(ShouldCollectionBindWithJoinColumn)
         def trimmer = Stub(BackTigsTrimmer)
 
-        def calculator = new TableForManyCalculator(namingStrategy, tableNameFetcher, backticksRemover, shouldBind, trimmer)
+        def calculator = new TableForManyCalculator(namingStrategy, tableNameFetcher, backticksRemover, trimmer)
 
         GrailsHibernatePersistentEntity ownerEntity = Stub(GrailsHibernatePersistentEntity)
         GrailsHibernatePersistentEntity associatedEntity = Stub(GrailsHibernatePersistentEntity)
@@ -40,6 +39,7 @@ class TableForManyCalculatorSpec extends Specification {
         property.getAssociatedEntity() >> associatedEntity
         property.isOwningSide() >> isOwningSide
         property.getMappedForm() >> config
+        property.supportsJoinColumnMapping() >> shouldBindWithJoinColumn
 
         if (property instanceof ManyToMany) {
             ((ManyToMany)property).getInversePropertyName() >> "inverseProp"
@@ -50,7 +50,6 @@ class TableForManyCalculatorSpec extends Specification {
         namingStrategy.resolveColumnName("inverseProp") >> "inverse_prop_col"
         tableNameFetcher.getTableName(ownerEntity) >> "owner_table"
         tableNameFetcher.getTableName(associatedEntity) >> "associated_table"
-        shouldBind.apply(_) >> shouldBindWithJoinColumn
 
         backticksRemover.apply(_) >> { String s -> s }
         trimmer.trimBackTigs(_) >> { String s -> s }

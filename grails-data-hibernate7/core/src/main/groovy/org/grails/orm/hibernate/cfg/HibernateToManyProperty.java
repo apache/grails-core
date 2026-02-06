@@ -2,6 +2,11 @@ package org.grails.orm.hibernate.cfg;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.ManyToMany;
+import org.grails.datastore.mapping.model.types.OneToMany;
+
+import java.util.Map;
 
 /**
  * Marker interface for Hibernate associations
@@ -30,5 +35,16 @@ public interface HibernateToManyProperty extends GrailsHibernatePersistentProper
 
     default boolean isBidirectionalOneToManyMap() {
         return ((Association) this).isBidirectionalOneToManyMap();
+    }
+
+    /**
+     * @return Whether the collection should be bound with a foreign key
+     */
+    default boolean shouldBindWithForeignKey() {
+        return ((this instanceof OneToMany) && isBidirectional() ||
+                !isUnidirectionalOneToMany()) &&
+                !Map.class.isAssignableFrom(getType()) &&
+                !(this instanceof ManyToMany) &&
+                !(this instanceof Basic);
     }
 }

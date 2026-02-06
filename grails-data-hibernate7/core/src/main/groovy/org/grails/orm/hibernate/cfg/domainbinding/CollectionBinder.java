@@ -117,7 +117,7 @@ public class CollectionBinder {
             collection.setOrphanDelete(pc.getCascade().equals(CascadeBehavior.ALL_DELETE_ORPHAN.getValue()));
         }
         // if it's a one-to-many mapping
-        if (shouldBindCollectionWithForeignKey(property)) {
+        if (property.shouldBindWithForeignKey()) {
             OneToMany oneToMany = new OneToMany(metadataBuildingContext, collection.getOwner());
             collection.setElement(oneToMany);
             bindOneToMany((org.grails.datastore.mapping.model.types.OneToMany) property, oneToMany, mappings);
@@ -220,7 +220,7 @@ public class CollectionBinder {
             }
 
             oneToMany.setAssociatedClass(associatedClass);
-            if (shouldBindCollectionWithForeignKey(property)) {
+            if (property.shouldBindWithForeignKey()) {
                 collection.setCollectionTable(associatedClass.getTable());
             }
 
@@ -251,7 +251,7 @@ public class CollectionBinder {
 
             GrailsHibernatePersistentProperty otherSide = (GrailsHibernatePersistentProperty) property.getInverseSide();
 
-            if ((otherSide instanceof org.grails.datastore.mapping.model.types.ToOne) && shouldBindCollectionWithForeignKey(property)) {
+            if ((otherSide instanceof org.grails.datastore.mapping.model.types.ToOne) && property.shouldBindWithForeignKey()) {
 
                 linkBidirectionalOneToMany(collection, associatedClass, key, otherSide);
 
@@ -303,10 +303,10 @@ public class CollectionBinder {
             } else {
                 // TODO support unidirectional many-to-many
             }
-        } else if (new ShouldCollectionBindWithJoinColumn().apply(property)) {
+        } else if (property.supportsJoinColumnMapping()) {
             bindCollectionWithJoinTable(property, mappings, collection, propConfig, sessionFactoryBeanName);
 
-        } else if (ofNullable(property).map(PersistentProperty::isUnidirectionalOneToMany).orElse(false)) {
+        } else if (property.isUnidirectionalOneToMany()) {
             // for non-inverse one-to-many, with a not-null fk, add a backref!
             // there are problems with list and map mappings and join columns relating to duplicate key constraints
             // TODO change this when HHH-1268 is resolved
@@ -454,16 +454,9 @@ public class CollectionBinder {
         return null;
     }
 
-    /*
-     * We bind collections with foreign keys if specified in the mapping and only if
-     * it is a unidirectional one-to-many that is.
-     */
-    private boolean shouldBindCollectionWithForeignKey(HibernateToManyProperty property) {
-        return ((property instanceof org.grails.datastore.mapping.model.types.OneToMany) && property.isBidirectional() ||
-                !(boolean) new ShouldCollectionBindWithJoinColumn().apply(property)) &&
-                !Map.class.isAssignableFrom(property.getType()) &&
-                !(property instanceof ManyToMany) &&
-                !(property instanceof Basic);
+    private PersistentClass getAssociatedClass(Map<?, ?> persistentClasses, HibernateToManyProperty property) {
+        String associatedClassName = property.getAssociatedEntity().getName();
+        return (PersistentClass) persistentClasses.get(associatedClassName);
     }
 
     private String getNameForPropertyAndPath(PersistentProperty property, String path) {
@@ -790,8 +783,7 @@ public class CollectionBinder {
             mapping = persistentEntity.getMappedForm();
         }
         boolean hasCompositeIdentifier = mapping != null && mapping.hasCompositeIdentifier();
-        if ((new ShouldCollectionBindWithJoinColumn().apply((HibernateToManyProperty) property) && hasCompositeIdentifier) ||
-                (hasCompositeIdentifier && ( property instanceof ManyToMany))) {
+        if (hasCompositeIdentifier && property.supportsJoinColumnMapping()) {
             CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
             new CompositeIdentifierToManyToOneBinder(namingStrategy).bindCompositeIdentifierToManyToOne((GrailsHibernatePersistentProperty) property, key, ci, refDomainClass, EMPTY_PATH);
         }

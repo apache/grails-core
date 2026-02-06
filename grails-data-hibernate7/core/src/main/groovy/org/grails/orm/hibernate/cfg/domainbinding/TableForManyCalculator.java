@@ -19,26 +19,22 @@ public class TableForManyCalculator {
     private final PersistentEntityNamingStrategy namingStrategy;
     private final TableNameFetcher tableNameFetcher;
     private final BackticksRemover backticksRemover;
-    private final ShouldCollectionBindWithJoinColumn shouldCollectionBindWithJoinColumn;
     private final BackTigsTrimmer backTigsTrimmer;
 
     public TableForManyCalculator(PersistentEntityNamingStrategy namingStrategy) {
         this.namingStrategy = namingStrategy;
         tableNameFetcher = new TableNameFetcher(namingStrategy);
         backticksRemover = new BackticksRemover();
-        shouldCollectionBindWithJoinColumn = new ShouldCollectionBindWithJoinColumn();
         backTigsTrimmer = new BackTigsTrimmer();
     }
 
     protected TableForManyCalculator(PersistentEntityNamingStrategy namingStrategy
              , TableNameFetcher tableNameFetcher
             , BackticksRemover backticksRemover
-    , ShouldCollectionBindWithJoinColumn shouldCollectionBindWithJoinColumn
     , BackTigsTrimmer backTigsTrimmer) {
         this.namingStrategy = namingStrategy;
         this.tableNameFetcher = tableNameFetcher;
         this.backticksRemover = backticksRemover;
-        this.shouldCollectionBindWithJoinColumn = shouldCollectionBindWithJoinColumn;
         this.backTigsTrimmer = backTigsTrimmer;
     }
 
@@ -90,7 +86,7 @@ public class TableForManyCalculator {
             return backticksRemover.apply(right) + UNDERSCORE + backticksRemover.apply(s2);
         }
 
-        if (shouldCollectionBindWithJoinColumn.apply(property)) {
+        if (property.supportsJoinColumnMapping()) {
             if (hasJoinTableMapping) {
                 return jt.getName();
             }
