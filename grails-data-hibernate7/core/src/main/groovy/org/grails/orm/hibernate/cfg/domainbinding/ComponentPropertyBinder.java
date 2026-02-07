@@ -92,8 +92,7 @@ public class ComponentPropertyBinder {
         CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
         if (collectionType != null) {
             // create collection
-            Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass
-            );
+            Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass);
             collectionBinder.bindCollection((HibernateToManyProperty) currentGrailsProp, collection, persistentClass, mappings, path, sessionFactoryBeanName);
             mappings.addCollectionBinding(collection);
             value = collection;
@@ -137,15 +136,13 @@ public class ComponentPropertyBinder {
             }
         }
 
-        if (value != null) {
-            Property persistentProperty = propertyFromValueCreator.createProperty(value, currentGrailsProp);
-            component.addProperty(persistentProperty);
-            if (componentProperty != null && componentProperty.getOwner() instanceof GrailsHibernatePersistentEntity ghpe && ghpe.isComponentPropertyNullable(componentProperty)) {
-                final Iterator<?> columnIterator = value.getColumns().iterator();
-                while (columnIterator.hasNext()) {
-                    Column c = (Column) columnIterator.next();
-                    c.setNullable(true);
-                }
+        Property persistentProperty = propertyFromValueCreator.createProperty(value, currentGrailsProp);
+        component.addProperty(persistentProperty);
+        if (componentProperty != null && componentProperty.getOwner() instanceof GrailsHibernatePersistentEntity ghpe && ghpe.isComponentPropertyNullable(componentProperty)) {
+            final Iterator<?> columnIterator = value.getColumns().iterator();
+            while (columnIterator.hasNext()) {
+                Column c = (Column) columnIterator.next();
+                c.setNullable(true);
             }
         }
     }

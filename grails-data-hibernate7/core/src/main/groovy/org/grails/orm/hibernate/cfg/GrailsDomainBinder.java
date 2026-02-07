@@ -17,13 +17,9 @@ package org.grails.orm.hibernate.cfg;
 import groovy.lang.Closure;
 
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.datastore.mapping.model.DatastoreConfigurationException;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.Basic;
-import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.orm.hibernate.cfg.domainbinding.ClassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ColumnConfigToColumnBinder;
@@ -32,66 +28,43 @@ import org.grails.orm.hibernate.cfg.domainbinding.NamingStrategyProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.*;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
-import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
-import org.grails.orm.hibernate.cfg.domainbinding.secondpass.GrailsCollectionSecondPass;
-import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPass;
-import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPass;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
 import org.hibernate.boot.ResourceStreamLocator;
 import org.hibernate.boot.internal.MetadataBuildingContextRootImpl;
 import org.hibernate.boot.internal.RootMappingDefaults;
 import org.hibernate.boot.model.TypeContributions;
 import org.hibernate.boot.model.TypeContributor;
-import org.hibernate.boot.model.internal.BinderHelper;
 import org.hibernate.boot.spi.AdditionalMappingContributions;
 import org.hibernate.boot.spi.AdditionalMappingContributor;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.engine.spi.FilterDefinition;
-import org.hibernate.mapping.Backref;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Column;
-import org.hibernate.mapping.Component;
 import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.Formula;
-import org.hibernate.mapping.IndexBackref;
-import org.hibernate.mapping.IndexedCollection;
 import org.hibernate.mapping.JoinedSubclass;
-import org.hibernate.mapping.KeyValue;
-import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.OneToMany;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.RootClass;
-import org.hibernate.mapping.Selectable;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.SingleTableSubclass;
 import org.hibernate.mapping.Subclass;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.UnionSubclass;
-import org.hibernate.mapping.Value;
 import org.hibernate.metamodel.mapping.JdbcMapping;
 import org.hibernate.service.ServiceRegistry;
-import org.hibernate.type.StandardBasicTypes;
-import org.hibernate.type.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Optional;
-import java.util.StringTokenizer;
 
 import jakarta.annotation.Nonnull;
 
@@ -694,7 +667,7 @@ public class GrailsDomainBinder
 
 
         for (GrailsHibernatePersistentProperty currentGrailsProp : domainClass.getPersistentPropertiesToBind()) {
-           var value = grailsPropertyBinder.bindProperty(persistentClass, mappings, sessionFactoryBeanName, currentGrailsProp);
+           var value = grailsPropertyBinder.bindProperty(persistentClass, currentGrailsProp, mappings, sessionFactoryBeanName);
             persistentClass.addProperty(propertyFromValueCreator.createProperty(value, currentGrailsProp));
         }
 

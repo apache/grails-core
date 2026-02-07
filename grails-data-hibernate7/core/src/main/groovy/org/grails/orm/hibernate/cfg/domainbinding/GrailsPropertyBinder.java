@@ -82,9 +82,8 @@ public class GrailsPropertyBinder {
     }
 
     public Value bindProperty(PersistentClass persistentClass
-            , @Nonnull InFlightMetadataCollector mappings
-            , String sessionFactoryBeanName
-            , @Nonnull GrailsHibernatePersistentProperty currentGrailsProp) {
+            , @Nonnull GrailsHibernatePersistentProperty currentGrailsProp, @Nonnull InFlightMetadataCollector mappings
+            , String sessionFactoryBeanName) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("[GrailsPropertyBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
         }
