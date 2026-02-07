@@ -46,10 +46,7 @@ public class GrailsCollectionSecondPass implements org.hibernate.boot.spi.Second
         this.sessionFactoryBeanName = sessionFactoryBeanName;
     }
 
-    public void doSecondPass(Map<?, ?> persistentClasses, Map<?, ?> inheritedMetas) throws MappingException {
-        grailsDomainBinder.bindCollectionSecondPass(property, mappings, persistentClasses, collection, sessionFactoryBeanName);
-        createCollectionKeys();
-    }
+
 
     private void createCollectionKeys() {
         collection.createAllKeys();

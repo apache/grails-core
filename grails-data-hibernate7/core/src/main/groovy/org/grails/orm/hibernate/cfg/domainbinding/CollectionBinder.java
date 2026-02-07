@@ -257,7 +257,7 @@ public class CollectionBinder {
 
             } else if ((otherSide instanceof ManyToMany) || Map.class.isAssignableFrom(property.getType())) {
 
-                bindDependentKeyValue((GrailsHibernatePersistentProperty) property, key, mappings, sessionFactoryBeanName);
+                bindDependentKeyValue((GrailsHibernatePersistentProperty) property, key);
 
             }
 
@@ -271,7 +271,7 @@ public class CollectionBinder {
 
             } else {
 
-                bindDependentKeyValue((GrailsHibernatePersistentProperty) property, key, mappings, sessionFactoryBeanName);
+                bindDependentKeyValue((GrailsHibernatePersistentProperty) property, key);
 
             }
 
@@ -696,8 +696,7 @@ public class CollectionBinder {
         manyToOne.setReferencedEntityName(property.getAssociatedEntity().getName());
     }
 
-    private void bindDependentKeyValue(GrailsHibernatePersistentProperty property, DependantValue key,
-                                       @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+    private void bindDependentKeyValue(GrailsHibernatePersistentProperty property, DependantValue key) {
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("[CollectionBinder] binding  [" + property.getName() + "] with dependant key");
