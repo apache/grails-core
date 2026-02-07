@@ -309,6 +309,10 @@ public class GrailsDomainBinder
         mappings.addEntityBinding(root);
     }
 
+    public String getMultiTenantFilterCondition(PersistentEntity referenced) {
+        return collectionBinder.getMultiTenantFilterCondition(referenced);
+    }
+
     public PersistentEntityNamingStrategy getNamingStrategy() {
         if (namingStrategy == null) {
             namingStrategy = new NamingStrategyWrapper(NAMING_STRATEGY_PROVIDER.getPhysicalNamingStrategy(sessionFactoryName), getJdbcEnvironment());
