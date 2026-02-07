@@ -52,7 +52,7 @@ public class GrailsCollectionSecondPass implements org.hibernate.boot.spi.Second
 
 
 
-    private void createCollectionKeys() {
+    protected void createCollectionKeys() {
         collection.createAllKeys();
 
         if (GrailsDomainBinder.LOG.isDebugEnabled()) {

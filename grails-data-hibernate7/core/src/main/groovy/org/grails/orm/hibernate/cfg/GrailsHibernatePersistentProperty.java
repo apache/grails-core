@@ -7,6 +7,7 @@ import org.grails.datastore.mapping.model.types.Embedded;
 import java.util.Optional;
 
 import org.hibernate.MappingException;
+import org.hibernate.mapping.IndexedCollection;
 import org.hibernate.usertype.UserCollectionType;
 
 /**
@@ -114,5 +115,13 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
                 .map(PropertyConfig::getIndexColumn)
                 .map(ic -> getTypeName(ic, getHibernateOwner().getMappedForm()))
                 .orElse(defaultType);
+    }
+
+    default String getIndexColumnName(PersistentEntityNamingStrategy namingStrategy) {
+        PropertyConfig pc = getMappedForm();
+        if (pc.getIndexColumn() != null && pc.getIndexColumn().getColumn() != null) {
+            return pc.getIndexColumn().getColumn();
+        }
+        return namingStrategy.resolveColumnName(getName()) + GrailsDomainBinder.UNDERSCORE + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
     }
 }

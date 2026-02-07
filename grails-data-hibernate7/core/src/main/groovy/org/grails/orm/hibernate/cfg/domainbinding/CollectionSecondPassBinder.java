@@ -42,6 +42,10 @@ public class CollectionSecondPassBinder {
         this.namingStrategy = namingStrategy;
     }
 
+    public PersistentEntityNamingStrategy getNamingStrategy() {
+        return namingStrategy;
+    }
+
     public void bindCollectionSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
                                          java.util.Map<?, ?> persistentClasses, Collection collection, String sessionFactoryBeanName) {
         PersistentClass associatedClass = null;
@@ -572,5 +576,9 @@ public class CollectionSecondPassBinder {
         else {
             return null;
         }
+    }
+
+    public boolean hasJoinTableColumnNameMapping(PropertyConfig pc) {
+        return pc != null && pc.getJoinTable() != null && pc.getJoinTable().getColumn() != null && pc.getJoinTable().getColumn().getName() != null;
     }
 }

@@ -30,22 +30,20 @@ import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.UNDERSCORE;
 public class MapSecondPassBinder {
     private final MetadataBuildingContext metadataBuildingContext;
     private final PersistentEntityNamingStrategy namingStrategy;
-    private final CollectionBinder collectionBinder;
+    private final CollectionSecondPassBinder collectionSecondPassBinder;
 
-    public MapSecondPassBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, CollectionBinder collectionBinder) {
+    public MapSecondPassBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, CollectionSecondPassBinder collectionSecondPassBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
-        this.collectionBinder = collectionBinder;
+        this.collectionSecondPassBinder = collectionSecondPassBinder;
     }
 
     public void bindMapSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
                                   Map<?, ?> persistentClasses, org.hibernate.mapping.Map map, String sessionFactoryBeanName) {
-        collectionBinder.bindCollectionSecondPass(property, mappings, persistentClasses, map, sessionFactoryBeanName);
-
         SimpleValue value = new BasicValue(metadataBuildingContext, map.getCollectionTable());
 
         String type = ((GrailsHibernatePersistentProperty) property).getIndexColumnType("string");
-        String columnName1 = collectionBinder.getIndexColumnName(property);
+        String columnName1 = property.getIndexColumnName(namingStrategy);
         new SimpleValueColumnBinder().bindSimpleValue(value, type, columnName1, true);
         PropertyConfig mappedForm = property.getMappedForm();
         if (mappedForm.getIndexColumn() != null) {
@@ -102,13 +100,9 @@ public class MapSecondPassBinder {
     private String getMapElementName(PersistentProperty property, String sessionFactoryBeanName) {
         PropertyConfig pc = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
 
-        if (hasJoinTableColumnNameMapping(pc)) {
+        if (collectionSecondPassBinder.hasJoinTableColumnNameMapping(pc)) {
             return pc.getJoinTable().getColumn().getName();
         }
         return namingStrategy.resolveColumnName(property.getName()) + UNDERSCORE + IndexedCollection.DEFAULT_ELEMENT_COLUMN_NAME;
-    }
-
-    private boolean hasJoinTableColumnNameMapping(PropertyConfig pc) {
-        return pc != null && pc.getJoinTable() != null && pc.getJoinTable().getColumn() != null && pc.getJoinTable().getColumn().getName() != null;
     }
 }

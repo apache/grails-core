@@ -222,27 +222,8 @@ public class GrailsDomainBinder
         NAMING_STRATEGY_PROVIDER.configureNamingStrategy(datasourceName, strategy);
     }
 
-    public void bindMapSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
-                                     Map<?, ?> persistentClasses, org.hibernate.mapping.Map map, String sessionFactoryBeanName) {
-        collectionBinder.bindMapSecondPass(property, mappings, persistentClasses, map, sessionFactoryBeanName);
-    }
 
-    /**
-     * @param property
-     * @param mappings
-     * @param persistentClasses
-     * @param list
-     * @param sessionFactoryBeanName
-     */
-    public void bindListSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
-                                   Map<?, ?> persistentClasses, org.hibernate.mapping.List list, String sessionFactoryBeanName) {
-        collectionBinder.bindListSecondPass(property, mappings, persistentClasses, list, sessionFactoryBeanName);
-    }
 
-    public void bindCollectionSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
-                                            Map<?, ?> persistentClasses, Collection collection, String sessionFactoryBeanName) {
-        collectionBinder.bindCollectionSecondPass(property, mappings, persistentClasses, collection, sessionFactoryBeanName);
-    }
 
     /**
      * First pass to bind collection to Hibernate metamodel, sets up second pass

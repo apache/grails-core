@@ -3,9 +3,6 @@ package org.grails.orm.hibernate.cfg.domainbinding;
 import jakarta.annotation.Nonnull;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.Basic;
-import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
@@ -61,9 +58,9 @@ public class CollectionBinder {
         this.metadataBuildingContext = metadataBuildingContext;
         this.grailsDomainBinder = grailsDomainBinder;
         this.namingStrategy = namingStrategy;
-        this.listSecondPassBinder = new ListSecondPassBinder(metadataBuildingContext, this);
         this.collectionSecondPassBinder = new CollectionSecondPassBinder(metadataBuildingContext, namingStrategy);
-        this.mapSecondPassBinder = new MapSecondPassBinder(metadataBuildingContext, namingStrategy, this);
+        this.listSecondPassBinder = new ListSecondPassBinder(metadataBuildingContext, collectionSecondPassBinder);
+        this.mapSecondPassBinder = new MapSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
     }
 
     /**
@@ -120,10 +117,10 @@ public class CollectionBinder {
             mappings.addSecondPass(new GrailsCollectionSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
         }
         else if (collection instanceof org.hibernate.mapping.List) {
-            mappings.addSecondPass(new ListSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
+            mappings.addSecondPass(new ListSecondPass(grailsDomainBinder, this, listSecondPassBinder, property, mappings, collection, sessionFactoryBeanName));
         }
         else if (collection instanceof org.hibernate.mapping.Map) {
-            mappings.addSecondPass(new MapSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
+            mappings.addSecondPass(new MapSecondPass(grailsDomainBinder, this, mapSecondPassBinder, property, mappings, collection, sessionFactoryBeanName));
         }
         else { // Collection -> Bag
             mappings.addSecondPass(new GrailsCollectionSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
@@ -187,15 +184,24 @@ public class CollectionBinder {
                 tableName, null, false, metadataBuildingContext));
     }
 
-    public String getIndexColumnName(PersistentProperty property) {
-        PropertyConfig pc = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
-        if (pc.getIndexColumn() != null && pc.getIndexColumn().getColumn() != null) {
-            return pc.getIndexColumn().getColumn();
+
+
+    public Property getProperty(PersistentClass associatedClass, String propertyName) throws MappingException {
+        try {
+            return associatedClass.getProperty(propertyName);
         }
-        return namingStrategy.resolveColumnName(property.getName()) + UNDERSCORE + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
+        catch (MappingException e) {
+            //maybe it's squirreled away in a composite primary key
+            if (associatedClass.getKey() instanceof Component) {
+                return ((Component) associatedClass.getKey()).getProperty(propertyName);
+            }
+            throw e;
+        }
     }
 
-    public String getMultiTenantFilterCondition(PersistentEntity referenced) {
+    public String getMultiTenantFilterCondition(GrailsHibernatePersistentEntity referenced) {
         return collectionSecondPassBinder.getMultiTenantFilterCondition(referenced);
     }
+
+
 }

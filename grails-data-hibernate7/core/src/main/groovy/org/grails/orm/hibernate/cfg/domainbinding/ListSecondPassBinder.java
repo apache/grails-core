@@ -30,19 +30,17 @@ import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.UNDERSCORE;
 public class ListSecondPassBinder {
 
     private final MetadataBuildingContext metadataBuildingContext;
-    private final CollectionBinder collectionBinder;
+    private final CollectionSecondPassBinder collectionSecondPassBinder;
 
-    public ListSecondPassBinder(MetadataBuildingContext metadataBuildingContext, CollectionBinder collectionBinder) {
+    public ListSecondPassBinder(MetadataBuildingContext metadataBuildingContext, CollectionSecondPassBinder collectionSecondPassBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
-        this.collectionBinder = collectionBinder;
+        this.collectionSecondPassBinder = collectionSecondPassBinder;
     }
 
     public void bindListSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
                                    Map<?, ?> persistentClasses, org.hibernate.mapping.List list, String sessionFactoryBeanName) {
 
-        collectionBinder.bindCollectionSecondPass(property, mappings, persistentClasses, list, sessionFactoryBeanName);
-
-        String columnName = collectionBinder.getIndexColumnName(property);
+        String columnName = property.getIndexColumnName(collectionSecondPassBinder.getNamingStrategy());
         final boolean isManyToMany = property instanceof ManyToMany;
 
         if (isManyToMany && !property.isOwningSide()) {
