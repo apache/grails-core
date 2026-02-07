@@ -1,5 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
+import java.io.Serial;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -18,7 +19,8 @@ import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.CollectionBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.MapSecondPassBinder;
 
-public class MapSecondPass implements org.hibernate.boot.spi.SecondPass {
+public class MapSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsSecondPass {
+    @Serial
     private static final long serialVersionUID = -3244991685626409031L;
 
     protected final GrailsDomainBinder grailsDomainBinder;
@@ -48,33 +50,8 @@ public class MapSecondPass implements org.hibernate.boot.spi.SecondPass {
         collectionBinder.bindCollectionSecondPass(property, mappings, persistentClasses, collection, sessionFactoryBeanName);
         mapSecondPassBinder.bindMapSecondPass(property, mappings, persistentClasses,
                 (org.hibernate.mapping.Map) collection, sessionFactoryBeanName);
-        createCollectionKeys();
+        createCollectionKeys(collection);
     }
 
-    protected void createCollectionKeys() {
-        collection.createAllKeys();
 
-        if (GrailsDomainBinder.LOG.isDebugEnabled()) {
-            String msg = "Mapped collection key: " + columns(collection.getKey());
-            if (collection.isIndexed())
-                msg += ", index: " + columns(((IndexedCollection) collection).getIndex());
-            if (collection.isOneToMany()) {
-                msg += ", one-to-many: "
-                        + ((OneToMany) collection.getElement()).getReferencedEntityName();
-            } else {
-                msg += ", element: " + columns(collection.getElement());
-            }
-            GrailsDomainBinder.LOG.debug(msg);
-        }
-    }
-
-    protected String columns(Value val) {
-        StringBuilder columns = new StringBuilder();
-        Iterator<?> iter = val.getColumns().iterator();
-        while (iter.hasNext()) {
-            columns.append(((Selectable) iter.next()).getText());
-            if (iter.hasNext()) columns.append(", ");
-        }
-        return columns.toString();
-    }
 }

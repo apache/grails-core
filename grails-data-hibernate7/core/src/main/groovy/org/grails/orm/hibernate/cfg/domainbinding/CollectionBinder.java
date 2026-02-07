@@ -1,44 +1,29 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
 import jakarta.annotation.Nonnull;
-import org.grails.datastore.mapping.model.PersistentEntity;
+
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
-import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.JoinTable;
-import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetCollectionSecondPass;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSecondPass;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPass;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPass;
 import org.hibernate.FetchMode;
-import org.hibernate.MappingException;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.Component;
-import org.hibernate.mapping.IndexedCollection;
 import org.hibernate.mapping.OneToMany;
 import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Property;
-import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
-import org.hibernate.mapping.Value;
-import org.hibernate.type.StandardBasicTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.Map;
-
-import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.*;
 
 /**
  * Handles the binding of collections to the Hibernate runtime meta model.
@@ -114,7 +99,7 @@ public class CollectionBinder {
 
         // set up second pass
         if (collection instanceof org.hibernate.mapping.Set) {
-            mappings.addSecondPass(new SetCollectionSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
+            mappings.addSecondPass(new SetSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
         }
         else if (collection instanceof org.hibernate.mapping.List) {
             mappings.addSecondPass(new ListSecondPass(grailsDomainBinder, this, listSecondPassBinder, property, mappings, collection, sessionFactoryBeanName));
@@ -123,7 +108,7 @@ public class CollectionBinder {
             mappings.addSecondPass(new MapSecondPass(grailsDomainBinder, this, mapSecondPassBinder, property, mappings, collection, sessionFactoryBeanName));
         }
         else { // Collection -> Bag
-            mappings.addSecondPass(new SetCollectionSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
+            mappings.addSecondPass(new SetSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
         }
     }
 
