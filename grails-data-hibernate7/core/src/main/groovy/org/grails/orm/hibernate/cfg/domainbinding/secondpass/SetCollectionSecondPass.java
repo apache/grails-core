@@ -24,19 +24,18 @@ import org.grails.orm.hibernate.cfg.domainbinding.CollectionBinder;
  *
  * @author Graeme
  */
-public class GrailsCollectionSecondPass implements org.hibernate.boot.spi.SecondPass {
+public class SetCollectionSecondPass implements org.hibernate.boot.spi.SecondPass {
 
     private static final long serialVersionUID = -5540526942092611348L;
 
     protected final GrailsDomainBinder grailsDomainBinder;
     protected final CollectionBinder collectionBinder;
-    HibernateToManyProperty property;
-    @Nonnull
-    InFlightMetadataCollector mappings;
-    Collection collection;
-    String sessionFactoryBeanName;
+    protected final HibernateToManyProperty property;
+    protected final @Nonnull InFlightMetadataCollector mappings;
+    protected final Collection collection;
+    protected final String sessionFactoryBeanName;
 
-    public GrailsCollectionSecondPass(GrailsDomainBinder grailsDomainBinder,
+    public SetCollectionSecondPass(GrailsDomainBinder grailsDomainBinder,
                                       CollectionBinder collectionBinder,
                                       HibernateToManyProperty property,
                                       @Nonnull InFlightMetadataCollector mappings,
@@ -69,7 +68,7 @@ public class GrailsCollectionSecondPass implements org.hibernate.boot.spi.Second
         }
     }
 
-    private String columns(Value val) {
+    protected String columns(Value val) {
         StringBuilder columns = new StringBuilder();
         Iterator<?> iter = val.getColumns().iterator();
         while (iter.hasNext()) {

@@ -13,7 +13,7 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.JoinTable;
-import org.grails.orm.hibernate.cfg.domainbinding.secondpass.GrailsCollectionSecondPass;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetCollectionSecondPass;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPass;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPass;
 import org.hibernate.FetchMode;
@@ -114,7 +114,7 @@ public class CollectionBinder {
 
         // set up second pass
         if (collection instanceof org.hibernate.mapping.Set) {
-            mappings.addSecondPass(new GrailsCollectionSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
+            mappings.addSecondPass(new SetCollectionSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
         }
         else if (collection instanceof org.hibernate.mapping.List) {
             mappings.addSecondPass(new ListSecondPass(grailsDomainBinder, this, listSecondPassBinder, property, mappings, collection, sessionFactoryBeanName));
@@ -123,7 +123,7 @@ public class CollectionBinder {
             mappings.addSecondPass(new MapSecondPass(grailsDomainBinder, this, mapSecondPassBinder, property, mappings, collection, sessionFactoryBeanName));
         }
         else { // Collection -> Bag
-            mappings.addSecondPass(new GrailsCollectionSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
+            mappings.addSecondPass(new SetCollectionSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
         }
     }
 
