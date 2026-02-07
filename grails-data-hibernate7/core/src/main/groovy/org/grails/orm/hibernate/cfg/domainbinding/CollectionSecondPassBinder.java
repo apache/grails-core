@@ -17,7 +17,6 @@ import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.*;
 import org.hibernate.mapping.Collection;
-import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -578,7 +577,4 @@ public class CollectionSecondPassBinder {
         }
     }
 
-    public boolean hasJoinTableColumnNameMapping(PropertyConfig pc) {
-        return pc != null && pc.getJoinTable() != null && pc.getJoinTable().getColumn() != null && pc.getJoinTable().getColumn().getName() != null;
-    }
 }

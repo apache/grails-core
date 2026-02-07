@@ -118,10 +118,17 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
     }
 
     default String getIndexColumnName(PersistentEntityNamingStrategy namingStrategy) {
-        PropertyConfig pc = getMappedForm();
-        if (pc.getIndexColumn() != null && pc.getIndexColumn().getColumn() != null) {
-            return pc.getIndexColumn().getColumn();
-        }
-        return namingStrategy.resolveColumnName(getName()) + GrailsDomainBinder.UNDERSCORE + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
+        return Optional.ofNullable(getMappedForm())
+                .map(PropertyConfig::getIndexColumn)
+                .map(PropertyConfig::getColumn)
+                .orElseGet(() -> namingStrategy.resolveColumnName(getName()) + GrailsDomainBinder.UNDERSCORE + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME);
+    }
+
+    default String getMapElementName(PersistentEntityNamingStrategy namingStrategy) {
+        return Optional.ofNullable(getMappedForm())
+                .map(PropertyConfig::getJoinTable)
+                .map(JoinTable::getColumn)
+                .map(ColumnConfig::getName)
+                .orElseGet(() -> namingStrategy.resolveColumnName(getName()) + GrailsDomainBinder.UNDERSCORE + IndexedCollection.DEFAULT_ELEMENT_COLUMN_NAME);
     }
 }

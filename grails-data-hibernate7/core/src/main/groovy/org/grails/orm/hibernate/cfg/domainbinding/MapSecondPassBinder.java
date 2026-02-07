@@ -1,7 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
 import jakarta.annotation.Nonnull;
-import org.grails.datastore.mapping.model.PersistentProperty;
+
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
@@ -78,7 +78,7 @@ public class MapSecondPassBinder {
             if(typeName == null || typeName.equals(Object.class.getName())) {
                 typeName = StandardBasicTypes.STRING.getName();
             }
-            String columnName = getMapElementName(property, sessionFactoryBeanName);
+            String columnName = property.getMapElementName(namingStrategy);
             new SimpleValueColumnBinder().bindSimpleValue(elt, typeName, columnName, false);
 
             elt.setTypeName(typeName);
@@ -95,14 +95,5 @@ public class MapSecondPassBinder {
             }
         }
         return null;
-    }
-
-    private String getMapElementName(PersistentProperty property, String sessionFactoryBeanName) {
-        PropertyConfig pc = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
-
-        if (collectionSecondPassBinder.hasJoinTableColumnNameMapping(pc)) {
-            return pc.getJoinTable().getColumn().getName();
-        }
-        return namingStrategy.resolveColumnName(property.getName()) + UNDERSCORE + IndexedCollection.DEFAULT_ELEMENT_COLUMN_NAME;
     }
 }

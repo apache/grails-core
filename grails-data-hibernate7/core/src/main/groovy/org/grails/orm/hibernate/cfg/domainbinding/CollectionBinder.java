@@ -132,15 +132,6 @@ public class CollectionBinder {
         collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, collection, sessionFactoryBeanName);
     }
 
-    public void bindListSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
-                                   Map<?, ?> persistentClasses, org.hibernate.mapping.List list, String sessionFactoryBeanName) {
-        listSecondPassBinder.bindListSecondPass(property, mappings, persistentClasses, list, sessionFactoryBeanName);
-    }
-
-    public void bindMapSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
-                                  Map<?, ?> persistentClasses, org.hibernate.mapping.Map map, String sessionFactoryBeanName) {
-        mapSecondPassBinder.bindMapSecondPass(property, mappings, persistentClasses, map, sessionFactoryBeanName);
-    }
 
     private String getNameForPropertyAndPath(PersistentProperty property, String path) {
         if (GrailsHibernateUtil.isNotEmpty(path)) {
@@ -186,18 +177,7 @@ public class CollectionBinder {
 
 
 
-    public Property getProperty(PersistentClass associatedClass, String propertyName) throws MappingException {
-        try {
-            return associatedClass.getProperty(propertyName);
-        }
-        catch (MappingException e) {
-            //maybe it's squirreled away in a composite primary key
-            if (associatedClass.getKey() instanceof Component) {
-                return ((Component) associatedClass.getKey()).getProperty(propertyName);
-            }
-            throw e;
-        }
-    }
+
 
     public String getMultiTenantFilterCondition(GrailsHibernatePersistentEntity referenced) {
         return collectionSecondPassBinder.getMultiTenantFilterCondition(referenced);
