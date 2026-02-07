@@ -28,6 +28,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.NamingStrategyProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.*;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
+import org.grails.orm.hibernate.cfg.domainbinding.CollectionBinder;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.hibernate.MappingException;
@@ -63,7 +64,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
-import java.util.Map;
 import java.util.Optional;
 
 import jakarta.annotation.Nonnull;

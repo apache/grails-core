@@ -8,6 +8,9 @@ import org.grails.orm.hibernate.cfg.HibernateToManyProperty
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.SimpleValue
 
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionSecondPassBinder
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinder
+
 class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {

@@ -5,7 +5,6 @@ import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
-import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.datastore.mapping.model.types.ManyToOne as GormManyToOne
 import org.grails.datastore.mapping.model.types.OneToOne as GormOneToOne
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
@@ -21,7 +20,6 @@ import org.hibernate.mapping.Column
 import org.hibernate.mapping.Component
 import org.hibernate.mapping.ManyToOne as HibernateManyToOne
 import org.hibernate.mapping.OneToOne as HibernateOneToOne
-import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table

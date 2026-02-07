@@ -4,9 +4,12 @@ import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.HibernateToManyProperty
-import org.hibernate.mapping.Map
+
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.SimpleValue
+
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionSecondPassBinder
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPassBinder
 
 class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 

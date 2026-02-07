@@ -1,4 +1,4 @@
-package org.grails.orm.hibernate.cfg.domainbinding;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import jakarta.annotation.Nonnull;
 import org.grails.datastore.mapping.model.DatastoreConfigurationException;
@@ -10,6 +10,18 @@ import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.orm.hibernate.cfg.*;
+import org.grails.orm.hibernate.cfg.domainbinding.BackticksRemover;
+import org.grails.orm.hibernate.cfg.domainbinding.CollectionForPropertyConfigBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.ColumnConfigToColumnBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.CompositeIdentifierToManyToOneBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.DefaultColumnNameFetcher;
+import org.grails.orm.hibernate.cfg.domainbinding.EnumTypeBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.ManyToOneBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.RootMappingFetcher;
+import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnFetcher;
+
 import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
 import org.hibernate.boot.model.internal.BinderHelper;

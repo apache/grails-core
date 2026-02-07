@@ -1,4 +1,4 @@
-package org.grails.orm.hibernate.cfg.domainbinding;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import jakarta.annotation.Nonnull;
 
@@ -10,19 +10,20 @@ import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.orm.hibernate.cfg.domainbinding.ColumnConfigToColumnBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnFetcher;
+
 import org.hibernate.MappingException;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Column;
-import org.hibernate.mapping.IndexedCollection;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.type.StandardBasicTypes;
 
 import java.util.List;
 import java.util.Map;
-
-import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.UNDERSCORE;
 
 /**
  * Refactored from CollectionBinder to handle map second pass binding.
@@ -40,6 +41,7 @@ public class MapSecondPassBinder {
 
     public void bindMapSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
                                   Map<?, ?> persistentClasses, org.hibernate.mapping.Map map, String sessionFactoryBeanName) {
+        collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, map, sessionFactoryBeanName);
         SimpleValue value = new BasicValue(metadataBuildingContext, map.getCollectionTable());
 
         String type = ((GrailsHibernatePersistentProperty) property).getIndexColumnType("string");

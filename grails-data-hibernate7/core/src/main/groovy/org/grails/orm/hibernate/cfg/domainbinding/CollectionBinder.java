@@ -10,9 +10,13 @@ import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.JoinTable;
-import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSecondPass;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionSecondPassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPass;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPass;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPassBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSecondPass;
+
 import org.hibernate.FetchMode;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -98,23 +102,15 @@ public class CollectionBinder {
         }
 
         // set up second pass
-        if (collection instanceof org.hibernate.mapping.Set) {
-            mappings.addSecondPass(new SetSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
-        }
-        else if (collection instanceof org.hibernate.mapping.List) {
+       if (collection instanceof org.hibernate.mapping.List) {
             mappings.addSecondPass(new ListSecondPass(grailsDomainBinder, this, listSecondPassBinder, property, mappings, collection, sessionFactoryBeanName));
         }
         else if (collection instanceof org.hibernate.mapping.Map) {
             mappings.addSecondPass(new MapSecondPass(grailsDomainBinder, this, mapSecondPassBinder, property, mappings, collection, sessionFactoryBeanName));
         }
         else { // Collection -> Bag
-            mappings.addSecondPass(new SetSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
+            mappings.addSecondPass(new SetSecondPass(grailsDomainBinder, this,collectionSecondPassBinder,  property, mappings, collection, sessionFactoryBeanName));
         }
-    }
-
-    public void bindCollectionSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
-                                         Map<?, ?> persistentClasses, Collection collection, String sessionFactoryBeanName) {
-        collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, collection, sessionFactoryBeanName);
     }
 
 
