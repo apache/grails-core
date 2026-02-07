@@ -45,6 +45,7 @@ import org.hibernate.engine.spi.FilterDefinition;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Column;
+import org.hibernate.mapping.Component;
 import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.Formula;
 import org.hibernate.mapping.JoinedSubclass;
@@ -309,9 +310,7 @@ public class GrailsDomainBinder
         mappings.addEntityBinding(root);
     }
 
-    public String getMultiTenantFilterCondition(PersistentEntity referenced) {
-        return collectionBinder.getMultiTenantFilterCondition(referenced);
-    }
+
 
     public PersistentEntityNamingStrategy getNamingStrategy() {
         if (namingStrategy == null) {
@@ -345,7 +344,7 @@ public class GrailsDomainBinder
                         Collections.emptyMap()
                 );
 
-                Property property = collectionBinder.getProperty(persistentClass, tenantId.getName());
+                Property property = collectionBinder.grailsDomainBinder.getProperty(persistentClass, tenantId.getName());
                 if (property.getValue() instanceof BasicValue basicValue) {
                     JdbcMapping jdbcMapping = basicValue.resolve().getJdbcMapping();
                     var stringVMap = Collections.singletonMap(GormProperties.TENANT_IDENTITY, jdbcMapping);
@@ -714,4 +713,16 @@ public class GrailsDomainBinder
 
     }
 
+    public Property getProperty(PersistentClass associatedClass, String propertyName) throws MappingException {
+        try {
+            return associatedClass.getProperty(propertyName);
+        }
+        catch (MappingException e) {
+            //maybe it's squirreled away in a composite primary key
+            if (associatedClass.getKey() instanceof Component) {
+                return ((Component) associatedClass.getKey()).getProperty(propertyName);
+            }
+            throw e;
+        }
+    }
 }

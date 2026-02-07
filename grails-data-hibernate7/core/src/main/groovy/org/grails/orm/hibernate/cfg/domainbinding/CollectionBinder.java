@@ -51,7 +51,7 @@ public class CollectionBinder {
     private static final Logger LOG = LoggerFactory.getLogger(CollectionBinder.class);
 
     private final MetadataBuildingContext metadataBuildingContext;
-    private final GrailsDomainBinder grailsDomainBinder;
+    public final GrailsDomainBinder grailsDomainBinder;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final ListSecondPassBinder listSecondPassBinder;
     private final CollectionSecondPassBinder collectionSecondPassBinder;
@@ -193,19 +193,6 @@ public class CollectionBinder {
             return pc.getIndexColumn().getColumn();
         }
         return namingStrategy.resolveColumnName(property.getName()) + UNDERSCORE + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
-    }
-
-    public Property getProperty(PersistentClass associatedClass, String propertyName) throws MappingException {
-        try {
-            return associatedClass.getProperty(propertyName);
-        }
-        catch (MappingException e) {
-            //maybe it's squirreled away in a composite primary key
-            if (associatedClass.getKey() instanceof Component) {
-                return ((Component) associatedClass.getKey()).getProperty(propertyName);
-            }
-            throw e;
-        }
     }
 
     public String getMultiTenantFilterCondition(PersistentEntity referenced) {
