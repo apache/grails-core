@@ -20,11 +20,6 @@ public class ListSecondPass extends GrailsCollectionSecondPass {
         super(grailsDomainBinder, property, mappings, coll, sessionFactoryBeanName);
     }
 
-    @Override
-    public void doSecondPass(Map<?, ?> persistentClasses, Map<?, ?> inheritedMetas) throws MappingException {
-        grailsDomainBinder.bindListSecondPass(property, mappings, persistentClasses,
-                (org.hibernate.mapping.List) collection, sessionFactoryBeanName);
-    }
 
     @SuppressWarnings("rawtypes")
     @Override

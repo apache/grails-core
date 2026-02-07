@@ -48,7 +48,6 @@ import org.hibernate.mapping.Column;
 import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.Formula;
 import org.hibernate.mapping.JoinedSubclass;
-import org.hibernate.mapping.OneToMany;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.RootClass;
@@ -305,7 +304,7 @@ public class GrailsDomainBinder
             children.forEach(sub -> bindSubClass(sub, root, mappings, sessionFactoryBeanName, finalMapping,mappingCacheHolder ));
         }
 
-        addMultiTenantFilterIfNecessary(entity, root, mappings, sessionFactoryBeanName);
+        addMultiTenantFilterIfNecessary(entity, root, mappings);
 
         mappings.addEntityBinding(root);
     }
@@ -320,14 +319,13 @@ public class GrailsDomainBinder
     /**
      * Add a Hibernate filter for multitenancy if the persistent class is multitenant
      *
-     * @param entity target persistent entity for get tenant information
+     * @param entity          target persistent entity for get tenant information
      * @param persistentClass persistent class for add the filter and get tenant property info
-     * @param mappings mappings to add the filter
-     * @param sessionFactoryBeanName the session factory bean name
+     * @param mappings        mappings to add the filter
      */
     private void addMultiTenantFilterIfNecessary(
             @Nonnull GrailsHibernatePersistentEntity entity, PersistentClass persistentClass,
-            @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+            @Nonnull InFlightMetadataCollector mappings) {
 
         if (entity.isMultiTenant()) {
             TenantId tenantId = entity.getTenantId();
@@ -380,7 +378,7 @@ public class GrailsDomainBinder
         parent.addSubclass(subClass);
         mappings.addEntityBinding(subClass);
 
-        addMultiTenantFilterIfNecessary(sub, subClass, mappings, sessionFactoryBeanName);
+        addMultiTenantFilterIfNecessary(sub, subClass, mappings);
 
         var children = sub.getChildEntities(dataSourceName);
         if (!children.isEmpty()) {
@@ -674,10 +672,7 @@ public class GrailsDomainBinder
         new NaturalIdentifierBinder().bindNaturalIdentifier(domainClass.getMappedForm(), persistentClass);
     }
 
-    private void bindOneToMany(org.grails.datastore.mapping.model.types.OneToMany currentGrailsProp, OneToMany one, @Nonnull InFlightMetadataCollector mappings) {
-        one.setReferencedEntityName(currentGrailsProp.getAssociatedEntity().getName());
-        one.setIgnoreNotFound(true);
-    }
+
 
     public MetadataBuildingContext getMetadataBuildingContext() {
         return metadataBuildingContext;
@@ -691,13 +686,6 @@ public class GrailsDomainBinder
         return collectionHolder;
     }
 
-    public EnumTypeBinder getEnumTypeBinder() {
-        return enumTypeBinder;
-    }
-
-    public ComponentPropertyBinder getComponentPropertyBinder() {
-        return componentPropertyBinder;
-    }
 
     public PropertyFromValueCreator getPropertyFromValueCreator() {
         return propertyFromValueCreator;

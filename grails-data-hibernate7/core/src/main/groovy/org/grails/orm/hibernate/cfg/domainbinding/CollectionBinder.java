@@ -36,7 +36,6 @@ import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.DependantValue;
-import org.hibernate.mapping.IndexBackref;
 import org.hibernate.mapping.IndexedCollection;
 import org.hibernate.mapping.KeyValue;
 import org.hibernate.mapping.ManyToOne;
@@ -64,7 +63,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.StringTokenizer;
 
-import static java.util.Optional.ofNullable;
 import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.*;
 
 /**
@@ -77,11 +75,13 @@ public class CollectionBinder {
     private final MetadataBuildingContext metadataBuildingContext;
     private final GrailsDomainBinder grailsDomainBinder;
     private final PersistentEntityNamingStrategy namingStrategy;
+    private final ListSecondPassBinder listSecondPassBinder;
 
     public CollectionBinder(MetadataBuildingContext metadataBuildingContext, GrailsDomainBinder grailsDomainBinder, PersistentEntityNamingStrategy namingStrategy) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.grailsDomainBinder = grailsDomainBinder;
         this.namingStrategy = namingStrategy;
+        this.listSecondPassBinder = new ListSecondPassBinder(metadataBuildingContext, this);
     }
 
     /**
@@ -316,81 +316,7 @@ public class CollectionBinder {
 
     public void bindListSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
                                    Map<?, ?> persistentClasses, org.hibernate.mapping.List list, String sessionFactoryBeanName) {
-
-        bindCollectionSecondPass(property, mappings, persistentClasses, list, sessionFactoryBeanName);
-
-        String columnName = getIndexColumnName(property);
-        final boolean isManyToMany = property instanceof ManyToMany;
-
-        if (isManyToMany && !property.isOwningSide()) {
-            throw new MappingException("Invalid association [" + property +
-                    "]. List collection types only supported on the owning side of a many-to-many relationship.");
-        }
-
-        Table collectionTable = list.getCollectionTable();
-        SimpleValue iv = new BasicValue(metadataBuildingContext, collectionTable);
-        String type = ((GrailsHibernatePersistentProperty) property).getIndexColumnType("integer");
-        new SimpleValueColumnBinder().bindSimpleValue(iv, type, columnName, true);
-        iv.setTypeName(type);
-        list.setIndex(iv);
-        list.setBaseIndex(0);
-        list.setInverse(false);
-
-        Value v = list.getElement();
-        v.createForeignKey();
-
-        if (property.isBidirectional()) {
-
-            String entityName;
-            Value element = list.getElement();
-            if (element instanceof ManyToOne) {
-                ManyToOne manyToOne = (ManyToOne) element;
-                entityName = manyToOne.getReferencedEntityName();
-            } else {
-                entityName = ((OneToMany) element).getReferencedEntityName();
-            }
-
-            PersistentClass referenced = mappings.getEntityBinding(entityName);
-
-            boolean compositeIdProperty = property.getInverseSide().isCompositeIdProperty();
-            if (!compositeIdProperty) {
-                Backref prop = new Backref();
-                final PersistentEntity owner = property.getOwner();
-                prop.setEntityName(owner.getName());
-                String s2 = property.getName();
-                prop.setName(UNDERSCORE + new BackticksRemover().apply(owner.getJavaClass().getSimpleName()) + UNDERSCORE + new BackticksRemover().apply(s2) + "Backref");
-                prop.setSelectable(false);
-                prop.setUpdatable(false);
-                if (isManyToMany) {
-                    prop.setInsertable(false);
-                }
-                prop.setCollectionRole(list.getRole());
-                prop.setValue(list.getKey());
-
-                DependantValue value = (DependantValue) prop.getValue();
-                if (!property.isCircular()) {
-                    value.setNullable(false);
-                }
-                value.setUpdateable(true);
-                prop.setOptional(false);
-
-                referenced.addProperty(prop);
-            }
-
-            if ((!list.getKey().isNullable() && !list.isInverse()) || compositeIdProperty) {
-                IndexBackref ib = new IndexBackref();
-                ib.setName(UNDERSCORE + property.getName() + "IndexBackref");
-                ib.setUpdatable(false);
-                ib.setSelectable(false);
-                if (isManyToMany) {
-                    ib.setInsertable(false);
-                }
-                ib.setCollectionRole(list.getRole());
-                ib.setEntityName(list.getOwner().getEntityName());
-                ib.setValue(list.getIndex());
-                referenced.addProperty(ib);
-            }
-        }
+        listSecondPassBinder.bindListSecondPass(property, mappings, persistentClasses, list, sessionFactoryBeanName);
     }
 
     public void bindMapSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
@@ -501,7 +427,7 @@ public class CollectionBinder {
                 tableName, null, false, metadataBuildingContext));
     }
 
-    private String getIndexColumnName(PersistentProperty property) {
+    public String getIndexColumnName(PersistentProperty property) {
         PropertyConfig pc = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : new PropertyConfig();
         if (pc.getIndexColumn() != null && pc.getIndexColumn().getColumn() != null) {
             return pc.getIndexColumn().getColumn();
