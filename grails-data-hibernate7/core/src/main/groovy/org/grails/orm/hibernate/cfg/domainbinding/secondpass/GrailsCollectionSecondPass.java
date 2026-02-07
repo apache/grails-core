@@ -15,6 +15,7 @@ import org.hibernate.mapping.Value;
 
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.CollectionBinder;
 
 /**
  * Second pass class for grails relationships. This is required as all
@@ -28,6 +29,7 @@ public class GrailsCollectionSecondPass implements org.hibernate.boot.spi.Second
     private static final long serialVersionUID = -5540526942092611348L;
 
     protected final GrailsDomainBinder grailsDomainBinder;
+    protected final CollectionBinder collectionBinder;
     HibernateToManyProperty property;
     @Nonnull
     InFlightMetadataCollector mappings;
@@ -35,11 +37,13 @@ public class GrailsCollectionSecondPass implements org.hibernate.boot.spi.Second
     String sessionFactoryBeanName;
 
     public GrailsCollectionSecondPass(GrailsDomainBinder grailsDomainBinder,
+                                      CollectionBinder collectionBinder,
                                       HibernateToManyProperty property,
                                       @Nonnull InFlightMetadataCollector mappings,
                                       Collection coll,
                                       String sessionFactoryBeanName) {
         this.grailsDomainBinder = grailsDomainBinder;
+        this.collectionBinder = collectionBinder;
         this.property = property;
         this.mappings = mappings;
         this.collection = coll;
@@ -77,7 +81,7 @@ public class GrailsCollectionSecondPass implements org.hibernate.boot.spi.Second
 
     @SuppressWarnings("rawtypes")
     public void doSecondPass(Map persistentClasses) throws MappingException {
-        grailsDomainBinder.bindCollectionSecondPass(property, mappings, persistentClasses, collection, sessionFactoryBeanName);
+        collectionBinder.bindCollectionSecondPass(property, mappings, persistentClasses, collection, sessionFactoryBeanName);
         createCollectionKeys();
     }
 }

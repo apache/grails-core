@@ -10,14 +10,15 @@ import org.hibernate.mapping.Collection;
 
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.CollectionBinder;
 
 public class MapSecondPass extends GrailsCollectionSecondPass {
     private static final long serialVersionUID = -3244991685626409031L;
 
 
-    public MapSecondPass(GrailsDomainBinder grailsDomainBinder, HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
+    public MapSecondPass(GrailsDomainBinder grailsDomainBinder, CollectionBinder collectionBinder, HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
                          Collection coll, String sessionFactoryBeanName) {
-        super(grailsDomainBinder, property, mappings, coll, sessionFactoryBeanName);
+        super(grailsDomainBinder, collectionBinder, property, mappings, coll, sessionFactoryBeanName);
     }
 
 
@@ -25,7 +26,7 @@ public class MapSecondPass extends GrailsCollectionSecondPass {
     @SuppressWarnings("rawtypes")
     @Override
     public void doSecondPass(Map persistentClasses) throws MappingException {
-        grailsDomainBinder.bindMapSecondPass(property, mappings, persistentClasses,
+        collectionBinder.bindMapSecondPass(property, mappings, persistentClasses,
                 (org.hibernate.mapping.Map) collection, sessionFactoryBeanName);
     }
 }

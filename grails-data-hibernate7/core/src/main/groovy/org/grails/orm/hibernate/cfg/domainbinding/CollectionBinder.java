@@ -117,16 +117,16 @@ public class CollectionBinder {
 
         // set up second pass
         if (collection instanceof org.hibernate.mapping.Set) {
-            mappings.addSecondPass(new GrailsCollectionSecondPass(grailsDomainBinder, property, mappings, collection, sessionFactoryBeanName));
+            mappings.addSecondPass(new GrailsCollectionSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
         }
         else if (collection instanceof org.hibernate.mapping.List) {
-            mappings.addSecondPass(new ListSecondPass(grailsDomainBinder, property, mappings, collection, sessionFactoryBeanName));
+            mappings.addSecondPass(new ListSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
         }
         else if (collection instanceof org.hibernate.mapping.Map) {
-            mappings.addSecondPass(new MapSecondPass(grailsDomainBinder, property, mappings, collection, sessionFactoryBeanName));
+            mappings.addSecondPass(new MapSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
         }
         else { // Collection -> Bag
-            mappings.addSecondPass(new GrailsCollectionSecondPass(grailsDomainBinder, property, mappings, collection, sessionFactoryBeanName));
+            mappings.addSecondPass(new GrailsCollectionSecondPass(grailsDomainBinder, this, property, mappings, collection, sessionFactoryBeanName));
         }
     }
 
