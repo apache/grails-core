@@ -1,6 +1,5 @@
 package org.grails.orm.hibernate.cfg;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.ManyToMany;
@@ -29,8 +28,8 @@ public interface HibernateToManyProperty extends GrailsHibernatePersistentProper
         return ((Association) this).isCircular();
     }
 
-    default PersistentEntity getAssociatedEntity() {
-        return ((Association) this).getAssociatedEntity();
+    default GrailsHibernatePersistentEntity getAssociatedEntity() {
+        return (GrailsHibernatePersistentEntity) ((Association) this).getAssociatedEntity();
     }
 
     default boolean isBidirectionalOneToManyMap() {

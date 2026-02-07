@@ -13,4 +13,9 @@ public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyCon
     public HibernateOneToManyProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
     }
+
+    @Override
+    public GrailsHibernatePersistentEntity getAssociatedEntity() {
+        return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
+    }
 }

@@ -69,7 +69,7 @@ public class CollectionSecondPassBinder {
 
         PropertyConfig propConfig = property.getMappedForm();
 
-        PersistentEntity referenced = property.getAssociatedEntity();
+        GrailsHibernatePersistentEntity referenced = property.getAssociatedEntity();
         if (StringUtils.hasText(propConfig.getSort())) {
             if (!property.isBidirectional() && (property instanceof org.grails.datastore.mapping.model.types.OneToMany)) {
                 throw new DatastoreConfigurationException("Default sort for associations ["+property.getOwner().getName()+"->" + property.getName() +
@@ -78,7 +78,7 @@ public class CollectionSecondPassBinder {
             if (referenced != null) {
                 PersistentProperty propertyToSortBy = referenced.getPropertyByName(propConfig.getSort());
 
-                String associatedClassName = property.getAssociatedEntity().getName();
+                String associatedClassName = referenced.getName();
 
                 associatedClass = (PersistentClass) persistentClasses.get(associatedClassName);
                 if (associatedClass != null) {
@@ -112,7 +112,7 @@ public class CollectionSecondPassBinder {
                     }
                 }
                 //NOTE: this will build the set for the in clause if it has sublcasses
-                java.util.Set<String> discSet = buildDiscriminatorSet((GrailsHibernatePersistentEntity) referenced);
+                java.util.Set<String> discSet = buildDiscriminatorSet(referenced);
                 String inclause = String.join(",", discSet);
 
                 collection.setWhere(discriminatorColumnName + " in (" + inclause + ")");
@@ -312,11 +312,11 @@ public class CollectionSecondPassBinder {
                 }
             }
         } else {
-            final PersistentEntity domainClass = property.getAssociatedEntity();
+            final GrailsHibernatePersistentEntity domainClass = property.getAssociatedEntity();
 
             Mapping m = null;
             if (domainClass != null) {
-                m = ((GrailsHibernatePersistentEntity) domainClass).getMappedForm();
+                m = domainClass.getMappedForm();
             }
             if (m != null && m.hasCompositeIdentifier()) {
                 CompositeIdentity ci = (CompositeIdentity) m.getIdentity();
@@ -577,7 +577,7 @@ public class CollectionSecondPassBinder {
         return false;
     }
 
-    public String getMultiTenantFilterCondition(PersistentEntity referenced) {
+    public String getMultiTenantFilterCondition(GrailsHibernatePersistentEntity referenced) {
         TenantId tenantId = referenced.getTenantId();
         if(tenantId != null) {
 

@@ -7,6 +7,7 @@ import org.hibernate.MappingException;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.ManyToMany;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
@@ -72,7 +73,7 @@ public class TableForManyCalculator {
             throw new MappingException("Expected an entity to be associated with the association ("  + property + ") and none was found. ");
         }
 
-        PersistentEntity domainClass = property.getAssociatedEntity();
+        GrailsHibernatePersistentEntity domainClass = property.getAssociatedEntity();
         String right = tableNameFetcher.getTableName(domainClass);
 
         if (property instanceof ManyToMany property1) {
