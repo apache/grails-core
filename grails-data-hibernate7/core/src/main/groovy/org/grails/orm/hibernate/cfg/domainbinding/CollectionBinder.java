@@ -27,8 +27,6 @@ import org.hibernate.mapping.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
-
 /**
  * Handles the binding of collections to the Hibernate runtime meta model.
  */
@@ -42,14 +40,17 @@ public class CollectionBinder {
     private final ListSecondPassBinder listSecondPassBinder;
     private final CollectionSecondPassBinder collectionSecondPassBinder;
     private final MapSecondPassBinder mapSecondPassBinder;
+    private final DefaultColumnNameFetcher defaultColumnNameFetcher;
 
     public CollectionBinder(MetadataBuildingContext metadataBuildingContext, GrailsDomainBinder grailsDomainBinder, PersistentEntityNamingStrategy namingStrategy) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.grailsDomainBinder = grailsDomainBinder;
         this.namingStrategy = namingStrategy;
         this.collectionSecondPassBinder = new CollectionSecondPassBinder(metadataBuildingContext, namingStrategy);
-        this.listSecondPassBinder = new ListSecondPassBinder(metadataBuildingContext, collectionSecondPassBinder);
+        this.listSecondPassBinder = new ListSecondPassBinder(metadataBuildingContext, namingStrategy,collectionSecondPassBinder);
         this.mapSecondPassBinder = new MapSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
+        this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy);
+
     }
 
     /**
@@ -161,7 +162,7 @@ public class CollectionBinder {
 
 
     public String getMultiTenantFilterCondition(GrailsHibernatePersistentEntity referenced) {
-        return collectionSecondPassBinder.getMultiTenantFilterCondition(referenced);
+        return referenced.getMultiTenantFilterCondition(defaultColumnNameFetcher);
     }
 
 

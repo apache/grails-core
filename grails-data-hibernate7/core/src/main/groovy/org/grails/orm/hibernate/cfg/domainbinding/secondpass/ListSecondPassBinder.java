@@ -5,6 +5,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.BackticksRemover;
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnBinder;
 
@@ -33,17 +34,20 @@ public class ListSecondPassBinder {
 
     private final MetadataBuildingContext metadataBuildingContext;
     private final CollectionSecondPassBinder collectionSecondPassBinder;
+    private final PersistentEntityNamingStrategy namingStrategy;
 
-    public ListSecondPassBinder(MetadataBuildingContext metadataBuildingContext, CollectionSecondPassBinder collectionSecondPassBinder) {
+    public ListSecondPassBinder(MetadataBuildingContext metadataBuildingContext
+            , PersistentEntityNamingStrategy namingStrategy, CollectionSecondPassBinder collectionSecondPassBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.collectionSecondPassBinder = collectionSecondPassBinder;
+        this.namingStrategy = namingStrategy;
     }
 
     public void bindListSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
                                    Map<?, ?> persistentClasses, org.hibernate.mapping.List list, String sessionFactoryBeanName) {
 
         collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, list, sessionFactoryBeanName);
-        String columnName = property.getIndexColumnName(collectionSecondPassBinder.getNamingStrategy());
+        String columnName = property.getIndexColumnName(namingStrategy);
         final boolean isManyToMany = property instanceof ManyToMany;
 
         if (isManyToMany && !property.isOwningSide()) {

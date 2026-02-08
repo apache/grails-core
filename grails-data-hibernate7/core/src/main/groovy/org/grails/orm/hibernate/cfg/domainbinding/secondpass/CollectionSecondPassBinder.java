@@ -8,7 +8,6 @@ import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.ManyToMany;
-import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.orm.hibernate.cfg.*;
 import org.grails.orm.hibernate.cfg.domainbinding.BackticksRemover;
 import org.grails.orm.hibernate.cfg.domainbinding.CollectionForPropertyConfigBinder;
@@ -47,15 +46,14 @@ public class CollectionSecondPassBinder {
 
     private final MetadataBuildingContext metadataBuildingContext;
     private final PersistentEntityNamingStrategy namingStrategy;
+    private final DefaultColumnNameFetcher defaultColumnNameFetcher;
 
     public CollectionSecondPassBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
+        this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy);
     }
 
-    public PersistentEntityNamingStrategy getNamingStrategy() {
-        return namingStrategy;
-    }
 
     public void bindCollectionSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
                                          java.util.Map<?, ?> persistentClasses, Collection collection, String sessionFactoryBeanName) {
@@ -138,7 +136,7 @@ public class CollectionSecondPassBinder {
 
         final boolean isManyToMany = property instanceof ManyToMany;
         if(referenced != null && !isManyToMany && referenced.isMultiTenant()) {
-            String filterCondition = getMultiTenantFilterCondition(referenced);
+            String filterCondition = referenced.getMultiTenantFilterCondition(defaultColumnNameFetcher);
             if(filterCondition != null) {
                 if (property.isUnidirectionalOneToMany()) {
                     collection.addManyToManyFilter(GormProperties.TENANT_IDENTITY, filterCondition, true, Collections.emptyMap(), Collections.emptyMap());
@@ -575,18 +573,6 @@ public class CollectionSecondPassBinder {
         if (token.equalsIgnoreCase("desc")) return true;
         if (token.equalsIgnoreCase("asc")) return true;
         return false;
-    }
-
-    public String getMultiTenantFilterCondition(GrailsHibernatePersistentEntity referenced) {
-        TenantId tenantId = referenced.getTenantId();
-        if(tenantId != null) {
-
-            String defaultColumnName = new DefaultColumnNameFetcher(namingStrategy).getDefaultColumnName(tenantId);
-            return ":tenantId = " + defaultColumnName;
-        }
-        else {
-            return null;
-        }
     }
 
 }

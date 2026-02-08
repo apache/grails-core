@@ -26,7 +26,8 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         def binder = getGrailsDomainBinder()
         def collectionBinder = binder.getCollectionBinder()
         def collectionSecondPassBinder = new CollectionSecondPassBinder(binder.getMetadataBuildingContext(), binder.getNamingStrategy())
-        def listSecondPassBinder = new ListSecondPassBinder(binder.getMetadataBuildingContext(), collectionSecondPassBinder)
+        def namingStrategy = binder.getNamingStrategy()
+        def listSecondPassBinder = new ListSecondPassBinder(binder.getMetadataBuildingContext(),namingStrategy, collectionSecondPassBinder)
 
         def authorEntity = getPersistentEntity(ListBinderAuthor) as GrailsHibernatePersistentEntity
         def bookEntity = getPersistentEntity(ListBinderBook) as GrailsHibernatePersistentEntity

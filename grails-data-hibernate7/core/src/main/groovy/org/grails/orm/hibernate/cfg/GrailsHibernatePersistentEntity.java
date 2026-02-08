@@ -7,7 +7,9 @@ import java.util.Optional;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesConsumer;
+import org.grails.orm.hibernate.cfg.domainbinding.DefaultColumnNameFetcher;
 
 /**
  * Common interface for Hibernate persistent entities
@@ -78,6 +80,13 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
 
     default void configureDerivedProperties(){
         getPersistentProperties().forEach(new ConfigureDerivedPropertiesConsumer( getMappedForm()));
+    }
+
+    default String getMultiTenantFilterCondition(DefaultColumnNameFetcher fetcher) {
+        return Optional.ofNullable(getTenantId())
+                .map(fetcher::getDefaultColumnName)
+                .map(defaultColumnName -> ":tenantId = " + defaultColumnName)
+                .orElse(null);
     }
 
 }
