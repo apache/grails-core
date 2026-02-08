@@ -53,7 +53,7 @@ public class TableForManyCalculator {
         JoinTable jt = config.getJoinTable();
         boolean hasJoinTableMapping = jt != null && jt.getName() != null;
         PersistentEntity domainClass1 = property.getOwner();
-        String left = tableNameFetcher.getTableName(domainClass1);
+        String left = tableNameFetcher.getTableName((GrailsHibernatePersistentEntity) domainClass1);
 
         if (Map.class.isAssignableFrom(property.getType())) {
             if (hasJoinTableMapping) {

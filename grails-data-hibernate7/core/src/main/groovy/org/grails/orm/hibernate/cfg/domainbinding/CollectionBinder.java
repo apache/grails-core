@@ -161,9 +161,7 @@ public class CollectionBinder {
 
 
 
-    public String getMultiTenantFilterCondition(GrailsHibernatePersistentEntity referenced) {
-        return referenced.getMultiTenantFilterCondition(defaultColumnNameFetcher);
-    }
+
 
 
 }

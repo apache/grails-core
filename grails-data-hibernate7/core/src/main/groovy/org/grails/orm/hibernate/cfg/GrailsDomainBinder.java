@@ -315,7 +315,7 @@ public class GrailsDomainBinder
             TenantId tenantId = entity.getTenantId();
 
             if (tenantId != null) {
-                String filterCondition = collectionBinder.getMultiTenantFilterCondition(entity);
+                String filterCondition = entity.getMultiTenantFilterCondition(new DefaultColumnNameFetcher(getNamingStrategy()));
 
                 persistentClass.addFilter(
                         GormProperties.TENANT_IDENTITY,

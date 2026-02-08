@@ -252,8 +252,9 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @Override
     D attach(D instance) {
-        hibernateTemplate.lock(instance, LockMode.NONE)
-        return instance
+        return (D) hibernateTemplate.execute { Session session ->
+            return session.merge(instance)
+        }
     }
 
     @Override

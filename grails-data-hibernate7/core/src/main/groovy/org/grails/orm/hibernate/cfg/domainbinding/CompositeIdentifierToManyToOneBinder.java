@@ -10,6 +10,7 @@ import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 
@@ -71,7 +72,7 @@ public class CompositeIdentifierToManyToOneBinder {
                 // if the name is null then configure the name by convention
                 if (cc.getName() == null) {
                     // use the referenced table name as a prefix
-                    String prefix = tableNameFetcher.getTableName(refDomainClass);
+                    String prefix = tableNameFetcher.getTableName((GrailsHibernatePersistentEntity) refDomainClass);
                     PersistentProperty referencedProperty = refDomainClass.getPropertyByName(propertyName);
 
                     // if the referenced property is a ToOne and it has a composite id

@@ -17,11 +17,8 @@ public class TableNameFetcher {
         this.persistentEntityNamingStrategy = persistentEntityNamingStrategy;
     }
 
-    public String getTableName(PersistentEntity domainClass) {
-        Mapping result = null;
-        if (domainClass instanceof GrailsHibernatePersistentEntity) {
-            result = ((GrailsHibernatePersistentEntity) domainClass).getMappedForm();
-        }
+    public String getTableName(GrailsHibernatePersistentEntity domainClass) {
+        Mapping result = domainClass.getMappedForm();
         var tableName = result != null ? result.getTableName() : null;
         return tableName != null ? tableName  :persistentEntityNamingStrategy.resolveTableName(domainClass);
     }
