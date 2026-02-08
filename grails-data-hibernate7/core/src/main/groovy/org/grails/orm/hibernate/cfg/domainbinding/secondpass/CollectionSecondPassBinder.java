@@ -16,6 +16,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.CompositeIdentifierToManyToOne
 import org.grails.orm.hibernate.cfg.domainbinding.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.EnumTypeBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ManyToOneBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.OrderByClauseBuilder;
 import org.grails.orm.hibernate.cfg.domainbinding.RootMappingFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnBinder;
@@ -47,11 +48,13 @@ public class CollectionSecondPassBinder {
     private final MetadataBuildingContext metadataBuildingContext;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final DefaultColumnNameFetcher defaultColumnNameFetcher;
+    private final OrderByClauseBuilder orderByClauseBuilder;
 
     public CollectionSecondPassBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy);
+        this.orderByClauseBuilder = new OrderByClauseBuilder();
     }
 
 
@@ -80,7 +83,7 @@ public class CollectionSecondPassBinder {
 
                 associatedClass = (PersistentClass) persistentClasses.get(associatedClassName);
                 if (associatedClass != null) {
-                    collection.setOrderBy(buildOrderByClause(propertyToSortBy.getName(), associatedClass, collection.getRole(),
+                    collection.setOrderBy(orderByClauseBuilder.buildOrderByClause(propertyToSortBy.getName(), associatedClass, collection.getRole(),
                             propConfig.getOrder() != null ? propConfig.getOrder() : "asc"));
                 }
             }
@@ -472,107 +475,4 @@ public class CollectionSecondPassBinder {
         }
         return theSet;
     }
-
-    @SuppressWarnings("unchecked")
-    private String buildOrderByClause(String hqlOrderBy, PersistentClass associatedClass, String role, String defaultOrder) {
-        String orderByString = null;
-        if (hqlOrderBy != null) {
-            java.util.List<String> properties = new java.util.ArrayList<>();
-            java.util.List<String> ordering = new java.util.ArrayList<>();
-            StringBuilder orderByBuffer = new StringBuilder();
-            if (hqlOrderBy.length() == 0) {
-                //order by id
-                Iterator<?> it = associatedClass.getIdentifier().getSelectables().iterator();
-                while (it.hasNext()) {
-                    Selectable col = (Selectable) it.next();
-                    orderByBuffer.append(col.getText()).append(" asc").append(", ");
-                }
-            }
-            else {
-                StringTokenizer st = new StringTokenizer(hqlOrderBy, " ,", false);
-                String currentOrdering = defaultOrder;
-                //FIXME make this code decent
-                while (st.hasMoreTokens()) {
-                    String token = st.nextToken();
-                    if (isNonPropertyToken(token)) {
-                        if (currentOrdering != null) {
-                            throw new DatastoreConfigurationException(
-                                    "Error while parsing sort clause: " + hqlOrderBy
-                                            + " (" + role + ")"
-                            );
-                        }
-                        currentOrdering = token;
-                    }
-                    else {
-                        //Add ordering of the previous
-                        if (currentOrdering == null) {
-                            //default ordering
-                            ordering.add("asc");
-                        }
-                        else {
-                            ordering.add(currentOrdering);
-                            currentOrdering = null;
-                        }
-                        properties.add(token);
-                    }
-                }
-                ordering.remove(0); //first one is the algorithm starter
-                // add last one ordering
-                if (currentOrdering == null) {
-                    //default ordering
-                    ordering.add(defaultOrder);
-                }
-                else {
-                    ordering.add(currentOrdering);
-                    currentOrdering = null;
-                }
-                int index = 0;
-
-                for (String property : properties) {
-                    Property p = BinderHelper.findPropertyByName(associatedClass, property);
-                    if (p == null) {
-                        throw new DatastoreConfigurationException(
-                                "property from sort clause not found: "
-                                        + associatedClass.getEntityName() + "." + property
-                        );
-                    }
-                    PersistentClass pc = p.getPersistentClass();
-                    String table;
-                    if (pc == null) {
-                        table = "";
-                    }
-
-                    else if (pc == associatedClass
-                            || (associatedClass instanceof SingleTableSubclass &&
-                            pc.getMappedClass().isAssignableFrom(associatedClass.getMappedClass()))) {
-                        table = "";
-                    } else {
-                        table = pc.getTable().getQuotedName() + ".";
-                    }
-
-                    Iterator<?> propertyColumns = p.getSelectables().iterator();
-                    while (propertyColumns.hasNext()) {
-                        Selectable column = (Selectable) propertyColumns.next();
-                        orderByBuffer.append(table)
-                                .append(column.getText())
-                                .append(" ")
-                                .append(ordering.get(index))
-                                .append(", ");
-                    }
-                    index++;
-                }
-            }
-            orderByString = orderByBuffer.substring(0, orderByBuffer.length() - 2);
-        }
-        return orderByString;
-    }
-
-    private boolean isNonPropertyToken(String token) {
-        if (" ".equals(token)) return true;
-        if (",".equals(token)) return true;
-        if (token.equalsIgnoreCase("desc")) return true;
-        if (token.equalsIgnoreCase("asc")) return true;
-        return false;
-    }
-
 }
