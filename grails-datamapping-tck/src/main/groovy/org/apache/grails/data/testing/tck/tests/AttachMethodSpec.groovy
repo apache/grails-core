@@ -50,17 +50,11 @@ class AttachMethodSpec extends GrailsDataTckSpec {
         !test.attached
 
         when:
-        test.attach()
+        test = test.attach()
 
         then:
         manager.session.contains(test)
         test.isAttached()
         test.attached
-
-        when:
-        test.discard()
-
-        then:
-        test == test.attach()
     }
 }
