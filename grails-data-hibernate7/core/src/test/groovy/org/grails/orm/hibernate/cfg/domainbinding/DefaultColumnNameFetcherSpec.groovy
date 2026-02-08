@@ -36,7 +36,7 @@ class DefaultColumnNameFetcherSpec extends HibernateGormDatastoreSpec {
         where:
         description                          | entityClass                        | propertyName                     | expectedColumnName
         "a simple property"                  | DefaultColumnNameFetcherSpecEntity | "name"                           | "name"
-        "a unidirectional one-to-many"       | DefaultColumnNameFetcherSpecUnidirectionalOwner | "children"        | "org_grails_orm_hibernate_cfg_domainbinding_default_column_name_fetcher_spec_unidirectional_owner_children_id"
+        "a unidirectional one-to-many"       | DefaultColumnNameFetcherSpecUnidirectionalOwner | "children"        | "default_column_name_fetcher_spec_unidirectional_owner_children_id"
         "a bidirectional many-to-one"        | DefaultColumnNameFetcherSpecEntity | "bidirectionalManyToOne"         | "bidirectional_many_to_one_id"
         "a many-to-many"                     | AManyToManyEntity                  | "manyToMany"                     | "amany_to_many_entity_id"
         "an inherited bidirectional m-t-o"   | InheritedEntity                    | "bidirectionalManyToOne"         | "bidirectional_many_to_one_id"

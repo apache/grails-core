@@ -15,7 +15,7 @@ public class HibernateManyToOneProperty extends ManyToOneWithMapping<PropertyCon
     }
 
     @Override
-    public GrailsHibernatePersistentEntity getAssociatedEntity() {
+    public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
         return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
     }
 }

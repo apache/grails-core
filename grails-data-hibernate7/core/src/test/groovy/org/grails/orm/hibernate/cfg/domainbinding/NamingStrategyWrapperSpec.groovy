@@ -133,10 +133,9 @@ class NamingStrategyWrapperSpec extends HibernateGormDatastoreSpec {
         capturedIdentifier.text == decapitalizedOwnerName
     }
 
-    def "should replace dots with underscores for logical column name before passing to wrapped strategy"() {
+    def "should preserve dots for logical column name before passing to wrapped strategy"() {
         given:
         def logicalNameWithDots = "com.example.MyClass.myProperty"
-        def expectedLogicalNameForStrategy = "com_example_MyClass_myProperty"
         def expectedPhysicalName = "com_example_my_class_my_property"
         def capturedIdentifier
 
@@ -150,13 +149,12 @@ class NamingStrategyWrapperSpec extends HibernateGormDatastoreSpec {
 
         then:
         actualResult == expectedPhysicalName
-        capturedIdentifier.text == expectedLogicalNameForStrategy
+        capturedIdentifier.text == logicalNameWithDots
     }
 
-    def "should replace dots with underscores for logical table name before passing to wrapped strategy"() {
+    def "should preserve dots for logical table name before passing to wrapped strategy"() {
         given:
         def logicalNameWithDots = "com.example.MyClass"
-        def expectedLogicalNameForStrategy = "com_example_MyClass"
         def expectedPhysicalName = "com_example_my_class"
         def capturedIdentifier
 
@@ -170,7 +168,7 @@ class NamingStrategyWrapperSpec extends HibernateGormDatastoreSpec {
 
         then:
         actualResult == expectedPhysicalName
-        capturedIdentifier.text == expectedLogicalNameForStrategy
+        capturedIdentifier.text == logicalNameWithDots
     }
 }
 

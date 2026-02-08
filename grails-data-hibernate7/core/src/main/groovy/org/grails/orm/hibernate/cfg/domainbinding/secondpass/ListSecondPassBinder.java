@@ -80,7 +80,7 @@ public class ListSecondPassBinder {
 
             PersistentClass referenced = mappings.getEntityBinding(entityName);
 
-            boolean compositeIdProperty = property.getInverseSide().isCompositeIdProperty();
+            boolean compositeIdProperty = property.getHibernateInverseSide().isCompositeIdProperty();
             if (!compositeIdProperty) {
                 Backref prop = new Backref();
                 final PersistentEntity owner = property.getOwner();

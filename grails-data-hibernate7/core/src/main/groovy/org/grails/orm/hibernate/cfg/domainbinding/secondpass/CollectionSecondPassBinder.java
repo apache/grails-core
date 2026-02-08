@@ -67,7 +67,7 @@ public class CollectionSecondPassBinder {
 
         PropertyConfig propConfig = property.getMappedForm();
 
-        GrailsHibernatePersistentEntity referenced = property.getAssociatedEntity();
+        GrailsHibernatePersistentEntity referenced = property.getHibernateAssociatedEntity();
         if (StringUtils.hasText(propConfig.getSort())) {
             if (!property.isBidirectional() && (property instanceof org.grails.datastore.mapping.model.types.OneToMany)) {
                 throw new DatastoreConfigurationException("Default sort for associations ["+property.getOwner().getName()+"->" + property.getName() +
@@ -156,7 +156,7 @@ public class CollectionSecondPassBinder {
         // link a bidirectional relationship
         if (property.isBidirectional()) {
 
-            GrailsHibernatePersistentProperty otherSide = (GrailsHibernatePersistentProperty) property.getInverseSide();
+            var otherSide =  property.getHibernateInverseSide();
 
             if ((otherSide instanceof org.grails.datastore.mapping.model.types.ToOne) && property.shouldBindWithForeignKey()) {
 
@@ -195,7 +195,7 @@ public class CollectionSecondPassBinder {
 
         // if we have a many-to-many
         if (isManyToMany || property.isBidirectionalOneToManyMap()) {
-            PersistentProperty otherSide = property.getInverseSide();
+            var otherSide = property.getHibernateInverseSide();
 
             if (property.isBidirectional()) {
                 if (LOG.isDebugEnabled())
@@ -310,7 +310,7 @@ public class CollectionSecondPassBinder {
                 }
             }
         } else {
-            final GrailsHibernatePersistentEntity domainClass = property.getAssociatedEntity();
+            final GrailsHibernatePersistentEntity domainClass = property.getHibernateAssociatedEntity();
 
             Mapping m = null;
             if (domainClass != null) {
@@ -325,7 +325,7 @@ public class CollectionSecondPassBinder {
                     columnName = joinColumnMappingOptional.get().getName();
                 }
                 else {
-                    var decapitalize = domainClass.getName();
+                    var decapitalize = domainClass.getJavaClass().getSimpleName();
                     columnName = namingStrategy.resolveColumnName(decapitalize) + FOREIGN_KEY_SUFFIX;
                 }
 
@@ -352,7 +352,7 @@ public class CollectionSecondPassBinder {
         }
 
         // set referenced entity
-        manyToOne.setReferencedEntityName(property.getAssociatedEntity().getName());
+        manyToOne.setReferencedEntityName(property.getHibernateAssociatedEntity().getName());
     }
 
     private void bindManyToMany(Association property, ManyToOne element,

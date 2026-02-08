@@ -5,6 +5,7 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.CompositeIdentity
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -29,7 +30,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         // 2. Set up stubs for the method arguments
         def association = Stub(ToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def value = Stub(SimpleValue)
-        def refDomainClass = Stub(PersistentEntity)
+        def refDomainClass = Stub(PersistentEntity, additionalInterfaces: [GrailsHibernatePersistentEntity])
         def path = "/test"
 
         // Use a real CompositeIdentity object to avoid final method mocking issues
@@ -47,7 +48,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         refDomainClass.getPropertyByName("nestedEntity") >> nestedEntityProp
         nestedEntityProp.name >> "nestedEntity"
 
-        def nestedAssociatedEntity = Stub(PersistentEntity)
+        def nestedAssociatedEntity = Stub(PersistentEntity, additionalInterfaces: [GrailsHibernatePersistentEntity])
         nestedEntityProp.getAssociatedEntity() >> nestedAssociatedEntity
 
         def nestedPartA = Stub(PersistentProperty)
@@ -95,7 +96,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         def value = Stub(SimpleValue)
         def compositeId = new CompositeIdentity()
         compositeId.setPropertyNames(["prop1", "prop2"] as String[])
-        def refDomainClass = Stub(PersistentEntity)
+        def refDomainClass = Stub(PersistentEntity, additionalInterfaces: [GrailsHibernatePersistentEntity])
         def path = "/test"
 
         // 3. Set up the "match" condition

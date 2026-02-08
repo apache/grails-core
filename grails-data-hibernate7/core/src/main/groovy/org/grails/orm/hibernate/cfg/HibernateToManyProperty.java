@@ -20,15 +20,15 @@ public interface HibernateToManyProperty extends GrailsHibernatePersistentProper
         return ((Association) this).isBidirectional();
     }
 
-    default Association getInverseSide() {
-        return ((Association) this).getInverseSide();
+    default HibernateToManyProperty getHibernateInverseSide() {
+        return (HibernateToManyProperty)((Association) this).getInverseSide();
     }
 
     default boolean isCircular() {
         return ((Association) this).isCircular();
     }
 
-    default GrailsHibernatePersistentEntity getAssociatedEntity() {
+    default GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
         return (GrailsHibernatePersistentEntity) ((Association) this).getAssociatedEntity();
     }
 

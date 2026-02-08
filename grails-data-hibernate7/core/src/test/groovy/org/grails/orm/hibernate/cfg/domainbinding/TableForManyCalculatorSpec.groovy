@@ -1,74 +1,129 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
-
+import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.persistence.Entity
+import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.model.types.ManyToMany
 import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.HibernateManyToManyProperty
+import org.grails.orm.hibernate.cfg.HibernateOneToManyProperty
 import org.grails.orm.hibernate.cfg.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.JoinTable
-import org.grails.orm.hibernate.cfg.Mapping
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
-import org.grails.orm.hibernate.cfg.PropertyConfig
-import spock.lang.Specification
+
 import spock.lang.Unroll
 
-class TableForManyCalculatorSpec extends Specification {
+class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
 
     @Unroll
     def "Test calculateTableForMany for #scenario"() {
         given:
-        def namingStrategy = Stub(PersistentEntityNamingStrategy)
-        def tableNameFetcher = Stub(TableNameFetcher)
-        def backticksRemover = Stub(BackticksRemover)
-        def trimmer = Stub(BackTigsTrimmer)
+        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def tableNameFetcher = new TableNameFetcher(namingStrategy)
+        def backticksRemover = new BackticksRemover()
+        def trimmer = new BackTigsTrimmer()
 
         def calculator = new TableForManyCalculator(namingStrategy, tableNameFetcher, backticksRemover, trimmer)
 
-        GrailsHibernatePersistentEntity ownerEntity = Stub(GrailsHibernatePersistentEntity)
-        GrailsHibernatePersistentEntity associatedEntity = Stub(GrailsHibernatePersistentEntity)
-        def config = new PropertyConfig()
-        if (hasJoinTable) {
-            config.setJoinTable(new JoinTable(name: "explicit_join_table"))
+        GrailsHibernatePersistentEntity ownerEntityInstance
+        GrailsHibernatePersistentEntity associatedEntityInstance
+        GrailsHibernatePersistentProperty propertyToTest
+
+        // Setup entities and properties based on scenario
+        switch (scenario) {
+            case "an owning OneToMany":
+                ownerEntityInstance = createPersistentEntity(OwningSide)
+                associatedEntityInstance = createPersistentEntity(AssociatedSide)
+                propertyToTest = ownerEntityInstance.getPropertyByName("associated") as GrailsHibernatePersistentProperty
+                break
+            case "a Basic property":
+                ownerEntityInstance = createPersistentEntity(BasicCollectionOwner)
+                propertyToTest = ownerEntityInstance.getPropertyByName("items") as GrailsHibernatePersistentProperty
+                break
+            case "a Map property":
+                ownerEntityInstance = createPersistentEntity(MapCollectionOwner)
+                propertyToTest = ownerEntityInstance.getPropertyByName("data") as GrailsHibernatePersistentProperty
+                break
+            case "an owning ManyToMany":
+                ownerEntityInstance = createPersistentEntity(OwningSide)
+                associatedEntityInstance = createPersistentEntity(Tag)
+                propertyToTest = ownerEntityInstance.getPropertyByName("tags") as GrailsHibernatePersistentProperty
+                break
+            case "an inverse ManyToMany":
+                ownerEntityInstance = createPersistentEntity(Tag)
+                associatedEntityInstance = createPersistentEntity(OwningSide)
+                propertyToTest = ownerEntityInstance.getPropertyByName("owners") as GrailsHibernatePersistentProperty
+                break
+            case "a ManyToMany with explicit joinTable":
+                ownerEntityInstance = createPersistentEntity(OwningSide)
+                associatedEntityInstance = createPersistentEntity(Tag)
+                propertyToTest = ownerEntityInstance.getPropertyByName("tags") as GrailsHibernatePersistentProperty
+                propertyToTest.getMappedForm().setJoinTable(new JoinTable(name: "my_custom_join_table"))
+                break
+            case "a ToMany with supportsJoinColumnMapping":
+                ownerEntityInstance = createPersistentEntity(UnidirectionalOwner)
+                associatedEntityInstance = createPersistentEntity(UnidirectionalItem)
+                propertyToTest = ownerEntityInstance.getPropertyByName("items") as GrailsHibernatePersistentProperty
+                break
+            default:
+                throw new IllegalArgumentException("Unknown scenario: $scenario")
         }
 
-        HibernateToManyProperty property = Mock(mockClass, additionalInterfaces: [HibernateToManyProperty])
-        property.getType() >> propertyJavaType
-        property.getOwner() >> ownerEntity
-        property.getName() >> "myProp"
-        property.getAssociatedEntity() >> associatedEntity
-        property.isOwningSide() >> isOwningSide
-        property.getMappedForm() >> config
-        property.supportsJoinColumnMapping() >> shouldBindWithJoinColumn
-
-        if (property instanceof ManyToMany) {
-            ((ManyToMany)property).getInversePropertyName() >> "inverseProp"
-        }
-
-        ownerEntity.getMappedForm() >> new Mapping()
-        namingStrategy.resolveColumnName("myProp") >> "my_prop_col"
-        namingStrategy.resolveColumnName("inverseProp") >> "inverse_prop_col"
-        tableNameFetcher.getTableName(ownerEntity) >> "owner_table"
-        tableNameFetcher.getTableName(associatedEntity) >> "associated_table"
-
-        backticksRemover.apply(_) >> { String s -> s }
-        trimmer.trimBackTigs(_) >> { String s -> s }
 
         when:
-        def result = calculator.calculateTableForMany(property)
+        def result = calculator.calculateTableForMany(propertyToTest)
 
         then:
         result == expectedTableName
 
         where:
-        scenario                      | mockClass        | propertyJavaType | isOwningSide | hasJoinTable | shouldBindWithJoinColumn | expectedTableName
-        "a Map property"              | ToMany.class     | Map              | true         | false        | false                    | "owner_table_my_prop_col"
-        "a Basic property"            | Basic.class      | List             | true         | false        | false                    | "owner_table_my_prop_col"
-        "an owning ManyToMany"        | ManyToMany.class | Set              | true         | false        | false                    | "owner_table_my_prop_col"
-        "an inverse ManyToMany"       | ManyToMany.class | Set              | false        | false        | false                    | "associated_table_inverse_prop_col"
-        "a ManyToMany with joinTable" | ManyToMany.class | Set              | true         | true         | false                    | "explicit_join_table"
-        "a ToMany with joinColumn"    | ToMany.class     | Set              | true         | false        | true                     | "owner_table_associated_table"
-        "an owning ToMany"            | ToMany.class     | Set              | true         | false        | false                    | "owner_table_associated_table"
-        "an inverse ToMany"           | ToMany.class     | Set              | false        | false        | false                    | "associated_table_owner_table"
+        scenario                              | expectedTableName
+
+        "a Map property"                      | "map_collection_owner_data"
+        "a Basic property"                    | "basic_collection_owner_items"
+        "an owning OneToMany"                 | "owning_side_associated_side"
+                "an owning ManyToMany"        | "tag_owners"
+        "an inverse ManyToMany"               | "owning_side_tags" // MappedBy logic ensures single join table
+        "a ManyToMany with explicit joinTable" | "my_custom_join_table"
+        "a ToMany with supportsJoinColumnMapping" | "unidirectional_owner_unidirectional_item"
     }
+}
+
+@Entity
+class AssociatedSide {
+    static belongsTo = [owningSide: OwningSide]
+}
+
+@Entity
+class OwningSide {
+    static hasMany = [associated: AssociatedSide, tags: Tag] // For one-to-many and many-to-many
+    static mappedBy = [tags: 'owners'] // For many-to-many inverse
+}
+
+@Entity
+class BasicCollectionOwner {
+    List<String> items
+}
+
+
+@Entity
+class MapCollectionOwner {
+    Map<String, String> data
+}
+
+@Entity
+class Tag {
+    static hasMany = [owners: OwningSide]
+}
+
+@Entity
+class UnidirectionalItem {
+    // No belongsTo, making it unidirectional
+}
+
+@Entity
+class UnidirectionalOwner {
+    static hasMany = [items: UnidirectionalItem]
 }

@@ -15,7 +15,7 @@ public class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyC
     }
 
     @Override
-    public GrailsHibernatePersistentEntity getAssociatedEntity() {
+    public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
         return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
     }
 }
