@@ -39,7 +39,7 @@ public class NamingStrategyWrapper implements PersistentEntityNamingStrategy {
         return Optional.ofNullable(logicalName)
                 .flatMap(name ->
                         // Safely handle a null return from the strategy by wrapping it in an Optional.
-                        Optional.ofNullable(namingStrategy.toPhysicalColumnName(toIdentifier(name), jdbcEnvironment))
+                        Optional.ofNullable(namingStrategy.toPhysicalColumnName(toIdentifier(name.replace('.', '_')), jdbcEnvironment))
                 )
                 .map(Identifier::getText)
                 // Per Hibernate contract, if the strategy returns null, use the original logical name.
@@ -51,7 +51,7 @@ public class NamingStrategyWrapper implements PersistentEntityNamingStrategy {
         return Optional.ofNullable(logicalName)
                 .flatMap(name ->
                         // Safely handle a null return from the strategy.
-                        Optional.ofNullable(namingStrategy.toPhysicalTableName(toIdentifier(name), jdbcEnvironment))
+                        Optional.ofNullable(namingStrategy.toPhysicalTableName(toIdentifier(name.replace('.', '_')), jdbcEnvironment))
                 )
                 .map(Identifier::getText)
                 // Per Hibernate contract, if the strategy returns null, use the original logical name.

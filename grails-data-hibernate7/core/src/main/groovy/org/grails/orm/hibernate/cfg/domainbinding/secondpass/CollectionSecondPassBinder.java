@@ -177,7 +177,7 @@ public class CollectionSecondPassBinder {
 
                 String columnName = propConfig.getJoinTable().getKey().getName();
 
-                new SimpleValueColumnBinder().bindSimpleValue(key, "long", columnName, false);
+                new SimpleValueColumnBinder().bindSimpleValue(key, "long", columnName, true);
 
             } else {
 
@@ -213,15 +213,19 @@ public class CollectionSecondPassBinder {
             } else {
                 // TODO support unidirectional many-to-many
             }
-        } else if (property.supportsJoinColumnMapping()) {
-            bindCollectionWithJoinTable(property, mappings, collection, propConfig, sessionFactoryBeanName);
-
         } else if (property.isUnidirectionalOneToMany()) {
             // for non-inverse one-to-many, with a not-null fk, add a backref!
             // there are problems with list and map mappings and join columns relating to duplicate key constraints
             // TODO change this when HHH-1268 is resolved
-            bindUnidirectionalOneToMany((org.grails.datastore.mapping.model.types.OneToMany) property, mappings, collection);
+            if (!property.shouldBindWithForeignKey()) {
+                bindCollectionWithJoinTable(property, mappings, collection, propConfig, sessionFactoryBeanName);
+            } else {
+                bindUnidirectionalOneToMany((org.grails.datastore.mapping.model.types.OneToMany) property, mappings, collection);
+            }
+        } else if (property.supportsJoinColumnMapping()) {
+            bindCollectionWithJoinTable(property, mappings, collection, propConfig, sessionFactoryBeanName);
         }
+        forceNullableAndCheckUpdateable(key, property, mappings);
     }
 
     private void bindUnidirectionalOneToMany(org.grails.datastore.mapping.model.types.OneToMany property, @Nonnull InFlightMetadataCollector mappings, Collection collection) {
@@ -254,6 +258,7 @@ public class CollectionSecondPassBinder {
     private void bindCollectionWithJoinTable(HibernateToManyProperty property,
                                              @Nonnull InFlightMetadataCollector mappings, Collection collection, PropertyConfig config, String sessionFactoryBeanName) {
 
+        collection.setInverse(false);
         SimpleValue element;
         final boolean isBasicCollectionType = property instanceof Basic;
         if (isBasicCollectionType) {
@@ -264,7 +269,6 @@ public class CollectionSecondPassBinder {
             element = new ManyToOne(metadataBuildingContext, collection.getCollectionTable());
             bindUnidirectionalOneToManyInverseValues(property, (ManyToOne) element);
         }
-        collection.setInverse(false);
 
         String columnName;
 
@@ -328,7 +332,7 @@ public class CollectionSecondPassBinder {
                     columnName = joinColumnMappingOptional.get().getName();
                 }
                 else {
-                    var decapitalize = domainClass.getJavaClass().getSimpleName();
+                    var decapitalize = domainClass.getRootEntity().getJavaClass().getSimpleName();
                     columnName = namingStrategy.resolveColumnName(decapitalize) + FOREIGN_KEY_SUFFIX;
                 }
 
@@ -383,7 +387,12 @@ public class CollectionSecondPassBinder {
         }
         else {
             // set type
-            new SimpleValueBinder(namingStrategy).bindSimpleValue(property, null, key, EMPTY_PATH);
+            GrailsHibernatePersistentProperty identity = (GrailsHibernatePersistentProperty) refDomainClass.getIdentity();
+            if (identity != null) {
+                new SimpleValueBinder(namingStrategy).bindSimpleValue(property, identity, null, key, EMPTY_PATH);
+            } else {
+                new SimpleValueBinder(namingStrategy).bindSimpleValue(property, null, key, EMPTY_PATH);
+            }
         }
     }
 
@@ -423,6 +432,30 @@ public class CollectionSecondPassBinder {
         }
     }
 
+    private void forceNullableAndCheckUpdateable(DependantValue key, PersistentProperty property, InFlightMetadataCollector mappings) {
+        Iterator<?> it = key.getColumns().iterator();
+        while (it.hasNext()) {
+            Object next = it.next();
+            if (next instanceof Column) {
+                ((Column) next).setNullable(true);
+            }
+        }
+        
+        int unidirectionalCount = 0;
+        PersistentEntity owner = property.getOwner();
+        for (PersistentProperty p : owner.getPersistentProperties()) {
+            if (p instanceof Association association && !association.isBidirectional()) {
+                unidirectionalCount++;
+            }
+        }
+        
+        if (unidirectionalCount > 1) {
+            key.setUpdateable(false);
+        } else {
+            key.setUpdateable(true);
+        }
+    }
+
     private DependantValue createPrimaryKeyValue(@Nonnull InFlightMetadataCollector mappings, PersistentProperty property,
                                                  Collection collection, java.util.Map<?, ?> persistentClasses) {
         KeyValue keyValue;
@@ -439,11 +472,10 @@ public class CollectionSecondPassBinder {
             LOG.debug("[CollectionSecondPassBinder] creating dependant key value  to table [" + keyValue.getTable().getName() + "]");
 
         key = new DependantValue(metadataBuildingContext, collection.getCollectionTable(), keyValue);
-
         key.setTypeName(null);
-        // make nullable and non-updateable
         key.setNullable(true);
-        key.setUpdateable(false);
+        key.setUpdateable(true);
+
         //JPA now requires to check for sorting
         key.setSorted(collection.isSorted());
         return key;

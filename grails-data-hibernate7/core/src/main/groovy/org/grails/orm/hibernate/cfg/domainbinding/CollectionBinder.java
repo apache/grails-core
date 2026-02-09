@@ -93,8 +93,12 @@ public class CollectionBinder {
         } else {
             bindCollectionTable(property, mappings, collection, owner.getTable());
 
-            if (!property.isOwningSide()) {
-                collection.setInverse(true);
+            if (property.isBidirectional()) {
+                if (!property.isOwningSide()) {
+                    collection.setInverse(true);
+                }
+            } else {
+                collection.setInverse(false);
             }
         }
 

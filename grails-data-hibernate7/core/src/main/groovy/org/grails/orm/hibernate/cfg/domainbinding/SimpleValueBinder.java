@@ -62,18 +62,29 @@ public class SimpleValueBinder {
             PersistentProperty parentProperty,
             SimpleValue simpleValue,
             String path) {
+        bindSimpleValue(property, property, parentProperty, simpleValue, path);
+    }
+
+    public void bindSimpleValue(
+            @jakarta.annotation.Nonnull PersistentProperty property,
+            @jakarta.annotation.Nonnull PersistentProperty typeProperty,
+            PersistentProperty parentProperty,
+            SimpleValue simpleValue,
+            String path) {
 
         PropertyConfig propertyConfig = ((GrailsHibernatePersistentProperty) property).getMappedForm();
         Mapping mapping = null;
         if (property.getOwner() instanceof GrailsHibernatePersistentEntity persistentEntity) {
             mapping = persistentEntity.getMappedForm();
         }
-        
-        final String typeName = property instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName() : null;
+
+        final String typeName = typeProperty instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName() : null;
         if (typeName == null) {
-            Class<?> type = property.getType();
-            if (type != null) {
-                simpleValue.setTypeName(type.getName());
+            if (!(typeProperty instanceof org.grails.datastore.mapping.model.types.Association)) {
+                Class<?> type = typeProperty.getType();
+                if (type != null) {
+                    simpleValue.setTypeName(type.getName());
+                }
             }
         } else {
             simpleValue.setTypeName(typeName);
@@ -121,6 +132,9 @@ public class SimpleValueBinder {
                         Column column = new Column();
                         columnConfigToColumnBinder.bindColumnConfigToColumn(column, cc, propertyConfig);
                         columnBinder.bindColumn(property, parentProperty, column, cc, path, table);
+                        if (simpleValue instanceof org.hibernate.mapping.DependantValue) {
+                            column.setNullable(true);
+                        }
                         if (table != null) {
                             table.addColumn(column);
                         }

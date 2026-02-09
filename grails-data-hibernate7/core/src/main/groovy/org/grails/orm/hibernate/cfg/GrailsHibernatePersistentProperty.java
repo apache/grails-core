@@ -28,6 +28,9 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
      * @return The type name
      */
     default String getTypeName(PropertyConfig config, Mapping mapping) {
+        if (this instanceof Association) {
+            return null;
+        }
         return Optional.ofNullable(config)
                 .map(PropertyConfig::getType)
                 .map(typeObj -> typeObj instanceof Class<?> clazz ? clazz.getName() : typeObj.toString())

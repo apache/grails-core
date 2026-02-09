@@ -15,9 +15,10 @@ class TableNameFetcherSpec extends Specification {
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def fetcher = new TableNameFetcher(namingStrategy)
         def mapping = Mock(Mapping)
-        def persistentEntity = Mock(GrailsHibernatePersistentEntity) {
-            getMappedForm() >> mapping
-        }
+        def persistentEntity = Mock(GrailsHibernatePersistentEntity)
+
+        persistentEntity.getMappedForm() >> mapping
+        persistentEntity.getRootEntity() >> persistentEntity
 
         // The table name from the mapping can be explicit or null
         mapping.getTableName() >> tableName

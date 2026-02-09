@@ -18,8 +18,13 @@ public class TableNameFetcher {
     }
 
     public String getTableName(GrailsHibernatePersistentEntity domainClass) {
+        GrailsHibernatePersistentEntity root = (GrailsHibernatePersistentEntity) domainClass.getRootEntity();
+        Mapping rootMapping = root.getMappedForm();
         Mapping result = domainClass.getMappedForm();
         var tableName = result != null ? result.getTableName() : null;
+        if (tableName == null && rootMapping != null && rootMapping.isTablePerHierarchy()) {
+            tableName = rootMapping.getTableName();
+        }
         return tableName != null ? tableName  :persistentEntityNamingStrategy.resolveTableName(domainClass);
     }
 }

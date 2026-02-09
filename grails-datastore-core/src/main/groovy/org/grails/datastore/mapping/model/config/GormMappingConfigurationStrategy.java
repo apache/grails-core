@@ -290,12 +290,7 @@ public class GormMappingConfigurationStrategy implements MappingConfigurationStr
                     if (associatedEntity.isOwningEntity(association.getOwner()))
                         association.setOwningSide(true);
                 } else if (!(association instanceof Basic)) {
-                    if (associatedEntity.isOwningEntity(association.getOwner())) {
-                        association.setOwningSide(true);
-                    }
-                    else {
-                        association.setOwningSide(false);
-                    }
+                    association.setOwningSide(true);
                 }
             }
         }

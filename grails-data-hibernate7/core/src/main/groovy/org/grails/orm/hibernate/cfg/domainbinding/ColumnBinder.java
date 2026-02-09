@@ -110,7 +110,7 @@ public class ColumnBinder {
             } else if ((property instanceof ToOne) && association.isCircular()) {
                 column.setNullable(true);
             } else {
-                column.setNullable(property.isNullable());
+                column.setNullable(true);
             }
         } else {
             column.setName(columnName);

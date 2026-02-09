@@ -59,7 +59,7 @@ public class CascadeBehaviorFetcher {
             return association.isOwningSide() ?  ALL : SAVE_UPDATE;
         }
         else if (association.isOneToMany()) {
-            return association.isOwningSide() ?  ALL : SAVE_UPDATE;
+            return association.isCorrectlyOwned() ?  ALL : SAVE_UPDATE;
         }  else if (association.isManyToMany()) {
             return  association.isCorrectlyOwned() || association.isCircular() ? SAVE_UPDATE :NONE;
         }
