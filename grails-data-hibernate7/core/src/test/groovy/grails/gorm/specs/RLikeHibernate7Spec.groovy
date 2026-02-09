@@ -18,6 +18,7 @@
  */
 package grails.gorm.specs
 
+import org.testcontainers.DockerClientFactory
 import org.testcontainers.oracle.OracleContainer
 import spock.lang.Requires
 
@@ -35,11 +36,9 @@ import org.testcontainers.dockerclient.DockerClientProviderStrategy
 // In your Spock @Requires or @IgnoreIf closure:
 @Requires({
     try {
-        DockerClientProviderStrategy.getFirstValidStrategy()
-        return true
-    } catch (Exception e) {
-        return false
-    }
+        DockerClientFactory.instance().client()
+        true
+    } catch (ignored) { false }
 })
 class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
 
