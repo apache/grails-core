@@ -92,7 +92,7 @@ public class ColumnBinder {
             column.setCustomWrite(cc.getWrite());
         }
 
-        Class<?> userType = userTypeFetcher.getUserType(property);
+        Class<?> userType = userTypeFetcher.getUserType((GrailsHibernatePersistentProperty) property);
         String columnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(property, path, cc);
         if ((property instanceof Association association) && userType == null) {
             // Only use conventional naming when the column has not been explicitly mapped.

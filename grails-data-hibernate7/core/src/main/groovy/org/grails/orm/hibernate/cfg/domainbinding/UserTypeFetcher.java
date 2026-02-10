@@ -3,7 +3,6 @@ package org.grails.orm.hibernate.cfg.domainbinding;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
@@ -15,9 +14,9 @@ public class UserTypeFetcher {
     public UserTypeFetcher() {
     }
 
-    public Class<?> getUserType(PersistentProperty currentGrailsProp) {
+    public Class<?> getUserType(GrailsHibernatePersistentProperty currentGrailsProp) {
         Class<?> userType = null;
-        PropertyConfig config = ((GrailsHibernatePersistentProperty) currentGrailsProp).getMappedForm();
+        PropertyConfig config = currentGrailsProp.getMappedForm();
         Object typeObj = config.getType();
         if (typeObj instanceof Class<?>) {
             userType = (Class<?>)typeObj;
