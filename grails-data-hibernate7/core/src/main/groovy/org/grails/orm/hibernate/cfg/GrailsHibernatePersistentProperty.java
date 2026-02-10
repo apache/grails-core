@@ -4,6 +4,7 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import org.hibernate.MappingException;
@@ -133,6 +134,15 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
                 .map(JoinTable::getColumn)
                 .map(ColumnConfig::getName)
                 .orElseGet(() -> namingStrategy.resolveColumnName(getName()) + GrailsDomainBinder.UNDERSCORE + IndexedCollection.DEFAULT_ELEMENT_COLUMN_NAME);
+    }
+
+    default boolean isColumnNullable() {
+        return Optional.ofNullable(getHibernateOwner())
+                .filter(owner -> !owner.isRoot())
+                .map(owner -> Optional.ofNullable(owner.getMappedForm())
+                        .map(Mapping::getTablePerHierarchy)
+                        .orElse(false) || isNullable())
+                .orElse(false);
     }
 
 

@@ -4,6 +4,7 @@ import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.NamingStrategyWrapper
 import spock.lang.Unroll
 
 class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
@@ -92,6 +93,83 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         defaultMapProp.getIndexColumnType("string") == "string"
         customMapProp.getIndexColumnType("long") == "long"
         listProp.getIndexColumnType("integer") == "integer"
+    }
+
+    void "test isHibernateOneToOne and isHibernateManyToOne"() {
+        given:
+        createPersistentEntity(AssociatedEntity)
+        createPersistentEntity(ManyToOneEntity)
+        PersistentEntity entity = createPersistentEntity(TestEntityWithAssociations)
+        GrailsHibernatePersistentProperty oneToOneProp = (GrailsHibernatePersistentProperty) entity.getPropertyByName("oneToOne")
+        GrailsHibernatePersistentProperty manyToOneProp = (GrailsHibernatePersistentProperty) entity.getPropertyByName("manyToOne")
+
+        expect:
+        oneToOneProp.isHibernateOneToOne()
+        !oneToOneProp.isHibernateManyToOne()
+        !manyToOneProp.isHibernateOneToOne()
+        manyToOneProp.isHibernateManyToOne()
+    }
+
+    void "test isTablePerHierarchySubclass"() {
+        given:
+        createPersistentEntity(BaseTPH)
+        PersistentEntity subTPH = createPersistentEntity(SubTPH)
+        createPersistentEntity(BaseTablePerClass)
+        PersistentEntity subTPC = createPersistentEntity(SubTablePerClass)
+
+        GrailsHibernatePersistentProperty subTPHProp = (GrailsHibernatePersistentProperty) subTPH.getPropertyByName("subProp")
+        GrailsHibernatePersistentProperty subTPCProp = (GrailsHibernatePersistentProperty) subTPC.getPropertyByName("subProp")
+
+        expect:
+        subTPHProp.isTablePerHierarchySubclass()
+        !subTPCProp.isTablePerHierarchySubclass()
+    }
+
+    void "test isColumnNullable"() {
+        given:
+        PersistentEntity baseTPH = createPersistentEntity(BaseTPH)
+        PersistentEntity subTPH = createPersistentEntity(SubTPH)
+        PersistentEntity subTPC = createPersistentEntity(SubTablePerClass)
+
+        GrailsHibernatePersistentProperty baseTPHProp = (GrailsHibernatePersistentProperty) baseTPH.getPropertyByName("id")
+        GrailsHibernatePersistentProperty subTPHProp = (GrailsHibernatePersistentProperty) subTPH.getPropertyByName("subProp")
+        GrailsHibernatePersistentProperty subTPCProp = (GrailsHibernatePersistentProperty) subTPC.getPropertyByName("subProp")
+
+        expect:
+        !baseTPHProp.isColumnNullable() // Root is false
+        subTPHProp.isColumnNullable()   // Subclass TPH is true
+        !subTPCProp.isColumnNullable()  // Subclass not TPH uses isNullable() which is false by default
+    }
+
+    void "test getIndexColumnName and getMapElementName"() {
+        given:
+        def jdbcEnvironment = Mock(org.hibernate.engine.jdbc.env.spi.JdbcEnvironment)
+        def namingStrategy = new NamingStrategyWrapper(new org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl(), jdbcEnvironment)
+        PersistentEntity entityWithList = createPersistentEntity(EntityWithList)
+        PersistentEntity entityWithMap = createPersistentEntity(EntityWithMap)
+
+        GrailsHibernatePersistentProperty listProp = (GrailsHibernatePersistentProperty) entityWithList.getPropertyByName("items")
+        GrailsHibernatePersistentProperty mapProp = (GrailsHibernatePersistentProperty) entityWithMap.getPropertyByName("tags")
+
+        expect:
+        listProp.getIndexColumnName(namingStrategy) == "items_idx"
+        mapProp.getMapElementName(namingStrategy) == "tags_elt"
+    }
+
+    void "test validateAssociation throws exception for user type"() {
+        given:
+        PersistentEntity entity = createPersistentEntity(TestEntityWithAssociations)
+        GrailsHibernatePersistentProperty prop = (GrailsHibernatePersistentProperty) entity.getPropertyByName("manyToOne")
+        
+        // Mocking getUserType to return a non-null value for an association
+        def proxyProp = Spy(prop)
+        proxyProp.getUserType() >> String.class
+
+        when:
+        proxyProp.validateAssociation()
+
+        then:
+        thrown(org.hibernate.MappingException)
     }
 }
 
@@ -200,4 +278,30 @@ class EntityWithList {
     Long id
     List<String> items
     static hasMany = [items: String]
+}
+
+@Entity
+class BaseTPH {
+    Long id
+    static mapping = {
+        tablePerHierarchy true
+    }
+}
+
+@Entity
+class SubTPH extends BaseTPH {
+    String subProp
+}
+
+@Entity
+class BaseTablePerClass {
+    Long id
+    static mapping = {
+        tablePerHierarchy false
+    }
+}
+
+@Entity
+class SubTablePerClass extends BaseTablePerClass {
+    String subProp
 }

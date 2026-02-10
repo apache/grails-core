@@ -127,12 +127,9 @@ public class ColumnBinder {
         createKeyForProps.createKeyForProps(property, path, table, columnName);
         indexBinder.bindIndex(columnName, column, cc, table);
 
-        final PersistentEntity owner = property.getOwner();
+        var owner = property.getHibernateOwner();
         if (!owner.isRoot()) {
-            Mapping mapping = null;
-            if (owner instanceof GrailsHibernatePersistentEntity persistentEntity) {
-                mapping = persistentEntity.getMappedForm();
-            }
+            Mapping mapping = owner.getMappedForm();
             if (mapping != null && mapping.getTablePerHierarchy()) {
                 if (LOG.isDebugEnabled())
                     LOG.debug("[GrailsDomainBinder] Sub class property [" + property.getName() + "] for column name [" + column.getName() + "] set to nullable");
