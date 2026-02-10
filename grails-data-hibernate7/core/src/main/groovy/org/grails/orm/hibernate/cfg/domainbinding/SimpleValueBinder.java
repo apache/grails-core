@@ -1,19 +1,19 @@
 package org.grails.orm.hibernate.cfg.domainbinding;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.Properties;
 
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Column;
+import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.Formula;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.TenantId;
-import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
@@ -127,12 +127,12 @@ public class SimpleValueBinder {
 
             Optional.ofNullable(propertyConfig.getColumns())
                     .filter(list -> !list.isEmpty())
-                    .orElse(Arrays.asList(new ColumnConfig[]{null}))
+                    .orElse(new ArrayList<>())
                     .forEach(cc -> {
                         Column column = new Column();
                         columnConfigToColumnBinder.bindColumnConfigToColumn(column, cc, propertyConfig);
                         columnBinder.bindColumn((GrailsHibernatePersistentProperty) property, (GrailsHibernatePersistentProperty) parentProperty, column, cc, path, table);
-                        if (simpleValue instanceof org.hibernate.mapping.DependantValue) {
+                        if (simpleValue instanceof DependantValue) {
                             column.setNullable(true);
                         }
                         if (table != null) {
@@ -142,4 +142,5 @@ public class SimpleValueBinder {
                     });
         }
     }
+
 }

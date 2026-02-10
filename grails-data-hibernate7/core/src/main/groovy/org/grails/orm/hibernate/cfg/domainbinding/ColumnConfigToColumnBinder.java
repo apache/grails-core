@@ -5,30 +5,33 @@ import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.hibernate.mapping.Column;
 
+import java.util.Optional;
+
 public class ColumnConfigToColumnBinder {
 
     public void bindColumnConfigToColumn(
-             Column column,
-             ColumnConfig columnConfig,
+             @Nonnull Column column,
+             @Nonnull ColumnConfig columnConfig,
             PropertyConfig mappedForm
         ) {
-        if (columnConfig == null) {
-            return;
-        }
-        if (columnConfig.getLength() != -1) {
-            column.setLength(columnConfig.getLength());
-        }
-        if (columnConfig.getPrecision() != -1) {
-            column.setPrecision(columnConfig.getPrecision());
-        }
-        if (columnConfig.getScale() != -1) {
-            column.setScale(columnConfig.getScale());
-        }
-        if (columnConfig.getSqlType() != null && !columnConfig.getSqlType().isEmpty()) {
-            column.setSqlType(columnConfig.getSqlType());
-        }
-        if(mappedForm != null && !mappedForm.isUniqueWithinGroup()) {
-            column.setUnique(columnConfig.getUnique());
-        }
+        Optional.of(columnConfig.getLength())
+                .filter(l -> l != -1)
+                .ifPresent(column::setLength);
+
+        Optional.of(columnConfig.getPrecision())
+                .filter(p -> p != -1)
+                .ifPresent(column::setPrecision);
+
+        Optional.of(columnConfig.getScale())
+                .filter(s -> s != -1)
+                .ifPresent(column::setScale);
+
+        Optional.ofNullable(columnConfig.getSqlType())
+                .filter(s -> !s.isEmpty())
+                .ifPresent(column::setSqlType);
+
+        Optional.ofNullable(mappedForm)
+                .filter(mf -> !mf.isUniqueWithinGroup())
+                .ifPresent(mf -> column.setUnique(columnConfig.getUnique()));
     }
 }

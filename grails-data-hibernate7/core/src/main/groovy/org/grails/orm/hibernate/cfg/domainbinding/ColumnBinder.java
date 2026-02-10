@@ -127,6 +127,7 @@ public class ColumnBinder {
         createKeyForProps.createKeyForProps(property, path, table, columnName);
         indexBinder.bindIndex(columnName, column, cc, table);
 
+
         var owner = property.getHibernateOwner();
         if (!owner.isRoot()) {
             Mapping mapping = owner.getMappedForm();

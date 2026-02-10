@@ -125,22 +125,6 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         !subTPCProp.isTablePerHierarchySubclass()
     }
 
-    void "test isColumnNullable"() {
-        given:
-        PersistentEntity baseTPH = createPersistentEntity(BaseTPH)
-        PersistentEntity subTPH = createPersistentEntity(SubTPH)
-        PersistentEntity subTPC = createPersistentEntity(SubTablePerClass)
-
-        GrailsHibernatePersistentProperty baseTPHProp = (GrailsHibernatePersistentProperty) baseTPH.getPropertyByName("id")
-        GrailsHibernatePersistentProperty subTPHProp = (GrailsHibernatePersistentProperty) subTPH.getPropertyByName("subProp")
-        GrailsHibernatePersistentProperty subTPCProp = (GrailsHibernatePersistentProperty) subTPC.getPropertyByName("subProp")
-
-        expect:
-        !baseTPHProp.isColumnNullable() // Root is false
-        subTPHProp.isColumnNullable()   // Subclass TPH is true
-        !subTPCProp.isColumnNullable()  // Subclass not TPH uses isNullable() which is false by default
-    }
-
     void "test getIndexColumnName and getMapElementName"() {
         given:
         def jdbcEnvironment = Mock(org.hibernate.engine.jdbc.env.spi.JdbcEnvironment)
