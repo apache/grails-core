@@ -171,7 +171,7 @@ class SimpleValueBinderSpec extends Specification {
     def "binds for each provided column config and adds to table and simple value"() {
         given:
         def prop = Mock(GrailsHibernatePersistentProperty)
-        def parent = Mock(PersistentProperty)
+        def parent = Mock(GrailsHibernatePersistentProperty)
         def owner = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
         def pc = Mock(PropertyConfig)

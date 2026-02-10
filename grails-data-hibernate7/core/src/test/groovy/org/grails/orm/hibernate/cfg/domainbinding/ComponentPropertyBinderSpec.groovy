@@ -80,7 +80,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def ownerEntity = Mock(GrailsHibernatePersistentEntity)
         ownerEntity.isRoot() >> true
         def currentGrailsProp = Mock(GrailsHibernatePersistentProperty)
-        def componentProperty = Mock(PersistentProperty)
+        def componentProperty = Mock(GrailsHibernatePersistentProperty)
         def mappings = Mock(InFlightMetadataCollector)
         def hibernateProperty = new Property()
         hibernateProperty.setName("street")
@@ -110,7 +110,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def ownerEntity = Mock(GrailsHibernatePersistentEntity)
         ownerEntity.isRoot() >> true
         def currentGrailsProp = Mock(TestManyToOne)
-        def componentProperty = Mock(PersistentProperty)
+        def componentProperty = Mock(GrailsHibernatePersistentProperty)
         def mappings = Mock(InFlightMetadataCollector)
         def hibernateProperty = new Property()
         hibernateProperty.setName("owner")
@@ -141,7 +141,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def ownerEntity = Mock(GrailsHibernatePersistentEntity)
         ownerEntity.isRoot() >> true
         def currentGrailsProp = Mock(TestOneToOne)
-        def componentProperty = Mock(PersistentProperty)
+        def componentProperty = Mock(GrailsHibernatePersistentProperty)
         def mappings = Mock(InFlightMetadataCollector)
         def hibernateProperty = new Property()
         hibernateProperty.setName("detail")
@@ -177,7 +177,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def ownerEntity = Mock(GrailsHibernatePersistentEntity)
         ownerEntity.isRoot() >> true
         def currentGrailsProp = Mock(GrailsHibernatePersistentProperty)
-        def componentProperty = Mock(PersistentProperty)
+        def componentProperty = Mock(GrailsHibernatePersistentProperty)
         def mappings = Mock(InFlightMetadataCollector)
         def hibernateProperty = new Property()
         hibernateProperty.setName("type")
@@ -208,7 +208,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def ownerEntity = Mock(GrailsHibernatePersistentEntity)
         ownerEntity.isRoot() >> true
         def currentGrailsProp = Mock(GrailsHibernatePersistentProperty)
-        def componentProperty = Mock(PersistentProperty)
+        def componentProperty = Mock(GrailsHibernatePersistentProperty)
         def ownerEntityGHPE = Mock(GrailsHibernatePersistentEntity)
         def mappings = Mock(InFlightMetadataCollector)
         def hibernateProperty = new Property()

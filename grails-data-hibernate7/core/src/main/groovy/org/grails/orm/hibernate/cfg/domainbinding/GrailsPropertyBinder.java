@@ -83,7 +83,8 @@ public class GrailsPropertyBinder {
     }
 
     public Value bindProperty(PersistentClass persistentClass
-            , @Nonnull GrailsHibernatePersistentProperty currentGrailsProp, @Nonnull InFlightMetadataCollector mappings
+            , @Nonnull GrailsHibernatePersistentProperty currentGrailsProp
+            , @Nonnull InFlightMetadataCollector mappings
             , String sessionFactoryBeanName) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("[GrailsPropertyBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
@@ -110,8 +111,7 @@ public class GrailsPropertyBinder {
                 simpleValueBinder.bindSimpleValue(currentGrailsProp, null,(SimpleValue) value, EMPTY_PATH);// No specific binder call needed
             }
             else { // Actual Collection
-                Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass
-                );
+                Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass);
                 collectionBinder.bindCollection((HibernateToManyProperty) currentGrailsProp, collection, persistentClass, mappings, EMPTY_PATH, sessionFactoryBeanName);
                 mappings.addCollectionBinding(collection);
                 value = collection;

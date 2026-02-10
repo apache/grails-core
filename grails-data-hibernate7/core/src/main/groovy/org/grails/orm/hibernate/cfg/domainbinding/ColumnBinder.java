@@ -77,7 +77,7 @@ public class ColumnBinder {
      * @param path
      * @param table          The table name
      */
-    public void bindColumn(PersistentProperty property, PersistentProperty parentProperty,
+    public void bindColumn(GrailsHibernatePersistentProperty property, GrailsHibernatePersistentProperty parentProperty,
                            Column column, ColumnConfig cc, String path, Table table) {
 
         if (cc != null) {
@@ -87,7 +87,7 @@ public class ColumnBinder {
             column.setCustomWrite(cc.getWrite());
         }
 
-        Class<?> userType = ((GrailsHibernatePersistentProperty) property).getUserType();
+        Class<?> userType = property.getUserType();
         String columnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(property, path, cc);
         if ((property instanceof Association association) && userType == null) {
             // Only use conventional naming when the column has not been explicitly mapped.
@@ -116,10 +116,10 @@ public class ColumnBinder {
             // the column's length, precision, and scale
             Class<?> type = property.getType();
             if (type != null && (String.class.isAssignableFrom(type) || byte[].class.isAssignableFrom(type))) {
-                mappedForm = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+                mappedForm = property.getMappedForm();
                 stringColumnConstraintsBinder.bindStringColumnConstraints(column, mappedForm);
             } else if (type != null && Number.class.isAssignableFrom(type)) {
-                mappedForm = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+                mappedForm = property.getMappedForm();
                 numericColumnConstraintsBinder.bindNumericColumnConstraints(column, cc, mappedForm);
             }
         }
@@ -143,7 +143,7 @@ public class ColumnBinder {
         }
 
         // Apply uniqueness last to ensure it isn't overridden by downstream binders
-        PropertyConfig mappedFormFinal = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+        PropertyConfig mappedFormFinal = property.getMappedForm();
         column.setUnique(mappedFormFinal.isUnique() && !mappedFormFinal.isUniqueWithinGroup());
 
         if (LOG.isDebugEnabled())

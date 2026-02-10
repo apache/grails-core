@@ -16,8 +16,6 @@ package org.grails.orm.hibernate.cfg;
 
 import groovy.lang.Closure;
 
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.TenantId;
@@ -44,7 +42,6 @@ import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.engine.spi.FilterDefinition;
 import org.hibernate.mapping.BasicValue;
-import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.DependantValue;
@@ -116,6 +113,9 @@ public class GrailsDomainBinder
     private CollectionHolder collectionHolder;
     private GrailsPropertyBinder grailsPropertyBinder;
     private CollectionBinder collectionBinder;
+    private CompositeIdBinder compositeIdBinder;
+    private IdentityBinder identityBinder;
+    private VersionBinder versionBinder;
 
 
     public JdbcEnvironment getJdbcEnvironment() {
@@ -173,6 +173,9 @@ public class GrailsDomainBinder
         this.collectionBinder = new CollectionBinder(metadataBuildingContext, this, getNamingStrategy());
         this.componentPropertyBinder = new ComponentPropertyBinder(metadataBuildingContext, getNamingStrategy(), getMappingCacheHolder(), getCollectionHolder(), enumTypeBinder, collectionBinder, propertyFromValueCreator);
         this.grailsPropertyBinder = new GrailsPropertyBinder(metadataBuildingContext, getNamingStrategy(), getCollectionHolder(), enumTypeBinder, componentPropertyBinder, collectionBinder, propertyFromValueCreator);
+        this.compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentPropertyBinder);
+        this.identityBinder = new IdentityBinder(metadataBuildingContext, getNamingStrategy(), getJdbcEnvironment(), compositeIdBinder);
+        this.versionBinder = new VersionBinder(metadataBuildingContext, getNamingStrategy());
 
         hibernateMappingContext.getHibernatePersistentEntities().stream()
                 .filter(persistentEntity -> persistentEntity.forGrailsDomainMapping(dataSourceName))
@@ -552,27 +555,15 @@ public class GrailsDomainBinder
         if (LOG.isDebugEnabled()) {
             LOG.debug("[GrailsDomainBinder] Mapping Grails domain class: " + domainClass.getName() + " -> " + root.getTable().getName());
         }
-        bindIdentity(domainClass, root, mappings, gormMapping, sessionFactoryBeanName);
-        new VersionBinder(metadataBuildingContext, namingStrategy).bindVersion(domainClass.getVersion(), root);
+
+        identityBinder.bindIdentity(domainClass, root, mappings, gormMapping, sessionFactoryBeanName);
+        versionBinder.bindVersion(domainClass.getVersion(), root);
         root.createPrimaryKey();
         createClassProperties(domainClass, root, mappings, sessionFactoryBeanName);
 
         return root;
     }
 
-
-
-    private void bindIdentity(
-            @Nonnull GrailsHibernatePersistentEntity domainClass,
-            @Nonnull RootClass root,
-            @Nonnull InFlightMetadataCollector mappings,
-            Mapping gormMapping,
-            String sessionFactoryBeanName) {
-
-        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentPropertyBinder);
-        new IdentityBinder(metadataBuildingContext, getNamingStrategy(), getJdbcEnvironment(), compositeIdBinder)
-                .bindIdentity(domainClass, root, mappings, gormMapping, sessionFactoryBeanName);
-    }
 
     /**
      * Creates and binds the properties for the specified Grails domain class and PersistentClass
@@ -621,6 +612,18 @@ public class GrailsDomainBinder
 
     public CollectionBinder getCollectionBinder() {
         return collectionBinder;
+    }
+
+    public CompositeIdBinder getCompositeIdBinder() {
+        return compositeIdBinder;
+    }
+
+    public IdentityBinder getIdentityBinder() {
+        return identityBinder;
+    }
+
+    public VersionBinder getVersionBinder() {
+        return versionBinder;
     }
 
     @Override

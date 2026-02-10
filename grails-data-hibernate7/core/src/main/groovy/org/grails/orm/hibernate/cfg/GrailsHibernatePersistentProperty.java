@@ -134,4 +134,6 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
                 .map(ColumnConfig::getName)
                 .orElseGet(() -> namingStrategy.resolveColumnName(getName()) + GrailsDomainBinder.UNDERSCORE + IndexedCollection.DEFAULT_ELEMENT_COLUMN_NAME);
     }
+
+
 }

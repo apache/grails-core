@@ -62,7 +62,7 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
 
         def entity = createPersistentEntity(CBNumericSub)
         def prop = entity.getPropertyByName("num")
-        def parentProp = Mock(PersistentProperty)
+        def parentProp = Mock(GrailsHibernatePersistentProperty)
         def column = new Column("test")
         def table = new Table()
         def cc = new ColumnConfig(comment: "cmt", defaultValue: "def", read: "r", write: "w")
@@ -274,7 +274,7 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
 
         def entity = createPersistentEntity(CBNullableEntity)
         def prop = entity.getPropertyByName("nullableProp")
-        def parentProp = Mock(PersistentProperty)
+        def parentProp = Mock(GrailsHibernatePersistentProperty)
         def column = new Column("test")
         def table = new Table()
 
@@ -309,7 +309,7 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
 
         def entity = createPersistentEntity(CBBook)
         def prop = entity.getPropertyByName("title")
-        def parentProp = Mock(PersistentProperty)
+        def parentProp = Mock(GrailsHibernatePersistentProperty)
         def column = new Column("test")
         def table = new Table()
 
@@ -344,7 +344,7 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
 
         def entity = createPersistentEntity(CBBook)
         def prop = entity.getPropertyByName("title")
-        def parentProp = Mock(PersistentProperty)
+        def parentProp = Mock(GrailsHibernatePersistentProperty)
         def column = new Column("test")
         def table = new Table()
 

@@ -112,5 +112,6 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
                 .orElse(NamespaceNameExtractor.getCatalogName(mappings));
 
     }
+
 }
 

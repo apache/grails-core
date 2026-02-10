@@ -131,7 +131,7 @@ public class SimpleValueBinder {
                     .forEach(cc -> {
                         Column column = new Column();
                         columnConfigToColumnBinder.bindColumnConfigToColumn(column, cc, propertyConfig);
-                        columnBinder.bindColumn(property, parentProperty, column, cc, path, table);
+                        columnBinder.bindColumn((GrailsHibernatePersistentProperty) property, (GrailsHibernatePersistentProperty) parentProperty, column, cc, path, table);
                         if (simpleValue instanceof org.hibernate.mapping.DependantValue) {
                             column.setNullable(true);
                         }
