@@ -128,7 +128,7 @@ class SimpleValueBinderSpec extends Specification {
         0 * columnBinder.bindColumn(_, _, _, _, _, _)
 
         when:
-        binder.bindSimpleValue(tenantProp as PersistentProperty, null, sv2, null)
+        binder.bindSimpleValue(tenantProp, null, sv2, null)
 
         then:
         0 * sv2.addFormula(_)

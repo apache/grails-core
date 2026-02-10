@@ -48,7 +48,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         then:
         1 * manyToOneValuesBinder.bindManyToOneValues(association as Association, manyToOne)
         compositeBinderCalls * compositeBinder.bindCompositeIdentifierToManyToOne(association as Association, manyToOne, _, refDomainClass, path)
-        simpleValueBinderCalls * simpleValueBinder.bindSimpleValue(association as PersistentProperty, null, manyToOne, path)
+        simpleValueBinderCalls * simpleValueBinder.bindSimpleValue(association as GrailsHibernatePersistentProperty, null, manyToOne, path)
 
         where:
         scenario                 | hasCompositeId | compositeBinderCalls | simpleValueBinderCalls
@@ -86,7 +86,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         1 * manyToOneValuesBinder.bindManyToOneValues(property as Association, manyToOne)
-        1 * simpleValueBinder.bindSimpleValue(property as PersistentProperty, null, manyToOne, "/test")
+        1 * simpleValueBinder.bindSimpleValue(property as GrailsHibernatePersistentProperty, null, manyToOne, "/test")
         def resultConfig = mapping.getColumns().get("myCircularProp")
         resultConfig != null
         resultConfig.getJoinTable().getKey().getName() == "my_circular_prop_id"

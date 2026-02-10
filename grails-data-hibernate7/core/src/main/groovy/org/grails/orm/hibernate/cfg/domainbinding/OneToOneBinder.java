@@ -49,7 +49,7 @@ public class OneToOneBinder {
         oneToOne.setReferenceToPrimaryKey(false);
 
         if (hasOne || otherSide == null) {
-            simpleValueBinder.bindSimpleValue(property, null, oneToOne, path);
+            simpleValueBinder.bindSimpleValue((GrailsHibernatePersistentProperty) property, null, oneToOne, path);
         }
         else {
             oneToOne.setReferencedPropertyName(otherSide.getName());

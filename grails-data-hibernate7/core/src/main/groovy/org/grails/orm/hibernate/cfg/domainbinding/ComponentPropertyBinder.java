@@ -42,6 +42,7 @@ public class ComponentPropertyBinder {
     private final EnumTypeBinder enumTypeBinder;
     private final CollectionBinder collectionBinder;
     private final PropertyFromValueCreator propertyFromValueCreator;
+    private final SimpleValueBinder simpleValueBinder;
     private final ComponentBinder componentBinder;
 
     public ComponentPropertyBinder(MetadataBuildingContext metadataBuildingContext,
@@ -52,7 +53,7 @@ public class ComponentPropertyBinder {
                                    CollectionBinder collectionBinder,
                                    PropertyFromValueCreator propertyFromValueCreator) {
         this(metadataBuildingContext, namingStrategy, mappingCacheHolder, collectionHolder,
-                enumTypeBinder, collectionBinder, propertyFromValueCreator, null);
+                enumTypeBinder, collectionBinder, propertyFromValueCreator, null, new SimpleValueBinder(namingStrategy));
     }
 
     protected ComponentPropertyBinder(MetadataBuildingContext metadataBuildingContext,
@@ -62,7 +63,8 @@ public class ComponentPropertyBinder {
                                    EnumTypeBinder enumTypeBinder,
                                    CollectionBinder collectionBinder,
                                    PropertyFromValueCreator propertyFromValueCreator,
-                                   ComponentBinder componentBinder) {
+                                   ComponentBinder componentBinder,
+                                   SimpleValueBinder simpleValueBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.mappingCacheHolder = mappingCacheHolder;
@@ -71,6 +73,7 @@ public class ComponentPropertyBinder {
         this.collectionBinder = collectionBinder;
         this.propertyFromValueCreator = propertyFromValueCreator;
         this.componentBinder = componentBinder != null ? componentBinder : new ComponentBinder(mappingCacheHolder, this);
+        this.simpleValueBinder = simpleValueBinder;
     }
 
     protected ComponentPropertyBinder() {
@@ -82,6 +85,7 @@ public class ComponentPropertyBinder {
         this.collectionBinder = null;
         this.propertyFromValueCreator = null;
         this.componentBinder = null;
+        this.simpleValueBinder = null;
     }
 
     public void bindComponentProperty(Component component, PersistentProperty componentProperty,
@@ -132,7 +136,7 @@ public class ComponentPropertyBinder {
             }
             else {
                 // set type
-                new SimpleValueBinder(namingStrategy).bindSimpleValue((GrailsHibernatePersistentProperty) currentGrailsProp, componentProperty, (SimpleValue) value, path);
+                this.simpleValueBinder.bindSimpleValue((GrailsHibernatePersistentProperty) currentGrailsProp, (GrailsHibernatePersistentProperty) componentProperty, (SimpleValue) value, path);
             }
         }
 

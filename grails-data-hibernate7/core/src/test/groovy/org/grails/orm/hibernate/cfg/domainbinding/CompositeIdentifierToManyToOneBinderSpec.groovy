@@ -76,7 +76,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         finalColumns[1].getName() == "ref_table_nested_entity_col_part_b_col"
 
         and: // 6. Verify the call to the simple value binder
-        1 * simpleValueBinder.bindSimpleValue(association as PersistentProperty, null, value, path)
+        1 * simpleValueBinder.bindSimpleValue(association as GrailsHibernatePersistentProperty, null, value, path)
     }
 
     def "Test bindCompositeIdentifierToManyToOne when column count matches"() {
@@ -119,6 +119,6 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         0 * backticksRemover._
 
         and: // 5. Verify the simple value binder is still called
-        1 * simpleValueBinder.bindSimpleValue(association as PersistentProperty, null, value, path)
+        1 * simpleValueBinder.bindSimpleValue(association as GrailsHibernatePersistentProperty, null, value, path)
     }
 }

@@ -14,6 +14,7 @@ import org.hibernate.mapping.Table;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.TenantId;
+import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
@@ -58,30 +59,23 @@ public class SimpleValueBinder {
     }
 
     public void bindSimpleValue(
-            @jakarta.annotation.Nonnull PersistentProperty property,
-            PersistentProperty parentProperty,
+            @jakarta.annotation.Nonnull GrailsHibernatePersistentProperty property,
+            GrailsHibernatePersistentProperty parentProperty,
             SimpleValue simpleValue,
-            String path) {
-        bindSimpleValue(property, property, parentProperty, simpleValue, path);
-    }
+            String path,
+            GrailsHibernatePersistentProperty... typeProperty) {
 
-    public void bindSimpleValue(
-            @jakarta.annotation.Nonnull PersistentProperty property,
-            @jakarta.annotation.Nonnull PersistentProperty typeProperty,
-            PersistentProperty parentProperty,
-            SimpleValue simpleValue,
-            String path) {
-
-        PropertyConfig propertyConfig = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+        final GrailsHibernatePersistentProperty actualTypeProperty = (typeProperty.length > 0 && typeProperty[0] != null) ? typeProperty[0] : property;
+        PropertyConfig propertyConfig = property.getMappedForm();
         Mapping mapping = null;
         if (property.getOwner() instanceof GrailsHibernatePersistentEntity persistentEntity) {
             mapping = persistentEntity.getMappedForm();
         }
 
-        final String typeName = typeProperty instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getTypeName() : null;
+        final String typeName = actualTypeProperty.getTypeName();
         if (typeName == null) {
-            if (!(typeProperty instanceof org.grails.datastore.mapping.model.types.Association)) {
-                Class<?> type = typeProperty.getType();
+            if (!(actualTypeProperty instanceof org.grails.datastore.mapping.model.types.Association)) {
+                Class<?> type = actualTypeProperty.getType();
                 if (type != null) {
                     simpleValue.setTypeName(type.getName());
                 }
@@ -127,11 +121,11 @@ public class SimpleValueBinder {
 
             Optional.ofNullable(propertyConfig.getColumns())
                     .filter(list -> !list.isEmpty())
-                    .orElse(new ArrayList<>())
+                    .orElse(java.util.Arrays.asList(new ColumnConfig[]{null}))
                     .forEach(cc -> {
                         Column column = new Column();
                         columnConfigToColumnBinder.bindColumnConfigToColumn(column, cc, propertyConfig);
-                        columnBinder.bindColumn((GrailsHibernatePersistentProperty) property, (GrailsHibernatePersistentProperty) parentProperty, column, cc, path, table);
+                        columnBinder.bindColumn(property, parentProperty, column, cc, path, table);
                         if (simpleValue instanceof DependantValue) {
                             column.setNullable(true);
                         }

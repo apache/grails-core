@@ -2,6 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.engine.OptimisticLockStyle
 import org.hibernate.mapping.BasicValue
@@ -32,7 +33,7 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         def table = new Table("TEST_TABLE")
         rootClass.setTable(table)
         
-        def versionProperty = Mock(PersistentProperty) {
+        def versionProperty = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty]) {
             getName() >> "version"
         }
         
@@ -43,7 +44,7 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         
         then:
         1 * basicValueFactory.apply(metadataBuildingContext, table) >> basicValue
-        1 * simpleValueBinder.bindSimpleValue(versionProperty, null, basicValue, "")
+        1 * simpleValueBinder.bindSimpleValue(versionProperty, null, basicValue, "", _)
         1 * propertyBinder.bindProperty(versionProperty, _)
         
         rootClass.getVersion() != null
@@ -71,7 +72,7 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         def table = new Table("TEST_TABLE")
         rootClass.setTable(table)
         
-        def versionProperty = Mock(PersistentProperty) {
+        def versionProperty = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty]) {
             getName() >> "lastUpdated"
         }
         

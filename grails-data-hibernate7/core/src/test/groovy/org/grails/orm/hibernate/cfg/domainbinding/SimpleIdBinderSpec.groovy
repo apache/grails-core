@@ -61,7 +61,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         simpleIdBinder.bindSimpleId(testProperty, rootClass, new Identity(generator: GrailsSequenceGeneratorEnum.IDENTITY.toString()))
 
         then:
-        1 * simpleValueBinder.bindSimpleValue(testProperty, null, _, "")
+        1 * simpleValueBinder.bindSimpleValue(testProperty as GrailsHibernatePersistentProperty, null, _, "")
         1 * propertyBinder.bindProperty(testProperty, _)
 
         rootClass.identifier instanceof BasicValue
@@ -89,7 +89,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         simpleIdBinder.bindSimpleId(testProperty, rootClass, new Identity(generator: GrailsSequenceGeneratorEnum.SEQUENCE.toString(), params: [sequence: 'SEQ_TEST']))
 
         then:
-        1 * simpleValueBinder.bindSimpleValue(testProperty, null, _, "")
+        1 * simpleValueBinder.bindSimpleValue(testProperty as GrailsHibernatePersistentProperty, null, _, "")
         1 * propertyBinder.bindProperty(testProperty, _)
 
         rootClass.identifier instanceof BasicValue

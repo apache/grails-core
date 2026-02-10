@@ -83,12 +83,12 @@ public class ManyToOneBinder {
                     pc.setJoinTable(jt);
                 }
                 // set type
-                simpleValueBinder.bindSimpleValue(property, null, manyToOne, path);
+                simpleValueBinder.bindSimpleValue((GrailsHibernatePersistentProperty) property, null, manyToOne, path);
             }
             else {
                 // bind column
                 // set type
-                simpleValueBinder.bindSimpleValue(property, null, manyToOne, path);
+                simpleValueBinder.bindSimpleValue((GrailsHibernatePersistentProperty) property, null, manyToOne, path);
             }
         }
 

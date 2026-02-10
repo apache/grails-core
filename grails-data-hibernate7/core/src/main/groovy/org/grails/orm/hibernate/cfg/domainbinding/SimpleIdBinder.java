@@ -9,6 +9,7 @@ import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.Table;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.Mapping;
@@ -65,7 +66,7 @@ public class SimpleIdBinder {
         entity.setDeclaredIdentifierProperty(idProperty);
         entity.setIdentifier(id);
         // set type
-        simpleValueBinder.bindSimpleValue(identifier, null, id, EMPTY_PATH);
+        simpleValueBinder.bindSimpleValue((GrailsHibernatePersistentProperty) identifier, null, id, EMPTY_PATH);
 
         // create property
         Property prop = new Property();
