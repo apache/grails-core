@@ -24,10 +24,6 @@ public class CompositeIdBinder {
         this.componentPropertyBinder = componentPropertyBinder;
     }
 
-    protected CompositeIdBinder() {
-        this.metadataBuildingContext = null;
-        this.componentPropertyBinder = null;
-    }
 
     public void bindCompositeId(@Nonnull PersistentEntity domainClass, RootClass root,
                                  CompositeIdentity compositeIdentity, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {

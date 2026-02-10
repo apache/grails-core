@@ -16,9 +16,6 @@ import spock.lang.Unroll
  */
 class NamespaceNameExtractorSpec extends Specification {
 
-    @Subject
-    NamespaceNameExtractor extractor = new NamespaceNameExtractor()
-
     // --- Tests for getSchemaName ---
 
     def "should return the schema name when the full object graph exists"() {
@@ -37,7 +34,7 @@ class NamespaceNameExtractorSpec extends Specification {
         mockSchemaIdentifier.getCanonicalName() >> expectedSchema
 
         when: "the schema name is extracted"
-        def result = extractor.getSchemaName(mockMappings)
+        def result = NamespaceNameExtractor.getSchemaName(mockMappings)
 
         then: "the correct schema name is returned"
         result == expectedSchema
@@ -74,7 +71,7 @@ class NamespaceNameExtractorSpec extends Specification {
         }
 
         when: "the schema name is extracted"
-        def result = extractor.getSchemaName(mockMappings)
+        def result = NamespaceNameExtractor.getSchemaName(mockMappings)
 
         then: "the result is null"
         result == null
@@ -105,7 +102,7 @@ class NamespaceNameExtractorSpec extends Specification {
         mockCatalogIdentifier.getCanonicalName() >> expectedCatalog
 
         when: "the catalog name is extracted"
-        def result = extractor.getCatalogName(mockMappings)
+        def result = NamespaceNameExtractor.getCatalogName(mockMappings)
 
         then: "the correct catalog name is returned"
         result == expectedCatalog
@@ -140,7 +137,7 @@ class NamespaceNameExtractorSpec extends Specification {
         }
 
         when: "the catalog name is extracted"
-        def result = extractor.getCatalogName(mockMappings)
+        def result = NamespaceNameExtractor.getCatalogName(mockMappings)
 
         then: "the result is null"
         result == null

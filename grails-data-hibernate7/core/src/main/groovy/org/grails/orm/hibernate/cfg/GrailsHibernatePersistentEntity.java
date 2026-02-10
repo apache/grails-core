@@ -3,6 +3,14 @@ package org.grails.orm.hibernate.cfg;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
+
+import jakarta.annotation.Nonnull;
+
+import org.hibernate.boot.model.naming.Identifier;
+import org.hibernate.boot.model.relational.Database;
+import org.hibernate.boot.model.relational.Namespace;
+import org.hibernate.boot.spi.InFlightMetadataCollector;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -10,6 +18,7 @@ import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesConsumer;
 import org.grails.orm.hibernate.cfg.domainbinding.DefaultColumnNameFetcher;
+import org.grails.orm.hibernate.cfg.domainbinding.NamespaceNameExtractor;
 
 /**
  * Common interface for Hibernate persistent entities
@@ -88,5 +97,20 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
                 .map(defaultColumnName -> ":tenantId = " + defaultColumnName)
                 .orElse(null);
     }
+    default String getSchema(@Nonnull InFlightMetadataCollector mappings) {
+        return Optional.ofNullable(getMappedForm())
+                .map(Mapping::getTable)
+                .map(org.grails.orm.hibernate.cfg.Table::getSchema)
+                .orElse(NamespaceNameExtractor.getSchemaName(mappings));
 
+    }
+
+    default String getCatalog(@Nonnull InFlightMetadataCollector mappings) {
+        return Optional.ofNullable(getMappedForm())
+                .map(Mapping::getTable)
+                .map(org.grails.orm.hibernate.cfg.Table::getCatalog)
+                .orElse(NamespaceNameExtractor.getCatalogName(mappings));
+
+    }
 }
+

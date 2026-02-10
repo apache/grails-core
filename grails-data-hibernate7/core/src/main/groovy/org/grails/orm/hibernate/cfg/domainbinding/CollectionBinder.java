@@ -141,8 +141,8 @@ public class CollectionBinder {
         String s = new TableForManyCalculator(namingStrategy).calculateTableForMany(property);
         String tableName = (jt != null && jt.getName() != null ? jt.getName() : namingStrategy.resolveTableName(s));
 
-        String schemaName = new NamespaceNameExtractor().getSchemaName(mappings);
-        String catalogName = new NamespaceNameExtractor().getCatalogName(mappings);
+        String schemaName = NamespaceNameExtractor.getSchemaName(mappings);
+        String catalogName = NamespaceNameExtractor.getCatalogName(mappings);
         if(jt != null) {
             if(jt.getSchema() != null) {
                 schemaName = jt.getSchema();

@@ -13,18 +13,18 @@ import java.util.function.Function;
 public class NamespaceNameExtractor {
 
 
-    public String getCatalogName(@Nonnull InFlightMetadataCollector mappings) {
+    public static String getCatalogName(@Nonnull InFlightMetadataCollector mappings) {
         return getNamespaceName(mappings, Namespace.Name::getCatalog);
     }
 
-    public String getSchemaName(@Nonnull InFlightMetadataCollector mappings) {
+    public static String getSchemaName(@Nonnull InFlightMetadataCollector mappings) {
         return getNamespaceName(mappings, Namespace.Name::getSchema);
     }
 
 
 
 
-    public String  getNamespaceName(
+    private static String  getNamespaceName(
             @Nonnull InFlightMetadataCollector mappings, Function<Namespace.Name, Identifier> function
     ) {
         return Optional.ofNullable(mappings.getDatabase())
@@ -32,7 +32,6 @@ public class NamespaceNameExtractor {
                 .map(Namespace::getName)
                 .map(function)
                 .map(Identifier::getCanonicalName)
-                .orElse(null)
-                ;
+                .orElse(null);
     }
 }

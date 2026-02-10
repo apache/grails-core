@@ -135,8 +135,6 @@ public class GrailsDomainBinder
         this.propertyFromValueCreator = new PropertyFromValueCreator();
         this.mappingCacheHolder = MappingCacheHolder.getInstance();
         this.collectionHolder = new CollectionHolder(this);
-        this.collectionBinder = new CollectionBinder(null, this, null);
-        this.componentPropertyBinder = new ComponentPropertyBinder(null, null, mappingCacheHolder, collectionHolder, enumTypeBinder, collectionBinder, propertyFromValueCreator);
         // pre-build mappings
         for (GrailsHibernatePersistentEntity persistentEntity : hibernateMappingContext.getHibernatePersistentEntities()) {
             mappingCacheHolder.cacheMapping(persistentEntity);
@@ -160,21 +158,6 @@ public class GrailsDomainBinder
     }
 
 
-    /**
-     * The default mapping defined by {@link org.grails.datastore.mapping.config.Settings#SETTING_DEFAULT_MAPPING}
-     * @param defaultMapping The default mapping
-     */
-    public void setDefaultMapping(Closure defaultMapping) {
-        this.defaultMapping = defaultMapping;
-    }
-
-    /**
-     *
-     * @param namingStrategy Custom naming strategy to plugin into table naming
-     */
-    public void setNamingStrategy(PersistentEntityNamingStrategy namingStrategy) {
-        this.namingStrategy = namingStrategy;
-    }
 
 
     @Override
@@ -197,16 +180,6 @@ public class GrailsDomainBinder
     }
 
 
-    /**
-     * Override the default naming strategy for the default datasource given a Class or a full class name.
-     * @param strategy the class or name
-     * @throws ClassNotFoundException When the class was not found for specified strategy
-     * @throws InstantiationException When an error occurred instantiating the strategy
-     * @throws IllegalAccessException When an error occurred instantiating the strategy
-     */
-    public static void configureNamingStrategy(final Object strategy) throws ClassNotFoundException, InstantiationException, IllegalAccessException {
-        configureNamingStrategy(ConnectionSource.DEFAULT, strategy);
-    }
 
     /**
      * Override the default naming strategy given a Class or a full class name,
@@ -222,38 +195,6 @@ public class GrailsDomainBinder
         NAMING_STRATEGY_PROVIDER.configureNamingStrategy(datasourceName, strategy);
     }
 
-
-
-
-    /**
-     * First pass to bind collection to Hibernate metamodel, sets up second pass
-     *
-     * @param property   The GrailsDomainClassProperty instance
-     * @param collection The collection
-     * @param owner      The owning persistent class
-     * @param mappings   The Hibernate mappings instance
-     * @param path
-     */
-    public void bindCollection(HibernateToManyProperty property, Collection collection,
-                               PersistentClass owner, @Nonnull InFlightMetadataCollector mappings, String path, String sessionFactoryBeanName) {
-        collectionBinder.bindCollection(property, collection, owner, mappings, path, sessionFactoryBeanName);
-    }
-
-    /**
-     * Binds a Grails domain class to the Hibernate runtime meta model
-     *
-     * @param entity The domain class to bind
-     * @param mappings    The existing mappings
-     * @param sessionFactoryBeanName  the session factory bean name
-     * @throws MappingException Thrown if the domain class uses inheritance which is not supported
-     */
-    public void bindClass(@Nonnull PersistentEntity entity, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName)
-            throws MappingException {
-        //if (domainClass.getClazz().getSuperclass() == Object.class) {
-        if (entity.isRoot()) {
-            bindRoot((GrailsHibernatePersistentEntity) entity, mappings, sessionFactoryBeanName);
-        }
-    }
 
 
 
@@ -449,8 +390,8 @@ public class GrailsDomainBinder
                                       InFlightMetadataCollector mappings, Mapping gormMapping, String sessionFactoryBeanName) {
         classBinding.bindClass(sub, joinedSubclass, mappings);
 
-        String schemaName = new NamespaceNameExtractor().getSchemaName(mappings);
-        String catalogName = new NamespaceNameExtractor().getCatalogName(mappings);
+        String schemaName = NamespaceNameExtractor.getSchemaName(mappings);
+        String catalogName = NamespaceNameExtractor.getCatalogName(mappings);
 
         Table mytable = mappings.addTable(
                 schemaName, catalogName,
@@ -481,8 +422,8 @@ public class GrailsDomainBinder
         String logicalTableName = GrailsHibernateUtil.unqualify(model.getEntityName());
         String physicalTableName = new TableNameFetcher(getNamingStrategy()).getTableName(sub);
 
-        String schemaName = new NamespaceNameExtractor().getSchemaName(mappings);
-        String catalogName = new NamespaceNameExtractor().getCatalogName(mappings);
+        String schemaName = NamespaceNameExtractor.getSchemaName(mappings);
+        String catalogName = NamespaceNameExtractor.getCatalogName(mappings);
 
         mappings.addTableNameBinding(schemaName, catalogName, logicalTableName, physicalTableName, denormalizedSuperTable);
         return physicalTableName;
@@ -565,7 +506,9 @@ public class GrailsDomainBinder
      */
     private RootClass bindRootPersistentClassCommonValues(@Nonnull GrailsHibernatePersistentEntity domainClass,
                                                        @Nonnull java.util.Collection<GrailsHibernatePersistentEntity> children,
-                                                       @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+                                                       @Nonnull InFlightMetadataCollector mappings,
+                                                       String sessionFactoryBeanName
+    ) {
 
         RootClass root = new RootClass(this.metadataBuildingContext);
         root.setAbstract(domainClass.isAbstract());
@@ -590,16 +533,13 @@ public class GrailsDomainBinder
         root.setDynamicInsert(gormMapping.getDynamicInsert());
 
 
-        var schema = ofNullable(gormMapping.getTable())
-                .map(org.grails.orm.hibernate.cfg.Table::getSchema)
-                .orElse(new NamespaceNameExtractor().getSchemaName(mappings));
+        var schema = domainClass.getSchema(mappings);
 
-        var catalog = ofNullable(gormMapping.getTable())
-                .map(org.grails.orm.hibernate.cfg.Table::getCatalog)
-                .orElse(new NamespaceNameExtractor().getCatalogName(mappings));
+        var catalog = domainClass.getCatalog(mappings);
 
 
         var isAbstract = !gormMapping.getTablePerHierarchy() && gormMapping.isTablePerConcreteClass() && root.isAbstract();
+
         // create the table
         var table = mappings.addTable(schema
                 , catalog
@@ -622,9 +562,9 @@ public class GrailsDomainBinder
 
 
 
-    public void bindIdentity(
+    private void bindIdentity(
             @Nonnull GrailsHibernatePersistentEntity domainClass,
-            RootClass root,
+            @Nonnull RootClass root,
             @Nonnull InFlightMetadataCollector mappings,
             Mapping gormMapping,
             String sessionFactoryBeanName) {
