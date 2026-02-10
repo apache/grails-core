@@ -26,7 +26,6 @@ public class ColumnBinder {
     private final StringColumnConstraintsBinder stringColumnConstraintsBinder;
     private final NumericColumnConstraintsBinder numericColumnConstraintsBinder;
     private final CreateKeyForProps createKeyForProps;
-    private final UserTypeFetcher userTypeFetcher;
     private final IndexBinder indexBinder;
 
     /**
@@ -37,13 +36,11 @@ public class ColumnBinder {
             StringColumnConstraintsBinder stringColumnConstraintsBinder,
             NumericColumnConstraintsBinder numericColumnConstraintsBinder,
             CreateKeyForProps createKeyForProps,
-            UserTypeFetcher userTypeFetcher,
             IndexBinder indexBinder) {
         this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
         this.stringColumnConstraintsBinder = stringColumnConstraintsBinder;
         this.numericColumnConstraintsBinder = numericColumnConstraintsBinder;
         this.createKeyForProps = createKeyForProps;
-        this.userTypeFetcher = userTypeFetcher;
         this.indexBinder = indexBinder;
     }
 
@@ -56,7 +53,6 @@ public class ColumnBinder {
                 new StringColumnConstraintsBinder(),
                 new NumericColumnConstraintsBinder(),
                 new CreateKeyForProps(new ColumnNameForPropertyAndPathFetcher(namingStrategy)),
-                new UserTypeFetcher(),
                 new IndexBinder()
         );
     }
@@ -69,7 +65,6 @@ public class ColumnBinder {
         this.stringColumnConstraintsBinder = null;
         this.numericColumnConstraintsBinder = null;
         this.createKeyForProps = null;
-        this.userTypeFetcher = null;
         this.indexBinder = null;
     }
 
@@ -92,7 +87,7 @@ public class ColumnBinder {
             column.setCustomWrite(cc.getWrite());
         }
 
-        Class<?> userType = userTypeFetcher.getUserType((GrailsHibernatePersistentProperty) property);
+        Class<?> userType = ((GrailsHibernatePersistentProperty) property).getUserType();
         String columnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(property, path, cc);
         if ((property instanceof Association association) && userType == null) {
             // Only use conventional naming when the column has not been explicitly mapped.

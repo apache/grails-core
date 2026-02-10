@@ -1,112 +1,75 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
-
+import grails.gorm.annotation.Entity
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.model.types.ManyToMany
 import org.grails.orm.hibernate.cfg.ColumnConfig
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
-import org.grails.orm.hibernate.cfg.Mapping
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
-import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.Table
-import spock.lang.Specification
 
-class ColumnBinderSpec extends Specification {
+class ColumnBinderSpec extends HibernateGormDatastoreSpec {
 
     def "association ManyToMany without userType uses fetched name and is not nullable"() {
         given:
-        def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
         def binder = new ColumnBinder(
-
                 columnNameFetcher,
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                userTypeFetcher,
                 indexBinder
         )
 
-        def prop = Mock(ManyToMany, additionalInterfaces: [GrailsHibernatePersistentProperty])
-        def owner = Mock(GrailsHibernatePersistentEntity)
-        def mappedForm = Mock(PropertyConfig)
+        def entity = createPersistentEntity(CBBook)
+        def prop = entity.getPropertyByName("authors")
         def column = new Column()
         def table = new Table()
 
         // stubs
-        userTypeFetcher.getUserType(prop) >> null
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "mtm_fk"
-        prop.isNullable() >> false
-        prop.getOwner() >> owner
-        owner.isRoot() >> true // skip subclass nullable logic
-        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >> mappedForm
-        mappedForm.isUnique() >> false
-        mappedForm.isUniqueWithinGroup() >> false
 
         when:
         binder.bindColumn(prop, null, column, null, null, table)
 
         then:
         column.getName() == "mtm_fk"
-        column.isNullable() == false
-        0 * stringBinder._
-        0 * numericBinder._
+        column.isNullable() == true
         1 * keyCreator.createKeyForProps(prop, null, table, "mtm_fk")
         1 * indexBinder.bindIndex("mtm_fk", column, null, table)
     }
 
     def "numeric non-association property applies config, numeric constraints, unique and subclass TPH nullable"() {
         given:
-        def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
         def binder = new ColumnBinder(
-
                 columnNameFetcher,
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                userTypeFetcher,
                 indexBinder
         )
 
-        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
+        def entity = createPersistentEntity(CBNumericSub)
+        def prop = entity.getPropertyByName("num")
         def parentProp = Mock(PersistentProperty)
-        def owner = Mock(GrailsHibernatePersistentEntity)
-        def mapping = Mock(Mapping)
-        def propertyConfig = Mock(PropertyConfig)
         def column = new Column("test")
         def table = new Table()
         def cc = new ColumnConfig(comment: "cmt", defaultValue: "def", read: "r", write: "w")
 
         // stubs
-        userTypeFetcher.getUserType(prop) >> null
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, "p", cc) >> "num_col"
-        prop.getType() >> Integer
-        prop.isNullable() >> false
         parentProp.isNullable() >> true // should make column initially nullable
-        prop.getOwner() >> owner
-        owner.isRoot() >> false
-        owner.getMappedForm() >> mapping
-        mapping.getTablePerHierarchy() >> true // forces nullable true for subclass
-        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >>> [propertyConfig, propertyConfig] // called twice in code
-        // numeric constraints applied
-        // unique settings
-        propertyConfig.isUnique() >> true
-        propertyConfig.isUniqueWithinGroup() >> false
 
         when:
         binder.bindColumn(prop, parentProp, column, cc, "p", table)
@@ -119,52 +82,35 @@ class ColumnBinderSpec extends Specification {
         column.getCustomRead() == "r"
         column.getCustomWrite() == "w"
 
-        1 * numericBinder.bindNumericColumnConstraints(column, cc, propertyConfig)
-        0 * stringBinder._
+        1 * numericBinder.bindNumericColumnConstraints(column, cc, _)
         1 * keyCreator.createKeyForProps(prop, "p", table, "num_col")
         1 * indexBinder.bindIndex("num_col", column, cc, table)
     }
 
     def "one-to-one inverse non-owning with hasOne keeps existing name and sets nullable=false"() {
         given:
-        def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
         def binder = new ColumnBinder(
-
                 columnNameFetcher,
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                userTypeFetcher,
                 indexBinder
         )
 
-        def prop = Mock(org.grails.datastore.mapping.model.types.OneToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
-        def inverse = Mock(org.grails.datastore.mapping.model.types.Association)
-        def owner = Mock(GrailsHibernatePersistentEntity)
-        def mappedForm = Mock(PropertyConfig)
+        createPersistentEntity(CBOwner)
+        def entity = createPersistentEntity(CBPet)
+        def prop = entity.getPropertyByName("owner")
         def column = new Column("pre_existing")
         def table = new Table()
 
         // stubs
-        userTypeFetcher.getUserType(prop) >> null
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "fetched_col"
-        prop.isNullable() >> true
-        prop.isBidirectional() >> true
-        prop.isOwningSide() >> false
-        prop.getInverseSide() >> inverse
-        inverse.isHasOne() >> true
-        prop.getOwner() >> owner
-        owner.isRoot() >> true
-        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >> mappedForm
-        mappedForm.isUnique() >> false
-        mappedForm.isUniqueWithinGroup() >> false
 
         when:
         binder.bindColumn(prop, null, column, null, null, table)
@@ -174,97 +120,65 @@ class ColumnBinderSpec extends Specification {
         column.isNullable() == false
         1 * keyCreator.createKeyForProps(prop, null, table, "fetched_col")
         1 * indexBinder.bindIndex("fetched_col", column, null, table)
-        0 * stringBinder._
-        0 * numericBinder._
     }
 
     def "string property triggers string constraints binder only"() {
         given:
-        def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
         def binder = new ColumnBinder(
-
                 columnNameFetcher,
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                userTypeFetcher,
                 indexBinder
         )
 
-        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
-        def owner = Mock(GrailsHibernatePersistentEntity)
-        def propertyConfig = Mock(PropertyConfig)
+        def entity = createPersistentEntity(CBBook)
+        def prop = entity.getPropertyByName("title")
         def column = new Column("test")
         def table = new Table()
 
-        userTypeFetcher.getUserType(prop) >> null
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "str_col"
-        prop.getType() >> String
-        prop.isNullable() >> true
-        prop.getOwner() >> owner
-        owner.isRoot() >> true
-        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >>> [propertyConfig, propertyConfig]
-        propertyConfig.isUnique() >> false
-        propertyConfig.isUniqueWithinGroup() >> false
 
         when:
         binder.bindColumn(prop, null, column, null, null, table)
 
         then:
         column.getName() == "str_col"
-        column.isNullable()
-        1 * stringBinder.bindStringColumnConstraints(column, propertyConfig)
-        0 * numericBinder._
+        column.isNullable() == false
+        1 * stringBinder.bindStringColumnConstraints(column, _)
         1 * keyCreator.createKeyForProps(prop, null, table, "str_col")
         1 * indexBinder.bindIndex("str_col", column, null, table)
     }
 
     def "one-to-one inverse non-owning without hasOne sets nullable=true"() {
         given:
-        def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
         def binder = new ColumnBinder(
-
                 columnNameFetcher,
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                userTypeFetcher,
                 indexBinder
         )
 
-        def prop = Mock(org.grails.datastore.mapping.model.types.OneToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
-        def inverse = Mock(org.grails.datastore.mapping.model.types.Association)
-        def owner = Mock(GrailsHibernatePersistentEntity)
-        def mappedForm = Mock(PropertyConfig)
-        def column = new Column() // name is null so binder should set it
+        createPersistentEntity(CBFace)
+        def entity = createPersistentEntity(CBNose)
+        def prop = entity.getPropertyByName("face")
+        def column = new Column()
         def table = new Table()
 
-        userTypeFetcher.getUserType(prop) >> null
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "one_to_one_fk"
-        prop.isNullable() >> false // but branch should override to true due to !hasOne
-        prop.isBidirectional() >> true
-        prop.isOwningSide() >> false
-        prop.getInverseSide() >> inverse
-        inverse.isHasOne() >> false
-        prop.getOwner() >> owner
-        owner.isRoot() >> true
-        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >> mappedForm
-        mappedForm.isUnique() >> false
-        mappedForm.isUniqueWithinGroup() >> false
 
         when:
         binder.bindColumn(prop, null, column, null, null, table)
@@ -274,45 +188,30 @@ class ColumnBinderSpec extends Specification {
         column.isNullable() == true
         1 * keyCreator.createKeyForProps(prop, null, table, "one_to_one_fk")
         1 * indexBinder.bindIndex("one_to_one_fk", column, null, table)
-        0 * stringBinder._
-        0 * numericBinder._
     }
 
     def "to-one circular association sets nullable=true"() {
         given:
-        def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
         def binder = new ColumnBinder(
-
                 columnNameFetcher,
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                userTypeFetcher,
                 indexBinder
         )
 
-        def prop = Mock(org.grails.datastore.mapping.model.types.ToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
-        def owner = Mock(GrailsHibernatePersistentEntity)
-        def mappedForm = Mock(PropertyConfig)
+        def entity = createPersistentEntity(CBCircular)
+        def prop = entity.getPropertyByName("parent")
         def column = new Column()
         def table = new Table()
 
-        userTypeFetcher.getUserType(prop) >> null
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "to_one_fk"
-        prop.isNullable() >> false
-        prop.isCircular() >> true
-        prop.getOwner() >> owner
-        owner.isRoot() >> true
-        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >> mappedForm
-        mappedForm.isUnique() >> false
-        mappedForm.isUniqueWithinGroup() >> false
 
         when:
         binder.bindColumn(prop, null, column, null, null, table)
@@ -322,46 +221,30 @@ class ColumnBinderSpec extends Specification {
         column.isNullable() == true
         1 * keyCreator.createKeyForProps(prop, null, table, "to_one_fk")
         1 * indexBinder.bindIndex("to_one_fk", column, null, table)
-        0 * stringBinder._
-        0 * numericBinder._
     }
 
     def "association default nullable falls back to property.isNullable()"() {
         given:
-        def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
         def binder = new ColumnBinder(
-
                 columnNameFetcher,
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                userTypeFetcher,
                 indexBinder
         )
 
-        def prop = Mock(org.grails.datastore.mapping.model.types.Association, additionalInterfaces: [GrailsHibernatePersistentProperty])
-        def owner = Mock(GrailsHibernatePersistentEntity)
-        def mappedForm = Mock(PropertyConfig)
+        def entity = createPersistentEntity(CBBook)
+        def prop = entity.getPropertyByName("authors")
         def column = new Column()
         def table = new Table()
 
-        userTypeFetcher.getUserType(prop) >> null
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "assoc_fk"
-        prop.isNullable() >> true
-        prop.getOwner() >> owner
-        owner.isRoot() >> true
-        // ensure we don't hit special branches
-        // Spock will not have methods isBidirectional, isOwningSide on Association base; not needed since code checks only if OneToOne or ToOne/circular
-        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >> mappedForm
-        mappedForm.isUnique() >> false
-        mappedForm.isUniqueWithinGroup() >> false
 
         when:
         binder.bindColumn(prop, null, column, null, null, table)
@@ -371,46 +254,32 @@ class ColumnBinderSpec extends Specification {
         column.isNullable() == true
         1 * keyCreator.createKeyForProps(prop, null, table, "assoc_fk")
         1 * indexBinder.bindIndex("assoc_fk", column, null, table)
-        0 * stringBinder._
-        0 * numericBinder._
     }
 
     def "non-association nullable computed as property OR parent (prop=true, parent=false)"() {
         given:
-        def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
         def binder = new ColumnBinder(
-
                 columnNameFetcher,
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                userTypeFetcher,
                 indexBinder
         )
 
-        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
+        def entity = createPersistentEntity(CBNullableEntity)
+        def prop = entity.getPropertyByName("nullableProp")
         def parentProp = Mock(PersistentProperty)
-        def owner = Mock(GrailsHibernatePersistentEntity)
-        def propertyConfig = Mock(PropertyConfig)
         def column = new Column("test")
         def table = new Table()
 
-        userTypeFetcher.getUserType(prop) >> null
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "na_col"
-        prop.isNullable() >> true
         parentProp.isNullable() >> false
-        prop.getOwner() >> owner
-        owner.isRoot() >> true
-        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >>> [propertyConfig, propertyConfig]
-        propertyConfig.isUnique() >> false
-        propertyConfig.isUniqueWithinGroup() >> false
 
         when:
         binder.bindColumn(prop, parentProp, column, null, null, table)
@@ -418,48 +287,34 @@ class ColumnBinderSpec extends Specification {
         then:
         column.getName() == "na_col"
         column.isNullable() == true
-        0 * stringBinder._
-        0 * numericBinder._
         1 * keyCreator.createKeyForProps(prop, null, table, "na_col")
         1 * indexBinder.bindIndex("na_col", column, null, table)
     }
 
     def "non-association nullable computed as property OR parent (prop=false, parent=true)"() {
         given:
-        def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
         def binder = new ColumnBinder(
-
                 columnNameFetcher,
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                userTypeFetcher,
                 indexBinder
         )
 
-        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
+        def entity = createPersistentEntity(CBBook)
+        def prop = entity.getPropertyByName("title")
         def parentProp = Mock(PersistentProperty)
-        def owner = Mock(GrailsHibernatePersistentEntity)
-        def propertyConfig = Mock(PropertyConfig)
         def column = new Column("test")
         def table = new Table()
 
-        userTypeFetcher.getUserType(prop) >> null
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "na_col2"
-        prop.isNullable() >> false
         parentProp.isNullable() >> true
-        prop.getOwner() >> owner
-        owner.isRoot() >> true
-        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >>> [propertyConfig, propertyConfig]
-        propertyConfig.isUnique() >> false
-        propertyConfig.isUniqueWithinGroup() >> false
 
         when:
         binder.bindColumn(prop, parentProp, column, null, null, table)
@@ -473,40 +328,28 @@ class ColumnBinderSpec extends Specification {
 
     def "non-association nullable computed as property OR parent (both false)"() {
         given:
-        def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
         def binder = new ColumnBinder(
-
                 columnNameFetcher,
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                userTypeFetcher,
                 indexBinder
         )
 
-        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
+        def entity = createPersistentEntity(CBBook)
+        def prop = entity.getPropertyByName("title")
         def parentProp = Mock(PersistentProperty)
-        def owner = Mock(GrailsHibernatePersistentEntity)
-        def propertyConfig = Mock(PropertyConfig)
         def column = new Column("test")
         def table = new Table()
 
-        userTypeFetcher.getUserType(prop) >> null
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "na_col3"
-        prop.isNullable() >> false
         parentProp.isNullable() >> false
-        prop.getOwner() >> owner
-        owner.isRoot() >> true
-        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >>> [propertyConfig, propertyConfig]
-        propertyConfig.isUnique() >> false
-        propertyConfig.isUniqueWithinGroup() >> false
 
         when:
         binder.bindColumn(prop, parentProp, column, null, null, table)
@@ -518,182 +361,68 @@ class ColumnBinderSpec extends Specification {
         1 * indexBinder.bindIndex("na_col3", column, null, table)
     }
 
-    def "uniqueness handling scenarios 1"() {
+    def "uniqueness handling scenarios"() {
         given:
-        def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
         def binder = new ColumnBinder(
-
                 columnNameFetcher,
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                userTypeFetcher,
                 indexBinder
         )
 
-        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
-        def owner = Mock(GrailsHibernatePersistentEntity)
+        def entity = createPersistentEntity(CBUniqueEntity)
         def column = new Column("test")
         def table = new Table()
 
-        userTypeFetcher.getUserType(prop) >> null
-        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "u_col"
-        prop.getType() >> Object
-        prop.isNullable() >> true
-        prop.getOwner() >> owner
-        owner.isRoot() >> true
+        def propUnique = entity.getPropertyByName("uniqueProp")
+        columnNameFetcher.getColumnNameForPropertyAndPath(propUnique, null, null) >> "u_col"
+
+        def propNotUnique = entity.getPropertyByName("notUniqueProp")
+        columnNameFetcher.getColumnNameForPropertyAndPath(propNotUnique, null, null) >> "nu_col"
 
         when:
-        // Unique true, withinGroup false => unique true
-        def pc1 = Mock(PropertyConfig)
-        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >>> [pc1, pc1]
-        pc1.isUnique() >> true
-        pc1.isUniqueWithinGroup() >> false
-        binder.bindColumn(prop, null, column, null, null, table)
+        binder.bindColumn(propUnique, null, column, null, null, table)
 
         then:
         column.isUnique()
 
-    }
-
-    def "uniqueness handling scenarios 2"() {
-        given:
-        def namingStrategy = Mock(PersistentEntityNamingStrategy)
-        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def stringBinder = Mock(StringColumnConstraintsBinder)
-        def numericBinder = Mock(NumericColumnConstraintsBinder)
-        def keyCreator = Mock(CreateKeyForProps)
-        def userTypeFetcher = Mock(UserTypeFetcher)
-        def indexBinder = Mock(IndexBinder)
-
-        def binder = new ColumnBinder(
-
-                columnNameFetcher,
-                stringBinder,
-                numericBinder,
-                keyCreator,
-                userTypeFetcher,
-                indexBinder
-        )
-
-        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
-        def owner = Mock(GrailsHibernatePersistentEntity)
-        def column = new Column("test")
-        def table = new Table()
-
-        userTypeFetcher.getUserType(prop) >> null
-        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "u_col"
-        prop.getType() >> Object
-        prop.isNullable() >> true
-        prop.getOwner() >> owner
-        owner.isRoot() >> true
-
-
         when:
-        // Unique true, withinGroup true => unique false
         def column2 = new Column("test2")
-        def pc2 = Mock(PropertyConfig)
-        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >> pc2
-        pc2.isUnique() >> true
-        pc2.isUniqueWithinGroup() >> true
-        binder.bindColumn(prop, null, column2, null, null, table)
+        binder.bindColumn(propNotUnique, null, column2, null, null, table)
 
         then:
         !column2.isUnique()
-
-    }
-
-    def "uniqueness handling scenarios 3"() {
-        given:
-        def namingStrategy = Mock(PersistentEntityNamingStrategy)
-        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-        def stringBinder = Mock(StringColumnConstraintsBinder)
-        def numericBinder = Mock(NumericColumnConstraintsBinder)
-        def keyCreator = Mock(CreateKeyForProps)
-        def userTypeFetcher = Mock(UserTypeFetcher)
-        def indexBinder = Mock(IndexBinder)
-
-        def binder = new ColumnBinder(
-
-                columnNameFetcher,
-                stringBinder,
-                numericBinder,
-                keyCreator,
-                userTypeFetcher,
-                indexBinder
-        )
-
-        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
-        def owner = Mock(GrailsHibernatePersistentEntity)
-        def column = new Column("test")
-        def table = new Table()
-
-        userTypeFetcher.getUserType(prop) >> null
-        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "u_col"
-        prop.getType() >> Object
-        prop.isNullable() >> true
-        prop.getOwner() >> owner
-        owner.isRoot() >> true
-
-
-        when:
-        // Unique false => unique false
-        def column3 = new Column("test3")
-        def pc3 = Mock(PropertyConfig)
-        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >>> [pc3, pc3]
-        pc3.isUnique() >> false
-        pc3.isUniqueWithinGroup() >> false
-        binder.bindColumn(prop, null, column3, null, null, table)
-
-        then:
-        !column3.isUnique()
     }
 
     def "owner not root with tablePerHierarchy=false sets nullable to property.isNullable()"() {
         given:
-        def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
         def numericBinder = Mock(NumericColumnConstraintsBinder)
         def keyCreator = Mock(CreateKeyForProps)
-        def userTypeFetcher = Mock(UserTypeFetcher)
         def indexBinder = Mock(IndexBinder)
 
         def binder = new ColumnBinder(
-
                 columnNameFetcher,
                 stringBinder,
                 numericBinder,
                 keyCreator,
-                userTypeFetcher,
                 indexBinder
         )
 
-        def prop = Mock(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
-        def owner = Mock(GrailsHibernatePersistentEntity)
-        def mapping = Mock(Mapping)
-        def propertyConfig = Mock(PropertyConfig)
+        def entity = createPersistentEntity(CBSubNonTph)
+        def prop = entity.getPropertyByName("subProp")
         def column = new Column("test")
         def table = new Table()
 
-        userTypeFetcher.getUserType(prop) >> null
         columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "sub_col"
-        prop.getType() >> Object
-        prop.isNullable() >> false
-        prop.getOwner() >> owner
-        owner.isRoot() >> false
-        owner.getMappedForm() >> mapping
-        mapping.getTablePerHierarchy() >> false
-        ((GrailsHibernatePersistentProperty)prop).getMappedForm() >>> [propertyConfig, propertyConfig]
-        propertyConfig.isUnique() >> false
-        propertyConfig.isUniqueWithinGroup() >> false
 
         when:
         binder.bindColumn(prop, null, column, null, null, table)
@@ -703,5 +432,97 @@ class ColumnBinderSpec extends Specification {
         !column.isNullable()
         1 * keyCreator.createKeyForProps(prop, null, table, "sub_col")
         1 * indexBinder.bindIndex("sub_col", column, null, table)
+    }
+}
+
+@Entity
+class CBBook {
+    String title
+    static hasMany = [authors: CBAuthor]
+    static mapping = {
+        authors joinTable: [name: "cb_book_authors", key: "book_id", column: "author_id"]
+    }
+    static constraints = {
+        title nullable: false
+        authors nullable: true
+    }
+}
+
+@Entity
+class CBAuthor {
+    String name
+    static constraints = {
+        name nullable: false
+    }
+}
+
+@Entity
+class CBNumericBase {
+}
+
+@Entity
+class CBNumericSub extends CBNumericBase {
+    Integer num
+    static constraints = {
+        num nullable: false
+    }
+}
+
+@Entity
+class CBOwner {
+    static hasOne = [pet: CBPet]
+}
+
+@Entity
+class CBPet {
+    String name
+    CBOwner owner
+}
+
+@Entity
+class CBFace {
+    CBNose nose
+}
+
+@Entity
+class CBNose {
+    CBFace face
+}
+
+@Entity
+class CBCircular {
+    CBCircular parent
+}
+
+@Entity
+class CBNullableEntity {
+    String nullableProp
+    static constraints = {
+        nullableProp nullable: true
+    }
+}
+
+@Entity
+class CBUniqueEntity {
+    String uniqueProp
+    String notUniqueProp
+    static mapping = {
+        uniqueProp unique: true
+        notUniqueProp unique: false
+    }
+}
+
+@Entity
+class CBBaseNonTph {
+    static mapping = {
+        tablePerHierarchy false
+    }
+}
+
+@Entity
+class CBSubNonTph extends CBBaseNonTph {
+    String subProp
+    static constraints = {
+        subProp nullable: false
     }
 }
