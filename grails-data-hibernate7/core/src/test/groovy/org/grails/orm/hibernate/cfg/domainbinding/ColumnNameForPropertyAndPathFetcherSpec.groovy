@@ -80,7 +80,7 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
                 backticksRemover
         )
 
-        def grailsProp = Mock(PersistentProperty)
+        def grailsProp = Mock(GrailsHibernatePersistentProperty)
 
         // No config available and no join mapping path
         grailsProp.supportsJoinColumnMapping() >> false
@@ -110,7 +110,7 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
                 backticksRemover
         )
 
-        def grailsProp = Mock(PersistentProperty)
+        def grailsProp = Mock(GrailsHibernatePersistentProperty)
 
         defaultColumnFetcher.getDefaultColumnName(grailsProp) >> "only_default"
 

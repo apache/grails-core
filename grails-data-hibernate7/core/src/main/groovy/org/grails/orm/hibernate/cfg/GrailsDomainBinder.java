@@ -407,7 +407,7 @@ public class GrailsDomainBinder
 
         SimpleValue key = new DependantValue(metadataBuildingContext, mytable, joinedSubclass.getIdentifier());
         joinedSubclass.setKey(key);
-        final PersistentProperty identifier = sub.getIdentity();
+        var identifier = sub.getIdentity();
         String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(identifier, EMPTY_PATH, null);
         new SimpleValueColumnBinder().bindSimpleValue(key, identifier.getType().getName(), columnName, false);
 

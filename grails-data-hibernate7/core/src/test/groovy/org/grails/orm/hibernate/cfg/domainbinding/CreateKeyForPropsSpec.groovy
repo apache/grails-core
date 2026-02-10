@@ -27,8 +27,8 @@ class CreateKeyForPropsSpec extends Specification {
         }
         grailsProp.getMappedForm() >> mappedForm
 
-        def otherProp1 = Mock(PersistentProperty)
-        def otherProp2 = Mock(PersistentProperty)
+        def otherProp1 = Mock(GrailsHibernatePersistentProperty)
+        def otherProp2 = Mock(GrailsHibernatePersistentProperty)
         owner.getPropertyByName("p1") >> otherProp1
         owner.getPropertyByName("p2") >> otherProp2
 

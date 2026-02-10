@@ -44,7 +44,7 @@ public class CreateKeyForProps {
                 if (otherProp == null) {
                     throw new MappingException(owner.getJavaClass().getName() + " references an unknown property " + propertyName);
                 }
-                String otherColumnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(otherProp, path, null);
+                String otherColumnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath((GrailsHibernatePersistentProperty) otherProp, path, null);
                 keyList.add(new Column(otherColumnName));
             }
 

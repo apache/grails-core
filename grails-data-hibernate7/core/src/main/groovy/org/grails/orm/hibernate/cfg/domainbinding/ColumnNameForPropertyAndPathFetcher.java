@@ -32,7 +32,7 @@ public class ColumnNameForPropertyAndPathFetcher {
 
     private static final String UNDERSCORE = "_";
 
-    public String getColumnNameForPropertyAndPath(PersistentProperty grailsProp,
+    public String getColumnNameForPropertyAndPath(GrailsHibernatePersistentProperty grailsProp,
                                                    String path, ColumnConfig cc) {
         // First try the column config.
         String columnName = null;

@@ -88,9 +88,14 @@ public class ComponentPropertyBinder {
         this.simpleValueBinder = null;
     }
 
-    public void bindComponentProperty(Component component, PersistentProperty componentProperty,
-                                       PersistentProperty currentGrailsProp, PersistentClass persistentClass,
-                                       String path, Table table, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+    public void bindComponentProperty(Component component,
+                                      PersistentProperty componentProperty,
+                                       PersistentProperty currentGrailsProp,
+                                      PersistentClass persistentClass,
+                                       String path,
+                                      Table table,
+                                      @Nonnull InFlightMetadataCollector mappings,
+                                      String sessionFactoryBeanName) {
         Value value;
         // see if it's a collection type
         CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
@@ -131,7 +136,7 @@ public class ComponentPropertyBinder {
 
             value = new BasicValue(metadataBuildingContext, table);
             if (currentGrailsProp.getType().isEnum()) {
-                String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, path, null);
+                String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath((GrailsHibernatePersistentProperty) currentGrailsProp, path, null);
                 enumTypeBinder.bindEnumType((GrailsHibernatePersistentProperty) currentGrailsProp, currentGrailsProp.getType(), (SimpleValue) value, columnName);
             }
             else {
