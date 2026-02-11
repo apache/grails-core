@@ -36,7 +36,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindIdentity(domainClass, root, mappings, null, "sessionFactory")
 
         then:
-        1 * simpleIdBinder.bindSimpleId(identifierProp, root, null)
+        1 * simpleIdBinder.bindSimpleId(domainClass, root, null)
     }
 
     def "should delegate to compositeIdBinder when mapping is null and domainClass has composite identity"() {
@@ -87,25 +87,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindIdentity(domainClass, root, mappings, gormMapping, "sessionFactory")
 
         then:
-        1 * simpleIdBinder.bindSimpleId(identifierProp, root, identity)
-    }
-
-    def "should throw MappingException when mapping specifies a non-existent identifier property"() {
-        given:
-        def domainClass = Mock(GrailsHibernatePersistentEntity)
-        def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
-        def mappings = Mock(InFlightMetadataCollector)
-        def gormMapping = Mock(Mapping)
-        def identity = new Identity(name: "nonExistent")
-        gormMapping.getIdentity() >> identity
-        domainClass.getName() >> "MyEntity"
-        domainClass.getPropertyByName("nonExistent") >> null
-
-        when:
-        binder.bindIdentity(domainClass, root, mappings, gormMapping, "sessionFactory")
-
-        then:
-        thrown(org.hibernate.MappingException)
+        1 * simpleIdBinder.bindSimpleId(domainClass, root, identity)
     }
 
     def "should not lookup property by name if identity name matches domain class name"() {
@@ -124,8 +106,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindIdentity(domainClass, root, mappings, gormMapping, "sessionFactory")
 
         then:
-        0 * domainClass.getPropertyByName(_)
-        1 * simpleIdBinder.bindSimpleId(identifierProp, root, identity)
+        1 * simpleIdBinder.bindSimpleId(domainClass, root, identity)
     }
 
     def "should set entity name on identity if it is null"() {
@@ -146,6 +127,6 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         identity.getName() == "MyEntity"
-        1 * simpleIdBinder.bindSimpleId(identifierProp, root, identity)
+        1 * simpleIdBinder.bindSimpleId(domainClass, root, identity)
     }
 }

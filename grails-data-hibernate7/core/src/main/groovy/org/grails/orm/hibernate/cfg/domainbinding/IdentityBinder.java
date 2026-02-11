@@ -9,6 +9,7 @@ import org.hibernate.mapping.RootClass;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.HibernateIdentity;
 import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.Mapping;
@@ -45,37 +46,15 @@ public class IdentityBinder {
             Mapping gormMapping,
             String sessionFactoryBeanName) {
 
-        if (gormMapping != null) {
-            HibernateIdentity id = gormMapping.getIdentity();
-            if (id instanceof CompositeIdentity) {
-                compositeIdBinder.bindCompositeId(domainClass, root, (CompositeIdentity) id, mappings, sessionFactoryBeanName);
-            } else {
-                final Identity identity = (Identity) id;
-                PersistentProperty identifierProp = domainClass.getIdentity();
-                String propertyName = identity.getName();
-                if (propertyName != null && !propertyName.equals(domainClass.getName())) {
-                    PersistentProperty namedIdentityProp = domainClass.getPropertyByName(propertyName);
-                    if (namedIdentityProp == null) {
-                        throw new MappingException("Mapping specifies an identifier property name that doesn't exist [" + propertyName + "]");
-                    }
-                    if (!namedIdentityProp.equals(identifierProp)) {
-                        identifierProp = namedIdentityProp;
-                    }
-                }
-                if (identity.getName() == null) {
-                    identity.setName(root.getEntityName());
-                }
-                simpleIdBinder.bindSimpleId(identifierProp, root, identity);
-            }
+        HibernateIdentity id = gormMapping != null ? gormMapping.getIdentity() : null;
+        if (id instanceof CompositeIdentity || (id == null && domainClass.getCompositeIdentity() != null)) {
+            compositeIdBinder.bindCompositeId(domainClass, root, (CompositeIdentity) id, mappings, sessionFactoryBeanName);
         } else {
-            if (domainClass.getCompositeIdentity() != null) {
-                compositeIdBinder.bindCompositeId(domainClass, root, null, mappings, sessionFactoryBeanName);
-            } else {
-                PersistentProperty identifierProp = domainClass.getIdentity();
-                if (identifierProp != null) {
-                    simpleIdBinder.bindSimpleId(identifierProp, root, null);
-                }
+            Identity identity = id instanceof Identity ? (Identity) id : null;
+            if (identity != null && identity.getName() == null) {
+                identity.setName(root.getEntityName());
             }
+            simpleIdBinder.bindSimpleId(domainClass, root, identity);
         }
     }
 }

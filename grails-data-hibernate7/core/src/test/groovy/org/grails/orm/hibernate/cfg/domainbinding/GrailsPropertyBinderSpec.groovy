@@ -298,7 +298,11 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def enumTypeBinder = Mock(EnumTypeBinder)
         def componentPropertyBinder = Mock(ComponentPropertyBinder)
         def collectionBinder = Mock(CollectionBinder)
-        def propertyFromValueCreator = Mock(PropertyFromValueCreator) // Mock propertyFromValueCreator as it is a constructor parameter
+        def propertyFromValueCreator = Mock(PropertyFromValueCreator)
+        def simpleValueBinder = Mock(SimpleValueBinder)
+        def columnNameForPropertyAndPathFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+        def oneToOneBinder = Mock(OneToOneBinder)
+        def manyToOneBinder = Mock(ManyToOneBinder)
 
         // Instantiate GrailsPropertyBinder using the protected constructor with necessary mocks
         def propertyBinder = new GrailsPropertyBinder(
@@ -308,7 +312,10 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
                 enumTypeBinder,
                 componentPropertyBinder,
                 collectionBinder,
-                propertyFromValueCreator
+                simpleValueBinder,
+                columnNameForPropertyAndPathFetcher,
+                oneToOneBinder,
+                manyToOneBinder
         )
 
         def mappings = Mock(org.hibernate.boot.spi.InFlightMetadataCollector)
@@ -329,17 +336,6 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         // Stubbing getOwner() to return mockOwner
         currentGrailsProp.getOwner() >> mockOwner
         mockOwner.isRoot() >> true // Stub isRoot() to prevent NPE in ColumnBinder
-
-        // Mock PropertyConfig and stub its methods for SimpleValueBinder
-        def propertyConfigMock = Mock(PropertyConfig)
-        currentGrailsProp.getMappedForm() >> propertyConfigMock // For SimpleValueBinder logic, need PropertyConfig
-
-        propertyConfigMock.getGenerator() >> null
-        propertyConfigMock.getTypeParams() >> new Properties()
-        propertyConfigMock.isDerived() >> false
-        def columnConfigMock = Mock(ColumnConfig) // Mock ColumnConfig for getColumns()
-        columnConfigMock.getName() >> "test_column" // Provide a column name to prevent NPE
-        propertyConfigMock.getColumns() >> Arrays.asList(columnConfigMock)
 
         // Mocking other necessary properties of currentGrailsProp
         currentGrailsProp.getType() >> String.class

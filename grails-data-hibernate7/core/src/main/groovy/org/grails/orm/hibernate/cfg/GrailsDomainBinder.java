@@ -16,7 +16,6 @@ package org.grails.orm.hibernate.cfg;
 
 import groovy.lang.Closure;
 
-import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.orm.hibernate.cfg.domainbinding.ClassBinder;
@@ -269,7 +268,7 @@ public class GrailsDomainBinder
                         Collections.emptyMap()
                 );
 
-                Property property = collectionBinder.grailsDomainBinder.getProperty(persistentClass, tenantId.getName());
+                Property property = getProperty(persistentClass, tenantId.getName());
                 if (property.getValue() instanceof BasicValue basicValue) {
                     JdbcMapping jdbcMapping = basicValue.resolve().getJdbcMapping();
                     var stringVMap = Collections.singletonMap(GormProperties.TENANT_IDENTITY, jdbcMapping);
@@ -320,7 +319,7 @@ public class GrailsDomainBinder
         subEntity.configureDerivedProperties();
         if (!m.getTablePerHierarchy() && !m.isTablePerConcreteClass()) {
             subClass = new JoinedSubclass(parent, this.metadataBuildingContext);
-            bindJoinedSubClass(subEntity, (JoinedSubclass) subClass, mappings, m, sessionFactoryBeanName);
+            bindJoinedSubClass(subEntity, (JoinedSubclass) subClass, mappings, sessionFactoryBeanName);
         }
         else if(m.isTablePerConcreteClass()) {
             subClass = new UnionSubclass(parent, this.metadataBuildingContext);
@@ -346,26 +345,15 @@ public class GrailsDomainBinder
                                   @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) throws MappingException {
         classBinding.bindClass(subClass, unionSubclass, mappings);
 
-        Mapping subMapping = subClass.getMappedForm();
-
-        //TODO Verify if needed at all
-//        if ( unionSubclass.getEntityPersisterClass() == null ) {
-//            unionSubclass.getRootClass().setEntityPersisterClass(
-//                    UnionSubclassEntityPersister.class );
-//        }
-
-        String schema = subMapping != null && subMapping.getTable().getSchema() != null ?
-                subMapping.getTable().getSchema() : null;
-
-        String catalog = subMapping != null && subMapping.getTable().getCatalog() != null ?
-                subMapping.getTable().getCatalog() : null;
+        String schema = subClass.getSchema(mappings);
+        String catalog = subClass.getCatalog(mappings);
 
         Table denormalizedSuperTable = unionSubclass.getSuperclass().getTable();
         Table mytable = mappings.addDenormalizedTable(
                 schema,
                 catalog,
                 new TableNameFetcher(getNamingStrategy()).getTableName(subClass),
-                unionSubclass.isAbstract() != null && unionSubclass.isAbstract(),
+                Boolean.TRUE.equals(unionSubclass.isAbstract()),
                 null,
                 denormalizedSuperTable, metadataBuildingContext
         );
@@ -383,22 +371,21 @@ public class GrailsDomainBinder
     /**
      * Binds a joined sub-class mapping using table-per-subclass
      *
-     * @param sub            The Grails sub class
-     * @param joinedSubclass The Hibernate Subclass object
-     * @param mappings       The mappings Object
-     * @param gormMapping    The GORM mapping object
-     * @param sessionFactoryBeanName  the session factory bean name
+     * @param sub                    The Grails sub class
+     * @param joinedSubclass         The Hibernate Subclass object
+     * @param mappings               The mappings Object
+     * @param sessionFactoryBeanName the session factory bean name
      */
     private void bindJoinedSubClass(GrailsHibernatePersistentEntity sub, JoinedSubclass joinedSubclass,
-                                      InFlightMetadataCollector mappings, Mapping gormMapping, String sessionFactoryBeanName) {
+                                    InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         classBinding.bindClass(sub, joinedSubclass, mappings);
 
-        String schemaName = NamespaceNameExtractor.getSchemaName(mappings);
-        String catalogName = NamespaceNameExtractor.getCatalogName(mappings);
+        String schemaName = sub.getSchema(mappings);
+        String catalogName = sub.getCatalog(mappings);
 
         Table mytable = mappings.addTable(
                 schemaName, catalogName,
-                getJoinedSubClassTableName(sub, joinedSubclass, null, mappings, sessionFactoryBeanName),
+                getJoinedSubClassTableName(sub, joinedSubclass, null, mappings),
                 null, false, metadataBuildingContext);
 
         joinedSubclass.setTable(mytable);
@@ -420,13 +407,13 @@ public class GrailsDomainBinder
 
     private String getJoinedSubClassTableName(
             GrailsHibernatePersistentEntity sub, PersistentClass model, Table denormalizedSuperTable,
-            InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+            InFlightMetadataCollector mappings) {
 
         String logicalTableName = GrailsHibernateUtil.unqualify(model.getEntityName());
         String physicalTableName = new TableNameFetcher(getNamingStrategy()).getTableName(sub);
 
-        String schemaName = NamespaceNameExtractor.getSchemaName(mappings);
-        String catalogName = NamespaceNameExtractor.getCatalogName(mappings);
+        String schemaName = sub.getSchema(mappings);
+        String catalogName = sub.getCatalog(mappings);
 
         mappings.addTableNameBinding(schemaName, catalogName, logicalTableName, physicalTableName, denormalizedSuperTable);
         return physicalTableName;
@@ -637,7 +624,7 @@ public class GrailsDomainBinder
 
     }
 
-    public Property getProperty(PersistentClass associatedClass, String propertyName) throws MappingException {
+    private Property getProperty(PersistentClass associatedClass, String propertyName) throws MappingException {
         try {
             return associatedClass.getProperty(propertyName);
         }

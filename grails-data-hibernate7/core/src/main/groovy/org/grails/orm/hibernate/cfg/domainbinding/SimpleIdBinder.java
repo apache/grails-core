@@ -8,6 +8,9 @@ import org.hibernate.mapping.Property;
 import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.Table;
 
+import jakarta.annotation.Nonnull;
+import org.hibernate.MappingException;
+
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
@@ -46,19 +49,28 @@ public class SimpleIdBinder {
     }
 
 
-    public void bindSimpleId(PersistentProperty identifier, RootClass entity, Identity mappedId) {
+    public void bindSimpleId(@Nonnull GrailsHibernatePersistentEntity domainClass, RootClass entity, Identity mappedId) {
 
-        Mapping result = null;
-        GrailsHibernatePersistentEntity domainClass = null;
-        if (identifier.getOwner() instanceof GrailsHibernatePersistentEntity) {
-            domainClass = (GrailsHibernatePersistentEntity) identifier.getOwner();
-            result = domainClass.getMappedForm();
-        }
+        Mapping result = domainClass.getMappedForm();
         boolean useSequence = result != null && result.isTablePerConcreteClass();
         // create the id value
 
         BasicValueIdCreator idCreator = this.basicValueIdCreator != null ? this.basicValueIdCreator : new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment, domainClass, entity);
         BasicValue id = idCreator.getBasicValueId(mappedId, useSequence);
+
+        var identifier = domainClass.getIdentity();
+        if (mappedId != null) {
+            String propertyName = mappedId.getName();
+            if (propertyName != null && !propertyName.equals(domainClass.getName())) {
+                var namedIdentityProp = (GrailsHibernatePersistentProperty) domainClass.getPropertyByName(propertyName);
+                if (namedIdentityProp == null) {
+                    throw new MappingException("Mapping specifies an identifier property name that doesn't exist [" + propertyName + "]");
+                }
+                if (!namedIdentityProp.equals(identifier)) {
+                    identifier = namedIdentityProp;
+                }
+            }
+        }
 
         Property idProperty  = new Property();
         idProperty.setName(identifier.getName());
@@ -66,7 +78,7 @@ public class SimpleIdBinder {
         entity.setDeclaredIdentifierProperty(idProperty);
         entity.setIdentifier(id);
         // set type
-        simpleValueBinder.bindSimpleValue((GrailsHibernatePersistentProperty) identifier, null, id, EMPTY_PATH);
+        simpleValueBinder.bindSimpleValue(identifier, null, id, EMPTY_PATH);
 
         // create property
         Property prop = new Property();

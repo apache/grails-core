@@ -49,16 +49,18 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         }
         def testProperty = Mock(GrailsHibernatePersistentProperty) {
             getName() >> "id"
-            getOwner() >> Mock(GrailsHibernatePersistentEntity) {
-                getMappedForm() >> mapping
-            }
+        }
+        def domainClass = Mock(GrailsHibernatePersistentEntity) {
+            getMappedForm() >> mapping
+            getIdentity() >> testProperty
+            getName() >> "TestEntity"
         }
         def rootClass = new RootClass(metadataBuildingContext)
         currentTable = new Table("TEST_TABLE")
         rootClass.setTable(currentTable)
 
         when:
-        simpleIdBinder.bindSimpleId(testProperty, rootClass, new Identity(generator: GrailsSequenceGeneratorEnum.IDENTITY.toString()))
+        simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(generator: GrailsSequenceGeneratorEnum.IDENTITY.toString()))
 
         then:
         1 * simpleValueBinder.bindSimpleValue(testProperty as GrailsHibernatePersistentProperty, null, _, "")
@@ -77,16 +79,18 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         }
         def testProperty = Mock(GrailsHibernatePersistentProperty) {
             getName() >> "id"
-            getOwner() >> Mock(GrailsHibernatePersistentEntity) {
-                getMappedForm() >> mapping
-            }
+        }
+        def domainClass = Mock(GrailsHibernatePersistentEntity) {
+            getMappedForm() >> mapping
+            getIdentity() >> testProperty
+            getName() >> "TestEntity"
         }
         def rootClass = new RootClass(metadataBuildingContext)
         currentTable = new Table("TEST_TABLE")
         rootClass.setTable(currentTable)
 
         when:
-        simpleIdBinder.bindSimpleId(testProperty, rootClass, new Identity(generator: GrailsSequenceGeneratorEnum.SEQUENCE.toString(), params: [sequence: 'SEQ_TEST']))
+        simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(generator: GrailsSequenceGeneratorEnum.SEQUENCE.toString(), params: [sequence: 'SEQ_TEST']))
 
         then:
         1 * simpleValueBinder.bindSimpleValue(testProperty as GrailsHibernatePersistentProperty, null, _, "")
@@ -96,5 +100,21 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.declaredIdentifierProperty != null
         rootClass.identifierProperty != null
         rootClass.table.primaryKey instanceof PrimaryKey
+    }
+
+    def "bindSimpleId with non-existent identifier property"() {
+        given:
+        def domainClass = Mock(GrailsHibernatePersistentEntity) {
+            getName() >> "TestEntity"
+            getPropertyByName("nonExistent") >> null
+            getIdentity() >> Mock(GrailsHibernatePersistentProperty)
+        }
+        def rootClass = new RootClass(metadataBuildingContext)
+
+        when:
+        simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(name: "nonExistent"))
+
+        then:
+        thrown(org.hibernate.MappingException)
     }
 }
