@@ -17,7 +17,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.EnumTypeBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.ManyToOneBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.OrderByClauseBuilder;
-import org.grails.orm.hibernate.cfg.domainbinding.RootMappingFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnFetcher;
@@ -92,11 +91,11 @@ public class CollectionSecondPassBinder {
         // Configure one-to-many
         if (collection.isOneToMany()) {
 
-            Mapping m = new RootMappingFetcher().getRootMapping(referenced);
+            Mapping m = referenced != null ? referenced.getRootMapping() : null;
             boolean tablePerSubclass = m != null && !m.getTablePerHierarchy();
 
             if (referenced != null && !referenced.isRoot() && !tablePerSubclass) {
-                Mapping rootMapping = new RootMappingFetcher().getRootMapping(referenced);
+                Mapping rootMapping = referenced.getRootMapping();
                 //TODO FIXME
                 String discriminatorColumnName = JPA_DEFAULT_DISCRIMINATOR_TYPE;
 
@@ -492,7 +491,7 @@ public class CollectionSecondPassBinder {
                 discriminator = discriminatorConfig.getValue();
             }
         }
-        Mapping rootMapping = new RootMappingFetcher().getRootMapping(domainClass);
+        Mapping rootMapping = domainClass != null ? domainClass.getRootMapping() : null;
         String quote = "'";
         if (rootMapping != null && rootMapping.getDatasources() != null) {
             DiscriminatorConfig discriminatorConfig = rootMapping.getDiscriminator();

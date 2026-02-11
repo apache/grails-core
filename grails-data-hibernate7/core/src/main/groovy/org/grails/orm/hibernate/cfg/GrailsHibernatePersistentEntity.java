@@ -26,6 +26,27 @@ import org.grails.orm.hibernate.cfg.domainbinding.NamespaceNameExtractor;
 public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     Mapping getMappedForm();
 
+    default GrailsHibernatePersistentEntity getHibernateRootEntity() {
+        PersistentEntity root = getRootEntity();
+        if (root instanceof GrailsHibernatePersistentEntity) {
+            return (GrailsHibernatePersistentEntity) root;
+        }
+        return null;
+    }
+
+    default Mapping getRootMapping() {
+        GrailsHibernatePersistentEntity root = getHibernateRootEntity();
+        if (root != null) {
+            return root.getMappedForm();
+        }
+        return null;
+    }
+
+    default boolean isTablePerHierarchySubclass() {
+        Mapping ownerMapping = getMappedForm();
+        return !this.isRoot() && (ownerMapping == null || ownerMapping.getTablePerHierarchy());
+    }
+
     @Override
     GrailsHibernatePersistentProperty getIdentity();
 

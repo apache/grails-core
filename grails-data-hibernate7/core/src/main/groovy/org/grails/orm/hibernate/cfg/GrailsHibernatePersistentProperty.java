@@ -109,11 +109,6 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
         return "serializable".equals(getTypeName());
     }
 
-    default boolean isTablePerHierarchySubclass() {
-        Mapping ownerMapping = getHibernateOwner().getMappedForm();
-        return !getHibernateOwner().isRoot() && (ownerMapping == null || ownerMapping.getTablePerHierarchy());
-    }
-
 
 
     default String getIndexColumnType(String defaultType) {

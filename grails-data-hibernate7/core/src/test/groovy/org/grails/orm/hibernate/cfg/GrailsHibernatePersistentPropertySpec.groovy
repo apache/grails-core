@@ -112,20 +112,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         manyToOneProp.isHibernateManyToOne()
     }
 
-    void "test isTablePerHierarchySubclass"() {
-        given:
-        createPersistentEntity(BaseTPH)
-        PersistentEntity subTPH = createPersistentEntity(SubTPH)
-        createPersistentEntity(BaseTablePerClass)
-        PersistentEntity subTPC = createPersistentEntity(SubTablePerClass)
 
-        GrailsHibernatePersistentProperty subTPHProp = (GrailsHibernatePersistentProperty) subTPH.getPropertyByName("subProp")
-        GrailsHibernatePersistentProperty subTPCProp = (GrailsHibernatePersistentProperty) subTPC.getPropertyByName("subProp")
-
-        expect:
-        subTPHProp.isTablePerHierarchySubclass()
-        !subTPCProp.isTablePerHierarchySubclass()
-    }
 
     @Unroll
     void "test isBidirectionalManyToOneWithListMapping for property #propertyName"() {

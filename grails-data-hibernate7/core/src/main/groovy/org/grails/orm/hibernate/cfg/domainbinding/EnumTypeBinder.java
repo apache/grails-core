@@ -66,7 +66,7 @@ public class EnumTypeBinder {
         simpleValue.setTypeParameters(enumProperties);
 
         Column column = new Column();
-        boolean isTablePerHierarchySubclass = property.isTablePerHierarchySubclass();
+        boolean isTablePerHierarchySubclass = property.getHibernateOwner().isTablePerHierarchySubclass();
         if (isTablePerHierarchySubclass) {
             // Properties on subclasses in a table-per-hierarchy strategy must be nullable.
             if (LOG.isDebugEnabled()) {
