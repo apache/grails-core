@@ -4,7 +4,6 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
 
-import java.util.Objects;
 import java.util.Optional;
 
 import org.hibernate.MappingException;
@@ -134,6 +133,26 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
                 .map(JoinTable::getColumn)
                 .map(ColumnConfig::getName)
                 .orElseGet(() -> namingStrategy.resolveColumnName(getName()) + GrailsDomainBinder.UNDERSCORE + IndexedCollection.DEFAULT_ELEMENT_COLUMN_NAME);
+    }
+
+    default boolean isJoinKeyMapped() {
+        return getMappedForm() != null  && getMappedForm().hasJoinKeyMapping() && supportsJoinColumnMapping();
+    }
+
+    default String getMappedColumnName() {
+        if( getMappedForm() != null) {
+            return getMappedForm().getColumn();
+        }
+        return null;
+    }
+
+    default String getColumnName(ColumnConfig cc) {
+        return Optional.of(this)
+                .filter(GrailsHibernatePersistentProperty::isJoinKeyMapped)
+                .map(p -> p.getMappedForm().getJoinTable().getKey().getName())
+                .orElseGet(() -> Optional.ofNullable(cc)
+                        .map(ColumnConfig::getName)
+                        .orElseGet(this::getMappedColumnName));
     }
 
 

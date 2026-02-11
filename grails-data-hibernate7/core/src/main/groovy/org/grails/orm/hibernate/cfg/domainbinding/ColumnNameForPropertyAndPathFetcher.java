@@ -7,6 +7,8 @@ import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
+import java.util.Optional;
+
 public class ColumnNameForPropertyAndPathFetcher {
 
     private final PersistentEntityNamingStrategy namingStrategy;
@@ -33,51 +35,15 @@ public class ColumnNameForPropertyAndPathFetcher {
     private static final String UNDERSCORE = "_";
 
     public String getColumnNameForPropertyAndPath(GrailsHibernatePersistentProperty grailsProp,
-                                                   String path, ColumnConfig cc) {
-        // First try the column config.
-        String columnName = null;
-        if (cc == null) {
-            // No column config given, attempt to obtain the property config directly from the property
-            PropertyConfig c = null;
-            try {
-                c = ((GrailsHibernatePersistentProperty) grailsProp).getMappedForm();
-            } catch (Exception ignore) {
-                // If we cannot resolve a PropertyConfig, treat as absent and fall back later
-            }
-
-            if (grailsProp.supportsJoinColumnMapping() && c != null && c.hasJoinKeyMapping()) {
-                columnName = c.getJoinTable().getKey().getName();
-            }
-            else if (c != null && c.getColumn() != null) {
-                columnName = c.getColumn();
-            }
-        }
-        else {
-            if (grailsProp.supportsJoinColumnMapping()) {
-                PropertyConfig pc = ((GrailsHibernatePersistentProperty) grailsProp).getMappedForm();
-                if (pc.hasJoinKeyMapping()) {
-                    columnName = pc.getJoinTable().getKey().getName();
-                }
-                else {
-                    columnName = cc.getName();
-                }
-            }
-            else {
-                columnName = cc.getName();
-            }
-        }
-
-        if (columnName == null) {
-            if (GrailsHibernateUtil.isNotEmpty(path)) {
-                String s1 = namingStrategy.resolveColumnName(path);
-
-                String s2 = defaultColumnNameFetcher.getDefaultColumnName(grailsProp);
-                columnName = backticksRemover.apply(s1) + UNDERSCORE + backticksRemover.apply(s2);
-            } else {
-
-                columnName = defaultColumnNameFetcher.getDefaultColumnName(grailsProp);
-            }
-        }
-        return columnName;
+                                                   String path,
+                                                  ColumnConfig cc) {
+        return Optional.ofNullable(grailsProp.getColumnName(cc))
+                .orElseGet(() -> {
+                    String suffix = defaultColumnNameFetcher.getDefaultColumnName(grailsProp);
+                    return Optional.ofNullable(path)
+                            .filter(GrailsHibernateUtil::isNotEmpty)
+                            .map(p -> backticksRemover.apply(namingStrategy.resolveColumnName(p)) + UNDERSCORE + backticksRemover.apply(suffix))
+                            .orElse(suffix);
+                });
     }
 }
