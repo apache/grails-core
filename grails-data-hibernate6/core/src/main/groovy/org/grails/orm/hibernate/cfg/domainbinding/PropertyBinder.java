@@ -31,7 +31,6 @@ public class PropertyBinder {
                 , new CascadeBehaviorFetcher()
                 , new BidirectionalManyToOneWithListMapping());
     }
-
     /**
      * Binds a property to Hibernate runtime meta model. Deals with cascade strategy based on the Grails domain model
      *

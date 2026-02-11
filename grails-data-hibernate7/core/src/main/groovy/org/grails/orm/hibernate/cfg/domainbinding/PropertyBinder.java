@@ -17,18 +17,13 @@ import java.util.Optional;
 public class PropertyBinder {
 
     private final CascadeBehaviorFetcher cascadeBehaviorFetcher;
-    private final BidirectionalManyToOneWithListMapping bidirectionalManyToOneWithListMapping;
-
     public PropertyBinder(
-            CascadeBehaviorFetcher cascadeBehaviorFetcher
-            , BidirectionalManyToOneWithListMapping bidirectionalManyToOneWithListMapping) {
+            CascadeBehaviorFetcher cascadeBehaviorFetcher) {
         this.cascadeBehaviorFetcher = cascadeBehaviorFetcher;
-        this.bidirectionalManyToOneWithListMapping = bidirectionalManyToOneWithListMapping;
     }
 
     public PropertyBinder() {
-        this(new CascadeBehaviorFetcher()
-                , new BidirectionalManyToOneWithListMapping());
+        this(new CascadeBehaviorFetcher());
     }
 
     /**
@@ -37,15 +32,15 @@ public class PropertyBinder {
      * @param persistentProperty The grails property instance
      * @param prop           The Hibernate property
      */
-    public void bindProperty(PersistentProperty<?> persistentProperty, Property prop) {
+    public void bindProperty(GrailsHibernatePersistentProperty persistentProperty, Property prop) {
         // set the property name
         prop.setName(persistentProperty.getName());
-        PropertyConfig config = persistentProperty instanceof GrailsHibernatePersistentProperty ghpp ? ghpp.getMappedForm() : null;
+        PropertyConfig config = persistentProperty.getMappedForm();
         if (config == null) {
             config = new PropertyConfig();
         }
 
-        if (bidirectionalManyToOneWithListMapping.isBidirectionalManyToOneWithListMapping(persistentProperty, prop)) {
+        if (persistentProperty.isBidirectionalManyToOneWithListMapping(prop)) {
             prop.setInsertable(false);
             prop.setUpdateable(false);
         } else {

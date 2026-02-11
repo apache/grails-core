@@ -53,7 +53,7 @@ public class VersionBinder {
             }
             Property prop = new Property();
             prop.setValue(val);
-            propertyBinder.bindProperty(version, prop);
+            propertyBinder.bindProperty((GrailsHibernatePersistentProperty) version, prop);
             prop.setLazy(false);
             val.setNullValue("undefined");
             entity.setVersion(prop);

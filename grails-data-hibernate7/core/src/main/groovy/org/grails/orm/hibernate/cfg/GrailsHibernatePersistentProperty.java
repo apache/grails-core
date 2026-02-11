@@ -4,10 +4,13 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.hibernate.MappingException;
 import org.hibernate.mapping.IndexedCollection;
+import org.hibernate.mapping.ManyToOne;
+import org.hibernate.mapping.Property;
 import org.hibernate.usertype.UserCollectionType;
 
 /**
@@ -153,6 +156,19 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
                 .orElseGet(() -> Optional.ofNullable(cc)
                         .map(ColumnConfig::getName)
                         .orElseGet(this::getMappedColumnName));
+    }
+
+    default boolean isBidirectionalManyToOneWithListMapping( Property prop) {
+       if(this instanceof Association<?> association) {
+
+            return association.isBidirectional()
+                    && association.getInverseSide() != null
+                    && List.class.isAssignableFrom(this.getType())
+                    && prop != null
+                    && prop.getValue() instanceof ManyToOne;
+
+        }
+        return false;
     }
 
 

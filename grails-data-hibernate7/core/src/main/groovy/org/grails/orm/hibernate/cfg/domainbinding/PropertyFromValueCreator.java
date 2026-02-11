@@ -4,6 +4,7 @@ import org.hibernate.mapping.Property;
 import org.hibernate.mapping.Value;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 
 public class PropertyFromValueCreator {
 
@@ -17,7 +18,7 @@ public class PropertyFromValueCreator {
         this.propertyBinder = propertyBinder;
     }
 
-    public Property createProperty(Value value, PersistentProperty grailsProperty) {
+    public Property createProperty(Value value, GrailsHibernatePersistentProperty grailsProperty) {
         // set type
         value.setTypeUsingReflection(grailsProperty.getOwnerClassName(), grailsProperty.getName());
 

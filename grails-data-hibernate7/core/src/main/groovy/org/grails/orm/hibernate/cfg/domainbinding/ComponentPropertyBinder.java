@@ -90,7 +90,7 @@ public class ComponentPropertyBinder {
 
     public void bindComponentProperty(Component component,
                                       PersistentProperty componentProperty,
-                                       PersistentProperty currentGrailsProp,
+                                       GrailsHibernatePersistentProperty currentGrailsProp,
                                       PersistentClass persistentClass,
                                        String path,
                                       Table table,
@@ -145,7 +145,7 @@ public class ComponentPropertyBinder {
             }
         }
 
-        Property persistentProperty = propertyFromValueCreator.createProperty(value, currentGrailsProp);
+        Property persistentProperty = propertyFromValueCreator.createProperty(value, (GrailsHibernatePersistentProperty) currentGrailsProp);
         component.addProperty(persistentProperty);
         if (componentProperty != null && componentProperty.getOwner() instanceof GrailsHibernatePersistentEntity ghpe && ghpe.isComponentPropertyNullable(componentProperty)) {
             final Iterator<?> columnIterator = value.getColumns().iterator();

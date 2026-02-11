@@ -6,6 +6,8 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.NamingStrategyWrapper
 import spock.lang.Unroll
+import org.hibernate.mapping.Property
+import org.hibernate.mapping.ManyToOne
 
 class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
 
@@ -124,6 +126,32 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         subTPHProp.isTablePerHierarchySubclass()
         !subTPCProp.isTablePerHierarchySubclass()
     }
+
+    @Unroll
+    void "test isBidirectionalManyToOneWithListMapping for property #propertyName"() {
+        given:
+        createPersistentEntity(BMTOWLMBook)
+        createPersistentEntity(BMTOWLMAuthor)
+        PersistentEntity entity = createPersistentEntity(BMTOWLMAuthor)
+        GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName(propertyName)
+
+        // Add this for the 'prop' parameter
+        Property mockProperty = Mock(Property)
+        ManyToOne mockManyToOne = GroovyMock(ManyToOne)
+        mockProperty.getValue() >> mockManyToOne
+
+        when:
+        boolean isBidirectional = property.isBidirectionalManyToOneWithListMapping(mockProperty)
+
+        then:
+        isBidirectional == expectedIsBidirectional
+
+        where:
+        propertyName | expectedIsBidirectional
+        "books"      | true
+        "name"       | false
+    }
+
 
     void "test getIndexColumnName and getMapElementName"() {
         given:
@@ -288,4 +316,22 @@ class BaseTablePerClass {
 @Entity
 class SubTablePerClass extends BaseTablePerClass {
     String subProp
+}
+
+@Entity
+class BMTOWLMBook {
+    Long id
+    String title
+    BMTOWLMAuthor author
+
+    static belongsTo = [author: BMTOWLMAuthor]
+}
+
+@Entity
+class BMTOWLMAuthor {
+    Long id
+    String name
+    List<BMTOWLMBook> books
+
+    static hasMany = [books: BMTOWLMBook]
 }

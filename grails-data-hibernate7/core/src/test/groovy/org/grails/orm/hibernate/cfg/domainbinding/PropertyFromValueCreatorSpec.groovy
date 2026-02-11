@@ -6,6 +6,8 @@ import org.hibernate.mapping.Value
 import org.grails.datastore.mapping.model.PersistentProperty
 import spock.lang.Specification
 
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
+
 class PropertyFromValueCreatorSpec extends Specification {
 
     def "should create a property from a value"() {
@@ -14,7 +16,7 @@ class PropertyFromValueCreatorSpec extends Specification {
         def creator = new PropertyFromValueCreator(propertyBinder)
         
         def value = Mock(Value)
-        def grailsProperty = Mock(PersistentProperty)
+        def grailsProperty = Mock(GrailsHibernatePersistentProperty)
         def table = new Table("my_table")
 
         grailsProperty.getOwnerClassName() >> "com.example.MyEntity"
@@ -37,7 +39,7 @@ class PropertyFromValueCreatorSpec extends Specification {
         def creator = new PropertyFromValueCreator(propertyBinder)
         
         def value = Mock(Value)
-        def grailsProperty = Mock(PersistentProperty)
+        def grailsProperty = Mock(GrailsHibernatePersistentProperty)
 
         grailsProperty.getOwnerClassName() >> "com.example.MyEntity"
         grailsProperty.getName() >> "myProp"

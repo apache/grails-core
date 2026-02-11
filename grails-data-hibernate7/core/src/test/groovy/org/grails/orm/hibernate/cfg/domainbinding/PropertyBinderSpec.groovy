@@ -25,8 +25,7 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
     void "test property binding"() {
         given:
         def cascadeBehaviorFetcher = Mock(CascadeBehaviorFetcher)
-        def bidirectionalManyToOneWithListMapping = Mock(BidirectionalManyToOneWithListMapping)
-        def binder = new PropertyBinder(cascadeBehaviorFetcher, bidirectionalManyToOneWithListMapping)
+        def binder = new PropertyBinder(cascadeBehaviorFetcher)
 
         def persistentProperty = Mock(GrailsHibernatePersistentProperty)
         def property = new Property()
@@ -36,7 +35,7 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         persistentProperty.getMappedForm() >> config
-        bidirectionalManyToOneWithListMapping.isBidirectionalManyToOneWithListMapping(persistentProperty, property) >> isBidirectional
+        persistentProperty.isBidirectionalManyToOneWithListMapping(_) >> (propertyName == "foos")
         config.getInsertable() >> insertable
         config.getUpdatable() >> updateable
         config.getAccessType() >> AccessType.values().find { it.name() == accessType }
@@ -59,19 +58,18 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         property.isLazy() == expectedLazy
 
         where:
-        propertyName | nullable | isBidirectional | insertable | updateable | accessType      | lazy | lazyAble | expectedInsertable | expectedUpdateable | expectedAccessor | expectedLazy
-        "name"       | true     | false           | true       | true       | "PROPERTY"      | null | false    | true               | true               | "property"       | false
-        "name"       | false    | false           | false      | false      | "FIELD"         | null | false    | false              | false              | "field"          | false
-        "foos"       | true     | true            | true       | true       | "PROPERTY"      | null | false    | false              | false              | "property"       | false
-        "bar"        | true     | false           | true       | true       | "PROPERTY"      | true | true     | true               | true               | "property"       | true
-        "bar"        | true     | false           | true       | true       | "PROPERTY"      | false| true     | true               | true               | "property"       | false
+        propertyName | nullable | insertable | updateable | accessType      | lazy | lazyAble | expectedInsertable | expectedUpdateable | expectedAccessor | expectedLazy
+        "name"       | true     | true       | true       | "PROPERTY"      | null | false    | true               | true               | "property"       | false
+        "name"       | false    | false      | false      | "FIELD"         | null | false    | false              | false              | "field"          | false
+        "foos"       | true     | true       | true       | "PROPERTY"      | null | false    | false              | false              | "property"       | false
+        "bar"        | true     | true       | true       | "PROPERTY"      | true | true     | true               | true               | "property"       | true
+        "bar"        | true     | true       | true       | "PROPERTY"      | false| true     | true               | true               | "property"       | false
     }
 
     void "test cascade behavior binding"() {
         given:
         def cascadeBehaviorFetcher = Mock(CascadeBehaviorFetcher)
-        def bidirectionalManyToOneWithListMapping = Mock(BidirectionalManyToOneWithListMapping)
-        def binder = new PropertyBinder(cascadeBehaviorFetcher, bidirectionalManyToOneWithListMapping)
+        def binder = new PropertyBinder(cascadeBehaviorFetcher)
 
         def association = Mock(TestAssociation)
         def property = new Property()
@@ -81,7 +79,7 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         association.getMappedForm() >> config
         config.getAccessType() >> AccessType.PROPERTY
         cascadeBehaviorFetcher.getCascadeBehaviour(association as Association) >> "all-delete-orphan"
-        binder.bindProperty(association as Association, property)
+        binder.bindProperty(association as GrailsHibernatePersistentProperty, property)
 
         then:
         property.getCascade() == "all-delete-orphan"
@@ -90,8 +88,7 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
     void "test property accessor name with mocked persistent property"() {
         given:
         def cascadeBehaviorFetcher = Mock(CascadeBehaviorFetcher)
-        def bidirectionalManyToOneWithListMapping = Mock(BidirectionalManyToOneWithListMapping)
-        def binder = new PropertyBinder(cascadeBehaviorFetcher, bidirectionalManyToOneWithListMapping)
+        def binder = new PropertyBinder(cascadeBehaviorFetcher)
 
         def persistentProperty = Mock(GrailsHibernatePersistentProperty)
         persistentProperty.getName() >> "name"

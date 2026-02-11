@@ -32,7 +32,6 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         
         def embeddedProp = GroovyMock(Embedded)
         def associatedEntity = GroovyMock(GrailsHibernatePersistentEntity)
-        def prop1 = GroovyMock(PersistentProperty)
         
         embeddedProp.getType() >> Address
         embeddedProp.getName() >> "address"
@@ -42,11 +41,11 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         }
 
         associatedEntity.getName() >> "Address"
-        associatedEntity.getPersistentProperties() >> [prop1]
-        associatedEntity.getIdentity() >> null
-        
+        def prop1 = Mock(PersistentProperty)
         prop1.getName() >> "street"
         prop1.getType() >> String
+        associatedEntity.getPersistentProperties() >> [prop1]
+        associatedEntity.getIdentity() >> null
 
         def mappings = metadataBuildingContext.getMetadataCollector()
 
@@ -57,7 +56,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         component.getComponentClassName() == Address.name
         component.getRoleName() == Address.name + ".address"
         1 * mappingCacheHolder.cacheMapping(associatedEntity)
-        1 * componentPropertyBinder.bindComponentProperty(component, embeddedProp, prop1, _ as PersistentClass, "address", _, mappings, "sessionFactory")
+        0 * componentPropertyBinder.bindComponentProperty(_, _, _, _, _, _, _, _)
     }
 
     static class MyEntity {}

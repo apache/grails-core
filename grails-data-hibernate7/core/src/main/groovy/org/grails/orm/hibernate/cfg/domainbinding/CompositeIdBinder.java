@@ -10,6 +10,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 
 import jakarta.annotation.Nonnull;
@@ -67,7 +68,7 @@ public class CompositeIdBinder {
                         "] is not a valid property!");
             }
 
-            componentPropertyBinder.bindComponentProperty(id, identifierProp, property, root, "", root.getTable(), mappings, sessionFactoryBeanName);
+            componentPropertyBinder.bindComponentProperty(id, identifierProp, (GrailsHibernatePersistentProperty) property, root, "", root.getTable(), mappings, sessionFactoryBeanName);
         }
     }
 }
