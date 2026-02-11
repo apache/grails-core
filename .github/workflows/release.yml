@@ -24,7 +24,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GRAILS_PUBLISH_RELEASE: true
   JAVA_DISTRIBUTION: liberica
-  JAVA_VERSION: 17.0.15 # this must be a specific version for reproducible builds, keep it synced with .sdkmanrc
+  JAVA_VERSION: 17.0.17 # this must be a specific version for reproducible builds, keep it synced with .sdkmanrc
   PROJECT_DESC: > 
     Apache Grails Spring Security adds production-ready
     authentication and authorization to Apache Grails applications.
