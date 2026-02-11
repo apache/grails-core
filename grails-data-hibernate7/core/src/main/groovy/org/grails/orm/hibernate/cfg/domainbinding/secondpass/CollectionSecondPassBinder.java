@@ -23,7 +23,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnFetcher;
 
 import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
-import org.hibernate.boot.model.internal.BinderHelper;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.*;
@@ -91,10 +90,7 @@ public class CollectionSecondPassBinder {
         // Configure one-to-many
         if (collection.isOneToMany()) {
 
-            Mapping m = referenced != null ? referenced.getRootMapping() : null;
-            boolean tablePerSubclass = m != null && !m.getTablePerHierarchy();
-
-            if (referenced != null && !referenced.isRoot() && !tablePerSubclass) {
+            if (referenced != null && referenced.isTablePerHierarchySubclass()) {
                 Mapping rootMapping = referenced.getRootMapping();
                 //TODO FIXME
                 String discriminatorColumnName = JPA_DEFAULT_DISCRIMINATOR_TYPE;
@@ -491,7 +487,7 @@ public class CollectionSecondPassBinder {
                 discriminator = discriminatorConfig.getValue();
             }
         }
-        Mapping rootMapping = domainClass != null ? domainClass.getRootMapping() : null;
+        Mapping rootMapping = domainClass.getHibernateRootEntity().getMappedForm();
         String quote = "'";
         if (rootMapping != null && rootMapping.getDatasources() != null) {
             DiscriminatorConfig discriminatorConfig = rootMapping.getDiscriminator();

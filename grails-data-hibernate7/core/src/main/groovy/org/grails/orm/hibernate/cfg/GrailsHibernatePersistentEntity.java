@@ -3,19 +3,14 @@ package org.grails.orm.hibernate.cfg;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 
 import jakarta.annotation.Nonnull;
 
-import org.hibernate.boot.model.naming.Identifier;
-import org.hibernate.boot.model.relational.Database;
-import org.hibernate.boot.model.relational.Namespace;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesConsumer;
 import org.grails.orm.hibernate.cfg.domainbinding.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.NamespaceNameExtractor;
@@ -26,25 +21,18 @@ import org.grails.orm.hibernate.cfg.domainbinding.NamespaceNameExtractor;
 public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     Mapping getMappedForm();
 
-    default GrailsHibernatePersistentEntity getHibernateRootEntity() {
-        PersistentEntity root = getRootEntity();
-        if (root instanceof GrailsHibernatePersistentEntity) {
-            return (GrailsHibernatePersistentEntity) root;
-        }
-        return null;
+
+    @Nonnull default GrailsHibernatePersistentEntity getHibernateRootEntity() {
+        return  (GrailsHibernatePersistentEntity) getRootEntity();
     }
 
     default Mapping getRootMapping() {
-        GrailsHibernatePersistentEntity root = getHibernateRootEntity();
-        if (root != null) {
-            return root.getMappedForm();
-        }
-        return null;
+        return getHibernateRootEntity().getMappedForm();
     }
 
     default boolean isTablePerHierarchySubclass() {
-        Mapping ownerMapping = getMappedForm();
-        return !this.isRoot() && (ownerMapping == null || ownerMapping.getTablePerHierarchy());
+        Mapping rootMapping = getRootMapping();
+        return !this.isRoot() && (rootMapping == null || rootMapping.getTablePerHierarchy());
     }
 
     @Override
