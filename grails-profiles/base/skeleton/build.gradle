@@ -27,7 +27,20 @@ tasks.withType(Test).configureEach {
     useJUnitPlatform()
 }
 
-// https://github.com/apache/grails-core/issues/15321
 tasks.withType(GroovyCompile).configureEach {
+    // encoding needs to be the same since it's different across platforms
+    groovyOptions.encoding = 'UTF_8'
+    // Preserve method parameter names in Groovy/Java classes for IDE parameter hints & bean reflection metadata.
+    groovyOptions.parameters = true
+    // encoding needs to be the same since it's different across platforms
+    options.encoding = 'UTF_8'
+    // https://github.com/apache/grails-core/issues/15321
     groovyOptions.optimizationOptions.indy = false
+}
+
+tasks.withType(JavaCompile).configureEach {
+    // Preserve method parameter names in Groovy/Java classes for IDE parameter hints & bean reflection metadata.
+    options.compilerArgs.add('-parameters')
+    // encoding needs to be the same since it's different across platforms
+    options.encoding = 'UTF_8'
 }
