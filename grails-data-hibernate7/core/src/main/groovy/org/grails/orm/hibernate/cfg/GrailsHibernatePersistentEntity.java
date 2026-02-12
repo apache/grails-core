@@ -1,64 +1,66 @@
 package org.grails.orm.hibernate.cfg;
+ 
+ import java.util.Collection;
+ import java.util.List;
+ import java.util.Objects;
+ import java.util.Optional;
+ import java.util.Set;
+ import java.util.stream.Collectors;
+ import java.util.stream.Stream;
+ 
+ import jakarta.annotation.Nonnull;
+ 
+ import org.hibernate.boot.spi.InFlightMetadataCollector;
+ 
+ import org.grails.datastore.mapping.model.PersistentEntity;
+ import org.grails.datastore.mapping.model.PersistentProperty;
+ import org.grails.datastore.mapping.model.config.GormProperties;
+ import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesConsumer;
+ import org.grails.orm.hibernate.cfg.domainbinding.DefaultColumnNameFetcher;
+ import org.grails.orm.hibernate.cfg.domainbinding.NamespaceNameExtractor;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-
-import jakarta.annotation.Nonnull;
-
-import org.hibernate.boot.spi.InFlightMetadataCollector;
-
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesConsumer;
-import org.grails.orm.hibernate.cfg.domainbinding.DefaultColumnNameFetcher;
-import org.grails.orm.hibernate.cfg.domainbinding.NamespaceNameExtractor;
+ import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.JPA_DEFAULT_DISCRIMINATOR_TYPE;
 
 /**
- * Common interface for Hibernate persistent entities
- */
-public interface GrailsHibernatePersistentEntity extends PersistentEntity {
-    Mapping getMappedForm();
-
-
-    @Nonnull default GrailsHibernatePersistentEntity getHibernateRootEntity() {
-        return  (GrailsHibernatePersistentEntity) getRootEntity();
-    }
-
-    default Mapping getRootMapping() {
-        return getHibernateRootEntity().getMappedForm();
-    }
-
-    default boolean isTablePerHierarchySubclass() {
-        Mapping rootMapping = getRootMapping();
-        return !this.isRoot() && (rootMapping == null || rootMapping.getTablePerHierarchy());
-    }
-
-    default java.util.Set<String> buildDiscriminatorSet() {
-        java.util.Set<String> theSet = new java.util.HashSet<>();
-
-        String discriminator = getDiscriminatorValue();
-        Mapping rootMapping = getRootMapping();
-        String quote = "'";
-        if (rootMapping != null && rootMapping.getDatasources() != null) {
-            DiscriminatorConfig discriminatorConfig = rootMapping.getDiscriminator();
-            if(discriminatorConfig != null && discriminatorConfig.getType() != null && !discriminatorConfig.getType().equals("string"))
-                quote = "";
-        }
-        theSet.add(quote + discriminator + quote);
-
-        final java.util.Collection<PersistentEntity> childEntities = getMappingContext().getDirectChildEntities(this);
-        for (PersistentEntity subClass : childEntities) {
-            if (subClass instanceof GrailsHibernatePersistentEntity) {
-                theSet.addAll(((GrailsHibernatePersistentEntity) subClass).buildDiscriminatorSet());
-            }
-        }
-        return theSet;
-    }
-
-    @Override
-    GrailsHibernatePersistentProperty getIdentity();
+  * Common interface for Hibernate persistent entities
+  */
+ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
+     Mapping getMappedForm();
+ 
+ 
+     @Nonnull default GrailsHibernatePersistentEntity getHibernateRootEntity() {
+         return  (GrailsHibernatePersistentEntity) getRootEntity();
+     }
+ 
+     default Mapping getRootMapping() {
+         return getHibernateRootEntity().getMappedForm();
+     }
+ 
+     default boolean isTablePerHierarchySubclass() {
+         Mapping rootMapping = getRootMapping();
+         return !this.isRoot() && (rootMapping == null || rootMapping.getTablePerHierarchy());
+     }
+ 
+     default Set<String> buildDiscriminatorSet() {
+         String quote = Optional.ofNullable(getRootMapping())
+                 .filter(m -> m.getDatasources() != null)
+                 .map(Mapping::getDiscriminator)
+                 .filter(config -> config.getType() != null && !config.getType().equals("string"))
+                 .map(config -> "")
+                 .orElse("'");
+ 
+         String quotedDiscriminator = quote + getDiscriminatorValue() + quote;
+ 
+         return Stream.concat(
+                 Stream.of(quotedDiscriminator),
+                 getChildEntities().stream()
+                         .map(GrailsHibernatePersistentEntity::buildDiscriminatorSet)
+                         .flatMap(Collection::stream)
+         ).collect(Collectors.toSet());
+     }
+ 
+     @Override
+     GrailsHibernatePersistentProperty getIdentity();
 
     @Override
     GrailsHibernatePersistentProperty[] getCompositeIdentity();
@@ -103,6 +105,10 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     @Override
     GrailsHibernatePersistentProperty getVersion();
 
+    default List<GrailsHibernatePersistentEntity> getChildEntities() {
+        return getChildEntities(getDataSourceName());
+    }
+
     default List<GrailsHibernatePersistentEntity> getChildEntities(String dataSourceName) {
         return getMappingContext()
                 .getDirectChildEntities(this)
@@ -146,5 +152,16 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
 
     }
 
+     default String getDiscriminatorColumnName() {
+        return Optional.ofNullable(getRootMapping())
+                .map(Mapping::getDiscriminator)
+                .map(GrailsHibernatePersistentEntity::resolveDiscriminatorValue)
+                .orElse(JPA_DEFAULT_DISCRIMINATOR_TYPE);
+
+     }
+
+    private static String resolveDiscriminatorValue(DiscriminatorConfig discriminatorConfig) {
+        return discriminatorConfig.getColumn() != null ? discriminatorConfig.getColumn().getName() : discriminatorConfig.getFormula();
+    }
 }
 

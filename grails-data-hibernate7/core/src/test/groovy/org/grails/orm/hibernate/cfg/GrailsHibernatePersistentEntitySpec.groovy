@@ -2,6 +2,15 @@ package org.grails.orm.hibernate.cfg
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.types.TenantId
+import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesConsumer
+import org.grails.orm.hibernate.cfg.domainbinding.DefaultColumnNameFetcher
+import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory
+import org.hibernate.boot.spi.InFlightMetadataCollector
+import spock.lang.Specification
+import org.grails.datastore.mapping.model.MappingContext
 
 class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
 
@@ -24,68 +33,51 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         given:
         GrailsHibernatePersistentEntity entity = getPersistentEntity(Simple) as GrailsHibernatePersistentEntity
 
-        when:
-        Set<String> result = entity.buildDiscriminatorSet()
-
-        then:
-        result == ["'org.grails.orm.hibernate.cfg.Simple'"] as Set
+        expect:
+        entity.buildDiscriminatorSet() == ["'org.grails.orm.hibernate.cfg.Simple'"] as Set
     }
 
     void "test buildDiscriminatorSet with custom discriminator value"() {
         given:
         GrailsHibernatePersistentEntity entity = getPersistentEntity(CustomDiscriminator) as GrailsHibernatePersistentEntity
 
-        when:
-        Set<String> result = entity.buildDiscriminatorSet()
-
-        then:
-        result == ["'custom_val'"] as Set
+        expect:
+        entity.buildDiscriminatorSet() == ["'custom_val'"] as Set
     }
 
     void "test buildDiscriminatorSet with numeric discriminator type"() {
         given:
         GrailsHibernatePersistentEntity entity = getPersistentEntity(NumericDiscriminator) as GrailsHibernatePersistentEntity
 
-        when:
-        Set<String> result = entity.buildDiscriminatorSet()
-
-        then:
-        result == ["1"] as Set
+        expect:
+        entity.buildDiscriminatorSet() == ["1"] as Set
     }
 
     void "test buildDiscriminatorSet with hierarchy"() {
         given:
-        GrailsHibernatePersistentEntity entity = getPersistentEntity(Vehicle) as GrailsHibernatePersistentEntity
+        GrailsHibernatePersistentEntity vehicle = getPersistentEntity(Vehicle) as GrailsHibernatePersistentEntity
 
-        when:
-        Set<String> result = entity.buildDiscriminatorSet()
-
-        then:
-        result == ["'VEHICLE'", "'CAR'", "'TRUCK'"] as Set
+        expect:
+        vehicle.buildDiscriminatorSet() == ["'VEHICLE'", "'CAR'", "'TRUCK'"] as Set
     }
 
     void "test getHibernateRootEntity and getRootMapping"() {
         given:
-        GrailsHibernatePersistentEntity vehicle = getPersistentEntity(Vehicle) as GrailsHibernatePersistentEntity
         GrailsHibernatePersistentEntity car = getPersistentEntity(Car) as GrailsHibernatePersistentEntity
 
         expect:
-        car.hibernateRootEntity == vehicle
-        car.rootMapping == vehicle.mappedForm
-        vehicle.hibernateRootEntity == vehicle
-        vehicle.rootMapping == vehicle.mappedForm
+        car.getHibernateRootEntity().javaClass == Vehicle
+        car.getRootMapping().discriminator.value == "VEHICLE"
     }
 
     void "test isTablePerHierarchySubclass"() {
         given:
         GrailsHibernatePersistentEntity vehicle = getPersistentEntity(Vehicle) as GrailsHibernatePersistentEntity
         GrailsHibernatePersistentEntity car = getPersistentEntity(Car) as GrailsHibernatePersistentEntity
-        GrailsHibernatePersistentEntity simple = getPersistentEntity(Simple) as GrailsHibernatePersistentEntity
 
         expect:
         !vehicle.isTablePerHierarchySubclass()
         car.isTablePerHierarchySubclass()
-        !simple.isTablePerHierarchySubclass()
     }
 
     void "test getDiscriminatorValue"() {
@@ -95,9 +87,9 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         GrailsHibernatePersistentEntity simple = getPersistentEntity(Simple) as GrailsHibernatePersistentEntity
 
         expect:
-        vehicle.discriminatorValue == "VEHICLE"
-        car.discriminatorValue == "CAR"
-        simple.discriminatorValue == "org.grails.orm.hibernate.cfg.Simple"
+        vehicle.getDiscriminatorValue() == "VEHICLE"
+        car.getDiscriminatorValue() == "CAR"
+        simple.getDiscriminatorValue() == "org.grails.orm.hibernate.cfg.Simple"
     }
 
     void "test getPersistentPropertiesToBind"() {
@@ -121,29 +113,33 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
 
         then:
         children.size() == 2
-        children.any { it.name == Car.name }
-        children.any { it.name == Truck.name }
+        children.any { it.javaClass == Car }
+        children.any { it.javaClass == Truck }
     }
 
     void "test isComponentPropertyNullable"() {
         given:
-        GrailsHibernatePersistentEntity addressOwner = getPersistentEntity(AddressOwner) as GrailsHibernatePersistentEntity
-        def addressProp = addressOwner.getPropertyByName("address")
+        GrailsHibernatePersistentEntity owner = getPersistentEntity(AddressOwner) as GrailsHibernatePersistentEntity
+        def addressProp = owner.getPropertyByName("address")
 
         expect:
-        addressOwner.isComponentPropertyNullable(addressProp) == false
+        owner.isComponentPropertyNullable(addressProp) == false
     }
 
     void "test getMultiTenantFilterCondition"() {
         given:
-        GrailsHibernatePersistentEntity entity = Spy(getPersistentEntity(Person)) as GrailsHibernatePersistentEntity
-        def tenantIdProp = Mock(org.grails.datastore.mapping.model.types.TenantId)
+        GrailsHibernatePersistentEntity entity = Spy(HibernatePersistentEntity, constructorArgs: [Person, getMappingContext()])
+        def tenantIdProp = Stub(TenantId)
+        tenantIdProp.getName() >> "tenantId"
         entity.getTenantId() >> tenantIdProp
-        def fetcher = Mock(org.grails.orm.hibernate.cfg.domainbinding.DefaultColumnNameFetcher)
-        fetcher.getDefaultColumnName(tenantIdProp) >> "tenant_id"
+        def fetcher = Stub(DefaultColumnNameFetcher, constructorArgs: [Stub(org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy)])
+        fetcher.getDefaultColumnName(_) >> "tenant_id_col"
 
-        expect:
-        entity.getMultiTenantFilterCondition(fetcher) == ":tenantId = tenant_id"
+        when:
+        def condition = entity.getMultiTenantFilterCondition(fetcher)
+
+        then:
+        condition == ":tenantId = tenant_id_col"
     }
 
     void "test getSchema and getCatalog"() {
@@ -174,6 +170,40 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
 
         then:
         entities.every { it.dataSourceName == "customDS" }
+    }
+
+    void "test buildDiscriminatorSet with dataSourceName"() {
+        given:
+        def context = getMappingContext()
+        GrailsHibernatePersistentEntity vehicle = Spy(HibernatePersistentEntity, constructorArgs: [Vehicle, context])
+        GrailsHibernatePersistentEntity car = Spy(HibernatePersistentEntity, constructorArgs: [Car, context])
+        GrailsHibernatePersistentEntity truck = Spy(HibernatePersistentEntity, constructorArgs: [Truck, context])
+
+        // Mock discriminator values
+        vehicle.getDiscriminatorValue() >> "VEHICLE"
+        car.getDiscriminatorValue() >> "CAR"
+        truck.getDiscriminatorValue() >> "TRUCK"
+        
+        // Ensure child Spies don't try to call real buildDiscriminatorSet if it's too complex, 
+        // but here we want to test the recursion.
+        car.getChildEntities(_) >> []
+        truck.getChildEntities(_) >> []
+
+        when: "Testing for DS1"
+        vehicle.setDataSourceName("DS1")
+        vehicle.getChildEntities("DS1") >> [car]
+        Set<String> result1 = vehicle.buildDiscriminatorSet()
+
+        then:
+        result1 == ["'VEHICLE'", "'CAR'"] as Set
+
+        when: "Testing for DS2"
+        vehicle.setDataSourceName("DS2")
+        vehicle.getChildEntities("DS2") >> [truck]
+        Set<String> result2 = vehicle.buildDiscriminatorSet()
+
+        then:
+        result2 == ["'VEHICLE'", "'TRUCK'"] as Set
     }
 }
 

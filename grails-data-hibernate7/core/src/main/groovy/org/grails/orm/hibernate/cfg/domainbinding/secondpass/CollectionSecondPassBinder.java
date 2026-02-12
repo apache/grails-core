@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
+import java.util.Set;
 
 import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.*;
 
@@ -91,24 +92,9 @@ public class CollectionSecondPassBinder {
         if (collection.isOneToMany()) {
 
             if (referenced != null && referenced.isTablePerHierarchySubclass()) {
-                Mapping rootMapping = referenced.getRootMapping();
-                //TODO FIXME
-                String discriminatorColumnName = JPA_DEFAULT_DISCRIMINATOR_TYPE;
-
-                if (rootMapping != null) {
-                    DiscriminatorConfig discriminatorConfig = rootMapping.getDiscriminator();
-                    if(discriminatorConfig != null) {
-                        final ColumnConfig discriminatorColumn = discriminatorConfig.getColumn();
-                        if (discriminatorColumn != null) {
-                            discriminatorColumnName = discriminatorColumn.getName();
-                        }
-                        if (discriminatorConfig.getFormula() != null) {
-                            discriminatorColumnName = discriminatorConfig.getFormula();
-                        }
-                    }
-                }
+                String discriminatorColumnName = referenced.getDiscriminatorColumnName();
                 //NOTE: this will build the set for the in clause if it has sublcasses
-                java.util.Set<String> discSet = referenced.buildDiscriminatorSet();
+                Set<String> discSet = referenced.buildDiscriminatorSet();
                 String inclause = String.join(",", discSet);
 
                 collection.setWhere(discriminatorColumnName + " in (" + inclause + ")");
@@ -149,7 +135,7 @@ public class CollectionSecondPassBinder {
         }
 
         // setup the primary key references
-        DependantValue key = createPrimaryKeyValue(mappings, (GrailsHibernatePersistentProperty) property, collection, persistentClasses);
+        DependantValue key = createPrimaryKeyValue(mappings, property, collection, persistentClasses);
 
         // link a bidirectional relationship
         if (property.isBidirectional()) {
@@ -162,7 +148,7 @@ public class CollectionSecondPassBinder {
 
             } else if ((otherSide instanceof ManyToMany) || java.util.Map.class.isAssignableFrom(property.getType())) {
 
-                bindDependentKeyValue((GrailsHibernatePersistentProperty) property, key, mappings, sessionFactoryBeanName);
+                bindDependentKeyValue(property, key, mappings, sessionFactoryBeanName);
 
             }
 
@@ -176,7 +162,7 @@ public class CollectionSecondPassBinder {
 
             } else {
 
-                bindDependentKeyValue((GrailsHibernatePersistentProperty) property, key, mappings, sessionFactoryBeanName);
+                bindDependentKeyValue(property, key, mappings, sessionFactoryBeanName);
 
             }
 
@@ -184,11 +170,9 @@ public class CollectionSecondPassBinder {
         collection.setKey(key);
 
         // get cache config
-        if (propConfig != null) {
-            CacheConfig cacheConfig = propConfig.getCache();
-            if (cacheConfig != null) {
-                collection.setCacheConcurrencyStrategy(cacheConfig.getUsage());
-            }
+        CacheConfig cacheConfig = propConfig.getCache();
+        if (cacheConfig != null) {
+            collection.setCacheConcurrencyStrategy(cacheConfig.getUsage());
         }
 
         // if we have a many-to-many
@@ -282,7 +266,7 @@ public class CollectionSecondPassBinder {
             }
 
             if (isEnum) {
-                new EnumTypeBinder().bindEnumType((GrailsHibernatePersistentProperty) property, referencedType, element, columnName);
+                new EnumTypeBinder().bindEnumType(property, referencedType, element, columnName);
             }
             else {
 
