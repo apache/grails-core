@@ -93,7 +93,6 @@ public class GrailsDomainBinder
     private static final String STRING_TYPE = "string";
     public static final String EMPTY_PATH = "";
     public static final char UNDERSCORE = '_';
-    public static final String BACKTICK = "`";
 
     public static final String ENUM_TYPE_CLASS = org.grails.orm.hibernate.HibernateLegacyEnumType.class.getName();
     public static final String ENUM_CLASS_PROP = "enumClass";

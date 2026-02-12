@@ -21,23 +21,19 @@ public class TableForManyCalculator {
     private final PersistentEntityNamingStrategy namingStrategy;
     private final TableNameFetcher tableNameFetcher;
     private final BackticksRemover backticksRemover;
-    private final BackTigsTrimmer backTigsTrimmer;
 
     public TableForManyCalculator(PersistentEntityNamingStrategy namingStrategy) {
         this.namingStrategy = namingStrategy;
         tableNameFetcher = new TableNameFetcher(namingStrategy);
         backticksRemover = new BackticksRemover();
-        backTigsTrimmer = new BackTigsTrimmer();
     }
 
     protected TableForManyCalculator(PersistentEntityNamingStrategy namingStrategy
              , TableNameFetcher tableNameFetcher
-            , BackticksRemover backticksRemover
-    , BackTigsTrimmer backTigsTrimmer) {
+            , BackticksRemover backticksRemover) {
         this.namingStrategy = namingStrategy;
         this.tableNameFetcher = tableNameFetcher;
         this.backticksRemover = backticksRemover;
-        this.backTigsTrimmer = backTigsTrimmer;
     }
 
 
@@ -93,8 +89,6 @@ public class TableForManyCalculator {
             if (hasJoinTableMapping) {
                 return jt.getName();
             }
-            left = backTigsTrimmer.trimBackTigs(left);
-            right = backTigsTrimmer.trimBackTigs(right);
             return backticksRemover.apply(left) + UNDERSCORE + backticksRemover.apply(right);
         }
 

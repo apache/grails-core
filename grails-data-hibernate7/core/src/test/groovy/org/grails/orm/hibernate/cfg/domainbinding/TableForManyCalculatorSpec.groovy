@@ -8,7 +8,6 @@ import org.grails.orm.hibernate.cfg.JoinTable
 
 import spock.lang.Unroll
 
-import org.grails.orm.hibernate.cfg.domainbinding.util.BackTigsTrimmer
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableNameFetcher
@@ -21,9 +20,8 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
         def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
         def tableNameFetcher = new TableNameFetcher(namingStrategy)
         def backticksRemover = new BackticksRemover()
-        def trimmer = new BackTigsTrimmer()
 
-        def calculator = new TableForManyCalculator(namingStrategy, tableNameFetcher, backticksRemover, trimmer)
+        def calculator = new TableForManyCalculator(namingStrategy, tableNameFetcher, backticksRemover)
 
         GrailsHibernatePersistentEntity ownerEntityInstance
         GrailsHibernatePersistentEntity associatedEntityInstance

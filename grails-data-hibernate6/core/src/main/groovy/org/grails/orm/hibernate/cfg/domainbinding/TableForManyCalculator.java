@@ -20,7 +20,6 @@ public class TableForManyCalculator {
     private final TableNameFetcher tableNameFetcher;
     private final BackticksRemover backticksRemover;
     private final ShouldCollectionBindWithJoinColumn shouldCollectionBindWithJoinColumn;
-    private final BackTigsTrimmer backTigsTrimmer;
     private final PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig;
 
     public TableForManyCalculator(PersistentEntityNamingStrategy namingStrategy) {
@@ -28,7 +27,6 @@ public class TableForManyCalculator {
         tableNameFetcher = new TableNameFetcher(namingStrategy);
         backticksRemover = new BackticksRemover();
         shouldCollectionBindWithJoinColumn = new ShouldCollectionBindWithJoinColumn();
-        backTigsTrimmer = new BackTigsTrimmer();
         persistentPropertyToPropertyConfig = new PersistentPropertyToPropertyConfig();
     }
 
@@ -36,13 +34,11 @@ public class TableForManyCalculator {
              , TableNameFetcher tableNameFetcher
             , BackticksRemover backticksRemover
     , ShouldCollectionBindWithJoinColumn shouldCollectionBindWithJoinColumn
-    , BackTigsTrimmer backTigsTrimmer
     , PersistentPropertyToPropertyConfig persistentPropertyToPropertyConfig) {
         this.namingStrategy = namingStrategy;
         this.tableNameFetcher = tableNameFetcher;
         this.backticksRemover = backticksRemover;
         this.shouldCollectionBindWithJoinColumn = shouldCollectionBindWithJoinColumn;
-        this.backTigsTrimmer = backTigsTrimmer;
         this.persistentPropertyToPropertyConfig = persistentPropertyToPropertyConfig;
     }
 
@@ -98,8 +94,6 @@ public class TableForManyCalculator {
             if (hasJoinTableMapping) {
                 return jt.getName();
             }
-            left = backTigsTrimmer.trimBackTigs(left);
-            right = backTigsTrimmer.trimBackTigs(right);
             return backticksRemover.apply(left) + UNDERSCORE + backticksRemover.apply(right);
         }
 

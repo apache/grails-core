@@ -81,7 +81,7 @@ The core idea is to reorganize the binder application logic into a single primar
 *   **TableNameFetcher**: Resolves the table name for a given entity using the naming strategy.
 *   **DefaultColumnNameFetcher**: Resolves default column names for properties.
 *   **ColumnNameForPropertyAndPathFetcher**: Resolves column names considering embedded paths.
-*   **BackticksRemover / BackTigsTrimmer**: Utilities for handling database identifiers with quotes.
+*   **BackticksRemover**: Utility for handling database identifiers with quotes. Replaced redundant `BackTigsTrimmer`.
 *   **ConfigureDerivedPropertiesConsumer**: Applies `derived` flag to properties based on mapping.
 *   **GrailsHibernateUtil**: General utility methods for Hibernate integration.
 
@@ -174,7 +174,6 @@ The core idea is to reorganize the binder application logic into a single primar
 | `TableForManyCalculator` | Migrated | |
 | `UniqueNameGenerator` | Migrated | |
 | `BackticksRemover` | Migrated | |
-| `BackTigsTrimmer` | Migrated | |
 | `BasicValueIdCreator` | Migrated | |
 
 ## Known Issues / TODOs

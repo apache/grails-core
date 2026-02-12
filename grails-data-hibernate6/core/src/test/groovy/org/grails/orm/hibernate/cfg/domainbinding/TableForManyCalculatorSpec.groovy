@@ -20,11 +20,10 @@ class TableForManyCalculatorSpec extends Specification {
         def tableNameFetcher = Stub(TableNameFetcher)
         def backticksRemover = Stub(BackticksRemover)
         def shouldBind = Stub(ShouldCollectionBindWithJoinColumn)
-        def trimmer = Stub(BackTigsTrimmer)
         def configConverter = Stub(PersistentPropertyToPropertyConfig)
 
         // 2. Instantiate the calculator with mocks
-        def calculator = new TableForManyCalculator(namingStrategy, tableNameFetcher, backticksRemover, shouldBind, trimmer, configConverter)
+        def calculator = new TableForManyCalculator(namingStrategy, tableNameFetcher, backticksRemover, shouldBind, configConverter)
 
         // 3. Set up stubs for the property and entities
         def property = Stub(mockClass)
@@ -55,7 +54,6 @@ class TableForManyCalculatorSpec extends Specification {
 
         // Make removers and trimmers pass through values for simplicity
         backticksRemover.apply(_) >> { String s -> s }
-        trimmer.trimBackTigs(_) >> { String s -> s }
 
         when:
         def result = calculator.calculateTableForMany(property, "default")
