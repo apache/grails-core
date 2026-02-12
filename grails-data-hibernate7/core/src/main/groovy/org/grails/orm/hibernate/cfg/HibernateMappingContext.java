@@ -27,7 +27,6 @@ import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
 import org.grails.datastore.mapping.model.*;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.config.JpaMappingConfigurationStrategy;
-import org.grails.datastore.mapping.model.types.*;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
@@ -193,12 +192,13 @@ public class HibernateMappingContext extends AbstractMappingContext {
         return super.getPersistentEntity(name);
     }
 
-    public Collection<GrailsHibernatePersistentEntity> getHibernatePersistentEntities() {
+    public Collection<GrailsHibernatePersistentEntity> getHibernatePersistentEntities(String dataSourceName) {
         return Optional.ofNullable(persistentEntities)
                 .orElse(new ArrayList<>())
                 .stream()
                 .filter(GrailsHibernatePersistentEntity.class::isInstance)
                 .map(GrailsHibernatePersistentEntity.class::cast)
+                .peek(persistentEntity -> persistentEntity.setDataSourceName(dataSourceName))
                 .toList();
     }
 

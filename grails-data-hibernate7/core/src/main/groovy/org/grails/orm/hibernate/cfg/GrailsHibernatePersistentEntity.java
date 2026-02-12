@@ -35,6 +35,28 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
         return !this.isRoot() && (rootMapping == null || rootMapping.getTablePerHierarchy());
     }
 
+    default java.util.Set<String> buildDiscriminatorSet() {
+        java.util.Set<String> theSet = new java.util.HashSet<>();
+
+        String discriminator = getDiscriminatorValue();
+        Mapping rootMapping = getRootMapping();
+        String quote = "'";
+        if (rootMapping != null && rootMapping.getDatasources() != null) {
+            DiscriminatorConfig discriminatorConfig = rootMapping.getDiscriminator();
+            if(discriminatorConfig != null && discriminatorConfig.getType() != null && !discriminatorConfig.getType().equals("string"))
+                quote = "";
+        }
+        theSet.add(quote + discriminator + quote);
+
+        final java.util.Collection<PersistentEntity> childEntities = getMappingContext().getDirectChildEntities(this);
+        for (PersistentEntity subClass : childEntities) {
+            if (subClass instanceof GrailsHibernatePersistentEntity) {
+                theSet.addAll(((GrailsHibernatePersistentEntity) subClass).buildDiscriminatorSet());
+            }
+        }
+        return theSet;
+    }
+
     @Override
     GrailsHibernatePersistentProperty getIdentity();
 
@@ -49,7 +71,9 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
 
     }
 
+    void setDataSourceName(String dataSourceName);
 
+    String getDataSourceName();
 
     boolean forGrailsDomainMapping(String dataSourceName);
 

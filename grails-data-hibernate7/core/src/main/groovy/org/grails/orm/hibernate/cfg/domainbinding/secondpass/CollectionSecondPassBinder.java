@@ -108,7 +108,7 @@ public class CollectionSecondPassBinder {
                     }
                 }
                 //NOTE: this will build the set for the in clause if it has sublcasses
-                java.util.Set<String> discSet = buildDiscriminatorSet(referenced);
+                java.util.Set<String> discSet = referenced.buildDiscriminatorSet();
                 String inclause = String.join(",", discSet);
 
                 collection.setWhere(discriminatorColumnName + " in (" + inclause + ")");
@@ -474,32 +474,5 @@ public class CollectionSecondPassBinder {
         //JPA now requires to check for sorting
         key.setSorted(collection.isSorted());
         return key;
-    }
-
-    private java.util.Set<String> buildDiscriminatorSet(GrailsHibernatePersistentEntity domainClass) {
-        java.util.Set<String> theSet = new java.util.HashSet<>();
-
-        Mapping mapping = domainClass.getMappedForm();
-        String discriminator = domainClass.getName();
-        if (mapping != null && mapping.getDiscriminator() != null) {
-            DiscriminatorConfig discriminatorConfig = mapping.getDiscriminator();
-            if(discriminatorConfig.getValue() != null) {
-                discriminator = discriminatorConfig.getValue();
-            }
-        }
-        Mapping rootMapping = domainClass.getHibernateRootEntity().getMappedForm();
-        String quote = "'";
-        if (rootMapping != null && rootMapping.getDatasources() != null) {
-            DiscriminatorConfig discriminatorConfig = rootMapping.getDiscriminator();
-            if(discriminatorConfig != null && discriminatorConfig.getType() != null && !discriminatorConfig.getType().equals("string"))
-                quote = "";
-        }
-        theSet.add(quote + discriminator + quote);
-
-        final java.util.Collection<PersistentEntity> childEntities = domainClass.getMappingContext().getDirectChildEntities(domainClass);
-        for (PersistentEntity subClass : childEntities) {
-            theSet.addAll(buildDiscriminatorSet((GrailsHibernatePersistentEntity) subClass));
-        }
-        return theSet;
     }
 }

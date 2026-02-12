@@ -135,7 +135,7 @@ public class GrailsDomainBinder
         this.mappingCacheHolder = MappingCacheHolder.getInstance();
         this.collectionHolder = new CollectionHolder(this);
         // pre-build mappings
-        for (GrailsHibernatePersistentEntity persistentEntity : hibernateMappingContext.getHibernatePersistentEntities()) {
+        for (GrailsHibernatePersistentEntity persistentEntity : hibernateMappingContext.getHibernatePersistentEntities(dataSourceName)) {
             mappingCacheHolder.cacheMapping(persistentEntity);
         }
     }
@@ -176,7 +176,9 @@ public class GrailsDomainBinder
         this.identityBinder = new IdentityBinder(metadataBuildingContext, getNamingStrategy(), getJdbcEnvironment(), compositeIdBinder);
         this.versionBinder = new VersionBinder(metadataBuildingContext, getNamingStrategy());
 
-        hibernateMappingContext.getHibernatePersistentEntities().stream()
+        hibernateMappingContext
+                .getHibernatePersistentEntities(dataSourceName)
+                .stream()
                 .filter(persistentEntity -> persistentEntity.forGrailsDomainMapping(dataSourceName))
                 .forEach(hibernatePersistentEntity -> bindRoot(hibernatePersistentEntity, metadataCollector, sessionFactoryName));
     }

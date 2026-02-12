@@ -30,12 +30,23 @@ import jakarta.persistence.Entity;
  */
 public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping> implements GrailsHibernatePersistentEntity {
     private final AbstractClassMapping<Mapping> classMapping;
+    private String dataSourceName;
 
 
     public HibernatePersistentEntity(Class javaClass, final MappingContext context) {
         super(javaClass, context);
 
         this.classMapping = new HibernateClassMapping(this, context);
+    }
+
+    @Override
+    public void setDataSourceName(String dataSourceName) {
+        this.dataSourceName = dataSourceName;
+    }
+
+    @Override
+    public String getDataSourceName() {
+        return dataSourceName;
     }
 
     @Override
