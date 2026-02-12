@@ -2,7 +2,6 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.TenantId
 import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
@@ -14,6 +13,10 @@ import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.SimpleValue
 import spock.lang.Specification
+
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
 
 class SimpleValueBinderSpec extends Specification {
 

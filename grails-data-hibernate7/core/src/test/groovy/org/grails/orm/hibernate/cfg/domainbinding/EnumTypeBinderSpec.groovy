@@ -7,7 +7,6 @@ import org.grails.orm.hibernate.cfg.IdentityEnumType
 import org.hibernate.engine.spi.SharedSessionContractImplementor
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
-import org.hibernate.mapping.Selectable
 import org.hibernate.mapping.Table
 import org.grails.orm.hibernate.HibernateLegacyEnumType
 import org.hibernate.usertype.UserType
@@ -18,6 +17,10 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
 import java.sql.Types
+
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.IndexBinder
 
 class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
 

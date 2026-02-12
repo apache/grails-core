@@ -6,6 +6,8 @@ import org.hibernate.mapping.Index
 import org.hibernate.mapping.Table
 import spock.lang.Specification
 
+import org.grails.orm.hibernate.cfg.domainbinding.binder.IndexBinder
+
 class IndexBinderSpec extends Specification {
 
     def indexBinder = new IndexBinder()

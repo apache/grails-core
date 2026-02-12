@@ -12,6 +12,13 @@ import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.mapping.SimpleValue
 import spock.lang.Specification
 
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator
+import org.grails.orm.hibernate.cfg.domainbinding.util.TableNameFetcher
+
 class CompositeIdentifierToManyToOneBinderSpec extends Specification {
 
     def "Test bindCompositeIdentifierToManyToOne with nested composite ID"() {

@@ -6,6 +6,10 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
+import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
+
 class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
 
     def backticksRemover = new BackticksRemover()

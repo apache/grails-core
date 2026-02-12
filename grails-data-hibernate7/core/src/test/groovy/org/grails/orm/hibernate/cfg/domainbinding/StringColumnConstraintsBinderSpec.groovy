@@ -4,6 +4,8 @@ import org.hibernate.mapping.Column
 import org.grails.datastore.mapping.config.Property
 import spock.lang.Specification
 
+import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
+
 class StringColumnConstraintsBinderSpec extends Specification {
 
     StringColumnConstraintsBinder binder

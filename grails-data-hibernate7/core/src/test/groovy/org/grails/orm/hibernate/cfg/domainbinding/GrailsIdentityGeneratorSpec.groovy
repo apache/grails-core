@@ -7,8 +7,9 @@ import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.Table
-import org.hibernate.mapping.Value
 import spock.lang.Subject
+
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIdentityGenerator
 
 class GrailsIdentityGeneratorSpec extends HibernateGormDatastoreSpec {
 

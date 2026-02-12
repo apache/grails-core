@@ -11,6 +11,9 @@ import spock.lang.Specification
 import spock.lang.Subject
 import spock.lang.Unroll
 
+import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior
+import org.grails.orm.hibernate.cfg.domainbinding.util.LogCascadeMapping
+
 class LogCascadeMappingSpec extends Specification {
 
     Logger log = Mock(Logger)

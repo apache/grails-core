@@ -15,9 +15,9 @@ package org.grails.orm.hibernate.cfg;
  import org.grails.datastore.mapping.model.PersistentEntity;
  import org.grails.datastore.mapping.model.PersistentProperty;
  import org.grails.datastore.mapping.model.config.GormProperties;
- import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesConsumer;
- import org.grails.orm.hibernate.cfg.domainbinding.DefaultColumnNameFetcher;
- import org.grails.orm.hibernate.cfg.domainbinding.NamespaceNameExtractor;
+ import org.grails.orm.hibernate.cfg.domainbinding.util.ConfigureDerivedPropertiesConsumer;
+ import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
+ import org.grails.orm.hibernate.cfg.domainbinding.util.NamespaceNameExtractor;
 
  import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.JPA_DEFAULT_DISCRIMINATOR_TYPE;
 

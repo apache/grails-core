@@ -1,11 +1,14 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.hibernate.MappingException
 import org.hibernate.mapping.Table
 import spock.lang.Specification
+
+import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps
+import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueKeyForColumnsCreator
 
 class CreateKeyForPropsSpec extends Specification {
 

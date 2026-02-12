@@ -1,7 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Identity
@@ -11,8 +10,12 @@ import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.PrimaryKey
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
-import spock.lang.Unroll
+
+import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
+import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator
 
 class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
 

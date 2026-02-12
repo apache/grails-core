@@ -11,6 +11,9 @@ import org.hibernate.mapping.RootClass
 import org.hibernate.type.ForeignKeyDirection
 import spock.lang.Subject
 
+import org.grails.orm.hibernate.cfg.domainbinding.binder.OneToOneBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
+
 class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
 
     @Subject

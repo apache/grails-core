@@ -4,6 +4,8 @@ import spock.lang.Specification
 import spock.lang.Subject
 import spock.lang.Unroll
 
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
+
 /**
  * Specification for the BackticksRemover utility.
  *

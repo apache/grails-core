@@ -2,11 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.generator
 
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Identity
-import org.grails.orm.hibernate.cfg.domainbinding.GrailsIdentityGenerator
-import org.grails.orm.hibernate.cfg.domainbinding.GrailsIncrementGenerator
-import org.grails.orm.hibernate.cfg.domainbinding.GrailsNativeGenerator
-import org.grails.orm.hibernate.cfg.domainbinding.GrailsSequenceStyleGenerator
-import org.grails.orm.hibernate.cfg.domainbinding.GrailsTableGenerator
+
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.generator.Assigned
 import org.hibernate.generator.GeneratorCreationContext

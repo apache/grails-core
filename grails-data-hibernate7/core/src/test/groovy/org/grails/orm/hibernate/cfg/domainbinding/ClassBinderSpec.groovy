@@ -3,6 +3,8 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.hibernate.mapping.RootClass
 
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder
+
 class ClassBinderSpec extends HibernateGormDatastoreSpec {
 
 

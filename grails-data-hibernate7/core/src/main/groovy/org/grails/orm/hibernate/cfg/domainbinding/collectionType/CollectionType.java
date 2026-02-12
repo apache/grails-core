@@ -6,7 +6,7 @@ import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.PersistentClass;
 
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
-import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
 /**
  * A Collection type, for the moment only Set is supported

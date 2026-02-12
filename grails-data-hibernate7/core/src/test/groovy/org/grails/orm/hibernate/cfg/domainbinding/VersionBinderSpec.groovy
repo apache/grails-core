@@ -10,6 +10,10 @@ import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
 import java.util.function.BiFunction
 
+import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.VersionBinder
+
 class VersionBinderSpec extends HibernateGormDatastoreSpec {
 
     MetadataBuildingContext metadataBuildingContext

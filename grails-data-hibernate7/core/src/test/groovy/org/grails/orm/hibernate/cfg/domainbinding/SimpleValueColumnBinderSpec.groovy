@@ -6,6 +6,8 @@ import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.Table
 
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder
+
 class SimpleValueColumnBinderSpec extends HibernateGormDatastoreSpec {
 
     void "Test defaults"() {

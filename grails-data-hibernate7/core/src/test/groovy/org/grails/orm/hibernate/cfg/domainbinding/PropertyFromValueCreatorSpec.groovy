@@ -3,10 +3,11 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.Table
 import org.hibernate.mapping.Value
-import org.grails.datastore.mapping.model.PersistentProperty
 import spock.lang.Specification
 
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
+import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 
 class PropertyFromValueCreatorSpec extends Specification {
 

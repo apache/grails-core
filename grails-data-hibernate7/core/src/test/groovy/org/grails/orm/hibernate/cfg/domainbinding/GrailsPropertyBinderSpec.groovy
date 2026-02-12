@@ -9,10 +9,17 @@ import org.hibernate.mapping.ManyToOne
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.SimpleValue
-import org.grails.orm.hibernate.cfg.PropertyConfig
-import org.grails.orm.hibernate.cfg.ColumnConfig
-
 import org.hibernate.mapping.Value
+
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.OneToOneBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
+import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 
 class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 

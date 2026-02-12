@@ -8,6 +8,8 @@ import org.hibernate.mapping.Set
 import spock.lang.Subject
 import spock.lang.Unroll
 
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder
+
 class CollectionForPropertyConfigBinderSpec extends HibernateGormDatastoreSpec {
 
     @Subject

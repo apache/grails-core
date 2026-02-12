@@ -7,6 +7,8 @@ import org.hibernate.generator.GeneratorCreationContext
 import jakarta.persistence.GenerationType
 import spock.lang.Subject
 
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator
+
 class GrailsNativeGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "should return currentValue if not null (assigned identifier)"() {

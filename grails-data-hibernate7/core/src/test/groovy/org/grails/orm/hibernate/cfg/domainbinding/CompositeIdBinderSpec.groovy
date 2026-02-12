@@ -5,11 +5,14 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
-import org.hibernate.boot.spi.InFlightMetadataCollector
+
 import org.hibernate.mapping.Component
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
 import spock.lang.Subject
+
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdBinder
 
 class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
 

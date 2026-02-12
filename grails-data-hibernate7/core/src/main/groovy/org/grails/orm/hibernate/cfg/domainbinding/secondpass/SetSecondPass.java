@@ -9,8 +9,8 @@ import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.Collection;
 
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
-import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.CollectionBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder;
 
 /**
  * Second pass class for grails relationships. This is required as all

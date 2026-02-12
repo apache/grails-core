@@ -4,6 +4,8 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy
 
+import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider
+
 class NamingStrategyProviderSpec extends HibernateGormDatastoreSpec {
 
     void "Test constructor initializes with default strategy"() {

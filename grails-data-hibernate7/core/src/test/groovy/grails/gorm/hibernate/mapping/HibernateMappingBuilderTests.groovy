@@ -19,7 +19,7 @@
 package grails.gorm.hibernate.mapping
 
 import org.grails.orm.hibernate.cfg.CompositeIdentity
-import org.grails.orm.hibernate.cfg.HibernateMappingBuilder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateMappingBuilder
 import org.grails.orm.hibernate.cfg.PropertyConfig
 
 import org.hibernate.FetchMode

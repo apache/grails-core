@@ -2,15 +2,9 @@ package org.grails.orm.hibernate.cfg
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.TenantId
-import org.grails.orm.hibernate.cfg.domainbinding.ConfigureDerivedPropertiesConsumer
-import org.grails.orm.hibernate.cfg.domainbinding.DefaultColumnNameFetcher
-import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory
-import org.hibernate.boot.spi.InFlightMetadataCollector
-import spock.lang.Specification
-import org.grails.datastore.mapping.model.MappingContext
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 
 class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
 

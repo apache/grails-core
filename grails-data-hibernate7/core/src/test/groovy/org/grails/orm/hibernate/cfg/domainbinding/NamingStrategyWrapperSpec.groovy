@@ -9,6 +9,8 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import spock.lang.Subject
 import spock.lang.Unroll
 
+import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper
+
 import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.FOREIGN_KEY_SUFFIX
 
 /**

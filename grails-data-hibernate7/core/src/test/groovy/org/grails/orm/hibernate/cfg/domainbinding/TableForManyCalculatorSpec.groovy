@@ -2,18 +2,16 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.persistence.Entity
-import org.grails.datastore.mapping.model.types.Association
-import org.grails.datastore.mapping.model.types.Basic
-import org.grails.datastore.mapping.model.types.ManyToMany
-import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
-import org.grails.orm.hibernate.cfg.HibernateManyToManyProperty
-import org.grails.orm.hibernate.cfg.HibernateOneToManyProperty
-import org.grails.orm.hibernate.cfg.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.JoinTable
 
 import spock.lang.Unroll
+
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackTigsTrimmer
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
+import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator
+import org.grails.orm.hibernate.cfg.domainbinding.util.TableNameFetcher
 
 class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
 

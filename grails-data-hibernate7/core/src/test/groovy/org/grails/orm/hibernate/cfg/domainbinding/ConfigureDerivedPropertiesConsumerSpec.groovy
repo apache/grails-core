@@ -6,6 +6,8 @@ import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import spock.lang.Subject
 
+import org.grails.orm.hibernate.cfg.domainbinding.util.ConfigureDerivedPropertiesConsumer
+
 class ConfigureDerivedPropertiesConsumerSpec extends HibernateGormDatastoreSpec {
 
     def "should set derived to true if formula is present"() {

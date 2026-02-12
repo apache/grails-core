@@ -5,8 +5,9 @@ import org.hibernate.boot.model.relational.Database
 import org.hibernate.boot.model.relational.Namespace
 import org.hibernate.boot.spi.InFlightMetadataCollector
 import spock.lang.Specification
-import spock.lang.Subject
 import spock.lang.Unroll
+
+import org.grails.orm.hibernate.cfg.domainbinding.util.NamespaceNameExtractor
 
 /**
  * Specification for the NamespaceNameExtractor utility.

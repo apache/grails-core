@@ -4,8 +4,9 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Table
-import spock.lang.Specification
 import spock.lang.Subject
+
+import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher
 
 class SimpleValueColumnFetcherSpec extends HibernateGormDatastoreSpec {
 

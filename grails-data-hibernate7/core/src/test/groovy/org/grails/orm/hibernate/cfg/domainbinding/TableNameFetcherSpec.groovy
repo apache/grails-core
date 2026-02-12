@@ -1,11 +1,13 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import org.grails.datastore.mapping.model.PersistentEntity
+
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import org.grails.orm.hibernate.cfg.domainbinding.util.TableNameFetcher
 
 class TableNameFetcherSpec extends Specification {
 

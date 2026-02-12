@@ -5,6 +5,9 @@ import org.hibernate.mapping.Table
 import org.hibernate.mapping.UniqueKey
 import spock.lang.Specification
 
+import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueKeyForColumnsCreator
+import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator
+
 class UniqueKeyForColumnsCreatorSpec extends Specification {
 
     def "Test that createUniqueKeyForColumns adds a unique key to the table"() {

@@ -5,6 +5,8 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.hibernate.mapping.PersistentClass
 import spock.lang.Subject
 
+import org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder
+
 class OrderByClauseBuilderSpec extends HibernateGormDatastoreSpec {
 
     @Subject

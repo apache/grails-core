@@ -5,11 +5,13 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
-import org.hibernate.boot.spi.InFlightMetadataCollector
+
 import org.hibernate.mapping.Component
-import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.RootClass
 import spock.lang.Subject
+
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder
 
 class ComponentBinderSpec extends HibernateGormDatastoreSpec {
 

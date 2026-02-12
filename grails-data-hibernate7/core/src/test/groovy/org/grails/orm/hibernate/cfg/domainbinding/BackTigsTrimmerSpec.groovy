@@ -3,6 +3,8 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackTigsTrimmer
+
 class BackTigsTrimmerSpec extends Specification {
 
     @Unroll

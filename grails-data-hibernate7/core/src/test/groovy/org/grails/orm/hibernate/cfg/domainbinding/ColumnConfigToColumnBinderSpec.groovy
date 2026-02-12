@@ -5,6 +5,8 @@ import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.mapping.Column
 import spock.lang.Specification
 
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
+
 //TODO Check logic
 class ColumnConfigToColumnBinderSpec extends Specification {
 

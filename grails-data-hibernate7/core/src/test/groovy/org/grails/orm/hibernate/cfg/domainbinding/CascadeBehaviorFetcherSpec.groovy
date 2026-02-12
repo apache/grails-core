@@ -8,17 +8,18 @@ import spock.lang.Unroll
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehaviorFetcher
 
-import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.ALL
-import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.ALL_DELETE_ORPHAN
-import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.DELETE
-import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.EVICT
-import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.LOCK
-import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.MERGE
-import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.NONE
-import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.PERSIST
-import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.REPLICATE
-import static org.grails.orm.hibernate.cfg.domainbinding.CascadeBehavior.SAVE_UPDATE
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.ALL
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.ALL_DELETE_ORPHAN
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.DELETE
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.EVICT
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.LOCK
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.MERGE
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.NONE
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.PERSIST
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.REPLICATE
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.SAVE_UPDATE
 
 class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
 

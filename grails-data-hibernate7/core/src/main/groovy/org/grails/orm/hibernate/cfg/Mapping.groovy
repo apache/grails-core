@@ -20,12 +20,11 @@ import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
 import org.grails.datastore.mapping.config.Entity
-import org.grails.datastore.mapping.config.Property
-import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
-import org.grails.orm.hibernate.cfg.CompositeIdentity
+
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity
 
 /**
  * Models the mapping from GORM classes to the db.

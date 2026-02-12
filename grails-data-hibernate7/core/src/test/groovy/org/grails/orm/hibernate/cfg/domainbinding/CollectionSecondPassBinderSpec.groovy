@@ -3,7 +3,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.HibernateToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
 import org.hibernate.mapping.RootClass
 

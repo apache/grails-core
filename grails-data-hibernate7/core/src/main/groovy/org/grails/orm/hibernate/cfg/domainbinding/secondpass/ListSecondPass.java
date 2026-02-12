@@ -10,8 +10,8 @@ import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.Collection;
 
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
-import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.CollectionBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder;
 
 public class ListSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsSecondPass {
     @Serial

@@ -6,13 +6,13 @@ import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.ColumnConfigToColumnBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnFetcher;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
 
 import org.hibernate.MappingException;
 import org.hibernate.boot.spi.InFlightMetadataCollector;

@@ -4,15 +4,17 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.Identity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.NaturalId
-import org.hibernate.MappingException
+
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
 import org.hibernate.mapping.UniqueKey
 import org.hibernate.mapping.Value
-import spock.lang.Specification
 import spock.lang.Unroll
+
+import org.grails.orm.hibernate.cfg.domainbinding.binder.NaturalIdentifierBinder
+import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator
 
 class NaturalIdentifierBinderSpec extends HibernateGormDatastoreSpec {
 

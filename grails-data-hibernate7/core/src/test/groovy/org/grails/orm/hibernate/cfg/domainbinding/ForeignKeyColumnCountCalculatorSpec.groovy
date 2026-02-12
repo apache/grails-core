@@ -4,9 +4,11 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
-import org.grails.orm.hibernate.cfg.HibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator
 
 class ForeignKeyColumnCountCalculatorSpec extends Specification {
 

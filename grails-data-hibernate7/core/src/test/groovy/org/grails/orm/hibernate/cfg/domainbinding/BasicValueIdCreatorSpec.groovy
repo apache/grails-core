@@ -14,6 +14,7 @@ import spock.lang.Unroll
 
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
+import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator
 
 class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
 

@@ -13,10 +13,14 @@ import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder
 import org.hibernate.boot.spi.InFlightMetadataCollector
 import org.hibernate.mapping.BasicValue
-import org.hibernate.mapping.Column
 import org.hibernate.mapping.Component
 import org.hibernate.mapping.ManyToOne as HibernateManyToOne
 import org.hibernate.mapping.OneToOne as HibernateOneToOne
@@ -24,6 +28,8 @@ import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
 import spock.lang.Subject
+
+import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 
 class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
 

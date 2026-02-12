@@ -6,6 +6,9 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentProperty
 import spock.lang.Unroll
 
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
+
 class DefaultColumnNameFetcherSpec extends HibernateGormDatastoreSpec {
 
     @Unroll

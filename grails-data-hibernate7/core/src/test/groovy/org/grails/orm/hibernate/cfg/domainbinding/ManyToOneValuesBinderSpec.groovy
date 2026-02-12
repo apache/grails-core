@@ -9,6 +9,8 @@ import org.hibernate.FetchMode
 import org.hibernate.mapping.ManyToOne
 import spock.lang.Unroll
 
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneValuesBinder
+
 class ManyToOneValuesBinderSpec extends HibernateGormDatastoreSpec {
 
     @Unroll

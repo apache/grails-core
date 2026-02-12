@@ -1,7 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.ManyToMany
 import org.grails.datastore.mapping.model.types.OneToOne
@@ -15,6 +14,12 @@ import org.hibernate.MappingException
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.ManyToOne
 import spock.lang.Unroll
+
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneValuesBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
+import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher
 
 class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 

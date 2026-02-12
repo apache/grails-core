@@ -22,6 +22,8 @@ import org.grails.datastore.mapping.config.Property
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
 
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity
+
 /**
  * Defines the identity generation strategy. In the case of a 'composite' identity the properties
  * array defines the property names that formulate the composite id.

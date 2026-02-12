@@ -4,10 +4,10 @@ import jakarta.annotation.Nonnull;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.BackticksRemover;
-import org.grails.orm.hibernate.cfg.domainbinding.SimpleValueColumnBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
 
 import org.hibernate.MappingException;
 import org.hibernate.boot.spi.InFlightMetadataCollector;

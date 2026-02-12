@@ -11,6 +11,8 @@ import spock.lang.Unroll
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
+import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator
+
 class UniqueNameGeneratorSpec extends Specification {
 
     @Subject

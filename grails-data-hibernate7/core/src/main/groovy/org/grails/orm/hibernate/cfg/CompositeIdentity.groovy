@@ -20,6 +20,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
 import org.grails.datastore.mapping.config.Property
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity
 
 /**
  * Represents a composite identity, equivalent to Hibernate <composite-id> mapping.

@@ -3,6 +3,8 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType
+
 class GrailsEnumTypeSpec extends Specification {
 
     @Unroll
@@ -11,8 +13,8 @@ class GrailsEnumTypeSpec extends Specification {
         enumConstant.getType() == expectedType
 
         where:
-        enumConstant            | expectedType
-        GrailsEnumType.DEFAULT  | "default"
+        enumConstant           | expectedType
+        GrailsEnumType.DEFAULT | "default"
         GrailsEnumType.STRING   | "string"
         GrailsEnumType.ORDINAL  | "ordinal"
         GrailsEnumType.IDENTITY | "identity"

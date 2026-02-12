@@ -4,6 +4,8 @@ import org.hibernate.MappingException
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior
+
 class CascadeBehaviorEnumSpec extends Specification {
 
     @Unroll
@@ -12,8 +14,8 @@ class CascadeBehaviorEnumSpec extends Specification {
         behavior.isSaveUpdate() == expected
 
         where:
-        behavior                         | expected
-        CascadeBehavior.ALL              | true
+        behavior            | expected
+        CascadeBehavior.ALL | true
         CascadeBehavior.ALL_DELETE_ORPHAN | true
         CascadeBehavior.SAVE_UPDATE      | true
         CascadeBehavior.MERGE            | false
