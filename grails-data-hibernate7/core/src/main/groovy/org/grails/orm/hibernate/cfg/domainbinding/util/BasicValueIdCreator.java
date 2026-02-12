@@ -1,7 +1,5 @@
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
-import java.util.Optional;
-
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.generator.Generator;
@@ -43,20 +41,13 @@ public class BasicValueIdCreator {
 
     public BasicValue getBasicValueId(Identity mappedId, boolean useSequence) {
         // create a BasicValue for the specific entity table (do not reuse the prototype directly because table differs)
-        String generatorName = determineGeneratorName(mappedId, useSequence);
+        String generatorName = Identity.determineGeneratorName(mappedId, useSequence);
         id.setCustomIdGeneratorCreator(context -> createGenerator(mappedId, context, generatorName));
         return id;
     }
 
     private Generator createGenerator(Identity mappedId, GeneratorCreationContext context, String generatorName) {
         return grailsSequenceWrapper.getGenerator(generatorName, context, mappedId, domainClass, jdbcEnvironment);
-    }
-
-    private String determineGeneratorName(Identity mappedId, boolean useSequence) {
-        return Optional.ofNullable(mappedId)
-                .map(Identity::getGenerator)
-                .filter(gen -> !(GrailsSequenceGeneratorEnum.NATIVE.toString().equals(gen) && useSequence))
-                .orElse(useSequence ? GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString() : GrailsSequenceGeneratorEnum.NATIVE.toString());
     }
 }
 

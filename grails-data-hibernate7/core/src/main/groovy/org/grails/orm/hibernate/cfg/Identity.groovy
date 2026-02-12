@@ -23,6 +23,7 @@ import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
 
 /**
  * Defines the identity generation strategy. In the case of a 'composite' identity the properties
@@ -58,6 +59,20 @@ class Identity extends Property implements HibernateIdentity {
      * Any parameters (for example for the generator)
      */
     Map params = [:]
+
+    String determineGeneratorName(boolean useSequence) {
+        if (generator != null && !(GrailsSequenceGeneratorEnum.NATIVE.toString() == generator && useSequence)) {
+            return generator
+        }
+        return useSequence ? GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString() : GrailsSequenceGeneratorEnum.NATIVE.toString()
+    }
+
+    static String determineGeneratorName(Identity mappedId, boolean useSequence) {
+        if (mappedId != null) {
+            return mappedId.determineGeneratorName(useSequence)
+        }
+        return useSequence ? GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString() : GrailsSequenceGeneratorEnum.NATIVE.toString()
+    }
 
     /**
      * Define the natural id
