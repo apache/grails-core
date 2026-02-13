@@ -5,7 +5,7 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.generator.Generator;
 import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.mapping.BasicValue;
-import org.hibernate.mapping.RootClass;
+import org.hibernate.mapping.Table;
 
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Identity;
@@ -20,9 +20,9 @@ public class BasicValueIdCreator {
     private final BasicValue id;
     private final GrailsSequenceWrapper grailsSequenceWrapper;
 
-    public BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext, JdbcEnvironment jdbcEnvironment, GrailsHibernatePersistentEntity domainClass, RootClass entity) {
+    public BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext, JdbcEnvironment jdbcEnvironment, GrailsHibernatePersistentEntity domainClass, Table table) {
         // create a prototype BasicValue (table will be set per-entity when creating the actual BasicValue)
-        this.id =  new BasicValue(metadataBuildingContext, entity.getTable());
+        this.id =  new BasicValue(metadataBuildingContext, table);
         this.jdbcEnvironment = jdbcEnvironment;
         this.domainClass = domainClass;
         this.grailsSequenceWrapper = new GrailsSequenceWrapper();

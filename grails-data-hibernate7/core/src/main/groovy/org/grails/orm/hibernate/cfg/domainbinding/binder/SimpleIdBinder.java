@@ -51,7 +51,7 @@ public class SimpleIdBinder {
         boolean useSequence = result != null && result.isTablePerConcreteClass();
         // create the id value
 
-        BasicValueIdCreator idCreator = this.basicValueIdCreator != null ? this.basicValueIdCreator : new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment, domainClass, entity);
+        BasicValueIdCreator idCreator = this.basicValueIdCreator != null ? this.basicValueIdCreator : new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment, domainClass, entity.getTable());
         BasicValue id = idCreator.getBasicValueId(mappedId, useSequence);
 
         var identifier = domainClass.getIdentity();
