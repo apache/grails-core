@@ -104,30 +104,6 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         property.getPropertyAccessorName() == "property"
     }
 
-    void "test bindProperty with Property object"() {
-        given:
-        def cascadeBehaviorFetcher = Mock(CascadeBehaviorFetcher)
-        def binder = new PropertyBinder(cascadeBehaviorFetcher)
-
-        def persistentProperty = Mock(GrailsHibernatePersistentProperty)
-        persistentProperty.getName() >> "name"
-        persistentProperty.isNullable() >> true
-        def property = new Property()
-        def value = Mock(Value)
-        property.setValue(value)
-        def config = new PropertyConfig()
-        config.setAccessType(jakarta.persistence.AccessType.PROPERTY)
-        persistentProperty.getMappedForm() >> config
-
-        when:
-        binder.bindProperty(persistentProperty, property)
-
-        then:
-        property.getName() == "name"
-        property.isOptional() == true
-        property.getPropertyAccessorName() == "property"
-    }
-
 }
 
 @Entity

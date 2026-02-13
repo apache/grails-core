@@ -43,7 +43,7 @@ public class NaturalIdentifierBinder {
                             .map(persistentClass::getProperty)
                             .map(property -> {
                                 property.setNaturalIdentifier(true);
-                                property.setUpdateable(naturalId.isMutable());
+                                property.setUpdatable(naturalId.isMutable());
                                 uk.addColumns(property.getValue());
                                 return 1;
                             })

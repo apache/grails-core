@@ -48,10 +48,10 @@ public class PropertyBinder {
 
         if (persistentProperty.isBidirectionalManyToOneWithListMapping(prop)) {
             prop.setInsertable(false);
-            prop.setUpdateable(false);
+            prop.setUpdatable(false);
         } else {
             prop.setInsertable(config.getInsertable());
-            prop.setUpdateable(config.getUpdatable());
+            prop.setUpdatable(config.getUpdatable());
         }
 
         var accessType = AccessType.getAccessStrategy(config.getAccessType());
@@ -80,16 +80,5 @@ public class PropertyBinder {
             prop.setLazy(isLazy);
         }
         return prop;
-    }
-
-    public void bindProperty(GrailsHibernatePersistentProperty persistentProperty, Property prop) {
-        Property bound = bindProperty(persistentProperty, prop.getValue());
-        prop.setName(bound.getName());
-        prop.setInsertable(bound.isInsertable());
-        prop.setUpdateable(bound.isUpdateable());
-        prop.setPropertyAccessorName(bound.getPropertyAccessorName());
-        prop.setOptional(bound.isOptional());
-        prop.setCascade(bound.getCascade());
-        prop.setLazy(bound.isLazy());
     }
 }

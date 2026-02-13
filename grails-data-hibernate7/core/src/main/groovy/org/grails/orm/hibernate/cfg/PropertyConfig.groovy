@@ -106,7 +106,7 @@ class PropertyConfig extends Property {
      * @deprecated Use updatable instead
      */
     @Deprecated
-    void setUpdateable(boolean updateable) {
+    void setUpdatable(boolean updateable) {
         this.updatable = updateable
     }
 
