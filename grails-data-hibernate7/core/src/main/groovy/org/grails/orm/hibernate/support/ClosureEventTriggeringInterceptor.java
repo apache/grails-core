@@ -32,7 +32,6 @@ import org.hibernate.Hibernate;
 import org.hibernate.HibernateException;
 import org.hibernate.event.internal.DefaultMergeEventListener;
 import org.hibernate.event.internal.DefaultPersistEventListener;
-import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.MergeContext;
 import org.hibernate.event.spi.MergeEvent;
 import org.hibernate.event.spi.PersistContext;
@@ -341,8 +340,10 @@ public class ClosureEventTriggeringInterceptor extends AbstractClosureEventTrigg
         publishEvent(hibernateEvent, grailsEvent);
     }
 
-    private void publishEvent(AbstractEvent hibernateEvent, AbstractPersistenceEvent mappingEvent) {
-        mappingEvent.setNativeEvent(hibernateEvent);
+    private void publishEvent(Object hibernateEvent, AbstractPersistenceEvent mappingEvent) {
+        if (hibernateEvent instanceof Serializable) {
+            mappingEvent.setNativeEvent((Serializable) hibernateEvent);
+        }
         if(eventPublisher != null) {
             eventPublisher.publishEvent(mappingEvent);
         }

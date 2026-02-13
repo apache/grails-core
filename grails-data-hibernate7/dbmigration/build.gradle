@@ -43,8 +43,8 @@ dependencies {
         exclude group: 'org.liquibase', module: 'liquibase-core'
     }
 
-    implementation("org.liquibase:liquibase-core:$liquibaseHibernate6Version")
-    implementation("org.liquibase.ext:liquibase-hibernate6:$liquibaseHibernate6Version") {
+    implementation("org.liquibase:liquibase-core:5.0.1")
+    implementation("org.liquibase.ext:liquibase-hibernate7:$liquibaseHibernate7Version") {
         exclude group: 'org.hibernate', module: 'hibernate-core'
         exclude group: 'org.hibernate', module: 'hibernate-entitymanager'
         exclude group: 'org.hibernate', module: 'hibernate-envers'
@@ -79,12 +79,7 @@ dependencies {
     constraints {
         implementation("org.liquibase:liquibase-core") {
             version {
-                strictly "$liquibaseHibernate6Version"
-            }
-        }
-        implementation("org.liquibase.ext:liquibase-hibernate6") {
-            version {
-                strictly "$liquibaseHibernate6Version"
+                strictly "5.0.1"
             }
         }
     }

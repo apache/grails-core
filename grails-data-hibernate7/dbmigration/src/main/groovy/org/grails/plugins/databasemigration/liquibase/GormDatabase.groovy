@@ -43,7 +43,10 @@ class GormDatabase extends HibernateDatabase {
 
     private Dialect dialect
     private Metadata metadata
+    private HibernateDatastore gormDatastore
     DatabaseConnection connection
+
+
 
     GormDatabase() {
     }
@@ -51,6 +54,7 @@ class GormDatabase extends HibernateDatabase {
     GormDatabase(Dialect dialect, ServiceRegistry serviceRegistry, HibernateDatastore hibernateDatastore) {
         this.dialect = dialect
         this.metadata = hibernateDatastore.getMetadata()
+        this.gormDatastore = hibernateDatastore
         SnapshotControl snapshotControl = new SnapshotControl(this, null, null)
         GormDatabase database = this
         OfflineConnection connection = new OfflineConnection('offline:gorm', null) {
@@ -72,6 +76,10 @@ class GormDatabase extends HibernateDatabase {
     @Override
     Metadata getMetadata() {
         metadata
+    }
+
+    HibernateDatastore getGormDatastore() {
+        gormDatastore
     }
 
     @Override

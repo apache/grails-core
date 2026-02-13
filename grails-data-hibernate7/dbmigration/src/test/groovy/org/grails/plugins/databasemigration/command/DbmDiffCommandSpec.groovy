@@ -77,7 +77,7 @@ databaseChangeLog = \\{
 
     changeSet\\(author: ".+?", id: ".+?"\\) \\{
         addColumn\\(tableName: "BOOK"\\) \\{
-            column\\(name: "PRICE", type: "INTEGER"\\) \\{
+            column\\(name: "PRICE", type: "INT"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
         \\}
@@ -111,7 +111,7 @@ databaseChangeLog = \\{
 
     changeSet\\(author: ".+?", id: ".+?"\\) \\{
         addColumn\\(tableName: "BOOK"\\) \\{
-            column\\(name: "PRICE", type: "INTEGER"\\) \\{
+            column\\(name: "PRICE", type: "INT"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
         \\}

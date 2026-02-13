@@ -118,6 +118,10 @@ abstract class ApplicationContextDatabaseMigrationCommandSpec extends DatabaseMi
 class Book {
     String title
     Author author
+    static belongsTo = [author: Author]
+    static constraints = {
+        author nullable: false
+    }
 }
 
 @Entity
