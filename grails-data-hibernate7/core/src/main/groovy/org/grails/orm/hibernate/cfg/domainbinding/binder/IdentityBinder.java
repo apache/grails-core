@@ -19,14 +19,8 @@ public class IdentityBinder {
     private final SimpleIdBinder simpleIdBinder;
     private final CompositeIdBinder compositeIdBinder;
 
-    public IdentityBinder(MetadataBuildingContext metadataBuildingContext,
-                          PersistentEntityNamingStrategy namingStrategy,
-                          JdbcEnvironment jdbcEnvironment,
+    public IdentityBinder(SimpleIdBinder simpleIdBinder,
                           CompositeIdBinder compositeIdBinder) {
-        this(new SimpleIdBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment), compositeIdBinder);
-    }
-
-    public IdentityBinder(SimpleIdBinder simpleIdBinder, CompositeIdBinder compositeIdBinder) {
         this.simpleIdBinder = simpleIdBinder;
         this.compositeIdBinder = compositeIdBinder;
     }

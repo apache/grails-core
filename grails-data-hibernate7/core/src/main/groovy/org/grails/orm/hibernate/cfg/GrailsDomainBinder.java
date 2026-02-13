@@ -30,6 +30,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOnePro
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.IdentityBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.NaturalIdentifierBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.VersionBinder;
@@ -186,7 +187,8 @@ public class GrailsDomainBinder
         this.componentPropertyBinder = new ComponentPropertyBinder(metadataBuildingContext, getNamingStrategy(), getMappingCacheHolder(), getCollectionHolder(), enumTypeBinder, collectionBinder, propertyFromValueCreator);
         this.grailsPropertyBinder = new GrailsPropertyBinder(metadataBuildingContext, getNamingStrategy(), getCollectionHolder(), enumTypeBinder, componentPropertyBinder, collectionBinder, propertyFromValueCreator);
         this.compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentPropertyBinder);
-        this.identityBinder = new IdentityBinder(metadataBuildingContext, getNamingStrategy(), getJdbcEnvironment(), compositeIdBinder);
+        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, getNamingStrategy(), getJdbcEnvironment());
+        this.identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder);
         this.versionBinder = new VersionBinder(metadataBuildingContext, getNamingStrategy());
 
         hibernateMappingContext
