@@ -20,6 +20,7 @@ import org.hibernate.mapping.Component;
 import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.OneToOne;
 import org.hibernate.mapping.PersistentClass;
+import org.hibernate.mapping.Property;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
@@ -41,6 +42,7 @@ public class GrailsPropertyBinder {
     private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
     private final OneToOneBinder oneToOneBinder;
     private final ManyToOneBinder manyToOneBinder;
+    private final PropertyFromValueCreator propertyFromValueCreator;
 
     public GrailsPropertyBinder(
             MetadataBuildingContext metadataBuildingContext,
@@ -59,7 +61,8 @@ public class GrailsPropertyBinder {
                 new SimpleValueBinder(namingStrategy),
                 new ColumnNameForPropertyAndPathFetcher(namingStrategy),
                 new OneToOneBinder(namingStrategy),
-                new ManyToOneBinder(namingStrategy));
+                new ManyToOneBinder(namingStrategy),
+                propertyFromValueCreator);
     }
 
     protected GrailsPropertyBinder(
@@ -72,7 +75,8 @@ public class GrailsPropertyBinder {
             SimpleValueBinder simpleValueBinder,
             ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
             OneToOneBinder oneToOneBinder,
-            ManyToOneBinder manyToOneBinder) {
+            ManyToOneBinder manyToOneBinder,
+            PropertyFromValueCreator propertyFromValueCreator) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.collectionHolder = collectionHolder;
         this.enumTypeBinder = enumTypeBinder;
@@ -82,9 +86,10 @@ public class GrailsPropertyBinder {
         this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
         this.oneToOneBinder = oneToOneBinder;
         this.manyToOneBinder = manyToOneBinder;
+        this.propertyFromValueCreator = propertyFromValueCreator;
     }
 
-    public Value bindProperty(PersistentClass persistentClass
+    public void bindProperty(PersistentClass persistentClass
             , @Nonnull GrailsHibernatePersistentProperty currentGrailsProp
             , @Nonnull InFlightMetadataCollector mappings
             , String sessionFactoryBeanName) {
@@ -104,41 +109,35 @@ public class GrailsPropertyBinder {
         // 1. Create Value and apply binders (consolidated block)
         if (currentGrailsProp.isUserButNotCollectionType()) {
             value = new BasicValue(metadataBuildingContext, table);
-            // No specific binder call needed for this case per original logic
             simpleValueBinder.bindSimpleValue(currentGrailsProp, null,(SimpleValue) value, EMPTY_PATH);
         }
         else if (collectionType != null) {
             if (currentGrailsProp.isSerializableType()) {
                 value = new BasicValue(metadataBuildingContext, table);
-                simpleValueBinder.bindSimpleValue(currentGrailsProp, null,(SimpleValue) value, EMPTY_PATH);// No specific binder call needed
+                simpleValueBinder.bindSimpleValue(currentGrailsProp, null,(SimpleValue) value, EMPTY_PATH);
             }
             else { // Actual Collection
                 Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass);
                 collectionBinder.bindCollection((HibernateToManyProperty) currentGrailsProp, collection, persistentClass, mappings, EMPTY_PATH, sessionFactoryBeanName);
                 mappings.addCollectionBinding(collection);
                 value = collection;
-                // No specific binder for Collection itself in Block 2 originally.
             }
         }
         else if (currentGrailsProp.getType().isEnum()) {
             value = new BasicValue(metadataBuildingContext, table);
-            // Apply enumTypeBinder if the created value is a SimpleValue
             SimpleValue simpleValue = (SimpleValue) value;
             String columnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(currentGrailsProp, EMPTY_PATH, null);
             enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), simpleValue, columnName);
         }
         else if (currentGrailsProp.isHibernateOneToOne()) {
             value = new OneToOne(metadataBuildingContext, table, persistentClass);
-            // Apply OneToOneBinder logic
             oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne)currentGrailsProp, (OneToOne)value, EMPTY_PATH);
         } else if(currentGrailsProp.isHibernateManyToOne()) {
             value = new ManyToOne(metadataBuildingContext, table);
-            // Apply ManyToOneBinder logic
             manyToOneBinder.bindManyToOne((Association)currentGrailsProp, (ManyToOne)value, EMPTY_PATH);
         }
         else if (currentGrailsProp instanceof Embedded) {
             value = new Component(metadataBuildingContext, persistentClass);
-            // Apply ComponentPropertyBinder logic
             componentPropertyBinder.bindComponent((Component)value, (Embedded)currentGrailsProp, true, mappings, sessionFactoryBeanName);
         }
         // work out what type of relationship it is and bind value
@@ -147,9 +146,9 @@ public class GrailsPropertyBinder {
             simpleValueBinder.bindSimpleValue(currentGrailsProp, null,(SimpleValue) value, EMPTY_PATH);
         }
 
-        // After creating the value and applying binders (where applicable), create and add the property.
-        // This is now done once at the end of the consolidated block.
-
-        return value;
+        if (value != null) {
+            Property property = propertyFromValueCreator.createProperty(value, currentGrailsProp);
+            persistentClass.addProperty(property);
+        }
     }
 }

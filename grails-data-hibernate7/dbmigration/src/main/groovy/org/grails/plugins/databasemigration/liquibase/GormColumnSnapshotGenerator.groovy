@@ -29,6 +29,7 @@ import liquibase.structure.core.Relation
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.types.Association
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.Mapping
@@ -64,101 +65,98 @@ class GormColumnSnapshotGenerator implements SnapshotGenerator {
     public <T extends DatabaseObject> T snapshot(T example, DatabaseSnapshot snapshot, SnapshotGeneratorChain chain) {
         T snapshotObject = chain.snapshot(example, snapshot)
 
-        if (snapshotObject instanceof Column && snapshot.getDatabase() instanceof GormDatabase) {
-            Column column = (Column) snapshotObject
-            
-            Relation relation = column.getRelation()
-            if (relation == null) return snapshotObject
-            String tableName = relation.getName()
-            if (tableName == null) return snapshotObject
+        if (!(snapshotObject instanceof Column) || !(snapshot.database instanceof GormDatabase)) {
+            return snapshotObject
+        }
 
-            GormDatabase gormDb = (GormDatabase) snapshot.getDatabase()
-            def gormDatastore = gormDb.getGormDatastore()
-            if (gormDatastore == null) return snapshotObject
-            
-            MappingContext mappingContext = gormDatastore.getMappingContext()
-            Metadata metadata = gormDb.getMetadata()
-            if (metadata == null) return snapshotObject
-            
-            for (PersistentClass pc : metadata.getEntityBindings()) {
-                if (pc instanceof RootClass) {
-                    RootClass root = (RootClass) pc
-                    if (tableName.equalsIgnoreCase(root.getTable()?.getName())) {
-                        org.hibernate.mapping.Column hibernateColumn = null
-                        for (org.hibernate.mapping.Column hc : root.getTable().getColumns()) {
-                            if (hc.getName().equalsIgnoreCase(column.getName())) {
-                                hibernateColumn = hc
-                                break
-                            }
-                        }
-                        
-                        if (hibernateColumn != null) {
-                            PersistentEntity entity = mappingContext.getPersistentEntity(pc.getClassName() ?: pc.getEntityName())
-                            if (entity instanceof GrailsHibernatePersistentEntity) {
-                                GrailsHibernatePersistentEntity gpe = (GrailsHibernatePersistentEntity) entity
-                                
-                                // 1. Check if it is an ID column
-                                boolean isIdColumn = false
-                                if (root.getIdentifier() instanceof SimpleValue) {
-                                    SimpleValue sv = (SimpleValue) root.getIdentifier()
-                                    for (Selectable s : sv.getColumns()) {
-                                        if (s instanceof org.hibernate.mapping.Column) {
-                                            if (s.getName().equalsIgnoreCase(column.getName())) {
-                                                isIdColumn = true
-                                                break
-                                            }
-                                        }
-                                    }
-                                }
+        Column column = (Column) snapshotObject
+        String tableName = column.relation?.name
+        if (!tableName) return snapshotObject
 
-                                if (isIdColumn) {
-                                    // Always set identifiers as non-nullable
-                                    column.setNullable(false)
-                                    
-                                    Mapping m = gpe.getMappedForm()
-                                    Object idMapping = m.getIdentity()
-                                    if (idMapping instanceof Identity) {
-                                        Identity identity = (Identity) idMapping
-                                        boolean useSequence = m.isTablePerConcreteClass()
-                                        String strategy = identity.determineGeneratorName(useSequence)
-                                        if ("identity" == strategy || "native" == strategy || "sequence-identity" == strategy) {
-                                            column.setAutoIncrementInformation(new Column.AutoIncrementInformation())
-                                        }
-                                    }
-                                } else {
-                                    // 2. Fix nullability for non-ID columns using GORM metadata
-                                    if (column.isNullable() == null || column.isNullable()) {
-                                        boolean gormNullable = true
-                                        for (PersistentProperty prop : gpe.getPersistentProperties()) {
-                                            String propColumnName = null
-                                            if (prop instanceof GrailsHibernatePersistentProperty) {
-                                                propColumnName = ((GrailsHibernatePersistentProperty) prop).getMappedColumnName()
-                                            }
-                                            if (propColumnName == null) {
-                                                // Default naming convention
-                                                propColumnName = prop.getName()
-                                                if (prop instanceof org.grails.datastore.mapping.model.types.Association) {
-                                                    propColumnName += "_id"
-                                                }
-                                            }
-                                            
-                                            if (column.getName().equalsIgnoreCase(propColumnName)) {
-                                                gormNullable = prop.isNullable()
-                                                break
-                                            }
-                                        }
-                                        
-                                        if (!gormNullable) {
-                                            column.setNullable(false)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+        GormDatabase gormDb = (GormDatabase) snapshot.database
+        def gormDatastore = gormDb.gormDatastore
+        if (!gormDatastore) return snapshotObject
+
+        PersistentClass pc = findPersistentClass(gormDb.metadata, tableName)
+        if (!pc) return snapshotObject
+
+        MappingContext mappingContext = gormDatastore.mappingContext
+        PersistentEntity entity = mappingContext.getPersistentEntity(pc.className ?: pc.entityName)
+        if (!(entity instanceof GrailsHibernatePersistentEntity)) return snapshotObject
+
+        GrailsHibernatePersistentEntity gpe = (GrailsHibernatePersistentEntity) entity
+
+        if (isIdentifier(pc, column.name)) {
+            applyGormIdentitySettings(column, gpe)
+        } else {
+            PersistentProperty prop = resolveGormProperty(gpe, column.name)
+            if (prop) {
+                applyGormPropertySettings(column, prop)
             }
         }
+
         return snapshotObject
+    }
+
+    protected PersistentClass findPersistentClass(Metadata metadata, String tableName) {
+        for (PersistentClass pc : metadata.entityBindings) {
+            if (tableName.equalsIgnoreCase(pc.table?.name)) {
+                return pc
+            }
+        }
+        return null
+    }
+
+    protected boolean isIdentifier(PersistentClass pc, String columnName) {
+        if (!(pc instanceof RootClass)) return false
+        RootClass root = (RootClass) pc
+        if (!(root.identifier instanceof SimpleValue)) return false
+        SimpleValue sv = (SimpleValue) root.identifier
+        return sv.columns.any { Selectable s ->
+            s instanceof org.hibernate.mapping.Column && s.name.equalsIgnoreCase(columnName)
+        }
+    }
+
+    protected PersistentProperty resolveGormProperty(GrailsHibernatePersistentEntity gpe, String columnName) {
+        for (PersistentProperty prop : gpe.persistentProperties) {
+            String propColumnName = null
+            if (prop instanceof GrailsHibernatePersistentProperty) {
+                propColumnName = ((GrailsHibernatePersistentProperty) prop).mappedColumnName
+            }
+            if (propColumnName == null) {
+                propColumnName = prop.name
+                if (prop instanceof Association) {
+                    propColumnName += "_id"
+                }
+            }
+            if (columnName.equalsIgnoreCase(propColumnName)) {
+                return prop
+            }
+        }
+        return null
+    }
+
+    protected void applyGormIdentitySettings(Column column, GrailsHibernatePersistentEntity gpe) {
+        // Always set identifiers as non-nullable
+        column.setNullable(false)
+        
+        Mapping m = gpe.mappedForm
+        Object idMapping = m.identity
+        if (idMapping instanceof Identity) {
+            Identity identity = (Identity) idMapping
+            boolean useSequence = m.isTablePerConcreteClass()
+            String strategy = identity.determineGeneratorName(useSequence)
+            if (strategy == "identity" || strategy == "native" || strategy == "sequence-identity") {
+                column.setAutoIncrementInformation(new Column.AutoIncrementInformation())
+            }
+        }
+    }
+
+    protected void applyGormPropertySettings(Column column, PersistentProperty prop) {
+        if (column.isNullable() == null || column.isNullable()) {
+            if (!prop.isNullable()) {
+                column.setNullable(false)
+            }
+        }
     }
 }
