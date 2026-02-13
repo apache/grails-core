@@ -4,7 +4,6 @@ import java.util.Map;
 
 import org.hibernate.MappingException;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.ManyToMany;
@@ -48,8 +47,8 @@ public class TableForManyCalculator {
         PropertyConfig config = property.getMappedForm();
         JoinTable jt = config.getJoinTable();
         boolean hasJoinTableMapping = jt != null && jt.getName() != null;
-        PersistentEntity domainClass1 = property.getOwner();
-        String left = tableNameFetcher.getTableName((GrailsHibernatePersistentEntity) domainClass1);
+        GrailsHibernatePersistentEntity domainClass1 = property.getHibernateOwner();
+        String left = tableNameFetcher.getTableName(domainClass1);
 
         if (Map.class.isAssignableFrom(property.getType())) {
             if (hasJoinTableMapping) {

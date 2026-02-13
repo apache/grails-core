@@ -51,15 +51,15 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
 
         calculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames) >> 2
 
-        def nestedEntityProp = Stub(ToOne)
+        def nestedEntityProp = Stub(ToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
         refDomainClass.getPropertyByName("nestedEntity") >> nestedEntityProp
         nestedEntityProp.name >> "nestedEntity"
 
         def nestedAssociatedEntity = Stub(PersistentEntity, additionalInterfaces: [GrailsHibernatePersistentEntity])
         nestedEntityProp.getAssociatedEntity() >> nestedAssociatedEntity
 
-        def nestedPartA = Stub(PersistentProperty)
-        def nestedPartB = Stub(PersistentProperty)
+        def nestedPartA = Stub(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
+        def nestedPartB = Stub(PersistentProperty, additionalInterfaces: [GrailsHibernatePersistentProperty])
         def perArray = [nestedPartA, nestedPartB] as PersistentProperty[]
         nestedAssociatedEntity.getCompositeIdentity() >> perArray
 

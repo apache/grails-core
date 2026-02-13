@@ -303,7 +303,7 @@ public class HibernateMappingContext extends AbstractMappingContext {
 
         @Override
         public org.grails.datastore.mapping.model.types.Basic createBasicCollection(PersistentEntity entity, MappingContext context, PropertyDescriptor property, Class collectionType) {
-            HibernateBasicProperty basic = new HibernateBasicProperty(entity, context, property);
+            HibernateBasicProperty basic = new HibernateBasicProperty((GrailsHibernatePersistentEntity) entity, context, property);
             basic.setMapping(createPropertyMapping(basic, entity));
 
             CustomTypeMarshaller customTypeMarshaller = findCustomType(context, property.getPropertyType());

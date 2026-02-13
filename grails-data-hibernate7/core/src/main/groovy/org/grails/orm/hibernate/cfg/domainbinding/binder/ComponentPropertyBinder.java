@@ -91,7 +91,7 @@ public class ComponentPropertyBinder {
     }
 
     public void bindComponentProperty(Component component,
-                                      PersistentProperty componentProperty,
+                                      GrailsHibernatePersistentProperty componentProperty,
                                        GrailsHibernatePersistentProperty currentGrailsProp,
                                       PersistentClass persistentClass,
                                        String path,
@@ -143,7 +143,7 @@ public class ComponentPropertyBinder {
             }
             else {
                 // set type
-                this.simpleValueBinder.bindSimpleValue(currentGrailsProp, (GrailsHibernatePersistentProperty) componentProperty, (SimpleValue) value, path);
+                this.simpleValueBinder.bindSimpleValue(currentGrailsProp, componentProperty, (SimpleValue) value, path);
             }
         }
 

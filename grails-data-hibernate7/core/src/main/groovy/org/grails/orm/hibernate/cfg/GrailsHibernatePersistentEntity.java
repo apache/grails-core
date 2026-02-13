@@ -69,7 +69,7 @@ package org.grails.orm.hibernate.cfg;
         return Optional.ofNullable(getMappedForm())
                 .map(Mapping::getDiscriminator)
                 .map(DiscriminatorConfig::getValue)
-                .orElse(getName());
+                .orElse(getJavaClass().getSimpleName());
 
     }
 
@@ -132,7 +132,7 @@ package org.grails.orm.hibernate.cfg;
 
     default String getMultiTenantFilterCondition(DefaultColumnNameFetcher fetcher) {
         return Optional.ofNullable(getTenantId())
-                .map(fetcher::getDefaultColumnName)
+                .map(tenantId -> tenantId instanceof GrailsHibernatePersistentProperty ghpp ? fetcher.getDefaultColumnName(ghpp) : tenantId.getName())
                 .map(defaultColumnName -> ":tenantId = " + defaultColumnName)
                 .orElse(null);
     }

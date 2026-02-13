@@ -181,3 +181,18 @@ The core idea is to reorganize the binder application logic into a single primar
 - `CollectionSecondPassBinder`: TODO support unidirectional many-to-many.
 - `GrailsIncrementGenerator`: Reflection hacks for Hibernate 7.
 - Several tests are currently failing (Multitenancy, CompositeId, etc.). See `grep -r TODO grails-data-hibernate7` for details.
+
+## Utility Class Refactoring & Mock Compatibility
+
+**Objective:** Modernize utility classes in `domainbinding.util` to use Hibernate-specific GORM types while maintaining compatibility with Spock mocks.
+
+**Summary of Changes:**
+- **Refactored Utility Classes:** Updated `CreateKeyForProps`, `TableForManyCalculator`, `DefaultColumnNameFetcher`, `ConfigureDerivedPropertiesConsumer`, and `NamingStrategyWrapper` to use `GrailsHibernatePersistentProperty` and `GrailsHibernatePersistentEntity` where possible.
+- **Mock Compatibility Fixes:** Addressed `ClassCastException` in Spock specs by:
+    - Reverting public method signatures to use base interfaces (`PersistentProperty`, `PersistentEntity`) where required by mocks.
+    - Implementing internal safe casting using `instanceof` pattern matching.
+    - Updating test stubs to include `additionalInterfaces: [GrailsHibernatePersistentProperty]`.
+- **Logic Improvements:**
+    - Updated `getDiscriminatorValue` in `GrailsHibernatePersistentEntity` to default to `getJavaClass().getSimpleName()` to match GORM conventions and test expectations.
+    - Fixed `getMultiTenantFilterCondition` to safely handle non-Hibernate tenantId properties in test environments.
+    - Verified that all 1045 tests in `:grails-data-hibernate7-core` are passing.

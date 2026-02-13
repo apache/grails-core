@@ -72,7 +72,7 @@ public class CollectionSecondPassBinder {
         GrailsHibernatePersistentEntity referenced = property.getHibernateAssociatedEntity();
         if (StringUtils.hasText(propConfig.getSort())) {
             if (!property.isBidirectional() && (property instanceof org.grails.datastore.mapping.model.types.OneToMany)) {
-                throw new DatastoreConfigurationException("Default sort for associations ["+property.getOwner().getName()+"->" + property.getName() +
+                throw new DatastoreConfigurationException("Default sort for associations ["+property.getHibernateOwner().getName()+"->" + property.getName() +
                         "] are not supported with unidirectional one to many relationships.");
             }
             if (referenced != null) {
@@ -181,7 +181,7 @@ public class CollectionSecondPassBinder {
 
             if (property.isBidirectional()) {
                 if (LOG.isDebugEnabled())
-                    LOG.debug("[CollectionSecondPassBinder] Mapping other side " + otherSide.getOwner().getName() + "." + otherSide.getName() + " -> " + collection.getCollectionTable().getName() + " as ManyToOne");
+                    LOG.debug("[CollectionSecondPassBinder] Mapping other side " + otherSide.getHibernateOwner().getName() + "." + otherSide.getName() + " -> " + collection.getCollectionTable().getName() + " as ManyToOne");
                 ManyToOne element = new ManyToOne(metadataBuildingContext, collection.getCollectionTable());
                 bindManyToMany((Association)otherSide, element);
                 collection.setElement(element);
@@ -271,7 +271,7 @@ public class CollectionSecondPassBinder {
             else {
 
                 Mapping mapping = null;
-                GrailsHibernatePersistentEntity domainClass = (GrailsHibernatePersistentEntity) property.getOwner();
+                GrailsHibernatePersistentEntity domainClass = property.getHibernateOwner();
                 if (domainClass != null) {
                     mapping = domainClass.getMappedForm();
                 }
@@ -283,7 +283,7 @@ public class CollectionSecondPassBinder {
                     }
                 }
                 if (typeName == null) {
-                    String domainName = property.getOwner().getName();
+                    String domainName = property.getHibernateOwner().getName();
                     throw new MappingException("Missing type or column for column["+columnName+"] on domain["+domainName+"] referencing["+className+"]");
                 }
 

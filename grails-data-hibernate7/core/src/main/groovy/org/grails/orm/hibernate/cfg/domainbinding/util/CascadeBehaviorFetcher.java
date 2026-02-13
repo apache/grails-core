@@ -1,6 +1,5 @@
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
-import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.Embedded;
@@ -34,13 +33,13 @@ public class CascadeBehaviorFetcher {
     }
 
     public String getCascadeBehaviour(Association<?> association) {
-        var cascadeStrategy = getDefinedBehavior(association).orElse(getImpliedBehavior(association));
+        var cascadeStrategy = getDefinedBehavior((GrailsHibernatePersistentProperty) association).orElse(getImpliedBehavior(association));
         logCascadeMapping.logCascadeMapping(association, cascadeStrategy);
         return cascadeStrategy.getValue();
     }
 
-    private Optional<CascadeBehavior> getDefinedBehavior(PersistentProperty<?> grailsProperty) {
-        return Optional.ofNullable(((GrailsHibernatePersistentProperty) grailsProperty).getMappedForm())
+    private Optional<CascadeBehavior> getDefinedBehavior(GrailsHibernatePersistentProperty grailsProperty) {
+        return Optional.ofNullable(grailsProperty.getMappedForm())
                 .map(PropertyConfig::getCascade)
                 .map(CascadeBehavior::fromString);
     }
@@ -86,8 +85,8 @@ public class CascadeBehaviorFetcher {
     }
 
     private  Mapping getOwnersWrappedForm(Association<?> association) {
-        if (association.getOwner() instanceof GrailsHibernatePersistentEntity) {
-            return ((GrailsHibernatePersistentEntity) association.getOwner()).getMappedForm();
+        if (association.getOwner() instanceof GrailsHibernatePersistentEntity persistentEntity) {
+            return persistentEntity.getMappedForm();
         }
         return null;
     }

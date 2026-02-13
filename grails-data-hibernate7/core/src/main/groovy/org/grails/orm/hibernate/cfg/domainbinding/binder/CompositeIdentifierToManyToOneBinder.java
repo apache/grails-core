@@ -88,7 +88,7 @@ public class CompositeIdentifierToManyToOneBinder {
                                 String string = namingStrategy.resolveColumnName(referencedProperty.getName());
                                 String compositeIdPrefix = backticksRemover.apply(prefix) + UNDERSCORE + backticksRemover.apply(string);
 
-                                String suffix = defaultColumnNameFetcher.getDefaultColumnName(cip);
+                                String suffix = cip instanceof GrailsHibernatePersistentProperty ghpp ? defaultColumnNameFetcher.getDefaultColumnName(ghpp) : cip.getName();
                                 String finalColumnName = backticksRemover.apply(compositeIdPrefix) + UNDERSCORE + backticksRemover.apply(suffix);
                                 cc = new ColumnConfig();
                                 cc.setName(finalColumnName);
@@ -98,7 +98,7 @@ public class CompositeIdentifierToManyToOneBinder {
                         }
                     }
 
-                    String suffix = defaultColumnNameFetcher.getDefaultColumnName(referencedProperty);
+                    String suffix = referencedProperty instanceof GrailsHibernatePersistentProperty ghpp ? defaultColumnNameFetcher.getDefaultColumnName(ghpp) : referencedProperty.getName();
                     String finalColumnName = backticksRemover.apply(prefix) + UNDERSCORE + backticksRemover.apply(suffix);
                     cc.setName(finalColumnName);
                     columns.add(cc);

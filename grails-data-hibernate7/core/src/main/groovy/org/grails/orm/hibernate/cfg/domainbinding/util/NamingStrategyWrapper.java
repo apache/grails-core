@@ -1,8 +1,9 @@
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.reflect.NameUtils;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 
 import org.hibernate.boot.model.naming.Identifier;
@@ -60,15 +61,22 @@ public class NamingStrategyWrapper implements PersistentEntityNamingStrategy {
 
     @Override
     public String resolveForeignKeyForPropertyDomainClass(PersistentProperty property) {
-        return Optional.of(property)
+        return Optional.ofNullable(property)
                 .map(PersistentProperty::getOwner)
-                .map(PersistentEntity::getJavaClass)
+                .filter(GrailsHibernatePersistentEntity.class::isInstance)
+                .map(GrailsHibernatePersistentEntity.class::cast)
+                .map(GrailsHibernatePersistentEntity::getJavaClass)
                 .map(Class::getSimpleName)
                 .map(NameUtils::decapitalize)
                 .map(this::resolveColumnName)
                 .filter(name -> !name.isBlank())
                 .map(columnName -> columnName + FOREIGN_KEY_SUFFIX)
                 .orElse(null);
+    }
+
+    @Override
+    public String resolveTableName(GrailsHibernatePersistentEntity entity) {
+        return resolveTableName(entity.getJavaClass().getSimpleName());
     }
 
 }

@@ -9,7 +9,7 @@ import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Table;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
@@ -28,9 +28,9 @@ public class CreateKeyForProps {
         this.uniqueKeyForColumnsCreator = uniqueKeyForColumnsCreator;
     }
 
-    public void createKeyForProps(PersistentProperty grailsProp, String path, Table table,
+    public void createKeyForProps(GrailsHibernatePersistentProperty grailsProp, String path, Table table,
                                    String columnName) {
-        PropertyConfig mappedForm = ((GrailsHibernatePersistentProperty) grailsProp).getMappedForm();
+        PropertyConfig mappedForm = grailsProp.getMappedForm();
 
         if (mappedForm.isUnique() && mappedForm.isUniqueWithinGroup()) {
 
@@ -40,11 +40,11 @@ public class CreateKeyForProps {
             PersistentEntity owner = grailsProp.getOwner();
             for (Iterator<?> i = propertyNames.iterator(); i.hasNext();) {
                 String propertyName = (String) i.next();
-                PersistentProperty otherProp = owner.getPropertyByName(propertyName);
+                GrailsHibernatePersistentProperty otherProp = (GrailsHibernatePersistentProperty) owner.getPropertyByName(propertyName);
                 if (otherProp == null) {
                     throw new MappingException(owner.getJavaClass().getName() + " references an unknown property " + propertyName);
                 }
-                String otherColumnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath((GrailsHibernatePersistentProperty) otherProp, path, null);
+                String otherColumnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(otherProp, path, null);
                 keyList.add(new Column(otherColumnName));
             }
 

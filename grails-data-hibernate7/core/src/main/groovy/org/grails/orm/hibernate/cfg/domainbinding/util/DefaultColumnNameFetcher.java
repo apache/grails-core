@@ -1,6 +1,5 @@
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
-import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.ManyToMany;
@@ -25,13 +24,13 @@ public class DefaultColumnNameFetcher {
         this.backticksRemover = backticksRemover;
     }
 
-    public String getDefaultColumnName(PersistentProperty property) {
+    public String getDefaultColumnName(GrailsHibernatePersistentProperty property) {
 
         String columnName = namingStrategyWrapper.resolveColumnName(property.getName());
         if (property instanceof Association) {
             Association association = (Association) property;
             boolean isBasic = property instanceof Basic;
-            if (isBasic && (((GrailsHibernatePersistentProperty) property).getMappedForm()).getType() != null) {
+            if (isBasic && (property.getMappedForm()).getType() != null) {
                 return columnName;
             }
 
