@@ -64,7 +64,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setTable(currentTable)
 
         when:
-        simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(generator: GrailsSequenceGeneratorEnum.IDENTITY.toString()))
+        simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(generator: GrailsSequenceGeneratorEnum.IDENTITY.toString()), rootClass.getTable())
 
         then:
         1 * simpleValueBinder.bindSimpleValue(testProperty as GrailsHibernatePersistentProperty, null, _, "")
@@ -94,7 +94,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setTable(currentTable)
 
         when:
-        simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(generator: GrailsSequenceGeneratorEnum.SEQUENCE.toString(), params: [sequence: 'SEQ_TEST']))
+        simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(generator: GrailsSequenceGeneratorEnum.SEQUENCE.toString(), params: [sequence: 'SEQ_TEST']), rootClass.getTable())
 
         then:
         1 * simpleValueBinder.bindSimpleValue(testProperty as GrailsHibernatePersistentProperty, null, _, "")
@@ -116,7 +116,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         def rootClass = new RootClass(metadataBuildingContext)
 
         when:
-        simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(name: "nonExistent"))
+        simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(name: "nonExistent"), rootClass.getTable())
 
         then:
         thrown(org.hibernate.MappingException)

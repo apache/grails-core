@@ -45,13 +45,13 @@ public class SimpleIdBinder {
     }
 
 
-    public void bindSimpleId(@Nonnull GrailsHibernatePersistentEntity domainClass, RootClass entity, Identity mappedId) {
+    public void bindSimpleId(@Nonnull GrailsHibernatePersistentEntity domainClass, RootClass entity, Identity mappedId, Table table) {
 
         Mapping result = domainClass.getMappedForm();
         boolean useSequence = result != null && result.isTablePerConcreteClass();
         // create the id value
 
-        BasicValueIdCreator idCreator = this.basicValueIdCreator != null ? this.basicValueIdCreator : new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment, entity.getTable());
+        BasicValueIdCreator idCreator = this.basicValueIdCreator != null ? this.basicValueIdCreator : new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment, table);
         BasicValue id = idCreator.getBasicValueId(mappedId, domainClass, useSequence);
 
         var identifier = domainClass.getIdentity();
@@ -81,7 +81,7 @@ public class SimpleIdBinder {
         // set identifier property
         entity.setIdentifierProperty(prop);
 
-        Table table = id.getTable();
-        table.setPrimaryKey(new PrimaryKey(table));
+        Table pkTable = id.getTable();
+        pkTable.setPrimaryKey(new PrimaryKey(pkTable));
     }
 }

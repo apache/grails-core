@@ -46,7 +46,7 @@ public class IdentityBinder {
             if (identity != null && identity.getName() == null) {
                 identity.setName(root.getEntityName());
             }
-            simpleIdBinder.bindSimpleId(domainClass, root, identity);
+            simpleIdBinder.bindSimpleId(domainClass, root, identity, root.getTable());
         }
     }
 }
