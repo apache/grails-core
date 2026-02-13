@@ -4,6 +4,7 @@ import jakarta.annotation.Nonnull;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
@@ -135,7 +136,7 @@ public class GrailsPropertyBinder {
             value = new ManyToOne(metadataBuildingContext, table);
             manyToOneBinder.bindManyToOne((Association)currentGrailsProp, (ManyToOne)value, EMPTY_PATH);
         }
-        else if (currentGrailsProp instanceof Embedded embedded) {
+        else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
             value = new Component(metadataBuildingContext, persistentClass);
             componentPropertyBinder.bindComponent((Component)value, embedded, true, mappings, sessionFactoryBeanName);
         }

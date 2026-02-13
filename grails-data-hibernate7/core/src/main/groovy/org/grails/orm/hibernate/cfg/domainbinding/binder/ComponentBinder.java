@@ -9,11 +9,11 @@ import org.hibernate.mapping.Table;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 
 import jakarta.annotation.Nonnull;
 
@@ -32,7 +32,7 @@ public class ComponentBinder {
         this.componentPropertyBinder = null;
     }
 
-    public void bindComponent(Component component, Embedded property,
+    public void bindComponent(Component component, HibernateEmbeddedProperty property,
                                boolean isNullable, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         Class<?> type = property.getType();
         String role = GrailsHibernateUtil.qualify(type.getName(), property.getName());
@@ -57,7 +57,7 @@ public class ComponentBinder {
             }
 
             if (currentGrailsProp instanceof GrailsHibernatePersistentProperty hibernateProp) {
-                componentPropertyBinder.bindComponentProperty(component, (GrailsHibernatePersistentProperty) property, hibernateProp, persistentClass, path,
+                componentPropertyBinder.bindComponentProperty(component, property, hibernateProp, persistentClass, path,
                         table, mappings, sessionFactoryBeanName);
             }
         }

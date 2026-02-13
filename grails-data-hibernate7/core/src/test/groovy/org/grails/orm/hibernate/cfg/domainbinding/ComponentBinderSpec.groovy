@@ -2,7 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.model.types.Embedded
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
 
@@ -32,7 +32,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         root.setEntityName("MyEntity")
         def component = new Component(metadataBuildingContext, root)
         
-        def embeddedProp = GroovyMock(Embedded)
+        def embeddedProp = GroovyMock(HibernateEmbeddedProperty)
         def associatedEntity = GroovyMock(GrailsHibernatePersistentEntity)
         
         embeddedProp.getType() >> Address

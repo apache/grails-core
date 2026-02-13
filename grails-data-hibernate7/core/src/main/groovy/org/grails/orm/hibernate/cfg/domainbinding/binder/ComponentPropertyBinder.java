@@ -23,6 +23,7 @@ import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
@@ -128,7 +129,7 @@ public class ComponentPropertyBinder {
                 new ManyToOneBinder(namingStrategy).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
             }
         }
-        else if (currentGrailsProp instanceof Embedded embedded) {
+        else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
             value = new Component(metadataBuildingContext, persistentClass);
             componentBinder.bindComponent((Component) value, embedded, true, mappings, sessionFactoryBeanName);
         }
@@ -158,7 +159,7 @@ public class ComponentPropertyBinder {
         }
     }
 
-    public void bindComponent(Component component, Embedded property,
+    public void bindComponent(Component component, HibernateEmbeddedProperty property,
                                boolean isNullable, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         componentBinder.bindComponent(component, property, isNullable, mappings, sessionFactoryBeanName);
     }
