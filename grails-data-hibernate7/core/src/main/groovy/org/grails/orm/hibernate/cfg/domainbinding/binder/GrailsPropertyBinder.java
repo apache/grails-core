@@ -20,7 +20,6 @@ import org.hibernate.mapping.Component;
 import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.OneToOne;
 import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Property;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
@@ -89,7 +88,7 @@ public class GrailsPropertyBinder {
         this.propertyFromValueCreator = propertyFromValueCreator;
     }
 
-    public void bindProperty(PersistentClass persistentClass
+    public Value bindProperty(PersistentClass persistentClass
             , @Nonnull GrailsHibernatePersistentProperty currentGrailsProp
             , @Nonnull InFlightMetadataCollector mappings
             , String sessionFactoryBeanName) {
@@ -136,9 +135,9 @@ public class GrailsPropertyBinder {
             value = new ManyToOne(metadataBuildingContext, table);
             manyToOneBinder.bindManyToOne((Association)currentGrailsProp, (ManyToOne)value, EMPTY_PATH);
         }
-        else if (currentGrailsProp instanceof Embedded) {
+        else if (currentGrailsProp instanceof Embedded embedded) {
             value = new Component(metadataBuildingContext, persistentClass);
-            componentPropertyBinder.bindComponent((Component)value, (Embedded)currentGrailsProp, true, mappings, sessionFactoryBeanName);
+            componentPropertyBinder.bindComponent((Component)value, embedded, true, mappings, sessionFactoryBeanName);
         }
         // work out what type of relationship it is and bind value
         else { // Default BasicValue
@@ -146,9 +145,6 @@ public class GrailsPropertyBinder {
             simpleValueBinder.bindSimpleValue(currentGrailsProp, null,(SimpleValue) value, EMPTY_PATH);
         }
 
-        if (value != null) {
-            Property property = propertyFromValueCreator.createProperty(value, currentGrailsProp);
-            persistentClass.addProperty(property);
-        }
+        return value;
     }
 }

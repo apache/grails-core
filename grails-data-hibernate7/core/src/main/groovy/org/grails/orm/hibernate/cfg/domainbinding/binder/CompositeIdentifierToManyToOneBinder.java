@@ -75,7 +75,7 @@ public class CompositeIdentifierToManyToOneBinder {
                 // if the name is null then configure the name by convention
                 if (cc.getName() == null) {
                     // use the referenced table name as a prefix
-                    String prefix = tableNameFetcher.getTableName((GrailsHibernatePersistentEntity) refDomainClass);
+                    String prefix = refDomainClass instanceof GrailsHibernatePersistentEntity ghpe ? tableNameFetcher.getTableName(ghpe) : refDomainClass.getName();
                     PersistentProperty referencedProperty = refDomainClass.getPropertyByName(propertyName);
 
                     // if the referenced property is a ToOne and it has a composite id

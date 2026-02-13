@@ -56,12 +56,9 @@ public class ComponentBinder {
                 continue;
             }
 
-            if (currentGrailsProp instanceof GrailsHibernatePersistentProperty) {
-                componentPropertyBinder.bindComponentProperty(component, property, (GrailsHibernatePersistentProperty) currentGrailsProp, persistentClass, path,
+            if (currentGrailsProp instanceof GrailsHibernatePersistentProperty hibernateProp) {
+                componentPropertyBinder.bindComponentProperty(component, property, hibernateProp, persistentClass, path,
                         table, mappings, sessionFactoryBeanName);
-            } else {
-                // Handle cases where currentGrailsProp is not a GrailsHibernatePersistentProperty
-                // For now, we'll just skip binding for such properties in this test context
             }
         }
     }

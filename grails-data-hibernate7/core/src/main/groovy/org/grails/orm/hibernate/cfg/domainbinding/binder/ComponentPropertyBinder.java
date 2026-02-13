@@ -115,11 +115,11 @@ public class ComponentPropertyBinder {
 
             value = new ManyToOne(metadataBuildingContext, table);
             new ManyToOneBinder(namingStrategy).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
-        } else if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.OneToOne) {
+        } else if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.OneToOne association) {
             if (LOG.isDebugEnabled())
                 LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
 
-            if (((Association) currentGrailsProp).canBindOneToOneWithSingleColumnAndForeignKey()) {
+            if (association.canBindOneToOneWithSingleColumnAndForeignKey()) {
                 value = new OneToOne(metadataBuildingContext, table, persistentClass);
                 new OneToOneBinder(namingStrategy).bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, path);
             }
@@ -128,9 +128,9 @@ public class ComponentPropertyBinder {
                 new ManyToOneBinder(namingStrategy).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
             }
         }
-        else if (currentGrailsProp instanceof Embedded) {
+        else if (currentGrailsProp instanceof Embedded embedded) {
             value = new Component(metadataBuildingContext, persistentClass);
-            componentBinder.bindComponent((Component) value, (Embedded) currentGrailsProp, true, mappings, sessionFactoryBeanName);
+            componentBinder.bindComponent((Component) value, embedded, true, mappings, sessionFactoryBeanName);
         }
         else {
             if (LOG.isDebugEnabled())
@@ -138,16 +138,16 @@ public class ComponentPropertyBinder {
 
             value = new BasicValue(metadataBuildingContext, table);
             if (currentGrailsProp.getType().isEnum()) {
-                String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath((GrailsHibernatePersistentProperty) currentGrailsProp, path, null);
-                enumTypeBinder.bindEnumType((GrailsHibernatePersistentProperty) currentGrailsProp, currentGrailsProp.getType(), (SimpleValue) value, columnName);
+                String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, path, null);
+                enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), (SimpleValue) value, columnName);
             }
             else {
                 // set type
-                this.simpleValueBinder.bindSimpleValue((GrailsHibernatePersistentProperty) currentGrailsProp, (GrailsHibernatePersistentProperty) componentProperty, (SimpleValue) value, path);
+                this.simpleValueBinder.bindSimpleValue(currentGrailsProp, (GrailsHibernatePersistentProperty) componentProperty, (SimpleValue) value, path);
             }
         }
 
-        Property persistentProperty = propertyFromValueCreator.createProperty(value, (GrailsHibernatePersistentProperty) currentGrailsProp);
+        Property persistentProperty = propertyFromValueCreator.createProperty(value, currentGrailsProp);
         component.addProperty(persistentProperty);
         if (componentProperty != null && componentProperty.getOwner() instanceof GrailsHibernatePersistentEntity ghpe && ghpe.isComponentPropertyNullable(componentProperty)) {
             final Iterator<?> columnIterator = value.getColumns().iterator();

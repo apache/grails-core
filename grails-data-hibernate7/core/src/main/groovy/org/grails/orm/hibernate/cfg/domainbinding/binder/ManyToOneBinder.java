@@ -4,7 +4,6 @@ import org.hibernate.MappingException;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.ManyToOne;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.datastore.mapping.model.types.OneToOne;
@@ -57,21 +56,19 @@ public class ManyToOneBinder {
     public void bindManyToOne(Association property
             , ManyToOne manyToOne
             ,String path) {
+        GrailsHibernatePersistentProperty hibernateProperty = (GrailsHibernatePersistentProperty) property;
         manyToOneValuesBinder.bindManyToOneValues(property, manyToOne);
-        PersistentEntity refDomainClass = property instanceof ManyToMany ? property.getOwner() : property.getAssociatedEntity();
-        Mapping mapping = null;
-        if (refDomainClass instanceof GrailsHibernatePersistentEntity) {
-            mapping = ((GrailsHibernatePersistentEntity) refDomainClass).getMappedForm();
-        }
+        GrailsHibernatePersistentEntity refDomainClass = (GrailsHibernatePersistentEntity) (property instanceof ManyToMany ? property.getOwner() : property.getAssociatedEntity());
+        Mapping mapping = refDomainClass.getMappedForm();
 
         boolean isComposite = mapping != null && mapping.hasCompositeIdentifier();
         if (isComposite) {
             CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
-            compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne((GrailsHibernatePersistentProperty) property, manyToOne, ci, refDomainClass, path);
+            compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(hibernateProperty, manyToOne, ci, refDomainClass, path);
         }
         else {
             if (property.isCircular() && (property instanceof ManyToMany)) {
-                PropertyConfig pc = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+                PropertyConfig pc = hibernateProperty.getMappedForm();
 
                 if (mapping != null && pc.getColumns().isEmpty()) {
                     mapping.getColumns().put(property.getName(), pc);
@@ -84,16 +81,16 @@ public class ManyToOneBinder {
                     pc.setJoinTable(jt);
                 }
                 // set type
-                simpleValueBinder.bindSimpleValue((GrailsHibernatePersistentProperty) property, null, manyToOne, path);
+                simpleValueBinder.bindSimpleValue(hibernateProperty, null, manyToOne, path);
             }
             else {
                 // bind column
                 // set type
-                simpleValueBinder.bindSimpleValue((GrailsHibernatePersistentProperty) property, null, manyToOne, path);
+                simpleValueBinder.bindSimpleValue(hibernateProperty, null, manyToOne, path);
             }
         }
 
-        PropertyConfig config = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+        PropertyConfig config = hibernateProperty.getMappedForm();
         boolean isOneToOne = property instanceof OneToOne;
         boolean notComposite = !isComposite;
         if (isOneToOne && notComposite) {

@@ -322,7 +322,8 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
                 simpleValueBinder,
                 columnNameForPropertyAndPathFetcher,
                 oneToOneBinder,
-                manyToOneBinder
+                manyToOneBinder,
+                propertyFromValueCreator
         )
 
         def mappings = Mock(org.hibernate.boot.spi.InFlightMetadataCollector)

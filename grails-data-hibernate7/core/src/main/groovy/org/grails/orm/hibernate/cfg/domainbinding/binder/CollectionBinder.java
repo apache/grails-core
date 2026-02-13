@@ -2,15 +2,14 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
 
-import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior;
-import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamespaceNameExtractor;
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionSecondPassBinder;
@@ -43,7 +42,6 @@ public class CollectionBinder {
     private final ListSecondPassBinder listSecondPassBinder;
     private final CollectionSecondPassBinder collectionSecondPassBinder;
     private final MapSecondPassBinder mapSecondPassBinder;
-    private final DefaultColumnNameFetcher defaultColumnNameFetcher;
 
     public CollectionBinder(MetadataBuildingContext metadataBuildingContext, GrailsDomainBinder grailsDomainBinder, PersistentEntityNamingStrategy namingStrategy) {
         this.metadataBuildingContext = metadataBuildingContext;
@@ -52,7 +50,6 @@ public class CollectionBinder {
         this.collectionSecondPassBinder = new CollectionSecondPassBinder(metadataBuildingContext, namingStrategy);
         this.listSecondPassBinder = new ListSecondPassBinder(metadataBuildingContext, namingStrategy,collectionSecondPassBinder);
         this.mapSecondPassBinder = new MapSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
-        this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy);
 
     }
 
@@ -92,7 +89,7 @@ public class CollectionBinder {
         if (property.shouldBindWithForeignKey()) {
             OneToMany oneToMany = new OneToMany(metadataBuildingContext, collection.getOwner());
             collection.setElement(oneToMany);
-            bindOneToMany((org.grails.datastore.mapping.model.types.OneToMany) property, oneToMany, mappings);
+            bindOneToMany((org.grails.datastore.mapping.model.types.OneToMany) property, oneToMany);
         } else {
             bindCollectionTable(property, mappings, collection, owner.getTable());
 
@@ -122,14 +119,14 @@ public class CollectionBinder {
     }
 
 
-    private String getNameForPropertyAndPath(PersistentProperty property, String path) {
+    private String getNameForPropertyAndPath(GrailsHibernatePersistentProperty property, String path) {
         if (GrailsHibernateUtil.isNotEmpty(path)) {
             return GrailsHibernateUtil.qualify(path, property.getName());
         }
         return property.getName();
     }
 
-    private void bindOneToMany(org.grails.datastore.mapping.model.types.OneToMany currentGrailsProp, OneToMany one, @Nonnull InFlightMetadataCollector mappings) {
+    private void bindOneToMany(org.grails.datastore.mapping.model.types.OneToMany currentGrailsProp, OneToMany one) {
         one.setReferencedEntityName(currentGrailsProp.getAssociatedEntity().getName());
         one.setIgnoreNotFound(true);
     }
@@ -163,12 +160,4 @@ public class CollectionBinder {
                 schemaName, catalogName,
                 tableName, null, false, metadataBuildingContext));
     }
-
-
-
-
-
-
-
-
 }

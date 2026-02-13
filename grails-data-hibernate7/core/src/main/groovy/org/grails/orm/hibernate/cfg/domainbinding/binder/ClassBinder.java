@@ -1,6 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.PersistentClass;
@@ -19,7 +19,7 @@ public class ClassBinder {
      * @param persistentClass The persistant class
      * @param collector        Existing collector
      */
-    public void bindClass(@Nonnull PersistentEntity persistentEntity, PersistentClass persistentClass, @Nonnull InFlightMetadataCollector collector) {
+    public void bindClass(@Nonnull GrailsHibernatePersistentEntity persistentEntity, PersistentClass persistentClass, @Nonnull InFlightMetadataCollector collector) {
         persistentClass.setLazy(true);
         var entityName = persistentEntity.getName();
         persistentClass.setEntityName(entityName);
@@ -31,7 +31,8 @@ public class ClassBinder {
         persistentClass.setSelectBeforeUpdate(false);
 
         boolean autoImport;
-        if (persistentEntity.getMapping().getMappedForm() instanceof Mapping mappedForm) {
+        Mapping mappedForm = persistentEntity.getMappedForm();
+        if (mappedForm != null) {
             autoImport = mappedForm.isAutoImport();
         } else {
             autoImport = collector.getMetadataBuildingOptions().getMappingDefaults().isAutoImportEnabled();

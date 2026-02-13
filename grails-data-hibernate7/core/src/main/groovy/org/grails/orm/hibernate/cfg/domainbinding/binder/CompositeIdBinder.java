@@ -6,8 +6,6 @@ import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.RootClass;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
@@ -26,12 +24,7 @@ public class CompositeIdBinder {
     }
 
 
-    public void bindCompositeId(@Nonnull PersistentEntity domainClass, RootClass root,
-                                 CompositeIdentity compositeIdentity, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
-        bindCompositeId(domainClass, (GrailsHibernatePersistentEntity) domainClass, root, compositeIdentity, mappings, sessionFactoryBeanName);
-    }
-
-    public void bindCompositeId(@Nonnull PersistentEntity domainClass, @Nonnull GrailsHibernatePersistentEntity hibernatePersistentEntity, RootClass root,
+    public void bindCompositeId(@Nonnull GrailsHibernatePersistentEntity domainClass, RootClass root,
                                  CompositeIdentity compositeIdentity, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         Component id = new Component(metadataBuildingContext, root);
         id.setNullValue("undefined");
@@ -46,29 +39,29 @@ public class CompositeIdBinder {
 
         id.setRoleName(path);
 
-        PersistentProperty[] composite;
+        GrailsHibernatePersistentProperty[] composite;
         if (compositeIdentity != null && compositeIdentity.getPropertyNames() != null) {
             String[] propertyNames = compositeIdentity.getPropertyNames();
-            composite = new PersistentProperty[propertyNames.length];
+            composite = new GrailsHibernatePersistentProperty[propertyNames.length];
             for (int i = 0; i < propertyNames.length; i++) {
-                composite[i] = domainClass.getPropertyByName(propertyNames[i]);
+                composite[i] = (GrailsHibernatePersistentProperty) domainClass.getPropertyByName(propertyNames[i]);
             }
         } else {
-            composite = hibernatePersistentEntity.getCompositeIdentity();
+            composite = domainClass.getCompositeIdentity();
         }
 
         if (composite == null) {
             throw new MappingException("No composite identifier properties found for class [" + domainClass.getName() + "]");
         }
 
-        PersistentProperty identifierProp = hibernatePersistentEntity.getIdentity();
-        for (PersistentProperty property : composite) {
+        GrailsHibernatePersistentProperty identifierProp = domainClass.getIdentity();
+        for (GrailsHibernatePersistentProperty property : composite) {
             if (property == null) {
                 throw new MappingException("Property referenced in composite-id mapping of class [" + domainClass.getName() +
                         "] is not a valid property!");
             }
 
-            componentPropertyBinder.bindComponentProperty(id, identifierProp, (GrailsHibernatePersistentProperty) property, root, "", root.getTable(), mappings, sessionFactoryBeanName);
+            componentPropertyBinder.bindComponentProperty(id, identifierProp, property, root, "", root.getTable(), mappings, sessionFactoryBeanName);
         }
     }
 }

@@ -2,7 +2,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import jakarta.annotation.Nonnull;
 import org.grails.datastore.mapping.model.DatastoreConfigurationException;
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.Association;
@@ -77,7 +76,7 @@ public class CollectionSecondPassBinder {
                         "] are not supported with unidirectional one to many relationships.");
             }
             if (referenced != null) {
-                PersistentProperty propertyToSortBy = referenced.getPropertyByName(propConfig.getSort());
+                GrailsHibernatePersistentProperty propertyToSortBy = (GrailsHibernatePersistentProperty) referenced.getPropertyByName(propConfig.getSort());
 
                 String associatedClassName = referenced.getName();
 
@@ -136,7 +135,7 @@ public class CollectionSecondPassBinder {
         }
 
         // setup the primary key references
-        DependantValue key = createPrimaryKeyValue(mappings, property, collection, persistentClasses);
+        DependantValue key = createPrimaryKeyValue(mappings, property, collection);
 
         // link a bidirectional relationship
         if (property.isBidirectional()) {
@@ -184,7 +183,7 @@ public class CollectionSecondPassBinder {
                 if (LOG.isDebugEnabled())
                     LOG.debug("[CollectionSecondPassBinder] Mapping other side " + otherSide.getOwner().getName() + "." + otherSide.getName() + " -> " + collection.getCollectionTable().getName() + " as ManyToOne");
                 ManyToOne element = new ManyToOne(metadataBuildingContext, collection.getCollectionTable());
-                bindManyToMany((Association)otherSide, element, mappings, sessionFactoryBeanName);
+                bindManyToMany((Association)otherSide, element);
                 collection.setElement(element);
                 new CollectionForPropertyConfigBinder().bindCollectionForPropertyConfig(collection, propConfig);
                 if (property.isCircular()) {
@@ -198,14 +197,14 @@ public class CollectionSecondPassBinder {
             // there are problems with list and map mappings and join columns relating to duplicate key constraints
             // TODO change this when HHH-1268 is resolved
             if (!property.shouldBindWithForeignKey()) {
-                bindCollectionWithJoinTable(property, mappings, collection, propConfig, sessionFactoryBeanName);
+                bindCollectionWithJoinTable(property, mappings, collection, propConfig);
             } else {
                 bindUnidirectionalOneToMany((org.grails.datastore.mapping.model.types.OneToMany) property, mappings, collection);
             }
         } else if (property.supportsJoinColumnMapping()) {
-            bindCollectionWithJoinTable(property, mappings, collection, propConfig, sessionFactoryBeanName);
+            bindCollectionWithJoinTable(property, mappings, collection, propConfig);
         }
-        forceNullableAndCheckUpdateable(key, property, mappings);
+        forceNullableAndCheckUpdateable(key, property);
     }
 
     private void bindUnidirectionalOneToMany(org.grails.datastore.mapping.model.types.OneToMany property, @Nonnull InFlightMetadataCollector mappings, Collection collection) {
@@ -222,7 +221,7 @@ public class CollectionSecondPassBinder {
         collection.setInverse(false);
         PersistentClass referenced = mappings.getEntityBinding(entityName);
         Backref prop = new Backref();
-        PersistentEntity owner = property.getOwner();
+        GrailsHibernatePersistentEntity owner = (GrailsHibernatePersistentEntity) property.getOwner();
         prop.setEntityName(owner.getName());
         String s2 = property.getName();
         prop.setName(UNDERSCORE + new BackticksRemover().apply(owner.getJavaClass().getSimpleName()) + UNDERSCORE + new BackticksRemover().apply(s2) + "Backref");
@@ -236,7 +235,7 @@ public class CollectionSecondPassBinder {
     }
 
     private void bindCollectionWithJoinTable(HibernateToManyProperty property,
-                                             @Nonnull InFlightMetadataCollector mappings, Collection collection, PropertyConfig config, String sessionFactoryBeanName) {
+                                             @Nonnull InFlightMetadataCollector mappings, Collection collection, PropertyConfig config) {
 
         collection.setInverse(false);
         SimpleValue element;
@@ -305,14 +304,14 @@ public class CollectionSecondPassBinder {
             }
             if (m != null && m.hasCompositeIdentifier()) {
                 CompositeIdentity ci = (CompositeIdentity) m.getIdentity();
-                new CompositeIdentifierToManyToOneBinder(namingStrategy).bindCompositeIdentifierToManyToOne((GrailsHibernatePersistentProperty) property, element, ci, domainClass, EMPTY_PATH);
+                new CompositeIdentifierToManyToOneBinder(namingStrategy).bindCompositeIdentifierToManyToOne(property, element, ci, domainClass, EMPTY_PATH);
             }
             else {
                 if (joinColumnMappingOptional.isPresent()) {
                     columnName = joinColumnMappingOptional.get().getName();
                 }
                 else {
-                    var decapitalize = domainClass.getRootEntity().getJavaClass().getSimpleName();
+                    var decapitalize = domainClass.getHibernateRootEntity().getJavaClass().getSimpleName();
                     columnName = namingStrategy.resolveColumnName(decapitalize) + FOREIGN_KEY_SUFFIX;
                 }
 
@@ -342,8 +341,7 @@ public class CollectionSecondPassBinder {
         manyToOne.setReferencedEntityName(property.getHibernateAssociatedEntity().getName());
     }
 
-    private void bindManyToMany(Association property, ManyToOne element,
-                                @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+    private void bindManyToMany(Association property, ManyToOne element) {
         new ManyToOneBinder(namingStrategy).bindManyToOne(property, element, EMPTY_PATH);
         element.setReferencedEntityName(property.getOwner().getName());
     }
@@ -355,28 +353,25 @@ public class CollectionSecondPassBinder {
             LOG.debug("[CollectionSecondPassBinder] binding  [" + property.getName() + "] with dependant key");
         }
 
-        PersistentEntity refDomainClass = property.getOwner();
-        Mapping mapping = null;
-        if (refDomainClass instanceof GrailsHibernatePersistentEntity persistentEntity) {
-            mapping = persistentEntity.getMappedForm();
-        }
+        GrailsHibernatePersistentEntity refDomainClass = property.getHibernateOwner();
+        Mapping mapping = refDomainClass.getMappedForm();
         boolean hasCompositeIdentifier = mapping != null && mapping.hasCompositeIdentifier();
         if (hasCompositeIdentifier && property.supportsJoinColumnMapping()) {
             CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
-            new CompositeIdentifierToManyToOneBinder(namingStrategy).bindCompositeIdentifierToManyToOne((GrailsHibernatePersistentProperty) property, key, ci, refDomainClass, EMPTY_PATH);
+            new CompositeIdentifierToManyToOneBinder(namingStrategy).bindCompositeIdentifierToManyToOne(property, key, ci, refDomainClass, EMPTY_PATH);
         }
         else {
             // set type
-            GrailsHibernatePersistentProperty identity = (GrailsHibernatePersistentProperty) refDomainClass.getIdentity();
+            GrailsHibernatePersistentProperty identity = refDomainClass.getIdentity();
             if (identity != null) {
-                new SimpleValueBinder(namingStrategy).bindSimpleValue((GrailsHibernatePersistentProperty) property, null, key, EMPTY_PATH, identity);
+                new SimpleValueBinder(namingStrategy).bindSimpleValue(property, null, key, EMPTY_PATH, identity);
             } else {
-                new SimpleValueBinder(namingStrategy).bindSimpleValue((GrailsHibernatePersistentProperty) property, null, key, EMPTY_PATH);
+                new SimpleValueBinder(namingStrategy).bindSimpleValue(property, null, key, EMPTY_PATH);
             }
         }
     }
 
-    private void linkBidirectionalOneToMany(Collection collection, PersistentClass associatedClass, DependantValue key, PersistentProperty otherSide) {
+    private void linkBidirectionalOneToMany(Collection collection, PersistentClass associatedClass, DependantValue key, GrailsHibernatePersistentProperty otherSide) {
         collection.setInverse(true);
 
         // Iterator mappedByColumns = associatedClass.getProperty(otherSide.getName()).getValue().getColumnIterator();
@@ -387,7 +382,7 @@ public class CollectionSecondPassBinder {
         }
     }
 
-    private void linkValueUsingAColumnCopy(PersistentProperty prop, Column column, DependantValue key) {
+    private void linkValueUsingAColumnCopy(GrailsHibernatePersistentProperty prop, Column column, DependantValue key) {
         Column mappingColumn = new Column();
         mappingColumn.setName(column.getName());
         mappingColumn.setLength(column.getLength());
@@ -412,7 +407,7 @@ public class CollectionSecondPassBinder {
         }
     }
 
-    private void forceNullableAndCheckUpdateable(DependantValue key, PersistentProperty property, InFlightMetadataCollector mappings) {
+    private void forceNullableAndCheckUpdateable(DependantValue key, GrailsHibernatePersistentProperty property) {
         Iterator<?> it = key.getColumns().iterator();
         while (it.hasNext()) {
             Object next = it.next();
@@ -422,8 +417,8 @@ public class CollectionSecondPassBinder {
         }
         
         int unidirectionalCount = 0;
-        PersistentEntity owner = property.getOwner();
-        for (PersistentProperty p : owner.getPersistentProperties()) {
+        GrailsHibernatePersistentEntity owner = property.getHibernateOwner();
+        for (GrailsHibernatePersistentProperty p : owner.getPersistentPropertiesToBind()) {
             if (p instanceof Association association && !association.isBidirectional()) {
                 unidirectionalCount++;
             }
@@ -436,8 +431,8 @@ public class CollectionSecondPassBinder {
         }
     }
 
-    private DependantValue createPrimaryKeyValue(@Nonnull InFlightMetadataCollector mappings, PersistentProperty property,
-                                                 Collection collection, java.util.Map<?, ?> persistentClasses) {
+    private DependantValue createPrimaryKeyValue(@Nonnull InFlightMetadataCollector mappings, GrailsHibernatePersistentProperty property,
+                                                 Collection collection) {
         KeyValue keyValue;
         DependantValue key;
         String propertyRef = collection.getReferencedPropertyName();

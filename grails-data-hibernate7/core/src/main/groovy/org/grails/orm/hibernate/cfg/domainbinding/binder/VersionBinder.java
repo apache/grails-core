@@ -7,7 +7,6 @@ import org.hibernate.mapping.Property;
 import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.Table;
 
-import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 
@@ -39,21 +38,21 @@ public class VersionBinder {
         this.basicValueFactory = basicValueFactory;
     }
 
-    public void bindVersion(PersistentProperty version, RootClass entity) {
+    public void bindVersion(GrailsHibernatePersistentProperty version, RootClass entity) {
 
         if (version != null) {
 
             BasicValue val = basicValueFactory.apply(metadataBuildingContext, entity.getTable());
 
             // set type
-            simpleValueBinder.bindSimpleValue((GrailsHibernatePersistentProperty) version, null, val, EMPTY_PATH);
+            simpleValueBinder.bindSimpleValue(version, null, val, EMPTY_PATH);
 
             if (!val.isTypeSpecified()) {
                 val.setTypeName("version".equals(version.getName()) ? "integer" : "timestamp");
             }
             Property prop = new Property();
             prop.setValue(val);
-            propertyBinder.bindProperty((GrailsHibernatePersistentProperty) version, prop);
+            propertyBinder.bindProperty(version, prop);
             prop.setLazy(false);
             val.setNullValue("undefined");
             entity.setVersion(prop);
