@@ -11,6 +11,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehaviorFetcher;
 
 import org.hibernate.boot.spi.AccessType;
 import org.hibernate.mapping.Property;
+import org.hibernate.mapping.SimpleValue;
+import org.hibernate.mapping.Value;
 
 import java.util.Optional;
 
@@ -31,9 +33,12 @@ public class PropertyBinder {
      * Binds a property to Hibernate runtime meta model. Deals with cascade strategy based on the Grails domain model
      *
      * @param persistentProperty The grails property instance
-     * @param prop           The Hibernate property
+     * @param value           The Hibernate value
+     * @return The Hibernate property
      */
-    public void bindProperty(GrailsHibernatePersistentProperty persistentProperty, Property prop) {
+    public Property bindProperty(GrailsHibernatePersistentProperty persistentProperty, Value value) {
+        var prop = new Property();
+        prop.setValue(value);
         // set the property name
         prop.setName(persistentProperty.getName());
         PropertyConfig config = persistentProperty.getMappedForm();
@@ -74,5 +79,17 @@ public class PropertyBinder {
                     .orElse( persistentProperty instanceof Association);
             prop.setLazy(isLazy);
         }
+        return prop;
+    }
+
+    public void bindProperty(GrailsHibernatePersistentProperty persistentProperty, Property prop) {
+        Property bound = bindProperty(persistentProperty, prop.getValue());
+        prop.setName(bound.getName());
+        prop.setInsertable(bound.isInsertable());
+        prop.setUpdateable(bound.isUpdateable());
+        prop.setPropertyAccessorName(bound.getPropertyAccessorName());
+        prop.setOptional(bound.isOptional());
+        prop.setCascade(bound.getCascade());
+        prop.setLazy(bound.isLazy());
     }
 }

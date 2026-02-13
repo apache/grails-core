@@ -23,6 +23,11 @@ class PropertyFromValueCreatorSpec extends Specification {
         grailsProperty.getOwnerClassName() >> "com.example.MyEntity"
         grailsProperty.getName() >> "myProp"
         value.getTable() >> table
+        propertyBinder.bindProperty(grailsProperty, value) >> { 
+            def p = new Property()
+            p.setValue(value)
+            return p
+        }
 
         when:
         Property prop = creator.createProperty(value, grailsProperty)
@@ -30,7 +35,6 @@ class PropertyFromValueCreatorSpec extends Specification {
         then:
         1 * value.setTypeUsingReflection("com.example.MyEntity", "myProp")
         1 * value.createForeignKey()
-        1 * propertyBinder.bindProperty(grailsProperty, _ as Property)
         prop.getValue() == value
     }
 
@@ -45,6 +49,11 @@ class PropertyFromValueCreatorSpec extends Specification {
         grailsProperty.getOwnerClassName() >> "com.example.MyEntity"
         grailsProperty.getName() >> "myProp"
         value.getTable() >> null
+        propertyBinder.bindProperty(grailsProperty, value) >> {
+            def p = new Property()
+            p.setValue(value)
+            return p
+        }
 
         when:
         Property prop = creator.createProperty(value, grailsProperty)
@@ -52,7 +61,6 @@ class PropertyFromValueCreatorSpec extends Specification {
         then:
         1 * value.setTypeUsingReflection("com.example.MyEntity", "myProp")
         0 * value.createForeignKey()
-        1 * propertyBinder.bindProperty(grailsProperty, _ as Property)
         prop.getValue() == value
     }
 }

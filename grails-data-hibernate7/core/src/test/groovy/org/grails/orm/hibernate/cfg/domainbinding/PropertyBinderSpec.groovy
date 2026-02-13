@@ -30,9 +30,7 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         def binder = new PropertyBinder(cascadeBehaviorFetcher)
 
         def persistentProperty = Mock(GrailsHibernatePersistentProperty)
-        def property = new Property()
         def value = Mock(Value)
-        property.setValue(value)
         def config = Mock(PropertyConfig)
 
         when:
@@ -49,7 +47,7 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         persistentProperty.isLazyAble() >> lazyAble
 
         and:
-        binder.bindProperty(persistentProperty, property)
+        def property = binder.bindProperty(persistentProperty, value)
 
         then:
         property.getName() == propertyName
@@ -74,14 +72,14 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         def binder = new PropertyBinder(cascadeBehaviorFetcher)
 
         def association = Mock(TestAssociation)
-        def property = new Property()
+        def value = Mock(Value)
         def config = Mock(PropertyConfig)
 
         when:
         association.getMappedForm() >> config
         config.getAccessType() >> AccessType.PROPERTY
         cascadeBehaviorFetcher.getCascadeBehaviour(association as Association) >> "all-delete-orphan"
-        binder.bindProperty(association as GrailsHibernatePersistentProperty, property)
+        def property = binder.bindProperty(association as GrailsHibernatePersistentProperty, value)
 
         then:
         property.getCascade() == "all-delete-orphan"
@@ -94,7 +92,29 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         def persistentProperty = Mock(GrailsHibernatePersistentProperty)
         persistentProperty.getName() >> "name"
+        def value = Mock(Value)
+        def config = new PropertyConfig()
+        config.setAccessType(jakarta.persistence.AccessType.PROPERTY)
+        persistentProperty.getMappedForm() >> config
+
+        when:
+        def property = binder.bindProperty(persistentProperty, value)
+
+        then:
+        property.getPropertyAccessorName() == "property"
+    }
+
+    void "test bindProperty with Property object"() {
+        given:
+        def cascadeBehaviorFetcher = Mock(CascadeBehaviorFetcher)
+        def binder = new PropertyBinder(cascadeBehaviorFetcher)
+
+        def persistentProperty = Mock(GrailsHibernatePersistentProperty)
+        persistentProperty.getName() >> "name"
+        persistentProperty.isNullable() >> true
         def property = new Property()
+        def value = Mock(Value)
+        property.setValue(value)
         def config = new PropertyConfig()
         config.setAccessType(jakarta.persistence.AccessType.PROPERTY)
         persistentProperty.getMappedForm() >> config
@@ -103,6 +123,8 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindProperty(persistentProperty, property)
 
         then:
+        property.getName() == "name"
+        property.isOptional() == true
         property.getPropertyAccessorName() == "property"
     }
 

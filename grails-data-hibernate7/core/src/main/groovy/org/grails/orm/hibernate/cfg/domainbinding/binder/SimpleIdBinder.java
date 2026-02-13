@@ -80,12 +80,8 @@ public class SimpleIdBinder {
         // set type
         simpleValueBinder.bindSimpleValue(identifier, null, id, EMPTY_PATH);
 
-        // create property
-        Property prop = new Property();
-        prop.setValue(id);
-
         // bind property
-        propertyBinder.bindProperty(identifier, prop);
+        Property prop = propertyBinder.bindProperty(identifier, id);
         // set identifier property
         entity.setIdentifierProperty(prop);
 

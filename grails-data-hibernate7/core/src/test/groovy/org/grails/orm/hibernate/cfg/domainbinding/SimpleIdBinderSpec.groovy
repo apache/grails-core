@@ -8,6 +8,7 @@ import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.PrimaryKey
+import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
 
@@ -40,7 +41,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
 
         // Mock the collaborators that can be safely mocked
         simpleValueBinder = Mock(SimpleValueBinder)
-        propertyBinder = Mock(PropertyBinder)
+        propertyBinder = Spy(PropertyBinder)
 
         simpleIdBinder = new SimpleIdBinder(basicValueIdCreator, simpleValueBinder, propertyBinder)
     }

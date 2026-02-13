@@ -50,9 +50,7 @@ public class VersionBinder {
             if (!val.isTypeSpecified()) {
                 val.setTypeName("version".equals(version.getName()) ? "integer" : "timestamp");
             }
-            Property prop = new Property();
-            prop.setValue(val);
-            propertyBinder.bindProperty(version, prop);
+            Property prop = propertyBinder.bindProperty(version, val);
             prop.setLazy(false);
             val.setNullValue("undefined");
             entity.setVersion(prop);

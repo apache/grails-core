@@ -26,9 +26,6 @@ public class PropertyFromValueCreator {
             value.createForeignKey();
         }
 
-        Property prop = new Property();
-        prop.setValue(value);
-        propertyBinder.bindProperty(grailsProperty, prop);
-        return prop;
+        return propertyBinder.bindProperty(grailsProperty, value);
     }
 }
