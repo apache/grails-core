@@ -31,11 +31,6 @@ public class IdentityBinder {
         this.compositeIdBinder = compositeIdBinder;
     }
 
-    protected IdentityBinder() {
-        this.simpleIdBinder = null;
-        this.compositeIdBinder = null;
-    }
-
     public void bindIdentity(
             @Nonnull GrailsHibernatePersistentEntity domainClass,
             RootClass root,

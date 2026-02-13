@@ -15,16 +15,14 @@ import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrappe
 public class BasicValueIdCreator {
 
     private final JdbcEnvironment jdbcEnvironment;
-    private GrailsHibernatePersistentEntity domainClass;
     @SuppressWarnings("unused") // kept for tests that want to provide a prototype BasicValue
     private final BasicValue id;
     private final GrailsSequenceWrapper grailsSequenceWrapper;
 
-    public BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext, JdbcEnvironment jdbcEnvironment, GrailsHibernatePersistentEntity domainClass, Table table) {
+    public BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext, JdbcEnvironment jdbcEnvironment, Table table) {
         // create a prototype BasicValue (table will be set per-entity when creating the actual BasicValue)
         this.id =  new BasicValue(metadataBuildingContext, table);
         this.jdbcEnvironment = jdbcEnvironment;
-        this.domainClass = domainClass;
         this.grailsSequenceWrapper = new GrailsSequenceWrapper();
     }
 
@@ -39,14 +37,14 @@ public class BasicValueIdCreator {
     }
 
 
-    public BasicValue getBasicValueId(Identity mappedId, boolean useSequence) {
+    public BasicValue getBasicValueId(Identity mappedId, GrailsHibernatePersistentEntity domainClass, boolean useSequence) {
         // create a BasicValue for the specific entity table (do not reuse the prototype directly because table differs)
         String generatorName = Identity.determineGeneratorName(mappedId, useSequence);
-        id.setCustomIdGeneratorCreator(context -> createGenerator(mappedId, context, generatorName));
+        id.setCustomIdGeneratorCreator(context -> createGenerator(mappedId, domainClass, context, generatorName));
         return id;
     }
 
-    private Generator createGenerator(Identity mappedId, GeneratorCreationContext context, String generatorName) {
+    private Generator createGenerator(Identity mappedId, GrailsHibernatePersistentEntity domainClass, GeneratorCreationContext context, String generatorName) {
         return grailsSequenceWrapper.getGenerator(generatorName, context, mappedId, domainClass, jdbcEnvironment);
     }
 }
