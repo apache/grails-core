@@ -87,7 +87,7 @@ package org.grails.orm.hibernate.cfg;
      * @return The properties that should be bound to the Hibernate meta model
      */
     default List<GrailsHibernatePersistentProperty> getPersistentPropertiesToBind() {
-        List<PersistentProperty> properties = getPersistentProperties();
+        List<GrailsHibernatePersistentProperty> properties = getHibernatePersistentProperties();
         if (properties == null) {
             return java.util.Collections.emptyList();
         }
@@ -98,7 +98,6 @@ package org.grails.orm.hibernate.cfg;
                 .filter(p -> !p.isCompositeIdProperty())
                 .filter(p -> !GormProperties.VERSION.equals(p.getName()))
                 .filter(p -> !p.isInherited())
-                .map(p -> (GrailsHibernatePersistentProperty) p)
                 .toList();
     }
 
@@ -127,7 +126,7 @@ package org.grails.orm.hibernate.cfg;
     }
 
     default void configureDerivedProperties(){
-        getPersistentProperties().forEach(new ConfigureDerivedPropertiesConsumer( getMappedForm()));
+        getHibernatePersistentProperties().forEach(new ConfigureDerivedPropertiesConsumer( getMappedForm()));
     }
 
     default String getMultiTenantFilterCondition(DefaultColumnNameFetcher fetcher) {
@@ -163,5 +162,13 @@ package org.grails.orm.hibernate.cfg;
     private static String resolveDiscriminatorValue(DiscriminatorConfig discriminatorConfig) {
         return discriminatorConfig.getColumn() != null ? discriminatorConfig.getColumn().getName() : discriminatorConfig.getFormula();
     }
+
+    default List<GrailsHibernatePersistentProperty> getHibernatePersistentProperties(){
+        return getPersistentProperties()
+                .stream()
+                .filter(GrailsHibernatePersistentProperty.class::isInstance)
+                .map(GrailsHibernatePersistentProperty.class::cast)
+                .toList();
+    };
 }
 

@@ -33,7 +33,7 @@ public class ComponentBinder {
     }
 
     public void bindComponent(Component component, HibernateEmbeddedProperty property,
-                               boolean isNullable, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+                              @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         Class<?> type = property.getType();
         String role = GrailsHibernateUtil.qualify(type.getName(), property.getName());
         component.setRoleName(role);
@@ -41,13 +41,13 @@ public class ComponentBinder {
 
         GrailsHibernatePersistentEntity domainClass = (GrailsHibernatePersistentEntity) property.getAssociatedEntity();
         mappingCacheHolder.cacheMapping(domainClass);
-        final List<PersistentProperty> properties = domainClass.getPersistentProperties();
+        var properties = domainClass.getHibernatePersistentProperties();
         Table table = component.getOwner().getTable();
         PersistentClass persistentClass = component.getOwner();
         String path = property.getName();
         Class<?> propertyType = property.getOwner().getJavaClass();
 
-        for (PersistentProperty currentGrailsProp : properties) {
+        for (GrailsHibernatePersistentProperty currentGrailsProp : properties) {
             if (currentGrailsProp.equals(domainClass.getIdentity())) continue;
             if (currentGrailsProp.getName().equals(GormProperties.VERSION)) continue;
 
@@ -55,11 +55,7 @@ public class ComponentBinder {
                 component.setParentProperty(currentGrailsProp.getName());
                 continue;
             }
-
-            if (currentGrailsProp instanceof GrailsHibernatePersistentProperty hibernateProp) {
-                componentPropertyBinder.bindComponentProperty(component, property, hibernateProp, persistentClass, path,
-                        table, mappings, sessionFactoryBeanName);
-            }
+            componentPropertyBinder.bindComponentProperty(component, property, currentGrailsProp, persistentClass, path, table, mappings, sessionFactoryBeanName);
         }
     }
 }

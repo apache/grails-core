@@ -118,7 +118,7 @@ class GormColumnSnapshotGenerator implements SnapshotGenerator {
     }
 
     protected PersistentProperty resolveGormProperty(GrailsHibernatePersistentEntity gpe, String columnName) {
-        for (PersistentProperty prop : gpe.persistentProperties) {
+        for (PersistentProperty prop : gpe.hibernatePersistentProperties) {
             String propColumnName = null
             if (prop instanceof GrailsHibernatePersistentProperty) {
                 propColumnName = ((GrailsHibernatePersistentProperty) prop).mappedColumnName

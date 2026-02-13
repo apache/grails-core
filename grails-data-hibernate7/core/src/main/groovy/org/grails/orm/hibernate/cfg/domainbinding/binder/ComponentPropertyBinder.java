@@ -18,9 +18,7 @@ import org.hibernate.mapping.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
@@ -131,7 +129,7 @@ public class ComponentPropertyBinder {
         }
         else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
             value = new Component(metadataBuildingContext, persistentClass);
-            componentBinder.bindComponent((Component) value, embedded, true, mappings, sessionFactoryBeanName);
+            componentBinder.bindComponent((Component) value, embedded, mappings, sessionFactoryBeanName);
         }
         else {
             if (LOG.isDebugEnabled())
@@ -161,6 +159,6 @@ public class ComponentPropertyBinder {
 
     public void bindComponent(Component component, HibernateEmbeddedProperty property,
                                boolean isNullable, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
-        componentBinder.bindComponent(component, property, isNullable, mappings, sessionFactoryBeanName);
+        componentBinder.bindComponent(component, property, mappings, sessionFactoryBeanName);
     }
 }
