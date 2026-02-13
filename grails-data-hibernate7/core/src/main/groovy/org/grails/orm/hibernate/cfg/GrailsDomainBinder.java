@@ -23,6 +23,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBin
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.IdentityBinder;

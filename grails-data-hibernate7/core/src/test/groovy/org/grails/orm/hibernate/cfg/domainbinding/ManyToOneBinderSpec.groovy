@@ -2,14 +2,16 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.types.Association
-import org.grails.datastore.mapping.model.types.ManyToMany
-import org.grails.datastore.mapping.model.types.OneToOne
 import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
 import org.hibernate.MappingException
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.ManyToOne
@@ -34,7 +36,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
         def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, manyToOneValuesBinder, compositeBinder, columnFetcher)
 
-        def association = Mock(Association, additionalInterfaces: [GrailsHibernatePersistentProperty])
+        def association = Mock(HibernateManyToOneProperty)
         def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def path = "/test"
         def mapping = new Mapping()
@@ -44,7 +46,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def propertyConfig = new PropertyConfig()
 
         association.getAssociatedEntity() >> refDomainClass
-        ((GrailsHibernatePersistentProperty)association).getMappedForm() >> propertyConfig
+        association.getMappedForm() >> propertyConfig
         mapping.setIdentity(hasCompositeId ? new CompositeIdentity() : null)
 
         when:
@@ -52,7 +54,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         1 * manyToOneValuesBinder.bindManyToOneValues(association as Association, manyToOne)
-        compositeBinderCalls * compositeBinder.bindCompositeIdentifierToManyToOne(association as Association, manyToOne, _, refDomainClass, path)
+        compositeBinderCalls * compositeBinder.bindCompositeIdentifierToManyToOne(association as GrailsHibernatePersistentProperty, manyToOne, _, refDomainClass, path)
         simpleValueBinderCalls * simpleValueBinder.bindSimpleValue(association as GrailsHibernatePersistentProperty, null, manyToOne, path)
 
         where:
@@ -71,7 +73,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
         def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, manyToOneValuesBinder, compositeBinder, columnFetcher)
 
-        def property = Mock(ManyToMany, additionalInterfaces: [GrailsHibernatePersistentProperty])
+        def property = Mock(HibernateManyToManyProperty)
         def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def mapping = new Mapping()
         mapping.setColumns(new HashMap<String, PropertyConfig>())
@@ -83,7 +85,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         property.isCircular() >> true
         property.getOwner() >> ownerEntity
         property.getName() >> "myCircularProp"
-        ((GrailsHibernatePersistentProperty)property).getMappedForm() >> propertyConfig
+        property.getMappedForm() >> propertyConfig
         namingStrategy.resolveColumnName("myCircularProp") >> "my_circular_prop"
 
         when:
@@ -108,7 +110,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
         def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, manyToOneValuesBinder, compositeBinder, columnFetcher)
 
-        def property = Mock(OneToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
+        def property = Mock(HibernateOneToOneProperty)
         def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def mapping = new Mapping()
         def refDomainClass = Mock(GrailsHibernatePersistentEntity) {
@@ -120,7 +122,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
         property.getAssociatedEntity() >> refDomainClass
         mapping.setIdentity(null)
-        ((GrailsHibernatePersistentProperty)property).getMappedForm() >> propertyConfig
+        property.getMappedForm() >> propertyConfig
         columnFetcher.getColumnForSimpleValue(manyToOne) >> column
 
         propertyConfig.isUnique() >> isUnique
@@ -159,7 +161,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
         def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, manyToOneValuesBinder, compositeBinder, columnFetcher)
 
-        def property = Mock(OneToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
+        def property = Mock(HibernateOneToOneProperty)
         def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def mapping = new Mapping()
         def refDomainClass = Mock(GrailsHibernatePersistentEntity) {
@@ -169,7 +171,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
         property.getAssociatedEntity() >> refDomainClass
         mapping.setIdentity(null)
-        ((GrailsHibernatePersistentProperty)property).getMappedForm() >> propertyConfig
+        property.getMappedForm() >> propertyConfig
         columnFetcher.getColumnForSimpleValue(manyToOne) >> null
 
         when:

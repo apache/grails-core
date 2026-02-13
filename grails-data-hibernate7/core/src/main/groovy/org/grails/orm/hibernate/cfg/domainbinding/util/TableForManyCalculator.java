@@ -6,12 +6,12 @@ import org.hibernate.MappingException;
 
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
-import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 
 import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.UNDERSCORE;
 
@@ -73,7 +73,7 @@ public class TableForManyCalculator {
         }
         String right = tableNameFetcher.getTableName(domainClass);
 
-        if (property instanceof ManyToMany property1) {
+        if (property instanceof HibernateManyToManyProperty property1) {
             if (hasJoinTableMapping) {
                 return jt.getName();
             }

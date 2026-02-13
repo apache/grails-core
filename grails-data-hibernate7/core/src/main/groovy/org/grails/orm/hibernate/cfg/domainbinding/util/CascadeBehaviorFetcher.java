@@ -7,6 +7,10 @@ import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 
 import org.hibernate.MappingException;
 import org.slf4j.Logger;
@@ -55,15 +59,15 @@ public class CascadeBehaviorFetcher {
         if (association.isHasOne()) {
             return ALL;
         }
-        else if (association.isOneToOne()) {
+        else if (association instanceof HibernateOneToOneProperty) {
             return association.isOwningSide() ?  ALL : SAVE_UPDATE;
         }
-        else if (association.isOneToMany()) {
+        else if (association instanceof HibernateOneToManyProperty) {
             return association.isCorrectlyOwned() ?  ALL : SAVE_UPDATE;
-        }  else if (association.isManyToMany()) {
+        }  else if (association instanceof HibernateManyToManyProperty) {
             return  association.isCorrectlyOwned() || association.isCircular() ? SAVE_UPDATE :NONE;
         }
-        else if (association.isManyToOne()) {
+        else if (association instanceof HibernateManyToOneProperty) {
             if ( association.isCorrectlyOwned() && !association.isCircular()) {
                 return ALL;
             }

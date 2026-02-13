@@ -5,6 +5,7 @@ import jakarta.annotation.Nonnull;
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -89,7 +90,7 @@ public class CollectionBinder {
         if (property.shouldBindWithForeignKey()) {
             OneToMany oneToMany = new OneToMany(metadataBuildingContext, collection.getOwner());
             collection.setElement(oneToMany);
-            bindOneToMany((org.grails.datastore.mapping.model.types.OneToMany) property, oneToMany);
+            bindOneToMany((HibernateOneToManyProperty) property, oneToMany);
         } else {
             bindCollectionTable(property, mappings, collection, owner.getTable());
 
@@ -126,8 +127,8 @@ public class CollectionBinder {
         return property.getName();
     }
 
-    private void bindOneToMany(org.grails.datastore.mapping.model.types.OneToMany currentGrailsProp, OneToMany one) {
-        one.setReferencedEntityName(currentGrailsProp.getAssociatedEntity().getName());
+    private void bindOneToMany(HibernateOneToManyProperty currentGrailsProp, OneToMany one) {
+        one.setReferencedEntityName(currentGrailsProp.getHibernateAssociatedEntity().getName());
         one.setIgnoreNotFound(true);
     }
 

@@ -2,8 +2,8 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import jakarta.annotation.Nonnull;
 import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
@@ -48,7 +48,7 @@ public class ListSecondPassBinder {
 
         collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, list, sessionFactoryBeanName);
         String columnName = property.getIndexColumnName(namingStrategy);
-        final boolean isManyToMany = property instanceof ManyToMany;
+        final boolean isManyToMany = property instanceof HibernateManyToManyProperty;
 
         if (isManyToMany && !property.isOwningSide()) {
             throw new MappingException("Invalid association [" + property +

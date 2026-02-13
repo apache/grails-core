@@ -13,6 +13,10 @@ import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder
@@ -33,15 +37,15 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 
 class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
-    abstract static class TestManyToOne extends GormManyToOne<PropertyConfig> implements GrailsHibernatePersistentProperty {
+    abstract static class TestManyToOne extends HibernateManyToOneProperty {
         TestManyToOne(PersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
-            super(owner, context, descriptor)
+            super(owner, context, descriptor);
         }
     }
 
-    abstract static class TestOneToOne extends GormOneToOne<PropertyConfig> implements GrailsHibernatePersistentProperty {
+    abstract static class TestOneToOne extends HibernateOneToOneProperty {
         TestOneToOne(PersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
-            super(owner, context, descriptor)
+            super(owner, context, descriptor);
         }
     }
 
@@ -76,7 +80,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         prop.getName() >> name
         _ * prop.getOwner() >> owner
         if (prop instanceof GrailsHibernatePersistentProperty) {
-            _ * prop.getHibernateOwner() >> owner
+            _ * ((GrailsHibernatePersistentProperty)prop).getHibernateOwner() >> owner
         }
         def config = new PropertyConfig()
         mapping.getColumns().put(name, config)
@@ -93,9 +97,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         ownerEntity.isRoot() >> true
 
         def currentGrailsProp = Mock(GrailsHibernatePersistentProperty)
-        _ * currentGrailsProp.getOwner() >> ownerEntity 
-        _ * currentGrailsProp.getHibernateOwner() >> ownerEntity 
-
+        
         def componentProperty = Mock(GrailsHibernatePersistentProperty)
         def mappings = Mock(InFlightMetadataCollector)
         def hibernateProperty = new Property()
@@ -105,6 +107,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         ownerEntity.getMappedForm() >> mapping
         currentGrailsProp.getType() >> String
         setupProperty(currentGrailsProp, "street", mapping, ownerEntity)
+        setupProperty(componentProperty, "address", mapping, ownerEntity)
         
         propertyFromValueCreator.createProperty(_ as BasicValue, currentGrailsProp) >> hibernateProperty
 
@@ -132,8 +135,6 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         def mapping = new Mapping()
         ownerEntity.getMappedForm() >> mapping
-        _ * currentGrailsProp.getOwner() >> ownerEntity 
-        _ * currentGrailsProp.getHibernateOwner() >> ownerEntity
         currentGrailsProp.getAssociatedEntity() >> Mock(GrailsHibernatePersistentEntity) { 
             getName() >> "Owner" 
             getMappedForm() >> new Mapping()
@@ -141,6 +142,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         }
         currentGrailsProp.getType() >> Object
         setupProperty(currentGrailsProp, "owner", mapping, ownerEntity)
+        setupProperty(componentProperty, "address", mapping, ownerEntity)
         
         propertyFromValueCreator.createProperty(_ as HibernateManyToOne, currentGrailsProp) >> hibernateProperty
 
@@ -168,8 +170,6 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         def mapping = new Mapping()
         ownerEntity.getMappedForm() >> mapping
-        _ * currentGrailsProp.getOwner() >> ownerEntity
-        _ * currentGrailsProp.getHibernateOwner() >> ownerEntity
         ((Association)currentGrailsProp).getInverseSide() >> Mock(Association) {
             isHasOne() >> false
             getOwner() >> Mock(GrailsHibernatePersistentEntity) { 
@@ -181,6 +181,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         currentGrailsProp.getType() >> Object
         ((Association)currentGrailsProp).canBindOneToOneWithSingleColumnAndForeignKey() >> true
         setupProperty(currentGrailsProp, "detail", mapping, ownerEntity)
+        setupProperty(componentProperty, "address", mapping, ownerEntity)
         
         propertyFromValueCreator.createProperty(_ as HibernateOneToOne, currentGrailsProp) >> hibernateProperty
 
@@ -208,10 +209,9 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         def mapping = new Mapping()
         ownerEntity.getMappedForm() >> mapping
-        _ * currentGrailsProp.getOwner() >> ownerEntity
-        _ * currentGrailsProp.getHibernateOwner() >> ownerEntity
         currentGrailsProp.getType() >> MyEnum
         setupProperty(currentGrailsProp, "type", mapping, ownerEntity)
+        setupProperty(componentProperty, "address", mapping, ownerEntity)
         
         namingStrategy.resolveColumnName("type") >> "type_col"
         namingStrategy.resolveColumnName("address") >> "address"
@@ -234,20 +234,16 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         ownerEntity.isRoot() >> true
         def currentGrailsProp = Mock(GrailsHibernatePersistentProperty)
         def componentProperty = Mock(GrailsHibernatePersistentProperty)
-        def ownerEntityGHPE = Mock(GrailsHibernatePersistentEntity)
-        ownerEntityGHPE.isRoot() >> true
         def mappings = Mock(InFlightMetadataCollector)
         def hibernateProperty = new Property()
         hibernateProperty.setName("street")
         
         def mapping = new Mapping()
-        ownerEntityGHPE.getMappedForm() >> mapping
-        _ * currentGrailsProp.getOwner() >> ownerEntityGHPE 
-        _ * currentGrailsProp.getHibernateOwner() >> ownerEntityGHPE
+        ownerEntity.getMappedForm() >> mapping
         currentGrailsProp.getType() >> String
-        setupProperty(currentGrailsProp, "street", mapping, ownerEntityGHPE)
+        setupProperty(currentGrailsProp, "street", mapping, ownerEntity)
+        setupProperty(componentProperty, "address", mapping, ownerEntity)
         
-        componentProperty.getOwner() >> ownerEntity 
         ownerEntity.isComponentPropertyNullable(componentProperty) >> true
         
         propertyFromValueCreator.createProperty(_ as BasicValue, currentGrailsProp) >> hibernateProperty

@@ -6,11 +6,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.ManyToMany;
-import org.grails.datastore.mapping.model.types.OneToOne;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -93,9 +93,9 @@ public class ColumnBinder {
             if (column.getName() == null) {
                 column.setName(columnName);
             }
-            if (property instanceof ManyToMany) {
+            if (property instanceof HibernateManyToManyProperty) {
                 column.setNullable(false);
-            } else if (property instanceof OneToOne && association.isBidirectional() && !association.isOwningSide()) {
+            } else if (property instanceof HibernateOneToOneProperty && association.isBidirectional() && !association.isOwningSide()) {
                 if (association.getInverseSide().isHasOne()) {
                     column.setNullable(false);
                 } else {

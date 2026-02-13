@@ -6,8 +6,9 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
-import org.grails.datastore.mapping.model.types.ManyToMany;
 import org.grails.orm.hibernate.cfg.*;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
@@ -71,7 +72,7 @@ public class CollectionSecondPassBinder {
 
         GrailsHibernatePersistentEntity referenced = property.getHibernateAssociatedEntity();
         if (StringUtils.hasText(propConfig.getSort())) {
-            if (!property.isBidirectional() && (property instanceof org.grails.datastore.mapping.model.types.OneToMany)) {
+            if (!property.isBidirectional() && (property instanceof HibernateOneToManyProperty)) {
                 throw new DatastoreConfigurationException("Default sort for associations ["+property.getHibernateOwner().getName()+"->" + property.getName() +
                         "] are not supported with unidirectional one to many relationships.");
             }
@@ -118,7 +119,7 @@ public class CollectionSecondPassBinder {
             new CollectionForPropertyConfigBinder().bindCollectionForPropertyConfig(collection, propConfig);
         }
 
-        final boolean isManyToMany = property instanceof ManyToMany;
+        final boolean isManyToMany = property instanceof HibernateManyToManyProperty;
         if(referenced != null && !isManyToMany && referenced.isMultiTenant()) {
             String filterCondition = referenced.getMultiTenantFilterCondition(defaultColumnNameFetcher);
             if(filterCondition != null) {
@@ -146,7 +147,7 @@ public class CollectionSecondPassBinder {
 
                 linkBidirectionalOneToMany(collection, associatedClass, key, otherSide);
 
-            } else if ((otherSide instanceof ManyToMany) || java.util.Map.class.isAssignableFrom(property.getType())) {
+            } else if ((otherSide instanceof HibernateManyToManyProperty) || java.util.Map.class.isAssignableFrom(property.getType())) {
 
                 bindDependentKeyValue(property, key, mappings, sessionFactoryBeanName);
 
@@ -199,7 +200,7 @@ public class CollectionSecondPassBinder {
             if (!property.shouldBindWithForeignKey()) {
                 bindCollectionWithJoinTable(property, mappings, collection, propConfig);
             } else {
-                bindUnidirectionalOneToMany((org.grails.datastore.mapping.model.types.OneToMany) property, mappings, collection);
+                bindUnidirectionalOneToMany((HibernateOneToManyProperty) property, mappings, collection);
             }
         } else if (property.supportsJoinColumnMapping()) {
             bindCollectionWithJoinTable(property, mappings, collection, propConfig);
@@ -207,7 +208,7 @@ public class CollectionSecondPassBinder {
         forceNullableAndCheckUpdateable(key, property);
     }
 
-    private void bindUnidirectionalOneToMany(org.grails.datastore.mapping.model.types.OneToMany property, @Nonnull InFlightMetadataCollector mappings, Collection collection) {
+    private void bindUnidirectionalOneToMany(HibernateOneToManyProperty property, @Nonnull InFlightMetadataCollector mappings, Collection collection) {
         Value v = collection.getElement();
         v.createForeignKey();
         String entityName;

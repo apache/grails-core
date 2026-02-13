@@ -1,10 +1,10 @@
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
 import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.ManyToMany;
-import org.grails.datastore.mapping.model.types.ManyToOne;
-import org.grails.datastore.mapping.model.types.OneToMany;
-import org.grails.datastore.mapping.model.types.OneToOne;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 
 import org.slf4j.Logger;
 
@@ -40,16 +40,16 @@ public class LogCascadeMapping {
      */
     private String getAssociationType(Association association) {
         // Use a standard if-else-if chain for compatibility with Java 17 and earlier.
-        if (association instanceof ManyToMany) {
+        if (association instanceof HibernateManyToManyProperty) {
             return "many-to-many";
         }
-        else if (association instanceof OneToMany) {
+        else if (association instanceof HibernateOneToManyProperty) {
             return "one-to-many";
         }
-        else if (association instanceof OneToOne) {
+        else if (association instanceof HibernateOneToOneProperty) {
             return "one-to-one";
         }
-        else if (association instanceof ManyToOne) {
+        else if (association instanceof HibernateManyToOneProperty) {
             return "many-to-one";
         }
         else if (association.isEmbedded()) {

@@ -2,8 +2,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
-import org.grails.datastore.mapping.model.types.ManyToMany;
-import org.grails.datastore.mapping.model.types.OneToMany;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 
@@ -42,10 +40,10 @@ public interface HibernateToManyProperty extends GrailsHibernatePersistentProper
      * @return Whether the collection should be bound with a foreign key
      */
     default boolean shouldBindWithForeignKey() {
-        return ((this instanceof OneToMany) && isBidirectional() ||
+        return ((this instanceof HibernateOneToManyProperty) && isBidirectional() ||
                 !isUnidirectionalOneToMany()) &&
                 !Map.class.isAssignableFrom(getType()) &&
-                !(this instanceof ManyToMany) &&
+                !(this instanceof HibernateManyToManyProperty) &&
                 !(this instanceof Basic);
     }
 }

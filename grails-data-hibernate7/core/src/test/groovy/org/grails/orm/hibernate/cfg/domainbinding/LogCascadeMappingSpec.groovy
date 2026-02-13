@@ -6,6 +6,10 @@ import org.grails.datastore.mapping.model.types.ManyToMany
 import org.grails.datastore.mapping.model.types.ManyToOne
 import org.grails.datastore.mapping.model.types.OneToMany
 import org.grails.datastore.mapping.model.types.OneToOne
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
 import org.slf4j.Logger
 import spock.lang.Specification
 import spock.lang.Subject
@@ -46,11 +50,11 @@ class LogCascadeMappingSpec extends Specification {
                 typeDescription, "OwnerClass", "testProperty", TargetClass.name, cascadeBehavior)
 
         where:
-        associationClass | typeDescription
-        ManyToMany       | "many-to-many"
-        OneToMany        | "one-to-many"
-        OneToOne         | "one-to-one"
-        ManyToOne        | "many-to-one"
+        associationClass             | typeDescription
+        HibernateManyToManyProperty  | "many-to-many"
+        HibernateOneToManyProperty   | "one-to-many"
+        HibernateOneToOneProperty    | "one-to-one"
+        HibernateManyToOneProperty   | "many-to-one"
     }
 
     def "should log unknown for unrecognized association type"() {
