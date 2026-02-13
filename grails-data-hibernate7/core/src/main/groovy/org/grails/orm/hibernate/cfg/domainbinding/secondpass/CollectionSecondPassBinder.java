@@ -426,9 +426,9 @@ public class CollectionSecondPassBinder {
         }
         
         if (unidirectionalCount > 1) {
-            key.setUpdatable(false);
+            key.setUpdateable(false);
         } else {
-            key.setUpdatable(true);
+            key.setUpdateable(true);
         }
     }
 
@@ -450,7 +450,7 @@ public class CollectionSecondPassBinder {
         key = new DependantValue(metadataBuildingContext, collection.getCollectionTable(), keyValue);
         key.setTypeName(null);
         key.setNullable(true);
-        key.setUpdatable(true);
+        key.setUpdateable(true);
 
         //JPA now requires to check for sorting
         key.setSorted(collection.isSorted());

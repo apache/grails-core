@@ -99,7 +99,7 @@ public class ListSecondPassBinder {
                 if (!property.isCircular()) {
                     value.setNullable(false);
                 }
-                value.setUpdatable(true);
+                value.setUpdateable(true);
                 prop.setOptional(false);
 
                 referenced.addProperty(prop);
