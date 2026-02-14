@@ -59,6 +59,8 @@ class SimpleValueBinderSpec extends Specification {
         binder.bindSimpleValue(prop, null, sv, "p")
 
         then:
+        1 * prop.getTypeName(sv) >> "custom.Type"
+        1 * prop.getTypeParameters(sv) >> props
         1 * sv.setTypeName("custom.Type")
         1 * sv.setTypeParameters({ it.getProperty('p1') == 'v1' })
         1 * columnBinder.bindColumn(prop, null, _, null, 'p', null) >> { args ->
@@ -93,6 +95,8 @@ class SimpleValueBinderSpec extends Specification {
         binder.bindSimpleValue(prop, null, sv, null)
 
         then:
+        1 * prop.getTypeName(sv) >> Integer.name
+        1 * prop.getTypeParameters(sv) >> null
         1 * sv.setTypeName(Integer.name)
         1 * columnBinder.bindColumn(prop, null, _, null, null, null) >> { args ->
             def column = args[2] as Column
@@ -127,6 +131,8 @@ class SimpleValueBinderSpec extends Specification {
         binder.bindSimpleValue(prop, null, sv, null)
 
         then:
+        1 * prop.getTypeName(sv) >> 'X'
+        1 * prop.getTypeParameters(sv) >> null
         1 * sv.addFormula({ it.getFormula() == 'x+y' })
         0 * columnBinder.bindColumn(_, _, _, _, _, _)
 
@@ -134,6 +140,8 @@ class SimpleValueBinderSpec extends Specification {
         binder.bindSimpleValue(tenantProp, null, sv2, null)
 
         then:
+        1 * tenantProp.getTypeName(sv2) >> 'X'
+        1 * tenantProp.getTypeParameters(sv2) >> null
         0 * sv2.addFormula(_)
         1 * columnBinder.bindColumn(_, _, _, _, _, _) >> { args ->
             def column = args[2] as Column
@@ -165,6 +173,8 @@ class SimpleValueBinderSpec extends Specification {
         binder.bindSimpleValue(prop, null, sv, null)
 
         then:
+        1 * prop.getTypeName(sv) >> 'Y'
+        1 * prop.getTypeParameters(sv) >> null
         1 * columnBinder.bindColumn(prop, null, _, null, null, null) >> { args ->
             args[2].setName("testColumn")
         }
@@ -197,6 +207,8 @@ class SimpleValueBinderSpec extends Specification {
         binder.bindSimpleValue(prop, parent, sv, 'path')
 
         then:
+        1 * prop.getTypeName(sv) >> 'Z'
+        1 * prop.getTypeParameters(sv) >> null
         1 * columnConfigToColumnBinder.bindColumnConfigToColumn(_, cc1, pc) >> { args ->
             def column = args[0] as Column
             column.setName("testColumn")

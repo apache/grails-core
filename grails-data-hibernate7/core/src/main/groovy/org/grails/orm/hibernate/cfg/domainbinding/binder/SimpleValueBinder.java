@@ -62,23 +62,9 @@ public class SimpleValueBinder {
             SimpleValue simpleValue,
             String path) {
 
-        GrailsHibernatePersistentProperty actualTypeProperty = property;
-        if (simpleValue instanceof DependantValue) {
-            actualTypeProperty = Optional.ofNullable(property.getHibernateOwner().getIdentity()).orElse(property);
-        }
         PropertyConfig propertyConfig = property.getMappedForm();
-        final String typeName = actualTypeProperty.getTypeName();
-        if (typeName == null) {
-            if (!(actualTypeProperty instanceof org.grails.datastore.mapping.model.types.Association)) {
-                Class<?> type = actualTypeProperty.getType();
-                if (type != null) {
-                    simpleValue.setTypeName(type.getName());
-                }
-            }
-        } else {
-            simpleValue.setTypeName(typeName);
-            simpleValue.setTypeParameters(propertyConfig.getTypeParams());
-        }
+        simpleValue.setTypeName(property.getTypeName(simpleValue));
+        simpleValue.setTypeParameters(property.getTypeParameters(simpleValue));
 
         String generator = propertyConfig.getGenerator();
         if (generator != null && simpleValue instanceof BasicValue basicValue) {

@@ -8,9 +8,11 @@ import java.util.List;
 import java.util.Optional;
 
 import org.hibernate.MappingException;
+import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.IndexedCollection;
 import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.Property;
+import org.hibernate.mapping.SimpleValue;
 import org.hibernate.usertype.UserCollectionType;
 
 /**
@@ -153,18 +155,55 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
                         .orElseGet(this::getMappedColumnName));
     }
 
-    default boolean isBidirectionalManyToOneWithListMapping( Property prop) {
-       if(this instanceof Association<?> association) {
-
+    default boolean isBidirectionalManyToOneWithListMapping(Property prop) {
+        if (this instanceof Association<?> association) {
             return association.isBidirectional()
                     && association.getInverseSide() != null
                     && List.class.isAssignableFrom(this.getType())
                     && prop != null
                     && prop.getValue() instanceof ManyToOne;
-
         }
         return false;
     }
 
+    /**
+     * @param simpleValue The Hibernate simple value
+     * @return The type name
+     */
+    default String getTypeName(SimpleValue simpleValue) {
+        GrailsHibernatePersistentProperty actualTypeProperty = getTypeProperty(simpleValue);
+        String typeName = actualTypeProperty.getTypeName();
+        if (typeName == null) {
+            if (!(actualTypeProperty instanceof Association)) {
+                Class<?> type = actualTypeProperty.getType();
+                if (type != null) {
+                    return type.getName();
+                }
+            }
+            return null;
+        }
+        return typeName;
+    }
 
+    /**
+     * @param simpleValue The Hibernate simple value
+     * @return The type parameters
+     */
+    default java.util.Properties getTypeParameters(SimpleValue simpleValue) {
+        if (getTypeName(simpleValue) != null) {
+            return Optional.ofNullable(getTypeProperty(simpleValue).getMappedForm()).map(PropertyConfig::getTypeParams).orElse(null);
+        }
+        return null;
+    }
+
+    /**
+     * @param simpleValue The Hibernate simple value
+     * @return The property that defines the type
+     */
+    default GrailsHibernatePersistentProperty getTypeProperty(SimpleValue simpleValue) {
+        if (simpleValue instanceof DependantValue) {
+            return Optional.ofNullable(getHibernateOwner().getIdentity()).orElse(this);
+        }
+        return this;
+    }
 }

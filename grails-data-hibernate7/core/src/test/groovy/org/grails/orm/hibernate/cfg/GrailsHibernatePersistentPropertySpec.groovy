@@ -154,6 +154,50 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         mapProp.getMapElementName(namingStrategy) == "tags_elt"
     }
 
+    void "test getTypeName(SimpleValue) and getTypeParameters(SimpleValue)"() {
+        given:
+        def domainBinder = getGrailsDomainBinder()
+        def metadataBuildingContext = domainBinder.getMetadataBuildingContext()
+        def table = metadataBuildingContext.getMetadataCollector().addTable(null, null, "TEST", null, false, metadataBuildingContext)
+        PersistentEntity entity = createPersistentEntity(TestEntityWithTypeName)
+        GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName("name")
+        
+        def sv = new org.hibernate.mapping.BasicValue(metadataBuildingContext, table)
+        
+        expect:
+        property.getTypeName(sv) == "string"
+        property.getTypeParameters(sv) == null // No type params in TestEntityWithTypeName
+    }
+
+    void "test getTypeName(SimpleValue) with fallback"() {
+        given:
+        def domainBinder = getGrailsDomainBinder()
+        def metadataBuildingContext = domainBinder.getMetadataBuildingContext()
+        def table = metadataBuildingContext.getMetadataCollector().addTable(null, null, "TEST2", null, false, metadataBuildingContext)
+        PersistentEntity entity = createPersistentEntity(TestEntityWithEnum)
+        GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName("name")
+        
+        def sv = new org.hibernate.mapping.BasicValue(metadataBuildingContext, table)
+        
+        expect:
+        property.getTypeName(sv) == String.name
+    }
+
+    void "test getTypeName(SimpleValue) for DependantValue"() {
+        given:
+        def domainBinder = getGrailsDomainBinder()
+        def metadataBuildingContext = domainBinder.getMetadataBuildingContext()
+        def table = metadataBuildingContext.getMetadataCollector().addTable(null, null, "TEST3", null, false, metadataBuildingContext)
+        PersistentEntity entity = createPersistentEntity(BMTOWLMAuthor)
+        GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName("books")
+        
+        // DependantValue usually represents a foreign key, it should use the identity type of the owner
+        def dv = new org.hibernate.mapping.DependantValue(metadataBuildingContext, table, new org.hibernate.mapping.BasicValue(metadataBuildingContext, table))
+        
+        expect:
+        property.getTypeName(dv) == Long.name // Author's ID is Long
+    }
+
     void "test validateAssociation throws exception for user type"() {
         given:
         PersistentEntity entity = createPersistentEntity(TestEntityWithAssociations)
