@@ -20,7 +20,7 @@ public class DefaultColumnNameFetcher {
         this.backticksRemover = new BackticksRemover();
     }
 
-    protected DefaultColumnNameFetcher(PersistentEntityNamingStrategy namingStrategyWrapper , BackticksRemover backticksRemover) {
+    public DefaultColumnNameFetcher(PersistentEntityNamingStrategy namingStrategyWrapper , BackticksRemover backticksRemover) {
         this.namingStrategyWrapper = namingStrategyWrapper;
         this.backticksRemover = backticksRemover;
     }

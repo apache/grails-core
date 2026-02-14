@@ -15,6 +15,8 @@ import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps;
 
 public class ColumnBinder {
@@ -48,10 +50,10 @@ public class ColumnBinder {
      */
     public ColumnBinder(PersistentEntityNamingStrategy namingStrategy) {
         this(
-                new ColumnNameForPropertyAndPathFetcher(namingStrategy),
+                new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()),
                 new StringColumnConstraintsBinder(),
                 new NumericColumnConstraintsBinder(),
-                new CreateKeyForProps(new ColumnNameForPropertyAndPathFetcher(namingStrategy)),
+                new CreateKeyForProps(new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover())),
                 new IndexBinder()
         );
     }

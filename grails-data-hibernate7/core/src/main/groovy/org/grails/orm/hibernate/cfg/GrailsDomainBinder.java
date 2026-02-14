@@ -39,6 +39,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolde
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper;
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableNameFetcher;
@@ -130,6 +131,8 @@ public class GrailsDomainBinder
     private CompositeIdBinder compositeIdBinder;
     private IdentityBinder identityBinder;
     private VersionBinder versionBinder;
+    private DefaultColumnNameFetcher defaultColumnNameFetcher;
+    private BackticksRemover backticksRemover;
 
 
     public JdbcEnvironment getJdbcEnvironment() {
@@ -184,6 +187,8 @@ public class GrailsDomainBinder
                 metadataCollector
                 , rootMappingDefaults
         );
+        this.backticksRemover = new BackticksRemover();
+        this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(getNamingStrategy(), backticksRemover);
         this.collectionBinder = new CollectionBinder(metadataBuildingContext, this, getNamingStrategy());
         this.componentPropertyBinder = new ComponentPropertyBinder(metadataBuildingContext, getNamingStrategy(), getMappingCacheHolder(), getCollectionHolder(), enumTypeBinder, collectionBinder, propertyFromValueCreator);
         this.grailsPropertyBinder = new GrailsPropertyBinder(metadataBuildingContext, getNamingStrategy(), getCollectionHolder(), enumTypeBinder, componentPropertyBinder, collectionBinder, propertyFromValueCreator);
@@ -413,7 +418,7 @@ public class GrailsDomainBinder
         SimpleValue key = new DependantValue(metadataBuildingContext, mytable, joinedSubclass.getIdentifier());
         joinedSubclass.setKey(key);
         var identifier = sub.getIdentity();
-        String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(identifier, EMPTY_PATH, null);
+        String columnName = new ColumnNameForPropertyAndPathFetcher(getNamingStrategy(), defaultColumnNameFetcher, backticksRemover).getColumnNameForPropertyAndPath(identifier, EMPTY_PATH, null);
         new SimpleValueColumnBinder().bindSimpleValue(key, identifier.getType().getName(), columnName, false);
 
         joinedSubclass.createPrimaryKey();

@@ -29,6 +29,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 
 import jakarta.annotation.Nonnull;
 
@@ -137,7 +139,7 @@ public class ComponentPropertyBinder {
 
             value = new BasicValue(metadataBuildingContext, table);
             if (currentGrailsProp.getType().isEnum()) {
-                String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy).getColumnNameForPropertyAndPath(currentGrailsProp, path, null);
+                String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()).getColumnNameForPropertyAndPath(currentGrailsProp, path, null);
                 enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), (SimpleValue) value, columnName);
             }
             else {

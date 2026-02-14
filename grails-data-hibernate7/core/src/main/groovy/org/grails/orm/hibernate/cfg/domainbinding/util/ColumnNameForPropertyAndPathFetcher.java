@@ -14,13 +14,6 @@ public class ColumnNameForPropertyAndPathFetcher {
     private final BackticksRemover backticksRemover;
 
     public ColumnNameForPropertyAndPathFetcher(PersistentEntityNamingStrategy namingStrategy
-    ) {
-        this.namingStrategy = namingStrategy;
-        this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy);
-        this.backticksRemover = new BackticksRemover();
-    }
-
-    protected ColumnNameForPropertyAndPathFetcher(PersistentEntityNamingStrategy namingStrategy
     , DefaultColumnNameFetcher defaultColumnNameFetcher
     , BackticksRemover backticksRemover) {
         this.namingStrategy = namingStrategy;

@@ -12,6 +12,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -59,7 +61,7 @@ public class GrailsPropertyBinder {
                 componentPropertyBinder,
                 collectionBinder,
                 new SimpleValueBinder(namingStrategy),
-                new ColumnNameForPropertyAndPathFetcher(namingStrategy),
+                new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()),
                 new OneToOneBinder(namingStrategy),
                 new ManyToOneBinder(namingStrategy),
                 propertyFromValueCreator);
