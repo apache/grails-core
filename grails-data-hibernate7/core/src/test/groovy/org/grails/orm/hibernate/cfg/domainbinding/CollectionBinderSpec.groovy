@@ -62,7 +62,6 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
 
         CollectionBinder collectionBinder = new CollectionBinder(
                 metadataBuildingContext,
-                binder,
                 namingStrategy,
                 jdbcEnvironment,
                 simpleValueBinder,

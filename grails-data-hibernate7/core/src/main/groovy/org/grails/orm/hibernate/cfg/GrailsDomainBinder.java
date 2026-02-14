@@ -208,7 +208,6 @@ public class GrailsDomainBinder
 
         CollectionBinder collectionBinder = new CollectionBinder(
                 metadataBuildingContext,
-                this,
                 namingStrategy,
                 jdbcEnvironment,
                 simpleValueBinder,

@@ -2,7 +2,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
 
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
@@ -40,7 +39,6 @@ public class CollectionBinder {
     private static final Logger LOG = LoggerFactory.getLogger(CollectionBinder.class);
 
     private final MetadataBuildingContext metadataBuildingContext;
-    public final GrailsDomainBinder grailsDomainBinder;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final ListSecondPassBinder listSecondPassBinder;
     private final CollectionSecondPassBinder collectionSecondPassBinder;
@@ -48,7 +46,6 @@ public class CollectionBinder {
 
     public CollectionBinder(
             MetadataBuildingContext metadataBuildingContext,
-            GrailsDomainBinder grailsDomainBinder,
             PersistentEntityNamingStrategy namingStrategy,
             JdbcEnvironment jdbcEnvironment,
             SimpleValueBinder simpleValueBinder,
@@ -57,7 +54,6 @@ public class CollectionBinder {
             CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder,
             SimpleValueColumnFetcher simpleValueColumnFetcher) {
         this.metadataBuildingContext = metadataBuildingContext;
-        this.grailsDomainBinder = grailsDomainBinder;
         this.namingStrategy = namingStrategy;
         this.collectionSecondPassBinder = new CollectionSecondPassBinder(
                 metadataBuildingContext,
@@ -73,8 +69,8 @@ public class CollectionBinder {
         this.mapSecondPassBinder = new MapSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
     }
 
-    public CollectionBinder(MetadataBuildingContext metadataBuildingContext, GrailsDomainBinder grailsDomainBinder, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
-        this(metadataBuildingContext, grailsDomainBinder, namingStrategy, jdbcEnvironment,
+    public CollectionBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
+        this(metadataBuildingContext, namingStrategy, jdbcEnvironment,
                 new SimpleValueBinder(namingStrategy, jdbcEnvironment),
                 new EnumTypeBinder(),
                 new ManyToOneBinder(namingStrategy, jdbcEnvironment),
@@ -137,13 +133,13 @@ public class CollectionBinder {
 
         // set up second pass
        if (collection instanceof org.hibernate.mapping.List) {
-            mappings.addSecondPass(new ListSecondPass(grailsDomainBinder, this, listSecondPassBinder, property, mappings, collection, sessionFactoryBeanName));
+            mappings.addSecondPass(new ListSecondPass(listSecondPassBinder, property, mappings, collection, sessionFactoryBeanName));
         }
         else if (collection instanceof org.hibernate.mapping.Map) {
-            mappings.addSecondPass(new MapSecondPass(grailsDomainBinder, this, mapSecondPassBinder, property, mappings, collection, sessionFactoryBeanName));
+            mappings.addSecondPass(new MapSecondPass(mapSecondPassBinder, property, mappings, collection, sessionFactoryBeanName));
         }
         else { // Collection -> Bag
-            mappings.addSecondPass(new SetSecondPass(grailsDomainBinder, this,collectionSecondPassBinder,  property, mappings, collection, sessionFactoryBeanName));
+            mappings.addSecondPass(new SetSecondPass(collectionSecondPassBinder,  property, mappings, collection, sessionFactoryBeanName));
         }
     }
 
