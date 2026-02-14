@@ -43,8 +43,8 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
 
         // Use a Mock for BasicValueIdCreator and return a BasicValue based on the currentTable
         basicValueIdCreator = Mock(BasicValueIdCreator)
-        basicValueIdCreator.getBasicValueId(_, _, _, _) >> { Identity id, GrailsHibernatePersistentEntity domainClass, BasicValue val, boolean useSeq ->
-            return val
+        basicValueIdCreator.getBasicValueId(_, _, _, _, _) >> { MetadataBuildingContext ctx, Table table, Identity id, GrailsHibernatePersistentEntity domainClass, boolean useSeq ->
+            return new BasicValue(ctx, table)
         }
 
         // Mock the collaborators that can be safely mocked

@@ -49,7 +49,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.getBasicValueId(mappedId, domainClass, basicValue, useSequence)
+        BasicValue id = creator.getBasicValueId(metadataBuildingContext, table, mappedId, domainClass, useSequence)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         Generator generator = generatorCreator.createGenerator(context)
 
@@ -78,7 +78,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.getBasicValueId(null, domainClass, basicValue, false)
+        BasicValue id = creator.getBasicValueId(metadataBuildingContext, table, null, domainClass, false)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         Generator generator = generatorCreator.createGenerator(context)
 
@@ -94,7 +94,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.getBasicValueId(null, domainClass, basicValue, true)
+        BasicValue id = creator.getBasicValueId(metadataBuildingContext, table, null, domainClass, true)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         Generator generator = generatorCreator.createGenerator(context)
 
@@ -112,7 +112,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.getBasicValueId(mappedId, domainClass, basicValue, true)
+        BasicValue id = creator.getBasicValueId(metadataBuildingContext, table, mappedId, domainClass, true)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         Generator generator = generatorCreator.createGenerator(context)
 
@@ -129,7 +129,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.getBasicValueId(mappedId, domainClass, basicValue, false)
+        BasicValue id = creator.getBasicValueId(metadataBuildingContext, table, mappedId, domainClass, false)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         generatorCreator.createGenerator(context)
 

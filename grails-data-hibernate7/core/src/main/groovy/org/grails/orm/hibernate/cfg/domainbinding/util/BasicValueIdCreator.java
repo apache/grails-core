@@ -31,7 +31,8 @@ public class BasicValueIdCreator {
     }
 
 
-    public BasicValue getBasicValueId(Identity mappedId, GrailsHibernatePersistentEntity domainClass, BasicValue id, boolean useSequence) {
+    public BasicValue getBasicValueId(MetadataBuildingContext metadataBuildingContext, Table table, Identity mappedId, GrailsHibernatePersistentEntity domainClass, boolean useSequence) {
+        BasicValue id = new BasicValue(metadataBuildingContext, table);
         // create a BasicValue for the specific entity table (do not reuse the prototype directly because table differs)
         String generatorName = Identity.determineGeneratorName(mappedId, useSequence);
         id.setCustomIdGeneratorCreator(context -> createGenerator(mappedId, domainClass, context, generatorName));
