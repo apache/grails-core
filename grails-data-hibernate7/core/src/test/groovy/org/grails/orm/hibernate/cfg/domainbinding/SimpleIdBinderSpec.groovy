@@ -30,20 +30,28 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
     def simpleIdBinder
 
     def setup() {
-        metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
-        jdbcEnvironment = getGrailsDomainBinder().getJdbcEnvironment()
+        def domainBinder = getGrailsDomainBinder()
+        def metadataCollector = domainBinder.getMetadataBuildingContext().getMetadataCollector()
+        metadataBuildingContext = new org.hibernate.boot.internal.MetadataBuildingContextRootImpl(
+                "default",
+                metadataCollector.getBootstrapContext(),
+                metadataCollector.getMetadataBuildingOptions(),
+                metadataCollector,
+                null
+        )
+        jdbcEnvironment = domainBinder.getJdbcEnvironment()
 
         // Use a Mock for BasicValueIdCreator and return a BasicValue based on the currentTable
         basicValueIdCreator = Mock(BasicValueIdCreator)
-        basicValueIdCreator.getBasicValueId(_, _, _) >> { Identity id, GrailsHibernatePersistentEntity domainClass, boolean useSeq ->
-            new BasicValue(metadataBuildingContext, currentTable)
+        basicValueIdCreator.getBasicValueId(_, _, _, _) >> { Identity id, GrailsHibernatePersistentEntity domainClass, BasicValue val, boolean useSeq ->
+            return val
         }
 
         // Mock the collaborators that can be safely mocked
         simpleValueBinder = Mock(SimpleValueBinder)
         propertyBinder = Spy(PropertyBinder)
 
-        simpleIdBinder = new SimpleIdBinder(basicValueIdCreator, simpleValueBinder, propertyBinder)
+        simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, jdbcEnvironment, basicValueIdCreator, simpleValueBinder, propertyBinder)
     }
 
     def "bindSimpleId with identity generator"() {
@@ -114,9 +122,10 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
             getIdentity() >> Mock(GrailsHibernatePersistentProperty)
         }
         def rootClass = new RootClass(metadataBuildingContext)
+        def table = Mock(Table)
 
         when:
-        simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(name: "nonExistent"), rootClass.getTable())
+        simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(name: "nonExistent"), table)
 
         then:
         thrown(org.hibernate.MappingException)

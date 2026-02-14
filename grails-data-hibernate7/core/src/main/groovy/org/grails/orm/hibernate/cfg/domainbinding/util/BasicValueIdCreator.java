@@ -15,13 +15,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrappe
 public class BasicValueIdCreator {
 
     private final JdbcEnvironment jdbcEnvironment;
-    @SuppressWarnings("unused") // kept for tests that want to provide a prototype BasicValue
-    private final BasicValue id;
     private final GrailsSequenceWrapper grailsSequenceWrapper;
 
-    public BasicValueIdCreator(MetadataBuildingContext metadataBuildingContext, JdbcEnvironment jdbcEnvironment, Table table) {
-        // create a prototype BasicValue (table will be set per-entity when creating the actual BasicValue)
-        this.id =  new BasicValue(metadataBuildingContext, table);
+    public BasicValueIdCreator(JdbcEnvironment jdbcEnvironment) {
         this.jdbcEnvironment = jdbcEnvironment;
         this.grailsSequenceWrapper = new GrailsSequenceWrapper();
     }
@@ -29,15 +25,13 @@ public class BasicValueIdCreator {
 
 
     protected BasicValueIdCreator(JdbcEnvironment  jdbcEnvironment
-            , BasicValue prototypeBasicValue
     , GrailsSequenceWrapper grailsSequenceWrapper) {
         this.jdbcEnvironment = jdbcEnvironment;
-        this.id = prototypeBasicValue;
         this.grailsSequenceWrapper = grailsSequenceWrapper;
     }
 
 
-    public BasicValue getBasicValueId(Identity mappedId, GrailsHibernatePersistentEntity domainClass, boolean useSequence) {
+    public BasicValue getBasicValueId(Identity mappedId, GrailsHibernatePersistentEntity domainClass, BasicValue id, boolean useSequence) {
         // create a BasicValue for the specific entity table (do not reuse the prototype directly because table differs)
         String generatorName = Identity.determineGeneratorName(mappedId, useSequence);
         id.setCustomIdGeneratorCreator(context -> createGenerator(mappedId, domainClass, context, generatorName));

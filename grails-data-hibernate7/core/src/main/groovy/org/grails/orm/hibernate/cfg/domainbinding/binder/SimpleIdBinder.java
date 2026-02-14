@@ -36,9 +36,13 @@ public class SimpleIdBinder {
         this.basicValueIdCreator = null;
     }
 
-    protected SimpleIdBinder(BasicValueIdCreator basicValueIdCreator, SimpleValueBinder simpleValueBinder, PropertyBinder propertyBinder) {
-        this.metadataBuildingContext = null;
-        this.jdbcEnvironment = null;
+    public MetadataBuildingContext getMetadataBuildingContext() {
+        return metadataBuildingContext;
+    }
+
+    protected SimpleIdBinder(MetadataBuildingContext metadataBuildingContext, JdbcEnvironment jdbcEnvironment, BasicValueIdCreator basicValueIdCreator, SimpleValueBinder simpleValueBinder, PropertyBinder propertyBinder) {
+        this.metadataBuildingContext = metadataBuildingContext;
+        this.jdbcEnvironment = jdbcEnvironment;
         this.simpleValueBinder = simpleValueBinder;
         this.propertyBinder = propertyBinder;
         this.basicValueIdCreator = basicValueIdCreator;
@@ -51,8 +55,8 @@ public class SimpleIdBinder {
         boolean useSequence = result != null && result.isTablePerConcreteClass();
         // create the id value
 
-        BasicValueIdCreator idCreator = this.basicValueIdCreator != null ? this.basicValueIdCreator : new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment, table);
-        BasicValue id = idCreator.getBasicValueId(mappedId, domainClass, useSequence);
+        BasicValueIdCreator idCreator = this.basicValueIdCreator != null ? this.basicValueIdCreator : new BasicValueIdCreator(jdbcEnvironment);
+        BasicValue id = idCreator.getBasicValueId(mappedId, domainClass, new BasicValue(metadataBuildingContext, table), useSequence);
 
         var identifier = domainClass.getIdentity();
         if (mappedId != null) {
