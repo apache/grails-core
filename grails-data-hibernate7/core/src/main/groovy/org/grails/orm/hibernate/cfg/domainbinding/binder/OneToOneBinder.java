@@ -1,6 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import org.hibernate.FetchMode;
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.OneToOne;
 import org.hibernate.type.ForeignKeyDirection;
 
@@ -14,15 +15,13 @@ public class OneToOneBinder {
     private final PersistentEntityNamingStrategy namingStrategy;
     private final SimpleValueBinder simpleValueBinder;
 
-    public OneToOneBinder(PersistentEntityNamingStrategy namingStrategy) {
-        this.namingStrategy = namingStrategy;
-        this.simpleValueBinder = new SimpleValueBinder(namingStrategy);
-    }
-
-    protected OneToOneBinder(PersistentEntityNamingStrategy namingStrategy,
-                             SimpleValueBinder simpleValueBinder) {
+    public OneToOneBinder(PersistentEntityNamingStrategy namingStrategy, SimpleValueBinder simpleValueBinder) {
         this.namingStrategy = namingStrategy;
         this.simpleValueBinder = simpleValueBinder;
+    }
+
+    public OneToOneBinder(PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
+        this(namingStrategy, new SimpleValueBinder(namingStrategy, jdbcEnvironment));
     }
 
     public void bindOneToOne(final org.grails.datastore.mapping.model.types.OneToOne property, OneToOne oneToOne,

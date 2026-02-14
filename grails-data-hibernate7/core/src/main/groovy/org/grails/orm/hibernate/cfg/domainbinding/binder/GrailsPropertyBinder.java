@@ -14,6 +14,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolde
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
+import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper;
 
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -53,27 +54,6 @@ public class GrailsPropertyBinder {
             EnumTypeBinder enumTypeBinder,
             ComponentPropertyBinder componentPropertyBinder,
             CollectionBinder collectionBinder,
-            PropertyFromValueCreator propertyFromValueCreator) {
-        this(metadataBuildingContext,
-                namingStrategy,
-                collectionHolder,
-                enumTypeBinder,
-                componentPropertyBinder,
-                collectionBinder,
-                new SimpleValueBinder(namingStrategy),
-                new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()),
-                new OneToOneBinder(namingStrategy),
-                new ManyToOneBinder(namingStrategy),
-                propertyFromValueCreator);
-    }
-
-    protected GrailsPropertyBinder(
-            MetadataBuildingContext metadataBuildingContext,
-            PersistentEntityNamingStrategy namingStrategy,
-            CollectionHolder collectionHolder,
-            EnumTypeBinder enumTypeBinder,
-            ComponentPropertyBinder componentPropertyBinder,
-            CollectionBinder collectionBinder,
             SimpleValueBinder simpleValueBinder,
             ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
             OneToOneBinder oneToOneBinder,
@@ -89,6 +69,27 @@ public class GrailsPropertyBinder {
         this.oneToOneBinder = oneToOneBinder;
         this.manyToOneBinder = manyToOneBinder;
         this.propertyFromValueCreator = propertyFromValueCreator;
+    }
+
+    public GrailsPropertyBinder(
+            MetadataBuildingContext metadataBuildingContext,
+            PersistentEntityNamingStrategy namingStrategy,
+            CollectionHolder collectionHolder,
+            EnumTypeBinder enumTypeBinder,
+            ComponentPropertyBinder componentPropertyBinder,
+            CollectionBinder collectionBinder,
+            PropertyFromValueCreator propertyFromValueCreator) {
+        this(metadataBuildingContext,
+                namingStrategy,
+                collectionHolder,
+                enumTypeBinder,
+                componentPropertyBinder,
+                collectionBinder,
+                new SimpleValueBinder(namingStrategy, ((NamingStrategyWrapper)namingStrategy).getJdbcEnvironment()),
+                new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()),
+                new OneToOneBinder(namingStrategy, ((NamingStrategyWrapper)namingStrategy).getJdbcEnvironment()),
+                new ManyToOneBinder(namingStrategy, ((NamingStrategyWrapper)namingStrategy).getJdbcEnvironment()),
+                propertyFromValueCreator);
     }
 
     public Value bindProperty(PersistentClass persistentClass

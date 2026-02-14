@@ -7,6 +7,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper
 import spock.lang.Unroll
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.ManyToOne
+import org.hibernate.mapping.Table
 
 class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
 
@@ -158,7 +159,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         given:
         def domainBinder = getGrailsDomainBinder()
         def metadataBuildingContext = domainBinder.getMetadataBuildingContext()
-        def table = metadataBuildingContext.getMetadataCollector().addTable(null, null, "TEST", null, false, metadataBuildingContext)
+        def table = new Table("TEST")
         PersistentEntity entity = createPersistentEntity(TestEntityWithTypeName)
         GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName("name")
         
@@ -173,7 +174,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         given:
         def domainBinder = getGrailsDomainBinder()
         def metadataBuildingContext = domainBinder.getMetadataBuildingContext()
-        def table = metadataBuildingContext.getMetadataCollector().addTable(null, null, "TEST2", null, false, metadataBuildingContext)
+        def table = new Table("TEST2")
         PersistentEntity entity = createPersistentEntity(TestEntityWithEnum)
         GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName("name")
         
@@ -187,7 +188,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         given:
         def domainBinder = getGrailsDomainBinder()
         def metadataBuildingContext = domainBinder.getMetadataBuildingContext()
-        def table = metadataBuildingContext.getMetadataCollector().addTable(null, null, "TEST3", null, false, metadataBuildingContext)
+        def table = new Table("TEST3")
         PersistentEntity entity = createPersistentEntity(BMTOWLMAuthor)
         GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName("books")
         

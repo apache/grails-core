@@ -4,6 +4,8 @@ import java.util.Optional;
 import java.util.Properties;
 
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
+import org.hibernate.generator.Generator;
+import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.DependantValue;
@@ -19,21 +21,18 @@ import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum;
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper;
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 
 public class SimpleValueBinder {
 
     private final PersistentEntityNamingStrategy namingStrategy;
     private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
     private final ColumnBinder columnBinder;
+    private final JdbcEnvironment jdbcEnvironment;
+    private final GrailsSequenceWrapper grailsSequenceWrapper;
 
     private static final String SEQUENCE_KEY = GrailsSequenceGeneratorEnum.SEQUENCE.toString();
-
-    /**
-     * Convenience constructor for namingStrategy.
-     */
-    public SimpleValueBinder(PersistentEntityNamingStrategy namingStrategy) {
-        this(namingStrategy, new ColumnConfigToColumnBinder(), new ColumnBinder(namingStrategy));
-    }
 
     /**
      * Public constructor that accepts all collaborators.
@@ -41,10 +40,21 @@ public class SimpleValueBinder {
     public SimpleValueBinder(
             PersistentEntityNamingStrategy namingStrategy,
             ColumnConfigToColumnBinder columnConfigToColumnBinder,
-            ColumnBinder columnBinder) {
+            ColumnBinder columnBinder,
+            JdbcEnvironment jdbcEnvironment,
+            GrailsSequenceWrapper grailsSequenceWrapper) {
         this.namingStrategy = namingStrategy;
         this.columnConfigToColumnBinder = columnConfigToColumnBinder;
         this.columnBinder = columnBinder;
+        this.jdbcEnvironment = jdbcEnvironment;
+        this.grailsSequenceWrapper = grailsSequenceWrapper;
+    }
+
+    /**
+     * Convenience constructor for namingStrategy.
+     */
+    public SimpleValueBinder(PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
+        this(namingStrategy, new ColumnConfigToColumnBinder(), new ColumnBinder(namingStrategy), jdbcEnvironment, new GrailsSequenceWrapper());
     }
 
     /**
@@ -54,6 +64,8 @@ public class SimpleValueBinder {
         this.namingStrategy = null;
         this.columnConfigToColumnBinder = null;
         this.columnBinder = null;
+        this.jdbcEnvironment = null;
+        this.grailsSequenceWrapper = null;
     }
 
     public void bindSimpleValue(
@@ -68,29 +80,7 @@ public class SimpleValueBinder {
 
         String generator = propertyConfig.getGenerator();
         if (generator != null && simpleValue instanceof BasicValue basicValue) {
-            Properties params = propertyConfig.getTypeParams();
-            final Properties generatorProps = new Properties();
-            if (params != null) {
-                generatorProps.putAll(params);
-            }
-
-            if (SEQUENCE_KEY.equals(generator) && generatorProps.containsKey(SEQUENCE_KEY)) {
-                generatorProps.put(SequenceStyleGenerator.SEQUENCE_PARAM, generatorProps.getProperty(SEQUENCE_KEY));
-            }
-
-            if (GrailsSequenceGeneratorEnum.IDENTITY.toString().equals(generator)) {
-                basicValue.setCustomIdGeneratorCreator(context -> {
-                    var gen = new org.hibernate.id.IdentityGenerator();
-                    context.getProperty().getValue().getColumns().get(0).setIdentity(true);
-                    return gen;
-                });
-            } else if (GrailsSequenceGeneratorEnum.SEQUENCE.toString().equals(generator) || GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString().equals(generator)) {
-                basicValue.setCustomIdGeneratorCreator(context -> {
-                    var gen = new org.hibernate.id.enhanced.SequenceStyleGenerator();
-                    gen.configure(context.getType(), generatorProps, context.getServiceRegistry());
-                    return gen;
-                });
-            }
+            basicValue.setCustomIdGeneratorCreator(context -> createGenerator(property, context, generator));
         }
 
         if (propertyConfig.isDerived() && !(property instanceof TenantId)) {
@@ -116,6 +106,10 @@ public class SimpleValueBinder {
                         simpleValue.addColumn(column);
                     });
         }
+    }
+
+    private Generator createGenerator(GrailsHibernatePersistentProperty property, GeneratorCreationContext context, String generatorName) {
+        return grailsSequenceWrapper.getGenerator(generatorName, context, null, (GrailsHibernatePersistentEntity) property.getHibernateOwner(), jdbcEnvironment);
     }
 
 }

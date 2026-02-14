@@ -4,6 +4,7 @@ import java.util.Iterator;
 
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Column;
@@ -40,36 +41,50 @@ public class ComponentPropertyBinder {
 
     private final MetadataBuildingContext metadataBuildingContext;
     private final PersistentEntityNamingStrategy namingStrategy;
+    private final JdbcEnvironment jdbcEnvironment;
     private final MappingCacheHolder mappingCacheHolder;
     private final CollectionHolder collectionHolder;
     private final EnumTypeBinder enumTypeBinder;
     private final CollectionBinder collectionBinder;
     private final PropertyFromValueCreator propertyFromValueCreator;
+    private final ManyToOneBinder manyToOneBinder;
+    private final OneToOneBinder oneToOneBinder;
+    private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
     private final SimpleValueBinder simpleValueBinder;
     private final ComponentBinder componentBinder;
 
     public ComponentPropertyBinder(MetadataBuildingContext metadataBuildingContext,
                                    PersistentEntityNamingStrategy namingStrategy,
+                                   JdbcEnvironment jdbcEnvironment,
                                    MappingCacheHolder mappingCacheHolder,
                                    CollectionHolder collectionHolder,
                                    EnumTypeBinder enumTypeBinder,
                                    CollectionBinder collectionBinder,
                                    PropertyFromValueCreator propertyFromValueCreator) {
-        this(metadataBuildingContext, namingStrategy, mappingCacheHolder, collectionHolder,
-                enumTypeBinder, collectionBinder, propertyFromValueCreator, null, new SimpleValueBinder(namingStrategy));
+        this(metadataBuildingContext, namingStrategy, jdbcEnvironment, mappingCacheHolder, collectionHolder,
+                enumTypeBinder, collectionBinder, propertyFromValueCreator, null,
+                new SimpleValueBinder(namingStrategy, jdbcEnvironment),
+                new OneToOneBinder(namingStrategy, jdbcEnvironment),
+                new ManyToOneBinder(namingStrategy, jdbcEnvironment),
+                new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()));
     }
 
-    protected ComponentPropertyBinder(MetadataBuildingContext metadataBuildingContext,
-                                   PersistentEntityNamingStrategy namingStrategy,
-                                   MappingCacheHolder mappingCacheHolder,
-                                   CollectionHolder collectionHolder,
-                                   EnumTypeBinder enumTypeBinder,
-                                   CollectionBinder collectionBinder,
-                                   PropertyFromValueCreator propertyFromValueCreator,
-                                   ComponentBinder componentBinder,
-                                   SimpleValueBinder simpleValueBinder) {
+    public ComponentPropertyBinder(MetadataBuildingContext metadataBuildingContext,
+                                      PersistentEntityNamingStrategy namingStrategy,
+                                      JdbcEnvironment jdbcEnvironment,
+                                      MappingCacheHolder mappingCacheHolder,
+                                      CollectionHolder collectionHolder,
+                                      EnumTypeBinder enumTypeBinder,
+                                      CollectionBinder collectionBinder,
+                                      PropertyFromValueCreator propertyFromValueCreator,
+                                      ComponentBinder componentBinder,
+                                      SimpleValueBinder simpleValueBinder,
+                                      OneToOneBinder oneToOneBinder,
+                                      ManyToOneBinder manyToOneBinder,
+                                      ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
+        this.jdbcEnvironment = jdbcEnvironment;
         this.mappingCacheHolder = mappingCacheHolder;
         this.collectionHolder = collectionHolder;
         this.enumTypeBinder = enumTypeBinder;
@@ -77,11 +92,15 @@ public class ComponentPropertyBinder {
         this.propertyFromValueCreator = propertyFromValueCreator;
         this.componentBinder = componentBinder != null ? componentBinder : new ComponentBinder(mappingCacheHolder, this);
         this.simpleValueBinder = simpleValueBinder;
+        this.oneToOneBinder = oneToOneBinder;
+        this.manyToOneBinder = manyToOneBinder;
+        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
     }
 
     protected ComponentPropertyBinder() {
         this.metadataBuildingContext = null;
         this.namingStrategy = null;
+        this.jdbcEnvironment = null;
         this.mappingCacheHolder = null;
         this.collectionHolder = null;
         this.enumTypeBinder = null;
@@ -89,6 +108,9 @@ public class ComponentPropertyBinder {
         this.propertyFromValueCreator = null;
         this.componentBinder = null;
         this.simpleValueBinder = null;
+        this.manyToOneBinder = null;
+        this.oneToOneBinder = null;
+        this.columnNameForPropertyAndPathFetcher = null;
     }
 
     public void bindComponentProperty(Component component,
@@ -115,18 +137,18 @@ public class ComponentPropertyBinder {
                 LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as ManyToOne");
 
             value = new ManyToOne(metadataBuildingContext, table);
-            new ManyToOneBinder(namingStrategy).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
+            manyToOneBinder.bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
         } else if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.OneToOne association) {
             if (LOG.isDebugEnabled())
                 LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
 
             if (association.canBindOneToOneWithSingleColumnAndForeignKey()) {
                 value = new OneToOne(metadataBuildingContext, table, persistentClass);
-                new OneToOneBinder(namingStrategy).bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, path);
+                oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, path);
             }
             else {
                 value = new ManyToOne(metadataBuildingContext, table);
-                new ManyToOneBinder(namingStrategy).bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
+                manyToOneBinder.bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
             }
         }
         else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
@@ -139,7 +161,7 @@ public class ComponentPropertyBinder {
 
             value = new BasicValue(metadataBuildingContext, table);
             if (currentGrailsProp.getType().isEnum()) {
-                String columnName = new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()).getColumnNameForPropertyAndPath(currentGrailsProp, path, null);
+                String columnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(currentGrailsProp, path, null);
                 enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), (SimpleValue) value, columnName);
             }
             else {

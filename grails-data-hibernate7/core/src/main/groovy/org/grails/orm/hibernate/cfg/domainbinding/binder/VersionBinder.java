@@ -2,6 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.OptimisticLockStyle;
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.RootClass;
@@ -21,14 +22,7 @@ public class VersionBinder {
     private final PropertyBinder propertyBinder;
     private final BiFunction<MetadataBuildingContext, Table, BasicValue> basicValueFactory;
 
-    public VersionBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy) {
-        this(metadataBuildingContext,
-             new SimpleValueBinder(namingStrategy),
-             new PropertyBinder(),
-             BasicValue::new);
-    }
-
-    protected VersionBinder(MetadataBuildingContext metadataBuildingContext,
+    public VersionBinder(MetadataBuildingContext metadataBuildingContext,
                             SimpleValueBinder simpleValueBinder,
                             PropertyBinder propertyBinder,
                             BiFunction<MetadataBuildingContext, Table, BasicValue> basicValueFactory) {
@@ -36,6 +30,13 @@ public class VersionBinder {
         this.simpleValueBinder = simpleValueBinder;
         this.propertyBinder = propertyBinder;
         this.basicValueFactory = basicValueFactory;
+    }
+
+    public VersionBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
+        this(metadataBuildingContext,
+             new SimpleValueBinder(namingStrategy, jdbcEnvironment),
+             new PropertyBinder(),
+             BasicValue::new);
     }
 
     public void bindVersion(GrailsHibernatePersistentProperty version, RootClass entity) {

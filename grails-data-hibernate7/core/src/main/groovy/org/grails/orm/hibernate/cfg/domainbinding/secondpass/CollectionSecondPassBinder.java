@@ -26,6 +26,7 @@ import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.*;
 import org.hibernate.mapping.Collection;
 import org.hibernate.type.Type;
@@ -47,14 +48,43 @@ public class CollectionSecondPassBinder {
 
     private final MetadataBuildingContext metadataBuildingContext;
     private final PersistentEntityNamingStrategy namingStrategy;
+    private final JdbcEnvironment jdbcEnvironment;
     private final DefaultColumnNameFetcher defaultColumnNameFetcher;
     private final OrderByClauseBuilder orderByClauseBuilder;
+    private final SimpleValueBinder simpleValueBinder;
+    private final EnumTypeBinder enumTypeBinder;
+    private final ManyToOneBinder manyToOneBinder;
+    private final CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder;
+    private final SimpleValueColumnFetcher simpleValueColumnFetcher;
 
-    public CollectionSecondPassBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy) {
+    public CollectionSecondPassBinder(
+            MetadataBuildingContext metadataBuildingContext,
+            PersistentEntityNamingStrategy namingStrategy,
+            JdbcEnvironment jdbcEnvironment,
+            SimpleValueBinder simpleValueBinder,
+            EnumTypeBinder enumTypeBinder,
+            ManyToOneBinder manyToOneBinder,
+            CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder,
+            SimpleValueColumnFetcher simpleValueColumnFetcher) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
+        this.jdbcEnvironment = jdbcEnvironment;
+        this.simpleValueBinder = simpleValueBinder;
+        this.enumTypeBinder = enumTypeBinder;
+        this.manyToOneBinder = manyToOneBinder;
+        this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder;
+        this.simpleValueColumnFetcher = simpleValueColumnFetcher;
         this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy);
         this.orderByClauseBuilder = new OrderByClauseBuilder();
+    }
+
+    public CollectionSecondPassBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
+        this(metadataBuildingContext, namingStrategy, jdbcEnvironment,
+                new SimpleValueBinder(namingStrategy, jdbcEnvironment),
+                new EnumTypeBinder(),
+                new ManyToOneBinder(namingStrategy, jdbcEnvironment),
+                new CompositeIdentifierToManyToOneBinder(namingStrategy, jdbcEnvironment),
+                new SimpleValueColumnFetcher());
     }
 
 
@@ -267,7 +297,7 @@ public class CollectionSecondPassBinder {
             }
 
             if (isEnum) {
-                new EnumTypeBinder().bindEnumType(property, referencedType, element, columnName);
+                enumTypeBinder.bindEnumType(property, referencedType, element, columnName);
             }
             else {
 
@@ -290,7 +320,7 @@ public class CollectionSecondPassBinder {
 
                 new SimpleValueColumnBinder().bindSimpleValue(element, typeName, columnName, true);
                 if (joinColumnMappingOptional.isPresent()) {
-                    Column column = new SimpleValueColumnFetcher().getColumnForSimpleValue(element);
+                    Column column = simpleValueColumnFetcher.getColumnForSimpleValue(element);
                     ColumnConfig columnConfig = joinColumnMappingOptional.get();
                     final PropertyConfig mappedForm = property.getMappedForm();
                     new ColumnConfigToColumnBinder().bindColumnConfigToColumn(column, columnConfig, mappedForm);
@@ -305,7 +335,7 @@ public class CollectionSecondPassBinder {
             }
             if (m != null && m.hasCompositeIdentifier()) {
                 CompositeIdentity ci = (CompositeIdentity) m.getIdentity();
-                new CompositeIdentifierToManyToOneBinder(namingStrategy).bindCompositeIdentifierToManyToOne(property, element, ci, domainClass, EMPTY_PATH);
+                compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(property, element, ci, domainClass, EMPTY_PATH);
             }
             else {
                 if (joinColumnMappingOptional.isPresent()) {
@@ -343,7 +373,7 @@ public class CollectionSecondPassBinder {
     }
 
     private void bindManyToMany(Association property, ManyToOne element) {
-        new ManyToOneBinder(namingStrategy).bindManyToOne(property, element, EMPTY_PATH);
+        manyToOneBinder.bindManyToOne(property, element, EMPTY_PATH);
         element.setReferencedEntityName(property.getOwner().getName());
     }
 
@@ -359,11 +389,11 @@ public class CollectionSecondPassBinder {
         boolean hasCompositeIdentifier = mapping != null && mapping.hasCompositeIdentifier();
         if (hasCompositeIdentifier && property.supportsJoinColumnMapping()) {
             CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
-            new CompositeIdentifierToManyToOneBinder(namingStrategy).bindCompositeIdentifierToManyToOne(property, key, ci, refDomainClass, EMPTY_PATH);
+            compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(property, key, ci, refDomainClass, EMPTY_PATH);
         }
         else {
             // set type
-            new SimpleValueBinder(namingStrategy).bindSimpleValue(property, null, key, EMPTY_PATH);
+            simpleValueBinder.bindSimpleValue(property, null, key, EMPTY_PATH);
         }
     }
 

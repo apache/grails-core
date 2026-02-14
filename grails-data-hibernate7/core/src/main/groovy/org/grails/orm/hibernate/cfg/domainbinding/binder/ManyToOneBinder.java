@@ -1,6 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import org.hibernate.MappingException;
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.ManyToOne;
 
@@ -28,24 +29,24 @@ public class ManyToOneBinder {
     private final CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder;
     private final SimpleValueColumnFetcher simpleValueColumnFetcher;
 
-    public ManyToOneBinder(PersistentEntityNamingStrategy namingStrategy) {
-        this.namingStrategy = namingStrategy;
-        this.simpleValueBinder = new SimpleValueBinder(namingStrategy);
-        this.manyToOneValuesBinder = new ManyToOneValuesBinder();
-        this.compositeIdentifierToManyToOneBinder = new CompositeIdentifierToManyToOneBinder(namingStrategy);
-        this.simpleValueColumnFetcher = new SimpleValueColumnFetcher();
-    }
-
-    protected ManyToOneBinder(PersistentEntityNamingStrategy namingStrategy
+    public ManyToOneBinder(PersistentEntityNamingStrategy namingStrategy
             , SimpleValueBinder simpleValueBinder
-    , ManyToOneValuesBinder manyToOneValuesBinder
-    , CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder
-    , SimpleValueColumnFetcher simpleValueColumnFetcher) {
+            , ManyToOneValuesBinder manyToOneValuesBinder
+            , CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder
+            , SimpleValueColumnFetcher simpleValueColumnFetcher) {
         this.namingStrategy = namingStrategy;
         this.simpleValueBinder =simpleValueBinder;
         this.manyToOneValuesBinder = manyToOneValuesBinder;
         this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder;
         this.simpleValueColumnFetcher = simpleValueColumnFetcher;
+    }
+
+    public ManyToOneBinder(PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
+        this(namingStrategy,
+                new SimpleValueBinder(namingStrategy, jdbcEnvironment),
+                new ManyToOneValuesBinder(),
+                new CompositeIdentifierToManyToOneBinder(namingStrategy, jdbcEnvironment),
+                new SimpleValueColumnFetcher());
     }
 
 

@@ -2,6 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import java.util.List;
 
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.SimpleValue;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -27,27 +28,28 @@ public class CompositeIdentifierToManyToOneBinder {
     private final BackticksRemover backticksRemover;
     private final SimpleValueBinder simpleValueBinder;
 
-    public CompositeIdentifierToManyToOneBinder(PersistentEntityNamingStrategy namingStrategy){
-        this.foreignKeyColumnCountCalculator = new ForeignKeyColumnCountCalculator();
-        this.tableNameFetcher = new TableNameFetcher(namingStrategy);
-        this.namingStrategy = namingStrategy;
-        this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy);
-        this.backticksRemover = new BackticksRemover();
-        this.simpleValueBinder = new SimpleValueBinder(namingStrategy);
-
-    }
-
-    protected CompositeIdentifierToManyToOneBinder(ForeignKeyColumnCountCalculator foreignKeyColumnCountCalculator
-    , TableNameFetcher tableNameFetcher
-    , PersistentEntityNamingStrategy namingStrategy
-    , DefaultColumnNameFetcher defaultColumnNameFetcher
-    , BackticksRemover backticksRemover, SimpleValueBinder simpleValueBinder) {
+    public CompositeIdentifierToManyToOneBinder(
+            ForeignKeyColumnCountCalculator foreignKeyColumnCountCalculator,
+            TableNameFetcher tableNameFetcher,
+            PersistentEntityNamingStrategy namingStrategy,
+            DefaultColumnNameFetcher defaultColumnNameFetcher,
+            BackticksRemover backticksRemover,
+            SimpleValueBinder simpleValueBinder) {
         this.foreignKeyColumnCountCalculator = foreignKeyColumnCountCalculator;
         this.tableNameFetcher =tableNameFetcher;
         this.namingStrategy = namingStrategy;
         this.defaultColumnNameFetcher = defaultColumnNameFetcher;
         this.backticksRemover = backticksRemover;
         this.simpleValueBinder = simpleValueBinder;
+    }
+
+    public CompositeIdentifierToManyToOneBinder(PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment){
+        this(new ForeignKeyColumnCountCalculator(),
+                new TableNameFetcher(namingStrategy),
+                namingStrategy,
+                new DefaultColumnNameFetcher(namingStrategy),
+                new BackticksRemover(),
+                new SimpleValueBinder(namingStrategy, jdbcEnvironment));
     }
 
     public void bindCompositeIdentifierToManyToOne(GrailsHibernatePersistentProperty property,

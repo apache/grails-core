@@ -28,11 +28,17 @@ public class SimpleIdBinder {
     private final PropertyBinder propertyBinder;
     private final BasicValueIdCreator basicValueIdCreator;
 
-    public SimpleIdBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment, BasicValueIdCreator basicValueIdCreator)  {
+    public SimpleIdBinder(
+            MetadataBuildingContext metadataBuildingContext,
+            PersistentEntityNamingStrategy namingStrategy,
+            JdbcEnvironment jdbcEnvironment,
+            BasicValueIdCreator basicValueIdCreator,
+            SimpleValueBinder simpleValueBinder,
+            PropertyBinder propertyBinder)  {
         this.metadataBuildingContext = metadataBuildingContext;
         this.jdbcEnvironment = jdbcEnvironment;
-        this.simpleValueBinder = new SimpleValueBinder(namingStrategy);
-        this.propertyBinder = new PropertyBinder();
+        this.simpleValueBinder = simpleValueBinder;
+        this.propertyBinder = propertyBinder;
         this.basicValueIdCreator = basicValueIdCreator;
     }
 

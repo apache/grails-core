@@ -29,10 +29,14 @@ class SimpleValueBinderSpec extends Specification {
     def namingStrategy = Mock(PersistentEntityNamingStrategy)
     def columnConfigToColumnBinder = Mock(ColumnConfigToColumnBinder)
     def columnBinder = Mock(ColumnBinder)
+    def jdbcEnvironment = Mock(org.hibernate.engine.jdbc.env.spi.JdbcEnvironment)
+    def grailsSequenceWrapper = Mock(org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper)
 
     def binder = new SimpleValueBinder(namingStrategy,
             columnConfigToColumnBinder,
-            columnBinder)
+            columnBinder,
+            jdbcEnvironment,
+            grailsSequenceWrapper)
 
     def "sets type from provider when present and applies type params"() {
         given:

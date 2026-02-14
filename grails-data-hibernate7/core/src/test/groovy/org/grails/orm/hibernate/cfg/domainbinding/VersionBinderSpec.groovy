@@ -32,6 +32,7 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         simpleValueBinder = Mock(SimpleValueBinder)
         propertyBinder = Spy(PropertyBinder)
         basicValueFactory = Mock(BiFunction)
+        def jdbcEnvironment = Mock(org.hibernate.engine.jdbc.env.spi.JdbcEnvironment)
         
         versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, basicValueFactory)
     }

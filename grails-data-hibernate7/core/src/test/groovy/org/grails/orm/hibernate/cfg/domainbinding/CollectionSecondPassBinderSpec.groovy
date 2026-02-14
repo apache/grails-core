@@ -23,7 +23,18 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         def collector = getCollector()
         def binder = getGrailsDomainBinder()
         def collectionBinder = binder.getCollectionBinder()
-        def collectionSecondPassBinder = new CollectionSecondPassBinder(binder.getMetadataBuildingContext(), binder.getNamingStrategy())
+        def namingStrategy = binder.getNamingStrategy()
+        def jdbcEnvironment = binder.getJdbcEnvironment()
+        def collectionSecondPassBinder = new CollectionSecondPassBinder(
+                binder.getMetadataBuildingContext(),
+                namingStrategy,
+                jdbcEnvironment,
+                new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder(namingStrategy, jdbcEnvironment),
+                new org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder(),
+                new org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder(namingStrategy, jdbcEnvironment),
+                new org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder(namingStrategy, jdbcEnvironment),
+                new org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher()
+        )
 
         def authorEntity = getPersistentEntity(Author) as GrailsHibernatePersistentEntity
         def bookEntity = getPersistentEntity(Book) as GrailsHibernatePersistentEntity

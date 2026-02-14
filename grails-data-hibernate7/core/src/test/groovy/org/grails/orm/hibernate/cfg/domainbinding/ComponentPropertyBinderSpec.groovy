@@ -21,7 +21,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.OneToOneBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
+import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder
 import org.hibernate.boot.spi.InFlightMetadataCollector
 import org.hibernate.mapping.BasicValue
@@ -56,6 +59,9 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
     CollectionBinder collectionBinder = Mock(CollectionBinder)
     PropertyFromValueCreator propertyFromValueCreator = Mock(PropertyFromValueCreator)
     ComponentBinder componentBinder = Mock(ComponentBinder)
+    OneToOneBinder oneToOneBinder = Mock(OneToOneBinder)
+    ManyToOneBinder manyToOneBinder = Mock(ManyToOneBinder)
+    ColumnNameForPropertyAndPathFetcher columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
 
     @Subject
     ComponentPropertyBinder binder
@@ -63,16 +69,22 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
     def mockSimpleValueBinder = Mock(SimpleValueBinder) // Mock SimpleValueBinder
 
     def setup() {
+        def jdbcEnvironment = Mock(org.hibernate.engine.jdbc.env.spi.JdbcEnvironment)
+        
         binder = new ComponentPropertyBinder(
                 getGrailsDomainBinder().getMetadataBuildingContext(),
                 namingStrategy,
+                jdbcEnvironment,
                 mappingCacheHolder,
                 collectionHolder,
                 enumTypeBinder,
                 collectionBinder,
                 propertyFromValueCreator,
                 componentBinder,
-                mockSimpleValueBinder 
+                mockSimpleValueBinder,
+                oneToOneBinder,
+                manyToOneBinder,
+                columnNameFetcher
         )
     }
 
@@ -215,6 +227,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         
         namingStrategy.resolveColumnName("type") >> "type_col"
         namingStrategy.resolveColumnName("address") >> "address"
+        columnNameFetcher.getColumnNameForPropertyAndPath(currentGrailsProp, "address", null) >> "address_type_col"
         propertyFromValueCreator.createProperty(_ as BasicValue, currentGrailsProp) >> hibernateProperty
 
         when:

@@ -35,6 +35,10 @@ public class NamingStrategyWrapper implements PersistentEntityNamingStrategy {
         this.jdbcEnvironment = jdbcEnvironment;
     }
 
+    public JdbcEnvironment getJdbcEnvironment() {
+        return jdbcEnvironment;
+    }
+
     @Override
     public String resolveColumnName(String logicalName) {
         return Optional.ofNullable(logicalName)

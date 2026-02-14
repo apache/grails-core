@@ -31,17 +31,25 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.IdentityBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneValuesBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.OneToOneBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.NaturalIdentifierBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.VersionBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
+import org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper;
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
+import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableNameFetcher;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -188,14 +196,68 @@ public class GrailsDomainBinder
                 , rootMappingDefaults
         );
         this.backticksRemover = new BackticksRemover();
-        this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(getNamingStrategy(), backticksRemover);
-        this.collectionBinder = new CollectionBinder(metadataBuildingContext, this, getNamingStrategy());
-        this.componentPropertyBinder = new ComponentPropertyBinder(metadataBuildingContext, getNamingStrategy(), getMappingCacheHolder(), getCollectionHolder(), enumTypeBinder, collectionBinder, propertyFromValueCreator);
-        this.grailsPropertyBinder = new GrailsPropertyBinder(metadataBuildingContext, getNamingStrategy(), getCollectionHolder(), enumTypeBinder, componentPropertyBinder, collectionBinder, propertyFromValueCreator);
+        PersistentEntityNamingStrategy namingStrategy = getNamingStrategy();
+        JdbcEnvironment jdbcEnvironment = getJdbcEnvironment();
+        this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy, backticksRemover);
+        ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover);
+        SimpleValueBinder simpleValueBinder = new SimpleValueBinder(namingStrategy, jdbcEnvironment);
+        EnumTypeBinder enumTypeBinderToUse = enumTypeBinder != null ? enumTypeBinder : new EnumTypeBinder();
+        SimpleValueColumnFetcher simpleValueColumnFetcher = new SimpleValueColumnFetcher();
+        CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder = new CompositeIdentifierToManyToOneBinder(
+                new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(),
+                new TableNameFetcher(namingStrategy),
+                namingStrategy,
+                defaultColumnNameFetcher,
+                backticksRemover,
+                simpleValueBinder
+        );
+        OneToOneBinder oneToOneBinder = new OneToOneBinder(namingStrategy, simpleValueBinder);
+        ManyToOneBinder manyToOneBinder = new ManyToOneBinder(namingStrategy, simpleValueBinder, new ManyToOneValuesBinder(), compositeIdentifierToManyToOneBinder, simpleValueColumnFetcher);
+
+        this.collectionBinder = new CollectionBinder(
+                metadataBuildingContext,
+                this,
+                namingStrategy,
+                jdbcEnvironment,
+                simpleValueBinder,
+                enumTypeBinderToUse,
+                manyToOneBinder,
+                compositeIdentifierToManyToOneBinder,
+                simpleValueColumnFetcher
+        );
+        this.componentPropertyBinder = new ComponentPropertyBinder(
+                metadataBuildingContext,
+                namingStrategy,
+                jdbcEnvironment,
+                getMappingCacheHolder(),
+                getCollectionHolder(),
+                enumTypeBinderToUse,
+                collectionBinder,
+                propertyFromValueCreator,
+                null,
+                simpleValueBinder,
+                oneToOneBinder,
+                manyToOneBinder,
+                columnNameForPropertyAndPathFetcher
+        );
+        this.grailsPropertyBinder = new GrailsPropertyBinder(
+                metadataBuildingContext,
+                namingStrategy,
+                getCollectionHolder(),
+                enumTypeBinderToUse,
+                componentPropertyBinder,
+                collectionBinder,
+                simpleValueBinder,
+                columnNameForPropertyAndPathFetcher,
+                oneToOneBinder,
+                manyToOneBinder,
+                propertyFromValueCreator
+        );
         this.compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentPropertyBinder);
-        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, getNamingStrategy(), getJdbcEnvironment(), new BasicValueIdCreator(getJdbcEnvironment()));
+        PropertyBinder propertyBinder = new PropertyBinder();
+        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment, new BasicValueIdCreator(jdbcEnvironment), simpleValueBinder, propertyBinder);
         this.identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder);
-        this.versionBinder = new VersionBinder(metadataBuildingContext, getNamingStrategy());
+        this.versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, BasicValue::new);
 
         hibernateMappingContext
                 .getHibernatePersistentEntities(dataSourceName)
