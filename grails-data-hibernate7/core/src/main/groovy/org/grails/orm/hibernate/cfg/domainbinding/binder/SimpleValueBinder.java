@@ -60,16 +60,13 @@ public class SimpleValueBinder {
             @jakarta.annotation.Nonnull GrailsHibernatePersistentProperty property,
             GrailsHibernatePersistentProperty parentProperty,
             SimpleValue simpleValue,
-            String path,
-            GrailsHibernatePersistentProperty... typeProperty) {
+            String path) {
 
-        final GrailsHibernatePersistentProperty actualTypeProperty = (typeProperty.length > 0 && typeProperty[0] != null) ? typeProperty[0] : property;
-        PropertyConfig propertyConfig = property.getMappedForm();
-        Mapping mapping = null;
-        if (property.getOwner() instanceof GrailsHibernatePersistentEntity persistentEntity) {
-            mapping = persistentEntity.getMappedForm();
+        GrailsHibernatePersistentProperty actualTypeProperty = property;
+        if (simpleValue instanceof DependantValue) {
+            actualTypeProperty = Optional.ofNullable(property.getHibernateOwner().getIdentity()).orElse(property);
         }
-
+        PropertyConfig propertyConfig = property.getMappedForm();
         final String typeName = actualTypeProperty.getTypeName();
         if (typeName == null) {
             if (!(actualTypeProperty instanceof org.grails.datastore.mapping.model.types.Association)) {

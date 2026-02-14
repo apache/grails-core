@@ -115,7 +115,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings, "sessionFactory")
 
         then:
-        1 * mockSimpleValueBinder.bindSimpleValue(currentGrailsProp, componentProperty, _ as BasicValue, "address", _)
+        1 * mockSimpleValueBinder.bindSimpleValue(currentGrailsProp, componentProperty, _ as BasicValue, "address")
         component.getProperty("street") == hibernateProperty
     }
 
@@ -256,8 +256,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
             currentGrailsProp, 
             componentProperty, 
             _ as BasicValue, 
-            "address",         
-            _                  
+            "address"
         )
         1 * ownerEntity.isComponentPropertyNullable(componentProperty) >> true
     }

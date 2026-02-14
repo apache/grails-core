@@ -51,7 +51,7 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         
         then:
         1 * basicValueFactory.apply(metadataBuildingContext, table) >> basicValue
-        1 * simpleValueBinder.bindSimpleValue(versionProperty, null, basicValue, "", _)
+        1 * simpleValueBinder.bindSimpleValue(versionProperty, null, basicValue, "")
         1 * propertyBinder.bindProperty(versionProperty, basicValue)
         
         rootClass.getVersion() != null

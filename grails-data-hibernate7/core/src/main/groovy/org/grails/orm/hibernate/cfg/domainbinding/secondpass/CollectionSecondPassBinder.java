@@ -363,12 +363,7 @@ public class CollectionSecondPassBinder {
         }
         else {
             // set type
-            GrailsHibernatePersistentProperty identity = refDomainClass.getIdentity();
-            if (identity != null) {
-                new SimpleValueBinder(namingStrategy).bindSimpleValue(property, null, key, EMPTY_PATH, identity);
-            } else {
-                new SimpleValueBinder(namingStrategy).bindSimpleValue(property, null, key, EMPTY_PATH);
-            }
+            new SimpleValueBinder(namingStrategy).bindSimpleValue(property, null, key, EMPTY_PATH);
         }
     }
 
