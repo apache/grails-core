@@ -4,13 +4,12 @@ import java.util.Map;
 
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.PersistentClass;
-
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
+import org.hibernate.boot.spi.MetadataBuildingContext;
 
 public class MapCollectionType extends CollectionType {
 
-    public MapCollectionType(GrailsDomainBinder binder) {
-        super(Map.class, binder);
+    public MapCollectionType(MetadataBuildingContext buildingContext) {
+        super(Map.class, buildingContext);
     }
 
     @Override

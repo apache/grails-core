@@ -6,17 +6,17 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
+import org.hibernate.boot.spi.MetadataBuildingContext;
 
 public record CollectionHolder(Map<Class<?>, CollectionType> map) {
 
-    public CollectionHolder(GrailsDomainBinder binder) {
+    public CollectionHolder(MetadataBuildingContext buildingContext) {
         this(Map.ofEntries(
-                Map.entry(Set.class, new SetCollectionType(binder)),
-                Map.entry(SortedSet.class, new SetCollectionType(binder)),
-                Map.entry(List.class, new ListCollectionType(binder)),
-                Map.entry(Collection.class, new BagCollectionType(binder)),
-                Map.entry(Map.class, new MapCollectionType(binder))
+                Map.entry(Set.class, new SetCollectionType(buildingContext)),
+                Map.entry(SortedSet.class, new SetCollectionType(buildingContext)),
+                Map.entry(List.class, new ListCollectionType(buildingContext)),
+                Map.entry(Collection.class, new BagCollectionType(buildingContext)),
+                Map.entry(Map.class, new MapCollectionType(buildingContext))
         ));
     }
 

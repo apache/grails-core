@@ -3,13 +3,12 @@ package org.grails.orm.hibernate.cfg.domainbinding.collectionType;
 import java.util.Collection;
 
 import org.hibernate.mapping.PersistentClass;
-
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
+import org.hibernate.boot.spi.MetadataBuildingContext;
 
 public class BagCollectionType extends CollectionType {
 
-    public BagCollectionType(GrailsDomainBinder binder) {
-        super(Collection.class, binder);
+    public BagCollectionType(MetadataBuildingContext buildingContext) {
+        super(Collection.class, buildingContext);
     }
 
     @Override

@@ -16,7 +16,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
 public abstract class CollectionType {
 
     protected final Class<?> clazz;
-    protected final GrailsDomainBinder binder;
     protected final MetadataBuildingContext buildingContext;
 
     public abstract Collection createCollection(PersistentClass owner);
@@ -30,10 +29,9 @@ public abstract class CollectionType {
         return coll;
     }
 
-    protected CollectionType(Class<?> clazz, GrailsDomainBinder binder) {
+    protected CollectionType(Class<?> clazz, MetadataBuildingContext buildingContext) {
         this.clazz = clazz;
-        this.binder = binder;
-        this.buildingContext = binder.getMetadataBuildingContext();
+        this.buildingContext = buildingContext;
     }
 
     @Override

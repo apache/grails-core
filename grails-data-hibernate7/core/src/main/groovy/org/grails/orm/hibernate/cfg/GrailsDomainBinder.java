@@ -133,7 +133,6 @@ public class GrailsDomainBinder
     private PersistentEntityNamingStrategy namingStrategy;
     private MetadataBuildingContext metadataBuildingContext;
     private MappingCacheHolder mappingCacheHolder;
-    private CollectionHolder collectionHolder;
 
 
     public JdbcEnvironment getJdbcEnvironment() {
@@ -152,7 +151,7 @@ public class GrailsDomainBinder
         this.enumTypeBinder = enumTypeBinder;
         this.propertyFromValueCreator = new PropertyFromValueCreator();
         this.mappingCacheHolder = MappingCacheHolder.getInstance();
-        this.collectionHolder = new CollectionHolder(this);
+
         // pre-build mappings
         for (GrailsHibernatePersistentEntity persistentEntity : hibernateMappingContext.getHibernatePersistentEntities(dataSourceName)) {
             mappingCacheHolder.cacheMapping(persistentEntity);
@@ -187,6 +186,7 @@ public class GrailsDomainBinder
                 metadataCollector
                 , null
         );
+        CollectionHolder collectionHolder = new CollectionHolder(metadataBuildingContext);
         BackticksRemover backticksRemover = new BackticksRemover();
         PersistentEntityNamingStrategy namingStrategy = getNamingStrategy();
         JdbcEnvironment jdbcEnvironment = getJdbcEnvironment();
@@ -222,7 +222,7 @@ public class GrailsDomainBinder
                 namingStrategy,
                 jdbcEnvironment,
                 getMappingCacheHolder(),
-                getCollectionHolder(),
+                collectionHolder,
                 enumTypeBinderToUse,
                 collectionBinder,
                 propertyFromValueCreator,
@@ -235,7 +235,7 @@ public class GrailsDomainBinder
         GrailsPropertyBinder grailsPropertyBinder = new GrailsPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
-                getCollectionHolder(),
+                collectionHolder,
                 enumTypeBinderToUse,
                 componentPropertyBinder,
                 collectionBinder,
@@ -662,10 +662,6 @@ public class GrailsDomainBinder
 
     public MappingCacheHolder getMappingCacheHolder() {
         return mappingCacheHolder;
-    }
-
-    public CollectionHolder getCollectionHolder() {
-        return collectionHolder;
     }
 
 

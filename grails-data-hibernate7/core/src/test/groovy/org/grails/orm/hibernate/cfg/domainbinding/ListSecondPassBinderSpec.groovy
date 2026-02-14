@@ -6,6 +6,7 @@ import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 
 import org.hibernate.mapping.RootClass
@@ -48,6 +49,7 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         BackticksRemover backticksRemover = new BackticksRemover()
         DefaultColumnNameFetcher defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy, backticksRemover)
         ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover)
+        CollectionHolder collectionHolder = new CollectionHolder(metadataBuildingContext)
         SimpleValueBinder simpleValueBinder = new SimpleValueBinder(namingStrategy, jdbcEnvironment)
         EnumTypeBinder enumTypeBinderToUse = new EnumTypeBinder()
         SimpleValueColumnFetcher simpleValueColumnFetcher = new SimpleValueColumnFetcher()
@@ -78,7 +80,7 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
                 namingStrategy,
                 jdbcEnvironment,
                 binder.getMappingCacheHolder(),
-                binder.getCollectionHolder(),
+                collectionHolder,
                 enumTypeBinderToUse,
                 collectionBinder,
                 new PropertyFromValueCreator(),
@@ -91,7 +93,7 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         GrailsPropertyBinder propertyBinder = new GrailsPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
-                binder.getCollectionHolder(),
+                collectionHolder,
                 enumTypeBinderToUse,
                 componentPropertyBinder,
                 collectionBinder,

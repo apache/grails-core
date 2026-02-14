@@ -4,13 +4,12 @@ import java.util.SortedSet;
 
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.PersistentClass;
-
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
+import org.hibernate.boot.spi.MetadataBuildingContext;
 
 public class SortedSetCollectionType extends CollectionType {
 
-    public SortedSetCollectionType(GrailsDomainBinder binder) {
-        super(SortedSet.class, binder);
+    public SortedSetCollectionType(MetadataBuildingContext buildingContext) {
+        super(SortedSet.class, buildingContext);
     }
 
     @Override

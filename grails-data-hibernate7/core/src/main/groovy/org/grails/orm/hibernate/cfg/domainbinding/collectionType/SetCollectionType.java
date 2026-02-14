@@ -4,13 +4,12 @@ import java.util.Set;
 
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.PersistentClass;
-
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
+import org.hibernate.boot.spi.MetadataBuildingContext;
 
 public class SetCollectionType extends CollectionType {
 
-    public SetCollectionType(GrailsDomainBinder binder) {
-        super(Set.class, binder);
+    public SetCollectionType(MetadataBuildingContext buildingContext) {
+        super(Set.class, buildingContext);
     }
 
     @Override
