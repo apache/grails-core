@@ -32,7 +32,6 @@ public class SimpleValueBinder {
     private final JdbcEnvironment jdbcEnvironment;
     private final GrailsSequenceWrapper grailsSequenceWrapper;
 
-    private static final String SEQUENCE_KEY = GrailsSequenceGeneratorEnum.SEQUENCE.toString();
 
     /**
      * Public constructor that accepts all collaborators.

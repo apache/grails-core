@@ -140,7 +140,7 @@ public class GrailsDomainBinder
     private IdentityBinder identityBinder;
     private VersionBinder versionBinder;
     private DefaultColumnNameFetcher defaultColumnNameFetcher;
-    private BackticksRemover backticksRemover;
+    private ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
 
 
     public JdbcEnvironment getJdbcEnvironment() {
@@ -195,11 +195,11 @@ public class GrailsDomainBinder
                 metadataCollector
                 , rootMappingDefaults
         );
-        this.backticksRemover = new BackticksRemover();
+        BackticksRemover backticksRemover = new BackticksRemover();
         PersistentEntityNamingStrategy namingStrategy = getNamingStrategy();
         JdbcEnvironment jdbcEnvironment = getJdbcEnvironment();
         this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy, backticksRemover);
-        ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover);
+        this.columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover);
         SimpleValueBinder simpleValueBinder = new SimpleValueBinder(namingStrategy, jdbcEnvironment);
         EnumTypeBinder enumTypeBinderToUse = enumTypeBinder != null ? enumTypeBinder : new EnumTypeBinder();
         SimpleValueColumnFetcher simpleValueColumnFetcher = new SimpleValueColumnFetcher();
@@ -343,7 +343,7 @@ public class GrailsDomainBinder
             TenantId tenantId = entity.getTenantId();
 
             if (tenantId != null) {
-                String filterCondition = entity.getMultiTenantFilterCondition(new DefaultColumnNameFetcher(getNamingStrategy()));
+                String filterCondition = entity.getMultiTenantFilterCondition(defaultColumnNameFetcher);
 
                 persistentClass.addFilter(
                         GormProperties.TENANT_IDENTITY,
@@ -480,7 +480,7 @@ public class GrailsDomainBinder
         SimpleValue key = new DependantValue(metadataBuildingContext, mytable, joinedSubclass.getIdentifier());
         joinedSubclass.setKey(key);
         var identifier = sub.getIdentity();
-        String columnName = new ColumnNameForPropertyAndPathFetcher(getNamingStrategy(), defaultColumnNameFetcher, backticksRemover).getColumnNameForPropertyAndPath(identifier, EMPTY_PATH, null);
+        String columnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(identifier, EMPTY_PATH, null);
         new SimpleValueColumnBinder().bindSimpleValue(key, identifier.getType().getName(), columnName, false);
 
         joinedSubclass.createPrimaryKey();
