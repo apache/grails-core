@@ -18,7 +18,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.OneToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 
 class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
@@ -166,7 +168,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def authorEntity = createPersistentEntity(ListAuthor)
 
         // Register referenced entity in Hibernate
-        binder.bindRoot(bookEntity, collector, "sessionFactory")
+        binder.bindRoot(bookEntity, collector, "sessionFactory", new DefaultColumnNameFetcher(binder.getNamingStrategy(), new BackticksRemover()))
 
         // Manually create RootClass for the main entity to avoid duplicate property binding
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
@@ -206,7 +208,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def authorEntity = createPersistentEntity(MapAuthor)
 
         // Register referenced entity in Hibernate
-        binder.bindRoot(bookEntity, collector, "sessionFactory")
+        binder.bindRoot(bookEntity, collector, "sessionFactory", new DefaultColumnNameFetcher(binder.getNamingStrategy(), new BackticksRemover()))
 
         // Manually create RootClass for the main entity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
@@ -243,7 +245,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def personEntity = getPersistentEntity(org.apache.grails.data.testing.tck.domains.PersonWithCompositeKey) as GrailsHibernatePersistentEntity
         
         when:
-        binder.bindRoot(personEntity, collector, "sessionFactory")
+        binder.bindRoot(personEntity, collector, "sessionFactory", new DefaultColumnNameFetcher(binder.getNamingStrategy(), new BackticksRemover()))
         def rootClass = collector.getEntityBinding(personEntity.name)
 
         then:
@@ -266,7 +268,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def bookEntity = createPersistentEntity(BookForOneToOne) as GrailsHibernatePersistentEntity
 
         // Register referenced entity in Hibernate
-        binder.bindRoot(bookEntity, collector, "sessionFactory")
+        binder.bindRoot(bookEntity, collector, "sessionFactory", new DefaultColumnNameFetcher(binder.getNamingStrategy(), new BackticksRemover()))
 
         // Manually create RootClass for the main entity (AuthorWithOneToOne)
         def rootClass = new RootClass(binder.getMetadataBuildingContext())

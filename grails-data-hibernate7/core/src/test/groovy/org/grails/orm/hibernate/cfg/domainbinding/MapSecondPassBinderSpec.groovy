@@ -4,6 +4,8 @@ import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.SimpleValue
@@ -43,7 +45,7 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         def bookEntity = getPersistentEntity(MapBookBinder) as GrailsHibernatePersistentEntity
 
         // Register referenced entity in Hibernate
-        binder.bindRoot(bookEntity, collector, "sessionFactory")
+        binder.bindRoot(bookEntity, collector, "sessionFactory", new DefaultColumnNameFetcher(binder.getNamingStrategy(), new BackticksRemover()))
 
         // Manually create RootClass for the main entity
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
