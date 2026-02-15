@@ -56,6 +56,7 @@ dependencies {
         exclude group:'org.slf4j', module:'slf4j-log4j12'
         exclude group:'xml-apis', module:'xml-apis'
     }
+    api "org.hibernate.models:hibernate-models:1.0.0"
     api 'org.hibernate.validator:hibernate-validator', {
         exclude group:'commons-logging', module:'commons-logging'
         exclude group:'commons-collections', module:'commons-collections'
