@@ -36,6 +36,11 @@ package org.grails.orm.hibernate.cfg;
          return getHibernateRootEntity().getMappedForm();
      }
  
+     default boolean isTablePerHierarchy() {
+         Mapping mapping = getMappedForm();
+         return mapping == null || mapping.getTablePerHierarchy();
+     }
+
      default boolean isTablePerHierarchySubclass() {
          Mapping rootMapping = getRootMapping();
          return !this.isRoot() && (rootMapping == null || rootMapping.getTablePerHierarchy());

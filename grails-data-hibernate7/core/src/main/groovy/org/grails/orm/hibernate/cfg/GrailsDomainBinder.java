@@ -279,11 +279,8 @@ public class GrailsDomainBinder
         RootClass root = bindRootPersistentClassCommonValues(entity, children, mappings, sessionFactoryBeanName, identityBinder, versionBinder, grailsPropertyBinder, classBinder, propertyFromValueCreator);
         Mapping m = entity.getMappedForm();
         final Mapping finalMapping = m;
-        boolean tablePerSubclass = !m.getTablePerHierarchy();
-        if (!children.isEmpty() && !tablePerSubclass) {
-            // if the root class has children create a discriminator property
-
-            bindDiscriminatorProperty(root.getTable(), root, m);
+        if (!children.isEmpty() && entity.isTablePerHierarchy()) {
+            bindDiscriminatorProperty(root, m);
         }
         // bind the sub classes
         children.forEach(sub -> bindSubClass(sub, root, mappings, sessionFactoryBeanName, finalMapping,mappingCacheHolder, defaultColumnNameFetcher, columnNameForPropertyAndPathFetcher, grailsPropertyBinder, classBinder, propertyFromValueCreator, multiTenantFilterBinder, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder));
@@ -374,11 +371,11 @@ public class GrailsDomainBinder
      * Creates and binds the discriminator property used in table-per-hierarchy inheritance to
      * discriminate between sub class instances
      *
-     * @param table       The table to bind onto
      * @param entity      The root class entity
      * @param someMapping The mappings instance
      */
-    private void bindDiscriminatorProperty(Table table, RootClass entity, Mapping someMapping) {
+    private void bindDiscriminatorProperty(RootClass entity, Mapping someMapping) {
+        Table table = entity.getTable();
         SimpleValue d = new BasicValue(metadataBuildingContext, table);
         entity.setDiscriminator(d);
         DiscriminatorConfig discriminatorConfig = someMapping.getDiscriminator();
