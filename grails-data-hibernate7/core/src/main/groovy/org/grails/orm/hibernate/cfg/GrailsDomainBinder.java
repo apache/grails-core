@@ -277,18 +277,16 @@ public class GrailsDomainBinder
         }
         var children = entity.getChildEntities(dataSourceName);
         RootClass root = bindRootPersistentClassCommonValues(entity, children, mappings, sessionFactoryBeanName, identityBinder, versionBinder, grailsPropertyBinder, classBinder, propertyFromValueCreator);
-        if (root.isPolymorphic()) {
-            Mapping m = entity.getMappedForm();
-            final Mapping finalMapping = m;
-            boolean tablePerSubclass = !m.getTablePerHierarchy();
-            if (!tablePerSubclass) {
-                // if the root class has children create a discriminator property
+        Mapping m = entity.getMappedForm();
+        final Mapping finalMapping = m;
+        boolean tablePerSubclass = !m.getTablePerHierarchy();
+        if (!children.isEmpty() && !tablePerSubclass) {
+            // if the root class has children create a discriminator property
 
-                bindDiscriminatorProperty(root.getTable(), root, m);
-            }
-            // bind the sub classes
-            children.forEach(sub -> bindSubClass(sub, root, mappings, sessionFactoryBeanName, finalMapping,mappingCacheHolder, defaultColumnNameFetcher, columnNameForPropertyAndPathFetcher, grailsPropertyBinder, classBinder, propertyFromValueCreator, multiTenantFilterBinder, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder));
+            bindDiscriminatorProperty(root.getTable(), root, m);
         }
+        // bind the sub classes
+        children.forEach(sub -> bindSubClass(sub, root, mappings, sessionFactoryBeanName, finalMapping,mappingCacheHolder, defaultColumnNameFetcher, columnNameForPropertyAndPathFetcher, grailsPropertyBinder, classBinder, propertyFromValueCreator, multiTenantFilterBinder, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder));
 
         multiTenantFilterBinder.addMultiTenantFilterIfNecessary(entity, root, mappings, defaultColumnNameFetcher);
 
@@ -421,8 +419,6 @@ public class GrailsDomainBinder
                 new ColumnConfigToColumnBinder().bindColumnConfigToColumn(c, cc, null);
             }
         }
-
-        entity.setPolymorphic(true);
     }
 
     /*
@@ -441,7 +437,6 @@ public class GrailsDomainBinder
 
         RootClass root = new RootClass(this.metadataBuildingContext);
         root.setAbstract(domainClass.isAbstract());
-        root.setPolymorphic(!children.isEmpty());
         classBinder.bindClass(domainClass, root, mappings);
 
         // get the schema and catalog names from the configuration
