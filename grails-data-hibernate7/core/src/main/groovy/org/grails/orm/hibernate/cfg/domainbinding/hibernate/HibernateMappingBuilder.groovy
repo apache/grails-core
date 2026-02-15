@@ -28,6 +28,7 @@ import jakarta.persistence.AccessType
 import org.grails.orm.hibernate.cfg.CacheConfig
 import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.CompositeIdentity
+import org.grails.orm.hibernate.cfg.Identity
 import org.grails.orm.hibernate.cfg.JoinTable
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.NaturalId
@@ -393,43 +394,42 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
         if (args.composite) {
             mapping.identity = new CompositeIdentity(propertyNames:args.composite as String[])
             if (args.compositeClass) {
-                mapping.identity.compositeClass = args.compositeClass
+                ((CompositeIdentity)mapping.identity).compositeClass = (Class)args.compositeClass
             }
         }
         else {
             if (args?.generator) {
-                mapping.identity.generator = args.remove('generator')
+                ((Identity)mapping.identity).generator = args.remove('generator').toString()
             }
             if (args?.name) {
-                mapping.identity.name = args.remove('name').toString()
+                ((Identity)mapping.identity).name = args.remove('name').toString()
             }
             if (args?.params) {
-                def params = args.remove('params')
+                def params = (Map)args.remove('params')
                 for (entry in params) {
                     params[entry.key] = entry.value?.toString()
                 }
-                mapping.identity.params = params
+                ((Identity)mapping.identity).params = params
             }
-            if (args?.natural) {
-                def naturalArgs = args.remove('natural')
-                def propertyNames = naturalArgs instanceof Map ? naturalArgs.remove('properties') : naturalArgs
+        }
+        if (args?.natural) {
+            def naturalArgs = args.remove('natural')
+            def propertyNames = naturalArgs instanceof Map ? ((Map)naturalArgs).remove('properties') : naturalArgs
 
-                if (propertyNames) {
-                    def ni = new NaturalId()
-                    ni.mutable = (naturalArgs instanceof Map) && naturalArgs.mutable ?: false
-                    if (propertyNames instanceof List) {
-                        ni.propertyNames = propertyNames
-                    }
-                    else {
-                        ni.propertyNames = [propertyNames.toString()]
-                    }
-                    mapping.identity.natural = ni
+            if (propertyNames) {
+                def ni = new NaturalId()
+                ni.mutable = (naturalArgs instanceof Map) && ((Map)naturalArgs).mutable ?: false
+                if (propertyNames instanceof List) {
+                    ni.propertyNames = (List<String>)propertyNames
                 }
+                else {
+                    ni.propertyNames = [propertyNames.toString()]
+                }
+                mapping.identity.natural = ni
             }
-            // still more arguments?
-            if (args) {
-                handleMethodMissing("id", [args] as Object[])
-            }
+        }
+        if (!args.composite && args) {
+            handleMethodMissing("id", [args] as Object[])
         }
     }
 

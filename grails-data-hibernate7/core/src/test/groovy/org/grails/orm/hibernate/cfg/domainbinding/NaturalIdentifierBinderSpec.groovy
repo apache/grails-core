@@ -1,6 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.Identity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.NaturalId
@@ -101,6 +102,38 @@ class NaturalIdentifierBinderSpec extends HibernateGormDatastoreSpec {
             assert uk.getColumns().get(0) == column1
             assert  uk.getColumns().get(1)  == column2
         }
+    }
+
+    void "test bindNaturalIdentifier with CompositeIdentity"() {
+        given:
+        def mapping = Mock(Mapping.class)
+        def identity = Mock(CompositeIdentity)
+        def naturalId = Mock(NaturalId)
+        def property = new Property()
+        property.setName("id1")
+        def value = Mock(Value)
+        property.setValue(value)
+        Table table = Mock(Table)
+        def id1 = "id1"
+        mapping.getIdentity() >> identity
+        identity.getNatural() >> naturalId
+        naturalId.getPropertyNames() >> [id1]
+        naturalId.isMutable() >> false
+        def rootClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        rootClass.addProperty(property)
+        rootClass.setTable(table)
+        value.getSelectables() >> []
+
+        def uniqueNameGenerator = Mock(UniqueNameGenerator)
+        def binder = new NaturalIdentifierBinder(uniqueNameGenerator)
+
+        when:
+        binder.bindNaturalIdentifier(mapping, rootClass)
+
+        then:
+        1 * uniqueNameGenerator.setGeneratedUniqueName(_)
+        property.isNaturalIdentifier()
+        1 * table.addUniqueKey(_)
     }
 
     void "test bindNaturalIdentifier when no natural id is defined"() {

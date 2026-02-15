@@ -40,4 +40,21 @@ class CompositeIdentity extends Property implements HibernateIdentity {
      * The composite id class
      */
     Class compositeClass
+    /**
+     * The natural id definition
+     */
+    NaturalId natural
+
+    /**
+     * Define the natural id
+     * @param naturalIdDef The callable
+     * @return This id
+     */
+    CompositeIdentity naturalId(@DelegatesTo(NaturalId) Closure naturalIdDef) {
+        this.natural = new NaturalId()
+        naturalIdDef.setDelegate(this.natural)
+        naturalIdDef.setResolveStrategy(Closure.DELEGATE_ONLY)
+        naturalIdDef.call()
+        return this
+    }
 }

@@ -3,6 +3,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 import org.apache.commons.collections.CollectionUtils;
 import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity;
 import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator;
 
 import org.hibernate.mapping.PersistentClass;
@@ -26,9 +27,7 @@ public class NaturalIdentifierBinder {
 
     public void bindNaturalIdentifier(Mapping mapping, PersistentClass persistentClass) {
         Optional.ofNullable(mapping.getIdentity())
-                .filter(Identity.class::isInstance)
-                .map(Identity.class::cast)
-                .map(Identity::getNatural)
+                .map(HibernateIdentity::getNatural)
                 .ifPresent(naturalId -> {
                     if(CollectionUtils.isEmpty(naturalId.getPropertyNames())) {
                         return;

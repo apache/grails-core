@@ -80,7 +80,8 @@ class Identity extends Property implements HibernateIdentity {
      * @return This id
      */
     Identity naturalId(@DelegatesTo(NaturalId) Closure naturalIdDef) {
-        naturalIdDef.setDelegate(new NaturalId())
+        this.natural = new NaturalId()
+        naturalIdDef.setDelegate(this.natural)
         naturalIdDef.setResolveStrategy(Closure.DELEGATE_ONLY)
         naturalIdDef.call()
         return this
