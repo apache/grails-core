@@ -12,6 +12,7 @@ import org.hibernate.mapping.SimpleValue
 import org.hibernate.mapping.Value
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder
@@ -122,7 +123,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
     protected void bindRoot(GrailsDomainBinder binder, GrailsHibernatePersistentEntity entity, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         def binders = getBinders(binder)
-        binder.bindRoot(entity, mappings, sessionFactoryBeanName, binders.defaultColumnNameFetcher, binders.columnNameForPropertyAndPathFetcher, binders.identityBinder as IdentityBinder, binders.versionBinder as VersionBinder, binders.propertyBinder as GrailsPropertyBinder)
+        binder.bindRoot(entity, mappings, sessionFactoryBeanName, binders.defaultColumnNameFetcher, binders.columnNameForPropertyAndPathFetcher, binders.identityBinder as IdentityBinder, binders.versionBinder as VersionBinder, binders.propertyBinder as GrailsPropertyBinder, new ClassBinder(), new PropertyFromValueCreator())
     }
 
     void setupSpec() {
@@ -148,7 +149,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         when:
         def titleProp = persistentEntity.getPropertyByName("title") as GrailsHibernatePersistentProperty
         Value value = propertyBinder.bindProperty(rootClass, titleProp, collector, "sessionFactory")
-        rootClass.addProperty(binder.getPropertyFromValueCreator().createProperty(value, titleProp))
+        rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, titleProp))
 
         then:
         Property prop = rootClass.getProperty("title")
@@ -170,7 +171,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         when:
         def statusProp = persistentEntity.getPropertyByName("status") as GrailsHibernatePersistentProperty
         Value value = propertyBinder.bindProperty(rootClass, statusProp, collector, "sessionFactory")
-        rootClass.addProperty(binder.getPropertyFromValueCreator().createProperty(value, statusProp))
+        rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, statusProp))
 
         then:
         Property prop = rootClass.getProperty("status")
@@ -196,7 +197,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         when:
         def ownerProp = petEntity.getPropertyByName("owner") as GrailsHibernatePersistentProperty
         Value value = propertyBinder.bindProperty(rootClass, ownerProp, collector, "sessionFactory")
-        rootClass.addProperty(binder.getPropertyFromValueCreator().createProperty(value, ownerProp))
+        rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, ownerProp))
 
         then:
         Property prop = rootClass.getProperty("owner")
@@ -219,7 +220,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         when:
         def addressProp = persistentEntity.getPropertyByName("homeAddress") as GrailsHibernatePersistentProperty
         Value value = propertyBinder.bindProperty(rootClass, addressProp, collector, "sessionFactory")
-        rootClass.addProperty(binder.getPropertyFromValueCreator().createProperty(value, addressProp))
+        rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, addressProp))
 
         then:
         Property prop = rootClass.getProperty("homeAddress")
@@ -247,7 +248,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         when:
         def petsProp = personEntity.getPropertyByName("pets") as GrailsHibernatePersistentProperty
         Value value = propertyBinder.bindProperty(rootClass, petsProp, collector, "sessionFactory")
-        rootClass.addProperty(binder.getPropertyFromValueCreator().createProperty(value, petsProp))
+        rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, petsProp))
 
         then:
         Property prop = rootClass.getProperty("pets")
@@ -286,7 +287,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         when:
         def booksProp = authorEntity.getPropertyByName("books") as GrailsHibernatePersistentProperty
         Value value = propertyBinder.bindProperty(rootClass, booksProp, collector, "sessionFactory")
-        rootClass.addProperty(binder.getPropertyFromValueCreator().createProperty(value, booksProp))
+        rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, booksProp))
         collector.processSecondPasses(binder.getMetadataBuildingContext())
 
         then:
@@ -325,7 +326,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         when:
         def booksProp = authorEntity.getPropertyByName("books") as GrailsHibernatePersistentProperty
         Value value = propertyBinder.bindProperty(rootClass, booksProp, collector, "sessionFactory")
-        rootClass.addProperty(binder.getPropertyFromValueCreator().createProperty(value, booksProp))
+        rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, booksProp))
         collector.processSecondPasses(binder.getMetadataBuildingContext())
 
         then:
@@ -386,7 +387,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         when:
         def childBookProp = authorEntity.getPropertyByName("childBook") as GrailsHibernatePersistentProperty
         Value value = propertyBinder.bindProperty(rootClass, childBookProp, collector, "sessionFactory")
-        rootClass.addProperty(binder.getPropertyFromValueCreator().createProperty(value, childBookProp))
+        rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, childBookProp))
         // Process second passes to ensure Hibernate's internal mappings are finalized
         collector.processSecondPasses(binder.getMetadataBuildingContext())
 

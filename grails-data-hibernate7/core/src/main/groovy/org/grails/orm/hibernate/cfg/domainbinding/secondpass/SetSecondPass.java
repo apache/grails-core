@@ -1,5 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
+import java.io.Serial;
 import java.util.Map;
 
 import jakarta.annotation.Nonnull;
@@ -19,6 +20,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
  */
 public class SetSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsSecondPass  {
 
+    @Serial
     private static final long serialVersionUID = -5540526942092611348L;
 
     private final CollectionSecondPassBinder collectionSecondPassBinder;
