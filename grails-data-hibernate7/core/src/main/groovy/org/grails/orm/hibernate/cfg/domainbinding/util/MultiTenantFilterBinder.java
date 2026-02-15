@@ -22,8 +22,6 @@ import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 /**
  * Utility class for binding multi-tenant filters to the Hibernate meta model.
  *
- * @author Walter Duque de Estrada
- * @author Graeme Rocher
  * @since 7.0
  */
 public class MultiTenantFilterBinder {
