@@ -40,6 +40,15 @@ package org.grails.orm.hibernate.cfg;
          Mapping mapping = getMappedForm();
          return mapping == null || mapping.getTablePerHierarchy();
      }
+ 
+     default boolean isTablePerConcreteClass() {
+         Mapping mapping = getMappedForm();
+         return mapping != null && mapping.isTablePerConcreteClass();
+     }
+
+     default boolean isTableAbstract() {
+         return !isTablePerHierarchy() && isTablePerConcreteClass() && isAbstract();
+     }
 
      default boolean isTablePerHierarchySubclass() {
          Mapping rootMapping = getRootMapping();

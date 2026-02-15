@@ -459,14 +459,12 @@ public class GrailsDomainBinder
         var catalog = domainClass.getCatalog(mappings);
 
 
-        var isAbstract = !gormMapping.getTablePerHierarchy() && gormMapping.isTablePerConcreteClass() && root.isAbstract();
-
         // create the table
         var table = mappings.addTable(schema
                 , catalog
                 , new TableNameFetcher(getNamingStrategy()).getTableName(domainClass)
                 , null
-                , isAbstract
+                , domainClass.isTableAbstract()
                 , metadataBuildingContext
         );
         root.setTable(table);
