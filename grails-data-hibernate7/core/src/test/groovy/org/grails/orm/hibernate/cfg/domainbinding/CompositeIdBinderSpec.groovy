@@ -13,19 +13,17 @@ import spock.lang.Subject
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentUpdater
 import org.hibernate.mapping.Value
 
 class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
 
     def componentPropertyBinder = Mock(ComponentPropertyBinder)
-    def componentUpdater = Mock(ComponentUpdater)
 
     @Subject
     CompositeIdBinder binder
 
     def setup() {
-        binder = new CompositeIdBinder(getGrailsDomainBinder().getMetadataBuildingContext(), componentPropertyBinder, componentUpdater)
+        binder = new CompositeIdBinder(getGrailsDomainBinder().getMetadataBuildingContext(), componentPropertyBinder)
     }
 
     def "should bind composite id using property names from CompositeIdentity"() {

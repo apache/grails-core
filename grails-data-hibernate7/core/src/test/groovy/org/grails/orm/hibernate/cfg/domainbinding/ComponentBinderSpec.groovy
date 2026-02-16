@@ -12,7 +12,6 @@ import spock.lang.Subject
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentUpdater
 import org.hibernate.mapping.Value
 import org.hibernate.mapping.Table
 
@@ -20,13 +19,12 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
 
     MappingCacheHolder mappingCacheHolder = Mock(MappingCacheHolder)
     ComponentPropertyBinder componentPropertyBinder = Mock(ComponentPropertyBinder)
-    ComponentUpdater componentUpdater = Mock(ComponentUpdater)
 
     @Subject
     ComponentBinder binder
 
     def setup() {
-        binder = new ComponentBinder(getGrailsDomainBinder().getMetadataBuildingContext(), mappingCacheHolder, componentPropertyBinder, componentUpdater)
+        binder = new ComponentBinder(getGrailsDomainBinder().getMetadataBuildingContext(), mappingCacheHolder, componentPropertyBinder)
     }
 
     def "should bind component and its properties"() {

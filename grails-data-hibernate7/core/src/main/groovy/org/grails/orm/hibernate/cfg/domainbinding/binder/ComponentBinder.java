@@ -1,15 +1,10 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import java.util.Iterator;
-
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Property;
 import org.hibernate.mapping.Table;
-import org.hibernate.mapping.Value;
 
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
@@ -17,7 +12,6 @@ import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
 
 import jakarta.annotation.Nonnull;
 
@@ -26,13 +20,11 @@ public class ComponentBinder {
     private final MetadataBuildingContext metadataBuildingContext;
     private final MappingCacheHolder mappingCacheHolder;
     private final ComponentPropertyBinder componentPropertyBinder;
-    private final ComponentUpdater componentUpdater;
 
-    public ComponentBinder(MetadataBuildingContext metadataBuildingContext, MappingCacheHolder mappingCacheHolder, ComponentPropertyBinder componentPropertyBinder, ComponentUpdater componentUpdater) {
+    public ComponentBinder(MetadataBuildingContext metadataBuildingContext, MappingCacheHolder mappingCacheHolder, ComponentPropertyBinder componentPropertyBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.mappingCacheHolder = mappingCacheHolder;
         this.componentPropertyBinder = componentPropertyBinder;
-        this.componentUpdater = componentUpdater;
     }
 
 
@@ -61,6 +53,7 @@ public class ComponentBinder {
                 continue;
             }
             componentPropertyBinder.bindComponentProperty(component, property, currentGrailsProp, persistentClass, path, table, mappings);
+
         }
         return component;
     }

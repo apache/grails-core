@@ -187,21 +187,18 @@ public class GrailsDomainBinder
         ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator);
         ComponentPropertyBinder componentPropertyBinder = new ComponentPropertyBinder(
                 metadataBuildingContext,
-                namingStrategy,
-                jdbcEnvironment,
-                getMappingCacheHolder(),
                 collectionHolder,
                 enumTypeBinder,
                 collectionBinder,
-                propertyFromValueCreator,
-                null,
                 simpleValueBinder,
                 oneToOneBinder,
                 manyToOneBinder,
                 columnNameForPropertyAndPathFetcher,
                 componentUpdater
         );
-        ComponentBinder componentBinder = new ComponentBinder(metadataBuildingContext, getMappingCacheHolder(), componentPropertyBinder, componentUpdater);
+        ComponentBinder componentBinder = new ComponentBinder(metadataBuildingContext, getMappingCacheHolder(), componentPropertyBinder);
+        componentPropertyBinder.setComponentBinder(componentBinder);
+
         GrailsPropertyBinder grailsPropertyBinder = new GrailsPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
@@ -215,7 +212,7 @@ public class GrailsDomainBinder
                 manyToOneBinder,
                 propertyFromValueCreator
         );
-        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentPropertyBinder, componentUpdater);
+        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentPropertyBinder);
         PropertyBinder propertyBinder = new PropertyBinder();
         SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment, new BasicValueIdCreator(jdbcEnvironment), simpleValueBinder, propertyBinder);
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder);

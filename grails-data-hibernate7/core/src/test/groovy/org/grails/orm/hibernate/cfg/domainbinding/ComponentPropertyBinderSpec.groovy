@@ -67,25 +67,20 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
     def mockSimpleValueBinder = Mock(SimpleValueBinder) // Mock SimpleValueBinder
 
     def setup() {
-        def jdbcEnvironment = Mock(org.hibernate.engine.jdbc.env.spi.JdbcEnvironment)
         componentUpdater = new ComponentUpdater(propertyFromValueCreator)
         
         binder = new ComponentPropertyBinder(
                 getGrailsDomainBinder().getMetadataBuildingContext(),
-                namingStrategy,
-                jdbcEnvironment,
-                mappingCacheHolder,
                 collectionHolder,
                 enumTypeBinder,
                 collectionBinder,
-                propertyFromValueCreator,
-                componentBinder,
                 mockSimpleValueBinder,
                 oneToOneBinder,
                 manyToOneBinder,
                 columnNameFetcher,
                 componentUpdater
         )
+        binder.setComponentBinder(componentBinder)
     }
 
     private void setupProperty(PersistentProperty prop, String name, Mapping mapping, PersistentEntity owner) {
@@ -121,8 +116,6 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         setupProperty(currentGrailsProp, "street", mapping, ownerEntity)
         setupProperty(componentProperty, "address", mapping, ownerEntity)
         
-        propertyFromValueCreator.createProperty(_ as BasicValue, currentGrailsProp) >> hibernateProperty
-
         when:
         binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
 
@@ -156,8 +149,6 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         setupProperty(currentGrailsProp, "owner", mapping, ownerEntity)
         setupProperty(componentProperty, "address", mapping, ownerEntity)
         
-        propertyFromValueCreator.createProperty(_ as HibernateManyToOne, currentGrailsProp) >> hibernateProperty
-
         when:
         binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
 
@@ -195,8 +186,6 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         setupProperty(currentGrailsProp, "detail", mapping, ownerEntity)
         setupProperty(componentProperty, "address", mapping, ownerEntity)
         
-        propertyFromValueCreator.createProperty(_ as HibernateOneToOne, currentGrailsProp) >> hibernateProperty
-
         when:
         binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
 
@@ -225,10 +214,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         setupProperty(currentGrailsProp, "type", mapping, ownerEntity)
         setupProperty(componentProperty, "address", mapping, ownerEntity)
         
-        namingStrategy.resolveColumnName("type") >> "type_col"
-        namingStrategy.resolveColumnName("address") >> "address"
         columnNameFetcher.getColumnNameForPropertyAndPath(currentGrailsProp, "address", null) >> "address_type_col"
-        propertyFromValueCreator.createProperty(_ as BasicValue, currentGrailsProp) >> hibernateProperty
 
         when:
         binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
@@ -260,8 +246,6 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         
         ownerEntity.isComponentPropertyNullable(componentProperty) >> true
         
-        propertyFromValueCreator.createProperty(_ as BasicValue, currentGrailsProp) >> hibernateProperty
-
         when:
         binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
 

@@ -83,21 +83,18 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator)
         ComponentPropertyBinder componentPropertyBinder = new ComponentPropertyBinder(
                 metadataBuildingContext,
-                namingStrategy,
-                jdbcEnvironment,
-                binder.getMappingCacheHolder(),
                 collectionHolder,
                 enumTypeBinderToUse,
                 collectionBinder,
-                propertyFromValueCreator,
-                null,
                 simpleValueBinder,
                 oneToOneBinder,
                 manyToOneBinder,
                 columnNameForPropertyAndPathFetcher,
                 componentUpdater
         )
-        ComponentBinder componentBinder = new ComponentBinder(metadataBuildingContext, binder.getMappingCacheHolder(), componentPropertyBinder, componentUpdater)
+        ComponentBinder componentBinder = new ComponentBinder(metadataBuildingContext, binder.getMappingCacheHolder(), componentPropertyBinder)
+        componentPropertyBinder.setComponentBinder(componentBinder)
+
         GrailsPropertyBinder propertyBinder = new GrailsPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
@@ -111,7 +108,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
                 manyToOneBinder,
                 propertyFromValueCreator
         )
-        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentPropertyBinder, componentUpdater)
+        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentPropertyBinder)
         PropertyBinder propertyBinderHelper = new PropertyBinder()
         SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment, new BasicValueIdCreator(jdbcEnvironment), simpleValueBinder, propertyBinderHelper)
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder)

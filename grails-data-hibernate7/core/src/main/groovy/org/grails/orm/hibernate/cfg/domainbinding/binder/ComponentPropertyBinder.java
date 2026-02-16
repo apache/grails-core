@@ -1,18 +1,13 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import java.util.Iterator;
-
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.OneToOne;
 import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Property;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
@@ -20,18 +15,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.grails.datastore.mapping.model.types.Association;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
-import org.grails.orm.hibernate.cfg.MappingCacheHolder;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
-import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
-import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 
 import jakarta.annotation.Nonnull;
 
@@ -40,60 +29,29 @@ public class ComponentPropertyBinder {
     private static final Logger LOG = LoggerFactory.getLogger(ComponentPropertyBinder.class);
 
     private final MetadataBuildingContext metadataBuildingContext;
-    private final PersistentEntityNamingStrategy namingStrategy;
-    private final JdbcEnvironment jdbcEnvironment;
-    private final MappingCacheHolder mappingCacheHolder;
     private final CollectionHolder collectionHolder;
     private final EnumTypeBinder enumTypeBinder;
     private final CollectionBinder collectionBinder;
-    private final PropertyFromValueCreator propertyFromValueCreator;
     private final ManyToOneBinder manyToOneBinder;
     private final OneToOneBinder oneToOneBinder;
     private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
     private final SimpleValueBinder simpleValueBinder;
-    private final ComponentBinder componentBinder;
     private final ComponentUpdater componentUpdater;
+    private ComponentBinder componentBinder;
 
     public ComponentPropertyBinder(MetadataBuildingContext metadataBuildingContext,
-                                   PersistentEntityNamingStrategy namingStrategy,
-                                   JdbcEnvironment jdbcEnvironment,
-                                   MappingCacheHolder mappingCacheHolder,
-                                   CollectionHolder collectionHolder,
-                                   EnumTypeBinder enumTypeBinder,
-                                   CollectionBinder collectionBinder,
-                                   PropertyFromValueCreator propertyFromValueCreator) {
-        this(metadataBuildingContext, namingStrategy, jdbcEnvironment, mappingCacheHolder, collectionHolder,
-                enumTypeBinder, collectionBinder, propertyFromValueCreator, null,
-                new SimpleValueBinder(namingStrategy, jdbcEnvironment),
-                new OneToOneBinder(namingStrategy, jdbcEnvironment),
-                new ManyToOneBinder(namingStrategy, jdbcEnvironment),
-                new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()),
-                new ComponentUpdater(propertyFromValueCreator));
-    }
-
-    public ComponentPropertyBinder(MetadataBuildingContext metadataBuildingContext,
-                                      PersistentEntityNamingStrategy namingStrategy,
-                                      JdbcEnvironment jdbcEnvironment,
-                                      MappingCacheHolder mappingCacheHolder,
                                       CollectionHolder collectionHolder,
                                       EnumTypeBinder enumTypeBinder,
                                       CollectionBinder collectionBinder,
-                                      PropertyFromValueCreator propertyFromValueCreator,
-                                      ComponentBinder componentBinder,
                                       SimpleValueBinder simpleValueBinder,
                                       OneToOneBinder oneToOneBinder,
                                       ManyToOneBinder manyToOneBinder,
                                       ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
                                       ComponentUpdater componentUpdater) {
         this.metadataBuildingContext = metadataBuildingContext;
-        this.namingStrategy = namingStrategy;
-        this.jdbcEnvironment = jdbcEnvironment;
-        this.mappingCacheHolder = mappingCacheHolder;
         this.collectionHolder = collectionHolder;
         this.enumTypeBinder = enumTypeBinder;
         this.collectionBinder = collectionBinder;
-        this.propertyFromValueCreator = propertyFromValueCreator;
-        this.componentBinder = componentBinder != null ? componentBinder : new ComponentBinder(metadataBuildingContext, mappingCacheHolder, this, componentUpdater);
         this.simpleValueBinder = simpleValueBinder;
         this.oneToOneBinder = oneToOneBinder;
         this.manyToOneBinder = manyToOneBinder;
@@ -101,7 +59,9 @@ public class ComponentPropertyBinder {
         this.componentUpdater = componentUpdater;
     }
 
-
+    public void setComponentBinder(ComponentBinder componentBinder) {
+        this.componentBinder = componentBinder;
+    }
 
     public Value bindComponentProperty(Component component,
                                        GrailsHibernatePersistentProperty componentProperty,
