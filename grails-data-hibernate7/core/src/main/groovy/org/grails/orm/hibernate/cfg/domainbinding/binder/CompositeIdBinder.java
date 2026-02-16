@@ -1,15 +1,21 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
+import java.util.Iterator;
+
 import org.hibernate.MappingException;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Component;
+import org.hibernate.mapping.Property;
 import org.hibernate.mapping.RootClass;
+import org.hibernate.mapping.Value;
 
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
+import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
 
 import jakarta.annotation.Nonnull;
 
@@ -17,10 +23,12 @@ public class CompositeIdBinder {
 
     private final MetadataBuildingContext metadataBuildingContext;
     private final ComponentPropertyBinder componentPropertyBinder;
+    private final ComponentUpdater componentUpdater;
 
-    public CompositeIdBinder(MetadataBuildingContext metadataBuildingContext, ComponentPropertyBinder componentPropertyBinder) {
+    public CompositeIdBinder(MetadataBuildingContext metadataBuildingContext, ComponentPropertyBinder componentPropertyBinder, ComponentUpdater componentUpdater) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.componentPropertyBinder = componentPropertyBinder;
+        this.componentUpdater = componentUpdater;
     }
 
 
@@ -61,7 +69,7 @@ public class CompositeIdBinder {
                         "] is not a valid property!");
             }
 
-            componentPropertyBinder.bindComponentProperty(id, identifierProp, property, root, "", root.getTable(), mappings);
+           componentPropertyBinder.bindComponentProperty(id, identifierProp, property, root, "", root.getTable(), mappings);
         }
     }
 }

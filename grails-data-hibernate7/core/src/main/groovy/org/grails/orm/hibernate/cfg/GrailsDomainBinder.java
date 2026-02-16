@@ -19,6 +19,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentUpdater;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider;
@@ -183,6 +184,7 @@ public class GrailsDomainBinder
                 compositeIdentifierToManyToOneBinder,
                 simpleValueColumnFetcher
         );
+        ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator);
         ComponentPropertyBinder componentPropertyBinder = new ComponentPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
@@ -196,9 +198,10 @@ public class GrailsDomainBinder
                 simpleValueBinder,
                 oneToOneBinder,
                 manyToOneBinder,
-                columnNameForPropertyAndPathFetcher
+                columnNameForPropertyAndPathFetcher,
+                componentUpdater
         );
-        ComponentBinder componentBinder = new ComponentBinder(metadataBuildingContext, getMappingCacheHolder(), componentPropertyBinder);
+        ComponentBinder componentBinder = new ComponentBinder(metadataBuildingContext, getMappingCacheHolder(), componentPropertyBinder, componentUpdater);
         GrailsPropertyBinder grailsPropertyBinder = new GrailsPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
@@ -212,7 +215,7 @@ public class GrailsDomainBinder
                 manyToOneBinder,
                 propertyFromValueCreator
         );
-        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentPropertyBinder);
+        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentPropertyBinder, componentUpdater);
         PropertyBinder propertyBinder = new PropertyBinder();
         SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment, new BasicValueIdCreator(jdbcEnvironment), simpleValueBinder, propertyBinder);
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder);

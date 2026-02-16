@@ -12,17 +12,21 @@ import spock.lang.Subject
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentUpdater
+import org.hibernate.mapping.Value
+import org.hibernate.mapping.Table
 
 class ComponentBinderSpec extends HibernateGormDatastoreSpec {
 
     MappingCacheHolder mappingCacheHolder = Mock(MappingCacheHolder)
     ComponentPropertyBinder componentPropertyBinder = Mock(ComponentPropertyBinder)
+    ComponentUpdater componentUpdater = Mock(ComponentUpdater)
 
     @Subject
     ComponentBinder binder
 
     def setup() {
-        binder = new ComponentBinder(getGrailsDomainBinder().getMetadataBuildingContext(), mappingCacheHolder, componentPropertyBinder)
+        binder = new ComponentBinder(getGrailsDomainBinder().getMetadataBuildingContext(), mappingCacheHolder, componentPropertyBinder, componentUpdater)
     }
 
     def "should bind component and its properties"() {
@@ -30,6 +34,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
         root.setEntityName("MyEntity")
+        root.setTable(new Table("my_entity"))
         
         def embeddedProp = GroovyMock(HibernateEmbeddedProperty)
         def associatedEntity = GroovyMock(GrailsHibernatePersistentEntity)
@@ -57,7 +62,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         component.getComponentClassName() == Address.name
         component.getRoleName() == Address.name + ".address"
         1 * mappingCacheHolder.cacheMapping(associatedEntity)
-        1 * componentPropertyBinder.bindComponentProperty(_, _, _, _, _, _, _)
+        1 * componentPropertyBinder.bindComponentProperty(_ as Component, embeddedProp, prop1, root, "address", _ as Table, mappings) >> Mock(Value)
     }
 
     static class MyEntity {}

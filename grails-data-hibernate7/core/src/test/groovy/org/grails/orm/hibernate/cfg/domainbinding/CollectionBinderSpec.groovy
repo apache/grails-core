@@ -36,6 +36,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolde
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentUpdater
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder
@@ -79,6 +80,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
                 simpleValueColumnFetcher
         )
         PropertyFromValueCreator propertyFromValueCreator = new PropertyFromValueCreator()
+        ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator)
         ComponentPropertyBinder componentPropertyBinder = new ComponentPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
@@ -92,9 +94,10 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
                 simpleValueBinder,
                 oneToOneBinder,
                 manyToOneBinder,
-                columnNameForPropertyAndPathFetcher
+                columnNameForPropertyAndPathFetcher,
+                componentUpdater
         )
-        ComponentBinder componentBinder = new ComponentBinder(metadataBuildingContext, binder.getMappingCacheHolder(), componentPropertyBinder)
+        ComponentBinder componentBinder = new ComponentBinder(metadataBuildingContext, binder.getMappingCacheHolder(), componentPropertyBinder, componentUpdater)
         GrailsPropertyBinder propertyBinder = new GrailsPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
@@ -108,7 +111,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
                 manyToOneBinder,
                 propertyFromValueCreator
         )
-        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentPropertyBinder)
+        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentPropertyBinder, componentUpdater)
         PropertyBinder propertyBinderHelper = new PropertyBinder()
         SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment, new BasicValueIdCreator(jdbcEnvironment), simpleValueBinder, propertyBinderHelper)
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder)

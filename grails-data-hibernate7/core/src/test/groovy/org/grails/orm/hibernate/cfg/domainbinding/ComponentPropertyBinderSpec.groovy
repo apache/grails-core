@@ -16,6 +16,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOnePro
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentUpdater
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.OneToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder
@@ -58,6 +59,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
     OneToOneBinder oneToOneBinder = Mock(OneToOneBinder)
     ManyToOneBinder manyToOneBinder = Mock(ManyToOneBinder)
     ColumnNameForPropertyAndPathFetcher columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+    ComponentUpdater componentUpdater
 
     @Subject
     ComponentPropertyBinder binder
@@ -66,6 +68,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
     def setup() {
         def jdbcEnvironment = Mock(org.hibernate.engine.jdbc.env.spi.JdbcEnvironment)
+        componentUpdater = new ComponentUpdater(propertyFromValueCreator)
         
         binder = new ComponentPropertyBinder(
                 getGrailsDomainBinder().getMetadataBuildingContext(),
@@ -80,7 +83,8 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
                 mockSimpleValueBinder,
                 oneToOneBinder,
                 manyToOneBinder,
-                columnNameFetcher
+                columnNameFetcher,
+                componentUpdater
         )
     }
 
@@ -124,7 +128,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         1 * mockSimpleValueBinder.bindSimpleValue(currentGrailsProp, componentProperty, _ as BasicValue, "address")
-        component.getProperty("street") == hibernateProperty
+        1 * propertyFromValueCreator.createProperty(_ as BasicValue, currentGrailsProp) >> hibernateProperty
     }
 
     def "should bind many-to-one property"() {
@@ -158,8 +162,8 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
+        1 * manyToOneBinder.bindManyToOne(currentGrailsProp, _ as HibernateManyToOne, "address")
         1 * propertyFromValueCreator.createProperty(_ as HibernateManyToOne, currentGrailsProp) >> hibernateProperty
-        component.getProperty("owner") == hibernateProperty
     }
 
     def "should bind one-to-one property"() {
@@ -197,8 +201,8 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
+        1 * oneToOneBinder.bindOneToOne(currentGrailsProp, _ as HibernateOneToOne, "address")
         1 * propertyFromValueCreator.createProperty(_ as HibernateOneToOne, currentGrailsProp) >> hibernateProperty
-        component.getProperty("detail") == hibernateProperty
     }
 
     def "should bind enum property"() {
@@ -231,6 +235,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         1 * enumTypeBinder.bindEnumType(currentGrailsProp, MyEnum, _ as BasicValue, "address_type_col")
+        1 * propertyFromValueCreator.createProperty(_ as BasicValue, currentGrailsProp) >> hibernateProperty
     }
 
     def "should set columns to nullable when component property is nullable"() {
@@ -267,7 +272,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
             _ as BasicValue, 
             "address"
         )
-        1 * ownerEntity.isComponentPropertyNullable(componentProperty) >> true
+        1 * propertyFromValueCreator.createProperty(_ as BasicValue, currentGrailsProp) >> hibernateProperty
     }
 
     enum MyEnum { VAL }

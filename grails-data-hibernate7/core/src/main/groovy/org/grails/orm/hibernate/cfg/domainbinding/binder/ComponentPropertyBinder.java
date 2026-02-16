@@ -52,6 +52,7 @@ public class ComponentPropertyBinder {
     private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
     private final SimpleValueBinder simpleValueBinder;
     private final ComponentBinder componentBinder;
+    private final ComponentUpdater componentUpdater;
 
     public ComponentPropertyBinder(MetadataBuildingContext metadataBuildingContext,
                                    PersistentEntityNamingStrategy namingStrategy,
@@ -66,7 +67,8 @@ public class ComponentPropertyBinder {
                 new SimpleValueBinder(namingStrategy, jdbcEnvironment),
                 new OneToOneBinder(namingStrategy, jdbcEnvironment),
                 new ManyToOneBinder(namingStrategy, jdbcEnvironment),
-                new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()));
+                new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()),
+                new ComponentUpdater(propertyFromValueCreator));
     }
 
     public ComponentPropertyBinder(MetadataBuildingContext metadataBuildingContext,
@@ -81,7 +83,8 @@ public class ComponentPropertyBinder {
                                       SimpleValueBinder simpleValueBinder,
                                       OneToOneBinder oneToOneBinder,
                                       ManyToOneBinder manyToOneBinder,
-                                      ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher) {
+                                      ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
+                                      ComponentUpdater componentUpdater) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.jdbcEnvironment = jdbcEnvironment;
@@ -90,22 +93,23 @@ public class ComponentPropertyBinder {
         this.enumTypeBinder = enumTypeBinder;
         this.collectionBinder = collectionBinder;
         this.propertyFromValueCreator = propertyFromValueCreator;
-        this.componentBinder = componentBinder != null ? componentBinder : new ComponentBinder(metadataBuildingContext, mappingCacheHolder, this);
+        this.componentBinder = componentBinder != null ? componentBinder : new ComponentBinder(metadataBuildingContext, mappingCacheHolder, this, componentUpdater);
         this.simpleValueBinder = simpleValueBinder;
         this.oneToOneBinder = oneToOneBinder;
         this.manyToOneBinder = manyToOneBinder;
         this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
+        this.componentUpdater = componentUpdater;
     }
 
 
 
-    public void bindComponentProperty(Component component,
-                                      GrailsHibernatePersistentProperty componentProperty,
+    public Value bindComponentProperty(Component component,
+                                       GrailsHibernatePersistentProperty componentProperty,
                                        GrailsHibernatePersistentProperty currentGrailsProp,
-                                      PersistentClass persistentClass,
+                                       PersistentClass persistentClass,
                                        String path,
-                                      Table table,
-                                      @Nonnull InFlightMetadataCollector mappings) {
+                                       Table table,
+                                       @Nonnull InFlightMetadataCollector mappings) {
         Value value;
         // see if it's a collection type
         CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
@@ -153,17 +157,8 @@ public class ComponentPropertyBinder {
                 this.simpleValueBinder.bindSimpleValue(currentGrailsProp, componentProperty, (SimpleValue) value, path);
             }
         }
-
-        Property persistentProperty = propertyFromValueCreator.createProperty(value, currentGrailsProp);
-        component.addProperty(persistentProperty);
-        if (componentProperty != null && componentProperty.getOwner() instanceof GrailsHibernatePersistentEntity ghpe && ghpe.isComponentPropertyNullable(componentProperty)) {
-            final Iterator<?> columnIterator = value.getColumns().iterator();
-            while (columnIterator.hasNext()) {
-                Column c = (Column) columnIterator.next();
-                c.setNullable(true);
-            }
-        }
+        componentUpdater.updateComponent(component, componentProperty, currentGrailsProp, value);
+        return value;
     }
-
 
 }
