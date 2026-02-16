@@ -97,21 +97,7 @@ public class ComponentPropertyBinder {
         this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
     }
 
-    protected ComponentPropertyBinder() {
-        this.metadataBuildingContext = null;
-        this.namingStrategy = null;
-        this.jdbcEnvironment = null;
-        this.mappingCacheHolder = null;
-        this.collectionHolder = null;
-        this.enumTypeBinder = null;
-        this.collectionBinder = null;
-        this.propertyFromValueCreator = null;
-        this.componentBinder = null;
-        this.simpleValueBinder = null;
-        this.manyToOneBinder = null;
-        this.oneToOneBinder = null;
-        this.columnNameForPropertyAndPathFetcher = null;
-    }
+
 
     public void bindComponentProperty(Component component,
                                       GrailsHibernatePersistentProperty componentProperty,
@@ -180,8 +166,5 @@ public class ComponentPropertyBinder {
         }
     }
 
-    public void bindComponent(Component component, HibernateEmbeddedProperty property,
-                               boolean isNullable, @Nonnull InFlightMetadataCollector mappings) {
-        componentBinder.bindComponent(component, property, mappings);
-    }
+
 }

@@ -24,10 +24,6 @@ public class ComponentBinder {
         this.componentPropertyBinder = componentPropertyBinder;
     }
 
-    protected ComponentBinder() {
-        this.mappingCacheHolder = null;
-        this.componentPropertyBinder = null;
-    }
 
     public void bindComponent(Component component, HibernateEmbeddedProperty property,
                               @Nonnull InFlightMetadataCollector mappings) {

@@ -38,7 +38,7 @@ public class GrailsPropertyBinder {
     private final MetadataBuildingContext metadataBuildingContext;
     private final CollectionHolder collectionHolder;
     private final EnumTypeBinder enumTypeBinder;
-    private final ComponentPropertyBinder componentPropertyBinder;
+    private final ComponentBinder componentBinder;
     private final CollectionBinder collectionBinder;
     private final SimpleValueBinder simpleValueBinder;
     private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
@@ -51,7 +51,7 @@ public class GrailsPropertyBinder {
             PersistentEntityNamingStrategy namingStrategy,
             CollectionHolder collectionHolder,
             EnumTypeBinder enumTypeBinder,
-            ComponentPropertyBinder componentPropertyBinder,
+            ComponentBinder componentBinder,
             CollectionBinder collectionBinder,
             SimpleValueBinder simpleValueBinder,
             ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
@@ -61,7 +61,7 @@ public class GrailsPropertyBinder {
         this.metadataBuildingContext = metadataBuildingContext;
         this.collectionHolder = collectionHolder;
         this.enumTypeBinder = enumTypeBinder;
-        this.componentPropertyBinder = componentPropertyBinder;
+        this.componentBinder = componentBinder;
         this.collectionBinder = collectionBinder;
         this.simpleValueBinder = simpleValueBinder;
         this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
@@ -75,14 +75,14 @@ public class GrailsPropertyBinder {
             PersistentEntityNamingStrategy namingStrategy,
             CollectionHolder collectionHolder,
             EnumTypeBinder enumTypeBinder,
-            ComponentPropertyBinder componentPropertyBinder,
+            ComponentBinder componentBinder,
             CollectionBinder collectionBinder,
             PropertyFromValueCreator propertyFromValueCreator) {
         this(metadataBuildingContext,
                 namingStrategy,
                 collectionHolder,
                 enumTypeBinder,
-                componentPropertyBinder,
+                componentBinder,
                 collectionBinder,
                 new SimpleValueBinder(namingStrategy, ((NamingStrategyWrapper)namingStrategy).getJdbcEnvironment()),
                 new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()),
@@ -139,7 +139,7 @@ public class GrailsPropertyBinder {
         }
         else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
             value = new Component(metadataBuildingContext, persistentClass);
-            componentPropertyBinder.bindComponent((Component)value, embedded, true, mappings);
+            componentBinder.bindComponent((Component)value, embedded,mappings);
         }
         // work out what type of relationship it is and bind value
         else { // Default BasicValue

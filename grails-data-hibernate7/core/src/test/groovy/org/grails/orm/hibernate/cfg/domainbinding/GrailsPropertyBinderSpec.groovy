@@ -13,6 +13,7 @@ import org.hibernate.mapping.Value
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder
@@ -97,12 +98,13 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
                 manyToOneBinder,
                 columnNameForPropertyAndPathFetcher
         )
+        ComponentBinder componentBinder = new ComponentBinder(binder.getMappingCacheHolder(), componentPropertyBinder)
         GrailsPropertyBinder propertyBinder = new GrailsPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
                 collectionHolder,
                 enumTypeBinderToUse,
-                componentPropertyBinder,
+                componentBinder,
                 collectionBinder,
                 simpleValueBinder,
                 columnNameForPropertyAndPathFetcher,
@@ -432,7 +434,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         // CollectionHolder is a Java record (final), so we instantiate it
         def collectionHolder = new org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder(new HashMap<Class<?>, org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType>())
         def enumTypeBinder = Mock(EnumTypeBinder)
-        def componentPropertyBinder = Mock(ComponentPropertyBinder)
+        def componentBinder = Mock(ComponentBinder)
         def collectionBinder = Mock(CollectionBinder)
         def propertyFromValueCreator = Mock(PropertyFromValueCreator)
         def simpleValueBinder = Mock(SimpleValueBinder)
@@ -446,7 +448,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
                 namingStrategy,
                 collectionHolder,
                 enumTypeBinder,
-                componentPropertyBinder,
+                componentBinder,
                 collectionBinder,
                 simpleValueBinder,
                 columnNameForPropertyAndPathFetcher,

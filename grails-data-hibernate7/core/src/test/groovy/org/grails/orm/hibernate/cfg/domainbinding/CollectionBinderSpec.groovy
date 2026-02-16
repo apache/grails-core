@@ -34,6 +34,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator
 
@@ -93,12 +94,13 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
                 manyToOneBinder,
                 columnNameForPropertyAndPathFetcher
         )
+        ComponentBinder componentBinder = new ComponentBinder(binder.getMappingCacheHolder(), componentPropertyBinder)
         GrailsPropertyBinder propertyBinder = new GrailsPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
                 collectionHolder,
                 enumTypeBinderToUse,
-                componentPropertyBinder,
+                componentBinder,
                 collectionBinder,
                 simpleValueBinder,
                 columnNameForPropertyAndPathFetcher,

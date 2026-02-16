@@ -17,6 +17,7 @@ package org.grails.orm.hibernate.cfg;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder;
@@ -197,12 +198,13 @@ public class GrailsDomainBinder
                 manyToOneBinder,
                 columnNameForPropertyAndPathFetcher
         );
+        ComponentBinder componentBinder = new ComponentBinder(getMappingCacheHolder(), componentPropertyBinder);
         GrailsPropertyBinder grailsPropertyBinder = new GrailsPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
                 collectionHolder,
                 enumTypeBinder,
-                componentPropertyBinder,
+                componentBinder,
                 collectionBinder,
                 simpleValueBinder,
                 columnNameForPropertyAndPathFetcher,

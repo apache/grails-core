@@ -29,6 +29,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinde
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.OneToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder
@@ -97,12 +98,13 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
                 manyToOneBinder,
                 columnNameForPropertyAndPathFetcher
         )
+        ComponentBinder componentBinder = new ComponentBinder(binder.getMappingCacheHolder(), componentPropertyBinder)
         GrailsPropertyBinder propertyBinder = new GrailsPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
                 collectionHolder,
                 enumTypeBinderToUse,
-                componentPropertyBinder,
+                componentBinder,
                 collectionBinder,
                 simpleValueBinder,
                 columnNameForPropertyAndPathFetcher,
