@@ -21,6 +21,7 @@ class ClassPropertiesBinderSpec extends HibernateGormDatastoreSpec {
 
         def domainClass = Mock(GrailsHibernatePersistentEntity)
         def persistentClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        persistentClass.setTable(new org.hibernate.mapping.Table("test"))
         def mappings = Mock(InFlightMetadataCollector)
         def sessionFactoryBeanName = "sessionFactory"
 

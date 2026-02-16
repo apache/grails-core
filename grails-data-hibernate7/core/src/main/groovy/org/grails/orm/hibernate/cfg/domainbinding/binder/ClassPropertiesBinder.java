@@ -44,6 +44,8 @@ public class ClassPropertiesBinder {
                                     PersistentClass persistentClass,
                                     @Nonnull InFlightMetadataCollector mappings) {
 
+        persistentClass.getTable().setComment(domainClass.getMappedForm().getComment());
+
         for (GrailsHibernatePersistentProperty currentGrailsProp : domainClass.getPersistentPropertiesToBind()) {
             Value value = grailsPropertyBinder.bindProperty(persistentClass, currentGrailsProp, mappings);
             persistentClass.addProperty(propertyFromValueCreator.createProperty(value, currentGrailsProp));

@@ -75,9 +75,7 @@ public class GrailsPropertyBinder {
         if (LOG.isDebugEnabled()) {
             LOG.debug("[GrailsPropertyBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
         }
-        Mapping gormMapping =  currentGrailsProp.getHibernateOwner().getMappedForm();
         Table table = persistentClass.getTable();
-        table.setComment(gormMapping.getComment());
 
         Value value = null;
 
