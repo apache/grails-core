@@ -18,6 +18,7 @@ import groovy.lang.Closure;
 
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.TenantId;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder;
@@ -230,6 +231,8 @@ public class GrailsDomainBinder
         SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment, new BasicValueIdCreator(jdbcEnvironment), simpleValueBinder, propertyBinder);
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder);
         VersionBinder versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, BasicValue::new);
+        NaturalIdentifierBinder naturalIdentifierBinder = new NaturalIdentifierBinder();
+        ClassPropertiesBinder classPropertiesBinder = new ClassPropertiesBinder(grailsPropertyBinder, propertyFromValueCreator, naturalIdentifierBinder);
         MultiTenantFilterBinder multiTenantFilterBinder = new MultiTenantFilterBinder();
         JoinedSubClassBinder joinedSubClassBinder = new JoinedSubClassBinder(metadataBuildingContext, namingStrategy, new SimpleValueColumnBinder(), columnNameForPropertyAndPathFetcher, classBinder);
         UnionSubclassBinder unionSubclassBinder = new UnionSubclassBinder(metadataBuildingContext, namingStrategy, classBinder);
@@ -239,7 +242,7 @@ public class GrailsDomainBinder
                 .getHibernatePersistentEntities(dataSourceName)
                 .stream()
                 .filter(persistentEntity -> persistentEntity.forGrailsDomainMapping(dataSourceName))
-                .forEach(hibernatePersistentEntity -> bindRoot(hibernatePersistentEntity, metadataCollector, sessionFactoryName, defaultColumnNameFetcher, columnNameForPropertyAndPathFetcher, identityBinder, versionBinder, grailsPropertyBinder, classBinder, propertyFromValueCreator, multiTenantFilterBinder, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder));
+                .forEach(hibernatePersistentEntity -> bindRoot(hibernatePersistentEntity, metadataCollector, sessionFactoryName, defaultColumnNameFetcher, identityBinder, versionBinder, classBinder, classPropertiesBinder, multiTenantFilterBinder, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder));
     }
 
 
@@ -270,20 +273,20 @@ public class GrailsDomainBinder
      * @param mappings    The Hibernate Mappings object
      * @param sessionFactoryBeanName  the session factory bean name
      */
-    protected void bindRoot(@Nonnull GrailsHibernatePersistentEntity entity,@Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName, DefaultColumnNameFetcher defaultColumnNameFetcher, ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher, IdentityBinder identityBinder, VersionBinder versionBinder, GrailsPropertyBinder grailsPropertyBinder, ClassBinder classBinder, PropertyFromValueCreator propertyFromValueCreator, MultiTenantFilterBinder multiTenantFilterBinder, JoinedSubClassBinder joinedSubClassBinder, UnionSubclassBinder unionSubclassBinder, SingleTableSubclassBinder singleTableSubclassBinder) {
+    protected void bindRoot(@Nonnull GrailsHibernatePersistentEntity entity,@Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName, DefaultColumnNameFetcher defaultColumnNameFetcher, IdentityBinder identityBinder, VersionBinder versionBinder, ClassBinder classBinder, ClassPropertiesBinder classPropertiesBinder, MultiTenantFilterBinder multiTenantFilterBinder, JoinedSubClassBinder joinedSubClassBinder, UnionSubclassBinder unionSubclassBinder, SingleTableSubclassBinder singleTableSubclassBinder) {
         if (mappings.getEntityBinding(entity.getName()) != null) {
             LOG.info("[GrailsDomainBinder] Class [" + entity.getName() + "] is already mapped, skipping.. ");
             return;
         }
         var children = entity.getChildEntities(dataSourceName);
-        RootClass root = bindRootPersistentClassCommonValues(entity, children, mappings, sessionFactoryBeanName, identityBinder, versionBinder, grailsPropertyBinder, classBinder, propertyFromValueCreator);
+        RootClass root = bindRootPersistentClassCommonValues(entity, children, mappings, sessionFactoryBeanName, identityBinder, versionBinder, classBinder, classPropertiesBinder);
         Mapping m = entity.getMappedForm();
         final Mapping finalMapping = m;
         if (!children.isEmpty() && entity.isTablePerHierarchy()) {
             bindDiscriminatorProperty(root, m);
         }
         // bind the sub classes
-        children.forEach(sub -> bindSubClass(sub, root, mappings, sessionFactoryBeanName, finalMapping,mappingCacheHolder, defaultColumnNameFetcher, columnNameForPropertyAndPathFetcher, grailsPropertyBinder, classBinder, propertyFromValueCreator, multiTenantFilterBinder, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder));
+        children.forEach(sub -> bindSubClass(sub, root, mappings, sessionFactoryBeanName, finalMapping,mappingCacheHolder, defaultColumnNameFetcher, classBinder, classPropertiesBinder, multiTenantFilterBinder, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder));
 
         multiTenantFilterBinder.addMultiTenantFilterIfNecessary(entity, root, mappings, defaultColumnNameFetcher);
 
@@ -312,9 +315,9 @@ public class GrailsDomainBinder
                               PersistentClass parent,
                               @Nonnull InFlightMetadataCollector mappings,
                               String sessionFactoryBeanName
-                            , Mapping m, MappingCacheHolder mappingCacheHolder, DefaultColumnNameFetcher defaultColumnNameFetcher, ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher, GrailsPropertyBinder grailsPropertyBinder, ClassBinder classBinder, PropertyFromValueCreator propertyFromValueCreator, MultiTenantFilterBinder multiTenantFilterBinder, JoinedSubClassBinder joinedSubClassBinder, UnionSubclassBinder unionSubclassBinder, SingleTableSubclassBinder singleTableSubclassBinder) {
+                            , Mapping m, MappingCacheHolder mappingCacheHolder, DefaultColumnNameFetcher defaultColumnNameFetcher, ClassBinder classBinder, ClassPropertiesBinder classPropertiesBinder, MultiTenantFilterBinder multiTenantFilterBinder, JoinedSubClassBinder joinedSubClassBinder, UnionSubclassBinder unionSubclassBinder, SingleTableSubclassBinder singleTableSubclassBinder) {
         mappingCacheHolder.cacheMapping(sub);
-        Subclass subClass = createSubclassMapping(sub, parent, mappings, sessionFactoryBeanName, m, defaultColumnNameFetcher, columnNameForPropertyAndPathFetcher, grailsPropertyBinder, classBinder, propertyFromValueCreator, multiTenantFilterBinder, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder);
+        Subclass subClass = createSubclassMapping(sub, parent, mappings, sessionFactoryBeanName, m, defaultColumnNameFetcher, classBinder, classPropertiesBinder, multiTenantFilterBinder, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder);
 
 
         parent.addSubclass(subClass);
@@ -325,11 +328,11 @@ public class GrailsDomainBinder
         var children = sub.getChildEntities(dataSourceName);
         if (!children.isEmpty()) {
             // bind the sub classes
-            children.forEach(sub1 -> bindSubClass(sub1, subClass, mappings, sessionFactoryBeanName, m,mappingCacheHolder, defaultColumnNameFetcher, columnNameForPropertyAndPathFetcher, grailsPropertyBinder, classBinder, propertyFromValueCreator, multiTenantFilterBinder, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder ));
+            children.forEach(sub1 -> bindSubClass(sub1, subClass, mappings, sessionFactoryBeanName, m,mappingCacheHolder, defaultColumnNameFetcher, classBinder, classPropertiesBinder, multiTenantFilterBinder, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder ));
         }
     }
 
-    private @NonNull Subclass createSubclassMapping(@NonNull GrailsHibernatePersistentEntity subEntity, PersistentClass parent, @NonNull InFlightMetadataCollector mappings, String sessionFactoryBeanName, Mapping m, DefaultColumnNameFetcher defaultColumnNameFetcher, ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher, GrailsPropertyBinder grailsPropertyBinder, ClassBinder classBinder, PropertyFromValueCreator propertyFromValueCreator, MultiTenantFilterBinder multiTenantFilterBinder, JoinedSubClassBinder joinedSubClassBinder, UnionSubclassBinder unionSubclassBinder, SingleTableSubclassBinder singleTableSubclassBinder) {
+    private @NonNull Subclass createSubclassMapping(@NonNull GrailsHibernatePersistentEntity subEntity, PersistentClass parent, @NonNull InFlightMetadataCollector mappings, String sessionFactoryBeanName, Mapping m, DefaultColumnNameFetcher defaultColumnNameFetcher, ClassBinder classBinder, ClassPropertiesBinder classPropertiesBinder, MultiTenantFilterBinder multiTenantFilterBinder, JoinedSubClassBinder joinedSubClassBinder, UnionSubclassBinder unionSubclassBinder, SingleTableSubclassBinder singleTableSubclassBinder) {
         Subclass subClass;
         subEntity.configureDerivedProperties();
         if (!m.getTablePerHierarchy() && !m.isTablePerConcreteClass()) {
@@ -355,7 +358,7 @@ public class GrailsDomainBinder
         subClass.setAbstract(subEntity.isAbstract());
         subClass.setEntityName(subEntity.getName());
         subClass.setJpaEntityName(GrailsHibernateUtil.unqualify(subEntity.getName()));
-        createClassProperties(subEntity, subClass, mappings, sessionFactoryBeanName, grailsPropertyBinder, propertyFromValueCreator);
+        classPropertiesBinder.bindClassProperties(subEntity, subClass, mappings, sessionFactoryBeanName);
         return subClass;
     }
 
@@ -427,9 +430,8 @@ public class GrailsDomainBinder
                                                        String sessionFactoryBeanName,
                                                        IdentityBinder identityBinder,
                                                        VersionBinder versionBinder,
-                                                       GrailsPropertyBinder grailsPropertyBinder,
                                                        ClassBinder classBinder,
-                                                       PropertyFromValueCreator propertyFromValueCreator
+                                                       ClassPropertiesBinder classPropertiesBinder
     ) {
 
         RootClass root = new RootClass(this.metadataBuildingContext);
@@ -475,34 +477,10 @@ public class GrailsDomainBinder
         identityBinder.bindIdentity(domainClass, root, mappings, gormMapping, sessionFactoryBeanName);
         versionBinder.bindVersion(domainClass.getVersion(), root);
         root.createPrimaryKey();
-        createClassProperties(domainClass, root, mappings, sessionFactoryBeanName, grailsPropertyBinder, propertyFromValueCreator);
+        classPropertiesBinder.bindClassProperties(domainClass, root, mappings, sessionFactoryBeanName);
 
         return root;
     }
-
-
-    /**
-     * Creates and binds the properties for the specified Grails domain class and PersistentClass
-     * and binds them to the Hibernate runtime meta model
-     *
-     * @param domainClass     The Grails domain class
-     * @param persistentClass The Hibernate PersistentClass instance
-     * @param mappings        The Hibernate Mappings instance
-     * @param sessionFactoryBeanName  the session factory bean name
-     */
-    private void createClassProperties(@Nonnull GrailsHibernatePersistentEntity domainClass, PersistentClass persistentClass,
-                                         @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName, GrailsPropertyBinder grailsPropertyBinder, PropertyFromValueCreator propertyFromValueCreator) {
-
-
-
-        for (GrailsHibernatePersistentProperty currentGrailsProp : domainClass.getPersistentPropertiesToBind()) {
-           var value = grailsPropertyBinder.bindProperty(persistentClass, currentGrailsProp, mappings, sessionFactoryBeanName);
-           persistentClass.addProperty(propertyFromValueCreator.createProperty(value, currentGrailsProp));
-        }
-
-        new NaturalIdentifierBinder().bindNaturalIdentifier(domainClass.getMappedForm(), persistentClass);
-    }
-
 
 
     public MetadataBuildingContext getMetadataBuildingContext() {
