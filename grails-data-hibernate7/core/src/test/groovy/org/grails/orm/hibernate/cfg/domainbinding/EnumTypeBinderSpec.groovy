@@ -3,7 +3,11 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.IdentityEnumType
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
+import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.hibernate.engine.spi.SharedSessionContractImplementor
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
@@ -31,7 +35,16 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
     def columnBinder = Mock(ColumnConfigToColumnBinder)
 
     @Subject
-    EnumTypeBinder binder = new EnumTypeBinder(indexBinder, columnBinder)
+    EnumTypeBinder binder
+
+    def setup() {
+        def grailsDomainBinder = getGrailsDomainBinder()
+        def metadataBuildingContext = grailsDomainBinder.getMetadataBuildingContext()
+        def namingStrategy = grailsDomainBinder.getNamingStrategy()
+        def defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy, new BackticksRemover())
+        def columnNameFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, new BackticksRemover())
+        binder = new EnumTypeBinder(metadataBuildingContext, columnNameFetcher, indexBinder, columnBinder)
+    }
 
 
 
@@ -120,6 +133,24 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         clazz    | times
         Person01 | 0
         Person02 | 1
+    }
+
+    def "should create BasicValue and bind enum type"() {
+        given: "A root entity and its enum property"
+        def grailsDomainBinder = getGrailsDomainBinder()
+        def owner = createPersistentEntity(Person01, grailsDomainBinder)
+        PersistentProperty property = owner.getPropertyByName("status")
+        def table = new Table("person")
+
+        when: "the enum is bound using the new signature"
+        def result = binder.bindEnumType(property as GrailsHibernatePersistentProperty, Status01, table, "")
+
+        then: "a BasicValue is returned and bound correctly"
+        result instanceof BasicValue
+        result.getTable() == table
+        result.getTypeName() == HibernateLegacyEnumType.class.getName()
+        result.getColumns().size() == 1
+        result.getColumns()[0].getName() == "status"
     }
 
 

@@ -134,19 +134,11 @@ public class ComponentBinder {
         else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
             value = bindComponent(persistentClass, embedded, mappings);
         }
-        else {
-            if (LOG.isDebugEnabled())
-                LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as SimpleValue");
-
-            value = new BasicValue(metadataBuildingContext, table);
-            if (currentGrailsProp.getType().isEnum()) {
-                String columnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(currentGrailsProp, path, null);
-                enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), (SimpleValue) value, columnName);
-            }
-            else {
-                // set type
+        else  if (currentGrailsProp.getType().isEnum()) {
+            value = enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), table, path);
+        }  else {
+                value = new BasicValue(metadataBuildingContext, table);
                 this.simpleValueBinder.bindSimpleValue(currentGrailsProp, componentProperty, (SimpleValue) value, path);
-            }
         }
         return value;
     }

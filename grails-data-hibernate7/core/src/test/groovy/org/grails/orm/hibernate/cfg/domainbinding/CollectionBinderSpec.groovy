@@ -55,7 +55,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover)
         CollectionHolder collectionHolder = new CollectionHolder(metadataBuildingContext)
         SimpleValueBinder simpleValueBinder = new SimpleValueBinder(namingStrategy, jdbcEnvironment)
-        EnumTypeBinder enumTypeBinderToUse = new EnumTypeBinder()
+        EnumTypeBinder enumTypeBinderToUse = new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher)
         SimpleValueColumnFetcher simpleValueColumnFetcher = new SimpleValueColumnFetcher()
         CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder = new CompositeIdentifierToManyToOneBinder(
                 new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(),
@@ -76,7 +76,8 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
                 enumTypeBinderToUse,
                 manyToOneBinder,
                 compositeIdentifierToManyToOneBinder,
-                simpleValueColumnFetcher
+                simpleValueColumnFetcher,
+                columnNameForPropertyAndPathFetcher
         )
         PropertyFromValueCreator propertyFromValueCreator = new PropertyFromValueCreator()
         ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator)

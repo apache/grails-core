@@ -104,10 +104,7 @@ public class GrailsPropertyBinder {
             }
         }
         else if (currentGrailsProp.getType().isEnum()) {
-            value = new BasicValue(metadataBuildingContext, table);
-            SimpleValue simpleValue = (SimpleValue) value;
-            String columnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(currentGrailsProp, EMPTY_PATH, null);
-            enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), simpleValue, columnName);
+            value = enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), table, EMPTY_PATH);
         }
         else if (currentGrailsProp.isHibernateOneToOne()) {
             value = oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne)currentGrailsProp, persistentClass, table, EMPTY_PATH);

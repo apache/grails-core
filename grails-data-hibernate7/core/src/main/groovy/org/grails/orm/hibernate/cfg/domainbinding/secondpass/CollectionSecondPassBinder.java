@@ -10,6 +10,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyP
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
+import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder;
@@ -81,7 +82,7 @@ public class CollectionSecondPassBinder {
     public CollectionSecondPassBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
         this(metadataBuildingContext, namingStrategy, jdbcEnvironment,
                 new SimpleValueBinder(namingStrategy, jdbcEnvironment),
-                new EnumTypeBinder(),
+                new EnumTypeBinder(metadataBuildingContext, new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover())),
                 new ManyToOneBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment),
                 new CompositeIdentifierToManyToOneBinder(namingStrategy, jdbcEnvironment),
                 new SimpleValueColumnFetcher());

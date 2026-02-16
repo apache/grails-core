@@ -255,7 +255,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
-        1 * enumTypeBinder.bindEnumType(currentGrailsProp, MyEnum, _ as BasicValue, "address_type_col")
+        1 * enumTypeBinder.bindEnumType(currentGrailsProp, MyEnum, table, "address")
         0 * componentUpdater.updateComponent(_, _, _, _)
     }
 

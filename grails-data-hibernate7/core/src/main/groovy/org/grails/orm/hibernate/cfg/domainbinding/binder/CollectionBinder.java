@@ -10,6 +10,9 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior;
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
+import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamespaceNameExtractor;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
@@ -40,6 +43,7 @@ public class CollectionBinder {
 
     private final MetadataBuildingContext metadataBuildingContext;
     private final PersistentEntityNamingStrategy namingStrategy;
+    private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
     private final ListSecondPassBinder listSecondPassBinder;
     private final CollectionSecondPassBinder collectionSecondPassBinder;
     private final MapSecondPassBinder mapSecondPassBinder;
@@ -52,9 +56,11 @@ public class CollectionBinder {
             EnumTypeBinder enumTypeBinder,
             ManyToOneBinder manyToOneBinder,
             CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder,
-            SimpleValueColumnFetcher simpleValueColumnFetcher) {
+            SimpleValueColumnFetcher simpleValueColumnFetcher,
+            ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
+        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
         this.collectionSecondPassBinder = new CollectionSecondPassBinder(
                 metadataBuildingContext,
                 namingStrategy,
@@ -72,10 +78,11 @@ public class CollectionBinder {
     public CollectionBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
         this(metadataBuildingContext, namingStrategy, jdbcEnvironment,
                 new SimpleValueBinder(namingStrategy, jdbcEnvironment),
-                new EnumTypeBinder(),
+                new EnumTypeBinder(metadataBuildingContext, new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover())),
                 new ManyToOneBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment),
                 new CompositeIdentifierToManyToOneBinder(namingStrategy, jdbcEnvironment),
-                new SimpleValueColumnFetcher());
+                new SimpleValueColumnFetcher(),
+                new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()));
     }
 
     /**

@@ -4,7 +4,10 @@ import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.IdentityEnumType;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.hibernate.MappingException;
+import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
@@ -23,20 +26,34 @@ import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.ENUM_TYPE_CLASS;
 
 public class EnumTypeBinder {
 
+    private final MetadataBuildingContext metadataBuildingContext;
+    private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
     private final IndexBinder indexBinder;
-    private ColumnConfigToColumnBinder columnConfigToColumnBinder;
+    private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
 
-    public EnumTypeBinder() {
-        this(new IndexBinder(), new ColumnConfigToColumnBinder());
+    public EnumTypeBinder(MetadataBuildingContext metadataBuildingContext, ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher) {
+        this(metadataBuildingContext, columnNameForPropertyAndPathFetcher, new IndexBinder(), new ColumnConfigToColumnBinder());
     }
 
-    protected EnumTypeBinder(IndexBinder indexBinder, ColumnConfigToColumnBinder columnConfigToColumnBinder) {
+    protected EnumTypeBinder(MetadataBuildingContext metadataBuildingContext,
+                             ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
+                             IndexBinder indexBinder,
+                             ColumnConfigToColumnBinder columnConfigToColumnBinder) {
+        this.metadataBuildingContext = metadataBuildingContext;
+        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
         this.indexBinder = indexBinder;
         this.columnConfigToColumnBinder = columnConfigToColumnBinder;
     }
 
 
     private static final Logger LOG = LoggerFactory.getLogger(EnumTypeBinder.class);
+
+    public BasicValue bindEnumType(GrailsHibernatePersistentProperty property, Class<?> propertyType, Table table, String path) {
+        BasicValue simpleValue = new BasicValue(metadataBuildingContext, table);
+        String columnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(property, path, null);
+        bindEnumType(property, propertyType, simpleValue, columnName);
+        return simpleValue;
+    }
 
     public void bindEnumType(GrailsHibernatePersistentProperty property, Class<?> propertyType, SimpleValue simpleValue, String columnName) {
         PropertyConfig pc = property.getMappedForm();

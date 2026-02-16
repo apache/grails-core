@@ -158,7 +158,7 @@ public class GrailsDomainBinder
         DefaultColumnNameFetcher defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy, backticksRemover);
         ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover);
         SimpleValueBinder simpleValueBinder = new SimpleValueBinder(namingStrategy, jdbcEnvironment);
-        EnumTypeBinder enumTypeBinder = new EnumTypeBinder();
+        EnumTypeBinder enumTypeBinder = new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher);
         PropertyFromValueCreator propertyFromValueCreator = new PropertyFromValueCreator();
         ClassBinder classBinder = new ClassBinder();
         SimpleValueColumnFetcher simpleValueColumnFetcher = new SimpleValueColumnFetcher();
@@ -181,7 +181,8 @@ public class GrailsDomainBinder
                 enumTypeBinder,
                 manyToOneBinder,
                 compositeIdentifierToManyToOneBinder,
-                simpleValueColumnFetcher
+                simpleValueColumnFetcher,
+                columnNameForPropertyAndPathFetcher
         );
         ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator);
         ComponentBinder componentBinder = new ComponentBinder(
