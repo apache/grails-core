@@ -70,12 +70,12 @@ public class GrailsPropertyBinder {
     }
 
     public Value bindProperty(PersistentClass persistentClass
+            , Table table
             , @Nonnull GrailsHibernatePersistentProperty currentGrailsProp
             , @Nonnull InFlightMetadataCollector mappings) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("[GrailsPropertyBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
         }
-        Table table = persistentClass.getTable();
 
         Value value = null;
 
