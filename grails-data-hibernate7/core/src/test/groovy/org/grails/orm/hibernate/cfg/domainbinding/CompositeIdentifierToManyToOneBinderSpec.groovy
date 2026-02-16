@@ -30,9 +30,10 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         def columnNameFetcher = Stub(DefaultColumnNameFetcher)
         def backticksRemover = Stub(BackticksRemover)
         def simpleValueBinder = Mock(SimpleValueBinder) // Use Mock to verify interaction
+        def metadataBuildingContext = Mock(org.hibernate.boot.spi.MetadataBuildingContext)
 
         // Instantiate the binder with stubs
-        def binder = new CompositeIdentifierToManyToOneBinder(calculator, tableNameFetcher, namingStrategy, columnNameFetcher, backticksRemover, simpleValueBinder)
+        def binder = new CompositeIdentifierToManyToOneBinder(metadataBuildingContext, calculator, tableNameFetcher, namingStrategy, columnNameFetcher, backticksRemover, simpleValueBinder)
 
         // 2. Set up stubs for the method arguments
         def association = Stub(ToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
@@ -95,8 +96,9 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         def columnNameFetcher = Mock(DefaultColumnNameFetcher)
         def backticksRemover = Mock(BackticksRemover)
         def simpleValueBinder = Mock(SimpleValueBinder)
+        def metadataBuildingContext = Mock(org.hibernate.boot.spi.MetadataBuildingContext)
 
-        def binder = new CompositeIdentifierToManyToOneBinder(calculator, tableNameFetcher, namingStrategy, columnNameFetcher, backticksRemover, simpleValueBinder)
+        def binder = new CompositeIdentifierToManyToOneBinder(metadataBuildingContext, calculator, tableNameFetcher, namingStrategy, columnNameFetcher, backticksRemover, simpleValueBinder)
 
         // 2. Set up arguments
         def association = Stub(ToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])

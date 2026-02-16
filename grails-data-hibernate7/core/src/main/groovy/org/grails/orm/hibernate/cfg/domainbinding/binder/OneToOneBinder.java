@@ -25,7 +25,7 @@ public class OneToOneBinder {
     }
 
     public OneToOneBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
-        this(metadataBuildingContext, namingStrategy, new SimpleValueBinder(namingStrategy, jdbcEnvironment));
+        this(metadataBuildingContext, namingStrategy, new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment));
     }
 
     public OneToOne bindOneToOne(final org.grails.datastore.mapping.model.types.OneToOne property

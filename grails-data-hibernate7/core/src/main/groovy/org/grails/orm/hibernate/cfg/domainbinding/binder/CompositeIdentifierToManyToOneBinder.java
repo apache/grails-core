@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.SimpleValue;
+import org.hibernate.boot.spi.MetadataBuildingContext;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -21,6 +22,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.UNDERSCORE;
 
 public class CompositeIdentifierToManyToOneBinder {
+    private final MetadataBuildingContext metadataBuildingContext;
     private final ForeignKeyColumnCountCalculator foreignKeyColumnCountCalculator;
     private final TableNameFetcher tableNameFetcher;
     private final PersistentEntityNamingStrategy namingStrategy;
@@ -29,12 +31,14 @@ public class CompositeIdentifierToManyToOneBinder {
     private final SimpleValueBinder simpleValueBinder;
 
     public CompositeIdentifierToManyToOneBinder(
+            MetadataBuildingContext metadataBuildingContext,
             ForeignKeyColumnCountCalculator foreignKeyColumnCountCalculator,
             TableNameFetcher tableNameFetcher,
             PersistentEntityNamingStrategy namingStrategy,
             DefaultColumnNameFetcher defaultColumnNameFetcher,
             BackticksRemover backticksRemover,
             SimpleValueBinder simpleValueBinder) {
+        this.metadataBuildingContext = metadataBuildingContext;
         this.foreignKeyColumnCountCalculator = foreignKeyColumnCountCalculator;
         this.tableNameFetcher =tableNameFetcher;
         this.namingStrategy = namingStrategy;
@@ -43,13 +47,14 @@ public class CompositeIdentifierToManyToOneBinder {
         this.simpleValueBinder = simpleValueBinder;
     }
 
-    public CompositeIdentifierToManyToOneBinder(PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment){
-        this(new ForeignKeyColumnCountCalculator(),
+    public CompositeIdentifierToManyToOneBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment){
+        this(metadataBuildingContext,
+                new ForeignKeyColumnCountCalculator(),
                 new TableNameFetcher(namingStrategy),
                 namingStrategy,
                 new DefaultColumnNameFetcher(namingStrategy),
                 new BackticksRemover(),
-                new SimpleValueBinder(namingStrategy, jdbcEnvironment));
+                new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment));
     }
 
     public void bindCompositeIdentifierToManyToOne(GrailsHibernatePersistentProperty property,

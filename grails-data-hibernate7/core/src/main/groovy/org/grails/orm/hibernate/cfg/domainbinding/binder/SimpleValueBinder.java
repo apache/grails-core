@@ -6,6 +6,7 @@ import java.util.Properties;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 import org.hibernate.generator.Generator;
 import org.hibernate.generator.GeneratorCreationContext;
+import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.DependantValue;
@@ -25,7 +26,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrappe
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 
 public class SimpleValueBinder {
-
+    private final MetadataBuildingContext metadataBuildingContext;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
     private final ColumnBinder columnBinder;
@@ -37,11 +38,13 @@ public class SimpleValueBinder {
      * Public constructor that accepts all collaborators.
      */
     public SimpleValueBinder(
+            MetadataBuildingContext metadataBuildingContext,
             PersistentEntityNamingStrategy namingStrategy,
             ColumnConfigToColumnBinder columnConfigToColumnBinder,
             ColumnBinder columnBinder,
             JdbcEnvironment jdbcEnvironment,
             GrailsSequenceWrapper grailsSequenceWrapper) {
+        this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.columnConfigToColumnBinder = columnConfigToColumnBinder;
         this.columnBinder = columnBinder;
@@ -52,19 +55,30 @@ public class SimpleValueBinder {
     /**
      * Convenience constructor for namingStrategy.
      */
-    public SimpleValueBinder(PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
-        this(namingStrategy, new ColumnConfigToColumnBinder(), new ColumnBinder(namingStrategy), jdbcEnvironment, new GrailsSequenceWrapper());
+    public SimpleValueBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
+        this(metadataBuildingContext, namingStrategy, new ColumnConfigToColumnBinder(), new ColumnBinder(namingStrategy), jdbcEnvironment, new GrailsSequenceWrapper());
     }
 
     /**
      * Protected constructor for testing purposes.
      */
     protected SimpleValueBinder() {
+        this.metadataBuildingContext = null;
         this.namingStrategy = null;
         this.columnConfigToColumnBinder = null;
         this.columnBinder = null;
         this.jdbcEnvironment = null;
         this.grailsSequenceWrapper = null;
+    }
+
+    public BasicValue bindSimpleValue(
+            @jakarta.annotation.Nonnull GrailsHibernatePersistentProperty property,
+            GrailsHibernatePersistentProperty parentProperty,
+            Table table,
+            String path) {
+        BasicValue basicValue = new BasicValue(metadataBuildingContext, table);
+        bindSimpleValue(property, parentProperty, (SimpleValue) basicValue, path);
+        return basicValue;
     }
 
     public void bindSimpleValue(

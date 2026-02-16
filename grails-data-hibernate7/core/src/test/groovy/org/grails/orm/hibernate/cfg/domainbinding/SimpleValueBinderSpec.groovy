@@ -31,8 +31,10 @@ class SimpleValueBinderSpec extends Specification {
     def columnBinder = Mock(ColumnBinder)
     def jdbcEnvironment = Mock(org.hibernate.engine.jdbc.env.spi.JdbcEnvironment)
     def grailsSequenceWrapper = Mock(org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper)
+    def metadataBuildingContext = Mock(org.hibernate.boot.spi.MetadataBuildingContext)
 
-    def binder = new SimpleValueBinder(namingStrategy,
+    def binder = new SimpleValueBinder(metadataBuildingContext,
+            namingStrategy,
             columnConfigToColumnBinder,
             columnBinder,
             jdbcEnvironment,
@@ -230,5 +232,37 @@ class SimpleValueBinderSpec extends Specification {
             column.setName("testColumn")
         }
         2 * sv.addColumn(_ as Column)
+    }
+
+    def "bindSimpleValue creates and returns BasicValue"() {
+        given:
+        def prop = Mock(GrailsHibernatePersistentProperty)
+        def owner = Mock(GrailsHibernatePersistentEntity)
+        def mapping = Mock(Mapping)
+        def pc = Mock(PropertyConfig)
+        def table = new org.hibernate.mapping.Table("test_table")
+        def mappings = Mock(org.hibernate.boot.spi.InFlightMetadataCollector)
+        metadataBuildingContext.getMetadataCollector() >> mappings
+
+        prop.getMappedForm() >> pc
+        prop.getOwner() >> owner
+        owner.getMappedForm() >> mapping
+        prop.getTypeName(_ as SimpleValue) >> String.name
+        pc.isDerived() >> false
+        pc.getColumns() >> null
+        prop.getType() >> String
+        prop.isNullable() >> true
+
+        when:
+        def result = binder.bindSimpleValue(prop, null, table, "path")
+
+        then:
+        1 * columnBinder.bindColumn(prop, null, _, null, "path", table) >> { args ->
+            def column = args[2] as Column
+            column.setName("testColumn")
+        }
+        result instanceof org.hibernate.mapping.BasicValue
+        result.getTable() == table
+        result.getTypeName() == String.name
     }
 }

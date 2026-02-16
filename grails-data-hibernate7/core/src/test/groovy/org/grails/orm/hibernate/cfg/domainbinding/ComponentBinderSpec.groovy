@@ -93,6 +93,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
 
     def setup() {
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
+        mockSimpleValueBinder = Mock(SimpleValueBinder)
         binder = new ComponentBinder(
                 metadataBuildingContext,
                 mappingCacheHolder,
@@ -154,7 +155,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         component.getComponentClassName() == Address.name
         component.getRoleName() == Address.name + ".address"
         1 * mappingCacheHolder.cacheMapping(associatedEntity)
-        1 * mockSimpleValueBinder.bindSimpleValue(prop1, embeddedProp, _ as BasicValue, "address")
+        1 * mockSimpleValueBinder.bindSimpleValue(prop1, embeddedProp, _ as Table, "address") >> new BasicValue(metadataBuildingContext, root.getTable())
         1 * componentUpdater.updateComponent(_ as Component, embeddedProp, prop1, _ as Value)
     }
 
@@ -199,6 +200,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         then:
         0 * componentUpdater.updateComponent(_, _, idProp, _)
         0 * componentUpdater.updateComponent(_, _, versionProp, _)
+        1 * mockSimpleValueBinder.bindSimpleValue(normalProp, embeddedProp, _ as Table, "address") >> new BasicValue(metadataBuildingContext, root.getTable())
         1 * componentUpdater.updateComponent(_, _, normalProp, _)
     }
 
@@ -236,6 +238,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         component.getParentProperty() == "myEntity"
+        0 * mockSimpleValueBinder.bindSimpleValue(parentProp, _, _, _)
         0 * componentUpdater.updateComponent(_, _, parentProp, _)
     }
 
@@ -266,7 +269,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindComponentProperty(componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
-        1 * mockSimpleValueBinder.bindSimpleValue(currentGrailsProp, componentProperty, _ as BasicValue, "address")
+        1 * mockSimpleValueBinder.bindSimpleValue(currentGrailsProp, componentProperty, table, "address") >> new BasicValue(metadataBuildingContext, table)
         0 * componentUpdater.updateComponent(_, _, _, _)
     }
 
@@ -371,7 +374,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindComponentProperty(componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
-        1 * enumTypeBinder.bindEnumType(currentGrailsProp, MyEnum, table, "address")
+        1 * enumTypeBinder.bindEnumType(currentGrailsProp, MyEnum, table, "address") >> new BasicValue(metadataBuildingContext, table)
         0 * componentUpdater.updateComponent(_, _, _, _)
     }
 
@@ -405,9 +408,9 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         1 * mockSimpleValueBinder.bindSimpleValue(
             currentGrailsProp, 
             componentProperty, 
-            _ as BasicValue, 
+            table, 
             "address"
-        )
+        ) >> new BasicValue(metadataBuildingContext, table)
         0 * componentUpdater.updateComponent(_, _, _, _)
     }
 
@@ -468,7 +471,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         result instanceof Component
         result.getComponentClassName() == Address.name
         1 * mappingCacheHolder.cacheMapping(nestedAssociatedEntity)
-        1 * mockSimpleValueBinder.bindSimpleValue(nestedProp1, nestedEmbeddedProp, _ as BasicValue, "nestedAddress")
+        1 * mockSimpleValueBinder.bindSimpleValue(nestedProp1, nestedEmbeddedProp, _ as Table, "nestedAddress") >> new BasicValue(metadataBuildingContext, table)
         1 * componentUpdater.updateComponent(_ as Component, nestedEmbeddedProp, nestedProp1, _ as Value)
     }
 

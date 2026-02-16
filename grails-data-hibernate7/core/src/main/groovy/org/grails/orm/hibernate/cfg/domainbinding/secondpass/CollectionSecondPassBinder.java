@@ -81,10 +81,10 @@ public class CollectionSecondPassBinder {
 
     public CollectionSecondPassBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
         this(metadataBuildingContext, namingStrategy, jdbcEnvironment,
-                new SimpleValueBinder(namingStrategy, jdbcEnvironment),
+                new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment),
                 new EnumTypeBinder(metadataBuildingContext, new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover())),
                 new ManyToOneBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment),
-                new CompositeIdentifierToManyToOneBinder(namingStrategy, jdbcEnvironment),
+                new CompositeIdentifierToManyToOneBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment),
                 new SimpleValueColumnFetcher());
     }
 

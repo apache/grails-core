@@ -101,8 +101,7 @@ public class GrailsPropertyBinder {
             value = componentBinder.bindComponent(persistentClass, embedded, mappings);
         } else {
             //HibernateSimpleProperty
-            value = new BasicValue(metadataBuildingContext, table);
-            simpleValueBinder.bindSimpleValue(currentGrailsProp, null, (SimpleValue) value, EMPTY_PATH);
+            value = simpleValueBinder.bindSimpleValue(currentGrailsProp, null, table, EMPTY_PATH);
         }
 
         return value;

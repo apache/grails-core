@@ -112,10 +112,11 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         DefaultColumnNameFetcher defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy, backticksRemover)
         ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover)
         CollectionHolder collectionHolder = new CollectionHolder(metadataBuildingContext)
-        SimpleValueBinder simpleValueBinder = new SimpleValueBinder(namingStrategy, jdbcEnvironment)
+        SimpleValueBinder simpleValueBinder = new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment)
         EnumTypeBinder enumTypeBinderToUse = new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher)
         SimpleValueColumnFetcher simpleValueColumnFetcher = new SimpleValueColumnFetcher()
         CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder = new CompositeIdentifierToManyToOneBinder(
+                metadataBuildingContext,
                 new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(),
                 new TableNameFetcher(namingStrategy),
                 namingStrategy,
@@ -535,6 +536,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         // Mocking other necessary properties of currentGrailsProp
         currentGrailsProp.getType() >> String.class
         currentGrailsProp.getName() >> "title"
+        simpleValueBinder.bindSimpleValue(currentGrailsProp, null, table, EMPTY_PATH) >> new BasicValue(metadataBuildingContext, table)
 
         when:
         // Capture the return value of bindProperty

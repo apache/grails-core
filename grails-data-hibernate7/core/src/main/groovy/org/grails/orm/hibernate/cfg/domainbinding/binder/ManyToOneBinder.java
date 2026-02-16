@@ -46,12 +46,7 @@ public class ManyToOneBinder {
     }
 
     public ManyToOneBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
-        this(metadataBuildingContext,
-                namingStrategy,
-                new SimpleValueBinder(namingStrategy, jdbcEnvironment),
-                new ManyToOneValuesBinder(),
-                new CompositeIdentifierToManyToOneBinder(namingStrategy, jdbcEnvironment),
-                new SimpleValueColumnFetcher());
+        this(metadataBuildingContext, namingStrategy, new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment), new ManyToOneValuesBinder(), new CompositeIdentifierToManyToOneBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment), new SimpleValueColumnFetcher());
     }
 
 

@@ -34,7 +34,7 @@ public class VersionBinder {
 
     public VersionBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
         this(metadataBuildingContext,
-             new SimpleValueBinder(namingStrategy, jdbcEnvironment),
+             new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment),
              new PropertyBinder(),
              BasicValue::new);
     }
