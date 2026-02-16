@@ -178,11 +178,20 @@ package org.grails.orm.hibernate.cfg;
     }
 
     default List<GrailsHibernatePersistentProperty> getHibernatePersistentProperties(){
-        return getPersistentProperties()
+        var properties = new java.util.ArrayList<>(getPersistentProperties()
                 .stream()
                 .filter(GrailsHibernatePersistentProperty.class::isInstance)
                 .map(GrailsHibernatePersistentProperty.class::cast)
-                .toList();
+                .toList());
+        properties.sort((p1, p2) -> {
+            if (p1 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty && !(p2 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty)) {
+                return -1;
+            } else if (!(p1 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty) && p2 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty) {
+                return 1;
+            }
+            return p1.getName().compareTo(p2.getName());
+        });
+        return properties;
     };
 }
 

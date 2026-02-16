@@ -73,15 +73,7 @@ public class ComponentBinder {
 
         GrailsHibernatePersistentEntity domainClass = (GrailsHibernatePersistentEntity) embeddedProperty.getAssociatedEntity();
         mappingCacheHolder.cacheMapping(domainClass);
-        var peerProperties = new java.util.ArrayList<>(domainClass.getHibernatePersistentProperties());
-        peerProperties.sort((p1, p2) -> {
-            if (p1 instanceof HibernateEmbeddedProperty && !(p2 instanceof HibernateEmbeddedProperty)) {
-                return -1;
-            } else if (!(p1 instanceof HibernateEmbeddedProperty) && p2 instanceof HibernateEmbeddedProperty) {
-                return 1;
-            }
-            return p1.getName().compareTo(p2.getName());
-        });
+        var peerProperties = domainClass.getHibernatePersistentProperties();
 
         Table table = component.getOwner().getTable();
         PersistentClass persistentClass = component.getOwner();

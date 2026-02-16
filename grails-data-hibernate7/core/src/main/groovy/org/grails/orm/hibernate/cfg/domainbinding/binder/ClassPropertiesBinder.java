@@ -51,17 +51,7 @@ public class ClassPropertiesBinder {
         persistentClass.getTable().setComment(domainClass.getMappedForm().getComment());
         Table table = persistentClass.getTable();
 
-        List<GrailsHibernatePersistentProperty> properties = new ArrayList<>(domainClass.getPersistentPropertiesToBind());
-        properties.sort((p1, p2) -> {
-            if (p1 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty && !(p2 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty)) {
-                return -1;
-            } else if (!(p1 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty) && p2 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty) {
-                return 1;
-            }
-            return p1.getName().compareTo(p2.getName());
-        });
-
-        for (GrailsHibernatePersistentProperty currentGrailsProp : properties) {
+        for (GrailsHibernatePersistentProperty currentGrailsProp : domainClass.getPersistentPropertiesToBind()) {
             Value value = grailsPropertyBinder.bindProperty(persistentClass, table, org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH, null, currentGrailsProp, mappings);
             persistentClass.addProperty(propertyFromValueCreator.createProperty(value, currentGrailsProp));
         }
