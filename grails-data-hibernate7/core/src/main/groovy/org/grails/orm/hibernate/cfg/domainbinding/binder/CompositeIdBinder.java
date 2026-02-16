@@ -63,7 +63,7 @@ public class CompositeIdBinder {
                         "] is not a valid property!");
             }
 
-           var value = componentBinder.bindComponentProperty(id, identifierProp, property, root, "", root.getTable(), mappings);
+           var value = componentBinder.bindComponentProperty(identifierProp, property, root, "", root.getTable(), mappings);
            componentUpdater.updateComponent(id, identifierProp, property, value);
         }
     }

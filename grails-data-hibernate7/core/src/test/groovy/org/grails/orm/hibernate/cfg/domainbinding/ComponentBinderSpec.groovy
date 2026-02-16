@@ -365,6 +365,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         def mapping = new Mapping()
         ownerEntity.getMappedForm() >> mapping
         currentGrailsProp.getType() >> MyEnum
+        currentGrailsProp.isEnumType() >> true
         currentGrailsProp.isHibernateOneToOne() >> false
         currentGrailsProp.isHibernateManyToOne() >> false
         setupProperty(currentGrailsProp, "type", mapping, ownerEntity)

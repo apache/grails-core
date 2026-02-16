@@ -2,15 +2,23 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder
+import org.grails.orm.hibernate.cfg.Mapping
+import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.mapping.ManyToOne
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.SimpleValue
 import org.hibernate.mapping.Value
 
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
@@ -47,8 +55,54 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.JoinedSubClassBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.UnionSubclassBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SingleTableSubclassBinder
+import org.hibernate.mapping.Table
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.MappingContext
+
+import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH
 
 class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
+
+    abstract static class TestManyToOne extends HibernateManyToOneProperty {
+        TestManyToOne(PersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
+            super(owner, context, descriptor);
+        }
+    }
+
+    abstract static class TestOneToOne extends HibernateOneToOneProperty {
+        TestOneToOne(PersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
+            super(owner, context, descriptor);
+        }
+    }
+
+    abstract static class TestEmbedded extends HibernateEmbeddedProperty {
+        TestEmbedded(PersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
+            super(owner, context, descriptor);
+        }
+    }
+
+    abstract static class TestBasic extends HibernateBasicProperty {
+        TestBasic(GrailsHibernatePersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
+            super(owner, context, descriptor);
+        }
+    }
+
+    abstract static class TestSimple extends HibernateSimpleProperty {
+        TestSimple(PersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
+            super(owner, context, descriptor);
+        }
+    }
+
+    private void setupProperty(PersistentProperty prop, String name, Mapping mapping, PersistentEntity owner) {
+        prop.getName() >> name
+        _ * prop.getOwner() >> owner
+        if (prop instanceof GrailsHibernatePersistentProperty) {
+            _ * ((GrailsHibernatePersistentProperty)prop).getHibernateOwner() >> owner
+        }
+        def config = new PropertyConfig()
+        mapping.getColumns().put(name, config)
+        prop.getMappedForm() >> config
+    }
 
     protected Map getBinders(GrailsDomainBinder binder) {
         MetadataBuildingContext metadataBuildingContext = binder.getMetadataBuildingContext()
@@ -194,8 +248,14 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setEntityName(persistentEntity.name)
         rootClass.setTable(collector.addTable(null, null, "ENUM_BOOK", null, false, binder.getMetadataBuildingContext()))
 
+        def statusProp = Mock(TestBasic)
+        setupProperty(statusProp, "status", new Mapping(), persistentEntity)
+        statusProp.getType() >> java.util.concurrent.TimeUnit
+        statusProp.isEnumType() >> true
+        statusProp.isHibernateOneToOne() >> false
+        statusProp.isHibernateManyToOne() >> false
+
         when:
-        def statusProp = persistentEntity.getPropertyByName("status") as GrailsHibernatePersistentProperty
         Value value = propertyBinder.bindProperty(rootClass, statusProp, collector)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, statusProp))
 

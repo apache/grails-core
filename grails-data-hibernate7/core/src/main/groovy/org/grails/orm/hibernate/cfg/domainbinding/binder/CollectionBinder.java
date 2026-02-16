@@ -23,6 +23,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPass;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSecondPass;
 
+import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
+import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
 import org.hibernate.FetchMode;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -43,6 +45,7 @@ public class CollectionBinder {
 
     private final MetadataBuildingContext metadataBuildingContext;
     private final PersistentEntityNamingStrategy namingStrategy;
+    private final CollectionHolder collectionHolder;
     private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
     private final ListSecondPassBinder listSecondPassBinder;
     private final CollectionSecondPassBinder collectionSecondPassBinder;
@@ -57,10 +60,12 @@ public class CollectionBinder {
             ManyToOneBinder manyToOneBinder,
             CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder,
             SimpleValueColumnFetcher simpleValueColumnFetcher,
-            ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher) {
+            ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
+            CollectionHolder collectionHolder) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
+        this.collectionHolder = collectionHolder;
         this.collectionSecondPassBinder = new CollectionSecondPassBinder(
                 metadataBuildingContext,
                 namingStrategy,
@@ -75,27 +80,29 @@ public class CollectionBinder {
         this.mapSecondPassBinder = new MapSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
     }
 
-    public CollectionBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
+    public CollectionBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment, CollectionHolder collectionHolder) {
         this(metadataBuildingContext, namingStrategy, jdbcEnvironment,
                 new SimpleValueBinder(namingStrategy, jdbcEnvironment),
                 new EnumTypeBinder(metadataBuildingContext, new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover())),
                 new ManyToOneBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment),
                 new CompositeIdentifierToManyToOneBinder(namingStrategy, jdbcEnvironment),
                 new SimpleValueColumnFetcher(),
-                new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()));
+                new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()),
+                collectionHolder);
     }
 
     /**
      * First pass to bind collection to Hibernate metamodel, sets up second pass
      *
      * @param property   The GrailsDomainClassProperty instance
-     * @param collection The collection
      * @param owner      The owning persistent class
      * @param mappings   The Hibernate mappings instance
      * @param path       The property path
      */
-    public void bindCollection(HibernateToManyProperty property, Collection collection,
+    public Collection bindCollection(HibernateToManyProperty property,
                                PersistentClass owner, @Nonnull InFlightMetadataCollector mappings, String path) {
+        CollectionType collectionType = collectionHolder.get(property.getType());
+        Collection collection = collectionType.create(property, owner);
 
         // set role
         String propertyName = getNameForPropertyAndPath(property, path);
@@ -148,6 +155,8 @@ public class CollectionBinder {
         else { // Collection -> Bag
             mappings.addSecondPass(new SetSecondPass(collectionSecondPassBinder,  property, mappings, collection));
         }
+        mappings.addCollectionBinding(collection);
+        return collection;
     }
 
 

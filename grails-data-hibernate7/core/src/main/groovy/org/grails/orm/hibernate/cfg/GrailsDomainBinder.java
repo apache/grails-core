@@ -182,13 +182,13 @@ public class GrailsDomainBinder
                 manyToOneBinder,
                 compositeIdentifierToManyToOneBinder,
                 simpleValueColumnFetcher,
-                columnNameForPropertyAndPathFetcher
+                columnNameForPropertyAndPathFetcher,
+                collectionHolder
         );
         ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator);
         ComponentBinder componentBinder = new ComponentBinder(
                 metadataBuildingContext,
                 getMappingCacheHolder(),
-                collectionHolder,
                 enumTypeBinder,
                 collectionBinder,
                 simpleValueBinder,
@@ -201,7 +201,6 @@ public class GrailsDomainBinder
         GrailsPropertyBinder grailsPropertyBinder = new GrailsPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
-                collectionHolder,
                 enumTypeBinder,
                 componentBinder,
                 collectionBinder,

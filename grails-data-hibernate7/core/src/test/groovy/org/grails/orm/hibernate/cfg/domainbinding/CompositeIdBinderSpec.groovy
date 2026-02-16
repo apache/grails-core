@@ -81,7 +81,7 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindCompositeId(domainClass, root, null, mappings)
 
         then:
-        1 * componentBinder.bindComponentProperty(_ as Component, identifierProp, prop1, root, "", table, mappings) >> Mock(Value)
+        1 * componentBinder.bindComponentProperty(identifierProp, prop1, root, "", table, mappings) >> Mock(Value)
         1 * componentUpdater.updateComponent(_ as Component, identifierProp, prop1, _ as Value)
     }
 

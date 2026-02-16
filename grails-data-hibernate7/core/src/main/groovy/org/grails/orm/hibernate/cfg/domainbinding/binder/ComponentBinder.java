@@ -5,8 +5,6 @@ import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Component;
-import org.hibernate.mapping.ManyToOne;
-import org.hibernate.mapping.OneToOne;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
@@ -20,13 +18,11 @@ import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
-import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 
 import jakarta.annotation.Nonnull;
@@ -37,7 +33,6 @@ public class ComponentBinder {
 
     private final MetadataBuildingContext metadataBuildingContext;
     private final MappingCacheHolder mappingCacheHolder;
-    private final CollectionHolder collectionHolder;
     private final EnumTypeBinder enumTypeBinder;
     private final CollectionBinder collectionBinder;
     private final ManyToOneBinder manyToOneBinder;
@@ -48,7 +43,6 @@ public class ComponentBinder {
 
     public ComponentBinder(MetadataBuildingContext metadataBuildingContext,
                            MappingCacheHolder mappingCacheHolder,
-                           CollectionHolder collectionHolder,
                            EnumTypeBinder enumTypeBinder,
                            CollectionBinder collectionBinder,
                            SimpleValueBinder simpleValueBinder,
@@ -58,7 +52,6 @@ public class ComponentBinder {
                            ComponentUpdater componentUpdater) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.mappingCacheHolder = mappingCacheHolder;
-        this.collectionHolder = collectionHolder;
         this.enumTypeBinder = enumTypeBinder;
         this.collectionBinder = collectionBinder;
         this.simpleValueBinder = simpleValueBinder;
@@ -93,55 +86,52 @@ public class ComponentBinder {
                 component.setParentProperty(currentGrailsProp.getName());
                 continue;
             }
-            var value = bindComponentProperty(component, property, currentGrailsProp, persistentClass, path, table, mappings);
+            var value = bindComponentProperty(property, currentGrailsProp, persistentClass, path, table, mappings);
             componentUpdater.updateComponent(component, property, currentGrailsProp, value);
 
         }
         return component;
     }
 
-    public Value bindComponentProperty(Component component,
-                                       GrailsHibernatePersistentProperty componentProperty,
+    public Value bindComponentProperty(GrailsHibernatePersistentProperty componentProperty,
                                        GrailsHibernatePersistentProperty currentGrailsProp,
                                        PersistentClass persistentClass,
                                        String path,
                                        Table table,
                                        @Nonnull InFlightMetadataCollector mappings) {
         Value value;
-        // see if it's a collection type
-        CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
-        if (collectionType != null) {
-            //HibernateToManyProperty
-            // create collection
-            Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass);
-            collectionBinder.bindCollection((HibernateToManyProperty) currentGrailsProp, collection, persistentClass, mappings, path);
-            mappings.addCollectionBinding(collection);
-            value = collection;
-        }
         // work out what type of relationship it is and bind value
-        else if (currentGrailsProp.isHibernateOneToOne()) {
+        if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne) {
             //HibernateOneToOneProperty
-            if (LOG.isDebugEnabled())
-                LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
+            if (oneToOne.isHibernateOneToOne()) {
+                if (LOG.isDebugEnabled())
+                    LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
 
-            value = oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, persistentClass, table, path);
-        } else if (currentGrailsProp.isHibernateManyToOne()) {
+                value = oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, persistentClass, table, path);
+            } else {
+                if (LOG.isDebugEnabled())
+                    LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as ManyToOne");
+
+                value = manyToOneBinder.bindManyToOne((Association) currentGrailsProp, table, path);
+            }
+        } else if (currentGrailsProp instanceof HibernateManyToOneProperty manyToOne) {
             //HibernateManyToOneProperty
             if (LOG.isDebugEnabled())
                 LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as ManyToOne");
 
             value = manyToOneBinder.bindManyToOne((Association) currentGrailsProp, table, path);
-        }
-        else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
+        } else if (currentGrailsProp instanceof HibernateToManyProperty toMany && !currentGrailsProp.isSerializableType()) {
+            //HibernateToManyProperty
+            value = collectionBinder.bindCollection(toMany, persistentClass, mappings, path);
+        } else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
             value = bindComponent(persistentClass, embedded, mappings);
-        }
-        else  if (currentGrailsProp.getType().isEnum()) {
+        } else if (currentGrailsProp instanceof HibernateBasicProperty basic && basic.isEnumType()) {
             //HibernateEnumTypeProperty
             value = enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), table, path);
-        }  else {
+        } else {
             //HibernateSimpleProperty
-                value = new BasicValue(metadataBuildingContext, table);
-                this.simpleValueBinder.bindSimpleValue(currentGrailsProp, componentProperty, (SimpleValue) value, path);
+            value = new BasicValue(metadataBuildingContext, table);
+            this.simpleValueBinder.bindSimpleValue(currentGrailsProp, componentProperty, (SimpleValue) value, path);
         }
         return value;
     }
