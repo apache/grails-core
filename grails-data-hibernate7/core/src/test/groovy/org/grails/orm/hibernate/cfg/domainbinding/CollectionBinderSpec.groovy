@@ -94,7 +94,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
                 manyToOneBinder,
                 columnNameForPropertyAndPathFetcher
         )
-        ComponentBinder componentBinder = new ComponentBinder(binder.getMappingCacheHolder(), componentPropertyBinder)
+        ComponentBinder componentBinder = new ComponentBinder(metadataBuildingContext, binder.getMappingCacheHolder(), componentPropertyBinder)
         GrailsPropertyBinder propertyBinder = new GrailsPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,

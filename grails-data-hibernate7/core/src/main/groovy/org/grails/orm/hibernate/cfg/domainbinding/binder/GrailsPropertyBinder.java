@@ -138,8 +138,7 @@ public class GrailsPropertyBinder {
             manyToOneBinder.bindManyToOne((Association)currentGrailsProp, (ManyToOne)value, EMPTY_PATH);
         }
         else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
-            value = new Component(metadataBuildingContext, persistentClass);
-            componentBinder.bindComponent((Component)value, embedded,mappings);
+            value = componentBinder.bindComponent(persistentClass, embedded, mappings);
         }
         // work out what type of relationship it is and bind value
         else { // Default BasicValue

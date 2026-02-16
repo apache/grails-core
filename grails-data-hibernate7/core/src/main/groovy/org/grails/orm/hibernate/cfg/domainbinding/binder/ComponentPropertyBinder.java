@@ -90,7 +90,7 @@ public class ComponentPropertyBinder {
         this.enumTypeBinder = enumTypeBinder;
         this.collectionBinder = collectionBinder;
         this.propertyFromValueCreator = propertyFromValueCreator;
-        this.componentBinder = componentBinder != null ? componentBinder : new ComponentBinder(mappingCacheHolder, this);
+        this.componentBinder = componentBinder != null ? componentBinder : new ComponentBinder(metadataBuildingContext, mappingCacheHolder, this);
         this.simpleValueBinder = simpleValueBinder;
         this.oneToOneBinder = oneToOneBinder;
         this.manyToOneBinder = manyToOneBinder;
@@ -137,8 +137,7 @@ public class ComponentPropertyBinder {
             }
         }
         else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
-            value = new Component(metadataBuildingContext, persistentClass);
-            componentBinder.bindComponent((Component) value, embedded, mappings);
+            value = componentBinder.bindComponent(persistentClass, embedded, mappings);
         }
         else {
             if (LOG.isDebugEnabled())

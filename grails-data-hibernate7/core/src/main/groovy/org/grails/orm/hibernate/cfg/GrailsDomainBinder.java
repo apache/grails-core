@@ -198,7 +198,7 @@ public class GrailsDomainBinder
                 manyToOneBinder,
                 columnNameForPropertyAndPathFetcher
         );
-        ComponentBinder componentBinder = new ComponentBinder(getMappingCacheHolder(), componentPropertyBinder);
+        ComponentBinder componentBinder = new ComponentBinder(metadataBuildingContext, getMappingCacheHolder(), componentPropertyBinder);
         GrailsPropertyBinder grailsPropertyBinder = new GrailsPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,

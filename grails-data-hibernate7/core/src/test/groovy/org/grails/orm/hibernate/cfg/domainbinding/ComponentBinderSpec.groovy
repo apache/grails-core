@@ -22,7 +22,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
     ComponentBinder binder
 
     def setup() {
-        binder = new ComponentBinder(mappingCacheHolder, componentPropertyBinder)
+        binder = new ComponentBinder(getGrailsDomainBinder().getMetadataBuildingContext(), mappingCacheHolder, componentPropertyBinder)
     }
 
     def "should bind component and its properties"() {
@@ -30,7 +30,6 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
         root.setEntityName("MyEntity")
-        def component = new Component(metadataBuildingContext, root)
         
         def embeddedProp = GroovyMock(HibernateEmbeddedProperty)
         def associatedEntity = GroovyMock(GrailsHibernatePersistentEntity)
@@ -52,7 +51,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         def mappings = metadataBuildingContext.getMetadataCollector()
 
         when:
-        binder.bindComponent(component, embeddedProp, mappings)
+        def component = binder.bindComponent(root, embeddedProp, mappings)
 
         then:
         component.getComponentClassName() == Address.name
