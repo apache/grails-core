@@ -18,7 +18,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentUpdater;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder;
@@ -185,8 +184,9 @@ public class GrailsDomainBinder
                 simpleValueColumnFetcher
         );
         ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator);
-        ComponentPropertyBinder componentPropertyBinder = new ComponentPropertyBinder(
+        ComponentBinder componentBinder = new ComponentBinder(
                 metadataBuildingContext,
+                getMappingCacheHolder(),
                 collectionHolder,
                 enumTypeBinder,
                 collectionBinder,
@@ -196,8 +196,6 @@ public class GrailsDomainBinder
                 columnNameForPropertyAndPathFetcher,
                 componentUpdater
         );
-        ComponentBinder componentBinder = new ComponentBinder(metadataBuildingContext, getMappingCacheHolder(), componentPropertyBinder);
-        componentPropertyBinder.setComponentBinder(componentBinder);
 
         GrailsPropertyBinder grailsPropertyBinder = new GrailsPropertyBinder(
                 metadataBuildingContext,
@@ -212,7 +210,7 @@ public class GrailsDomainBinder
                 manyToOneBinder,
                 propertyFromValueCreator
         );
-        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentPropertyBinder);
+        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentBinder);
         PropertyBinder propertyBinder = new PropertyBinder();
         SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment, new BasicValueIdCreator(jdbcEnvironment), simpleValueBinder, propertyBinder);
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder);

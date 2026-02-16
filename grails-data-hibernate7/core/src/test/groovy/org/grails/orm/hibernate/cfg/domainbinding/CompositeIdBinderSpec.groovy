@@ -11,19 +11,19 @@ import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
 import spock.lang.Subject
 
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdBinder
 import org.hibernate.mapping.Value
 
 class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
 
-    def componentPropertyBinder = Mock(ComponentPropertyBinder)
+    def componentBinder = Mock(ComponentBinder)
 
     @Subject
     CompositeIdBinder binder
 
     def setup() {
-        binder = new CompositeIdBinder(getGrailsDomainBinder().getMetadataBuildingContext(), componentPropertyBinder)
+        binder = new CompositeIdBinder(getGrailsDomainBinder().getMetadataBuildingContext(), componentBinder)
     }
 
     def "should bind composite id using property names from CompositeIdentity"() {
@@ -54,7 +54,7 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
         root.getIdentifier() instanceof Component
         root.getIdentifierMapper() instanceof Component
         root.hasEmbeddedIdentifier()
-        2 * componentPropertyBinder.bindComponentProperty(_ as Component, identifierProp, _ as PersistentProperty, root, "", table, mappings) >> Mock(Value)
+        2 * componentBinder.bindComponentProperty(_ as Component, identifierProp, _ as PersistentProperty, root, "", table, mappings) >> Mock(Value)
     }
 
     def "should fallback to domainClass composite identity when CompositeIdentity is null"() {
@@ -78,7 +78,7 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindCompositeId(domainClass, root, null, mappings)
 
         then:
-        1 * componentPropertyBinder.bindComponentProperty(_ as Component, identifierProp, prop1, root, "", table, mappings) >> Mock(Value)
+        1 * componentBinder.bindComponentProperty(_ as Component, identifierProp, prop1, root, "", table, mappings) >> Mock(Value)
     }
 
     def "should throw MappingException if no composite properties found"() {

@@ -16,11 +16,11 @@ import jakarta.annotation.Nonnull;
 public class CompositeIdBinder {
 
     private final MetadataBuildingContext metadataBuildingContext;
-    private final ComponentPropertyBinder componentPropertyBinder;
+    private final ComponentBinder componentBinder;
 
-    public CompositeIdBinder(MetadataBuildingContext metadataBuildingContext, ComponentPropertyBinder componentPropertyBinder) {
+    public CompositeIdBinder(MetadataBuildingContext metadataBuildingContext, ComponentBinder componentBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
-        this.componentPropertyBinder = componentPropertyBinder;
+        this.componentBinder = componentBinder;
     }
 
 
@@ -61,7 +61,7 @@ public class CompositeIdBinder {
                         "] is not a valid property!");
             }
 
-           componentPropertyBinder.bindComponentProperty(id, identifierProp, property, root, "", root.getTable(), mappings);
+           componentBinder.bindComponentProperty(id, identifierProp, property, root, "", root.getTable(), mappings);
         }
     }
 }
