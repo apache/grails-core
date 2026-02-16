@@ -21,6 +21,9 @@ import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
@@ -108,6 +111,7 @@ public class ComponentBinder {
         // see if it's a collection type
         CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
         if (collectionType != null) {
+            //HibernateToManyProperty
             // create collection
             Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass);
             collectionBinder.bindCollection((HibernateToManyProperty) currentGrailsProp, collection, persistentClass, mappings, path);
@@ -115,28 +119,27 @@ public class ComponentBinder {
             value = collection;
         }
         // work out what type of relationship it is and bind value
-        else if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.ManyToOne) {
+        else if (currentGrailsProp.isHibernateOneToOne()) {
+            //HibernateOneToOneProperty
+            if (LOG.isDebugEnabled())
+                LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
+
+            value = oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, persistentClass, table, path);
+        } else if (currentGrailsProp.isHibernateManyToOne()) {
+            //HibernateManyToOneProperty
             if (LOG.isDebugEnabled())
                 LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as ManyToOne");
 
             value = manyToOneBinder.bindManyToOne((Association) currentGrailsProp, table, path);
-        } else if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.OneToOne association) {
-            if (LOG.isDebugEnabled())
-                LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
-
-            if (association.canBindOneToOneWithSingleColumnAndForeignKey()) {
-                value = oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, persistentClass, table, path);
-            }
-            else {
-                value = manyToOneBinder.bindManyToOne((Association) currentGrailsProp, table, path);
-            }
         }
         else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
             value = bindComponent(persistentClass, embedded, mappings);
         }
         else  if (currentGrailsProp.getType().isEnum()) {
+            //HibernateEnumTypeProperty
             value = enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), table, path);
         }  else {
+            //HibernateSimpleProperty
                 value = new BasicValue(metadataBuildingContext, table);
                 this.simpleValueBinder.bindSimpleValue(currentGrailsProp, componentProperty, (SimpleValue) value, path);
         }
