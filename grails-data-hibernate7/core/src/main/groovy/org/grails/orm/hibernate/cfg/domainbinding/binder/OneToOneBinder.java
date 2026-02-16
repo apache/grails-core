@@ -1,8 +1,10 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import org.hibernate.FetchMode;
+import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.OneToOne;
+import org.hibernate.mapping.PersistentClass;
 import org.hibernate.type.ForeignKeyDirection;
 
 import org.grails.datastore.mapping.model.types.Association;
@@ -12,20 +14,25 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 public class OneToOneBinder {
 
+    private final MetadataBuildingContext metadataBuildingContext;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final SimpleValueBinder simpleValueBinder;
 
-    public OneToOneBinder(PersistentEntityNamingStrategy namingStrategy, SimpleValueBinder simpleValueBinder) {
+    public OneToOneBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, SimpleValueBinder simpleValueBinder) {
+        this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.simpleValueBinder = simpleValueBinder;
     }
 
-    public OneToOneBinder(PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
-        this(namingStrategy, new SimpleValueBinder(namingStrategy, jdbcEnvironment));
+    public OneToOneBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
+        this(metadataBuildingContext, namingStrategy, new SimpleValueBinder(namingStrategy, jdbcEnvironment));
     }
 
-    public void bindOneToOne(final org.grails.datastore.mapping.model.types.OneToOne property, OneToOne oneToOne,
-                              String path) {
+    public OneToOne bindOneToOne(final org.grails.datastore.mapping.model.types.OneToOne property
+            , PersistentClass owner
+            , org.hibernate.mapping.Table table
+            , String path) {
+        OneToOne oneToOne = new OneToOne(metadataBuildingContext, table, owner);
         PropertyConfig config = ((GrailsHibernatePersistentProperty) property).getMappedForm();
         final Association otherSide = property.getInverseSide();
 
@@ -53,5 +60,6 @@ public class OneToOneBinder {
         else {
             oneToOne.setReferencedPropertyName(otherSide.getName());
         }
+        return oneToOne;
     }
 }

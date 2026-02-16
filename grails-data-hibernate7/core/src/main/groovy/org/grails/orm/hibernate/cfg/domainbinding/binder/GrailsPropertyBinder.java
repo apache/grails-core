@@ -110,8 +110,7 @@ public class GrailsPropertyBinder {
             enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), simpleValue, columnName);
         }
         else if (currentGrailsProp.isHibernateOneToOne()) {
-            value = new OneToOne(metadataBuildingContext, table, persistentClass);
-            oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne)currentGrailsProp, (OneToOne)value, EMPTY_PATH);
+            value = oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne)currentGrailsProp, persistentClass, table, EMPTY_PATH);
         } else if(currentGrailsProp.isHibernateManyToOne()) {
             value = manyToOneBinder.bindManyToOne((Association)currentGrailsProp, table, EMPTY_PATH);
         }

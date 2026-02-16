@@ -125,8 +125,7 @@ public class ComponentBinder {
                 LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
 
             if (association.canBindOneToOneWithSingleColumnAndForeignKey()) {
-                value = new OneToOne(metadataBuildingContext, table, persistentClass);
-                oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, path);
+                value = oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, persistentClass, table, path);
             }
             else {
                 value = manyToOneBinder.bindManyToOne((Association) currentGrailsProp, table, path);

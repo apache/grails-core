@@ -65,7 +65,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
                 backticksRemover,
                 simpleValueBinder
         )
-        OneToOneBinder oneToOneBinder = new OneToOneBinder(namingStrategy, simpleValueBinder)
+        OneToOneBinder oneToOneBinder = new OneToOneBinder(metadataBuildingContext, namingStrategy, simpleValueBinder)
         ManyToOneBinder manyToOneBinder = new ManyToOneBinder(metadataBuildingContext, namingStrategy, simpleValueBinder, new ManyToOneValuesBinder(), compositeIdentifierToManyToOneBinder, simpleValueColumnFetcher)
 
         CollectionBinder collectionBinder = new CollectionBinder(

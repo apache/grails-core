@@ -219,12 +219,13 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         ((Association)currentGrailsProp).canBindOneToOneWithSingleColumnAndForeignKey() >> true
         setupProperty(currentGrailsProp, "detail", mapping, ownerEntity)
         setupProperty(componentProperty, "address", mapping, ownerEntity)
+        def hibernateOneToOne = new HibernateOneToOne(metadataBuildingContext, table, root)
         
         when:
         binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
-        1 * oneToOneBinder.bindOneToOne(currentGrailsProp, _ as HibernateOneToOne, "address")
+        1 * oneToOneBinder.bindOneToOne(currentGrailsProp, root, table, "address") >> hibernateOneToOne
         0 * componentUpdater.updateComponent(_, _, _, _)
     }
 
