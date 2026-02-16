@@ -71,6 +71,8 @@ public class GrailsPropertyBinder {
 
     public Value bindProperty(PersistentClass persistentClass
             , Table table
+            , String path
+            , GrailsHibernatePersistentProperty parentProperty
             , @Nonnull GrailsHibernatePersistentProperty currentGrailsProp
             , @Nonnull InFlightMetadataCollector mappings) {
         if (LOG.isDebugEnabled()) {
@@ -82,24 +84,24 @@ public class GrailsPropertyBinder {
         // 1. Create Value and apply binders (consolidated block)
         if (currentGrailsProp.isEnumType()) {
             //HibernateEnumTypeProperty
-            value = enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), table, EMPTY_PATH);
+            value = enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), table, path);
         } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne) {
             //HibernateOneToOneProperty
             if (oneToOne.isHibernateOneToOne()) {
-                value = oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, persistentClass, table, EMPTY_PATH);
+                value = oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, persistentClass, table, path);
             } else {
-                value = manyToOneBinder.bindManyToOne((Association) currentGrailsProp, table, EMPTY_PATH);
+                value = manyToOneBinder.bindManyToOne((Association) currentGrailsProp, table, path);
             }
         } else if (currentGrailsProp instanceof HibernateManyToOneProperty manyToOne) {
-            value = manyToOneBinder.bindManyToOne((Association) currentGrailsProp, table, EMPTY_PATH);
+            value = manyToOneBinder.bindManyToOne((Association) currentGrailsProp, table, path);
         } else if (currentGrailsProp instanceof HibernateToManyProperty toMany && !currentGrailsProp.isSerializableType()) {
             //HibernateToManyProperty
-            value = collectionBinder.bindCollection(toMany, persistentClass, mappings, EMPTY_PATH);
+            value = collectionBinder.bindCollection(toMany, persistentClass, mappings, path);
         } else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
-            value = componentBinder.bindComponent(persistentClass, embedded, mappings);
+            value = componentBinder.bindComponent(persistentClass, embedded, mappings, path);
         } else {
             //HibernateSimpleProperty
-            value = simpleValueBinder.bindSimpleValue(currentGrailsProp, null, table, EMPTY_PATH);
+            value = simpleValueBinder.bindSimpleValue(currentGrailsProp, parentProperty, table, path);
         }
 
         return value;

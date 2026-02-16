@@ -26,7 +26,9 @@ class ClassPropertiesBinderSpec extends HibernateGormDatastoreSpec {
         def sessionFactoryBeanName = "sessionFactory"
 
         def prop1 = Mock(GrailsHibernatePersistentProperty)
+        prop1.getName() >> "prop1"
         def prop2 = Mock(GrailsHibernatePersistentProperty)
+        prop2.getName() >> "prop2"
         domainClass.getPersistentPropertiesToBind() >> [prop1, prop2]
         
         def value1 = Mock(Value)
@@ -44,10 +46,10 @@ class ClassPropertiesBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindClassProperties(domainClass, persistentClass, mappings)
 
         then:
-        1 * grailsPropertyBinder.bindProperty(persistentClass, persistentClass.table, prop1, mappings) >> value1
+        1 * grailsPropertyBinder.bindProperty(persistentClass, persistentClass.table, org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH, null, prop1, mappings) >> value1
         1 * propertyFromValueCreator.createProperty(value1, prop1) >> hibernateProp1
 
-        1 * grailsPropertyBinder.bindProperty(persistentClass, persistentClass.table, prop2, mappings) >> value2
+        1 * grailsPropertyBinder.bindProperty(persistentClass, persistentClass.table, org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH, null, prop2, mappings) >> value2
         1 * propertyFromValueCreator.createProperty(value2, prop2) >> hibernateProp2
 
         persistentClass.getProperty("hibernateProp1") == hibernateProp1

@@ -18,11 +18,13 @@ public class CompositeIdBinder {
     private final MetadataBuildingContext metadataBuildingContext;
     private final ComponentBinder componentBinder;
     private final ComponentUpdater componentUpdater;
+    private final GrailsPropertyBinder grailsPropertyBinder;
 
-    public CompositeIdBinder(MetadataBuildingContext metadataBuildingContext, ComponentBinder componentBinder, ComponentUpdater componentUpdater) {
+    public CompositeIdBinder(MetadataBuildingContext metadataBuildingContext, ComponentBinder componentBinder, ComponentUpdater componentUpdater, GrailsPropertyBinder grailsPropertyBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.componentBinder = componentBinder;
         this.componentUpdater = componentUpdater;
+        this.grailsPropertyBinder = grailsPropertyBinder;
     }
 
 
@@ -63,7 +65,7 @@ public class CompositeIdBinder {
                         "] is not a valid property!");
             }
 
-           var value = componentBinder.bindComponentProperty(identifierProp, property, root, "", root.getTable(), mappings);
+           var value = grailsPropertyBinder.bindProperty(root, root.getTable(), "", identifierProp, property, mappings);
            componentUpdater.updateComponent(id, identifierProp, property, value);
         }
     }

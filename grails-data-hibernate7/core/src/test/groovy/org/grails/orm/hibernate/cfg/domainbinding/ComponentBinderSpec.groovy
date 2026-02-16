@@ -87,6 +87,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
     ColumnNameForPropertyAndPathFetcher columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
     ComponentUpdater componentUpdater = Mock(ComponentUpdater)
     SimpleValueBinder mockSimpleValueBinder = Mock(SimpleValueBinder)
+    org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder grailsPropertyBinder = Mock(org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder)
 
     @Subject
     ComponentBinder binder
@@ -105,6 +106,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
                 columnNameFetcher,
                 componentUpdater
         )
+        binder.setGrailsPropertyBinder(grailsPropertyBinder)
     }
 
     private void setupProperty(PersistentProperty prop, String name, Mapping mapping, PersistentEntity owner) {
@@ -149,13 +151,13 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         def mappings = metadataBuildingContext.getMetadataCollector()
 
         when:
-        def component = binder.bindComponent(root, embeddedProp, mappings)
+        def component = binder.bindComponent(root, embeddedProp, mappings, "")
 
         then:
         component.getComponentClassName() == Address.name
         component.getRoleName() == Address.name + ".address"
         1 * mappingCacheHolder.cacheMapping(associatedEntity)
-        1 * mockSimpleValueBinder.bindSimpleValue(prop1, embeddedProp, _ as Table, "address") >> new BasicValue(metadataBuildingContext, root.getTable())
+        1 * grailsPropertyBinder.bindProperty(root, root.getTable(), "address", embeddedProp, prop1, mappings) >> new BasicValue(metadataBuildingContext, root.getTable())
         1 * componentUpdater.updateComponent(_ as Component, embeddedProp, prop1, _ as Value)
     }
 
@@ -195,12 +197,12 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         def mappings = metadataBuildingContext.getMetadataCollector()
 
         when:
-        binder.bindComponent(root, embeddedProp, mappings)
+        binder.bindComponent(root, embeddedProp, mappings, "")
 
         then:
         0 * componentUpdater.updateComponent(_, _, idProp, _)
         0 * componentUpdater.updateComponent(_, _, versionProp, _)
-        1 * mockSimpleValueBinder.bindSimpleValue(normalProp, embeddedProp, _ as Table, "address") >> new BasicValue(metadataBuildingContext, root.getTable())
+        1 * grailsPropertyBinder.bindProperty(root, root.getTable(), "address", embeddedProp, normalProp, mappings) >> new BasicValue(metadataBuildingContext, root.getTable())
         1 * componentUpdater.updateComponent(_, _, normalProp, _)
     }
 
@@ -234,268 +236,12 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         def mappings = metadataBuildingContext.getMetadataCollector()
 
         when:
-        def component = binder.bindComponent(root, embeddedProp, mappings)
+        def component = binder.bindComponent(root, embeddedProp, mappings, "")
 
         then:
         component.getParentProperty() == "myEntity"
-        0 * mockSimpleValueBinder.bindSimpleValue(parentProp, _, _, _)
+        0 * grailsPropertyBinder.bindProperty(_, _, _, _, parentProp, _)
         0 * componentUpdater.updateComponent(_, _, parentProp, _)
-    }
-
-    def "should bind simple property"() {
-        given:
-        def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
-        def root = new RootClass(metadataBuildingContext)
-        def table = new Table("my_table")
-        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
-        ownerEntity.isRoot() >> true
-
-        def currentGrailsProp = Mock(TestSimple)
-        
-        def componentProperty = Mock(GrailsHibernatePersistentProperty)
-        def mappings = Mock(InFlightMetadataCollector)
-        def hibernateProperty = new Property()
-        hibernateProperty.setName("street")
-        
-        def mapping = new Mapping()
-        ownerEntity.getMappedForm() >> mapping
-        currentGrailsProp.getType() >> String
-        currentGrailsProp.isHibernateOneToOne() >> false
-        currentGrailsProp.isHibernateManyToOne() >> false
-        setupProperty(currentGrailsProp, "street", mapping, ownerEntity)
-        setupProperty(componentProperty, "address", mapping, ownerEntity)
-        
-        when:
-        binder.bindComponentProperty(componentProperty, currentGrailsProp, root, "address", table, mappings)
-
-        then:
-        1 * mockSimpleValueBinder.bindSimpleValue(currentGrailsProp, componentProperty, table, "address") >> new BasicValue(metadataBuildingContext, table)
-        0 * componentUpdater.updateComponent(_, _, _, _)
-    }
-
-    def "should bind many-to-one property"() {
-        given:
-        def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
-        def root = new RootClass(metadataBuildingContext)
-        def table = new Table("my_table")
-        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
-        ownerEntity.isRoot() >> true
-        def currentGrailsProp = Mock(TestManyToOne)
-        def componentProperty = Mock(GrailsHibernatePersistentProperty)
-        def mappings = Mock(InFlightMetadataCollector)
-        def hibernateProperty = new Property()
-        hibernateProperty.setName("owner")
-        def hibernateManyToOne = new HibernateManyToOne(metadataBuildingContext, table)
-
-        def mapping = new Mapping()
-        ownerEntity.getMappedForm() >> mapping
-        currentGrailsProp.getAssociatedEntity() >> Mock(GrailsHibernatePersistentEntity) { 
-            getName() >> "Owner" 
-            getMappedForm() >> new Mapping()
-            isRoot() >> true
-        }
-        currentGrailsProp.getType() >> Object
-        currentGrailsProp.isHibernateOneToOne() >> false
-        currentGrailsProp.isHibernateManyToOne() >> true
-        setupProperty(currentGrailsProp, "owner", mapping, ownerEntity)
-        setupProperty(componentProperty, "address", mapping, ownerEntity)
-        
-        when:
-        binder.bindComponentProperty(componentProperty, currentGrailsProp, root, "address", table, mappings)
-
-        then:
-        1 * manyToOneBinder.bindManyToOne(currentGrailsProp, table, "address") >> hibernateManyToOne
-        0 * componentUpdater.updateComponent(_, _, _, _)
-    }
-
-    def "should bind one-to-one property"() {
-        given:
-        def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
-        def root = new RootClass(metadataBuildingContext)
-        def table = new Table("my_table")
-        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
-        ownerEntity.isRoot() >> true
-        def currentGrailsProp = Mock(TestOneToOne)
-        def componentProperty = Mock(GrailsHibernatePersistentProperty)
-        def mappings = Mock(InFlightMetadataCollector)
-        def hibernateProperty = new Property()
-        hibernateProperty.setName("detail")
-
-        def mapping = new Mapping()
-        ownerEntity.getMappedForm() >> mapping
-        ((Association)currentGrailsProp).getInverseSide() >> Mock(Association) {
-            isHasOne() >> false
-            getOwner() >> Mock(GrailsHibernatePersistentEntity) { 
-                getName() >> "Other" 
-                isRoot() >> true
-            }
-            getName() >> "other"
-        }
-        currentGrailsProp.getType() >> Object
-        ((Association)currentGrailsProp).canBindOneToOneWithSingleColumnAndForeignKey() >> true
-        currentGrailsProp.isHibernateOneToOne() >> true
-        setupProperty(currentGrailsProp, "detail", mapping, ownerEntity)
-        setupProperty(componentProperty, "address", mapping, ownerEntity)
-        def hibernateOneToOne = new HibernateOneToOne(metadataBuildingContext, table, root)
-        
-        when:
-        binder.bindComponentProperty(componentProperty, currentGrailsProp, root, "address", table, mappings)
-
-        then:
-        1 * oneToOneBinder.bindOneToOne(currentGrailsProp, root, table, "address") >> hibernateOneToOne
-        0 * componentUpdater.updateComponent(_, _, _, _)
-    }
-
-    def "should bind enum property"() {
-        given:
-        def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
-        def root = new RootClass(metadataBuildingContext)
-        def table = new Table("my_table")
-        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
-        ownerEntity.isRoot() >> true
-        def currentGrailsProp = Mock(TestBasic)
-        def componentProperty = Mock(GrailsHibernatePersistentProperty)
-        def mappings = Mock(InFlightMetadataCollector)
-        def hibernateProperty = new Property()
-        hibernateProperty.setName("type")
-
-        def mapping = new Mapping()
-        ownerEntity.getMappedForm() >> mapping
-        currentGrailsProp.getType() >> MyEnum
-        currentGrailsProp.isEnumType() >> true
-        currentGrailsProp.isHibernateOneToOne() >> false
-        currentGrailsProp.isHibernateManyToOne() >> false
-        setupProperty(currentGrailsProp, "type", mapping, ownerEntity)
-        setupProperty(componentProperty, "address", mapping, ownerEntity)
-        
-        columnNameFetcher.getColumnNameForPropertyAndPath(currentGrailsProp, "address", null) >> "address_type_col"
-
-        when:
-        binder.bindComponentProperty(componentProperty, currentGrailsProp, root, "address", table, mappings)
-
-        then:
-        1 * enumTypeBinder.bindEnumType(currentGrailsProp, MyEnum, table, "address") >> new BasicValue(metadataBuildingContext, table)
-        0 * componentUpdater.updateComponent(_, _, _, _)
-    }
-
-    def "should set columns to nullable when component property is nullable"() {
-        given:
-        def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
-        def root = new RootClass(metadataBuildingContext)
-        def table = new Table("my_table")
-        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
-        ownerEntity.isRoot() >> true
-        def currentGrailsProp = Mock(TestSimple)
-        def componentProperty = Mock(GrailsHibernatePersistentProperty)
-        def mappings = Mock(InFlightMetadataCollector)
-        def hibernateProperty = new Property()
-        hibernateProperty.setName("street")
-        
-        def mapping = new Mapping()
-        ownerEntity.getMappedForm() >> mapping
-        currentGrailsProp.getType() >> String
-        currentGrailsProp.isHibernateOneToOne() >> false
-        currentGrailsProp.isHibernateManyToOne() >> false
-        setupProperty(currentGrailsProp, "street", mapping, ownerEntity)
-        setupProperty(componentProperty, "address", mapping, ownerEntity)
-        
-        ownerEntity.isComponentPropertyNullable(componentProperty) >> true
-        
-        when:
-        binder.bindComponentProperty(componentProperty, currentGrailsProp, root, "address", table, mappings)
-
-        then:
-        1 * mockSimpleValueBinder.bindSimpleValue(
-            currentGrailsProp, 
-            componentProperty, 
-            table, 
-            "address"
-        ) >> new BasicValue(metadataBuildingContext, table)
-        0 * componentUpdater.updateComponent(_, _, _, _)
-    }
-
-    def "should bind collection property within component"() {
-        given:
-        def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
-        def root = new RootClass(metadataBuildingContext)
-        def table = new Table("my_table")
-        def currentGrailsProp = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty)
-        def componentProperty = Mock(GrailsHibernatePersistentProperty)
-        def mappings = Mock(InFlightMetadataCollector)
-        
-        currentGrailsProp.getType() >> Set
-        currentGrailsProp.isHibernateOneToOne() >> false
-        currentGrailsProp.isHibernateManyToOne() >> false
-
-        when:
-        def result = binder.bindComponentProperty(componentProperty, currentGrailsProp, root, "address", table, mappings)
-
-        then:
-        1 * collectionBinder.bindCollection(currentGrailsProp, root, mappings, "address") >> Mock(org.hibernate.mapping.Set)
-    }
-
-    def "should bind nested component recursively"() {
-        given:
-        def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
-        def root = new RootClass(metadataBuildingContext)
-        root.setTable(new Table("my_table"))
-        def table = root.getTable()
-        def mappings = Mock(InFlightMetadataCollector)
-        
-        def nestedEmbeddedProp = Mock(TestEmbedded)
-        def nestedAssociatedEntity = Mock(GrailsHibernatePersistentEntity)
-        def parentProp = Mock(GrailsHibernatePersistentProperty)
-        
-        nestedEmbeddedProp.getType() >> Address
-        nestedEmbeddedProp.getName() >> "nestedAddress"
-        nestedEmbeddedProp.getAssociatedEntity() >> nestedAssociatedEntity
-        nestedEmbeddedProp.getOwner() >> Mock(GrailsHibernatePersistentEntity) {
-            getJavaClass() >> Address
-        }
-        nestedEmbeddedProp.isHibernateOneToOne() >> false
-        nestedEmbeddedProp.isHibernateManyToOne() >> false
-        
-        nestedAssociatedEntity.getName() >> "NestedAddress"
-        def nestedProp1 = Mock(TestSimple)
-        nestedProp1.getName() >> "street"
-        nestedProp1.getType() >> String
-        nestedProp1.isHibernateOneToOne() >> false
-        nestedProp1.isHibernateManyToOne() >> false
-        nestedAssociatedEntity.getHibernatePersistentProperties() >> [nestedProp1]
-        nestedAssociatedEntity.getIdentity() >> null
-
-        when:
-        def result = binder.bindComponentProperty(parentProp, nestedEmbeddedProp, root, "address.nested", table, mappings)
-
-        then:
-        result instanceof Component
-        result.getComponentClassName() == Address.name
-        1 * mappingCacheHolder.cacheMapping(nestedAssociatedEntity)
-        1 * mockSimpleValueBinder.bindSimpleValue(nestedProp1, nestedEmbeddedProp, _ as Table, "nestedAddress") >> new BasicValue(metadataBuildingContext, table)
-        1 * componentUpdater.updateComponent(_ as Component, nestedEmbeddedProp, nestedProp1, _ as Value)
-    }
-
-    def "should bind one-to-one as many-to-one when it cannot be bound with single column"() {
-        given:
-        def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
-        def root = new RootClass(metadataBuildingContext)
-        def table = new Table("my_table")
-        def currentGrailsProp = Mock(TestOneToOne)
-        def componentProperty = Mock(GrailsHibernatePersistentProperty)
-        def mappings = Mock(InFlightMetadataCollector)
-        
-        currentGrailsProp.canBindOneToOneWithSingleColumnAndForeignKey() >> false
-        currentGrailsProp.getType() >> Object
-        currentGrailsProp.isHibernateOneToOne() >> false
-        currentGrailsProp.isHibernateManyToOne() >> true
-        def hibernateManyToOne = new HibernateManyToOne(metadataBuildingContext, table)
-
-        when:
-        def result = binder.bindComponentProperty(componentProperty, currentGrailsProp, root, "address", table, mappings)
-
-        then:
-        1 * manyToOneBinder.bindManyToOne(currentGrailsProp, table, "address") >> hibernateManyToOne
-        result == hibernateManyToOne
     }
 
     static class MyEntity {}

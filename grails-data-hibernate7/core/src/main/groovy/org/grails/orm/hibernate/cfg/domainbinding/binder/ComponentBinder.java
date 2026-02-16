@@ -2,11 +2,8 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.BasicValue;
-import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
 import org.slf4j.Logger;
@@ -18,7 +15,6 @@ import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
@@ -40,6 +36,7 @@ public class ComponentBinder {
     private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
     private final SimpleValueBinder simpleValueBinder;
     private final ComponentUpdater componentUpdater;
+    private GrailsPropertyBinder grailsPropertyBinder;
 
     public ComponentBinder(MetadataBuildingContext metadataBuildingContext,
                            MappingCacheHolder mappingCacheHolder,
@@ -61,67 +58,48 @@ public class ComponentBinder {
         this.componentUpdater = componentUpdater;
     }
 
+    public void setGrailsPropertyBinder(GrailsPropertyBinder grailsPropertyBinder) {
+        this.grailsPropertyBinder = grailsPropertyBinder;
+    }
 
-    public Component bindComponent(PersistentClass owner, HibernateEmbeddedProperty property,
-                              @Nonnull InFlightMetadataCollector mappings) {
+
+    public Component bindComponent(PersistentClass owner, HibernateEmbeddedProperty embeddedProperty,
+                              @Nonnull InFlightMetadataCollector mappings, String path) {
         Component component = new Component(metadataBuildingContext, owner);
-        Class<?> type = property.getType();
-        String role = GrailsHibernateUtil.qualify(type.getName(), property.getName());
+        Class<?> type = embeddedProperty.getType();
+        String role = GrailsHibernateUtil.qualify(type.getName(), embeddedProperty.getName());
         component.setRoleName(role);
         component.setComponentClassName(type.getName());
 
-        GrailsHibernatePersistentEntity domainClass = (GrailsHibernatePersistentEntity) property.getAssociatedEntity();
+        GrailsHibernatePersistentEntity domainClass = (GrailsHibernatePersistentEntity) embeddedProperty.getAssociatedEntity();
         mappingCacheHolder.cacheMapping(domainClass);
-        var properties = domainClass.getHibernatePersistentProperties();
+        var peerProperties = new java.util.ArrayList<>(domainClass.getHibernatePersistentProperties());
+        peerProperties.sort((p1, p2) -> {
+            if (p1 instanceof HibernateEmbeddedProperty && !(p2 instanceof HibernateEmbeddedProperty)) {
+                return -1;
+            } else if (!(p1 instanceof HibernateEmbeddedProperty) && p2 instanceof HibernateEmbeddedProperty) {
+                return 1;
+            }
+            return p1.getName().compareTo(p2.getName());
+        });
+
         Table table = component.getOwner().getTable();
         PersistentClass persistentClass = component.getOwner();
-        String path = property.getName();
-        Class<?> propertyType = property.getOwner().getJavaClass();
+        String currentPath = path.isEmpty() ? embeddedProperty.getName() : path + "." + embeddedProperty.getName();
+        Class<?> propertyType = embeddedProperty.getOwner().getJavaClass();
 
-        for (GrailsHibernatePersistentProperty currentGrailsProp : properties) {
-            if (currentGrailsProp.equals(domainClass.getIdentity())) continue;
-            if (currentGrailsProp.getName().equals(GormProperties.VERSION)) continue;
+        for (GrailsHibernatePersistentProperty peerProperty : peerProperties) {
+            if (peerProperty.equals(domainClass.getIdentity())) continue;
+            if (peerProperty.getName().equals(GormProperties.VERSION)) continue;
 
-            if (currentGrailsProp.getType().equals(propertyType)) {
-                component.setParentProperty(currentGrailsProp.getName());
+            if (peerProperty.getType().equals(propertyType)) {
+                component.setParentProperty(peerProperty.getName());
                 continue;
             }
-            var value = bindComponentProperty(property, currentGrailsProp, persistentClass, path, table, mappings);
-            componentUpdater.updateComponent(component, property, currentGrailsProp, value);
+            var value = grailsPropertyBinder.bindProperty(persistentClass, table, currentPath, embeddedProperty, peerProperty, mappings);
+            componentUpdater.updateComponent(component, embeddedProperty, peerProperty, value);
 
         }
         return component;
-    }
-
-    public Value bindComponentProperty(GrailsHibernatePersistentProperty componentProperty,
-                                       GrailsHibernatePersistentProperty currentGrailsProp,
-                                       PersistentClass persistentClass,
-                                       String path,
-                                       Table table,
-                                       @Nonnull InFlightMetadataCollector mappings) {
-        Value value;
-        // work out what type of relationship it is and bind value
-        if (currentGrailsProp.isEnumType()) {
-            //HibernateEnumTypeProperty
-            value = enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), table, path);
-        } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne) {
-            //HibernateOneToOneProperty
-            if (oneToOne.isHibernateOneToOne()) {
-                value = oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, persistentClass, table, path);
-            } else {
-                value = manyToOneBinder.bindManyToOne((Association) currentGrailsProp, table, path);
-            }
-        } else if (currentGrailsProp instanceof HibernateManyToOneProperty manyToOne) {
-            value = manyToOneBinder.bindManyToOne((Association) currentGrailsProp, table, path);
-        } else if (currentGrailsProp instanceof HibernateToManyProperty toMany && !currentGrailsProp.isSerializableType()) {
-            //HibernateToManyProperty
-            value = collectionBinder.bindCollection(toMany, persistentClass, mappings, path);
-        } else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
-            value = bindComponent(persistentClass, embedded, mappings);
-        } else {
-            //HibernateSimpleProperty
-            value = this.simpleValueBinder.bindSimpleValue(currentGrailsProp, componentProperty, table, path);
-        }
-        return value;
     }
 }
