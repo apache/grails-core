@@ -5,17 +5,13 @@ import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
-import org.grails.datastore.mapping.model.types.ManyToOne as GormManyToOne
-import org.grails.datastore.mapping.model.types.OneToOne as GormOneToOne
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
@@ -124,7 +120,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         propertyFromValueCreator.createProperty(_ as BasicValue, currentGrailsProp) >> hibernateProperty
 
         when:
-        binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings, "sessionFactory")
+        binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
         1 * mockSimpleValueBinder.bindSimpleValue(currentGrailsProp, componentProperty, _ as BasicValue, "address")
@@ -159,7 +155,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         propertyFromValueCreator.createProperty(_ as HibernateManyToOne, currentGrailsProp) >> hibernateProperty
 
         when:
-        binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings, "sessionFactory")
+        binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
         1 * propertyFromValueCreator.createProperty(_ as HibernateManyToOne, currentGrailsProp) >> hibernateProperty
@@ -198,7 +194,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         propertyFromValueCreator.createProperty(_ as HibernateOneToOne, currentGrailsProp) >> hibernateProperty
 
         when:
-        binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings, "sessionFactory")
+        binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
         1 * propertyFromValueCreator.createProperty(_ as HibernateOneToOne, currentGrailsProp) >> hibernateProperty
@@ -231,7 +227,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         propertyFromValueCreator.createProperty(_ as BasicValue, currentGrailsProp) >> hibernateProperty
 
         when:
-        binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings, "sessionFactory")
+        binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
         1 * enumTypeBinder.bindEnumType(currentGrailsProp, MyEnum, _ as BasicValue, "address_type_col")
@@ -262,7 +258,7 @@ class ComponentPropertyBinderSpec extends HibernateGormDatastoreSpec {
         propertyFromValueCreator.createProperty(_ as BasicValue, currentGrailsProp) >> hibernateProperty
 
         when:
-        binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings, "sessionFactory")
+        binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
         1 * mockSimpleValueBinder.bindSimpleValue(

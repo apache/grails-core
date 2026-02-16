@@ -10,7 +10,7 @@ class CollectionHolderSpec extends HibernateGormDatastoreSpec {
     CollectionHolder holder
 
     def setup() {
-        holder = new CollectionHolder(getGrailsDomainBinder())
+        holder = new CollectionHolder(getGrailsDomainBinder().getMetadataBuildingContext())
     }
 
     @Unroll

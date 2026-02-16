@@ -2,7 +2,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import jakarta.annotation.Nonnull;
 import org.grails.datastore.mapping.model.DatastoreConfigurationException;
-import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
@@ -35,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
+import java.util.Map;
 import java.util.Set;
 
 import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.*;
@@ -89,7 +89,7 @@ public class CollectionSecondPassBinder {
 
 
     public void bindCollectionSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
-                                         java.util.Map<?, ?> persistentClasses, Collection collection, String sessionFactoryBeanName) {
+                                         Map<?, ?> persistentClasses, Collection collection) {
         PersistentClass associatedClass = null;
 
         if (LOG.isDebugEnabled())
@@ -179,7 +179,7 @@ public class CollectionSecondPassBinder {
 
             } else if ((otherSide instanceof HibernateManyToManyProperty) || java.util.Map.class.isAssignableFrom(property.getType())) {
 
-                bindDependentKeyValue(property, key, mappings, sessionFactoryBeanName);
+                bindDependentKeyValue(property, key);
 
             }
 
@@ -193,7 +193,7 @@ public class CollectionSecondPassBinder {
 
             } else {
 
-                bindDependentKeyValue(property, key, mappings, sessionFactoryBeanName);
+                bindDependentKeyValue(property, key);
 
             }
 
@@ -377,8 +377,7 @@ public class CollectionSecondPassBinder {
         element.setReferencedEntityName(property.getOwner().getName());
     }
 
-    private void bindDependentKeyValue(GrailsHibernatePersistentProperty property, DependantValue key,
-                                       @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+    private void bindDependentKeyValue(GrailsHibernatePersistentProperty property, DependantValue key) {
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("[CollectionSecondPassBinder] binding  [" + property.getName() + "] with dependant key");

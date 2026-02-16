@@ -36,18 +36,16 @@ public class ClassPropertiesBinder {
     /**
      * Binds the properties of the specified Grails domain class to the Hibernate meta-model.
      *
-     * @param domainClass The Grails domain class
+     * @param domainClass     The Grails domain class
      * @param persistentClass The Hibernate PersistentClass instance
-     * @param mappings The Hibernate InFlightMetadataCollector instance
-     * @param sessionFactoryBeanName The session factory bean name
+     * @param mappings        The Hibernate InFlightMetadataCollector instance
      */
     public void bindClassProperties(@Nonnull GrailsHibernatePersistentEntity domainClass,
                                     PersistentClass persistentClass,
-                                    @Nonnull InFlightMetadataCollector mappings,
-                                    String sessionFactoryBeanName) {
+                                    @Nonnull InFlightMetadataCollector mappings) {
 
         for (GrailsHibernatePersistentProperty currentGrailsProp : domainClass.getPersistentPropertiesToBind()) {
-            Value value = grailsPropertyBinder.bindProperty(persistentClass, currentGrailsProp, mappings, sessionFactoryBeanName);
+            Value value = grailsPropertyBinder.bindProperty(persistentClass, currentGrailsProp, mappings);
             persistentClass.addProperty(propertyFromValueCreator.createProperty(value, currentGrailsProp));
         }
 

@@ -37,7 +37,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getCompositeIdentity() >> null
 
         when:
-        binder.bindIdentity(domainClass, root, mappings, null, "sessionFactory")
+        binder.bindIdentity(domainClass, root, mappings, null)
 
         then:
         1 * simpleIdBinder.bindSimpleId(domainClass, root, null, _)
@@ -52,10 +52,10 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getCompositeIdentity() >> compositeProps
 
         when:
-        binder.bindIdentity(domainClass, root, mappings, null, "sessionFactory")
+        binder.bindIdentity(domainClass, root, mappings, null)
 
         then:
-        1 * compositeIdBinder.bindCompositeId(domainClass, root, null, mappings, "sessionFactory")
+        1 * compositeIdBinder.bindCompositeId(domainClass, root, null, mappings)
     }
 
     def "should delegate to compositeIdBinder when mapping specifies composite identity"() {
@@ -68,10 +68,10 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         gormMapping.getIdentity() >> compositeIdentity
 
         when:
-        binder.bindIdentity(domainClass, root, mappings, gormMapping, "sessionFactory")
+        binder.bindIdentity(domainClass, root, mappings, gormMapping)
 
         then:
-        1 * compositeIdBinder.bindCompositeId(domainClass, root, compositeIdentity, mappings, "sessionFactory")
+        1 * compositeIdBinder.bindCompositeId(domainClass, root, compositeIdentity, mappings)
     }
 
     def "should delegate to simpleIdBinder when mapping specifies simple identity"() {
@@ -88,7 +88,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getName() >> "MyEntity"
 
         when:
-        binder.bindIdentity(domainClass, root, mappings, gormMapping, "sessionFactory")
+        binder.bindIdentity(domainClass, root, mappings, gormMapping)
 
         then:
         1 * simpleIdBinder.bindSimpleId(domainClass, root, identity, _)
@@ -107,7 +107,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getName() >> "MyEntity"
 
         when:
-        binder.bindIdentity(domainClass, root, mappings, gormMapping, "sessionFactory")
+        binder.bindIdentity(domainClass, root, mappings, gormMapping)
 
         then:
         1 * simpleIdBinder.bindSimpleId(domainClass, root, identity, _)
@@ -127,7 +127,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getName() >> "MyEntity"
 
         when:
-        binder.bindIdentity(domainClass, root, mappings, gormMapping, "sessionFactory")
+        binder.bindIdentity(domainClass, root, mappings, gormMapping)
 
         then:
         identity.getName() == "MyEntity"

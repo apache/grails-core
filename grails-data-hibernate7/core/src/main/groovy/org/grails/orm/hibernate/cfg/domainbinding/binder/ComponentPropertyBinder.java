@@ -119,15 +119,14 @@ public class ComponentPropertyBinder {
                                       PersistentClass persistentClass,
                                        String path,
                                       Table table,
-                                      @Nonnull InFlightMetadataCollector mappings,
-                                      String sessionFactoryBeanName) {
+                                      @Nonnull InFlightMetadataCollector mappings) {
         Value value;
         // see if it's a collection type
         CollectionType collectionType = collectionHolder.get(currentGrailsProp.getType());
         if (collectionType != null) {
             // create collection
             Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass);
-            collectionBinder.bindCollection((HibernateToManyProperty) currentGrailsProp, collection, persistentClass, mappings, path, sessionFactoryBeanName);
+            collectionBinder.bindCollection((HibernateToManyProperty) currentGrailsProp, collection, persistentClass, mappings, path);
             mappings.addCollectionBinding(collection);
             value = collection;
         }
@@ -153,7 +152,7 @@ public class ComponentPropertyBinder {
         }
         else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
             value = new Component(metadataBuildingContext, persistentClass);
-            componentBinder.bindComponent((Component) value, embedded, mappings, sessionFactoryBeanName);
+            componentBinder.bindComponent((Component) value, embedded, mappings);
         }
         else {
             if (LOG.isDebugEnabled())
@@ -182,7 +181,7 @@ public class ComponentPropertyBinder {
     }
 
     public void bindComponent(Component component, HibernateEmbeddedProperty property,
-                               boolean isNullable, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
-        componentBinder.bindComponent(component, property, mappings, sessionFactoryBeanName);
+                               boolean isNullable, @Nonnull InFlightMetadataCollector mappings) {
+        componentBinder.bindComponent(component, property, mappings);
     }
 }

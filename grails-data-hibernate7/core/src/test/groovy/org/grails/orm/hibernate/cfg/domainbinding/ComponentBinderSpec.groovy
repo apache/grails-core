@@ -1,7 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
@@ -53,13 +52,13 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         def mappings = metadataBuildingContext.getMetadataCollector()
 
         when:
-        binder.bindComponent(component, embeddedProp, mappings, "sessionFactory")
+        binder.bindComponent(component, embeddedProp, mappings)
 
         then:
         component.getComponentClassName() == Address.name
         component.getRoleName() == Address.name + ".address"
         1 * mappingCacheHolder.cacheMapping(associatedEntity)
-        1 * componentPropertyBinder.bindComponentProperty(_, _, _, _, _, _, _, _)
+        1 * componentPropertyBinder.bindComponentProperty(_, _, _, _, _, _, _)
     }
 
     static class MyEntity {}

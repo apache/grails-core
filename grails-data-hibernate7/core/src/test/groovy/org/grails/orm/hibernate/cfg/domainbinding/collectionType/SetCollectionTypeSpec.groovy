@@ -19,7 +19,7 @@ class SetCollectionTypeSpec extends HibernateGormDatastoreSpec {
         binder.getMetadataBuildingContext() >> metadataBuildingContext
         
         @Subject
-        def collectionType = new SetCollectionType(binder)
+        def collectionType = new SetCollectionType(metadataBuildingContext)
         
         def property = Mock(HibernateToManyProperty)
         def owner = new RootClass(metadataBuildingContext)

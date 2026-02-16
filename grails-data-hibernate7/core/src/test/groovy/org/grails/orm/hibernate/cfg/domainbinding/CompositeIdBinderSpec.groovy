@@ -47,13 +47,13 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
         root.setTable(table)
 
         when:
-        binder.bindCompositeId(domainClass, root, compositeIdentity, mappings, "sessionFactory")
+        binder.bindCompositeId(domainClass, root, compositeIdentity, mappings)
 
         then:
         root.getIdentifier() instanceof Component
         root.getIdentifierMapper() instanceof Component
         root.hasEmbeddedIdentifier()
-        2 * componentPropertyBinder.bindComponentProperty(_ as Component, identifierProp, _ as PersistentProperty, root, "", table, mappings, "sessionFactory")
+        2 * componentPropertyBinder.bindComponentProperty(_ as Component, identifierProp, _ as PersistentProperty, root, "", table, mappings)
     }
 
     def "should fallback to domainClass composite identity when CompositeIdentity is null"() {
@@ -74,10 +74,10 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
         root.setTable(table)
 
         when:
-        binder.bindCompositeId(domainClass, root, null, mappings, "sessionFactory")
+        binder.bindCompositeId(domainClass, root, null, mappings)
 
         then:
-        1 * componentPropertyBinder.bindComponentProperty(_ as Component, identifierProp, prop1, root, "", table, mappings, "sessionFactory")
+        1 * componentPropertyBinder.bindComponentProperty(_ as Component, identifierProp, prop1, root, "", table, mappings)
     }
 
     def "should throw MappingException if no composite properties found"() {
@@ -91,7 +91,7 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getName() >> "MyEntity"
 
         when:
-        binder.bindCompositeId(domainClass, root, null, mappings, "sessionFactory")
+        binder.bindCompositeId(domainClass, root, null, mappings)
 
         then:
         thrown(org.hibernate.MappingException)

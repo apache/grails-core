@@ -37,6 +37,12 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentPropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator
 
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder
+import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.JoinedSubClassBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.UnionSubclassBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SingleTableSubclassBinder
+
 class CollectionBinderSpec extends HibernateGormDatastoreSpec {
 
     protected Map getBinders(GrailsDomainBinder binder) {
@@ -71,6 +77,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
                 compositeIdentifierToManyToOneBinder,
                 simpleValueColumnFetcher
         )
+        PropertyFromValueCreator propertyFromValueCreator = new PropertyFromValueCreator()
         ComponentPropertyBinder componentPropertyBinder = new ComponentPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
@@ -79,7 +86,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
                 collectionHolder,
                 enumTypeBinderToUse,
                 collectionBinder,
-                new PropertyFromValueCreator(),
+                propertyFromValueCreator,
                 null,
                 simpleValueBinder,
                 oneToOneBinder,
@@ -97,7 +104,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
                 columnNameForPropertyAndPathFetcher,
                 oneToOneBinder,
                 manyToOneBinder,
-                new PropertyFromValueCreator()
+                propertyFromValueCreator
         )
         CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentPropertyBinder)
         PropertyBinder propertyBinderHelper = new PropertyBinder()
@@ -105,19 +112,41 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder)
         VersionBinder versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinderHelper, BasicValue::new)
 
+        ClassBinder classBinder = new ClassBinder()
+        ClassPropertiesBinder classPropertiesBinder = new ClassPropertiesBinder(propertyBinder, propertyFromValueCreator)
+        MultiTenantFilterBinder multiTenantFilterBinder = new MultiTenantFilterBinder()
+        JoinedSubClassBinder joinedSubClassBinder = new JoinedSubClassBinder(metadataBuildingContext, namingStrategy, new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder(), columnNameForPropertyAndPathFetcher, classBinder)
+        UnionSubclassBinder unionSubclassBinder = new UnionSubclassBinder(metadataBuildingContext, namingStrategy, classBinder)
+        SingleTableSubclassBinder singleTableSubclassBinder = new SingleTableSubclassBinder(classBinder)
+
         return [
             propertyBinder: propertyBinder,
             collectionBinder: collectionBinder,
             identityBinder: identityBinder,
             versionBinder: versionBinder,
             defaultColumnNameFetcher: defaultColumnNameFetcher,
-            columnNameForPropertyAndPathFetcher: columnNameForPropertyAndPathFetcher
+            columnNameForPropertyAndPathFetcher: columnNameForPropertyAndPathFetcher,
+            classBinder: classBinder,
+            classPropertiesBinder: classPropertiesBinder,
+            multiTenantFilterBinder: multiTenantFilterBinder,
+            joinedSubClassBinder: joinedSubClassBinder,
+            unionSubclassBinder: unionSubclassBinder,
+            singleTableSubclassBinder: singleTableSubclassBinder
         ]
     }
 
     protected void bindRoot(GrailsDomainBinder binder, GrailsHibernatePersistentEntity entity, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         def binders = getBinders(binder)
-        binder.bindRoot(entity, mappings, sessionFactoryBeanName, binders.defaultColumnNameFetcher, binders.columnNameForPropertyAndPathFetcher, binders.identityBinder as IdentityBinder, binders.versionBinder as VersionBinder, binders.propertyBinder as GrailsPropertyBinder, new ClassBinder(), new PropertyFromValueCreator())
+        binder.bindRoot(entity, mappings, sessionFactoryBeanName, 
+            binders.defaultColumnNameFetcher, 
+            binders.identityBinder as IdentityBinder, 
+            binders.versionBinder as VersionBinder, 
+            binders.classBinder as ClassBinder, 
+            binders.classPropertiesBinder as ClassPropertiesBinder, 
+            binders.multiTenantFilterBinder as MultiTenantFilterBinder, 
+            binders.joinedSubClassBinder as JoinedSubClassBinder, 
+            binders.unionSubclassBinder as UnionSubclassBinder, 
+            binders.singleTableSubclassBinder as SingleTableSubclassBinder)
     }
 
     void setupSpec() {
@@ -145,7 +174,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         def collection = new Set(binder.getMetadataBuildingContext(), rootClass)
 
         when:
-        collectionBinder.bindCollection(petsProp, collection, rootClass, collector, "", "sessionFactory")
+        collectionBinder.bindCollection(petsProp, collection, rootClass, collector, "")
 
         then:
         collection.role == "${personEntity.name}.pets".toString()

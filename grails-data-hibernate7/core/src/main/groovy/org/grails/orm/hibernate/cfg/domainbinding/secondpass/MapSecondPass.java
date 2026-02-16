@@ -19,15 +19,13 @@ public class MapSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsS
     protected final HibernateToManyProperty property;
     protected final @Nonnull InFlightMetadataCollector mappings;
     protected final Collection collection;
-    protected final String sessionFactoryBeanName;
 
     public MapSecondPass(MapSecondPassBinder mapSecondPassBinder, HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
-                         Collection coll, String sessionFactoryBeanName) {
+                         Collection coll) {
         this.mapSecondPassBinder = mapSecondPassBinder;
         this.property = property;
         this.mappings = mappings;
         this.collection = coll;
-        this.sessionFactoryBeanName = sessionFactoryBeanName;
     }
 
 
@@ -36,7 +34,7 @@ public class MapSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsS
     @Override
     public void doSecondPass(Map persistentClasses) throws MappingException {
         mapSecondPassBinder.bindMapSecondPass(property, mappings, persistentClasses,
-                (org.hibernate.mapping.Map) collection, sessionFactoryBeanName);
+                (org.hibernate.mapping.Map) collection);
         createCollectionKeys(collection);
     }
 

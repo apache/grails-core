@@ -2,7 +2,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
 import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
@@ -94,8 +93,7 @@ public class GrailsPropertyBinder {
 
     public Value bindProperty(PersistentClass persistentClass
             , @Nonnull GrailsHibernatePersistentProperty currentGrailsProp
-            , @Nonnull InFlightMetadataCollector mappings
-            , String sessionFactoryBeanName) {
+            , @Nonnull InFlightMetadataCollector mappings) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("[GrailsPropertyBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
         }
@@ -121,7 +119,7 @@ public class GrailsPropertyBinder {
             }
             else { // Actual Collection
                 Collection collection = collectionType.create((HibernateToManyProperty) currentGrailsProp, persistentClass);
-                collectionBinder.bindCollection((HibernateToManyProperty) currentGrailsProp, collection, persistentClass, mappings, EMPTY_PATH, sessionFactoryBeanName);
+                collectionBinder.bindCollection((HibernateToManyProperty) currentGrailsProp, collection, persistentClass, mappings, EMPTY_PATH);
                 mappings.addCollectionBinding(collection);
                 value = collection;
             }
@@ -141,7 +139,7 @@ public class GrailsPropertyBinder {
         }
         else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
             value = new Component(metadataBuildingContext, persistentClass);
-            componentPropertyBinder.bindComponent((Component)value, embedded, true, mappings, sessionFactoryBeanName);
+            componentPropertyBinder.bindComponent((Component)value, embedded, true, mappings);
         }
         // work out what type of relationship it is and bind value
         else { // Default BasicValue

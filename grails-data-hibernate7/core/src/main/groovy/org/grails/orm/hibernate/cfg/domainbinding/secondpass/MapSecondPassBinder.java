@@ -42,8 +42,8 @@ public class MapSecondPassBinder {
     }
 
     public void bindMapSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
-                                  Map<?, ?> persistentClasses, org.hibernate.mapping.Map map, String sessionFactoryBeanName) {
-        collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, map, sessionFactoryBeanName);
+                                  Map<?, ?> persistentClasses, org.hibernate.mapping.Map map) {
+        collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, map);
         SimpleValue value = new BasicValue(metadataBuildingContext, map.getCollectionTable());
 
         String type = ((GrailsHibernatePersistentProperty) property).getIndexColumnType("string");

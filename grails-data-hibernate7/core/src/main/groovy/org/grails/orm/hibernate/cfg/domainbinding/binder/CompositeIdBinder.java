@@ -25,7 +25,7 @@ public class CompositeIdBinder {
 
 
     public void bindCompositeId(@Nonnull GrailsHibernatePersistentEntity domainClass, RootClass root,
-                                 CompositeIdentity compositeIdentity, @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+                                 CompositeIdentity compositeIdentity, @Nonnull InFlightMetadataCollector mappings) {
         Component id = new Component(metadataBuildingContext, root);
         id.setNullValue("undefined");
         root.setIdentifier(id);
@@ -61,7 +61,7 @@ public class CompositeIdBinder {
                         "] is not a valid property!");
             }
 
-            componentPropertyBinder.bindComponentProperty(id, identifierProp, property, root, "", root.getTable(), mappings, sessionFactoryBeanName);
+            componentPropertyBinder.bindComponentProperty(id, identifierProp, property, root, "", root.getTable(), mappings);
         }
     }
 }

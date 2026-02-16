@@ -40,13 +40,13 @@ class ClassPropertiesBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getMappedForm() >> mapping
 
         when:
-        binder.bindClassProperties(domainClass, persistentClass, mappings, sessionFactoryBeanName)
+        binder.bindClassProperties(domainClass, persistentClass, mappings)
 
         then:
-        1 * grailsPropertyBinder.bindProperty(persistentClass, prop1, mappings, sessionFactoryBeanName) >> value1
+        1 * grailsPropertyBinder.bindProperty(persistentClass, prop1, mappings) >> value1
         1 * propertyFromValueCreator.createProperty(value1, prop1) >> hibernateProp1
 
-        1 * grailsPropertyBinder.bindProperty(persistentClass, prop2, mappings, sessionFactoryBeanName) >> value2
+        1 * grailsPropertyBinder.bindProperty(persistentClass, prop2, mappings) >> value2
         1 * propertyFromValueCreator.createProperty(value2, prop2) >> hibernateProp2
 
         persistentClass.getProperty("hibernateProp1") == hibernateProp1

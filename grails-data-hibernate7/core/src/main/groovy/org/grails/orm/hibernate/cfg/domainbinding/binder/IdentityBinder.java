@@ -1,8 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.RootClass;
 
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
@@ -10,7 +8,6 @@ import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity;
 import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 
 import jakarta.annotation.Nonnull;
 
@@ -29,12 +26,11 @@ public class IdentityBinder {
             @Nonnull GrailsHibernatePersistentEntity domainClass,
             RootClass root,
             @Nonnull InFlightMetadataCollector mappings,
-            Mapping gormMapping,
-            String sessionFactoryBeanName) {
+            Mapping gormMapping) {
 
         HibernateIdentity id = gormMapping != null ? gormMapping.getIdentity() : null;
         if (id instanceof CompositeIdentity || (id == null && domainClass.getCompositeIdentity() != null)) {
-            compositeIdBinder.bindCompositeId(domainClass, root, (CompositeIdentity) id, mappings, sessionFactoryBeanName);
+            compositeIdBinder.bindCompositeId(domainClass, root, (CompositeIdentity) id, mappings);
         } else {
             Identity identity = id instanceof Identity ? (Identity) id : null;
             if (identity != null && identity.getName() == null) {

@@ -27,25 +27,22 @@ public class SetSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsS
     protected final HibernateToManyProperty property;
     protected final @Nonnull InFlightMetadataCollector mappings;
     protected final Collection collection;
-    protected final String sessionFactoryBeanName;
 
     public SetSecondPass(CollectionSecondPassBinder collectionSecondPassBinder,
                          HibernateToManyProperty property,
                          @Nonnull InFlightMetadataCollector mappings,
-                         Collection coll,
-                         String sessionFactoryBeanName) {
+                         Collection coll) {
         this.collectionSecondPassBinder = collectionSecondPassBinder;
         this.property = property;
         this.mappings = mappings;
         this.collection = coll;
-        this.sessionFactoryBeanName = sessionFactoryBeanName;
 
     }
 
 
     @SuppressWarnings("rawtypes")
     public void doSecondPass(Map persistentClasses) throws MappingException {
-        collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, collection, sessionFactoryBeanName);
+        collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, collection);
         createCollectionKeys(collection);
     }
 }

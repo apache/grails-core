@@ -1,13 +1,10 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import java.util.List;
-
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
 
-import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
@@ -33,7 +30,7 @@ public class ComponentBinder {
     }
 
     public void bindComponent(Component component, HibernateEmbeddedProperty property,
-                              @Nonnull InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
+                              @Nonnull InFlightMetadataCollector mappings) {
         Class<?> type = property.getType();
         String role = GrailsHibernateUtil.qualify(type.getName(), property.getName());
         component.setRoleName(role);
@@ -55,7 +52,7 @@ public class ComponentBinder {
                 component.setParentProperty(currentGrailsProp.getName());
                 continue;
             }
-            componentPropertyBinder.bindComponentProperty(component, property, currentGrailsProp, persistentClass, path, table, mappings, sessionFactoryBeanName);
+            componentPropertyBinder.bindComponentProperty(component, property, currentGrailsProp, persistentClass, path, table, mappings);
         }
     }
 }

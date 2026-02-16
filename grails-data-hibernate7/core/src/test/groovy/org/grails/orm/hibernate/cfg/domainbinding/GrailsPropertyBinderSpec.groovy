@@ -33,8 +33,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneValuesBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableNameFetcher
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder
-
 import org.grails.orm.hibernate.cfg.domainbinding.binder.IdentityBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.VersionBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdBinder
@@ -42,6 +40,12 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator
 import org.hibernate.boot.spi.InFlightMetadataCollector
+
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder
+import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.JoinedSubClassBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.UnionSubclassBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SingleTableSubclassBinder
 
 class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
@@ -77,6 +81,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
                 compositeIdentifierToManyToOneBinder,
                 simpleValueColumnFetcher
         )
+        PropertyFromValueCreator propertyFromValueCreator = new PropertyFromValueCreator()
         ComponentPropertyBinder componentPropertyBinder = new ComponentPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
@@ -85,7 +90,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
                 collectionHolder,
                 enumTypeBinderToUse,
                 collectionBinder,
-                new PropertyFromValueCreator(),
+                propertyFromValueCreator,
                 null,
                 simpleValueBinder,
                 oneToOneBinder,
@@ -103,13 +108,20 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
                 columnNameForPropertyAndPathFetcher,
                 oneToOneBinder,
                 manyToOneBinder,
-                new PropertyFromValueCreator()
+                propertyFromValueCreator
         )
         CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentPropertyBinder)
         PropertyBinder propertyBinderHelper = new PropertyBinder()
         SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment, new BasicValueIdCreator(jdbcEnvironment), simpleValueBinder, propertyBinderHelper)
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder)
         VersionBinder versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinderHelper, BasicValue::new)
+        
+        ClassBinder classBinder = new ClassBinder()
+        ClassPropertiesBinder classPropertiesBinder = new ClassPropertiesBinder(propertyBinder, propertyFromValueCreator)
+        MultiTenantFilterBinder multiTenantFilterBinder = new MultiTenantFilterBinder()
+        JoinedSubClassBinder joinedSubClassBinder = new JoinedSubClassBinder(metadataBuildingContext, namingStrategy, new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder(), columnNameForPropertyAndPathFetcher, classBinder)
+        UnionSubclassBinder unionSubclassBinder = new UnionSubclassBinder(metadataBuildingContext, namingStrategy, classBinder)
+        SingleTableSubclassBinder singleTableSubclassBinder = new SingleTableSubclassBinder(classBinder)
 
         return [
             propertyBinder: propertyBinder,
@@ -117,15 +129,29 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
             identityBinder: identityBinder,
             versionBinder: versionBinder,
             defaultColumnNameFetcher: defaultColumnNameFetcher,
-            columnNameForPropertyAndPathFetcher: columnNameForPropertyAndPathFetcher
+            columnNameForPropertyAndPathFetcher: columnNameForPropertyAndPathFetcher,
+            classBinder: classBinder,
+            classPropertiesBinder: classPropertiesBinder,
+            multiTenantFilterBinder: multiTenantFilterBinder,
+            joinedSubClassBinder: joinedSubClassBinder,
+            unionSubclassBinder: unionSubclassBinder,
+            singleTableSubclassBinder: singleTableSubclassBinder
         ]
     }
 
     protected void bindRoot(GrailsDomainBinder binder, GrailsHibernatePersistentEntity entity, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         def binders = getBinders(binder)
-        binder.bindRoot(entity, mappings, sessionFactoryBeanName, binders.defaultColumnNameFetcher, binders.columnNameForPropertyAndPathFetcher, binders.identityBinder as IdentityBinder, binders.versionBinder as VersionBinder, binders.propertyBinder as GrailsPropertyBinder, new ClassBinder(), new PropertyFromValueCreator())
+        binder.bindRoot(entity, mappings, sessionFactoryBeanName, 
+            binders.defaultColumnNameFetcher, 
+            binders.identityBinder as IdentityBinder, 
+            binders.versionBinder as VersionBinder, 
+            binders.classBinder as ClassBinder, 
+            binders.classPropertiesBinder as ClassPropertiesBinder, 
+            binders.multiTenantFilterBinder as MultiTenantFilterBinder, 
+            binders.joinedSubClassBinder as JoinedSubClassBinder, 
+            binders.unionSubclassBinder as UnionSubclassBinder, 
+            binders.singleTableSubclassBinder as SingleTableSubclassBinder)
     }
-
     void setupSpec() {
         manager.addAllDomainClasses([
             org.apache.grails.data.testing.tck.domains.Pet,
@@ -148,7 +174,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         def titleProp = persistentEntity.getPropertyByName("title") as GrailsHibernatePersistentProperty
-        Value value = propertyBinder.bindProperty(rootClass, titleProp, collector, "sessionFactory")
+        Value value = propertyBinder.bindProperty(rootClass, titleProp, collector)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, titleProp))
 
         then:
@@ -170,7 +196,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         def statusProp = persistentEntity.getPropertyByName("status") as GrailsHibernatePersistentProperty
-        Value value = propertyBinder.bindProperty(rootClass, statusProp, collector, "sessionFactory")
+        Value value = propertyBinder.bindProperty(rootClass, statusProp, collector)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, statusProp))
 
         then:
@@ -196,7 +222,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         def ownerProp = petEntity.getPropertyByName("owner") as GrailsHibernatePersistentProperty
-        Value value = propertyBinder.bindProperty(rootClass, ownerProp, collector, "sessionFactory")
+        Value value = propertyBinder.bindProperty(rootClass, ownerProp, collector)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, ownerProp))
 
         then:
@@ -219,7 +245,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         def addressProp = persistentEntity.getPropertyByName("homeAddress") as GrailsHibernatePersistentProperty
-        Value value = propertyBinder.bindProperty(rootClass, addressProp, collector, "sessionFactory")
+        Value value = propertyBinder.bindProperty(rootClass, addressProp, collector)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, addressProp))
 
         then:
@@ -247,7 +273,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         def petsProp = personEntity.getPropertyByName("pets") as GrailsHibernatePersistentProperty
-        Value value = propertyBinder.bindProperty(rootClass, petsProp, collector, "sessionFactory")
+        Value value = propertyBinder.bindProperty(rootClass, petsProp, collector)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, petsProp))
 
         then:
@@ -286,7 +312,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         def booksProp = authorEntity.getPropertyByName("books") as GrailsHibernatePersistentProperty
-        Value value = propertyBinder.bindProperty(rootClass, booksProp, collector, "sessionFactory")
+        Value value = propertyBinder.bindProperty(rootClass, booksProp, collector)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, booksProp))
         collector.processSecondPasses(binder.getMetadataBuildingContext())
 
@@ -325,7 +351,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         def booksProp = authorEntity.getPropertyByName("books") as GrailsHibernatePersistentProperty
-        Value value = propertyBinder.bindProperty(rootClass, booksProp, collector, "sessionFactory")
+        Value value = propertyBinder.bindProperty(rootClass, booksProp, collector)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, booksProp))
         collector.processSecondPasses(binder.getMetadataBuildingContext())
 
@@ -386,7 +412,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         def childBookProp = authorEntity.getPropertyByName("childBook") as GrailsHibernatePersistentProperty
-        Value value = propertyBinder.bindProperty(rootClass, childBookProp, collector, "sessionFactory")
+        Value value = propertyBinder.bindProperty(rootClass, childBookProp, collector)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, childBookProp))
         // Process second passes to ensure Hibernate's internal mappings are finalized
         collector.processSecondPasses(binder.getMetadataBuildingContext())
@@ -454,7 +480,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         // Capture the return value of bindProperty
-        def resultValue = propertyBinder.bindProperty(rootClass, currentGrailsProp, mappings, "sessionFactory")
+        def resultValue = propertyBinder.bindProperty(rootClass, currentGrailsProp, mappings)
 
         then:
         // Assert that bindProperty returns a Value object

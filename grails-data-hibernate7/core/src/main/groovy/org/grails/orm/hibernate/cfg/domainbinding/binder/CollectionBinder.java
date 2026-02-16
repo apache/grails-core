@@ -88,7 +88,7 @@ public class CollectionBinder {
      * @param path       The property path
      */
     public void bindCollection(HibernateToManyProperty property, Collection collection,
-                               PersistentClass owner, @Nonnull InFlightMetadataCollector mappings, String path, String sessionFactoryBeanName) {
+                               PersistentClass owner, @Nonnull InFlightMetadataCollector mappings, String path) {
 
         // set role
         String propertyName = getNameForPropertyAndPath(property, path);
@@ -133,13 +133,13 @@ public class CollectionBinder {
 
         // set up second pass
        if (collection instanceof org.hibernate.mapping.List) {
-            mappings.addSecondPass(new ListSecondPass(listSecondPassBinder, property, mappings, collection, sessionFactoryBeanName));
+            mappings.addSecondPass(new ListSecondPass(listSecondPassBinder, property, mappings, collection));
         }
         else if (collection instanceof org.hibernate.mapping.Map) {
-            mappings.addSecondPass(new MapSecondPass(mapSecondPassBinder, property, mappings, collection, sessionFactoryBeanName));
+            mappings.addSecondPass(new MapSecondPass(mapSecondPassBinder, property, mappings, collection));
         }
         else { // Collection -> Bag
-            mappings.addSecondPass(new SetSecondPass(collectionSecondPassBinder,  property, mappings, collection, sessionFactoryBeanName));
+            mappings.addSecondPass(new SetSecondPass(collectionSecondPassBinder,  property, mappings, collection));
         }
     }
 

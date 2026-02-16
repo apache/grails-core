@@ -19,7 +19,7 @@ class BagCollectionTypeSpec extends HibernateGormDatastoreSpec {
         binder.getMetadataBuildingContext() >> metadataBuildingContext
         
         @Subject
-        def collectionType = new BagCollectionType(binder)
+        def collectionType = new BagCollectionType(metadataBuildingContext)
         
         def property = Mock(HibernateToManyProperty)
         def owner = new RootClass(metadataBuildingContext)
