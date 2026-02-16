@@ -34,10 +34,9 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def compositeBinder = Mock(CompositeIdentifierToManyToOneBinder)
         def columnFetcher = Mock(SimpleValueColumnFetcher)
 
-        def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, manyToOneValuesBinder, compositeBinder, columnFetcher)
+        def binder = new ManyToOneBinder(getGrailsDomainBinder().getMetadataBuildingContext(), namingStrategy, simpleValueBinder, manyToOneValuesBinder, compositeBinder, columnFetcher)
 
         def association = Mock(HibernateManyToOneProperty)
-        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def path = "/test"
         def mapping = new Mapping()
         def refDomainClass = Mock(GrailsHibernatePersistentEntity) {
@@ -50,12 +49,13 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         mapping.setIdentity(hasCompositeId ? new CompositeIdentity() : null)
 
         when:
-        binder.bindManyToOne(association as Association, manyToOne, path)
+        def result = binder.bindManyToOne(association as Association, null, path)
 
         then:
-        1 * manyToOneValuesBinder.bindManyToOneValues(association as Association, manyToOne)
-        compositeBinderCalls * compositeBinder.bindCompositeIdentifierToManyToOne(association as GrailsHibernatePersistentProperty, manyToOne, _, refDomainClass, path)
-        simpleValueBinderCalls * simpleValueBinder.bindSimpleValue(association as GrailsHibernatePersistentProperty, null, manyToOne, path)
+        result instanceof ManyToOne
+        1 * manyToOneValuesBinder.bindManyToOneValues(association as Association, _ as ManyToOne)
+        compositeBinderCalls * compositeBinder.bindCompositeIdentifierToManyToOne(association as GrailsHibernatePersistentProperty, _ as ManyToOne, _, refDomainClass, path)
+        simpleValueBinderCalls * simpleValueBinder.bindSimpleValue(association as GrailsHibernatePersistentProperty, null, _ as ManyToOne, path)
 
         where:
         scenario                 | hasCompositeId | compositeBinderCalls | simpleValueBinderCalls
@@ -71,10 +71,9 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def compositeBinder = Mock(CompositeIdentifierToManyToOneBinder)
         def columnFetcher = Mock(SimpleValueColumnFetcher)
 
-        def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, manyToOneValuesBinder, compositeBinder, columnFetcher)
+        def binder = new ManyToOneBinder(getGrailsDomainBinder().getMetadataBuildingContext(), namingStrategy, simpleValueBinder, manyToOneValuesBinder, compositeBinder, columnFetcher)
 
         def property = Mock(HibernateManyToManyProperty)
-        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def mapping = new Mapping()
         mapping.setColumns(new HashMap<String, PropertyConfig>())
         def ownerEntity = Mock(GrailsHibernatePersistentEntity) {
@@ -89,11 +88,12 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         namingStrategy.resolveColumnName("myCircularProp") >> "my_circular_prop"
 
         when:
-        binder.bindManyToOne(property as Association, manyToOne, "/test")
+        def result = binder.bindManyToOne(property as Association, null, "/test")
 
         then:
-        1 * manyToOneValuesBinder.bindManyToOneValues(property as Association, manyToOne)
-        1 * simpleValueBinder.bindSimpleValue(property as GrailsHibernatePersistentProperty, null, manyToOne, "/test")
+        result instanceof ManyToOne
+        1 * manyToOneValuesBinder.bindManyToOneValues(property as Association, _ as ManyToOne)
+        1 * simpleValueBinder.bindSimpleValue(property as GrailsHibernatePersistentProperty, null, _ as ManyToOne, "/test")
         def resultConfig = mapping.getColumns().get("myCircularProp")
         resultConfig != null
         resultConfig.getJoinTable().getKey().getName() == "my_circular_prop_id"
@@ -108,10 +108,9 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def compositeBinder = Mock(CompositeIdentifierToManyToOneBinder)
         def columnFetcher = Mock(SimpleValueColumnFetcher)
 
-        def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, manyToOneValuesBinder, compositeBinder, columnFetcher)
+        def binder = new ManyToOneBinder(getGrailsDomainBinder().getMetadataBuildingContext(), namingStrategy, simpleValueBinder, manyToOneValuesBinder, compositeBinder, columnFetcher)
 
         def property = Mock(HibernateOneToOneProperty)
-        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def mapping = new Mapping()
         def refDomainClass = Mock(GrailsHibernatePersistentEntity) {
             getMappedForm() >> mapping
@@ -123,7 +122,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         property.getAssociatedEntity() >> refDomainClass
         mapping.setIdentity(null)
         property.getMappedForm() >> propertyConfig
-        columnFetcher.getColumnForSimpleValue(manyToOne) >> column
+        columnFetcher.getColumnForSimpleValue(_ as ManyToOne) >> column
 
         propertyConfig.isUnique() >> isUnique
         propertyConfig.isUniqueWithinGroup() >> isUniqueWithinGroup
@@ -132,10 +131,10 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         inverseSide.isHasOne() >> isInverseHasOne
 
         when:
-        binder.bindManyToOne(property as Association, manyToOne, "/test")
+        def result = binder.bindManyToOne(property as Association, null, "/test")
 
         then:
-        manyToOne.isAlternateUniqueKey()
+        result.isAlternateUniqueKey()
         if (expectedUniqueValue != null) {
             assert column.isUnique() == expectedUniqueValue
         } else {
@@ -159,10 +158,9 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def compositeBinder = Mock(CompositeIdentifierToManyToOneBinder)
         def columnFetcher = Mock(SimpleValueColumnFetcher)
 
-        def binder = new ManyToOneBinder(namingStrategy, simpleValueBinder, manyToOneValuesBinder, compositeBinder, columnFetcher)
+        def binder = new ManyToOneBinder(getGrailsDomainBinder().getMetadataBuildingContext(), namingStrategy, simpleValueBinder, manyToOneValuesBinder, compositeBinder, columnFetcher)
 
         def property = Mock(HibernateOneToOneProperty)
-        def manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def mapping = new Mapping()
         def refDomainClass = Mock(GrailsHibernatePersistentEntity) {
             getMappedForm() >> mapping
@@ -172,10 +170,10 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         property.getAssociatedEntity() >> refDomainClass
         mapping.setIdentity(null)
         property.getMappedForm() >> propertyConfig
-        columnFetcher.getColumnForSimpleValue(manyToOne) >> null
+        columnFetcher.getColumnForSimpleValue(_ as ManyToOne) >> null
 
         when:
-        binder.bindManyToOne(property as Association, manyToOne, "/test")
+        binder.bindManyToOne(property as Association, null, "/test")
 
         then:
         thrown(MappingException)

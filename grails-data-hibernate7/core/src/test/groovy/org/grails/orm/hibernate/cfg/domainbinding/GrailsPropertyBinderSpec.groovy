@@ -70,7 +70,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
                 simpleValueBinder
         )
         OneToOneBinder oneToOneBinder = new OneToOneBinder(namingStrategy, simpleValueBinder)
-        ManyToOneBinder manyToOneBinder = new ManyToOneBinder(namingStrategy, simpleValueBinder, new ManyToOneValuesBinder(), compositeIdentifierToManyToOneBinder, simpleValueColumnFetcher)
+        ManyToOneBinder manyToOneBinder = new ManyToOneBinder(metadataBuildingContext, namingStrategy, simpleValueBinder, new ManyToOneValuesBinder(), compositeIdentifierToManyToOneBinder, simpleValueColumnFetcher)
 
         CollectionBinder collectionBinder = new CollectionBinder(
                 metadataBuildingContext,

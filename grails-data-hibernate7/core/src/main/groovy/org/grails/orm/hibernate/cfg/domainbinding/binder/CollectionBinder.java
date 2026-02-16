@@ -73,7 +73,7 @@ public class CollectionBinder {
         this(metadataBuildingContext, namingStrategy, jdbcEnvironment,
                 new SimpleValueBinder(namingStrategy, jdbcEnvironment),
                 new EnumTypeBinder(),
-                new ManyToOneBinder(namingStrategy, jdbcEnvironment),
+                new ManyToOneBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment),
                 new CompositeIdentifierToManyToOneBinder(namingStrategy, jdbcEnvironment),
                 new SimpleValueColumnFetcher());
     }

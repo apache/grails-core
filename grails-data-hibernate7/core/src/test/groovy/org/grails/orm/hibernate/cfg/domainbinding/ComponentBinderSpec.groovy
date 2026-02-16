@@ -170,6 +170,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         def mappings = Mock(InFlightMetadataCollector)
         def hibernateProperty = new Property()
         hibernateProperty.setName("owner")
+        def hibernateManyToOne = new HibernateManyToOne(metadataBuildingContext, table)
 
         def mapping = new Mapping()
         ownerEntity.getMappedForm() >> mapping
@@ -186,7 +187,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
-        1 * manyToOneBinder.bindManyToOne(currentGrailsProp, _ as HibernateManyToOne, "address")
+        1 * manyToOneBinder.bindManyToOne(currentGrailsProp, table, "address") >> hibernateManyToOne
         0 * componentUpdater.updateComponent(_, _, _, _)
     }
 

@@ -70,27 +70,6 @@ public class GrailsPropertyBinder {
         this.propertyFromValueCreator = propertyFromValueCreator;
     }
 
-    public GrailsPropertyBinder(
-            MetadataBuildingContext metadataBuildingContext,
-            PersistentEntityNamingStrategy namingStrategy,
-            CollectionHolder collectionHolder,
-            EnumTypeBinder enumTypeBinder,
-            ComponentBinder componentBinder,
-            CollectionBinder collectionBinder,
-            PropertyFromValueCreator propertyFromValueCreator) {
-        this(metadataBuildingContext,
-                namingStrategy,
-                collectionHolder,
-                enumTypeBinder,
-                componentBinder,
-                collectionBinder,
-                new SimpleValueBinder(namingStrategy, ((NamingStrategyWrapper)namingStrategy).getJdbcEnvironment()),
-                new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()),
-                new OneToOneBinder(namingStrategy, ((NamingStrategyWrapper)namingStrategy).getJdbcEnvironment()),
-                new ManyToOneBinder(namingStrategy, ((NamingStrategyWrapper)namingStrategy).getJdbcEnvironment()),
-                propertyFromValueCreator);
-    }
-
     public Value bindProperty(PersistentClass persistentClass
             , @Nonnull GrailsHibernatePersistentProperty currentGrailsProp
             , @Nonnull InFlightMetadataCollector mappings) {
@@ -134,8 +113,7 @@ public class GrailsPropertyBinder {
             value = new OneToOne(metadataBuildingContext, table, persistentClass);
             oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne)currentGrailsProp, (OneToOne)value, EMPTY_PATH);
         } else if(currentGrailsProp.isHibernateManyToOne()) {
-            value = new ManyToOne(metadataBuildingContext, table);
-            manyToOneBinder.bindManyToOne((Association)currentGrailsProp, (ManyToOne)value, EMPTY_PATH);
+            value = manyToOneBinder.bindManyToOne((Association)currentGrailsProp, table, EMPTY_PATH);
         }
         else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
             value = componentBinder.bindComponent(persistentClass, embedded, mappings);

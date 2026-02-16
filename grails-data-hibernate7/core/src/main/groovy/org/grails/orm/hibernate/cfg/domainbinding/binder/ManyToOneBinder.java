@@ -1,6 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import org.hibernate.MappingException;
+import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.ManyToOne;
@@ -23,17 +24,20 @@ import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.FOREIGN_KEY_SUFFIX
 
 public class ManyToOneBinder {
 
+    private final MetadataBuildingContext metadataBuildingContext;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final SimpleValueBinder simpleValueBinder;
     private final ManyToOneValuesBinder manyToOneValuesBinder;
     private final CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder;
     private final SimpleValueColumnFetcher simpleValueColumnFetcher;
 
-    public ManyToOneBinder(PersistentEntityNamingStrategy namingStrategy
+    public ManyToOneBinder(MetadataBuildingContext metadataBuildingContext
+            , PersistentEntityNamingStrategy namingStrategy
             , SimpleValueBinder simpleValueBinder
             , ManyToOneValuesBinder manyToOneValuesBinder
             , CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder
             , SimpleValueColumnFetcher simpleValueColumnFetcher) {
+        this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.simpleValueBinder =simpleValueBinder;
         this.manyToOneValuesBinder = manyToOneValuesBinder;
@@ -41,8 +45,9 @@ public class ManyToOneBinder {
         this.simpleValueColumnFetcher = simpleValueColumnFetcher;
     }
 
-    public ManyToOneBinder(PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
-        this(namingStrategy,
+    public ManyToOneBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
+        this(metadataBuildingContext,
+                namingStrategy,
                 new SimpleValueBinder(namingStrategy, jdbcEnvironment),
                 new ManyToOneValuesBinder(),
                 new CompositeIdentifierToManyToOneBinder(namingStrategy, jdbcEnvironment),
@@ -55,9 +60,10 @@ public class ManyToOneBinder {
      *
      */
     @SuppressWarnings("unchecked")
-    public void bindManyToOne(Association property
-            , ManyToOne manyToOne
+    public ManyToOne bindManyToOne(Association property
+            , org.hibernate.mapping.Table table
             ,String path) {
+        ManyToOne manyToOne = new ManyToOne(metadataBuildingContext, table);
         GrailsHibernatePersistentProperty hibernateProperty = (GrailsHibernatePersistentProperty) property;
         manyToOneValuesBinder.bindManyToOneValues(property, manyToOne);
         GrailsHibernatePersistentEntity refDomainClass = (GrailsHibernatePersistentEntity) (property instanceof HibernateManyToManyProperty ? property.getOwner() : property.getAssociatedEntity());
@@ -110,5 +116,6 @@ public class ManyToOneBinder {
                 }
             }
         }
+        return manyToOne;
     }
 }

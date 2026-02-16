@@ -119,8 +119,7 @@ public class ComponentBinder {
             if (LOG.isDebugEnabled())
                 LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as ManyToOne");
 
-            value = new ManyToOne(metadataBuildingContext, table);
-            manyToOneBinder.bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
+            value = manyToOneBinder.bindManyToOne((Association) currentGrailsProp, table, path);
         } else if (currentGrailsProp instanceof org.grails.datastore.mapping.model.types.OneToOne association) {
             if (LOG.isDebugEnabled())
                 LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
@@ -130,8 +129,7 @@ public class ComponentBinder {
                 oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, (OneToOne) value, path);
             }
             else {
-                value = new ManyToOne(metadataBuildingContext, table);
-                manyToOneBinder.bindManyToOne((Association) currentGrailsProp, (ManyToOne) value, path);
+                value = manyToOneBinder.bindManyToOne((Association) currentGrailsProp, table, path);
             }
         }
         else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {

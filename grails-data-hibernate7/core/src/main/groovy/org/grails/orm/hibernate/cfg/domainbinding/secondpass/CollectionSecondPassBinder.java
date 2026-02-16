@@ -82,7 +82,7 @@ public class CollectionSecondPassBinder {
         this(metadataBuildingContext, namingStrategy, jdbcEnvironment,
                 new SimpleValueBinder(namingStrategy, jdbcEnvironment),
                 new EnumTypeBinder(),
-                new ManyToOneBinder(namingStrategy, jdbcEnvironment),
+                new ManyToOneBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment),
                 new CompositeIdentifierToManyToOneBinder(namingStrategy, jdbcEnvironment),
                 new SimpleValueColumnFetcher());
     }
@@ -213,8 +213,8 @@ public class CollectionSecondPassBinder {
             if (property.isBidirectional()) {
                 if (LOG.isDebugEnabled())
                     LOG.debug("[CollectionSecondPassBinder] Mapping other side " + otherSide.getHibernateOwner().getName() + "." + otherSide.getName() + " -> " + collection.getCollectionTable().getName() + " as ManyToOne");
-                ManyToOne element = new ManyToOne(metadataBuildingContext, collection.getCollectionTable());
-                bindManyToMany((Association)otherSide, element);
+                ManyToOne element = manyToOneBinder.bindManyToOne((Association)otherSide, collection.getCollectionTable(), EMPTY_PATH);
+                element.setReferencedEntityName(otherSide.getOwner().getName());
                 collection.setElement(element);
                 new CollectionForPropertyConfigBinder().bindCollectionForPropertyConfig(collection, propConfig);
                 if (property.isCircular()) {
@@ -370,11 +370,6 @@ public class CollectionSecondPassBinder {
 
         // set referenced entity
         manyToOne.setReferencedEntityName(property.getHibernateAssociatedEntity().getName());
-    }
-
-    private void bindManyToMany(Association property, ManyToOne element) {
-        manyToOneBinder.bindManyToOne(property, element, EMPTY_PATH);
-        element.setReferencedEntityName(property.getOwner().getName());
     }
 
     private void bindDependentKeyValue(GrailsHibernatePersistentProperty property, DependantValue key) {
