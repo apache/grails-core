@@ -109,7 +109,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
                 manyToOneBinder,
                 propertyFromValueCreator
         )
-        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentBinder)
+        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentBinder, componentUpdater);
         PropertyBinder propertyBinderHelper = new PropertyBinder()
         SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment, new BasicValueIdCreator(jdbcEnvironment), simpleValueBinder, propertyBinderHelper)
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder)

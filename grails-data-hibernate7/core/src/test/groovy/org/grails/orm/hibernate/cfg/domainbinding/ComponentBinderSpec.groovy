@@ -58,15 +58,13 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
     OneToOneBinder oneToOneBinder = Mock(OneToOneBinder)
     ManyToOneBinder manyToOneBinder = Mock(ManyToOneBinder)
     ColumnNameForPropertyAndPathFetcher columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
-    ComponentUpdater componentUpdater
+    ComponentUpdater componentUpdater = Mock(ComponentUpdater)
     SimpleValueBinder mockSimpleValueBinder = Mock(SimpleValueBinder)
 
     @Subject
     ComponentBinder binder
 
     def setup() {
-        componentUpdater = new ComponentUpdater(propertyFromValueCreator)
-        
         binder = new ComponentBinder(
                 getGrailsDomainBinder().getMetadataBuildingContext(),
                 mappingCacheHolder,
@@ -126,6 +124,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         component.getRoleName() == Address.name + ".address"
         1 * mappingCacheHolder.cacheMapping(associatedEntity)
         1 * mockSimpleValueBinder.bindSimpleValue(prop1, embeddedProp, _ as BasicValue, "address")
+        1 * componentUpdater.updateComponent(_ as Component, embeddedProp, prop1, _ as Value)
     }
 
     def "should bind simple property"() {
@@ -155,7 +154,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         1 * mockSimpleValueBinder.bindSimpleValue(currentGrailsProp, componentProperty, _ as BasicValue, "address")
-        1 * propertyFromValueCreator.createProperty(_ as BasicValue, currentGrailsProp) >> hibernateProperty
+        0 * componentUpdater.updateComponent(_, _, _, _)
     }
 
     def "should bind many-to-one property"() {
@@ -188,7 +187,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         1 * manyToOneBinder.bindManyToOne(currentGrailsProp, _ as HibernateManyToOne, "address")
-        1 * propertyFromValueCreator.createProperty(_ as HibernateManyToOne, currentGrailsProp) >> hibernateProperty
+        0 * componentUpdater.updateComponent(_, _, _, _)
     }
 
     def "should bind one-to-one property"() {
@@ -225,7 +224,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         1 * oneToOneBinder.bindOneToOne(currentGrailsProp, _ as HibernateOneToOne, "address")
-        1 * propertyFromValueCreator.createProperty(_ as HibernateOneToOne, currentGrailsProp) >> hibernateProperty
+        0 * componentUpdater.updateComponent(_, _, _, _)
     }
 
     def "should bind enum property"() {
@@ -255,7 +254,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         1 * enumTypeBinder.bindEnumType(currentGrailsProp, MyEnum, _ as BasicValue, "address_type_col")
-        1 * propertyFromValueCreator.createProperty(_ as BasicValue, currentGrailsProp) >> hibernateProperty
+        0 * componentUpdater.updateComponent(_, _, _, _)
     }
 
     def "should set columns to nullable when component property is nullable"() {
@@ -290,7 +289,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
             _ as BasicValue, 
             "address"
         )
-        1 * propertyFromValueCreator.createProperty(_ as BasicValue, currentGrailsProp) >> hibernateProperty
+        0 * componentUpdater.updateComponent(_, _, _, _)
     }
 
     static class MyEntity {}

@@ -210,7 +210,7 @@ public class GrailsDomainBinder
                 manyToOneBinder,
                 propertyFromValueCreator
         );
-        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentBinder);
+        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentBinder, componentUpdater);
         PropertyBinder propertyBinder = new PropertyBinder();
         SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment, new BasicValueIdCreator(jdbcEnvironment), simpleValueBinder, propertyBinder);
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder);

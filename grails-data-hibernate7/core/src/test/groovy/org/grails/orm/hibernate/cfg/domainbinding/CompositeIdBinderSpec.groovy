@@ -13,17 +13,19 @@ import spock.lang.Subject
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentUpdater
 import org.hibernate.mapping.Value
 
 class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
 
     def componentBinder = Mock(ComponentBinder)
+    def componentUpdater = Mock(ComponentUpdater)
 
     @Subject
     CompositeIdBinder binder
 
     def setup() {
-        binder = new CompositeIdBinder(getGrailsDomainBinder().getMetadataBuildingContext(), componentBinder)
+        binder = new CompositeIdBinder(getGrailsDomainBinder().getMetadataBuildingContext(), componentBinder, componentUpdater)
     }
 
     def "should bind composite id using property names from CompositeIdentity"() {
@@ -55,6 +57,7 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
         root.getIdentifierMapper() instanceof Component
         root.hasEmbeddedIdentifier()
         2 * componentBinder.bindComponentProperty(_ as Component, identifierProp, _ as PersistentProperty, root, "", table, mappings) >> Mock(Value)
+        2 * componentUpdater.updateComponent(_ as Component, identifierProp, _ as PersistentProperty, _ as Value)
     }
 
     def "should fallback to domainClass composite identity when CompositeIdentity is null"() {
@@ -79,6 +82,7 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         1 * componentBinder.bindComponentProperty(_ as Component, identifierProp, prop1, root, "", table, mappings) >> Mock(Value)
+        1 * componentUpdater.updateComponent(_ as Component, identifierProp, prop1, _ as Value)
     }
 
     def "should throw MappingException if no composite properties found"() {

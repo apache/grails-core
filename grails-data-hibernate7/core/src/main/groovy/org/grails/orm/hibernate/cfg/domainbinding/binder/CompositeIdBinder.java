@@ -17,10 +17,12 @@ public class CompositeIdBinder {
 
     private final MetadataBuildingContext metadataBuildingContext;
     private final ComponentBinder componentBinder;
+    private final ComponentUpdater componentUpdater;
 
-    public CompositeIdBinder(MetadataBuildingContext metadataBuildingContext, ComponentBinder componentBinder) {
+    public CompositeIdBinder(MetadataBuildingContext metadataBuildingContext, ComponentBinder componentBinder, ComponentUpdater componentUpdater) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.componentBinder = componentBinder;
+        this.componentUpdater = componentUpdater;
     }
 
 
@@ -61,7 +63,8 @@ public class CompositeIdBinder {
                         "] is not a valid property!");
             }
 
-           componentBinder.bindComponentProperty(id, identifierProp, property, root, "", root.getTable(), mappings);
+           var value = componentBinder.bindComponentProperty(id, identifierProp, property, root, "", root.getTable(), mappings);
+           componentUpdater.updateComponent(id, identifierProp, property, value);
         }
     }
 }

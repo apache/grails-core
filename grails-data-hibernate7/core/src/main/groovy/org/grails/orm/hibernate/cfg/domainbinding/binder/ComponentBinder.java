@@ -90,7 +90,8 @@ public class ComponentBinder {
                 component.setParentProperty(currentGrailsProp.getName());
                 continue;
             }
-            bindComponentProperty(component, property, currentGrailsProp, persistentClass, path, table, mappings);
+            var value = bindComponentProperty(component, property, currentGrailsProp, persistentClass, path, table, mappings);
+            componentUpdater.updateComponent(component, property, currentGrailsProp, value);
 
         }
         return component;
@@ -150,7 +151,6 @@ public class ComponentBinder {
                 this.simpleValueBinder.bindSimpleValue(currentGrailsProp, componentProperty, (SimpleValue) value, path);
             }
         }
-        componentUpdater.updateComponent(component, componentProperty, currentGrailsProp, value);
         return value;
     }
 }
