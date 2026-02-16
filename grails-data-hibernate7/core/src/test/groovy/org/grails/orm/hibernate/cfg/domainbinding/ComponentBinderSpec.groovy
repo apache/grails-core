@@ -93,11 +93,9 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
 
     def setup() {
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
-        collectionHolder = new CollectionHolder(metadataBuildingContext)
         binder = new ComponentBinder(
                 metadataBuildingContext,
                 mappingCacheHolder,
-                collectionHolder,
                 enumTypeBinder,
                 collectionBinder,
                 mockSimpleValueBinder,
@@ -245,7 +243,6 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         given:
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
-        def component = new Component(metadataBuildingContext, root)
         def table = new Table("my_table")
         def ownerEntity = Mock(GrailsHibernatePersistentEntity)
         ownerEntity.isRoot() >> true
@@ -266,7 +263,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         setupProperty(componentProperty, "address", mapping, ownerEntity)
         
         when:
-        binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
+        binder.bindComponentProperty(componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
         1 * mockSimpleValueBinder.bindSimpleValue(currentGrailsProp, componentProperty, _ as BasicValue, "address")
@@ -277,7 +274,6 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         given:
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
-        def component = new Component(metadataBuildingContext, root)
         def table = new Table("my_table")
         def ownerEntity = Mock(GrailsHibernatePersistentEntity)
         ownerEntity.isRoot() >> true
@@ -302,7 +298,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         setupProperty(componentProperty, "address", mapping, ownerEntity)
         
         when:
-        binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
+        binder.bindComponentProperty(componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
         1 * manyToOneBinder.bindManyToOne(currentGrailsProp, table, "address") >> hibernateManyToOne
@@ -313,7 +309,6 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         given:
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
-        def component = new Component(metadataBuildingContext, root)
         def table = new Table("my_table")
         def ownerEntity = Mock(GrailsHibernatePersistentEntity)
         ownerEntity.isRoot() >> true
@@ -341,7 +336,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         def hibernateOneToOne = new HibernateOneToOne(metadataBuildingContext, table, root)
         
         when:
-        binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
+        binder.bindComponentProperty(componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
         1 * oneToOneBinder.bindOneToOne(currentGrailsProp, root, table, "address") >> hibernateOneToOne
@@ -352,7 +347,6 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         given:
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
-        def component = new Component(metadataBuildingContext, root)
         def table = new Table("my_table")
         def ownerEntity = Mock(GrailsHibernatePersistentEntity)
         ownerEntity.isRoot() >> true
@@ -374,7 +368,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         columnNameFetcher.getColumnNameForPropertyAndPath(currentGrailsProp, "address", null) >> "address_type_col"
 
         when:
-        binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
+        binder.bindComponentProperty(componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
         1 * enumTypeBinder.bindEnumType(currentGrailsProp, MyEnum, table, "address")
@@ -385,7 +379,6 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         given:
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
-        def component = new Component(metadataBuildingContext, root)
         def table = new Table("my_table")
         def ownerEntity = Mock(GrailsHibernatePersistentEntity)
         ownerEntity.isRoot() >> true
@@ -406,7 +399,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         ownerEntity.isComponentPropertyNullable(componentProperty) >> true
         
         when:
-        binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
+        binder.bindComponentProperty(componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
         1 * mockSimpleValueBinder.bindSimpleValue(
@@ -422,7 +415,6 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         given:
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
-        def component = new Component(metadataBuildingContext, root)
         def table = new Table("my_table")
         def currentGrailsProp = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty)
         def componentProperty = Mock(GrailsHibernatePersistentProperty)
@@ -433,12 +425,10 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         currentGrailsProp.isHibernateManyToOne() >> false
 
         when:
-        def result = binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
+        def result = binder.bindComponentProperty(componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
-        result instanceof org.hibernate.mapping.Set
-        1 * collectionBinder.bindCollection(currentGrailsProp, _ as org.hibernate.mapping.Set, root, mappings, "address")
-        1 * mappings.addCollectionBinding(_ as org.hibernate.mapping.Set)
+        1 * collectionBinder.bindCollection(currentGrailsProp, root, mappings, "address") >> Mock(org.hibernate.mapping.Set)
     }
 
     def "should bind nested component recursively"() {
@@ -446,7 +436,6 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
         root.setTable(new Table("my_table"))
-        def component = new Component(metadataBuildingContext, root)
         def table = root.getTable()
         def mappings = Mock(InFlightMetadataCollector)
         
@@ -473,7 +462,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         nestedAssociatedEntity.getIdentity() >> null
 
         when:
-        def result = binder.bindComponentProperty(component, parentProp, nestedEmbeddedProp, root, "address.nested", table, mappings)
+        def result = binder.bindComponentProperty(parentProp, nestedEmbeddedProp, root, "address.nested", table, mappings)
 
         then:
         result instanceof Component
@@ -487,7 +476,6 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         given:
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
-        def component = new Component(metadataBuildingContext, root)
         def table = new Table("my_table")
         def currentGrailsProp = Mock(TestOneToOne)
         def componentProperty = Mock(GrailsHibernatePersistentProperty)
@@ -500,7 +488,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         def hibernateManyToOne = new HibernateManyToOne(metadataBuildingContext, table)
 
         when:
-        def result = binder.bindComponentProperty(component, componentProperty, currentGrailsProp, root, "address", table, mappings)
+        def result = binder.bindComponentProperty(componentProperty, currentGrailsProp, root, "address", table, mappings)
 
         then:
         1 * manyToOneBinder.bindManyToOne(currentGrailsProp, table, "address") >> hibernateManyToOne

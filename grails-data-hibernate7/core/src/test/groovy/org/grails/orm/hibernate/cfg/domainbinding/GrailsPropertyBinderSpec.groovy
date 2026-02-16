@@ -135,14 +135,14 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
                 manyToOneBinder,
                 compositeIdentifierToManyToOneBinder,
                 simpleValueColumnFetcher,
-                columnNameForPropertyAndPathFetcher
+                columnNameForPropertyAndPathFetcher,
+                collectionHolder
         )
         PropertyFromValueCreator propertyFromValueCreator = new PropertyFromValueCreator()
         ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator)
         ComponentBinder componentBinder = new ComponentBinder(
                 metadataBuildingContext,
                 binder.getMappingCacheHolder(),
-                collectionHolder,
                 enumTypeBinderToUse,
                 collectionBinder,
                 simpleValueBinder,
@@ -154,7 +154,6 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         GrailsPropertyBinder propertyBinder = new GrailsPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
-                collectionHolder,
                 enumTypeBinderToUse,
                 componentBinder,
                 collectionBinder,
@@ -504,7 +503,6 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def propertyBinder = new GrailsPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
-                collectionHolder,
                 enumTypeBinder,
                 componentBinder,
                 collectionBinder,

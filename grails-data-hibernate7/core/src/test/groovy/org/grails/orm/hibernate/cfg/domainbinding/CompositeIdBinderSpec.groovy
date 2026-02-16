@@ -56,7 +56,7 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
         root.getIdentifier() instanceof Component
         root.getIdentifierMapper() instanceof Component
         root.hasEmbeddedIdentifier()
-        2 * componentBinder.bindComponentProperty(_ as Component, identifierProp, _ as PersistentProperty, root, "", table, mappings) >> Mock(Value)
+        2 * componentBinder.bindComponentProperty(identifierProp, _ as PersistentProperty, root, "", table, mappings) >> Mock(Value)
         2 * componentUpdater.updateComponent(_ as Component, identifierProp, _ as PersistentProperty, _ as Value)
     }
 

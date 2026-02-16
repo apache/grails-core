@@ -77,14 +77,14 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
                 manyToOneBinder,
                 compositeIdentifierToManyToOneBinder,
                 simpleValueColumnFetcher,
-                columnNameForPropertyAndPathFetcher
+                columnNameForPropertyAndPathFetcher,
+                collectionHolder
         )
         PropertyFromValueCreator propertyFromValueCreator = new PropertyFromValueCreator()
         ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator)
         ComponentBinder componentBinder = new ComponentBinder(
                 metadataBuildingContext,
                 binder.getMappingCacheHolder(),
-                collectionHolder,
                 enumTypeBinderToUse,
                 collectionBinder,
                 simpleValueBinder,
@@ -97,7 +97,6 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         GrailsPropertyBinder propertyBinder = new GrailsPropertyBinder(
                 metadataBuildingContext,
                 namingStrategy,
-                collectionHolder,
                 enumTypeBinderToUse,
                 componentBinder,
                 collectionBinder,
@@ -172,10 +171,9 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setTable(collector.addTable(null, null, "PERSON", null, false, binder.getMetadataBuildingContext()))
 
         def petsProp = personEntity.getPropertyByName("pets") as GrailsHibernatePersistentProperty
-        def collection = new Set(binder.getMetadataBuildingContext(), rootClass)
 
         when:
-        collectionBinder.bindCollection(petsProp, collection, rootClass, collector, "")
+        def collection = collectionBinder.bindCollection(petsProp, rootClass, collector, "")
 
         then:
         collection.role == "${personEntity.name}.pets".toString()

@@ -82,33 +82,23 @@ public class GrailsPropertyBinder {
         Value value = null;
 
         // 1. Create Value and apply binders (consolidated block)
-        if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne) {
+        if (currentGrailsProp.isEnumType()) {
+            //HibernateEnumTypeProperty
+            value = enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), table, EMPTY_PATH);
+        } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne) {
             //HibernateOneToOneProperty
             if (oneToOne.isHibernateOneToOne()) {
-                if (LOG.isDebugEnabled())
-                    LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as OneToOne");
-
                 value = oneToOneBinder.bindOneToOne((org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp, persistentClass, table, EMPTY_PATH);
             } else {
-                if (LOG.isDebugEnabled())
-                    LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as ManyToOne");
-
                 value = manyToOneBinder.bindManyToOne((Association) currentGrailsProp, table, EMPTY_PATH);
             }
         } else if (currentGrailsProp instanceof HibernateManyToOneProperty manyToOne) {
-            //HibernateManyToOneProperty
-            if (LOG.isDebugEnabled())
-                LOG.debug("[GrailsDomainBinder] Binding property [" + currentGrailsProp.getName() + "] as ManyToOne");
-
             value = manyToOneBinder.bindManyToOne((Association) currentGrailsProp, table, EMPTY_PATH);
         } else if (currentGrailsProp instanceof HibernateToManyProperty toMany && !currentGrailsProp.isSerializableType()) {
             //HibernateToManyProperty
             value = collectionBinder.bindCollection(toMany, persistentClass, mappings, EMPTY_PATH);
         } else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
             value = componentBinder.bindComponent(persistentClass, embedded, mappings);
-        } else if (currentGrailsProp instanceof HibernateBasicProperty basic && basic.isEnumType()) {
-            //HibernateEnumTypeProperty
-            value = enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), table, EMPTY_PATH);
         } else {
             //HibernateSimpleProperty
             value = new BasicValue(metadataBuildingContext, table);

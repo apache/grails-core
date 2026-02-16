@@ -20,7 +20,9 @@ public class PropertyFromValueCreator {
 
     public Property createProperty(Value value, GrailsHibernatePersistentProperty grailsProperty) {
         // set type
-        value.setTypeUsingReflection(grailsProperty.getOwnerClassName(), grailsProperty.getName());
+        if (!grailsProperty.isEnumType()) {
+            value.setTypeUsingReflection(grailsProperty.getOwnerClassName(), grailsProperty.getName());
+        }
 
         if (value.getTable() != null) {
             value.createForeignKey();

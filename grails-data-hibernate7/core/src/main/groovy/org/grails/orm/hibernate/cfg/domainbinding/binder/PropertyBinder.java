@@ -67,7 +67,7 @@ public class PropertyBinder {
 
 
         prop.setOptional(persistentProperty.isNullable());
-        if (persistentProperty instanceof Association<?> association) {
+        if (persistentProperty instanceof Association<?> association && !persistentProperty.isEnumType()) {
             prop.setCascade(cascadeBehaviorFetcher.getCascadeBehaviour(association));
         }
 
