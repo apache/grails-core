@@ -43,28 +43,13 @@ public class CompositeIdBinder {
 
         id.setRoleName(path);
 
-        GrailsHibernatePersistentProperty[] composite;
-        if (compositeIdentity != null && compositeIdentity.getPropertyNames() != null) {
-            String[] propertyNames = compositeIdentity.getPropertyNames();
-            composite = new GrailsHibernatePersistentProperty[propertyNames.length];
-            for (int i = 0; i < propertyNames.length; i++) {
-                composite[i] = (GrailsHibernatePersistentProperty) domainClass.getPropertyByName(propertyNames[i]);
-            }
-        } else {
-            composite = domainClass.getCompositeIdentity();
+        if (compositeIdentity == null) {
+            compositeIdentity = new CompositeIdentity();
         }
-
-        if (composite == null) {
-            throw new MappingException("No composite identifier properties found for class [" + domainClass.getName() + "]");
-        }
+        GrailsHibernatePersistentProperty[] composite = compositeIdentity.getHibernateProperties(domainClass);
 
         GrailsHibernatePersistentProperty identifierProp = domainClass.getIdentity();
         for (GrailsHibernatePersistentProperty property : composite) {
-            if (property == null) {
-                throw new MappingException("Property referenced in composite-id mapping of class [" + domainClass.getName() +
-                        "] is not a valid property!");
-            }
-
            var value = grailsPropertyBinder.bindProperty(root, root.getTable(), "", identifierProp, property, mappings);
            componentUpdater.updateComponent(id, identifierProp, property, value);
         }

@@ -32,7 +32,7 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
 
     def "should bind composite id using property names from CompositeIdentity"() {
         given:
-        def domainClass = GroovyMock(GrailsHibernatePersistentEntity)
+        def domainClass = Mock(GrailsHibernatePersistentEntity)
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
         root.setEntityName("MyEntity")
@@ -40,9 +40,9 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
         
         def compositeIdentity = new CompositeIdentity(propertyNames: ['prop1', 'prop2'] as String[])
         
-        def prop1 = GroovyMock(GrailsHibernatePersistentProperty)
-        def prop2 = GroovyMock(GrailsHibernatePersistentProperty)
-        def identifierProp = GroovyMock(GrailsHibernatePersistentProperty)
+        def prop1 = Mock(GrailsHibernatePersistentProperty)
+        def prop2 = Mock(GrailsHibernatePersistentProperty)
+        def identifierProp = Mock(GrailsHibernatePersistentProperty)
         domainClass.getPropertyByName("prop1") >> prop1
         domainClass.getPropertyByName("prop2") >> prop2
         domainClass.getIdentity() >> identifierProp
@@ -64,14 +64,14 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
 
     def "should fallback to domainClass composite identity when CompositeIdentity is null"() {
         given:
-        def domainClass = GroovyMock(GrailsHibernatePersistentEntity)
+        def domainClass = Mock(GrailsHibernatePersistentEntity)
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
         root.setEntityName("MyEntity")
         def mappings = metadataBuildingContext.getMetadataCollector()
         
-        def prop1 = GroovyMock(GrailsHibernatePersistentProperty)
-        def identifierProp = GroovyMock(GrailsHibernatePersistentProperty)
+        def prop1 = Mock(GrailsHibernatePersistentProperty)
+        def identifierProp = Mock(GrailsHibernatePersistentProperty)
         domainClass.getCompositeIdentity() >> ([prop1] as GrailsHibernatePersistentProperty[])
         domainClass.getIdentity() >> identifierProp
         domainClass.getName() >> "MyEntity"
@@ -89,7 +89,7 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
 
     def "should throw MappingException if no composite properties found"() {
         given:
-        def domainClass = GroovyMock(GrailsHibernatePersistentEntity)
+        def domainClass = Mock(GrailsHibernatePersistentEntity)
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
         root.setEntityName("MyEntity")

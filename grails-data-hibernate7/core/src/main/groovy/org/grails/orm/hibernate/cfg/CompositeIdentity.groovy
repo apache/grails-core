@@ -21,6 +21,7 @@ import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
 import org.grails.datastore.mapping.config.Property
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity
+import org.hibernate.MappingException
 
 /**
  * Represents a composite identity, equivalent to Hibernate <composite-id> mapping.
@@ -56,5 +57,25 @@ class CompositeIdentity extends Property implements HibernateIdentity {
         naturalIdDef.setResolveStrategy(Closure.DELEGATE_ONLY)
         naturalIdDef.call()
         return this
+    }
+
+    /**
+     * @param domainClass The domain class
+     * @return The hibernate properties for the composite identity
+     */
+    GrailsHibernatePersistentProperty[] getHibernateProperties(GrailsHibernatePersistentEntity domainClass) {
+        GrailsHibernatePersistentProperty[] composite = propertyNames ?
+                propertyNames.collect { domainClass.getPropertyByName(it) as GrailsHibernatePersistentProperty } as GrailsHibernatePersistentProperty[] :
+                domainClass.compositeIdentity
+
+        if (!composite) {
+            throw new MappingException("No composite identifier properties found for class [${domainClass.name}]")
+        }
+
+        if (composite.any { it == null }) {
+            throw new MappingException("Property referenced in composite-id mapping of class [${domainClass.name}] is not a valid property!")
+        }
+
+        composite
     }
 }
