@@ -10,7 +10,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyP
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
-import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder;
@@ -57,6 +56,7 @@ public class CollectionSecondPassBinder {
     private final ManyToOneBinder manyToOneBinder;
     private final CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder;
     private final SimpleValueColumnFetcher simpleValueColumnFetcher;
+    private final PrimaryKeyValueCreator primaryKeyValueCreator;
 
     public CollectionSecondPassBinder(
             MetadataBuildingContext metadataBuildingContext,
@@ -66,7 +66,8 @@ public class CollectionSecondPassBinder {
             EnumTypeBinder enumTypeBinder,
             ManyToOneBinder manyToOneBinder,
             CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder,
-            SimpleValueColumnFetcher simpleValueColumnFetcher) {
+            SimpleValueColumnFetcher simpleValueColumnFetcher,
+            PrimaryKeyValueCreator primaryKeyValueCreator) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.jdbcEnvironment = jdbcEnvironment;
@@ -75,18 +76,11 @@ public class CollectionSecondPassBinder {
         this.manyToOneBinder = manyToOneBinder;
         this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder;
         this.simpleValueColumnFetcher = simpleValueColumnFetcher;
+        this.primaryKeyValueCreator = primaryKeyValueCreator;
         this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy);
         this.orderByClauseBuilder = new OrderByClauseBuilder();
     }
 
-    public CollectionSecondPassBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
-        this(metadataBuildingContext, namingStrategy, jdbcEnvironment,
-                new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment),
-                new EnumTypeBinder(metadataBuildingContext, new ColumnNameForPropertyAndPathFetcher(namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover())),
-                new ManyToOneBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment),
-                new CompositeIdentifierToManyToOneBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment),
-                new SimpleValueColumnFetcher());
-    }
 
 
     public void bindCollectionSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
@@ -167,7 +161,7 @@ public class CollectionSecondPassBinder {
         }
 
         // setup the primary key references
-        DependantValue key = createPrimaryKeyValue(mappings, property, collection);
+        DependantValue key = primaryKeyValueCreator.createPrimaryKeyValue(collection);
 
         // link a bidirectional relationship
         if (property.isBidirectional()) {
@@ -450,30 +444,5 @@ public class CollectionSecondPassBinder {
         } else {
             key.setUpdateable(true);
         }
-    }
-
-    private DependantValue createPrimaryKeyValue(@Nonnull InFlightMetadataCollector mappings, GrailsHibernatePersistentProperty property,
-                                                 Collection collection) {
-        KeyValue keyValue;
-        DependantValue key;
-        String propertyRef = collection.getReferencedPropertyName();
-        // this is to support mapping by a property
-        if (propertyRef == null) {
-            keyValue = collection.getOwner().getIdentifier();
-        } else {
-            keyValue = (KeyValue) collection.getOwner().getProperty(propertyRef).getValue();
-        }
-
-        if (LOG.isDebugEnabled())
-            LOG.debug("[CollectionSecondPassBinder] creating dependant key value  to table [" + keyValue.getTable().getName() + "]");
-
-        key = new DependantValue(metadataBuildingContext, collection.getCollectionTable(), keyValue);
-        key.setTypeName(null);
-        key.setNullable(true);
-        key.setUpdateable(true);
-
-        //JPA now requires to check for sorting
-        key.setSorted(collection.isSorted());
-        return key;
     }
 }

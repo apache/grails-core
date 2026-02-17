@@ -17,6 +17,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.NamespaceNameExtractor;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionSecondPassBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.PrimaryKeyValueCreator;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPass;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPass;
@@ -74,7 +75,8 @@ public class CollectionBinder {
                 enumTypeBinder,
                 manyToOneBinder,
                 compositeIdentifierToManyToOneBinder,
-                simpleValueColumnFetcher
+                simpleValueColumnFetcher,
+                new PrimaryKeyValueCreator(metadataBuildingContext)
         );
         this.listSecondPassBinder = new ListSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
         this.mapSecondPassBinder = new MapSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
