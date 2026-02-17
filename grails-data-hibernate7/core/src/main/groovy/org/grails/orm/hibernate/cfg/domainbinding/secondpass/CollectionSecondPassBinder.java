@@ -28,6 +28,7 @@ import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.*;
 import org.hibernate.mapping.Collection;
+import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
 import org.hibernate.type.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +59,7 @@ public class CollectionSecondPassBinder {
     private final SimpleValueColumnFetcher simpleValueColumnFetcher;
     private final PrimaryKeyValueCreator primaryKeyValueCreator;
     private final CollectionKeyColumnUpdater collectionKeyColumnUpdater;
+    private final GrailsPropertyResolver grailsPropertyResolver;
 
     public CollectionSecondPassBinder(
             MetadataBuildingContext metadataBuildingContext,
@@ -69,7 +71,8 @@ public class CollectionSecondPassBinder {
             CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder,
             SimpleValueColumnFetcher simpleValueColumnFetcher,
             PrimaryKeyValueCreator primaryKeyValueCreator,
-            CollectionKeyColumnUpdater collectionKeyColumnUpdater) {
+            CollectionKeyColumnUpdater collectionKeyColumnUpdater,
+            GrailsPropertyResolver grailsPropertyResolver) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.jdbcEnvironment = jdbcEnvironment;
@@ -80,6 +83,7 @@ public class CollectionSecondPassBinder {
         this.simpleValueColumnFetcher = simpleValueColumnFetcher;
         this.primaryKeyValueCreator = primaryKeyValueCreator;
         this.collectionKeyColumnUpdater = collectionKeyColumnUpdater;
+        this.grailsPropertyResolver = grailsPropertyResolver;
         this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy);
         this.orderByClauseBuilder = new OrderByClauseBuilder();
     }
@@ -392,8 +396,7 @@ public class CollectionSecondPassBinder {
     private void linkBidirectionalOneToMany(Collection collection, PersistentClass associatedClass, DependantValue key, GrailsHibernatePersistentProperty otherSide) {
         collection.setInverse(true);
 
-        // Iterator mappedByColumns = associatedClass.getProperty(otherSide.getName()).getValue().getColumnIterator();
-        Iterator<?> mappedByColumns = getProperty(associatedClass, otherSide.getName()).getValue().getColumns().iterator();
+        Iterator<?> mappedByColumns = grailsPropertyResolver.getProperty(associatedClass, otherSide.getName()).getValue().getColumns().iterator();
         while (mappedByColumns.hasNext()) {
             Column column = (Column) mappedByColumns.next();
             linkValueUsingAColumnCopy(otherSide, column, key);
@@ -412,16 +415,4 @@ public class CollectionSecondPassBinder {
         key.getTable().addColumn(mappingColumn);
     }
 
-    public Property getProperty(PersistentClass associatedClass, String propertyName) throws MappingException {
-        try {
-            return associatedClass.getProperty(propertyName);
-        }
-        catch (MappingException e) {
-            //maybe it's squirreled away in a composite primary key
-            if (associatedClass.getKey() instanceof Component) {
-                return ((Component) associatedClass.getKey()).getProperty(propertyName);
-            }
-            throw e;
-        }
-    }
 }

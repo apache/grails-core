@@ -47,6 +47,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper;
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
+import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.hibernate.boot.ResourceStreamLocator;
@@ -217,7 +218,7 @@ public class GrailsDomainBinder
         VersionBinder versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, BasicValue::new);
         NaturalIdentifierBinder naturalIdentifierBinder = new NaturalIdentifierBinder();
         ClassPropertiesBinder classPropertiesBinder = new ClassPropertiesBinder(grailsPropertyBinder, propertyFromValueCreator, naturalIdentifierBinder);
-        MultiTenantFilterBinder multiTenantFilterBinder = new MultiTenantFilterBinder();
+        MultiTenantFilterBinder multiTenantFilterBinder = new MultiTenantFilterBinder(new GrailsPropertyResolver());
         JoinedSubClassBinder joinedSubClassBinder = new JoinedSubClassBinder(metadataBuildingContext, namingStrategy, new SimpleValueColumnBinder(), columnNameForPropertyAndPathFetcher, classBinder);
         UnionSubclassBinder unionSubclassBinder = new UnionSubclassBinder(metadataBuildingContext, namingStrategy, classBinder);
         SingleTableSubclassBinder singleTableSubclassBinder = new SingleTableSubclassBinder(classBinder);

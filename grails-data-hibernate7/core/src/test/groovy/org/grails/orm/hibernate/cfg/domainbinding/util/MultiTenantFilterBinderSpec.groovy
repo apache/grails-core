@@ -24,7 +24,8 @@ import spock.lang.Specification
  */
 class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
 
-    MultiTenantFilterBinder filterBinder = new MultiTenantFilterBinder()
+    GrailsPropertyResolver grailsPropertyResolver = Mock(GrailsPropertyResolver)
+    MultiTenantFilterBinder filterBinder = new MultiTenantFilterBinder(grailsPropertyResolver)
     DefaultColumnNameFetcher fetcher = Mock(DefaultColumnNameFetcher)
     InFlightMetadataCollector mockCollector = GroovyMock(InFlightMetadataCollector)
 
@@ -45,6 +46,7 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         entity.isMultiTenant() >> true
         entity.getTenantId() >> tenantId
         tenantId.getName() >> "tenantId"
+        grailsPropertyResolver.getProperty(persistentClass, "tenantId") >> property
         
         property.setValue(value)
         persistentClass.setTable(table)
@@ -85,6 +87,7 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         entity.isMultiTenant() >> true
         entity.getTenantId() >> tenantId
         tenantId.getName() >> "tenantId"
+        grailsPropertyResolver.getProperty(persistentClass, "tenantId") >> property // Add stub here
         
         entity.isTablePerHierarchySubclass() >> true
         mockCollector.getFilterDefinition(_) >> Mock(FilterDefinition)
@@ -122,6 +125,7 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         entity.isMultiTenant() >> true
         entity.getTenantId() >> tenantId
         tenantId.getName() >> "tenantId"
+        grailsPropertyResolver.getProperty(persistentClass, "tenantId") >> property // Add stub here
         
         mockCollector.getFilterDefinition(_) >> Mock(FilterDefinition)
 
@@ -154,6 +158,7 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         entity.isMultiTenant() >> true
         entity.getTenantId() >> tenantId
         tenantId.getName() >> "tenantId"
+        grailsPropertyResolver.getProperty(persistentClass, "tenantId") >> property // Add stub here
         
         entity.isTablePerHierarchySubclass() >> false
         mockCollector.getFilterDefinition(_) >> Mock(FilterDefinition)

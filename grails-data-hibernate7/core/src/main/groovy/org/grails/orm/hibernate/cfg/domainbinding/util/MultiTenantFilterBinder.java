@@ -26,6 +26,12 @@ import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
  */
 public class MultiTenantFilterBinder {
 
+    private final GrailsPropertyResolver grailsPropertyResolver;
+
+    public MultiTenantFilterBinder(GrailsPropertyResolver grailsPropertyResolver) {
+        this.grailsPropertyResolver = grailsPropertyResolver;
+    }
+
     /**
      * Adds a multi-tenant filter to the given persistent class if necessary.
      *
@@ -46,7 +52,7 @@ public class MultiTenantFilterBinder {
 
         Optional.ofNullable(entity.getTenantId())
                 .map(TenantId::getName)
-                .map(name -> getProperty(persistentClass, name))
+                .map(name -> grailsPropertyResolver.getProperty(persistentClass, name))
                 .ifPresent(property -> {
                     var filterName = GormProperties.TENANT_IDENTITY;
                     ensureGlobalFilterDefinition(mappings, filterName, property);
@@ -100,16 +106,5 @@ public class MultiTenantFilterBinder {
         return false;
     }
 
-    private Property getProperty(PersistentClass associatedClass, String propertyName) {
-        try {
-            return associatedClass.getProperty(propertyName);
-        }
-        catch (MappingException e) {
-            // maybe it's squirreled away in a composite primary key
-            if (associatedClass.getKey() instanceof Component component) {
-                return component.getProperty(propertyName);
-            }
-            return null;
-        }
-    }
+
 }

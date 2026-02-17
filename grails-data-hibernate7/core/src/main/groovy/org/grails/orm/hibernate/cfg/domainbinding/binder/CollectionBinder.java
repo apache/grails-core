@@ -24,9 +24,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinde
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPass;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSecondPass;
-
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
+import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
+
 import org.hibernate.FetchMode;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -78,7 +79,8 @@ public class CollectionBinder {
                 compositeIdentifierToManyToOneBinder,
                 simpleValueColumnFetcher,
                 new PrimaryKeyValueCreator(metadataBuildingContext),
-                new CollectionKeyColumnUpdater()
+                new CollectionKeyColumnUpdater(),
+                new GrailsPropertyResolver()
         );
         this.listSecondPassBinder = new ListSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
         this.mapSecondPassBinder = new MapSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
