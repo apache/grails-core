@@ -60,6 +60,7 @@ public class CollectionSecondPassBinder {
     private final PrimaryKeyValueCreator primaryKeyValueCreator;
     private final CollectionKeyColumnUpdater collectionKeyColumnUpdater;
     private final GrailsPropertyResolver grailsPropertyResolver;
+    private final BidirectionalOneToManyLinker bidirectionalOneToManyLinker;
 
     public CollectionSecondPassBinder(
             MetadataBuildingContext metadataBuildingContext,
@@ -72,7 +73,8 @@ public class CollectionSecondPassBinder {
             SimpleValueColumnFetcher simpleValueColumnFetcher,
             PrimaryKeyValueCreator primaryKeyValueCreator,
             CollectionKeyColumnUpdater collectionKeyColumnUpdater,
-            GrailsPropertyResolver grailsPropertyResolver) {
+            GrailsPropertyResolver grailsPropertyResolver,
+            BidirectionalOneToManyLinker bidirectionalOneToManyLinker) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.jdbcEnvironment = jdbcEnvironment;
@@ -84,6 +86,7 @@ public class CollectionSecondPassBinder {
         this.primaryKeyValueCreator = primaryKeyValueCreator;
         this.collectionKeyColumnUpdater = collectionKeyColumnUpdater;
         this.grailsPropertyResolver = grailsPropertyResolver;
+        this.bidirectionalOneToManyLinker = bidirectionalOneToManyLinker;
         this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy);
         this.orderByClauseBuilder = new OrderByClauseBuilder();
     }
@@ -394,25 +397,7 @@ public class CollectionSecondPassBinder {
     }
 
     private void linkBidirectionalOneToMany(Collection collection, PersistentClass associatedClass, DependantValue key, GrailsHibernatePersistentProperty otherSide) {
-        collection.setInverse(true);
-
-        Iterator<?> mappedByColumns = grailsPropertyResolver.getProperty(associatedClass, otherSide.getName()).getValue().getColumns().iterator();
-        while (mappedByColumns.hasNext()) {
-            Column column = (Column) mappedByColumns.next();
-            linkValueUsingAColumnCopy(otherSide, column, key);
-        }
-    }
-
-    private void linkValueUsingAColumnCopy(GrailsHibernatePersistentProperty prop, Column column, DependantValue key) {
-        Column mappingColumn = new Column();
-        mappingColumn.setName(column.getName());
-        mappingColumn.setLength(column.getLength());
-        mappingColumn.setNullable(prop.isNullable());
-        mappingColumn.setSqlType(column.getSqlType());
-
-        mappingColumn.setValue(key);
-        key.addColumn(mappingColumn);
-        key.getTable().addColumn(mappingColumn);
+        bidirectionalOneToManyLinker.link(collection, associatedClass, key, otherSide);
     }
 
 }
