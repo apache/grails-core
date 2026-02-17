@@ -18,5 +18,5 @@ public interface PersistentEntityNamingStrategy {
 
     String resolveTableName(String logicalName);
 
-    String resolveForeignKeyForPropertyDomainClass(PersistentProperty property);
+    String resolveForeignKeyForPropertyDomainClass(GrailsHibernatePersistentProperty property);
 }

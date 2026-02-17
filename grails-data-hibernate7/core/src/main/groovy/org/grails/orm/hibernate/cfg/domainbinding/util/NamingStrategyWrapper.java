@@ -64,11 +64,9 @@ public class NamingStrategyWrapper implements PersistentEntityNamingStrategy {
     }
 
     @Override
-    public String resolveForeignKeyForPropertyDomainClass(PersistentProperty property) {
+    public String resolveForeignKeyForPropertyDomainClass(GrailsHibernatePersistentProperty property) {
         return Optional.ofNullable(property)
-                .map(PersistentProperty::getOwner)
-                .filter(GrailsHibernatePersistentEntity.class::isInstance)
-                .map(GrailsHibernatePersistentEntity.class::cast)
+                .map(GrailsHibernatePersistentProperty::getHibernateOwner)
                 .map(GrailsHibernatePersistentEntity::getJavaClass)
                 .map(Class::getSimpleName)
                 .map(NameUtils::decapitalize)
