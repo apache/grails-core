@@ -20,8 +20,38 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
                 Person,
                 AddressOwner,
                 CustomTableEntity,
+                CustomTableNameEntity,
                 DerivedPropertyEntity
         ])
+    }
+
+    void "test getTableName"() {
+        given:
+        GrailsHibernatePersistentEntity simple = getPersistentEntity(Simple) as GrailsHibernatePersistentEntity
+        GrailsHibernatePersistentEntity custom = getPersistentEntity(CustomTableNameEntity) as GrailsHibernatePersistentEntity
+        GrailsHibernatePersistentEntity car = getPersistentEntity(Car) as GrailsHibernatePersistentEntity
+        def namingStrategy = Mock(PersistentEntityNamingStrategy)
+
+        when: "Basic entity with no explicit table name"
+        def name1 = simple.getTableName(namingStrategy)
+
+        then:
+        1 * namingStrategy.resolveTableName(simple) >> "resolved_simple"
+        name1 == "resolved_simple"
+
+        when: "Entity with explicit table name"
+        def name2 = custom.getTableName(namingStrategy)
+
+        then:
+        0 * namingStrategy.resolveTableName(custom)
+        name2 == "my_custom_table"
+
+        when: "Subclass in table-per-hierarchy using root table name"
+        def name3 = car.getTableName(namingStrategy)
+
+        then:
+        1 * namingStrategy.resolveTableName(_) >> "vehicle_table"
+        name3 == "vehicle_table"
     }
 
     void "test buildDiscriminatorSet for simple entity"() {
@@ -227,6 +257,14 @@ class CustomTableEntity {
     Long id
     static mapping = {
         table schema: "custom_schema", catalog: "custom_catalog"
+    }
+}
+
+@Entity
+class CustomTableNameEntity {
+    Long id
+    static mapping = {
+        table "my_custom_table"
     }
 }
 

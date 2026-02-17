@@ -6,7 +6,6 @@ import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
-import org.grails.orm.hibernate.cfg.domainbinding.util.TableNameFetcher;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.DependantValue;
@@ -82,7 +81,7 @@ public class JoinedSubClassBinder {
             InFlightMetadataCollector mappings) {
 
         String logicalTableName = GrailsHibernateUtil.unqualify(model.getEntityName());
-        String physicalTableName = new TableNameFetcher(namingStrategy).getTableName(sub);
+        String physicalTableName = sub.getTableName(namingStrategy);
 
         String schemaName = sub.getSchema(mappings);
         String catalogName = sub.getCatalog(mappings);

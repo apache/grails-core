@@ -3,7 +3,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 import jakarta.annotation.Nonnull;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.util.TableNameFetcher;
 import org.hibernate.MappingException;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -49,7 +48,7 @@ public class UnionSubclassBinder {
         Table mytable = mappings.addDenormalizedTable(
                 schema,
                 catalog,
-                new TableNameFetcher(namingStrategy).getTableName(subClass),
+                subClass.getTableName(namingStrategy),
                 Boolean.TRUE.equals(unionSubclass.isAbstract()),
                 null,
                 denormalizedSuperTable, metadataBuildingContext

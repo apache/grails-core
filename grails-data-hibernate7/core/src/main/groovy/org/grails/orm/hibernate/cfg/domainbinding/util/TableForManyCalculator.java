@@ -18,20 +18,16 @@ import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.UNDERSCORE;
 public class TableForManyCalculator {
 
     private final PersistentEntityNamingStrategy namingStrategy;
-    private final TableNameFetcher tableNameFetcher;
     private final BackticksRemover backticksRemover;
 
     public TableForManyCalculator(PersistentEntityNamingStrategy namingStrategy) {
         this.namingStrategy = namingStrategy;
-        tableNameFetcher = new TableNameFetcher(namingStrategy);
         backticksRemover = new BackticksRemover();
     }
 
     protected TableForManyCalculator(PersistentEntityNamingStrategy namingStrategy
-             , TableNameFetcher tableNameFetcher
             , BackticksRemover backticksRemover) {
         this.namingStrategy = namingStrategy;
-        this.tableNameFetcher = tableNameFetcher;
         this.backticksRemover = backticksRemover;
     }
 
@@ -48,7 +44,7 @@ public class TableForManyCalculator {
         JoinTable jt = config.getJoinTable();
         boolean hasJoinTableMapping = jt != null && jt.getName() != null;
         GrailsHibernatePersistentEntity domainClass1 = property.getHibernateOwner();
-        String left = tableNameFetcher.getTableName(domainClass1);
+        String left = domainClass1.getTableName(namingStrategy);
 
         if (Map.class.isAssignableFrom(property.getType())) {
             if (hasJoinTableMapping) {
@@ -71,7 +67,7 @@ public class TableForManyCalculator {
         if (domainClass == null) {
             throw new MappingException("Expected an entity to be associated with the association (" + property + ") and none was found. ");
         }
-        String right = tableNameFetcher.getTableName(domainClass);
+        String right = domainClass.getTableName(namingStrategy);
 
         if (property instanceof HibernateManyToManyProperty property1) {
             if (hasJoinTableMapping) {

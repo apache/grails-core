@@ -15,7 +15,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneValuesBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher
-import org.grails.orm.hibernate.cfg.domainbinding.util.TableNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.OneToOneBinder
@@ -60,7 +59,6 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder = new CompositeIdentifierToManyToOneBinder(
                 metadataBuildingContext,
                 new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(),
-                new TableNameFetcher(namingStrategy),
                 namingStrategy,
                 defaultColumnNameFetcher,
                 backticksRemover,

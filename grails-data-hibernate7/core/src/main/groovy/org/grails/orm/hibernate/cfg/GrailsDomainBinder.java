@@ -47,7 +47,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper;
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
-import org.grails.orm.hibernate.cfg.domainbinding.util.TableNameFetcher;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.hibernate.boot.ResourceStreamLocator;
@@ -165,7 +164,6 @@ public class GrailsDomainBinder
         CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder = new CompositeIdentifierToManyToOneBinder(
                 metadataBuildingContext,
                 new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(),
-                new TableNameFetcher(namingStrategy),
                 namingStrategy,
                 defaultColumnNameFetcher,
                 backticksRemover,
@@ -455,7 +453,7 @@ public class GrailsDomainBinder
         // create the table
         var table = mappings.addTable(schema
                 , catalog
-                , new TableNameFetcher(getNamingStrategy()).getTableName(domainClass)
+                , domainClass.getTableName(getNamingStrategy())
                 , null
                 , domainClass.isTableAbstract()
                 , metadataBuildingContext

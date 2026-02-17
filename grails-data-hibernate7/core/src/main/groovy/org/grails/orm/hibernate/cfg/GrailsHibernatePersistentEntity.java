@@ -198,6 +198,21 @@ package org.grails.orm.hibernate.cfg;
 
     }
 
+    /**
+     * Evaluates the table name for the given entity
+     *
+     * @param persistentEntityNamingStrategy The naming strategy
+     * @return The table name
+     */
+    default String getTableName(PersistentEntityNamingStrategy persistentEntityNamingStrategy) {
+        return Optional.ofNullable(getMappedForm())
+                .map(Mapping::getTableName)
+                .or(() -> Optional.ofNullable(getRootMapping())
+                        .filter(Mapping::isTablePerHierarchy)
+                        .map(Mapping::getTableName))
+                .orElseGet(() -> persistentEntityNamingStrategy.resolveTableName(this));
+    }
+
      default String getDiscriminatorColumnName() {
         return Optional.ofNullable(getRootMapping())
                 .map(Mapping::getDiscriminator)

@@ -16,7 +16,6 @@ import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator;
-import org.grails.orm.hibernate.cfg.domainbinding.util.TableNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 
 import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.UNDERSCORE;
@@ -24,7 +23,6 @@ import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.UNDERSCORE;
 public class CompositeIdentifierToManyToOneBinder {
     private final MetadataBuildingContext metadataBuildingContext;
     private final ForeignKeyColumnCountCalculator foreignKeyColumnCountCalculator;
-    private final TableNameFetcher tableNameFetcher;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final DefaultColumnNameFetcher defaultColumnNameFetcher;
     private final BackticksRemover backticksRemover;
@@ -33,14 +31,12 @@ public class CompositeIdentifierToManyToOneBinder {
     public CompositeIdentifierToManyToOneBinder(
             MetadataBuildingContext metadataBuildingContext,
             ForeignKeyColumnCountCalculator foreignKeyColumnCountCalculator,
-            TableNameFetcher tableNameFetcher,
             PersistentEntityNamingStrategy namingStrategy,
             DefaultColumnNameFetcher defaultColumnNameFetcher,
             BackticksRemover backticksRemover,
             SimpleValueBinder simpleValueBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.foreignKeyColumnCountCalculator = foreignKeyColumnCountCalculator;
-        this.tableNameFetcher =tableNameFetcher;
         this.namingStrategy = namingStrategy;
         this.defaultColumnNameFetcher = defaultColumnNameFetcher;
         this.backticksRemover = backticksRemover;
@@ -50,7 +46,6 @@ public class CompositeIdentifierToManyToOneBinder {
     public CompositeIdentifierToManyToOneBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment){
         this(metadataBuildingContext,
                 new ForeignKeyColumnCountCalculator(),
-                new TableNameFetcher(namingStrategy),
                 namingStrategy,
                 new DefaultColumnNameFetcher(namingStrategy),
                 new BackticksRemover(),
@@ -82,7 +77,7 @@ public class CompositeIdentifierToManyToOneBinder {
                 // if the name is null then configure the name by convention
                 if (cc.getName() == null) {
                     // use the referenced table name as a prefix
-                    String prefix = refDomainClass instanceof GrailsHibernatePersistentEntity ghpe ? tableNameFetcher.getTableName(ghpe) : refDomainClass.getName();
+                    String prefix = refDomainClass instanceof GrailsHibernatePersistentEntity ghpe ? ghpe.getTableName(namingStrategy) : refDomainClass.getName();
                     PersistentProperty referencedProperty = refDomainClass.getPropertyByName(propertyName);
 
                     // if the referenced property is a ToOne and it has a composite id
