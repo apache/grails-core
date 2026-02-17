@@ -472,9 +472,9 @@ class BootStrap {
 }
 ----
 <1> The `PasswordEncoder` bean is auto-configured by the plugin and can be injected into `BootStrap` by name.
-<2> Pre-encode the password before constructing the User instance. This bypasses the `beforeInsert()` hook entirely.
+<2> Pre-encode the password before constructing the `User` instance so that password encoding is handled explicitly here, rather than relying on a `beforeInsert()` hook or an injected `springSecurityService` in the domain class.
 
-TIP: If you are using the `beforeInsert()` pattern, you must also guard against double-encoding. Since the password is already encoded before `save()`, the `beforeInsert()` callback will attempt to encode it again. Either check whether the password is already encoded, or remove the `beforeInsert()` hook and always encode explicitly. The recommended approach is to use the `UserPasswordEncoderListener` pattern shown above, which avoids this issue entirely.
+TIP: Be careful not to double-encode passwords if you also use a `beforeInsert()`-style encoding hook or a Spring-managed listener (for example, a `User` domain class with an injected `springSecurityService`, or a `UserPasswordEncoderListener` that encodes on insert/update). In those cases, the callback or listener would see the already-encoded value produced in `BootStrap` and attempt to encode it again. Ensure that only one mechanism is responsible for encoding - for example, rely solely on a listener such as `UserPasswordEncoderListener`, or disable automatic encoding for users created in `BootStrap`. The recommended approach is to use the `UserPasswordEncoderListener` pattern shown above, which avoids this issue entirely.
 
 ==== 6. Start the server.
 
