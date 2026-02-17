@@ -38,7 +38,6 @@ class UserControllerSpec extends ContainerGebSpec {
     void cleanup() {
         try {
             go 'logout'
-            waitFor { $('input', value: 'Log Out').displayed }
             $('input', value: 'Log Out').click()
         }
         catch (ignored) {
