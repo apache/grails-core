@@ -9,6 +9,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.JoinTable;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionKeyColumnUpdater;
 import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
@@ -76,7 +77,8 @@ public class CollectionBinder {
                 manyToOneBinder,
                 compositeIdentifierToManyToOneBinder,
                 simpleValueColumnFetcher,
-                new PrimaryKeyValueCreator(metadataBuildingContext)
+                new PrimaryKeyValueCreator(metadataBuildingContext),
+                new CollectionKeyColumnUpdater()
         );
         this.listSecondPassBinder = new ListSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
         this.mapSecondPassBinder = new MapSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);

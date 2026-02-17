@@ -57,6 +57,7 @@ public class CollectionSecondPassBinder {
     private final CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder;
     private final SimpleValueColumnFetcher simpleValueColumnFetcher;
     private final PrimaryKeyValueCreator primaryKeyValueCreator;
+    private final CollectionKeyColumnUpdater collectionKeyColumnUpdater;
 
     public CollectionSecondPassBinder(
             MetadataBuildingContext metadataBuildingContext,
@@ -67,7 +68,8 @@ public class CollectionSecondPassBinder {
             ManyToOneBinder manyToOneBinder,
             CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder,
             SimpleValueColumnFetcher simpleValueColumnFetcher,
-            PrimaryKeyValueCreator primaryKeyValueCreator) {
+            PrimaryKeyValueCreator primaryKeyValueCreator,
+            CollectionKeyColumnUpdater collectionKeyColumnUpdater) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.jdbcEnvironment = jdbcEnvironment;
@@ -77,6 +79,7 @@ public class CollectionSecondPassBinder {
         this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder;
         this.simpleValueColumnFetcher = simpleValueColumnFetcher;
         this.primaryKeyValueCreator = primaryKeyValueCreator;
+        this.collectionKeyColumnUpdater = collectionKeyColumnUpdater;
         this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy);
         this.orderByClauseBuilder = new OrderByClauseBuilder();
     }
@@ -230,7 +233,7 @@ public class CollectionSecondPassBinder {
         } else if (property.supportsJoinColumnMapping()) {
             bindCollectionWithJoinTable(property, mappings, collection, propConfig);
         }
-        forceNullableAndCheckUpdateable(key, property);
+        collectionKeyColumnUpdater.forceNullableAndCheckUpdateable(key, property); // Use the injected service
     }
 
     private void bindUnidirectionalOneToMany(HibernateOneToManyProperty property, @Nonnull InFlightMetadataCollector mappings, Collection collection) {
@@ -419,30 +422,6 @@ public class CollectionSecondPassBinder {
                 return ((Component) associatedClass.getKey()).getProperty(propertyName);
             }
             throw e;
-        }
-    }
-
-    private void forceNullableAndCheckUpdateable(DependantValue key, GrailsHibernatePersistentProperty property) {
-        Iterator<?> it = key.getColumns().iterator();
-        while (it.hasNext()) {
-            Object next = it.next();
-            if (next instanceof Column) {
-                ((Column) next).setNullable(true);
-            }
-        }
-        
-        int unidirectionalCount = 0;
-        GrailsHibernatePersistentEntity owner = property.getHibernateOwner();
-        for (GrailsHibernatePersistentProperty p : owner.getPersistentPropertiesToBind()) {
-            if (p instanceof Association association && !association.isBidirectional()) {
-                unidirectionalCount++;
-            }
-        }
-        
-        if (unidirectionalCount > 1) {
-            key.setUpdateable(false);
-        } else {
-            key.setUpdateable(true);
         }
     }
 }
