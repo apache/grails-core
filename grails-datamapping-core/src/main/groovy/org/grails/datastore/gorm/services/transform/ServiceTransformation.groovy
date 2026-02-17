@@ -191,16 +191,14 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                 ClassNode propertyType = pn.type
                 if (hasAnnotation(propertyType, Service) && propertyType != classNode && Modifier.isPublic(pn.modifiers) && pn.getterBlock == null && pn.setterBlock == null) {
                     FieldNode field = pn.field
-                    VariableExpression fieldVar = varX(field)
                     propertiesFields.add(field)
-                    pn.setGetterBlock(
-                            block(
-                                    ifS(equalsNullX(fieldVar),
-                                            assignX(fieldVar, callX(varX('datastore'), 'getService', classX(propertyType.plainNodeReference)))
-                                    ),
-                                    returnS(fieldVar)
-                            )
-                    )
+                    // NOTE: We intentionally do NOT set a getter block on the abstract class's
+                    // PropertyNode here. The previous approach of setting a lazy getter that
+                    // referenced varX('datastore') caused two problems under @CompileStatic:
+                    // 1. The 'datastore' field only exists on the generated impl class
+                    // 2. StaticTypeCheckingVisitor.visitProperty() throws "Unexpected return
+                    //    statement" when encountering ReturnStatement in a property getter block
+                    // Instead, lazy getter methods are generated on the impl class (below).
                 }
             }
 
