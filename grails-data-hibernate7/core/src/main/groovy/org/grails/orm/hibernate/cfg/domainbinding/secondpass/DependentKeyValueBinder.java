@@ -1,0 +1,39 @@
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+
+import org.grails.orm.hibernate.cfg.CompositeIdentity;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder;
+import org.hibernate.mapping.DependantValue;
+
+import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH;
+
+/**
+ * Binds a dependent key value for collection associations.
+ */
+public class DependentKeyValueBinder {
+
+    private final SimpleValueBinder simpleValueBinder;
+    private final CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder;
+
+    public DependentKeyValueBinder(SimpleValueBinder simpleValueBinder, CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder) {
+        this.simpleValueBinder = simpleValueBinder;
+        this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder;
+    }
+
+    public void bind(GrailsHibernatePersistentProperty property, DependantValue key) {
+        GrailsHibernatePersistentEntity refDomainClass = property.getHibernateOwner();
+        Mapping mapping = refDomainClass.getMappedForm();
+        boolean hasCompositeIdentifier = mapping != null && mapping.hasCompositeIdentifier();
+        if (hasCompositeIdentifier && property.supportsJoinColumnMapping()) {
+            CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
+            compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(property, key, ci, refDomainClass, EMPTY_PATH);
+        }
+        else {
+            // set type
+            simpleValueBinder.bindSimpleValue(property, null, key, EMPTY_PATH);
+        }
+    }
+}
