@@ -28,16 +28,17 @@ import grails.testing.mixin.integration.Integration
 class UserControllerSpec extends ContainerGebSpec {
 
     void setup() {
-        go '/'
         to LoginPage
         username = 'test@grails.org'
         password = 'letmein'
         loginButton.click()
+        waitFor { title != 'Please sign in' }
     }
 
     void cleanup() {
         try {
             go 'logout'
+            waitFor { $('input', value: 'Log Out').displayed }
             $('input', value: 'Log Out').click()
         }
         catch (ignored) {
@@ -50,7 +51,7 @@ class UserControllerSpec extends ContainerGebSpec {
         go 'user/index'
 
         then:
-        title == 'User List'
+        waitFor { title == 'User List' }
 
         and:
         $('table.scaffold')
