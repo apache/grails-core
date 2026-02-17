@@ -2,7 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.DependantValue
 import spock.lang.Subject
@@ -15,7 +15,7 @@ class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
     void "test forceNullableAndCheckUpdateable with single unidirectional association"() {
         given:
         def owner = createPersistentEntity(CollectionKeyColumnUpdaterSpecParent)
-        def property = (GrailsHibernatePersistentProperty) owner.getPropertyByName("children")
+        def property = (HibernateToManyProperty) owner.getPropertyByName("children")
         
         Column column = new Column("test")
         column.setNullable(false)
@@ -24,7 +24,7 @@ class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
         key.getColumns() >> [column]
 
         when:
-        updater.forceNullableAndCheckUpdateable(key, property)
+        updater.forceNullableAndCheckUpdatable(key, property)
 
         then:
         column.isNullable()
@@ -34,7 +34,7 @@ class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
     void "test forceNullableAndCheckUpdateable with multiple unidirectional associations"() {
         given:
         def owner = createPersistentEntity(CollectionKeyColumnUpdaterSpecMultiParent)
-        def property = (GrailsHibernatePersistentProperty) owner.getPropertyByName("children1")
+        def property = (HibernateToManyProperty) owner.getPropertyByName("children1")
         
         Column column = new Column("test")
         
@@ -42,7 +42,7 @@ class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
         key.getColumns() >> [column]
 
         when:
-        updater.forceNullableAndCheckUpdateable(key, property)
+        updater.forceNullableAndCheckUpdatable(key, property)
 
         then:
         1 * key.setUpdateable(false)
@@ -51,7 +51,7 @@ class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
     void "test configure with bidirectional association"() {
         given:
         def owner = createPersistentEntity(CollectionKeyColumnUpdaterSpecBiParent)
-        def property = (GrailsHibernatePersistentProperty) owner.getPropertyByName("children")
+        def property = (HibernateToManyProperty) owner.getPropertyByName("children")
 
         Column column = new Column("keyCol")
 
@@ -59,7 +59,7 @@ class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
         key.getColumns() >> [column]
 
         when:
-        updater.forceNullableAndCheckUpdateable(key, property)
+        updater.forceNullableAndCheckUpdatable(key, property)
 
         then:
         column.isNullable()

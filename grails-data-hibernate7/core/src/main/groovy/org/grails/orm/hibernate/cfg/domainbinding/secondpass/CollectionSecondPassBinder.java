@@ -243,7 +243,7 @@ public class CollectionSecondPassBinder {
         } else if (property.supportsJoinColumnMapping()) {
             bindCollectionWithJoinTable(property, mappings, collection, propConfig);
         }
-        collectionKeyColumnUpdater.forceNullableAndCheckUpdateable(key, property); // Use the injected service
+        collectionKeyColumnUpdater.forceNullableAndCheckUpdatable(key, property); // Use the injected service
     }
 
     private void bindUnidirectionalOneToMany(HibernateOneToManyProperty property, @Nonnull InFlightMetadataCollector mappings, Collection collection) {
