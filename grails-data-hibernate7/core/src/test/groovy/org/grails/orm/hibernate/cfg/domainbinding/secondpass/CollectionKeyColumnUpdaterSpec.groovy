@@ -47,6 +47,24 @@ class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
         then:
         1 * key.setUpdateable(false)
     }
+
+    void "test configure with bidirectional association"() {
+        given:
+        def owner = createPersistentEntity(CollectionKeyColumnUpdaterSpecBiParent)
+        def property = (GrailsHibernatePersistentProperty) owner.getPropertyByName("children")
+
+        Column column = new Column("keyCol")
+
+        DependantValue key = Mock(DependantValue)
+        key.getColumns() >> [column]
+
+        when:
+        updater.forceNullableAndCheckUpdateable(key, property)
+
+        then:
+        column.isNullable()
+        1 * key.setUpdateable(true)
+    }
 }
 
 @Entity
@@ -64,4 +82,17 @@ class CollectionKeyColumnUpdaterSpecChild {
 class CollectionKeyColumnUpdaterSpecMultiParent {
     Long id
     static hasMany = [children1: CollectionKeyColumnUpdaterSpecChild, children2: CollectionKeyColumnUpdaterSpecChild]
+}
+
+@Entity
+class CollectionKeyColumnUpdaterSpecBiParent {
+    Long id
+    static hasMany = [children: CollectionKeyColumnUpdaterSpecBiChild]
+}
+
+@Entity
+class CollectionKeyColumnUpdaterSpecBiChild {
+    Long id
+    CollectionKeyColumnUpdaterSpecBiParent parent
+    static belongsTo = [parent: CollectionKeyColumnUpdaterSpecBiParent]
 }

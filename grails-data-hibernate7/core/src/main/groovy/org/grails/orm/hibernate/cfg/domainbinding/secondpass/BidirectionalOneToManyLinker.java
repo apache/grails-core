@@ -1,6 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Column;
@@ -18,7 +19,7 @@ public class BidirectionalOneToManyLinker {
         this.grailsPropertyResolver = grailsPropertyResolver;
     }
 
-    public void link(Collection collection, PersistentClass associatedClass, DependantValue key, GrailsHibernatePersistentProperty otherSide) {
+    public void link(Collection collection, PersistentClass associatedClass, DependantValue key, HibernateToManyProperty otherSide) {
         collection.setInverse(true);
 
         for (Column column : grailsPropertyResolver.getProperty(associatedClass, otherSide.getName()).getValue().getColumns()) {

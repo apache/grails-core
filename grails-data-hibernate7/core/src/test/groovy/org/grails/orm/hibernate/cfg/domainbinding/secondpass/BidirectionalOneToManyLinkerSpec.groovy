@@ -2,6 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver
 import org.hibernate.mapping.Collection
 import org.hibernate.mapping.Column
@@ -42,7 +43,7 @@ class BidirectionalOneToManyLinkerSpec extends HibernateGormDatastoreSpec {
         Table collectionTable = new Table("collection_table")
         DependantValue key = new DependantValue(metadataContext, collectionTable, null)
         
-        GrailsHibernatePersistentProperty otherSide = Mock(GrailsHibernatePersistentProperty)
+        HibernateToManyProperty otherSide = Mock(HibernateToManyProperty)
         otherSide.getName() >> "owner"
         otherSide.isNullable() >> true
 
