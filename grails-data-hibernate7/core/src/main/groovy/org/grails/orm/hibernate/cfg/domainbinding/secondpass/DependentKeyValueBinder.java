@@ -2,10 +2,10 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.hibernate.mapping.DependantValue;
 
 import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH;
@@ -23,7 +23,7 @@ public class DependentKeyValueBinder {
         this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder;
     }
 
-    public void bind(GrailsHibernatePersistentProperty property, DependantValue key) {
+    public void bind(HibernateToManyProperty property, DependantValue key) {
         GrailsHibernatePersistentEntity refDomainClass = property.getHibernateOwner();
         Mapping mapping = refDomainClass.getMappedForm();
         boolean hasCompositeIdentifier = mapping != null && mapping.hasCompositeIdentifier();

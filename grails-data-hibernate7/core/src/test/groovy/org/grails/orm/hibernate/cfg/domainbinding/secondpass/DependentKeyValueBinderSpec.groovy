@@ -3,7 +3,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
@@ -22,7 +22,7 @@ class DependentKeyValueBinderSpec extends HibernateGormDatastoreSpec {
 
     void "test bind without composite identifier"() {
         given:
-        GrailsHibernatePersistentProperty property = Mock(GrailsHibernatePersistentProperty)
+        HibernateToManyProperty property = Mock(HibernateToManyProperty)
         GrailsHibernatePersistentEntity owner = Mock(GrailsHibernatePersistentEntity)
         Mapping mapping = Mock(Mapping)
         DependantValue key = Mock(DependantValue)
@@ -41,7 +41,7 @@ class DependentKeyValueBinderSpec extends HibernateGormDatastoreSpec {
 
     void "test bind with composite identifier and join column support"() {
         given:
-        GrailsHibernatePersistentProperty property = Mock(GrailsHibernatePersistentProperty)
+        HibernateToManyProperty property = Mock(HibernateToManyProperty)
         GrailsHibernatePersistentEntity owner = Mock(GrailsHibernatePersistentEntity)
         Mapping mapping = Mock(Mapping)
         CompositeIdentity ci = new CompositeIdentity()
@@ -63,7 +63,7 @@ class DependentKeyValueBinderSpec extends HibernateGormDatastoreSpec {
 
     void "test bind with composite identifier but NO join column support"() {
         given:
-        GrailsHibernatePersistentProperty property = Mock(GrailsHibernatePersistentProperty)
+        HibernateToManyProperty property = Mock(HibernateToManyProperty)
         GrailsHibernatePersistentEntity owner = Mock(GrailsHibernatePersistentEntity)
         Mapping mapping = Mock(Mapping)
         DependantValue key = Mock(DependantValue)
