@@ -41,7 +41,7 @@ jobs:
           java-version: 17
           distribution: liberica
       - name: "🗄️ Cache local Maven repository"
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.m2/repository
           key: cache-local-maven-${{ github.sha }}
@@ -148,7 +148,7 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🗄️ Restore local Maven repository from cache"
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.m2/repository
           key: cache-local-maven-${{ github.sha }}
