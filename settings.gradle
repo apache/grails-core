@@ -283,6 +283,9 @@ project(':grails-test-examples-hibernate5-grails-hibernate-groovy-proxy').projec
 include 'grails-test-examples-hibernate5-issue450'
 project(':grails-test-examples-hibernate5-issue450').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/issue450')
 
+include 'grails-test-examples-hibernate5-grails-multitenant-multi-datasource'
+project(':grails-test-examples-hibernate5-grails-multitenant-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-multitenant-multi-datasource')
+
 // Mongodb
 // core
 include 'grails-data-mongodb-core'
