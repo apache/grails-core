@@ -114,13 +114,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
      * @return a filtered array with command options removed, safe for Spring Boot
      */
     static String[] filterCommandOptions(String[] args) {
-        List<String> filtered = new ArrayList<>()
-        for (String arg : args) {
-            if (!arg.startsWith('--')) {
-                filtered.add(arg)
-            }
-        }
-        filtered.toArray(new String[0])
+        args.findAll { !it.startsWith('--') } as String[]
     }
 
     /**
