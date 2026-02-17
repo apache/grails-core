@@ -2,6 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.grails.datastore.mapping.model.DatastoreConfigurationException
 import org.hibernate.mapping.PersistentClass
 import spock.lang.Subject
 
@@ -13,7 +14,7 @@ class OrderByClauseBuilderSpec extends HibernateGormDatastoreSpec {
     OrderByClauseBuilder builder = new OrderByClauseBuilder()
 
     void setupSpec() {
-        manager.addAllDomainClasses([OrderTest, SubOrderTest])
+        manager.addAllDomainClasses([OrderTest, SubOrderTest, OrderWithComponent])
     }
 
     void "test buildOrderByClause with empty string (default to id)"() {
@@ -71,6 +72,62 @@ class OrderByClauseBuilderSpec extends HibernateGormDatastoreSpec {
         result == "other_column asc"
     }
 
+    void "test buildOrderByClause with null string"() {
+        given:
+        PersistentClass pc = datastore.metadata.getEntityBinding(OrderTest.name)
+
+        when:
+        String result = builder.buildOrderByClause(null, pc, "role", "asc")
+
+        then:
+        result == null
+    }
+
+    void "test buildOrderByClause with non-existent property"() {
+        given:
+        PersistentClass pc = datastore.metadata.getEntityBinding(OrderTest.name)
+
+        when:
+        builder.buildOrderByClause("foo", pc, "role", "asc")
+
+        then:
+        thrown(DatastoreConfigurationException)
+    }
+
+    void "test buildOrderByClause with invalid sort clause"() {
+        given:
+        PersistentClass pc = datastore.metadata.getEntityBinding(OrderTest.name)
+
+        when:
+        // Double ordering keyword should fail
+        builder.buildOrderByClause("name asc desc", pc, "role", "asc")
+
+        then:
+        thrown(DatastoreConfigurationException)
+    }
+
+    void "test buildOrderByClause with different defaultOrder"() {
+        given:
+        PersistentClass pc = datastore.metadata.getEntityBinding(OrderTest.name)
+
+        when:
+        String result = builder.buildOrderByClause("name", pc, "role", "desc")
+
+        then:
+        result == "name desc"
+    }
+
+    void "test buildOrderByClause with multiple columns"() {
+        given:
+        PersistentClass pc = datastore.metadata.getEntityBinding(OrderWithComponent.name)
+
+        when:
+        String result = builder.buildOrderByClause("comp", pc, "role", "asc")
+
+        then:
+        result == "comp_c1 asc, comp_c2 asc"
+    }
+
     void "test buildOrderByClause with table prefix for inherited property"() {
         given:
         PersistentClass pc = datastore.metadata.getEntityBinding(SubOrderTest.name)
@@ -80,11 +137,8 @@ class OrderByClauseBuilderSpec extends HibernateGormDatastoreSpec {
         String result = builder.buildOrderByClause("name, subProperty", pc, "role", "asc")
 
         then:
-        // Hibernate 7 mapping might use different table qualification depending on strategy.
-        // Assuming joined-subclass or TPH.
-        // If TPH (default GORM), table prefix might be empty if it's the same table.
-        result.contains("name asc")
-        result.contains("sub_property asc")
+        // In GORM TPH is default, so no table prefix
+        result == "name asc, sub_property asc"
     }
 }
 
@@ -102,4 +156,16 @@ class OrderTest {
 @Entity
 class SubOrderTest extends OrderTest {
     String subProperty
+}
+
+@Entity
+class OrderWithComponent {
+    Long id
+    TestComponent comp
+    static embedded = ['comp']
+}
+
+class TestComponent {
+    String c1
+    String c2
 }

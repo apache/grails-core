@@ -26,8 +26,7 @@ public class UniqueKeyForColumnsCreator {
     public void createUniqueKeyForColumns(Table table, List<Column> columns) {
         Collections.reverse(columns);
 
-        UniqueKey uk = new UniqueKey();
-        uk.setTable(table);
+        UniqueKey uk = new UniqueKey(table);
         for(Column column : columns) {
             uk.addColumn(column);
         }

@@ -7,113 +7,95 @@ import org.hibernate.mapping.Property;
 import org.hibernate.mapping.Selectable;
 import org.hibernate.mapping.SingleTableSubclass;
 
-import java.util.Iterator;
-import java.util.StringTokenizer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  * Utility class to build SQL order by clauses from HQL-style order by strings.
  */
 public class OrderByClauseBuilder {
 
-    @SuppressWarnings("unchecked")
     public String buildOrderByClause(String hqlOrderBy, PersistentClass associatedClass, String role, String defaultOrder) {
-        String orderByString = null;
-        if (hqlOrderBy != null) {
-            java.util.List<String> properties = new java.util.ArrayList<>();
-            java.util.List<String> ordering = new java.util.ArrayList<>();
-            StringBuilder orderByBuffer = new StringBuilder();
-            if (hqlOrderBy.length() == 0) {
-                //order by id
-                Iterator<?> it = associatedClass.getIdentifier().getSelectables().iterator();
-                while (it.hasNext()) {
-                    Selectable col = (Selectable) it.next();
-                    orderByBuffer.append(col.getText()).append(" asc").append(", ");
-                }
-            }
-            else {
-                StringTokenizer st = new StringTokenizer(hqlOrderBy, " ,", false);
-                String currentOrdering = defaultOrder;
-                //FIXME make this code decent
-                while (st.hasMoreTokens()) {
-                    String token = st.nextToken();
-                    if (isNonPropertyToken(token)) {
-                        if (currentOrdering != null) {
-                            throw new DatastoreConfigurationException(
-                                    "Error while parsing sort clause: " + hqlOrderBy
-                                            + " (" + role + ")"
-                            );
-                        }
-                        currentOrdering = token;
-                    }
-                    else {
-                        //Add ordering of the previous
-                        if (currentOrdering == null) {
-                            //default ordering
-                            ordering.add("asc");
-                        }
-                        else {
-                            ordering.add(currentOrdering);
-                            currentOrdering = null;
-                        }
-                        properties.add(token);
-                    }
-                }
-                ordering.remove(0); //first one is the algorithm starter
-                // add last one ordering
-                if (currentOrdering == null) {
-                    //default ordering
-                    ordering.add(defaultOrder);
-                }
-                else {
-                    ordering.add(currentOrdering);
-                    currentOrdering = null;
-                }
-                int index = 0;
-
-                for (String property : properties) {
-                    Property p = BinderHelper.findPropertyByName(associatedClass, property);
-                    if (p == null) {
-                        throw new DatastoreConfigurationException(
-                                "property from sort clause not found: "
-                                        + associatedClass.getEntityName() + "." + property
-                        );
-                    }
-                    PersistentClass pc = p.getPersistentClass();
-                    String table;
-                    if (pc == null) {
-                        table = "";
-                    }
-
-                    else if (pc == associatedClass
-                            || (associatedClass instanceof SingleTableSubclass &&
-                            pc.getMappedClass().isAssignableFrom(associatedClass.getMappedClass()))) {
-                        table = "";
-                    } else {
-                        table = pc.getTable().getQuotedName() + ".";
-                    }
-
-                    Iterator<?> propertyColumns = p.getSelectables().iterator();
-                    while (propertyColumns.hasNext()) {
-                        Selectable column = (Selectable) propertyColumns.next();
-                        orderByBuffer.append(table)
-                                .append(column.getText())
-                                .append(" ")
-                                .append(ordering.get(index))
-                                .append(", ");
-                    }
-                    index++;
-                }
-            }
-            orderByString = orderByBuffer.substring(0, orderByBuffer.length() - 2);
+        if (hqlOrderBy == null) {
+            return null;
         }
-        return orderByString;
+
+        if (hqlOrderBy.isEmpty()) {
+            return StreamSupport.stream(associatedClass.getIdentifier().getSelectables().spliterator(), false)
+                    .map(selectable -> ((Selectable) selectable).getText() + " asc")
+                    .collect(Collectors.joining(", "));
+        }
+
+        List<SortEntry> entries = parseSortEntries(hqlOrderBy, role, defaultOrder);
+
+        return entries.stream()
+                .map(entry -> buildPropertyOrderBy(entry, associatedClass))
+                .collect(Collectors.joining(", "));
     }
 
-    private boolean isNonPropertyToken(String token) {
-        if (" ".equals(token)) return true;
-        if (",".equals(token)) return true;
-        if (token.equalsIgnoreCase("desc")) return true;
-        if (token.equalsIgnoreCase("asc")) return true;
-        return false;
+    private List<SortEntry> parseSortEntries(String hqlOrderBy, String role, String defaultOrder) {
+        String[] tokens = hqlOrderBy.split("[ ,]+");
+        List<SortEntry> entries = new ArrayList<>();
+        SortEntry currentEntry = null;
+
+        for (String token : tokens) {
+            if (token.isEmpty()) continue;
+
+            if (isDirectionToken(token)) {
+                if (currentEntry == null || currentEntry.direction != null) {
+                    throw new DatastoreConfigurationException("Error while parsing sort clause: " + hqlOrderBy + " (" + role + ")");
+                }
+                currentEntry.direction = token.toLowerCase();
+            } else {
+                if (currentEntry != null && currentEntry.direction == null) {
+                    currentEntry.direction = "asc";
+                }
+                currentEntry = new SortEntry(token);
+                entries.add(currentEntry);
+            }
+        }
+
+        if (currentEntry != null && currentEntry.direction == null) {
+            currentEntry.direction = defaultOrder;
+        }
+
+        return entries;
+    }
+
+    private String buildPropertyOrderBy(SortEntry entry, PersistentClass associatedClass) {
+        Property p = BinderHelper.findPropertyByName(associatedClass, entry.property);
+        if (p == null) {
+            throw new DatastoreConfigurationException("property from sort clause not found: " + associatedClass.getEntityName() + "." + entry.property);
+        }
+
+        String tablePrefix = getTablePrefix(p, associatedClass);
+        String direction = entry.direction;
+
+        return StreamSupport.stream(p.getSelectables().spliterator(), false)
+                .map(selectable -> tablePrefix + ((Selectable) selectable).getText() + " " + direction)
+                .collect(Collectors.joining(", "));
+    }
+
+    private String getTablePrefix(Property p, PersistentClass associatedClass) {
+        PersistentClass pc = p.getPersistentClass();
+        if (pc == null || pc == associatedClass || (associatedClass instanceof SingleTableSubclass && pc.getMappedClass().isAssignableFrom(associatedClass.getMappedClass()))) {
+            return "";
+        }
+        return pc.getTable().getQuotedName() + ".";
+    }
+
+    private boolean isDirectionToken(String token) {
+        return token.equalsIgnoreCase("asc") || token.equalsIgnoreCase("desc");
+    }
+
+    private static class SortEntry {
+        final String property;
+        String direction;
+
+        SortEntry(String property) {
+            this.property = property;
+        }
     }
 }
