@@ -118,6 +118,39 @@ package org.grails.orm.hibernate.cfg;
     @Override
     GrailsHibernatePersistentProperty getVersion();
 
+    /**
+     * @param parentType The type of the parent entity
+     * @return The parent property if it exists
+     */
+    default Optional<GrailsHibernatePersistentProperty> getHibernateParentProperty(Class<?> parentType) {
+        List<GrailsHibernatePersistentProperty> properties = getHibernatePersistentProperties();
+        if (properties == null) {
+            return Optional.empty();
+        }
+        return properties.stream()
+                .filter(Objects::nonNull)
+                .filter(p -> p.getType().equals(parentType))
+                .findFirst();
+    }
+
+    /**
+     * @param parentType The type of the parent entity to exclude from the results
+     * @return The properties that should be bound to the Hibernate meta model
+     */
+    default List<GrailsHibernatePersistentProperty> getHibernatePersistentProperties(Class<?> parentType) {
+        List<GrailsHibernatePersistentProperty> properties = getHibernatePersistentProperties();
+        if (properties == null) {
+            return java.util.Collections.emptyList();
+        }
+        return properties.stream()
+                .filter(Objects::nonNull)
+                .filter(p -> p.getMappedForm() != null)
+                .filter(p -> !p.equals(getIdentity()))
+                .filter(p -> !GormProperties.VERSION.equals(p.getName()))
+                .filter(p -> !p.getType().equals(parentType))
+                .toList();
+    }
+
     default List<GrailsHibernatePersistentEntity> getChildEntities() {
         return getChildEntities(getDataSourceName());
     }

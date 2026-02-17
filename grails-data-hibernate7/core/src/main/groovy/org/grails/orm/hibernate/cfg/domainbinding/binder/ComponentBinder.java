@@ -73,24 +73,17 @@ public class ComponentBinder {
 
         GrailsHibernatePersistentEntity domainClass = (GrailsHibernatePersistentEntity) embeddedProperty.getAssociatedEntity();
         mappingCacheHolder.cacheMapping(domainClass);
-        var peerProperties = domainClass.getHibernatePersistentProperties();
 
         Table table = component.getOwner().getTable();
         PersistentClass persistentClass = component.getOwner();
         String currentPath = path.isEmpty() ? embeddedProperty.getName() : path + "." + embeddedProperty.getName();
         Class<?> propertyType = embeddedProperty.getOwner().getJavaClass();
 
-        for (GrailsHibernatePersistentProperty peerProperty : peerProperties) {
-            if (peerProperty.equals(domainClass.getIdentity())) continue;
-            if (peerProperty.getName().equals(GormProperties.VERSION)) continue;
+        domainClass.getHibernateParentProperty(propertyType).ifPresent(p -> component.setParentProperty(p.getName()));
 
-            if (peerProperty.getType().equals(propertyType)) {
-                component.setParentProperty(peerProperty.getName());
-                continue;
-            }
+        for (GrailsHibernatePersistentProperty peerProperty : domainClass.getHibernatePersistentProperties(propertyType)) {
             var value = grailsPropertyBinder.bindProperty(persistentClass, table, currentPath, embeddedProperty, peerProperty, mappings);
             componentUpdater.updateComponent(component, embeddedProperty, peerProperty, value);
-
         }
         return component;
     }

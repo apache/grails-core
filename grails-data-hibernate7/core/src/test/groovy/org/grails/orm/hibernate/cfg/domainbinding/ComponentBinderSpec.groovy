@@ -145,8 +145,8 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         prop1.getType() >> String
         prop1.isHibernateOneToOne() >> false
         prop1.isHibernateManyToOne() >> false
-        associatedEntity.getHibernatePersistentProperties() >> [prop1]
-        associatedEntity.getIdentity() >> null
+        associatedEntity.getHibernateParentProperty(MyEntity) >> Optional.empty()
+        associatedEntity.getHibernatePersistentProperties(MyEntity) >> [prop1]
 
         def mappings = metadataBuildingContext.getMetadataCollector()
 
@@ -192,7 +192,8 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         normalProp.isHibernateManyToOne() >> false
 
         associatedEntity.getIdentity() >> idProp
-        associatedEntity.getHibernatePersistentProperties() >> [idProp, versionProp, normalProp]
+        associatedEntity.getHibernateParentProperty(MyEntity) >> Optional.empty()
+        associatedEntity.getHibernatePersistentProperties(MyEntity) >> [normalProp]
 
         def mappings = metadataBuildingContext.getMetadataCollector()
 
@@ -231,7 +232,8 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         parentProp.getType() >> MyEntity
 
         associatedEntity.getIdentity() >> null
-        associatedEntity.getHibernatePersistentProperties() >> [parentProp]
+        associatedEntity.getHibernateParentProperty(MyEntity) >> Optional.of(parentProp)
+        associatedEntity.getHibernatePersistentProperties(MyEntity) >> []
 
         def mappings = metadataBuildingContext.getMetadataCollector()
 
