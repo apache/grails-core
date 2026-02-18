@@ -6,12 +6,26 @@ import org.grails.datastore.mapping.model.types.mapping.PropertyWithMapping;
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
+import org.hibernate.FetchMode;
+
 import java.util.Map;
 
 /**
  * Marker interface for Hibernate to-many associations
  */
 public interface HibernateToManyProperty extends PropertyWithMapping<PropertyConfig>, GrailsHibernatePersistentProperty {
+
+    default boolean getIgnoreNotFound() {
+        return getMappedForm().getIgnoreNotFound();
+    }
+
+    default FetchMode getFetchMode() {
+        return getMappedForm().getFetchMode();
+    }
+
+    default Boolean getLazy() {
+        return getMappedForm().getLazy();
+    }
 
     /**
      * @return Whether the collection should be bound with a foreign key

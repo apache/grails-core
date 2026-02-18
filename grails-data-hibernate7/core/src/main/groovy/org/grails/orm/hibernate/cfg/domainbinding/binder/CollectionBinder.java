@@ -30,6 +30,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolde
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
 
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyInverseValuesBinder;
 import org.hibernate.FetchMode;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -85,7 +86,8 @@ public class CollectionBinder {
                 new CollectionKeyColumnUpdater(),
                 grailsPropertyResolver,
                 new BidirectionalOneToManyLinker(grailsPropertyResolver),
-                new DependentKeyValueBinder(simpleValueBinder, compositeIdentifierToManyToOneBinder)
+                new DependentKeyValueBinder(simpleValueBinder, compositeIdentifierToManyToOneBinder),
+                new UnidirectionalOneToManyInverseValuesBinder()
         );
         this.listSecondPassBinder = new ListSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
         this.mapSecondPassBinder = new MapSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);

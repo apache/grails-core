@@ -62,6 +62,7 @@ public class CollectionSecondPassBinder {
     private final GrailsPropertyResolver grailsPropertyResolver;
     private final BidirectionalOneToManyLinker bidirectionalOneToManyLinker;
     private final DependentKeyValueBinder dependentKeyValueBinder;
+    private final UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder;
 
     public CollectionSecondPassBinder(
             MetadataBuildingContext metadataBuildingContext,
@@ -76,7 +77,8 @@ public class CollectionSecondPassBinder {
             CollectionKeyColumnUpdater collectionKeyColumnUpdater,
             GrailsPropertyResolver grailsPropertyResolver,
             BidirectionalOneToManyLinker bidirectionalOneToManyLinker,
-            DependentKeyValueBinder dependentKeyValueBinder) {
+            DependentKeyValueBinder dependentKeyValueBinder,
+            UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.jdbcEnvironment = jdbcEnvironment;
@@ -90,6 +92,7 @@ public class CollectionSecondPassBinder {
         this.grailsPropertyResolver = grailsPropertyResolver;
         this.bidirectionalOneToManyLinker = bidirectionalOneToManyLinker;
         this.dependentKeyValueBinder = dependentKeyValueBinder;
+        this.unidirectionalOneToManyInverseValuesBinder = unidirectionalOneToManyInverseValuesBinder;
         this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy);
         this.orderByClauseBuilder = new OrderByClauseBuilder();
     }
@@ -285,7 +288,7 @@ public class CollectionSecondPassBinder {
         else {
             // for a normal unidirectional one-to-many we use a join column
             element = new ManyToOne(metadataBuildingContext, collection.getCollectionTable());
-            bindUnidirectionalOneToManyInverseValues(property, (ManyToOne) element);
+            unidirectionalOneToManyInverseValuesBinder.bindUnidirectionalOneToManyInverseValues(property, (ManyToOne) element);
         }
 
         String columnName;
@@ -363,22 +366,7 @@ public class CollectionSecondPassBinder {
         new CollectionForPropertyConfigBinder().bindCollectionForPropertyConfig(collection, config);
     }
 
-    private void bindUnidirectionalOneToManyInverseValues(HibernateToManyProperty property, ManyToOne manyToOne) {
-        PropertyConfig config = property.getMappedForm();
-        manyToOne.setIgnoreNotFound(config.getIgnoreNotFound());
-        final FetchMode fetch = config.getFetchMode();
-        if(!fetch.equals(FetchMode.JOIN)) {
-            manyToOne.setLazy(true);
-        }
 
-        final Boolean lazy = config.getLazy();
-        if(lazy != null) {
-            manyToOne.setLazy(lazy);
-        }
-
-        // set referenced entity
-        manyToOne.setReferencedEntityName(property.getHibernateAssociatedEntity().getName());
-    }
 
 
 
