@@ -63,6 +63,7 @@ public class CollectionSecondPassBinder {
     private final BidirectionalOneToManyLinker bidirectionalOneToManyLinker;
     private final DependentKeyValueBinder dependentKeyValueBinder;
     private final UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder;
+    private final UnidirectionalOneToManyBinder unidirectionalOneToManyBinder;
     private final CollectionWithJoinTableBinder collectionWithJoinTableBinder;
 
     public CollectionSecondPassBinder(
@@ -80,6 +81,7 @@ public class CollectionSecondPassBinder {
             BidirectionalOneToManyLinker bidirectionalOneToManyLinker,
             DependentKeyValueBinder dependentKeyValueBinder,
             UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder,
+            UnidirectionalOneToManyBinder unidirectionalOneToManyBinder,
             CollectionWithJoinTableBinder collectionWithJoinTableBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
@@ -95,6 +97,7 @@ public class CollectionSecondPassBinder {
         this.bidirectionalOneToManyLinker = bidirectionalOneToManyLinker;
         this.dependentKeyValueBinder = dependentKeyValueBinder;
         this.unidirectionalOneToManyInverseValuesBinder = unidirectionalOneToManyInverseValuesBinder;
+        this.unidirectionalOneToManyBinder = unidirectionalOneToManyBinder;
         this.collectionWithJoinTableBinder = collectionWithJoinTableBinder;
         this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy);
         this.orderByClauseBuilder = new OrderByClauseBuilder();
@@ -102,8 +105,10 @@ public class CollectionSecondPassBinder {
 
 
 
-    public void bindCollectionSecondPass(@Nonnull HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
-                                         Map<?, ?> persistentClasses, @Nonnull Collection collection) {
+    public void bindCollectionSecondPass(@Nonnull HibernateToManyProperty property,
+                                         @Nonnull InFlightMetadataCollector mappings,
+                                         Map<?, ?> persistentClasses,
+                                         @Nonnull Collection collection) {
         PersistentClass associatedClass = null;
 
         if (LOG.isDebugEnabled())
@@ -238,46 +243,14 @@ public class CollectionSecondPassBinder {
                 // TODO support unidirectional many-to-many
             }
         } else if (property.isUnidirectionalOneToMany()) {
-            // for non-inverse one-to-many, with a not-null fk, add a backref!
-            // there are problems with list and map mappings and join columns relating to duplicate key constraints
-            // TODO change this when HHH-1268 is resolved
-            if (!property.shouldBindWithForeignKey()) {
-                collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, mappings, collection);
-            } else {
-                bindUnidirectionalOneToMany((HibernateOneToManyProperty) property, mappings, collection);
-            }
+            unidirectionalOneToManyBinder.bind((HibernateOneToManyProperty) property, mappings, collection);
         } else if (property.supportsJoinColumnMapping()) {
             collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, mappings, collection);
         }
         collectionKeyColumnUpdater.forceNullableAndCheckUpdatable(key, property); // Use the injected service
     }
 
-    private void bindUnidirectionalOneToMany(HibernateOneToManyProperty property, @Nonnull InFlightMetadataCollector mappings, Collection collection) {
-        Value v = collection.getElement();
-        v.createForeignKey();
-        String entityName;
-        if (v instanceof ManyToOne) {
-            ManyToOne manyToOne = (ManyToOne) v;
 
-            entityName = manyToOne.getReferencedEntityName();
-        } else {
-            entityName = ((OneToMany) v).getReferencedEntityName();
-        }
-        collection.setInverse(false);
-        PersistentClass referenced = mappings.getEntityBinding(entityName);
-        Backref prop = new Backref();
-        GrailsHibernatePersistentEntity owner = (GrailsHibernatePersistentEntity) property.getOwner();
-        prop.setEntityName(owner.getName());
-        String s2 = property.getName();
-        prop.setName(UNDERSCORE + new BackticksRemover().apply(owner.getJavaClass().getSimpleName()) + UNDERSCORE + new BackticksRemover().apply(s2) + "Backref");
-        prop.setUpdatable(false);
-        prop.setInsertable(true);
-        prop.setCollectionRole(collection.getRole());
-        prop.setValue(collection.getKey());
-        prop.setOptional(true);
-
-        referenced.addProperty(prop);
-    }
 
 
 

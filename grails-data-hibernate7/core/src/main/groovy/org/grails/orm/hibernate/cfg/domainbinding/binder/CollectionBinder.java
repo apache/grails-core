@@ -32,6 +32,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
 
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionWithJoinTableBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyInverseValuesBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyBinder;
 import org.hibernate.FetchMode;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -56,6 +57,7 @@ public class CollectionBinder {
     private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
     private final ListSecondPassBinder listSecondPassBinder;
     private final CollectionSecondPassBinder collectionSecondPassBinder;
+    private final UnidirectionalOneToManyBinder unidirectionalOneToManyBinder;
     private final MapSecondPassBinder mapSecondPassBinder;
 
     public CollectionBinder(
@@ -76,6 +78,16 @@ public class CollectionBinder {
         GrailsPropertyResolver grailsPropertyResolver = new GrailsPropertyResolver();
         CollectionForPropertyConfigBinder collectionForPropertyConfigBinder = new CollectionForPropertyConfigBinder();
         UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder = new UnidirectionalOneToManyInverseValuesBinder();
+        CollectionWithJoinTableBinder collectionWithJoinTableBinder = new CollectionWithJoinTableBinder(
+                metadataBuildingContext,
+                namingStrategy,
+                unidirectionalOneToManyInverseValuesBinder,
+                enumTypeBinder,
+                compositeIdentifierToManyToOneBinder,
+                simpleValueColumnFetcher,
+                collectionForPropertyConfigBinder
+        );
+        this.unidirectionalOneToManyBinder = new UnidirectionalOneToManyBinder(collectionWithJoinTableBinder);
         this.collectionSecondPassBinder = new CollectionSecondPassBinder(
                 metadataBuildingContext,
                 namingStrategy,
@@ -91,15 +103,8 @@ public class CollectionBinder {
                 new BidirectionalOneToManyLinker(grailsPropertyResolver),
                 new DependentKeyValueBinder(simpleValueBinder, compositeIdentifierToManyToOneBinder),
                 unidirectionalOneToManyInverseValuesBinder,
-                new CollectionWithJoinTableBinder(
-                        metadataBuildingContext,
-                        namingStrategy,
-                        unidirectionalOneToManyInverseValuesBinder,
-                        enumTypeBinder,
-                        compositeIdentifierToManyToOneBinder,
-                        simpleValueColumnFetcher,
-                        collectionForPropertyConfigBinder
-                )
+                unidirectionalOneToManyBinder,
+                collectionWithJoinTableBinder
         );
         this.listSecondPassBinder = new ListSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
         this.mapSecondPassBinder = new MapSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
