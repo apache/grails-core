@@ -89,22 +89,15 @@ public class CollectionBinder {
         );
         this.unidirectionalOneToManyBinder = new UnidirectionalOneToManyBinder(collectionWithJoinTableBinder);
         this.collectionSecondPassBinder = new CollectionSecondPassBinder(
-                metadataBuildingContext,
-                namingStrategy,
-                jdbcEnvironment,
-                simpleValueBinder,
-                enumTypeBinder,
                 manyToOneBinder,
-                compositeIdentifierToManyToOneBinder,
-                simpleValueColumnFetcher,
                 new PrimaryKeyValueCreator(metadataBuildingContext),
                 new CollectionKeyColumnUpdater(),
-                grailsPropertyResolver,
                 new BidirectionalOneToManyLinker(grailsPropertyResolver),
                 new DependentKeyValueBinder(simpleValueBinder, compositeIdentifierToManyToOneBinder),
-                unidirectionalOneToManyInverseValuesBinder,
                 unidirectionalOneToManyBinder,
-                collectionWithJoinTableBinder
+                collectionWithJoinTableBinder,
+                collectionForPropertyConfigBinder,
+                new DefaultColumnNameFetcher(namingStrategy)
         );
         this.listSecondPassBinder = new ListSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
         this.mapSecondPassBinder = new MapSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
