@@ -61,7 +61,7 @@ dependencies {
     compileOnly 'org.springframework.boot:spring-boot-loader-tools'
     compileOnly 'org.springframework:spring-web'
     api 'org.springframework.boot:spring-boot-cli'
-    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    implementation 'jakarta.servlet:jakarta.servlet-api'
     compileOnly "net.sf.jopt-simple:jopt-simple:$joptSimpleVersion"
 
     // Maven Resolver API & friends

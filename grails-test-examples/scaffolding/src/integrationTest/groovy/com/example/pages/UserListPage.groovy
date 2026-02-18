@@ -20,22 +20,13 @@ package com.example.pages
 
 import geb.Page
 
-class LoginPage extends Page {
+class UserListPage extends Page {
 
-    static String pageTitle = 'Please sign in'
+    static String pageTitle = 'User List'
 
-    static url = 'login'
+    static url = 'user/index'
     static at = { title == pageTitle }
     static content = {
-        username { $('input', name: 'username') }
-        password { $('input', name: 'password') }
-        loginButton { $('button.primary') }
-    }
-
-    void login(String username = 'test@grails.org', String password = 'letmein') {
-        this.username = username
-        this.password = password
-        loginButton.click()
-        waitFor { title != pageTitle }
+        scaffoldTable { $('table.scaffold') }
     }
 }

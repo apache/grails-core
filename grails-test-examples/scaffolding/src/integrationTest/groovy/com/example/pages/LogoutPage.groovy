@@ -16,19 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package com.example.pages
 
 import geb.Page
 
 class LogoutPage extends Page {
 
+    static String pageTitle = 'Confirm Log Out?'
+
     static url = 'logout'
-
-    static at = { title == 'Confirm Log Out?' }
-
+    static at = { title == pageTitle }
     static content = {
-        logoutForm { $('form') }
-        logoutButton { $('button', value: 'Log Out') }
+        logoutButton { $('button.primary') }
+    }
+
+    void logout() {
+        logoutButton.click()
+        waitFor { title != pageTitle }
     }
 }
