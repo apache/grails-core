@@ -63,6 +63,7 @@ public class CollectionSecondPassBinder {
     private final BidirectionalOneToManyLinker bidirectionalOneToManyLinker;
     private final DependentKeyValueBinder dependentKeyValueBinder;
     private final UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder;
+    private final CollectionWithJoinTableBinder collectionWithJoinTableBinder;
 
     public CollectionSecondPassBinder(
             MetadataBuildingContext metadataBuildingContext,
@@ -78,7 +79,8 @@ public class CollectionSecondPassBinder {
             GrailsPropertyResolver grailsPropertyResolver,
             BidirectionalOneToManyLinker bidirectionalOneToManyLinker,
             DependentKeyValueBinder dependentKeyValueBinder,
-            UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder) {
+            UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder,
+            CollectionWithJoinTableBinder collectionWithJoinTableBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.jdbcEnvironment = jdbcEnvironment;
@@ -93,14 +95,15 @@ public class CollectionSecondPassBinder {
         this.bidirectionalOneToManyLinker = bidirectionalOneToManyLinker;
         this.dependentKeyValueBinder = dependentKeyValueBinder;
         this.unidirectionalOneToManyInverseValuesBinder = unidirectionalOneToManyInverseValuesBinder;
+        this.collectionWithJoinTableBinder = collectionWithJoinTableBinder;
         this.defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy);
         this.orderByClauseBuilder = new OrderByClauseBuilder();
     }
 
 
 
-    public void bindCollectionSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
-                                         Map<?, ?> persistentClasses, Collection collection) {
+    public void bindCollectionSecondPass(@Nonnull HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
+                                         Map<?, ?> persistentClasses, @Nonnull Collection collection) {
         PersistentClass associatedClass = null;
 
         if (LOG.isDebugEnabled())
@@ -157,7 +160,7 @@ public class CollectionSecondPassBinder {
                 collection.setCollectionTable(associatedClass.getTable());
             }
 
-            new CollectionForPropertyConfigBinder().bindCollectionForPropertyConfig(collection, propConfig);
+            new CollectionForPropertyConfigBinder().bindCollectionForPropertyConfig(collection, property);
         }
 
         final boolean isManyToMany = property instanceof HibernateManyToManyProperty;
@@ -227,7 +230,7 @@ public class CollectionSecondPassBinder {
                 ManyToOne element = manyToOneBinder.bindManyToOne((Association)otherSide, collection.getCollectionTable(), EMPTY_PATH);
                 element.setReferencedEntityName(otherSide.getOwner().getName());
                 collection.setElement(element);
-                new CollectionForPropertyConfigBinder().bindCollectionForPropertyConfig(collection, propConfig);
+                new CollectionForPropertyConfigBinder().bindCollectionForPropertyConfig(collection, property);
                 if (property.isCircular()) {
                     collection.setInverse(false);
                 }
@@ -239,12 +242,12 @@ public class CollectionSecondPassBinder {
             // there are problems with list and map mappings and join columns relating to duplicate key constraints
             // TODO change this when HHH-1268 is resolved
             if (!property.shouldBindWithForeignKey()) {
-                bindCollectionWithJoinTable(property, mappings, collection, propConfig);
+                collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, mappings, collection);
             } else {
                 bindUnidirectionalOneToMany((HibernateOneToManyProperty) property, mappings, collection);
             }
         } else if (property.supportsJoinColumnMapping()) {
-            bindCollectionWithJoinTable(property, mappings, collection, propConfig);
+            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, mappings, collection);
         }
         collectionKeyColumnUpdater.forceNullableAndCheckUpdatable(key, property); // Use the injected service
     }
@@ -276,95 +279,7 @@ public class CollectionSecondPassBinder {
         referenced.addProperty(prop);
     }
 
-    private void bindCollectionWithJoinTable(HibernateToManyProperty property,
-                                             @Nonnull InFlightMetadataCollector mappings, Collection collection, PropertyConfig config) {
 
-        collection.setInverse(false);
-        SimpleValue element;
-        final boolean isBasicCollectionType = property instanceof Basic;
-        if (isBasicCollectionType) {
-            element = new BasicValue(metadataBuildingContext, collection.getCollectionTable());
-        }
-        else {
-            // for a normal unidirectional one-to-many we use a join column
-            element = new ManyToOne(metadataBuildingContext, collection.getCollectionTable());
-            unidirectionalOneToManyInverseValuesBinder.bindUnidirectionalOneToManyInverseValues(property, (ManyToOne) element);
-        }
-
-        String columnName;
-
-        var joinColumnMappingOptional = Optional.ofNullable(config).map(PropertyConfig::getJoinTableColumnConfig);
-        if (isBasicCollectionType) {
-            final Class<?> referencedType = property.getType();
-            String className = referencedType.getName();
-            final boolean isEnum = referencedType.isEnum();
-            if (joinColumnMappingOptional.isPresent()) {
-                columnName = joinColumnMappingOptional.get().getName();
-            }
-            else {
-                var clazz = namingStrategy.resolveColumnName(className);
-                var prop = namingStrategy.resolveTableName(property.getName());
-                columnName = isEnum ? clazz : new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz);
-            }
-
-            if (isEnum) {
-                enumTypeBinder.bindEnumType(property, referencedType, element, columnName);
-            }
-            else {
-
-                Mapping mapping = null;
-                GrailsHibernatePersistentEntity domainClass = property.getHibernateOwner();
-                if (domainClass != null) {
-                    mapping = domainClass.getMappedForm();
-                }
-                String typeName = property.getTypeName();
-                if (typeName == null) {
-                    Type type = mappings.getTypeConfiguration().getBasicTypeRegistry().getRegisteredType(className);
-                    if (type != null) {
-                        typeName = type.getName();
-                    }
-                }
-                if (typeName == null) {
-                    String domainName = property.getHibernateOwner().getName();
-                    throw new MappingException("Missing type or column for column["+columnName+"] on domain["+domainName+"] referencing["+className+"]");
-                }
-
-                new SimpleValueColumnBinder().bindSimpleValue(element, typeName, columnName, true);
-                if (joinColumnMappingOptional.isPresent()) {
-                    Column column = simpleValueColumnFetcher.getColumnForSimpleValue(element);
-                    ColumnConfig columnConfig = joinColumnMappingOptional.get();
-                    final PropertyConfig mappedForm = property.getMappedForm();
-                    new ColumnConfigToColumnBinder().bindColumnConfigToColumn(column, columnConfig, mappedForm);
-                }
-            }
-        } else {
-            final GrailsHibernatePersistentEntity domainClass = property.getHibernateAssociatedEntity();
-
-            Mapping m = null;
-            if (domainClass != null) {
-                m = domainClass.getMappedForm();
-            }
-            if (m != null && m.hasCompositeIdentifier()) {
-                CompositeIdentity ci = (CompositeIdentity) m.getIdentity();
-                compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(property, element, ci, domainClass, EMPTY_PATH);
-            }
-            else {
-                if (joinColumnMappingOptional.isPresent()) {
-                    columnName = joinColumnMappingOptional.get().getName();
-                }
-                else {
-                    var decapitalize = domainClass.getHibernateRootEntity().getJavaClass().getSimpleName();
-                    columnName = namingStrategy.resolveColumnName(decapitalize) + FOREIGN_KEY_SUFFIX;
-                }
-
-                new SimpleValueColumnBinder().bindSimpleValue(element, "long", columnName, true);
-            }
-        }
-
-        collection.setElement(element);
-
-        new CollectionForPropertyConfigBinder().bindCollectionForPropertyConfig(collection, config);
-    }
 
 
 

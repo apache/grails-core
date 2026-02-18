@@ -30,6 +30,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolde
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
 
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionWithJoinTableBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyInverseValuesBinder;
 import org.hibernate.FetchMode;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
@@ -73,6 +74,8 @@ public class CollectionBinder {
         this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
         this.collectionHolder = collectionHolder;
         GrailsPropertyResolver grailsPropertyResolver = new GrailsPropertyResolver();
+        CollectionForPropertyConfigBinder collectionForPropertyConfigBinder = new CollectionForPropertyConfigBinder();
+        UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder = new UnidirectionalOneToManyInverseValuesBinder();
         this.collectionSecondPassBinder = new CollectionSecondPassBinder(
                 metadataBuildingContext,
                 namingStrategy,
@@ -87,7 +90,16 @@ public class CollectionBinder {
                 grailsPropertyResolver,
                 new BidirectionalOneToManyLinker(grailsPropertyResolver),
                 new DependentKeyValueBinder(simpleValueBinder, compositeIdentifierToManyToOneBinder),
-                new UnidirectionalOneToManyInverseValuesBinder()
+                unidirectionalOneToManyInverseValuesBinder,
+                new CollectionWithJoinTableBinder(
+                        metadataBuildingContext,
+                        namingStrategy,
+                        unidirectionalOneToManyInverseValuesBinder,
+                        enumTypeBinder,
+                        compositeIdentifierToManyToOneBinder,
+                        simpleValueColumnFetcher,
+                        collectionForPropertyConfigBinder
+                )
         );
         this.listSecondPassBinder = new ListSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
         this.mapSecondPassBinder = new MapSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);

@@ -21,7 +21,7 @@ public class MapSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsS
     protected final Collection collection;
 
     public MapSecondPass(MapSecondPassBinder mapSecondPassBinder, HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
-                         Collection coll) {
+                         @Nonnull Collection coll) {
         this.mapSecondPassBinder = mapSecondPassBinder;
         this.property = property;
         this.mappings = mappings;

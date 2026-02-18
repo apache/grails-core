@@ -1,24 +1,17 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.hibernate.FetchMode;
 import org.hibernate.mapping.Collection;
 
+import java.util.Optional;
+
+import jakarta.annotation.Nonnull;
+
 public class CollectionForPropertyConfigBinder {
 
-    public void bindCollectionForPropertyConfig(Collection collection, PropertyConfig config) {
-        if (config == null) {
-            collection.setLazy(true);
-            collection.setExtraLazy(false);
-        } else {
-            final FetchMode fetch = config.getFetchMode();
-            if(!fetch.equals(FetchMode.JOIN)) {
-                collection.setLazy(true);
-            }
-            final Boolean lazy = config.getLazy();
-            if(lazy != null) {
-                collection.setExtraLazy(lazy);
-            }
-        }
+    public void bindCollectionForPropertyConfig(@Nonnull Collection collection,@Nonnull HibernateToManyProperty property) {
+        collection.setLazy(!FetchMode.JOIN.equals(property.getFetchMode()));
+        Optional.ofNullable(property.getLazy()).ifPresent(collection::setExtraLazy);
     }
 }

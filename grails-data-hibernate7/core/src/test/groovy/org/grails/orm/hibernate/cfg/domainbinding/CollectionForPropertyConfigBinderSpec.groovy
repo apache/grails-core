@@ -1,7 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.hibernate.FetchMode
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Set
@@ -17,40 +17,24 @@ class CollectionForPropertyConfigBinderSpec extends HibernateGormDatastoreSpec {
 
 
 
-    def "should apply default settings when the property config is null"() {
-        def grailsDomainBinder = getGrailsDomainBinder()
-        given: "A hibernate collection"
-        def owner = new RootClass(grailsDomainBinder.metadataBuildingContext)
-        def collection = new Set(grailsDomainBinder.metadataBuildingContext, owner)
-        // Set initial state to be different from the expected outcome
-        collection.setLazy(false)
-        collection.setExtraLazy(true)
-
-        when: "the binder is called with a null config"
-        binder.bindCollectionForPropertyConfig(collection, null)
-
-        then: "specific default values are applied"
-        collection.isLazy()
-        !collection.isExtraLazy()
-    }
 
     @Unroll
     def "should bind lazy settings based on fetch mode '#fetchMode.name()'} and an explicit lazy config of #lazySetting"() {
-        given: "A hibernate collection and a mocked property config"
+        given: "A hibernate collection and a mocked property"
         def owner = new RootClass(grailsDomainBinder.metadataBuildingContext)
         def collection = new Set(grailsDomainBinder.metadataBuildingContext, owner)
-        def config = Mock(PropertyConfig)
+        def property = Mock(HibernateToManyProperty)
 
         // Set initial state
         collection.setLazy(false)
         collection.setExtraLazy(false)
 
-        and: "the config is stubbed"
-        config.getFetchMode() >> fetchMode
-        config.getLazy() >> lazySetting
+        and: "the property is stubbed"
+        property.getFetchMode() >> fetchMode
+        property.getLazy() >> lazySetting
 
         when: "the binder is applied"
-        binder.bindCollectionForPropertyConfig(collection, config)
+        binder.bindCollectionForPropertyConfig(collection, property)
 
         then: "the collection's lazy and extraLazy properties are set according to the binder's logic"
         collection.isLazy() == expectedIsLazy
@@ -67,15 +51,6 @@ class CollectionForPropertyConfigBinderSpec extends HibernateGormDatastoreSpec {
 //        FetchMode.SUBSELECT | true      || true           | true
     }
 
-    def "should not throw an exception if the collection itself is null"() {
-        given: "A valid property config"
-        def config = Mock(PropertyConfig)
 
-        when: "the binder is called with a null collection"
-        binder.bindCollectionForPropertyConfig(null, config)
-
-        then: "a NullPointerException is thrown because the code does not guard against it"
-        thrown(NullPointerException)
-    }
 
 }

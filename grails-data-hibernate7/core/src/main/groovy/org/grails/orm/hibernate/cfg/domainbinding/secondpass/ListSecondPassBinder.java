@@ -44,8 +44,8 @@ public class ListSecondPassBinder {
         this.namingStrategy = namingStrategy;
     }
 
-    public void bindListSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
-                                   Map<?, ?> persistentClasses, List list) {
+    public void bindListSecondPass(@Nonnull HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
+                                   Map<?, ?> persistentClasses, @Nonnull List list) {
 
         collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, list);
         String columnName = property.getIndexColumnName(namingStrategy);

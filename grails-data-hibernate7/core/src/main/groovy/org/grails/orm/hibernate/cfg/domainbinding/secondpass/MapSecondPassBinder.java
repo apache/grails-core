@@ -41,8 +41,8 @@ public class MapSecondPassBinder {
         this.collectionSecondPassBinder = collectionSecondPassBinder;
     }
 
-    public void bindMapSecondPass(HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
-                                  Map<?, ?> persistentClasses, org.hibernate.mapping.Map map) {
+    public void bindMapSecondPass(@Nonnull HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
+                                  Map<?, ?> persistentClasses, @Nonnull org.hibernate.mapping.Map map) {
         collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, map);
         SimpleValue value = new BasicValue(metadataBuildingContext, map.getCollectionTable());
 
