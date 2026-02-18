@@ -198,7 +198,7 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                     // 1. The 'datastore' field only exists on the generated impl class
                     // 2. StaticTypeCheckingVisitor.visitProperty() throws "Unexpected return
                     //    statement" when encountering ReturnStatement in a property getter block
-                    // Instead, lazy getter methods are generated on the impl class (below).
+                    // Instead, service properties are eagerly populated in the generated setDatastore() method on the impl class (below).
                 }
             }
 

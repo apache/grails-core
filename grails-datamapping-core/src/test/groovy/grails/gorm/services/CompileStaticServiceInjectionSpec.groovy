@@ -310,7 +310,7 @@ interface ReportDataService {
         org.grails.datastore.mapping.services.Service.isAssignableFrom(impl)
     }
 
-    void "test setDatastore eagerly populates service properties in impl"() {
+    void "test impl has datastore infrastructure when abstract class has @Service properties"() {
         when: "A @Service abstract class with @Service-typed properties is compiled"
         Class service = new GroovyClassLoader().parseClass('''
 import grails.gorm.services.Service
@@ -347,7 +347,7 @@ interface RecordDataService {
         when: "The impl class is inspected"
         Class impl = service.classLoader.loadClass('$RecordServiceImplementation')
 
-        then: "The impl has setDatastore that eagerly populates service fields"
+        then: "The impl has datastore infrastructure for service injection"
         impl.getDeclaredMethod('setDatastore', Datastore) != null
         impl.getDeclaredMethod('getDatastore').returnType == Datastore
         impl.getDeclaredField('datastore') != null
