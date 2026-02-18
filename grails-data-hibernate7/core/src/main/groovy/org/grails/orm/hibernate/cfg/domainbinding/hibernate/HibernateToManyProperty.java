@@ -7,6 +7,7 @@ import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 import org.hibernate.FetchMode;
+import org.springframework.util.StringUtils;
 
 import java.util.Map;
 
@@ -14,6 +15,18 @@ import java.util.Map;
  * Marker interface for Hibernate to-many associations
  */
 public interface HibernateToManyProperty extends PropertyWithMapping<PropertyConfig>, GrailsHibernatePersistentProperty {
+
+    default boolean hasSort() {
+        return StringUtils.hasText(getMappedForm().getSort());
+    }
+
+    default String getSort() {
+        return getMappedForm().getSort();
+    }
+
+    default String getOrder() {
+        return getMappedForm().getOrder();
+    }
 
     default boolean getIgnoreNotFound() {
         return getMappedForm().getIgnoreNotFound();

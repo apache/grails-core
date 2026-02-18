@@ -21,7 +21,6 @@ import org.hibernate.mapping.*;
 import org.hibernate.mapping.Collection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.Map;
@@ -83,23 +82,21 @@ public class CollectionSecondPassBinder {
                     + " -> "
                     + collection.getCollectionTable().getName());
 
-        PropertyConfig propConfig = property.getMappedForm();
-
         GrailsHibernatePersistentEntity referenced = property.getHibernateAssociatedEntity();
-        if (StringUtils.hasText(propConfig.getSort())) {
+        if (property.hasSort()) {
             if (!property.isBidirectional() && (property instanceof HibernateOneToManyProperty)) {
                 throw new DatastoreConfigurationException("Default sort for associations ["+property.getHibernateOwner().getName()+"->" + property.getName() +
                         "] are not supported with unidirectional one to many relationships.");
             }
             if (referenced != null) {
-                GrailsHibernatePersistentProperty propertyToSortBy = (GrailsHibernatePersistentProperty) referenced.getPropertyByName(propConfig.getSort());
+                GrailsHibernatePersistentProperty propertyToSortBy = (GrailsHibernatePersistentProperty) referenced.getPropertyByName(property.getSort());
 
                 String associatedClassName = referenced.getName();
 
                 associatedClass = (PersistentClass) persistentClasses.get(associatedClassName);
                 if (associatedClass != null) {
                     collection.setOrderBy(orderByClauseBuilder.buildOrderByClause(propertyToSortBy.getName(), associatedClass, collection.getRole(),
-                            propConfig.getOrder() != null ? propConfig.getOrder() : "asc"));
+                            property.getOrder() != null ? property.getOrder() : "asc"));
                 }
             }
         }
@@ -170,9 +167,9 @@ public class CollectionSecondPassBinder {
 
         } else {
 
-            if (propConfig.hasJoinKeyMapping()) {
+            if (property.getMappedForm().hasJoinKeyMapping()) {
 
-                String columnName = propConfig.getJoinTable().getKey().getName();
+                String columnName = property.getMappedForm().getJoinTable().getKey().getName();
 
                 new SimpleValueColumnBinder().bindSimpleValue(key, "long", columnName, true);
 
@@ -186,7 +183,7 @@ public class CollectionSecondPassBinder {
         collection.setKey(key);
 
         // get cache config
-        CacheConfig cacheConfig = propConfig.getCache();
+        CacheConfig cacheConfig = property.getMappedForm().getCache();
         if (cacheConfig != null) {
             collection.setCacheConcurrencyStrategy(cacheConfig.getUsage());
         }
