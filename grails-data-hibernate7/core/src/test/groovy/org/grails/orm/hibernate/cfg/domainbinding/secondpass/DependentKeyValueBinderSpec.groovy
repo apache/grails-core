@@ -1,5 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
+import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
@@ -9,6 +10,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToMa
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
 import org.hibernate.mapping.DependantValue
 import spock.lang.Subject
+import org.grails.datastore.mapping.model.PersistentEntity
 
 import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH
 
@@ -20,16 +22,17 @@ class DependentKeyValueBinderSpec extends HibernateGormDatastoreSpec {
     @Subject
     DependentKeyValueBinder binder = new DependentKeyValueBinder(simpleValueBinder, compositeIdentifierToManyToOneBinder)
 
+    protected HibernateToManyProperty createTestProperty(Class<?> domainClass = TestEntityWithMany) {
+        PersistentEntity entity = createPersistentEntity(domainClass)
+        return (HibernateToManyProperty) entity.getPropertyByName("items")
+    }
+
     void "test bind without composite identifier"() {
         given:
-        HibernateToManyProperty property = Mock(HibernateToManyProperty)
-        GrailsHibernatePersistentEntity owner = Mock(GrailsHibernatePersistentEntity)
-        Mapping mapping = Mock(Mapping)
+        HibernateToManyProperty property = createTestProperty(TestEntityWithMany)
+        GrailsHibernatePersistentEntity owner = (GrailsHibernatePersistentEntity) property.getOwner()
+        Mapping mapping = owner.getMappedForm()
         DependantValue key = Mock(DependantValue)
-
-        property.getHibernateOwner() >> owner
-        owner.getMappedForm() >> mapping
-        mapping.hasCompositeIdentifier() >> false
 
         when:
         binder.bind(property, key)
@@ -41,43 +44,70 @@ class DependentKeyValueBinderSpec extends HibernateGormDatastoreSpec {
 
     void "test bind with composite identifier and join column support"() {
         given:
-        HibernateToManyProperty property = Mock(HibernateToManyProperty)
-        GrailsHibernatePersistentEntity owner = Mock(GrailsHibernatePersistentEntity)
-        Mapping mapping = Mock(Mapping)
-        CompositeIdentity ci = new CompositeIdentity()
+        HibernateToManyProperty property = createTestProperty(TestEntityWithCompositeMany)
+        def spiedProperty = Spy(property)
+        GrailsHibernatePersistentEntity owner = (GrailsHibernatePersistentEntity) spiedProperty.getOwner()
+        Mapping mapping = owner.getMappedForm()
+        CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity()
         DependantValue key = Mock(DependantValue)
 
-        property.getHibernateOwner() >> owner
-        owner.getMappedForm() >> mapping
-        mapping.hasCompositeIdentifier() >> true
-        mapping.getIdentity() >> ci
-        property.supportsJoinColumnMapping() >> true
+        spiedProperty.supportsJoinColumnMapping() >> true // Explicitly force to true for this scenario
 
         when:
-        binder.bind(property, key)
+        binder.bind(spiedProperty, key)
 
         then:
-        1 * compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(property, key, ci, owner, EMPTY_PATH)
+        1 * compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(spiedProperty, key, ci, owner, EMPTY_PATH)
         0 * simpleValueBinder.bindSimpleValue(*_)
     }
 
     void "test bind with composite identifier but NO join column support"() {
         given:
-        HibernateToManyProperty property = Mock(HibernateToManyProperty)
-        GrailsHibernatePersistentEntity owner = Mock(GrailsHibernatePersistentEntity)
-        Mapping mapping = Mock(Mapping)
+        HibernateToManyProperty property = createTestProperty(TestEntityWithCompositeMany)
+        def spiedProperty = Spy(property)
+        GrailsHibernatePersistentEntity owner = (GrailsHibernatePersistentEntity) spiedProperty.getOwner()
         DependantValue key = Mock(DependantValue)
 
-        property.getHibernateOwner() >> owner
-        owner.getMappedForm() >> mapping
-        mapping.hasCompositeIdentifier() >> true
-        property.supportsJoinColumnMapping() >> false
+        spiedProperty.supportsJoinColumnMapping() >> false
 
         when:
-        binder.bind(property, key)
+        binder.bind(spiedProperty, key)
 
         then:
-        1 * simpleValueBinder.bindSimpleValue(property, null, key, EMPTY_PATH)
+        1 * simpleValueBinder.bindSimpleValue(spiedProperty, null, key, EMPTY_PATH)
         0 * compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(*_)
     }
+}
+
+@Entity
+class TestEntityWithMany {
+    Long id
+    String name
+    static hasMany = [items: AssociatedItem]
+}
+
+@Entity
+class AssociatedItem {
+    Long id
+    String value
+    TestEntityWithMany parent
+    static belongsTo = [parent: TestEntityWithMany]
+}
+
+@Entity
+class TestEntityWithCompositeMany {
+    Long id
+    String name
+    static hasMany = [items: AssociatedItemWithComposite]
+    static mapping = {
+        id composite: ['id', 'name']
+    }
+}
+
+@Entity
+class AssociatedItemWithComposite {
+    Long id
+    String value
+    TestEntityWithCompositeMany parent
+    static belongsTo = [parent: TestEntityWithCompositeMany]
 }

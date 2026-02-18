@@ -19,7 +19,7 @@ public class BidirectionalOneToManyLinker {
         this.grailsPropertyResolver = grailsPropertyResolver;
     }
 
-    public void link(Collection collection, PersistentClass associatedClass, DependantValue key, HibernateToManyProperty otherSide) {
+    public void link(Collection collection, PersistentClass associatedClass, DependantValue key, GrailsHibernatePersistentProperty otherSide) {
         collection.setInverse(true);
 
         for (Column column : grailsPropertyResolver.getProperty(associatedClass, otherSide.getName()).getValue().getColumns()) {

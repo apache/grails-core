@@ -15,10 +15,45 @@ import org.hibernate.mapping.Property;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.usertype.UserCollectionType;
 
+import org.grails.orm.hibernate.cfg.CompositeIdentity;
+import org.grails.orm.hibernate.cfg.Mapping;
+
 /**
  * Interface for Hibernate persistent properties
  */
 public interface GrailsHibernatePersistentProperty extends PersistentProperty<PropertyConfig> {
+
+    default Optional<CompositeIdentity> getCompositeIdentity(Mapping mapping) {
+        return Optional.ofNullable(mapping)
+                .filter(m -> m.hasCompositeIdentifier() && supportsJoinColumnMapping())
+                .map(Mapping::getIdentity)
+                .filter(CompositeIdentity.class::isInstance)
+                .map(CompositeIdentity.class::cast);
+    }
+
+    default boolean isOwningSide() {
+        return this instanceof Association<?> association && association.isOwningSide();
+    }
+
+    default boolean isBidirectional() {
+        return this instanceof Association<?> association && association.isBidirectional();
+    }
+
+    default GrailsHibernatePersistentProperty getHibernateInverseSide() {
+        return this instanceof Association<?> association ? (GrailsHibernatePersistentProperty) association.getInverseSide() : null;
+    }
+
+    default boolean isCircular() {
+        return this instanceof Association<?> association && association.isCircular();
+    }
+
+    default GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
+        return this instanceof Association<?> association ? (GrailsHibernatePersistentEntity) association.getAssociatedEntity() : null;
+    }
+
+    default boolean isBidirectionalOneToManyMap() {
+        return this instanceof Association<?> association && association.isBidirectionalOneToManyMap();
+    }
 
     /**
      * @return The type name
