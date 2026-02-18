@@ -26,14 +26,11 @@ public class DependentKeyValueBinder {
     public void bind(HibernateToManyProperty property, DependantValue key) {
         GrailsHibernatePersistentEntity refDomainClass = property.getHibernateOwner();
         Mapping mapping = refDomainClass.getMappedForm();
-        boolean hasCompositeIdentifier = mapping != null && mapping.hasCompositeIdentifier();
-        if (hasCompositeIdentifier && property.supportsJoinColumnMapping()) {
-            CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
+
+        property.getCompositeIdentity(mapping).ifPresentOrElse(ci -> {
             compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(property, key, ci, refDomainClass, EMPTY_PATH);
-        }
-        else {
-            // set type
+        }, () -> {
             simpleValueBinder.bindSimpleValue(property, null, key, EMPTY_PATH);
-        }
+        });
     }
 }
