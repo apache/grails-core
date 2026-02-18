@@ -58,7 +58,7 @@ public class ListSecondPassBinder {
 
         Table collectionTable = list.getCollectionTable();
         SimpleValue iv = new BasicValue(metadataBuildingContext, collectionTable);
-        String type = ((GrailsHibernatePersistentProperty) property).getIndexColumnType("integer");
+        String type = property.getIndexColumnType("integer");
         new SimpleValueColumnBinder().bindSimpleValue(iv, type, columnName, true);
         iv.setTypeName(type);
         list.setIndex(iv);

@@ -1,10 +1,8 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import jakarta.annotation.Nonnull;
-import org.grails.datastore.mapping.model.DatastoreConfigurationException;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.orm.hibernate.cfg.*;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
@@ -15,7 +13,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
 
-import org.hibernate.MappingException;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.*;
 import org.hibernate.mapping.Collection;
@@ -74,143 +71,73 @@ public class CollectionSecondPassBinder {
                                          @Nonnull InFlightMetadataCollector mappings,
                                          Map<?, ?> persistentClasses,
                                          @Nonnull Collection collection) {
-        PersistentClass associatedClass = null;
-
-        if (LOG.isDebugEnabled())
-            LOG.debug("Mapping collection: "
-                    + collection.getRole()
-                    + " -> "
-                    + collection.getCollectionTable().getName());
-
-        GrailsHibernatePersistentEntity referenced = property.getHibernateAssociatedEntity();
-        if (property.hasSort()) {
-            if (!property.isBidirectional() && (property instanceof HibernateOneToManyProperty)) {
-                throw new DatastoreConfigurationException("Default sort for associations ["+property.getHibernateOwner().getName()+"->" + property.getName() +
-                        "] are not supported with unidirectional one to many relationships.");
-            }
-            if (referenced != null) {
-                GrailsHibernatePersistentProperty propertyToSortBy = (GrailsHibernatePersistentProperty) referenced.getPropertyByName(property.getSort());
-
-                String associatedClassName = referenced.getName();
-
-                associatedClass = (PersistentClass) persistentClasses.get(associatedClassName);
-                if (associatedClass != null) {
-                    collection.setOrderBy(orderByClauseBuilder.buildOrderByClause(propertyToSortBy.getName(), associatedClass, collection.getRole(),
-                            property.getOrder() != null ? property.getOrder() : "asc"));
-                }
-            }
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Mapping collection: {} -> {}", collection.getRole(), collection.getCollectionTable().getName());
         }
 
-        // Configure one-to-many
+        PersistentClass associatedClass = property.bindOrderBy(collection, persistentClasses, orderByClauseBuilder);
+
         if (collection.isOneToMany()) {
-
-            if (referenced != null && referenced.isTablePerHierarchySubclass()) {
-                String discriminatorColumnName = referenced.getDiscriminatorColumnName();
-                //NOTE: this will build the set for the in clause if it has sublcasses
-                Set<String> discSet = referenced.buildDiscriminatorSet();
-                String inclause = String.join(",", discSet);
-
-                collection.setWhere(discriminatorColumnName + " in (" + inclause + ")");
-            }
-
-
             OneToMany oneToMany = (OneToMany) collection.getElement();
-            String associatedClassName = oneToMany.getReferencedEntityName();
-
-            associatedClass = (PersistentClass) persistentClasses.get(associatedClassName);
-            // if there is no persistent class for the association throw exception
-            if (associatedClass == null) {
-                throw new MappingException("Association references unmapped class: " + oneToMany.getReferencedEntityName());
-            }
-
             oneToMany.setAssociatedClass(associatedClass);
             if (property.shouldBindWithForeignKey()) {
                 collection.setCollectionTable(associatedClass.getTable());
             }
-
             collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, property);
         }
 
-        final boolean isManyToMany = property instanceof HibernateManyToManyProperty;
-        if(referenced != null && !isManyToMany && referenced.isMultiTenant()) {
-            String filterCondition = referenced.getMultiTenantFilterCondition(defaultColumnNameFetcher);
-            if(filterCondition != null) {
-                if (property.isUnidirectionalOneToMany()) {
-                    collection.addManyToManyFilter(GormProperties.TENANT_IDENTITY, filterCondition, true, Collections.emptyMap(), Collections.emptyMap());
-                } else {
-                    collection.addFilter(GormProperties.TENANT_IDENTITY, filterCondition, true, Collections.emptyMap(), Collections.emptyMap());
-                }
-            }
-        }
+        Optional.ofNullable(property.getHibernateAssociatedEntity())
+                .filter(referenced -> !(property instanceof HibernateManyToManyProperty) && referenced.isMultiTenant())
+                .map(referenced -> referenced.getMultiTenantFilterCondition(defaultColumnNameFetcher))
+                .ifPresent(filterCondition -> {
+                    if (property.isUnidirectionalOneToMany()) {
+                        collection.addManyToManyFilter(GormProperties.TENANT_IDENTITY, filterCondition, true, Collections.emptyMap(), Collections.emptyMap());
+                    } else {
+                        collection.addFilter(GormProperties.TENANT_IDENTITY, filterCondition, true, Collections.emptyMap(), Collections.emptyMap());
+                    }
+                });
 
         if (property.isSorted()) {
             collection.setSorted(true);
         }
 
-        // setup the primary key references
         DependantValue key = primaryKeyValueCreator.createPrimaryKeyValue(collection);
-
-        // link a bidirectional relationship
-        if (property.isBidirectional()) {
-
-            var otherSide =  property.getHibernateInverseSide();
-
-            if ((otherSide instanceof org.grails.datastore.mapping.model.types.ToOne) && property.shouldBindWithForeignKey()) {
-
-                bidirectionalOneToManyLinker.link(collection, associatedClass, key, otherSide);
-
-            } else if ((otherSide instanceof HibernateManyToManyProperty) || java.util.Map.class.isAssignableFrom(property.getType())) {
-
-                dependentKeyValueBinder.bind(property, key);
-
-            }
-
-        } else {
-
-            if (property.getMappedForm().hasJoinKeyMapping()) {
-
-                String columnName = property.getMappedForm().getJoinTable().getKey().getName();
-
-                new SimpleValueColumnBinder().bindSimpleValue(key, "long", columnName, true);
-
-            } else {
-
-                dependentKeyValueBinder.bind(property, key);
-
-            }
-
-        }
         collection.setKey(key);
 
-        // get cache config
-        CacheConfig cacheConfig = property.getMappedForm().getCache();
-        if (cacheConfig != null) {
-            collection.setCacheConcurrencyStrategy(cacheConfig.getUsage());
+        if (property.isBidirectional()) {
+            if (property.getHibernateInverseSide() instanceof org.grails.datastore.mapping.model.types.ToOne && property.shouldBindWithForeignKey()) {
+                bidirectionalOneToManyLinker.link(collection, associatedClass, key, property.getHibernateInverseSide());
+            } else if (property.getHibernateInverseSide() instanceof HibernateManyToManyProperty || java.util.Map.class.isAssignableFrom(property.getType())) {
+                dependentKeyValueBinder.bind(property, key);
+            }
+        } else {
+            if (property.getMappedForm().hasJoinKeyMapping()) {
+                new SimpleValueColumnBinder().bindSimpleValue(key, "long", property.getMappedForm().getJoinTable().getKey().getName(), true);
+            } else {
+                dependentKeyValueBinder.bind(property, key);
+            }
         }
 
-        // if we have a many-to-many
-        if (isManyToMany || property.isBidirectionalOneToManyMap()) {
-            var otherSide = property.getHibernateInverseSide();
+        Optional.ofNullable(property.getMappedForm().getCache())
+                .ifPresent(cacheConfig -> collection.setCacheConcurrencyStrategy(cacheConfig.getUsage()));
 
+        if (property instanceof HibernateManyToManyProperty || property.isBidirectionalOneToManyMap()) {
             if (property.isBidirectional()) {
-                if (LOG.isDebugEnabled())
-                    LOG.debug("[CollectionSecondPassBinder] Mapping other side " + otherSide.getHibernateOwner().getName() + "." + otherSide.getName() + " -> " + collection.getCollectionTable().getName() + " as ManyToOne");
-                ManyToOne element = manyToOneBinder.bindManyToOne((Association)otherSide, collection.getCollectionTable(), EMPTY_PATH);
+                var otherSide = property.getHibernateInverseSide();
+                ManyToOne element = manyToOneBinder.bindManyToOne((Association) otherSide, collection.getCollectionTable(), EMPTY_PATH);
                 element.setReferencedEntityName(otherSide.getOwner().getName());
                 collection.setElement(element);
                 collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, property);
                 if (property.isCircular()) {
                     collection.setInverse(false);
                 }
-            } else {
-                // TODO support unidirectional many-to-many
             }
         } else if (property.isUnidirectionalOneToMany()) {
             unidirectionalOneToManyBinder.bind((HibernateOneToManyProperty) property, mappings, collection);
         } else if (property.supportsJoinColumnMapping()) {
             collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, mappings, collection);
         }
-        collectionKeyColumnUpdater.forceNullableAndCheckUpdatable(key, property); // Use the injected service
+        collectionKeyColumnUpdater.forceNullableAndCheckUpdatable(key, property);
     }
 
 
