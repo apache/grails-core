@@ -1,4 +1,4 @@
-package org.grails.orm.hibernate.cfg.domainbinding
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity

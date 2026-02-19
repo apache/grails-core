@@ -104,7 +104,7 @@ public class CollectionBinder {
                 simpleValueColumnBinder
         );
         this.listSecondPassBinder = new ListSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder, simpleValueColumnBinder);
-        this.mapSecondPassBinder = new MapSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
+        this.mapSecondPassBinder = new MapSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder, simpleValueColumnBinder, new ColumnConfigToColumnBinder(), simpleValueColumnFetcher);
     }
 
     public CollectionBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment, CollectionHolder collectionHolder) {

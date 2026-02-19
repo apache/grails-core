@@ -34,11 +34,23 @@ public class MapSecondPassBinder {
     private final MetadataBuildingContext metadataBuildingContext;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final CollectionSecondPassBinder collectionSecondPassBinder;
+    private final SimpleValueColumnBinder simpleValueColumnBinder;
+    private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
+    private final SimpleValueColumnFetcher simpleValueColumnFetcher;
 
-    public MapSecondPassBinder(MetadataBuildingContext metadataBuildingContext, PersistentEntityNamingStrategy namingStrategy, CollectionSecondPassBinder collectionSecondPassBinder) {
+    public MapSecondPassBinder(
+            MetadataBuildingContext metadataBuildingContext,
+            PersistentEntityNamingStrategy namingStrategy,
+            CollectionSecondPassBinder collectionSecondPassBinder,
+            SimpleValueColumnBinder simpleValueColumnBinder,
+            ColumnConfigToColumnBinder columnConfigToColumnBinder,
+            SimpleValueColumnFetcher simpleValueColumnFetcher) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.collectionSecondPassBinder = collectionSecondPassBinder;
+        this.simpleValueColumnBinder = simpleValueColumnBinder;
+        this.columnConfigToColumnBinder = columnConfigToColumnBinder;
+        this.simpleValueColumnFetcher = simpleValueColumnFetcher;
     }
 
     public void bindMapSecondPass(@Nonnull HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
@@ -48,12 +60,12 @@ public class MapSecondPassBinder {
 
         String type = ((GrailsHibernatePersistentProperty) property).getIndexColumnType("string");
         String columnName1 = property.getIndexColumnName(namingStrategy);
-        new SimpleValueColumnBinder().bindSimpleValue(value, type, columnName1, true);
+        simpleValueColumnBinder.bindSimpleValue(value, type, columnName1, true);
         PropertyConfig mappedForm = property.getMappedForm();
         if (mappedForm.getIndexColumn() != null) {
-            Column column = new SimpleValueColumnFetcher().getColumnForSimpleValue(value);
+            Column column = simpleValueColumnFetcher.getColumnForSimpleValue(value);
             ColumnConfig columnConfig = getSingleColumnConfig(mappedForm.getIndexColumn());
-            new ColumnConfigToColumnBinder().bindColumnConfigToColumn(column, columnConfig, mappedForm);
+            columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, mappedForm);
         }
 
         if (!value.isTypeSpecified()) {
@@ -78,7 +90,7 @@ public class MapSecondPassBinder {
                 typeName = StandardBasicTypes.STRING.getName();
             }
             String columnName = property.getMapElementName(namingStrategy);
-            new SimpleValueColumnBinder().bindSimpleValue(elt, typeName, columnName, false);
+            simpleValueColumnBinder.bindSimpleValue(elt, typeName, columnName, false);
 
             elt.setTypeName(typeName);
         }

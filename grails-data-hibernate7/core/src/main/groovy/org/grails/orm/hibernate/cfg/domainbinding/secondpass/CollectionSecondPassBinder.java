@@ -1,6 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import jakarta.annotation.Nonnull;
+import org.grails.datastore.mapping.model.DatastoreConfigurationException;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.orm.hibernate.cfg.*;
@@ -13,6 +14,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
 
+import org.hibernate.MappingException;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.*;
 import org.hibernate.mapping.Collection;
@@ -75,7 +77,7 @@ public class CollectionSecondPassBinder {
                                          Map<?, ?> persistentClasses,
                                          @Nonnull Collection collection) {
 
-        PersistentClass associatedClass = property.bindOrderBy(collection, persistentClasses, orderByClauseBuilder);
+        PersistentClass associatedClass = bindOrderBy(property, collection, persistentClasses);
 
         if (collection.isOneToMany()) {
             OneToMany oneToMany = (OneToMany) collection.getElement();
@@ -138,5 +140,35 @@ public class CollectionSecondPassBinder {
             collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, mappings, collection);
         }
         collectionKeyColumnUpdater.forceNullableAndCheckUpdatable(key, property);
+    }
+
+    PersistentClass bindOrderBy(HibernateToManyProperty property, Collection collection, Map<?, ?> persistentClasses) {
+        return Optional.ofNullable(property.getHibernateAssociatedEntity())
+                .map(referenced -> {
+                    if (referenced.isTablePerHierarchySubclass()) {
+                        String discriminatorColumnName = referenced.getDiscriminatorColumnName();
+                        Set<String> discSet = referenced.buildDiscriminatorSet();
+                        String inclause = String.join(",", discSet);
+
+                        collection.setWhere(discriminatorColumnName + " in (" + inclause + ")");
+                    }
+
+                    PersistentClass associatedClass = (PersistentClass) persistentClasses.get(referenced.getName());
+                    if (associatedClass == null) {
+                        throw new MappingException("Association references unmapped class: " + referenced.getName());
+                    }
+
+                    if (property.hasSort()) {
+                        if (!property.isBidirectional() && property instanceof HibernateOneToManyProperty) {
+                            throw new DatastoreConfigurationException("Default sort for associations [" + property.getHibernateOwner().getName() + "->" + property.getName() +
+                                    "] are not supported with unidirectional one to many relationships.");
+                        }
+                        GrailsHibernatePersistentProperty sortBy = (GrailsHibernatePersistentProperty) referenced.getPropertyByName(property.getSort());
+                        String order = Optional.ofNullable(property.getOrder()).orElse("asc");
+                        collection.setOrderBy(orderByClauseBuilder.buildOrderByClause(sortBy.getName(), associatedClass, collection.getRole(), order));
+                    }
+                    return associatedClass;
+                })
+                .orElse(null);
     }
 }
