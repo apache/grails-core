@@ -1,7 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Column;

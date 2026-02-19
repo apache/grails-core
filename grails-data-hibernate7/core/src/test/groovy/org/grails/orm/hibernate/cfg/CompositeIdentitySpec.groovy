@@ -2,8 +2,8 @@ package org.grails.orm.hibernate.cfg
 
 import org.hibernate.MappingException
 import spock.lang.Specification
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
 
 class CompositeIdentitySpec extends Specification {
 

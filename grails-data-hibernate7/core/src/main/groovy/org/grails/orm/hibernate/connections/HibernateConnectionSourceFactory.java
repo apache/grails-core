@@ -6,7 +6,7 @@ import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.core.grailsversion.GrailsVersion;
 import org.grails.datastore.mapping.validation.ValidatorRegistry;
 import org.grails.orm.hibernate.HibernateEventListeners;
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration;
 import org.grails.datastore.gorm.jdbc.connections.*;

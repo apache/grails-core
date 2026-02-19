@@ -2,8 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.persistence.Entity
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
@@ -14,11 +13,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher
-import org.hibernate.mapping.Backref
+
 import org.hibernate.mapping.Bag
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.OneToMany
-import org.hibernate.mapping.PersistentClass
 import spock.lang.Subject
 
 class UnidirectionalOneToManyBinderSpec extends HibernateGormDatastoreSpec {

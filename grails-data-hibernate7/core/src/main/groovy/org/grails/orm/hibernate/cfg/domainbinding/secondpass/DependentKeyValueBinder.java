@@ -1,7 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
@@ -9,7 +9,7 @@ import org.hibernate.mapping.DependantValue;
 
 import java.util.Optional;
 
-import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
 
 /**
  * Binds a dependent key value for collection associations.

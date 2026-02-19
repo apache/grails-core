@@ -11,14 +11,14 @@ import org.hibernate.mapping.Table;
 import jakarta.annotation.Nonnull;
 import org.hibernate.MappingException;
 
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator;
 
-import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
 
 public class SimpleIdBinder {
 

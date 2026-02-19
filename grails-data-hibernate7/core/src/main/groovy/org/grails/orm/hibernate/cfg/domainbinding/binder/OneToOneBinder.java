@@ -8,7 +8,7 @@ import org.hibernate.mapping.PersistentClass;
 import org.hibernate.type.ForeignKeyDirection;
 
 import org.grails.datastore.mapping.model.types.Association;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 

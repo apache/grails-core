@@ -1,16 +1,13 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Binds the properties of a Grails domain class to the Hibernate meta-model.
@@ -52,7 +49,7 @@ public class ClassPropertiesBinder {
         Table table = persistentClass.getTable();
 
         for (GrailsHibernatePersistentProperty currentGrailsProp : domainClass.getPersistentPropertiesToBind()) {
-            Value value = grailsPropertyBinder.bindProperty(persistentClass, table, org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH, null, currentGrailsProp, mappings);
+            Value value = grailsPropertyBinder.bindProperty(persistentClass, table, GrailsDomainBinder.EMPTY_PATH, null, currentGrailsProp, mappings);
             persistentClass.addProperty(propertyFromValueCreator.createProperty(value, currentGrailsProp));
         }
 

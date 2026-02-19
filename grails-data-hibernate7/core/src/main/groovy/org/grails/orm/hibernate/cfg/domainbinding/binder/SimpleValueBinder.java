@@ -1,9 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import java.util.Optional;
-import java.util.Properties;
 
-import org.hibernate.id.enhanced.SequenceStyleGenerator;
 import org.hibernate.generator.Generator;
 import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -16,12 +14,10 @@ import org.hibernate.mapping.Table;
 
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum;
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 

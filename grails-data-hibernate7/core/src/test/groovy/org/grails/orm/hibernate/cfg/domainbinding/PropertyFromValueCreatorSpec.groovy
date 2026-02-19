@@ -5,7 +5,7 @@ import org.hibernate.mapping.Table
 import org.hibernate.mapping.Value
 import spock.lang.Specification
 
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 

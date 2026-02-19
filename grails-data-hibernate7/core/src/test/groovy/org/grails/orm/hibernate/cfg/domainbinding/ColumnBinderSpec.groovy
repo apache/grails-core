@@ -3,7 +3,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.ColumnConfig
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.Table
 

@@ -1,6 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding.generator;
 
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Identity;
 
 import org.hibernate.boot.model.relational.SqlStringGenerationContext;

@@ -5,13 +5,12 @@ import org.codehaus.groovy.transform.trait.Traits;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehaviorFetcher;
 
 import org.hibernate.boot.spi.AccessType;
 import org.hibernate.mapping.Property;
-import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Value;
 
 import java.util.Optional;

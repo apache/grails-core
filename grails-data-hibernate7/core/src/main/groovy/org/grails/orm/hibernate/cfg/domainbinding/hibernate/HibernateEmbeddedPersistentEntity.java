@@ -2,8 +2,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
 import org.grails.datastore.mapping.model.*;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
 
 public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<Mapping> implements GrailsHibernatePersistentEntity {

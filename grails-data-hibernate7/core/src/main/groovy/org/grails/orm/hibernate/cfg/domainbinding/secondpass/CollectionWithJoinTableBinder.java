@@ -11,16 +11,15 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToMa
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
-import org.hibernate.MappingException;
+
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.*;
 import org.hibernate.mapping.Collection;
-import org.hibernate.type.Type;
 
 import java.util.Optional;
 
-import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.*;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.*;
 
 /**
  * Binds a collection with a join table.

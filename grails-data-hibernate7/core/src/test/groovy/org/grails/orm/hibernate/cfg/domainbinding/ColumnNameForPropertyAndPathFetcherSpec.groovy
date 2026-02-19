@@ -1,7 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import org.grails.orm.hibernate.cfg.ColumnConfig
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import spock.lang.Specification
 import spock.lang.Unroll

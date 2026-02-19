@@ -4,7 +4,7 @@ import jakarta.annotation.Nonnull;
 import org.grails.datastore.mapping.model.DatastoreConfigurationException;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.Association;
-import org.grails.orm.hibernate.cfg.*;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
@@ -25,7 +25,7 @@ import java.util.*;
 import java.util.Map;
 import java.util.Set;
 
-import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.*;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.*;
 
 /**
  * Refactored from CollectionBinder to handle collection second pass binding.

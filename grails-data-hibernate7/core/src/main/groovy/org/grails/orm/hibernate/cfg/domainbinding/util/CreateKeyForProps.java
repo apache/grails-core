@@ -9,8 +9,7 @@ import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Table;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 public class CreateKeyForProps {

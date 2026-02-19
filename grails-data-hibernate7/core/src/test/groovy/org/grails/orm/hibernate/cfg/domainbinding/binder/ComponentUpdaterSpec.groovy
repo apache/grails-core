@@ -1,8 +1,8 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column

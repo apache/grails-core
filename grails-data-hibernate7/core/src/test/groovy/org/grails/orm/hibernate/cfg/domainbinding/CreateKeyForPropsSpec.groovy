@@ -1,7 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
 import org.hibernate.MappingException
 import org.hibernate.mapping.Table
 import spock.lang.Specification

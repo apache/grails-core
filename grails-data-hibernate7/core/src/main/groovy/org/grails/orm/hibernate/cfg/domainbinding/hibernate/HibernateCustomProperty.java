@@ -6,7 +6,6 @@ import org.grails.datastore.mapping.model.types.mapping.CustomWithMapping;
 
 import java.beans.PropertyDescriptor;
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /**

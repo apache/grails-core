@@ -3,7 +3,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.mapping.ManyToManyWithMapping;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 import java.beans.PropertyDescriptor;

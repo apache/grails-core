@@ -6,7 +6,7 @@ import org.hibernate.FetchMode;
 import org.hibernate.mapping.ManyToOne;
 
 import org.grails.datastore.mapping.model.types.Association;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 public class ManyToOneValuesBinder {

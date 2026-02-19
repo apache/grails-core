@@ -1,9 +1,8 @@
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
-import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.reflect.NameUtils;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 
 import org.hibernate.boot.model.naming.Identifier;
@@ -12,7 +11,7 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 
 import java.util.Optional;
 
-import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.FOREIGN_KEY_SUFFIX;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.FOREIGN_KEY_SUFFIX;
 import static org.hibernate.boot.model.naming.Identifier.toIdentifier;
 
 /**

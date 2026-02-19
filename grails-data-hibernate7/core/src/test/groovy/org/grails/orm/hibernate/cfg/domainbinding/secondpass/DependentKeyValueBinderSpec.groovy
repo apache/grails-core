@@ -3,7 +3,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.CompositeIdentity
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
@@ -12,7 +12,7 @@ import org.hibernate.mapping.DependantValue
 import spock.lang.Subject
 import org.grails.datastore.mapping.model.PersistentEntity
 
-import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH
 
 class DependentKeyValueBinderSpec extends HibernateGormDatastoreSpec {
 

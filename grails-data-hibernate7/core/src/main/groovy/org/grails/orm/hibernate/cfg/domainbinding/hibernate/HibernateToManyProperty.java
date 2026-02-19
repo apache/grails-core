@@ -2,7 +2,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.mapping.PropertyWithMapping;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.hibernate.FetchMode;
 import org.springframework.util.StringUtils;

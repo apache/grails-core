@@ -3,7 +3,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.util;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.Value;
 
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder;
 
 public class PropertyFromValueCreator {

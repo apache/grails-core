@@ -5,9 +5,9 @@ import grails.persistence.Entity
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Association
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.PropertyConfig
-import org.hibernate.mapping.Property
+
 import spock.lang.Unroll
 import jakarta.persistence.AccessType
 import org.hibernate.mapping.Value

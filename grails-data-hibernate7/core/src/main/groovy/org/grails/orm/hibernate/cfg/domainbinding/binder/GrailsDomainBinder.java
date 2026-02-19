@@ -12,34 +12,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.grails.orm.hibernate.cfg;
+package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentUpdater;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder;
+import org.grails.orm.hibernate.cfg.CacheConfig;
+import org.grails.orm.hibernate.cfg.ColumnConfig;
+import org.grails.orm.hibernate.cfg.DiscriminatorConfig;
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
+import org.grails.orm.hibernate.cfg.HibernateMappingContext;
+import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.orm.hibernate.cfg.MappingCacheHolder;
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.IdentityBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.JoinedSubClassBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneValuesBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.OneToOneBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.NaturalIdentifierBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SingleTableSubclassBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.UnionSubclassBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.VersionBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder;

@@ -1,4 +1,4 @@
-package org.grails.orm.hibernate.cfg;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
  
  import java.util.Collection;
  import java.util.List;
@@ -15,11 +15,15 @@ package org.grails.orm.hibernate.cfg;
  import org.grails.datastore.mapping.model.PersistentEntity;
  import org.grails.datastore.mapping.model.PersistentProperty;
  import org.grails.datastore.mapping.model.config.GormProperties;
+ import org.grails.orm.hibernate.cfg.CompositeIdentity;
+ import org.grails.orm.hibernate.cfg.DiscriminatorConfig;
+ import org.grails.orm.hibernate.cfg.Mapping;
+ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
  import org.grails.orm.hibernate.cfg.domainbinding.util.ConfigureDerivedPropertiesConsumer;
  import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
  import org.grails.orm.hibernate.cfg.domainbinding.util.NamespaceNameExtractor;
 
- import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.JPA_DEFAULT_DISCRIMINATOR_TYPE;
+ import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.JPA_DEFAULT_DISCRIMINATOR_TYPE;
 
 /**
   * Common interface for Hibernate persistent entities

@@ -7,9 +7,8 @@ import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Table;
 
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.Identity;
-import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum;
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper;
 
 public class BasicValueIdCreator {

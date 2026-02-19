@@ -3,9 +3,9 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
-import org.grails.orm.hibernate.cfg.GrailsDomainBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.mapping.ManyToOne
@@ -55,11 +55,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.JoinedSubClassBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.UnionSubclassBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SingleTableSubclassBinder
-import org.hibernate.mapping.Table
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.MappingContext
 
-import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.EMPTY_PATH
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH
 
 class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
@@ -525,7 +524,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setTable(table)
 
         // Mocking currentGrailsProp and its dependencies to prevent NPEs
-        def mockOwner = Mock(org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity)
+        def mockOwner = Mock(GrailsHibernatePersistentEntity)
         def mockMapping = new org.grails.orm.hibernate.cfg.Mapping()
         mockMapping.setComment("test comment") // Provide a comment
         currentGrailsProp.getHibernateOwner() >> mockOwner

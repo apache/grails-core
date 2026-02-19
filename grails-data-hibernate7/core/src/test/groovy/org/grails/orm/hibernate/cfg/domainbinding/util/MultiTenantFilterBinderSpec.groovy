@@ -1,23 +1,18 @@
 package org.grails.orm.hibernate.cfg.domainbinding.util
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
-import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.hibernate.boot.spi.InFlightMetadataCollector
 import org.hibernate.mapping.BasicValue
-import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.SingleTableSubclass
 import org.hibernate.mapping.JoinedSubclass
 import org.hibernate.mapping.UnionSubclass
 import org.hibernate.mapping.Table
-import org.hibernate.metamodel.mapping.JdbcMapping
 import org.hibernate.engine.spi.FilterDefinition
 import org.grails.datastore.mapping.model.types.TenantId
-import spock.lang.Specification
 
 /**
  * Tests for MultiTenantFilterBinder.

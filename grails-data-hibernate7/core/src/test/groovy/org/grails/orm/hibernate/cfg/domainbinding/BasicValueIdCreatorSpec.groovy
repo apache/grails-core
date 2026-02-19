@@ -3,7 +3,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Identity
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.generator.Generator

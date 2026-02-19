@@ -2,14 +2,11 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
-import org.hibernate.boot.spi.InFlightMetadataCollector
+
 import org.hibernate.mapping.JoinedSubclass
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
-import org.hibernate.mapping.SimpleValue
-import org.grails.datastore.mapping.model.types.Identity
 
 /**
  * Tests for JoinedSubClassBinder using real entity classes.

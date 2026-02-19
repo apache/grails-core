@@ -2,14 +2,12 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
-import org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder
+
 import org.hibernate.mapping.Bag
 import org.hibernate.mapping.RootClass
-import org.hibernate.mapping.PersistentClass
+
 import org.grails.datastore.mapping.model.DatastoreConfigurationException
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder
@@ -21,9 +19,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyCo
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
-
-import java.util.Optional
-import java.util.Map
 
 class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 

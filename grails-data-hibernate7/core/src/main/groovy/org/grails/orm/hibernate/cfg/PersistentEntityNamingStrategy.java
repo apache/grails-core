@@ -1,6 +1,7 @@
 package org.grails.orm.hibernate.cfg;
 
-import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 
 /**
  * Allows plugging into to custom naming strategies

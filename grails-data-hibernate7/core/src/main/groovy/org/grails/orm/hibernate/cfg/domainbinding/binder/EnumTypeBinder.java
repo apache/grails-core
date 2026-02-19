@@ -1,7 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.IdentityEnumType;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
@@ -20,8 +20,8 @@ import org.slf4j.LoggerFactory;
 import java.sql.Types;
 import java.util.Properties;
 
-import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.ENUM_CLASS_PROP;
-import static org.grails.orm.hibernate.cfg.GrailsDomainBinder.ENUM_TYPE_CLASS;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.ENUM_CLASS_PROP;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.ENUM_TYPE_CLASS;
 
 
 public class EnumTypeBinder {
