@@ -288,7 +288,8 @@ public class GrailsDomainBinder
                               @Nonnull InFlightMetadataCollector mappings,
                               Mapping m, MappingCacheHolder mappingCacheHolder, DefaultColumnNameFetcher defaultColumnNameFetcher, ClassBinder classBinder, ClassPropertiesBinder classPropertiesBinder, MultiTenantFilterBinder multiTenantFilterBinder, JoinedSubClassBinder joinedSubClassBinder, UnionSubclassBinder unionSubclassBinder, SingleTableSubclassBinder singleTableSubclassBinder) {
         mappingCacheHolder.cacheMapping(sub);
-        Subclass subClass = createSubclassMapping(sub, parent, mappings, m, defaultColumnNameFetcher, classPropertiesBinder, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder);
+        SubclassMappingBinder subclassMappingBinder = new SubclassMappingBinder(metadataBuildingContext, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder, classPropertiesBinder);
+        Subclass subClass = subclassMappingBinder.createSubclassMapping(sub, parent, mappings, m);
 
 
         parent.addSubclass(subClass);
@@ -301,44 +302,6 @@ public class GrailsDomainBinder
             // bind the sub classes
             children.forEach(sub1 -> bindSubClass(sub1, subClass, mappings, m,mappingCacheHolder, defaultColumnNameFetcher, classBinder, classPropertiesBinder, multiTenantFilterBinder, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder ));
         }
-    }
-
-    private @NonNull Subclass createSubclassMapping(@NonNull GrailsHibernatePersistentEntity subEntity
-            , PersistentClass parent
-            , @NonNull InFlightMetadataCollector mappings
-            , Mapping m
-            , DefaultColumnNameFetcher defaultColumnNameFetcher
-            ,ClassPropertiesBinder classPropertiesBinder
-            ,JoinedSubClassBinder joinedSubClassBinder
-            , UnionSubclassBinder unionSubclassBinder
-            , SingleTableSubclassBinder singleTableSubclassBinder) {
-        Subclass subClass;
-        subEntity.configureDerivedProperties();
-        if (!m.getTablePerHierarchy() && !m.isTablePerConcreteClass()) {
-            var joined = new JoinedSubclass(parent, this.metadataBuildingContext);
-            joinedSubClassBinder.bindJoinedSubClass(subEntity, joined, mappings);
-            subClass = joined;
-        }
-        else if(m.isTablePerConcreteClass()) {
-            var union  = new UnionSubclass(parent, this.metadataBuildingContext);
-            unionSubclassBinder.bindUnionSubclass(subEntity, union, mappings);
-            subClass = union;
-        }
-        else {
-            var singleTableSubclass = new SingleTableSubclass(parent, this.metadataBuildingContext);
-
-            singleTableSubclassBinder.bindSubClass(subEntity, singleTableSubclass, mappings);
-            subClass = singleTableSubclass;
-        }
-        subClass.setBatchSize(Optional.ofNullable(m.getBatchSize()).orElse(-1));
-        subClass.setDynamicUpdate(m.getDynamicUpdate());
-        subClass.setDynamicInsert(m.getDynamicInsert());
-        subClass.setCached(parent.isCached());
-        subClass.setAbstract(subEntity.isAbstract());
-        subClass.setEntityName(subEntity.getName());
-        subClass.setJpaEntityName(GrailsHibernateUtil.unqualify(subEntity.getName()));
-        classPropertiesBinder.bindClassProperties(subEntity, subClass, mappings);
-        return subClass;
     }
 
 
