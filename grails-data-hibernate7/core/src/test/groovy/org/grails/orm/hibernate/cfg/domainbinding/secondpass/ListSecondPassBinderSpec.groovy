@@ -36,6 +36,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SubClassBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SubclassMappingBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.RootBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.RootPersistentClassCommonValuesBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.DiscriminatorPropertyBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
@@ -120,6 +124,9 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
         SubclassMappingBinder subclassMappingBinder = new SubclassMappingBinder(metadataBuildingContext, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder, classPropertiesBinder)
         SubClassBinder subClassBinder = new SubClassBinder(binder.getMappingCacheHolder(), subclassMappingBinder, multiTenantFilterBinder, defaultColumnNameFetcher, "dataSource")
+        RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder = new RootPersistentClassCommonValuesBinder(metadataBuildingContext, namingStrategy, identityBinder, versionBinder, classBinder, classPropertiesBinder)
+        DiscriminatorPropertyBinder discriminatorPropertyBinder = new DiscriminatorPropertyBinder(metadataBuildingContext, new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder(), new ColumnConfigToColumnBinder())
+        RootBinder rootBinder = new RootBinder(metadataBuildingContext, "default", namingStrategy, multiTenantFilterBinder, subClassBinder, defaultColumnNameFetcher, rootPersistentClassCommonValuesBinder, discriminatorPropertyBinder)
 
         return [
             propertyBinder: propertyBinder,
@@ -134,20 +141,14 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
             joinedSubClassBinder: joinedSubClassBinder,
             unionSubclassBinder: unionSubclassBinder,
             singleTableSubclassBinder: singleTableSubclassBinder,
-            subClassBinder: subClassBinder
+            subClassBinder: subClassBinder,
+            rootBinder: rootBinder
         ]
     }
 
     protected void bindRoot(GrailsDomainBinder binder, GrailsHibernatePersistentEntity entity, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         def binders = getBinders(binder)
-        binder.bindRoot(entity, mappings, 
-            binders.defaultColumnNameFetcher, 
-            binders.identityBinder as IdentityBinder, 
-            binders.versionBinder as VersionBinder, 
-            binders.classBinder as ClassBinder, 
-            binders.classPropertiesBinder as ClassPropertiesBinder, 
-            binders.multiTenantFilterBinder as MultiTenantFilterBinder, 
-            binders.subClassBinder as SubClassBinder)
+        binders.rootBinder.bindRoot(entity, mappings)
     }
 
     void setupSpec() {

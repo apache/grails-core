@@ -211,12 +211,15 @@ public class GrailsDomainBinder
 
         SubclassMappingBinder subclassMappingBinder = new SubclassMappingBinder(metadataBuildingContext, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder, classPropertiesBinder);
         SubClassBinder subClassBinder = new SubClassBinder(mappingCacheHolder, subclassMappingBinder, multiTenantFilterBinder, defaultColumnNameFetcher, dataSourceName);
+        RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder = new RootPersistentClassCommonValuesBinder(metadataBuildingContext, getNamingStrategy(), identityBinder, versionBinder, classBinder, classPropertiesBinder);
+        DiscriminatorPropertyBinder discriminatorPropertyBinder = new DiscriminatorPropertyBinder(metadataBuildingContext, new SimpleValueColumnBinder(), new ColumnConfigToColumnBinder());
+        RootBinder rootBinder = new RootBinder(metadataBuildingContext, dataSourceName, getNamingStrategy(), multiTenantFilterBinder, subClassBinder, defaultColumnNameFetcher, rootPersistentClassCommonValuesBinder, discriminatorPropertyBinder);
 
         hibernateMappingContext
                 .getHibernatePersistentEntities(dataSourceName)
                 .stream()
                 .filter(persistentEntity -> persistentEntity.forGrailsDomainMapping(dataSourceName))
-                .forEach(hibernatePersistentEntity -> bindRoot(hibernatePersistentEntity, metadataCollector, defaultColumnNameFetcher, identityBinder, versionBinder, classBinder, classPropertiesBinder, multiTenantFilterBinder, subClassBinder));
+                .forEach(hibernatePersistentEntity -> rootBinder.bindRoot(hibernatePersistentEntity, metadataCollector));
     }
 
 
@@ -236,37 +239,6 @@ public class GrailsDomainBinder
     }
 
 
-
-
-
-    /**
-     * Binds a root class (one with no super classes) to the runtime meta model
-     * based on the supplied Grails domain class
-     *
-     * @param entity The Grails domain class
-     * @param mappings    The Hibernate Mappings object
-     */
-    protected void bindRoot(@Nonnull GrailsHibernatePersistentEntity entity,@Nonnull InFlightMetadataCollector mappings, DefaultColumnNameFetcher defaultColumnNameFetcher, IdentityBinder identityBinder, VersionBinder versionBinder, ClassBinder classBinder, ClassPropertiesBinder classPropertiesBinder, MultiTenantFilterBinder multiTenantFilterBinder, SubClassBinder subClassBinder) {
-        if (mappings.getEntityBinding(entity.getName()) != null) {
-            LOG.info("[GrailsDomainBinder] Class [" + entity.getName() + "] is already mapped, skipping.. ");
-            return;
-        }
-        RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder = new RootPersistentClassCommonValuesBinder(metadataBuildingContext, getNamingStrategy(), identityBinder, versionBinder, classBinder, classPropertiesBinder);
-        var children = entity.getChildEntities(dataSourceName);
-        RootClass root = rootPersistentClassCommonValuesBinder.bindRootPersistentClassCommonValues(entity, children, mappings);
-        Mapping m = entity.getMappedForm();
-        final Mapping finalMapping = m;
-        if (!children.isEmpty() && entity.isTablePerHierarchy()) {
-            DiscriminatorPropertyBinder discriminatorPropertyBinder = new DiscriminatorPropertyBinder(metadataBuildingContext, new SimpleValueColumnBinder(), new ColumnConfigToColumnBinder());
-            discriminatorPropertyBinder.bindDiscriminatorProperty(root, m);
-        }
-        // bind the sub classes
-        children.forEach(sub -> subClassBinder.bindSubClass(sub, root, mappings, finalMapping));
-
-        multiTenantFilterBinder.addMultiTenantFilterIfNecessary(entity, root, mappings, defaultColumnNameFetcher);
-
-        mappings.addEntityBinding(root);
-    }
 
 
 
