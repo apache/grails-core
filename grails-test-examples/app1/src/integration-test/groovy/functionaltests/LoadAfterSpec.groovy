@@ -16,9 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functionaltests
-
 
 import functionaltests.pages.LoginAuthPage
 import grails.plugin.geb.ContainerGebSpec
@@ -28,10 +26,7 @@ import grails.testing.mixin.integration.Integration
 class LoadAfterSpec extends ContainerGebSpec {
 
     void "Test override one plugin view from another plugin"() {
-        when:
+        expect:
         to(LoginAuthPage)
-
-        then:
-        at(LoginAuthPage)
     }
 }

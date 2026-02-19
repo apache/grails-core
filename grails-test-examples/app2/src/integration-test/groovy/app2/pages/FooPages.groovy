@@ -16,10 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package app2.pages
 
 import geb.Page
+
+class FooListPage extends Page {
+
+    static String pageTitle = 'Foo List'
+
+    static url = '/foo/index'
+    static at = { title == pageTitle }
+}
 
 class PageNotFoundPage extends Page {
 

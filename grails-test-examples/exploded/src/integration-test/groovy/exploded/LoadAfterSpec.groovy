@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package exploded
 
 import exploded.pages.LoginAuthPage
@@ -27,10 +26,7 @@ import grails.testing.mixin.integration.Integration
 class LoadAfterSpec extends ContainerGebSpec {
 
     void "Basic test to prove reloading worked"() {
-        when:
+        expect:
         to(LoginAuthPage)
-
-        then:
-        at(LoginAuthPage)
     }
 }

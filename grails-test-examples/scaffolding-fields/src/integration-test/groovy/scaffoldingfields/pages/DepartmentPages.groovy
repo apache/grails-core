@@ -52,6 +52,11 @@ class DepartmentCreatePage extends ScaffoldCreatePage {
         descriptionField { $('textarea[name="description"], input[name="description"]') }
     }
 
+    void createDepartment(String name, String description = null) {
+        fillDepartment(name, description)
+        createButton.click()
+    }
+
     void fillDepartment(String name, String description = null) {
         nameField.value(name)
         if (description && descriptionField.displayed) {

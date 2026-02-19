@@ -16,52 +16,49 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functionaltests
 
 import functionaltests.pages.BookCreatePage
 import functionaltests.pages.BookListPage
 import functionaltests.pages.BookShowPage
+
+import grails.gorm.transactions.Rollback
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 import spock.lang.Issue
 
-@Integration(applicationClass = functionaltests.Application)
+@Integration
 class BookFunctionalSpec extends ContainerGebSpec {
 
     void "Test that when the /viewBooks URL is hit it redirects to the book list"() {
-        when: "We go to the book URI"
+        expect:
         to(BookListPage)
-
-        then: "Then thew show book view is rendered"
-        at(BookListPage)
     }
 
     void "Test that a book was created in the Bootstrap class"() {
-        when: "We go to the book URI"
+        expect:
         to(BookShowPage, 1)
-
-        then: "Then thew show book view is rendered"
-        at(BookShowPage)
     }
 
     void "Test that switching language results in correct encodings"() {
-        when: "the show page is rendered in german"
-        go "/book/show/1?lang=de"
-        then: "The language is correct"
-        $('a', class: 'create').text() == 'Book anlegen'
-        $('input', class: 'delete').@value == 'Löschen'
+        when: 'The show page is rendered in german'
+        def page = to(BookShowPage, 1, lang: 'de')
+
+        then: 'The language is correct'
+        page.createButton.text() == 'Book anlegen'
+        page.deleteButton.attr('value') == 'Löschen'
     }
 
+    @Rollback
     @Issue('10965')
     void "When creating a book the params are not on the url"() {
-        when: 'creating a book'
-        to(BookCreatePage)
-        $('#title').value('The Stand')
-        $('#create').click()
+        when: 'Creating a book'
+        to(BookCreatePage).createBook('The Stand')
 
-        then:
-        waitFor { title == BookShowPage.pageTitle }
+        then: 'The show book view is rendered'
+        at(BookShowPage)
+
+        and: 'The params are not on the url'
         !currentUrl.contains('title')
         !currentUrl.contains('create')
     }

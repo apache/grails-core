@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package app3
 
 import app3.pages.LoginAuthPage
@@ -27,10 +26,7 @@ import grails.testing.mixin.integration.Integration
 class LoadAfterSpec extends ContainerGebSpec {
 
     void "Test override one plugin view from another plugin"() {
-        when:
+        expect: 'The correct view is rendered when navigating to the login page'
         to(LoginAuthPage)
-
-        then:
-        at(LoginAuthPage)
     }
 }

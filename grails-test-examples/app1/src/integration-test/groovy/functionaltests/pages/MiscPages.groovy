@@ -16,14 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package namespaces.admin.pages
+package functionaltests.pages
 
 import geb.Page
 
-class ReportPage extends Page {
+class ActionReturnsNullPage extends Page {
 
-    static String pageTitle = 'Admin Report'
+    static String pageTitle = 'Action Which Returns Null GSP'
 
-    static url = '/myAppTest/report/index'
+    static url = '/misc/actionWhichReturnsNull'
     static at = { title == pageTitle }
+}
+
+class BeanPropertyOverridePage extends Page {
+
+    static url = '/misc/beanPropertyOverrideTest'
+    static at = { $().text().contains('Brian') }
+}
+
+class PlaceHolderConfigPage extends Page {
+
+    static url = '/misc/placeHolderConfig'
+    static at = { $().text().contains('[test test test]') }
 }

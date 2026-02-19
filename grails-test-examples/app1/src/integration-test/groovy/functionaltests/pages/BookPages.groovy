@@ -19,11 +19,44 @@
 package functionaltests.pages
 
 import geb.Page
+import geb.module.TextInput
+
+class BookListPage extends Page {
+
+    static String pageTitle = 'Book List'
+
+    static url = '/book/index'
+    static at = { title == pageTitle }
+}
 
 class BookShowPage extends Page {
 
-    static String pageTitle = 'Show Book'
+    static List<String> pageTitles = [
+            'Show Book',
+            'Book anzeigen'
+    ]
 
     static url = '/book/show'
+    static at = { title in pageTitles }
+    static content = {
+        createButton { $('a', class: 'create') }
+        deleteButton { $('input', class: 'delete') }
+    }
+}
+
+class BookCreatePage extends Page {
+
+    static String pageTitle = 'Create Book'
+
+    static url = '/book/create'
     static at = { title == pageTitle }
+    static content = {
+        titleField { $('#title').module(TextInput) }
+        createButton { $('#create') }
+    }
+
+    void createBook(String title) {
+        titleField.value(title)
+        createButton.click()
+    }
 }

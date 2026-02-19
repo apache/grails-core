@@ -16,9 +16,29 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package functionaltests.pages
+package functional.tests.pages
 
 import geb.Page
+import geb.module.TextInput
+
+class BookListPage extends Page {
+
+    static String pageTitle = 'Book List'
+
+    static url = '/book/index'
+    static at = { title == pageTitle }
+}
+
+class BookShowPage extends Page {
+
+    static String pageTitle = 'Show Book'
+
+    static url = '/book/show'
+    static at = { title == pageTitle }
+    static content = {
+        bookTitle { $('li.fieldcontain div').text() }
+    }
+}
 
 class BookCreatePage extends Page {
 
@@ -27,7 +47,12 @@ class BookCreatePage extends Page {
     static url = '/book/create'
     static at = { title == pageTitle }
     static content = {
-        titleField { $('#title') }
-        createButton { $('#create') }
+        titleInput { $('input#title').module(TextInput) }
+        createButton { $('input#create') }
+    }
+
+    void createBook(String title) {
+        titleInput.value(title)
+        createButton.click()
     }
 }

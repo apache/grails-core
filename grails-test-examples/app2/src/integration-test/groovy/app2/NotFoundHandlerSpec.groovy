@@ -16,30 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package app2
 
 import app2.pages.FooListPage
 import app2.pages.PageNotFoundPage
-import grails.gorm.transactions.Rollback
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 
-@Integration(applicationClass = Application)
-@Rollback
+@Integration
 class NotFoundHandlerSpec extends ContainerGebSpec {
 
     void "Test that a 404 handler renders the view correctly when a forward is executed"() {
-        when:"An action is visited where an interceptor uses response.sendError(404)"
-        go('/foo/index')
+        when: 'An action is visited where an interceptor uses response.sendError(404)'
+        via(FooListPage)
 
-        then:"The 404 handler is rendered"
-        waitFor { title == PageNotFoundPage.pageTitle }
+        then: 'The 404 handler is rendered when the forward is executed'
+        at(PageNotFoundPage)
 
-        when:"No response.sendError(404) method is called"
-        go('/foo/index?user=admin')
-
-        then:"The 404 handler is not executed"
-        waitFor { title == FooListPage.pageTitle }
+        and: 'and not when the user param is admin'
+        to(FooListPage, user: 'admin')
     }
 }

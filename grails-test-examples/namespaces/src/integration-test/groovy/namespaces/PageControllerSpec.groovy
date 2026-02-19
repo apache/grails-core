@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package namespaces
 
 import grails.plugin.geb.ContainerGebSpec
@@ -28,16 +27,10 @@ import namespaces.pages.FrontendPage
 class PageControllerSpec extends ContainerGebSpec {
 
     void "test that the page renders correctly"() {
-        when: "The admin page is visited"
+        expect: 'The admin namespace page is rendered'
         to(AdminPage)
 
-        then: "The title is correct"
-        at(AdminPage)
-
-        when: "The page is visited without namespace"
+        and: 'The default namespace page is rendered'
         to(FrontendPage)
-
-        then: "The title is correct"
-        at(FrontendPage)
     }
 }

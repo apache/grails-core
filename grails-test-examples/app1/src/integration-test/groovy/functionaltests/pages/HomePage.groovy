@@ -26,4 +26,11 @@ class HomePage extends Page {
 
     static url = '/'
     static at = { title == pageTitle }
+    static content = {
+        controllerList { $('li.controller') }
+    }
+
+    List<String> getControllers() {
+        return controllerList*.text()
+    }
 }

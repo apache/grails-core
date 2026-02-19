@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package namespaces.admin
 
 import grails.plugin.geb.ContainerGebSpec
@@ -28,16 +27,10 @@ import namespaces.admin.pages.ReportPage
 class ReportControllerSpec extends ContainerGebSpec {
 
     void "test that admin report page renders correctly"() {
-        when: "The admin report page is visited"
+        expect: 'The admin report page is rendered'
         to(AdminReportPage)
 
-        then: "The title is correct"
-        at(AdminReportPage)
-
-        when: "The admin report page is visited without namespace"
+        and: 'The report page is rendered'
         to(ReportPage)
-
-        then: "The title is correct"
-        at(ReportPage)
     }
 }

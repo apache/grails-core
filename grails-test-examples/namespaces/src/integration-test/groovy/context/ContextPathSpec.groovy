@@ -16,29 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package context
 
-import grails.gorm.transactions.Rollback
+import context.pages.TestEnvironmentHomePage
+import context.pages.DefaultEnvironmentHomePage
+
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
-import namespaces.Application
 
-@Integration(applicationClass = Application)
-@Rollback
+@Integration
 class ContextPathSpec extends ContainerGebSpec {
 
     void "test the context path defined in the environment overrides the standard one"() {
-        when:
-        go('/myAppTest')
+        expect: 'using the context path defined in the test environment, the home page is rendered'
+        to(TestEnvironmentHomePage)
 
-        then:
-        waitFor { title == "Welcome to Grails" }
-
-        when:
-        go('/myApp')
-
-        then:
-        waitFor { title == "HTTP Status 404 – Not Found" }
+        and: 'using the default context path, the 404 page is rendered'
+        to(DefaultEnvironmentHomePage)
     }
 }

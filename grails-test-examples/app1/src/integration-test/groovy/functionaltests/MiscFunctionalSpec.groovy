@@ -16,40 +16,33 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functionaltests
 
 import functionaltests.pages.ActionReturnsNullPage
+import functionaltests.pages.BeanPropertyOverridePage
+import functionaltests.pages.PlaceHolderConfigPage
+
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 import spock.lang.Issue
 
-@Integration(applicationClass = Application)
+@Integration
 class MiscFunctionalSpec extends ContainerGebSpec {
 
     @Issue('9133')
     void "Test that bean override configuration works"() {
-        when:
-        go('/misc/beanPropertyOverrideTest')
-
-        then:
-        pageSource.contains('Brian')
+        expect:
+        to(BeanPropertyOverridePage)
     }
 
     @Issue('GRAILS-12028')
     void "Test that when an action returns null the view is rendered by convention"() {
-        when:
+        expect:
         to(ActionReturnsNullPage)
-
-        then:
-        at(ActionReturnsNullPage)
     }
 
     void "Test that placeholder configuration works for the config object"() {
-        when:
-        go('/misc/placeHolderConfig')
-
-        then:
-        pageSource.contains('[test test test]')
+        expect:
+        to(PlaceHolderConfigPage)
     }
 }
