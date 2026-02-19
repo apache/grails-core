@@ -78,13 +78,12 @@ public class CollectionWithJoinTableBinder {
         var joinColumnMappingOptional = Optional.ofNullable(property.getMappedForm()).map(PropertyConfig::getJoinTableColumnConfig);
         if (isBasicCollectionType) {
             final Class<?> referencedType = ((Basic) property).getComponentType();
-            String className = referencedType.getName();
             final boolean isEnum = referencedType.isEnum();
             if (joinColumnMappingOptional.isPresent()) {
                 columnName = joinColumnMappingOptional.get().getName();
             }
             else {
-                var clazz = namingStrategy.resolveColumnName(className);
+                var clazz = namingStrategy.resolveColumnName(referencedType.getName());
                 var prop = namingStrategy.resolveTableName(property.getName());
                 columnName = isEnum ? clazz : new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz);
             }
@@ -105,26 +104,22 @@ public class CollectionWithJoinTableBinder {
                 }
             }
         } else {
-            final GrailsHibernatePersistentEntity domainClass = property.getHibernateAssociatedEntity();
+            final var domainClass = property.getHibernateAssociatedEntity();
 
-            Mapping m = null;
             if (domainClass != null) {
-                m = domainClass.getMappedForm();
-            }
-            if (m != null && m.hasCompositeIdentifier()) {
-                CompositeIdentity ci = (CompositeIdentity) m.getIdentity();
-                compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(property, element, ci, domainClass, EMPTY_PATH);
-            }
-            else {
-                if (joinColumnMappingOptional.isPresent()) {
-                    columnName = joinColumnMappingOptional.get().getName();
-                }
-                else {
-                    var decapitalize = domainClass.getHibernateRootEntity().getJavaClass().getSimpleName();
-                    columnName = namingStrategy.resolveColumnName(decapitalize) + FOREIGN_KEY_SUFFIX;
-                }
+                if (domainClass.getHibernateCompositeIdentity().isPresent()) {
+                    CompositeIdentity ci = domainClass.getHibernateCompositeIdentity().get();
+                    compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(property, element, ci, domainClass, EMPTY_PATH);
+                } else {
+                    if (joinColumnMappingOptional.isPresent()) {
+                        columnName = joinColumnMappingOptional.get().getName();
+                    } else {
+                        var decapitalize = domainClass.getHibernateRootEntity().getJavaClass().getSimpleName();
+                        columnName = namingStrategy.resolveColumnName(decapitalize) + FOREIGN_KEY_SUFFIX;
+                    }
 
-                simpleValueColumnBinder.bindSimpleValue(element, "long", columnName, true);
+                    simpleValueColumnBinder.bindSimpleValue(element, "long", columnName, true);
+                }
             }
         }
 
