@@ -255,7 +255,8 @@ public class GrailsDomainBinder
         Mapping m = entity.getMappedForm();
         final Mapping finalMapping = m;
         if (!children.isEmpty() && entity.isTablePerHierarchy()) {
-            bindDiscriminatorProperty(root, m);
+            DiscriminatorPropertyBinder discriminatorPropertyBinder = new DiscriminatorPropertyBinder(metadataBuildingContext, new SimpleValueColumnBinder(), new ColumnConfigToColumnBinder());
+            discriminatorPropertyBinder.bindDiscriminatorProperty(root, m);
         }
         // bind the sub classes
         children.forEach(sub -> bindSubClass(sub, root, mappings, finalMapping,mappingCacheHolder, defaultColumnNameFetcher, classBinder, classPropertiesBinder, multiTenantFilterBinder, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder));
@@ -348,57 +349,6 @@ public class GrailsDomainBinder
      * @param subClass The Hibernate SubClass instance
      * @param mappings The mappings instance
      */
-    /**
-     * Creates and binds the discriminator property used in table-per-hierarchy inheritance to
-     * discriminate between sub class instances
-     *
-     * @param entity      The root class entity
-     * @param someMapping The mappings instance
-     */
-    private void bindDiscriminatorProperty(RootClass entity, Mapping someMapping) {
-        Table table = entity.getTable();
-        SimpleValue d = new BasicValue(metadataBuildingContext, table);
-        entity.setDiscriminator(d);
-        DiscriminatorConfig discriminatorConfig = someMapping.getDiscriminator();
-
-        boolean hasDiscriminatorConfig = discriminatorConfig != null;
-        entity.setDiscriminatorValue(hasDiscriminatorConfig ? discriminatorConfig.getValue() : entity.getClassName());
-
-        if(hasDiscriminatorConfig) {
-            if (discriminatorConfig.getInsertable() != null) {
-                entity.setDiscriminatorInsertable(discriminatorConfig.getInsertable());
-            }
-            Object type = discriminatorConfig.getType();
-            if (type != null) {
-                if(type instanceof Class) {
-                    d.setTypeName(((Class)type).getName());
-                }
-                else {
-                    d.setTypeName(type.toString());
-                }
-            }
-        }
-
-
-        if (hasDiscriminatorConfig && discriminatorConfig.getFormula() != null) {
-            Formula formula = new Formula();
-            formula.setFormula(discriminatorConfig.getFormula());
-            d.addFormula(formula);
-        }
-        else{
-            new SimpleValueColumnBinder().bindSimpleValue(d, STRING_TYPE, JPA_DEFAULT_DISCRIMINATOR_TYPE, false);
-
-            ColumnConfig cc = !hasDiscriminatorConfig ? null : discriminatorConfig.getColumn();
-            if (cc != null) {
-                Column c = (Column) d.getColumns().iterator().next();
-                if (cc.getName() != null) {
-                    c.setName(cc.getName());
-                }
-                new ColumnConfigToColumnBinder().bindColumnConfigToColumn(c, cc, null);
-            }
-        }
-    }
-
     public MetadataBuildingContext getMetadataBuildingContext() {
         return metadataBuildingContext;
     }
