@@ -34,6 +34,8 @@ public class CollectionWithJoinTableBinder {
     private final CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder;
     private final SimpleValueColumnFetcher simpleValueColumnFetcher;
     private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder;
+    private final SimpleValueColumnBinder simpleValueColumnBinder;
+    private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
 
     public CollectionWithJoinTableBinder(
             MetadataBuildingContext metadataBuildingContext,
@@ -42,7 +44,9 @@ public class CollectionWithJoinTableBinder {
             EnumTypeBinder enumTypeBinder,
             CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder,
             SimpleValueColumnFetcher simpleValueColumnFetcher,
-            CollectionForPropertyConfigBinder collectionForPropertyConfigBinder) {
+            CollectionForPropertyConfigBinder collectionForPropertyConfigBinder,
+            SimpleValueColumnBinder simpleValueColumnBinder,
+            ColumnConfigToColumnBinder columnConfigToColumnBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.unidirectionalOneToManyInverseValuesBinder = unidirectionalOneToManyInverseValuesBinder;
@@ -50,6 +54,8 @@ public class CollectionWithJoinTableBinder {
         this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder;
         this.simpleValueColumnFetcher = simpleValueColumnFetcher;
         this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder;
+        this.simpleValueColumnBinder = simpleValueColumnBinder;
+        this.columnConfigToColumnBinder = columnConfigToColumnBinder;
     }
 
     public void bindCollectionWithJoinTable(@Nonnull HibernateToManyProperty property,
@@ -100,12 +106,12 @@ public class CollectionWithJoinTableBinder {
                     throw new MappingException("Missing type or column for column["+columnName+"] on domain["+domainName+"] referencing["+className+"]");
                 }
 
-                new SimpleValueColumnBinder().bindSimpleValue(element, typeName, columnName, true);
+                simpleValueColumnBinder.bindSimpleValue(element, typeName, columnName, true);
                 if (joinColumnMappingOptional.isPresent()) {
                     Column column = simpleValueColumnFetcher.getColumnForSimpleValue(element);
                     ColumnConfig columnConfig = joinColumnMappingOptional.get();
                     final PropertyConfig mappedForm = property.getMappedForm();
-                    new ColumnConfigToColumnBinder().bindColumnConfigToColumn(column, columnConfig, mappedForm);
+                    columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, mappedForm);
                 }
             }
         } else {
@@ -128,7 +134,7 @@ public class CollectionWithJoinTableBinder {
                     columnName = namingStrategy.resolveColumnName(decapitalize) + FOREIGN_KEY_SUFFIX;
                 }
 
-                new SimpleValueColumnBinder().bindSimpleValue(element, "long", columnName, true);
+                simpleValueColumnBinder.bindSimpleValue(element, "long", columnName, true);
             }
         }
 

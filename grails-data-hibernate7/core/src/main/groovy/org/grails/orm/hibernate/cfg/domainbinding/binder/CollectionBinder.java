@@ -85,7 +85,9 @@ public class CollectionBinder {
                 enumTypeBinder,
                 compositeIdentifierToManyToOneBinder,
                 simpleValueColumnFetcher,
-                collectionForPropertyConfigBinder
+                collectionForPropertyConfigBinder,
+                new SimpleValueColumnBinder(),
+                new ColumnConfigToColumnBinder()
         );
         this.unidirectionalOneToManyBinder = new UnidirectionalOneToManyBinder(collectionWithJoinTableBinder);
         this.collectionSecondPassBinder = new CollectionSecondPassBinder(

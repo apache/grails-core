@@ -5,8 +5,10 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.hibernate.boot.spi.InFlightMetadataCollector
@@ -28,6 +30,8 @@ class CollectionWithJoinTableBinderSpec extends HibernateGormDatastoreSpec {
     CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder = Mock(CompositeIdentifierToManyToOneBinder)
     SimpleValueColumnFetcher simpleValueColumnFetcher = Mock(SimpleValueColumnFetcher)
     CollectionForPropertyConfigBinder collectionForPropertyConfigBinder = Mock(CollectionForPropertyConfigBinder)
+    SimpleValueColumnBinder simpleValueColumnBinder = new SimpleValueColumnBinder()
+    ColumnConfigToColumnBinder columnConfigToColumnBinder = new ColumnConfigToColumnBinder()
 
     void setup() {
         def domainBinder = getGrailsDomainBinder()
@@ -38,7 +42,9 @@ class CollectionWithJoinTableBinderSpec extends HibernateGormDatastoreSpec {
                 enumTypeBinder,
                 compositeIdentifierToManyToOneBinder,
                 simpleValueColumnFetcher,
-                collectionForPropertyConfigBinder
+                collectionForPropertyConfigBinder,
+                simpleValueColumnBinder,
+                columnConfigToColumnBinder
         )
     }
 

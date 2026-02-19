@@ -5,8 +5,10 @@ import grails.persistence.Entity
 import org.grails.orm.hibernate.cfg.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
@@ -52,7 +54,9 @@ class UnidirectionalOneToManyBinderSpec extends HibernateGormDatastoreSpec {
                 enumTypeBinder,
                 compositeIdentifierToManyToOneBinder,
                 simpleValueColumnFetcher,
-                collectionForPropertyConfigBinder
+                collectionForPropertyConfigBinder,
+                new SimpleValueColumnBinder(),
+                new ColumnConfigToColumnBinder()
         )
         binder = new UnidirectionalOneToManyBinder(collectionWithJoinTableBinder)
     }
