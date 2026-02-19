@@ -112,6 +112,10 @@ tasks.named('bootJar') {
     loaderImplementation = org.springframework.boot.loader.tools.LoaderImplementation.CLASSIC
 }
 
+tasks.named('bootWar') {
+    loaderImplementation = org.springframework.boot.loader.tools.LoaderImplementation.CLASSIC
+}
+
 }
 
 @if (features.contains("spock")) {
