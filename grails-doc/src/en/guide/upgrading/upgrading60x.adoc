@@ -373,6 +373,10 @@ micronautPlatformVersion=4.9.2
 
 Please note that due to https://github.com/micronaut-projects/micronaut-spring/issues/769[this issue], Spring Boot Dev tools does not work with the micronaut integration.
 
+IMPORTANT: Do **not** manually add Micronaut annotation processors (such as `micronaut-inject-java`) to your `build.gradle`. The Grails Gradle Plugin automatically configures the correct annotation processor for Java source files and uses Groovy AST transforms (`micronaut-inject-groovy`) for Groovy source files. Manually adding annotation processors may cause duplicate bean definitions or incremental compilation issues (see https://github.com/apache/grails-core/issues/15211[#15211]).
+
+NOTE: The Grails Gradle Plugin automatically configures the Spring Boot `bootJar` and `bootWar` tasks to use the `CLASSIC` loader implementation when `grails-micronaut` is detected. This is required for `java -jar` execution to work correctly with the Micronaut-Spring integration (see https://github.com/apache/grails-core/issues/15207[#15207]). If you have explicitly set `loaderImplementation` in your `build.gradle`, you can remove it as the Grails Gradle Plugin now handles this automatically.
+
 ===== 12.5 hibernate-ehcache
 
 The `org.hibernate:hibernate-ehcache` library is no longer provided by the `org.apache.grails:grails-hibernate5` plugin. If
