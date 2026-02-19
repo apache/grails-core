@@ -139,11 +139,6 @@ tasks.withType(Copy) {
     }
 }
 
-tasks.withType(Test).configureEach {
-    systemProperty 'projectVersion', projectVersion
-    systemProperty 'currentJdk', JavaVersion.current().majorVersion
-}
-
 apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
