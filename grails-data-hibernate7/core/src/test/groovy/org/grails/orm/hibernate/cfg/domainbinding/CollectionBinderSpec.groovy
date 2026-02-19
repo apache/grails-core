@@ -135,7 +135,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
 
     protected void bindRoot(GrailsDomainBinder binder, GrailsHibernatePersistentEntity entity, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
         def binders = getBinders(binder)
-        binder.bindRoot(entity, mappings, sessionFactoryBeanName, 
+        binder.bindRoot(entity, mappings, 
             binders.defaultColumnNameFetcher, 
             binders.identityBinder as IdentityBinder, 
             binders.versionBinder as VersionBinder, 
