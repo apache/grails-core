@@ -30,17 +30,18 @@ plugins {
 }
 
 dependencies {
-    codenarc 'org.codenarc:CodeNarc:3.7.0-groovy-4.0'
+    codenarc 'org.codenarc:CodeNarc:3.6.0-groovy-4.0'
 }
 
 codenarc {
     configFile = file('config/codenarc/codenarc.groovy')
-    ignoreFailures = true
     maxPriority1Violations = 0
+    maxPriority2Violations = 0
+    maxPriority3Violations = 0
 }
 ----
 
-NOTE: Use the `-groovy-4.0` variant of CodeNarc for Grails 7 projects (which use Groovy 4.x). The plain `3.7.0` artifact is built for Groovy 3.x.
+NOTE: Use the `-groovy-4.0` variant of CodeNarc for Grails 7 projects (which use Groovy 4.x). The plain artifact without a `-groovy-4.0` suffix is built for Groovy 3.x and will not work correctly.
 
 You can then run CodeNarc with:
 
@@ -78,9 +79,8 @@ The solution is to list individual rules explicitly rather than importing entire
 // config/codenarc/codenarc.groovy
 ruleset {
 
-    description 'CodeNarc ruleset for a Grails application'
+    description 'A Codenarc ruleset for the Grails codebase'
 
-    // Formatting
     BracesForClass
     ClassStartsWithBlankLine {
         ignoreInnerClasses = true
@@ -88,22 +88,17 @@ ruleset {
     ClosureStatementOnOpeningLineOfMultipleLineClosure
     ConsecutiveBlankLines
     FileEndsWithoutNewline
-    Indentation
     NoTabCharacter
-
-    // Imports
     DuplicateImport
     ImportFromSamePackage
+    Indentation
     MisorderedStaticImports {
-        comesBefore = false
+        comesBefore = false // static imports should come last
     }
     MissingBlankLineAfterImports
     MissingBlankLineAfterPackage
+    MissingBlankLineBeforeAnnotatedField
     NoWildcardImports
-    UnnecessaryGroovyImport
-    UnusedImport
-
-    // Spacing
     SpaceAfterCatch
     SpaceAfterClosingBrace
     SpaceAfterComma
@@ -130,34 +125,19 @@ ruleset {
     }
     SpaceBeforeOpeningBrace
     SpaceInsideParentheses
-
-    // Unnecessary code
     UnnecessaryConstructor
     UnnecessaryDotClass
+    UnnecessaryGroovyImport
+    UnnecessaryGString
     UnnecessaryOverridingMethod
     UnnecessaryPublicModifier
     UnnecessarySafeNavigationOperator
     UnnecessarySemicolon
-
-    // Common bugs
-    EmptyCatchBlock
-    EmptyElseBlock
-    EmptyFinallyBlock
-    EmptyForStatement
-    EmptyIfStatement
-    EmptyMethod
-    EmptySwitchStatement
-    EmptyWhileStatement
-    EqualsAndHashCode
-
-    // Best practices
-    ExplicitCallToEqualsMethod
-    ExplicitCallToGetAtMethod
-    ExplicitCallToToStringMethod
+    UnusedImport
 }
 ----
 
-This configuration provides comprehensive coverage for formatting, imports, spacing, unnecessary code, common bugs, and best practices - all without triggering GORM AST compatibility issues.
+This is the exact ruleset used by the Grails framework's own build. It covers formatting, imports, spacing, and unnecessary code - all without triggering GORM AST compatibility issues. You can add additional individual rules as needed.
 
 TIP: You can find the full list of available CodeNarc rules at https://codenarc.org/codenarc-rules-formatting.html[codenarc.org]. Add individual rules as needed, testing that each one compiles cleanly against your Grails source files.
 
