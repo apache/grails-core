@@ -1,0 +1,159 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+https://codenarc.org/[CodeNarc] is a static analysis tool for Groovy that finds defects, poor coding practices, inconsistencies, style issues, and more. Grails projects can integrate CodeNarc via the Gradle https://docs.gradle.org/current/userguide/codenarc_plugin.html[CodeNarc plugin].
+
+==== Adding Code Analysis to Your Build
+
+Apply the CodeNarc plugin and configure it using `extensions.configure()`:
+
+[source,groovy]
+----
+import org.gradle.api.plugins.quality.CodeNarcExtension
+
+plugins {
+    id 'codenarc'
+}
+
+dependencies {
+    codenarc 'org.codenarc:CodeNarc:3.6.0-groovy-4.0'
+}
+
+extensions.configure(CodeNarcExtension) {
+    it.configFile = file('config/codenarc/codenarc.groovy')
+    it.maxPriority1Violations = 0
+    it.maxPriority2Violations = 0
+    it.maxPriority3Violations = 0
+}
+----
+
+NOTE: Use the `-groovy-4.0` variant of CodeNarc for Grails 7 projects (which use Groovy 4.x). The plain artifact without a `-groovy-4.0` suffix is built for Groovy 3.x and will not work correctly.
+
+You can then run CodeNarc with:
+
+[source,bash]
+----
+$ ./gradlew codenarcMain
+----
+
+The HTML report is written to `build/reports/codenarc/main.html`.
+
+==== GORM AST Compatibility
+
+CodeNarc provides pre-built rulesets that can be imported as a group using the `ruleset()` syntax:
+
+[source,groovy]
+----
+// config/codenarc/codenarc.groovy - DO NOT use this approach in Grails projects
+ruleset {
+    ruleset('rulesets/basic.xml')
+    ruleset('rulesets/formatting.xml')
+    ruleset('rulesets/unused.xml')
+}
+----
+
+WARNING: Importing entire rulesets with `ruleset('rulesets/xxx.xml')` in a Grails project causes compilation failures. This is because some CodeNarc rules (known as "enhanced" rules) perform semantic analysis at Groovy compiler phase 4. These enhanced rules attempt to resolve AST-transformed classes such as `OrderedGormTransformation` and `ServiceTransformation`, but CodeNarc compiles each source file independently without GORM's AST transformation processors on its classpath. The result is `ClassNotFoundException` or `NoClassDefFoundError` during analysis.
+
+Adding `compilationClasspath` to the CodeNarc Gradle task helps with basic class resolution but does *not* make GORM's transformation processors available, so enhanced rules still fail.
+
+==== Recommended Configuration
+
+The solution is to list individual rules explicitly rather than importing entire rulesets. This avoids pulling in enhanced rules that require GORM's AST infrastructure. The Grails framework's own build uses this approach:
+
+[source,groovy]
+----
+// config/codenarc/codenarc.groovy
+ruleset {
+
+    description 'A Codenarc ruleset for the Grails codebase'
+
+    BracesForClass
+    ClassStartsWithBlankLine {
+        ignoreInnerClasses = true
+    }
+    ClosureStatementOnOpeningLineOfMultipleLineClosure
+    ConsecutiveBlankLines
+    FileEndsWithoutNewline
+    NoTabCharacter
+    DuplicateImport
+    ImportFromSamePackage
+    Indentation
+    MisorderedStaticImports {
+        comesBefore = false // static imports should come last
+    }
+    MissingBlankLineAfterImports
+    MissingBlankLineAfterPackage
+    MissingBlankLineBeforeAnnotatedField
+    NoWildcardImports
+    SpaceAfterCatch
+    SpaceAfterClosingBrace
+    SpaceAfterComma
+    SpaceAfterFor
+    SpaceAfterIf
+    SpaceAfterMethodCallName
+    SpaceAfterMethodDeclarationName
+    SpaceAfterNotOperator
+    SpaceAfterOpeningBrace {
+        ignoreEmptyBlock = true
+    }
+    SpaceAfterSemicolon
+    SpaceAfterSwitch
+    SpaceAfterWhile
+    SpaceAroundClosureArrow
+    SpaceAroundMapEntryColon {
+        characterAfterColonRegex = ' '
+    }
+    SpaceAroundOperator {
+        ignoreParameterDefaultValueAssignments = false
+    }
+    SpaceBeforeClosingBrace {
+        ignoreEmptyBlock = true
+    }
+    SpaceBeforeOpeningBrace
+    SpaceInsideParentheses
+    UnnecessaryConstructor
+    UnnecessaryDotClass
+    UnnecessaryGroovyImport
+    UnnecessaryGString
+    UnnecessaryOverridingMethod
+    UnnecessaryPublicModifier
+    UnnecessarySafeNavigationOperator
+    UnnecessarySemicolon
+    UnusedImport
+}
+----
+
+This is the exact ruleset used by the Grails framework's own build. It covers formatting, imports, spacing, and unnecessary code - all without triggering GORM AST compatibility issues. You can add additional individual rules as needed.
+
+TIP: You can find the full list of available CodeNarc rules at https://codenarc.org/codenarc-rules-formatting.html[codenarc.org]. Add individual rules as needed, testing that each one compiles cleanly against your Grails source files.
+
+==== Separate Ruleset for Tests
+
+Spock specifications often use patterns that trigger style rules (method names with spaces, loose typing, mock syntax). You can configure a separate, more lenient ruleset for test sources:
+
+[source,groovy]
+----
+tasks.named('codenarcTest', CodeNarc) {
+    configFile = file('config/codenarc/codenarc-test.groovy')
+}
+----
+
+==== Reference
+
+The https://github.com/grails-plugins/grails-server-timing[grails-server-timing] plugin provides a complete working example of CodeNarc and Checkstyle configuration using Gradle convention plugins in its `build-logic/` directory. The Grails framework's own CodeNarc ruleset can be found in the https://github.com/apache/grails-core[grails-core] repository under `build-logic/plugins/src/main/resources/META-INF/org.apache.grails.buildsrc.codestyle/codenarc/codenarc.groovy`. Both are reliable starting points for any Grails project.
