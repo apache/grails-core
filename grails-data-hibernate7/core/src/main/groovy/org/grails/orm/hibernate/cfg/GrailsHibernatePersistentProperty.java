@@ -86,13 +86,18 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
      * @return The type name
      */
     default String getTypeName(Class<?> propertyType, PropertyConfig config, Mapping mapping) {
-        if (this instanceof Association) {
+        if (this instanceof Association && propertyType == getType() && getHibernateAssociatedEntity() != null) {
             return null;
         }
-        return Optional.ofNullable(config)
+        String typeName = Optional.ofNullable(config)
                 .map(PropertyConfig::getType)
                 .map(typeObj -> typeObj instanceof Class<?> clazz ? clazz.getName() : typeObj.toString())
                 .orElseGet(() -> mapping != null ? mapping.getTypeName(propertyType) : null);
+
+        if (typeName == null && propertyType != null && getHibernateAssociatedEntity() == null) {
+            return propertyType.getName();
+        }
+        return typeName;
     }
 
     default GrailsHibernatePersistentEntity getHibernateOwner() {
@@ -224,18 +229,7 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
      * @return The type name
      */
     default String getTypeName(SimpleValue simpleValue) {
-        GrailsHibernatePersistentProperty actualTypeProperty = getTypeProperty(simpleValue);
-        String typeName = actualTypeProperty.getTypeName();
-        if (typeName == null) {
-            if (!(actualTypeProperty instanceof Association)) {
-                Class<?> type = actualTypeProperty.getType();
-                if (type != null) {
-                    return type.getName();
-                }
-            }
-            return null;
-        }
-        return typeName;
+        return getTypeProperty(simpleValue).getTypeName();
     }
 
     /**

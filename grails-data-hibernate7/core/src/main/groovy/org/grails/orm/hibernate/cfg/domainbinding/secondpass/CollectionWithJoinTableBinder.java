@@ -95,16 +95,6 @@ public class CollectionWithJoinTableBinder {
             else {
 
                 String typeName = property.getTypeName(referencedType);
-                if (typeName == null) {
-                    Type type = mappings.getTypeConfiguration().getBasicTypeRegistry().getRegisteredType(className);
-                    if (type != null) {
-                        typeName = type.getName();
-                    }
-                }
-                if (typeName == null) {
-                    String domainName = property.getHibernateOwner().getName();
-                    throw new MappingException("Missing type or column for column["+columnName+"] on domain["+domainName+"] referencing["+className+"]");
-                }
 
                 simpleValueColumnBinder.bindSimpleValue(element, typeName, columnName, true);
                 if (joinColumnMappingOptional.isPresent()) {
