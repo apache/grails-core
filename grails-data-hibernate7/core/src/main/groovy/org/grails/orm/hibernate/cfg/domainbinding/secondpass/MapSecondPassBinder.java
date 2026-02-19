@@ -66,18 +66,13 @@ public class MapSecondPassBinder {
             SimpleValue elt = new BasicValue(metadataBuildingContext, map.getCollectionTable());
             map.setElement(elt);
 
-            Mapping mapping = null;
-            GrailsHibernatePersistentEntity domainClass = (GrailsHibernatePersistentEntity) property.getOwner();
-            if (domainClass != null) {
-                mapping = domainClass.getMappedForm();
+            String typeName = null;
+            if (property instanceof Basic basic) {
+                typeName = property.getTypeName(basic.getComponentType());
             }
-            String typeName = property.getTypeName();
-            if (typeName == null ) {
 
-                if(property instanceof Basic) {
-                    Basic basic = (Basic) property;
-                    typeName = basic.getComponentType().getName();
-                }
+            if (typeName == null) {
+                typeName = property.getTypeName();
             }
             if(typeName == null || typeName.equals(Object.class.getName())) {
                 typeName = StandardBasicTypes.STRING.getName();

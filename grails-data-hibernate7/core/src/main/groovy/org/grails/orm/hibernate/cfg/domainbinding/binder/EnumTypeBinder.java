@@ -60,7 +60,7 @@ public class EnumTypeBinder {
         String enumType = pc.getEnumType();
         Properties enumProperties = new Properties();
         enumProperties.put(ENUM_CLASS_PROP, propertyType.getName());
-        String typeName = property.getTypeName();
+        String typeName = property.getTypeName(propertyType);
         if (typeName != null) {
             simpleValue.setTypeName(typeName);
         } else {

@@ -88,12 +88,7 @@ public class CollectionWithJoinTableBinder {
             }
             else {
 
-                Mapping mapping = null;
-                GrailsHibernatePersistentEntity domainClass = property.getHibernateOwner();
-                if (domainClass != null) {
-                    mapping = domainClass.getMappedForm();
-                }
-                String typeName = property.getTypeName();
+                String typeName = property.getTypeName(referencedType);
                 if (typeName == null) {
                     Type type = mappings.getTypeConfiguration().getBasicTypeRegistry().getRegisteredType(className);
                     if (type != null) {
