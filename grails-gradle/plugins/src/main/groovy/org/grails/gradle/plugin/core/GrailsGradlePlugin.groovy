@@ -189,9 +189,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
         project.tasks.withType(GroovyCompile).configureEach { GroovyCompile c ->
             c.outputs.file(groovyCompilerConfigFile)
 
-            // Configure indy option from GrailsExtension
-            c.groovyOptions.optimizationOptions.indy = grailsExtension?.indy?.getOrElse(false) ?: false
-
             Closure<String> userScriptGenerator = getGroovyCompilerScript(c, project)
             c.doFirst {
                 // This isn't ideal - we're performing configuration at execution time, but the alternative would be having
@@ -222,9 +219,13 @@ class GrailsGradlePlugin extends GroovyPlugin {
             }
         }
 
-        // Log indy status once per project after evaluation
+        // Configure indy and log status after evaluation so user's grails { } block has been applied
         project.afterEvaluate {
-            if (!grailsExtension?.indy?.getOrElse(false)) {
+            boolean indyEnabled = grailsExtension?.indy?.getOrElse(false) ?: false
+            project.tasks.withType(GroovyCompile).configureEach { GroovyCompile c ->
+                c.groovyOptions.optimizationOptions.indy = indyEnabled
+            }
+            if (!indyEnabled) {
                 project.logger.lifecycle('Grails: Groovy invokedynamic (indy) is disabled to improve performance (see issue #15293).')
                 project.logger.lifecycle('        To enable invokedynamic: grails { indy = true } in build.gradle')
             }

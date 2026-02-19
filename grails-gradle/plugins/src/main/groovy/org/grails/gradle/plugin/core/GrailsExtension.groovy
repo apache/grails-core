@@ -86,6 +86,10 @@ class GrailsExtension {
      */
     final Property<Boolean> indy
 
+    void setIndy(boolean enabled) {
+        this.indy.set(enabled)
+    }
+
     DependencyHandler getPlugins() {
         if (pluginDefiner == null) {
             pluginDefiner = new PluginDefiner(project)
