@@ -94,7 +94,7 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
                 .map(typeObj -> typeObj instanceof Class<?> clazz ? clazz.getName() : typeObj.toString())
                 .orElseGet(() -> mapping != null ? mapping.getTypeName(propertyType) : null);
 
-        if (typeName == null && propertyType != null && getHibernateAssociatedEntity() == null) {
+        if (typeName == null && propertyType != null && getHibernateAssociatedEntity() == null && !propertyType.isEnum()) {
             return propertyType.getName();
         }
         return typeName;
