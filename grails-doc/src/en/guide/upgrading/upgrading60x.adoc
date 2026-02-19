@@ -61,13 +61,24 @@ In your gradle file, you can force a dependency upgrade via this code:
   }
 ----
 
-* By default, Groovy 4 switches away from callsite optimizations and uses invokedynamic instead. This can result in performance regressions compared to Grails 6. Groovy 5 will remove the ability to disable invokedynamic, but to disable it for Groovy 4, modify your `build.gradle` to include the following:
+* By default, Groovy 4 switches away from callsite optimizations and uses invokedynamic instead. This can result in performance regressions compared to Grails 6. The Grails Gradle Plugins now automatically disables invokedynamic for all `GroovyCompile` tasks (see https://github.com/apache/grails-core/issues/15293[#15293]). If you have a manual `tasks.withType(GroovyCompile)` block in your `build.gradle` that sets `indy = false`, you can safely remove it:
+
+[source,groovy]
+.build.gradle - remove this block (no longer needed)
+----
+  // This is now handled by the Grails Gradle Plugin - remove it
+  tasks.withType(GroovyCompile).configureEach {
+        groovyOptions.optimizationOptions.indy = false
+  }
+----
+
+To re-enable invokedynamic, use the `grails` extension in your `build.gradle`:
 
 [source,groovy]
 .build.gradle
 ----
-  tasks.withType(GroovyCompile).configureEach {
-        groovyOptions.optimizationOptions.indy = false
+  grails {
+      indy = true
   }
 ----
 
