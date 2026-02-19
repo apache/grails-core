@@ -71,9 +71,6 @@ public class CollectionSecondPassBinder {
                                          @Nonnull InFlightMetadataCollector mappings,
                                          Map<?, ?> persistentClasses,
                                          @Nonnull Collection collection) {
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Mapping collection: {} -> {}", collection.getRole(), collection.getCollectionTable().getName());
-        }
 
         PersistentClass associatedClass = property.bindOrderBy(collection, persistentClasses, orderByClauseBuilder);
 
