@@ -99,7 +99,8 @@ public class CollectionBinder {
                 unidirectionalOneToManyBinder,
                 collectionWithJoinTableBinder,
                 collectionForPropertyConfigBinder,
-                new DefaultColumnNameFetcher(namingStrategy)
+                new DefaultColumnNameFetcher(namingStrategy),
+                new SimpleValueColumnBinder()
         );
         this.listSecondPassBinder = new ListSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);
         this.mapSecondPassBinder = new MapSecondPassBinder(metadataBuildingContext, namingStrategy, collectionSecondPassBinder);

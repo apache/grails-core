@@ -42,6 +42,7 @@ public class CollectionSecondPassBinder {
     private final UnidirectionalOneToManyBinder unidirectionalOneToManyBinder;
     private final CollectionWithJoinTableBinder collectionWithJoinTableBinder;
     private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder;
+    private final SimpleValueColumnBinder simpleValueColumnBinder;
 
     public CollectionSecondPassBinder(
             ManyToOneBinder manyToOneBinder,
@@ -52,7 +53,8 @@ public class CollectionSecondPassBinder {
             UnidirectionalOneToManyBinder unidirectionalOneToManyBinder,
             CollectionWithJoinTableBinder collectionWithJoinTableBinder,
             CollectionForPropertyConfigBinder collectionForPropertyConfigBinder,
-            DefaultColumnNameFetcher defaultColumnNameFetcher) {
+            DefaultColumnNameFetcher defaultColumnNameFetcher,
+            SimpleValueColumnBinder simpleValueColumnBinder) {
         this.manyToOneBinder = manyToOneBinder;
         this.primaryKeyValueCreator = primaryKeyValueCreator;
         this.collectionKeyColumnUpdater = collectionKeyColumnUpdater;
@@ -62,6 +64,7 @@ public class CollectionSecondPassBinder {
         this.collectionWithJoinTableBinder = collectionWithJoinTableBinder;
         this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder;
         this.defaultColumnNameFetcher = defaultColumnNameFetcher;
+        this.simpleValueColumnBinder = simpleValueColumnBinder;
         this.orderByClauseBuilder = new OrderByClauseBuilder();
     }
 
@@ -109,7 +112,7 @@ public class CollectionSecondPassBinder {
             }
         } else {
             if (property.getMappedForm().hasJoinKeyMapping()) {
-                new SimpleValueColumnBinder().bindSimpleValue(key, "long", property.getMappedForm().getJoinTable().getKey().getName(), true);
+                simpleValueColumnBinder.bindSimpleValue(key, "long", property.getMappedForm().getJoinTable().getKey().getName(), true);
             } else {
                 dependentKeyValueBinder.bind(property, key);
             }
@@ -136,13 +139,4 @@ public class CollectionSecondPassBinder {
         }
         collectionKeyColumnUpdater.forceNullableAndCheckUpdatable(key, property);
     }
-
-
-
-
-
-
-
-
-
 }
