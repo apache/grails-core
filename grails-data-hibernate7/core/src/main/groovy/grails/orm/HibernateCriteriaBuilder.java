@@ -108,10 +108,8 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * Define constants which may be used inside of criteria queries
      * to refer to standard Hibernate Type instances.
      */
-
-
-
-
+    
+    private static final Logger log = LoggerFactory.getLogger(HibernateCriteriaBuilder.class);
     protected SessionFactory sessionFactory;
     protected Session hibernateSession;
     protected Class<?> targetClass;
@@ -1091,7 +1089,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @Override
     public Object list(@DelegatesTo(Criteria.class) Closure c) {
         hibernateQuery.setDetachedCriteria(new DetachedCriteria(targetClass));
-        return invokeMethod(CriteriaMethodInvoker.LIST_CALL, new Object[]{c});
+        return invokeMethod(CriteriaMethods.LIST_CALL.getName(), new Object[]{c});
     }
 
     public List list() {
@@ -1105,22 +1103,22 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @Override
     public Object list(Map params, @DelegatesTo(Criteria.class) Closure c) {
         hibernateQuery.setDetachedCriteria(new DetachedCriteria(targetClass));
-        return invokeMethod(CriteriaMethodInvoker.LIST_CALL, new Object[]{params, c});
+        return invokeMethod(CriteriaMethods.LIST_CALL.getName(), new Object[]{params, c});
     }
     
     @Override
     public Object listDistinct(@DelegatesTo(Criteria.class) Closure c) {
-        return invokeMethod(CriteriaMethodInvoker.LIST_DISTINCT_CALL, new Object[]{c});
+        return invokeMethod(CriteriaMethods.LIST_DISTINCT_CALL.getName(), new Object[]{c});
     }
 
     @Override
     public Object get(@DelegatesTo(Criteria.class) Closure c) {
-        return invokeMethod(CriteriaMethodInvoker.GET_CALL, new Object[]{c});
+        return invokeMethod(CriteriaMethods.GET_CALL.getName(), new Object[]{c});
     }
     
     @Override
     public Object scroll(@DelegatesTo(Criteria.class) Closure c) {
-        return invokeMethod(CriteriaMethodInvoker.SCROLL_CALL, new Object[]{c});
+        return invokeMethod(CriteriaMethods.SCROLL_CALL.getName(), new Object[]{c});
     }
 
     public JoinType convertFromInt(Integer from) {
