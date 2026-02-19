@@ -34,6 +34,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndP
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SubClassBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SubclassMappingBinder
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
@@ -116,6 +118,9 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         UnionSubclassBinder unionSubclassBinder = new UnionSubclassBinder(metadataBuildingContext, namingStrategy, classBinder)
         SingleTableSubclassBinder singleTableSubclassBinder = new SingleTableSubclassBinder(classBinder)
 
+        SubclassMappingBinder subclassMappingBinder = new SubclassMappingBinder(metadataBuildingContext, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder, classPropertiesBinder)
+        SubClassBinder subClassBinder = new SubClassBinder(binder.getMappingCacheHolder(), subclassMappingBinder, multiTenantFilterBinder, defaultColumnNameFetcher, "dataSource")
+
         return [
             propertyBinder: propertyBinder,
             collectionBinder: collectionBinder,
@@ -128,7 +133,8 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
             multiTenantFilterBinder: multiTenantFilterBinder,
             joinedSubClassBinder: joinedSubClassBinder,
             unionSubclassBinder: unionSubclassBinder,
-            singleTableSubclassBinder: singleTableSubclassBinder
+            singleTableSubclassBinder: singleTableSubclassBinder,
+            subClassBinder: subClassBinder
         ]
     }
 
@@ -141,9 +147,7 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
             binders.classBinder as ClassBinder, 
             binders.classPropertiesBinder as ClassPropertiesBinder, 
             binders.multiTenantFilterBinder as MultiTenantFilterBinder, 
-            binders.joinedSubClassBinder as JoinedSubClassBinder, 
-            binders.unionSubclassBinder as UnionSubclassBinder, 
-            binders.singleTableSubclassBinder as SingleTableSubclassBinder)
+            binders.subClassBinder as SubClassBinder)
     }
 
     void setupSpec() {

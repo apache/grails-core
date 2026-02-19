@@ -209,11 +209,14 @@ public class GrailsDomainBinder
         UnionSubclassBinder unionSubclassBinder = new UnionSubclassBinder(metadataBuildingContext, namingStrategy, classBinder);
         SingleTableSubclassBinder singleTableSubclassBinder = new SingleTableSubclassBinder(classBinder);
 
+        SubclassMappingBinder subclassMappingBinder = new SubclassMappingBinder(metadataBuildingContext, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder, classPropertiesBinder);
+        SubClassBinder subClassBinder = new SubClassBinder(mappingCacheHolder, subclassMappingBinder, multiTenantFilterBinder, defaultColumnNameFetcher, dataSourceName);
+
         hibernateMappingContext
                 .getHibernatePersistentEntities(dataSourceName)
                 .stream()
                 .filter(persistentEntity -> persistentEntity.forGrailsDomainMapping(dataSourceName))
-                .forEach(hibernatePersistentEntity -> bindRoot(hibernatePersistentEntity, metadataCollector, defaultColumnNameFetcher, identityBinder, versionBinder, classBinder, classPropertiesBinder, multiTenantFilterBinder, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder));
+                .forEach(hibernatePersistentEntity -> bindRoot(hibernatePersistentEntity, metadataCollector, defaultColumnNameFetcher, identityBinder, versionBinder, classBinder, classPropertiesBinder, multiTenantFilterBinder, subClassBinder));
     }
 
 
@@ -242,9 +245,8 @@ public class GrailsDomainBinder
      *
      * @param entity The Grails domain class
      * @param mappings    The Hibernate Mappings object
-     * @param sessionFactoryBeanName  the session factory bean name
      */
-    protected void bindRoot(@Nonnull GrailsHibernatePersistentEntity entity,@Nonnull InFlightMetadataCollector mappings, DefaultColumnNameFetcher defaultColumnNameFetcher, IdentityBinder identityBinder, VersionBinder versionBinder, ClassBinder classBinder, ClassPropertiesBinder classPropertiesBinder, MultiTenantFilterBinder multiTenantFilterBinder, JoinedSubClassBinder joinedSubClassBinder, UnionSubclassBinder unionSubclassBinder, SingleTableSubclassBinder singleTableSubclassBinder) {
+    protected void bindRoot(@Nonnull GrailsHibernatePersistentEntity entity,@Nonnull InFlightMetadataCollector mappings, DefaultColumnNameFetcher defaultColumnNameFetcher, IdentityBinder identityBinder, VersionBinder versionBinder, ClassBinder classBinder, ClassPropertiesBinder classPropertiesBinder, MultiTenantFilterBinder multiTenantFilterBinder, SubClassBinder subClassBinder) {
         if (mappings.getEntityBinding(entity.getName()) != null) {
             LOG.info("[GrailsDomainBinder] Class [" + entity.getName() + "] is already mapped, skipping.. ");
             return;
@@ -259,7 +261,7 @@ public class GrailsDomainBinder
             discriminatorPropertyBinder.bindDiscriminatorProperty(root, m);
         }
         // bind the sub classes
-        children.forEach(sub -> bindSubClass(sub, root, mappings, finalMapping,mappingCacheHolder, defaultColumnNameFetcher, classBinder, classPropertiesBinder, multiTenantFilterBinder, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder));
+        children.forEach(sub -> subClassBinder.bindSubClass(sub, root, mappings, finalMapping));
 
         multiTenantFilterBinder.addMultiTenantFilterIfNecessary(entity, root, mappings, defaultColumnNameFetcher);
 
@@ -275,43 +277,6 @@ public class GrailsDomainBinder
         return namingStrategy;
     }
 
-    /**
-     * Binds a sub class.
-     *
-     * @param sub                The sub domain class instance
-     * @param parent             The parent persistent class instance
-     * @param mappings           The mappings instance
-     * @param mappingCacheHolder
-     */
-    private void bindSubClass(@Nonnull GrailsHibernatePersistentEntity sub,
-                              PersistentClass parent,
-                              @Nonnull InFlightMetadataCollector mappings,
-                              Mapping m, MappingCacheHolder mappingCacheHolder, DefaultColumnNameFetcher defaultColumnNameFetcher, ClassBinder classBinder, ClassPropertiesBinder classPropertiesBinder, MultiTenantFilterBinder multiTenantFilterBinder, JoinedSubClassBinder joinedSubClassBinder, UnionSubclassBinder unionSubclassBinder, SingleTableSubclassBinder singleTableSubclassBinder) {
-        mappingCacheHolder.cacheMapping(sub);
-        SubclassMappingBinder subclassMappingBinder = new SubclassMappingBinder(metadataBuildingContext, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder, classPropertiesBinder);
-        Subclass subClass = subclassMappingBinder.createSubclassMapping(sub, parent, mappings, m);
-
-
-        parent.addSubclass(subClass);
-        mappings.addEntityBinding(subClass);
-
-        multiTenantFilterBinder.addMultiTenantFilterIfNecessary(sub, subClass, mappings, defaultColumnNameFetcher);
-
-        var children = sub.getChildEntities(dataSourceName);
-        if (!children.isEmpty()) {
-            // bind the sub classes
-            children.forEach(sub1 -> bindSubClass(sub1, subClass, mappings, m,mappingCacheHolder, defaultColumnNameFetcher, classBinder, classPropertiesBinder, multiTenantFilterBinder, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder ));
-        }
-    }
-
-
-    /**
-     * Binds a sub-class using table-per-hierarchy inheritance mapping
-     *
-     * @param sub      The Grails domain class instance representing the sub-class
-     * @param subClass The Hibernate SubClass instance
-     * @param mappings The mappings instance
-     */
     public MetadataBuildingContext getMetadataBuildingContext() {
         return metadataBuildingContext;
     }
