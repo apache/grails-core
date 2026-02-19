@@ -99,6 +99,10 @@ public class HibernateQuery extends Query {
         this.resultTransformer = resultTransformer;
     }
 
+    public ResultTransformer getResultTransformer() {
+        return resultTransformer;
+    }
+
     @Override
     protected Object resolveIdIfEntity(Object value) {
         // for Hibernate queries, the object itself is used in queries, not the id
