@@ -71,7 +71,10 @@ import org.springframework.boot.gradle.dsl.SpringBootExtension
 import org.springframework.boot.gradle.plugin.ResolveMainClassName
 import org.springframework.boot.gradle.plugin.SpringBootPlugin
 import org.springframework.boot.gradle.tasks.bundling.BootArchive
+import org.springframework.boot.gradle.tasks.bundling.BootJar
+import org.springframework.boot.gradle.tasks.bundling.BootWar
 import org.springframework.boot.gradle.tasks.run.BootRun
+import org.springframework.boot.loader.tools.LoaderImplementation
 
 import javax.inject.Inject
 
@@ -374,6 +377,23 @@ class GrailsGradlePlugin extends GroovyPlugin {
                         details.useVersion(micronautPlatformVersion)
                     }
                 }
+            }
+
+            // Add Micronaut annotation processor for Java source files.
+            // Groovy sources are handled by micronaut-inject-groovy AST transforms (via compileOnlyApi),
+            // but Java sources require the Java annotation processor to generate BeanDefinition classes.
+            // The annotationProcessor configuration only affects compileJava tasks, not compileGroovy.
+            project.logger.info('Adding Micronaut annotationProcessor for Java sources in {}', project.name)
+            project.getDependencies().add('annotationProcessor', project.dependencies.platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion"))
+            project.getDependencies().add('annotationProcessor', 'io.micronaut:micronaut-inject-java')
+            project.getDependencies().add('annotationProcessor', 'jakarta.annotation:jakarta.annotation-api')
+
+            project.logger.info('Configuring CLASSIC boot loader for Micronaut compatibility in {}', project.name)
+            project.tasks.withType(BootJar).configureEach { BootJar bootJar ->
+                bootJar.loaderImplementation.convention(LoaderImplementation.CLASSIC)
+            }
+            project.tasks.withType(BootWar).configureEach { BootWar bootWar ->
+                bootWar.loaderImplementation.convention(LoaderImplementation.CLASSIC)
             }
         }
     }
