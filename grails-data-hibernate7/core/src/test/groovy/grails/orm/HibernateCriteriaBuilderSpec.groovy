@@ -1,9 +1,7 @@
-package org.grails.orm.hibernate
+package grails.orm
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import grails.orm.HibernateCriteriaBuilder
-
 import java.math.RoundingMode
 
 class HibernateCriteriaBuilderSpec extends HibernateGormDatastoreSpec {
@@ -26,7 +24,7 @@ class HibernateCriteriaBuilderSpec extends HibernateGormDatastoreSpec {
         fred.save()
 
         barney.addToTransactions(new Transaction(amount: 50))
-        barney.save(flush: true,failOnError: true)
+        barney.save(flush: true, failOnError: true)
 
         builder = new HibernateCriteriaBuilder(Account, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
     }
@@ -153,7 +151,7 @@ class HibernateCriteriaBuilderSpec extends HibernateGormDatastoreSpec {
             le("balance", BigDecimal.valueOf(1000))
         }
         then:
-        results*.firstName.toSet() == ["Barney","Wilma","Pebbles"] as Set
+        results*.firstName.toSet() == ["Barney", "Wilma", "Pebbles"] as Set
     }
 
     void "test isNotNull and size constraints on association"() {
@@ -163,7 +161,7 @@ class HibernateCriteriaBuilderSpec extends HibernateGormDatastoreSpec {
             sizeGe("transactions", 1)
         }
         then:
-        results*.firstName.toSet() == ["Fred","Barney"] as Set
+        results*.firstName.toSet() == ["Fred", "Barney"] as Set
     }
 
     void "test property to property comparisons and ordering desc"() {
@@ -209,11 +207,11 @@ class HibernateCriteriaBuilderSpec extends HibernateGormDatastoreSpec {
         paged.size() == 1
         paged[0].firstName == "Fred"
     }
-    
+
     void "test eq with ignoreCase param path and like/ilike methods"() {
         when:
         def results = builder.list {
-            eq("firstName", "Fr", [ignoreCase:true]) // should fallback to like with %Fr%
+            eq("firstName", "Fr", [ignoreCase: true]) // should fallback to like with %Fr%
         }
         def likeRes = builder.list {
             like("branch", "%Bedrock%")
@@ -224,7 +222,7 @@ class HibernateCriteriaBuilderSpec extends HibernateGormDatastoreSpec {
         then:
         results instanceof List
         likeRes.size() >= 1
-        ilikeRes.size() >= 1 
+        ilikeRes.size() >= 1
     }
 }
 
@@ -238,7 +236,7 @@ class Account {
 
     static hasMany = [transactions: Transaction]
     static constraints = {
-        branch nullable:true
+        branch nullable: true
     }
 }
 
