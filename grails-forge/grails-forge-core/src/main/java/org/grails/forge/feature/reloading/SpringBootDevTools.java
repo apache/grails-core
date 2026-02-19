@@ -25,6 +25,7 @@ import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.build.dependencies.Scope;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
+import org.grails.forge.feature.micronaut.GrailsMicronaut;
 import org.grails.forge.options.Options;
 
 import java.util.Set;
@@ -61,6 +62,9 @@ public class SpringBootDevTools implements ReloadingFeature, DefaultFeature {
 
     @Override
     public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
+        if (selectedFeatures.stream().anyMatch(f -> f instanceof GrailsMicronaut)) {
+            return false;
+        }
         return selectedFeatures.stream().noneMatch(f -> f instanceof ReloadingFeature);
     }
 

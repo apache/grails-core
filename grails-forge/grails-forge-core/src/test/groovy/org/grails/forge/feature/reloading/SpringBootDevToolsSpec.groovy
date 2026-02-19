@@ -57,4 +57,12 @@ class SpringBootDevToolsSpec extends ApplicationContextSpec implements CommandOu
         def ex = thrown(IllegalArgumentException)
         ex.message.contains("There can only be one of the following features selected")
     }
+
+    void "test spring-boot-devtools is not applied when grails-micronaut is selected"() {
+        when:
+        final Features features = getFeatures(["grails-micronaut"])
+
+        then:
+        !features.contains("spring-boot-devtools")
+    }
 }
