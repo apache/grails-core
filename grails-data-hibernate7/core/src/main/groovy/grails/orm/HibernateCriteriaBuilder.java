@@ -108,42 +108,6 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * Define constants which may be used inside of criteria queries
      * to refer to standard Hibernate Type instances.
      */
-    public static final BasicTypeReference<Boolean> BOOLEAN = StandardBasicTypes.BOOLEAN;
-    public static final BasicTypeReference<Boolean> YES_NO = StandardBasicTypes.YES_NO;
-    public static final BasicTypeReference<Byte> BYTE = StandardBasicTypes.BYTE;
-    public static final BasicTypeReference<Character> CHARACTER = StandardBasicTypes.CHARACTER;
-    public static final BasicTypeReference<Short> SHORT = StandardBasicTypes.SHORT;
-    public static final BasicTypeReference<Integer> INTEGER = StandardBasicTypes.INTEGER;
-    public static final BasicTypeReference<Long> LONG = StandardBasicTypes.LONG;
-    public static final BasicTypeReference<Float> FLOAT = StandardBasicTypes.FLOAT;
-    public static final BasicTypeReference<Double> DOUBLE = StandardBasicTypes.DOUBLE;
-    public static final BasicTypeReference<BigDecimal> BIG_DECIMAL = StandardBasicTypes.BIG_DECIMAL;
-    public static final BasicTypeReference<BigInteger> BIG_INTEGER = StandardBasicTypes.BIG_INTEGER;
-    public static final BasicTypeReference<String> STRING = StandardBasicTypes.STRING;
-    public static final BasicTypeReference<Boolean> NUMERIC_BOOLEAN = StandardBasicTypes.NUMERIC_BOOLEAN;
-    public static final BasicTypeReference<Boolean> TRUE_FALSE = StandardBasicTypes.TRUE_FALSE;
-    public static final BasicTypeReference<java.net.URL> URL = StandardBasicTypes.URL;
-    public static final BasicTypeReference<Date> TIME = StandardBasicTypes.TIME;
-    public static final BasicTypeReference<Date> DATE = StandardBasicTypes.DATE;
-    public static final BasicTypeReference<Date> TIMESTAMP = StandardBasicTypes.TIMESTAMP;
-    public static final BasicTypeReference<Calendar> CALENDAR = StandardBasicTypes.CALENDAR;
-    public static final BasicTypeReference<Calendar> CALENDAR_DATE = StandardBasicTypes.CALENDAR_DATE;
-    public static final BasicTypeReference<Class> CLASS = StandardBasicTypes.CLASS;
-    public static final BasicTypeReference<Locale> LOCALE = StandardBasicTypes.LOCALE;
-    public static final BasicTypeReference<Currency> CURRENCY = StandardBasicTypes.CURRENCY;
-    public static final BasicTypeReference<TimeZone> TIMEZONE = StandardBasicTypes.TIMEZONE;
-    public static final BasicTypeReference<UUID> UUID_BINARY = StandardBasicTypes.UUID_BINARY;
-    public static final BasicTypeReference<UUID> UUID_CHAR = StandardBasicTypes.UUID_CHAR;
-    public static final BasicTypeReference<byte[]> BINARY = StandardBasicTypes.BINARY;
-    public static final BasicTypeReference<byte[]> IMAGE = StandardBasicTypes.IMAGE;
-    public static final BasicTypeReference<Blob> BLOB = StandardBasicTypes.BLOB;
-    public static final BasicTypeReference<byte[]> MATERIALIZED_BLOB = StandardBasicTypes.MATERIALIZED_BLOB;
-    public static final BasicTypeReference<char[]> CHAR_ARRAY = StandardBasicTypes.CHAR_ARRAY;
-    public static final BasicTypeReference<Character[]> CHARACTER_ARRAY = StandardBasicTypes.CHARACTER_ARRAY;
-    public static final BasicTypeReference<String> TEXT = StandardBasicTypes.TEXT;
-    public static final BasicTypeReference<Clob> CLOB = StandardBasicTypes.CLOB;
-    public static final BasicTypeReference<String> MATERIALIZED_CLOB = StandardBasicTypes.MATERIALIZED_CLOB;
-    public static final BasicTypeReference<Serializable> SERIALIZABLE = StandardBasicTypes.SERIALIZABLE;
 
     public static final String AND = "and"; // builder
     public static final String IS_NULL = "isNull"; // builder
@@ -1379,6 +1343,62 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
                 else {
                     hibernateQuery.isNotEmpty(propertyName);
                 }
+                return name;
+            }
+        }
+        else if (args.length >= 2 && args[0] instanceof String propertyName) {
+            propertyName = calculatePropertyName(propertyName);
+            switch (name) {
+                case RLIKE:
+                    return rlike(propertyName, args[1]);
+                case BETWEEN:
+                    if (args.length >= 3) {
+                        return between(propertyName, args[1], args[2]);
+                    }
+                    break;
+                case EQUALS:
+                    if (args.length == 3 && args[2] instanceof Map) {
+                        return eq(propertyName, args[1], (Map) args[2]);
+                    }
+                    return eq(propertyName, args[1]);
+                case EQUALS_PROPERTY:
+                    return eqProperty(propertyName, args[1].toString());
+                case GREATER_THAN:
+                    return gt(propertyName, args[1]);
+                case GREATER_THAN_PROPERTY:
+                    return gtProperty(propertyName, args[1].toString());
+                case GREATER_THAN_OR_EQUAL:
+                    return ge(propertyName, args[1]);
+                case GREATER_THAN_OR_EQUAL_PROPERTY:
+                    return geProperty(propertyName, args[1].toString());
+                case ILIKE:
+                    return ilike(propertyName, args[1]);
+                case IN:
+                    if (args[1] instanceof Collection) {
+                        return in(propertyName, (Collection) args[1]);
+                    } else if (args[1] instanceof Object[]) {
+                        return in(propertyName, (Object[]) args[1]);
+                    }
+                    break;
+                case LESS_THAN:
+                    return lt(propertyName, args[1]);
+                case LESS_THAN_PROPERTY:
+                    return ltProperty(propertyName, args[1].toString());
+                case LESS_THAN_OR_EQUAL:
+                    return le(propertyName, args[1]);
+                case LESS_THAN_OR_EQUAL_PROPERTY:
+                    return leProperty(propertyName, args[1].toString());
+                case LIKE:
+                    return like(propertyName, args[1]);
+                case NOT_EQUAL:
+                    return ne(propertyName, args[1]);
+                case NOT_EQUAL_PROPERTY:
+                    return neProperty(propertyName, args[1].toString());
+                case SIZE_EQUALS:
+                    if (args[1] instanceof Number) {
+                        return sizeEq(propertyName, ((Number) args[1]).intValue());
+                    }
+                    break;
             }
         }
         throw new MissingMethodException(name, getClass(), args);

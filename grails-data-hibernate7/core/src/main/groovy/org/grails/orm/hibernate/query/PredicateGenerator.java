@@ -108,27 +108,7 @@ public class PredicateGenerator {
                         } else if (criterion instanceof Query.SizeLessThanEquals c) {
                             return cb.le(cb.size(fullyQualifiedPath), getNumericValue(c));
                         } else if (criterion instanceof Query.Between c) {
-                            if (c.getFrom() instanceof String && c.getTo() instanceof String) {
-                                return cb.between(fullyQualifiedPath, (String) c.getFrom(), (String) c.getTo());
-                            } else if (c.getFrom() instanceof Short && c.getTo() instanceof Short) {
-                                return cb.between(fullyQualifiedPath, (Short) c.getFrom(), (Short) c.getTo());
-                            } else if (c.getFrom() instanceof Integer && c.getTo() instanceof Integer) {
-                                return cb.between(fullyQualifiedPath, (Integer) c.getFrom(), (Integer) c.getTo());
-                            } else if (c.getFrom() instanceof Long && c.getTo() instanceof Long) {
-                                return cb.between(fullyQualifiedPath, (Long) c.getFrom(), (Long) c.getTo());
-                            } else if (c.getFrom() instanceof Date && c.getTo() instanceof Date) {
-                                return cb.between(fullyQualifiedPath, (Date) c.getFrom(), (Date) c.getTo());
-                            } else if (c.getFrom() instanceof Instant && c.getTo() instanceof Instant) {
-                                return cb.between(fullyQualifiedPath, (Instant) c.getFrom(), (Instant) c.getTo());
-                            } else if (c.getFrom() instanceof LocalDate && c.getTo() instanceof LocalDate) {
-                                return cb.between(fullyQualifiedPath, (LocalDate) c.getFrom(), (LocalDate) c.getTo());
-                            } else if (c.getFrom() instanceof LocalDateTime && c.getTo() instanceof LocalDateTime) {
-                                return cb.between(fullyQualifiedPath, (LocalDateTime) c.getFrom(), (LocalDateTime) c.getTo());
-                            } else if (c.getFrom() instanceof OffsetDateTime && c.getTo() instanceof OffsetDateTime) {
-                                return cb.between(fullyQualifiedPath, (OffsetDateTime) c.getFrom(), (OffsetDateTime) c.getTo());
-                            } else if (c.getFrom() instanceof ZonedDateTime && c.getTo() instanceof ZonedDateTime) {
-                                return cb.between(fullyQualifiedPath, (ZonedDateTime) c.getFrom(), (ZonedDateTime) c.getTo());
-                            }
+                            return cb.between(fullyQualifiedPath, (Comparable) c.getFrom(), (Comparable) c.getTo());
                         } else if (criterion instanceof Query.ILike c) {
                             return cb.ilike(fullyQualifiedPath, c.getValue().toString());
                         } else if (criterion instanceof Query.RLike c) {

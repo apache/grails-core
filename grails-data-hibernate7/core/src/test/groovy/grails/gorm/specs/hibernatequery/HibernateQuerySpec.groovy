@@ -40,7 +40,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     }
 
     def setupSpec() {
-        manager.addAllDomainClasses([Person, Pet, Face,EagerOwner])
+        manager.addAllDomainClasses([Person, Pet, Face, EagerOwner, CommonTypes, BigDecimalEntity])
     }
 
     def equals() {
@@ -524,6 +524,46 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         oldBob == newBob
     }
 
+    def betweenBigDecimal() {
+        given:
+        HibernateDatastore hibernateDatastore = manager.hibernateDatastore
+        AbstractHibernateSession session = hibernateDatastore.connect() as AbstractHibernateSession
+        HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(BigDecimalEntity.typeName))
+        new BigDecimalEntity(amount: 10.5G).save(flush: true, failOnError: true)
+        new BigDecimalEntity(amount: 20.5G).save(flush: true, failOnError: true)
+        new BigDecimalEntity(amount: 30.5G).save(flush: true, failOnError: true)
+
+        query.between("amount", 15.0G, 25.0G)
+
+        when:
+        def results = query.list()
+
+        then:
+        results.size() == 1
+        results[0].amount == 20.5G
+    }
+
+    def inListArray() {
+        new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
+        given:
+        hibernateQuery.in("age", [50, 52])
+        when:
+        def results = hibernateQuery.list()
+        then:
+        results.size() == 2
+        results*.firstName.sort() == ["Bob", "Fred"]
+    }
+
+    def countDistinct() {
+        new Person(firstName: "Bob", lastName: "The Builder", age: 25).save(flush: true)
+        given:
+        hibernateQuery.projections().countDistinct("firstName")
+        when:
+        def count = hibernateQuery.singleResult()
+        then:
+        count == 1 // Both are "Bob"
+    }
+
     def joinWithProjection() {
         given:
         oldBob.addToPets(new Pet(name:"Lucky")).save(flush:true)
@@ -657,6 +697,40 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         age == 51
     }
 
+    def sumBigDecimal() {
+        given:
+        HibernateDatastore hibernateDatastore = manager.hibernateDatastore
+        AbstractHibernateSession session = hibernateDatastore.connect() as AbstractHibernateSession
+        HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(BigDecimalEntity.typeName))
+        new BigDecimalEntity(amount: 100.0G).save(flush: true, failOnError: true)
+        new BigDecimalEntity(amount: 200.0G).save(flush: true, failOnError: true)
+
+        query.projections().sum("amount")
+
+        when:
+        def sum = query.singleResult()
+
+        then:
+        sum == 300.0G
+    }
+
+    def avgBigDecimal() {
+        given:
+        HibernateDatastore hibernateDatastore = manager.hibernateDatastore
+        AbstractHibernateSession session = hibernateDatastore.connect() as AbstractHibernateSession
+        HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(BigDecimalEntity.typeName))
+        new BigDecimalEntity(amount: 100.0G).save(flush: true, failOnError: true)
+        new BigDecimalEntity(amount: 200.0G).save(flush: true, failOnError: true)
+
+        query.projections().avg("amount")
+
+        when:
+        def avg = query.singleResult()
+
+        then:
+        avg == 150.0G
+    }
+
     def groupByLastNameAverageAge() {
         def fred = new Person(firstName: "Fred", lastName: "Rogers", age: 52)
         fred.save(flush: true)
@@ -738,4 +812,12 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
 }
 
+
+
+@grails.persistence.Entity
+class BigDecimalEntity implements Serializable {
+    Long id
+    Long version
+    BigDecimal amount
+}
 

@@ -80,6 +80,53 @@ class HibernateCriteriaBuilderSpec extends HibernateGormDatastoreSpec {
         results[0].firstName == "Fred"
     }
 
+    void "test rlike criteria"() {
+        when:
+        def results = builder.list {
+            rlike("firstName", "^F.*")
+        }
+
+        then:
+        results.size() == 1
+        results[0].firstName == "Fred"
+    }
+
+    void "test between criteria"() {
+        when:
+        def results = builder.list {
+            between("balance", BigDecimal.valueOf(100), BigDecimal.valueOf(300))
+        }
+
+        then:
+        results.size() == 2
+        results*.firstName.sort() == ["Fred", "Wilma"]
+    }
+
+    void "test sizeEq criteria"() {
+        when:
+        def results = builder.list {
+            sizeEq("transactions", 2)
+        }
+
+        then:
+        results.size() == 1
+        results[0].firstName == "Fred"
+    }
+
+    void "test isEmpty and isNotEmpty criteria"() {
+        when:
+        def emptyResults = builder.list {
+            isEmpty("transactions")
+        }
+        def notEmptyResults = builder.list {
+            isNotEmpty("transactions")
+        }
+
+        then:
+        emptyResults.size() == 3 // Wilma, Pebbles, Bam-Bam
+        notEmptyResults.size() == 2 // Fred, Barney
+    }
+
     void "test isNull criteria"() {
         when:
         def results = builder.list {
@@ -168,11 +215,43 @@ class HibernateCriteriaBuilderSpec extends HibernateGormDatastoreSpec {
         when:
         def results = builder.list {
             geProperty("balance", "balance") // always true, validates path
+            eqProperty("firstName", "firstName")
+            neProperty("firstName", "lastName")
+            gtProperty("balance", "balance") // always false for same property
             order("balance", "desc")
         }
         then:
-        results[0].firstName == "Pebbles"
-        results[-1].firstName == "Bam-Bam"
+        results.size() == 0 // because gtProperty("balance", "balance") is false
+
+        when:
+        results = builder.list {
+            leProperty("balance", "balance")
+            ltProperty("balance", "balance")
+        }
+        then:
+        results.size() == 0
+    }
+
+    void "test nested criteria with aliases"() {
+        when:
+        def results = builder.list {
+            transactions {
+                eq("amount", BigDecimal.valueOf(50))
+            }
+        }
+        then:
+        results.size() == 1
+        results[0].firstName == "Barney"
+
+        when:
+        results = builder.list {
+            transactions {
+                between("amount", BigDecimal.valueOf(15), BigDecimal.valueOf(25))
+            }
+        }
+        then:
+        results.size() == 1
+        results[0].firstName == "Fred"
     }
 
     void "test projections countDistinct groupProperty min max"() {
