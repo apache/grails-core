@@ -36,12 +36,14 @@ public class ListSecondPassBinder {
     private final MetadataBuildingContext metadataBuildingContext;
     private final CollectionSecondPassBinder collectionSecondPassBinder;
     private final PersistentEntityNamingStrategy namingStrategy;
+    private final SimpleValueColumnBinder simpleValueColumnBinder;
 
     public ListSecondPassBinder(MetadataBuildingContext metadataBuildingContext
-            , PersistentEntityNamingStrategy namingStrategy, CollectionSecondPassBinder collectionSecondPassBinder) {
+            , PersistentEntityNamingStrategy namingStrategy, CollectionSecondPassBinder collectionSecondPassBinder, SimpleValueColumnBinder simpleValueColumnBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.collectionSecondPassBinder = collectionSecondPassBinder;
         this.namingStrategy = namingStrategy;
+        this.simpleValueColumnBinder = simpleValueColumnBinder;
     }
 
     public void bindListSecondPass(@Nonnull HibernateToManyProperty property, @Nonnull InFlightMetadataCollector mappings,
@@ -59,7 +61,7 @@ public class ListSecondPassBinder {
         Table collectionTable = list.getCollectionTable();
         SimpleValue iv = new BasicValue(metadataBuildingContext, collectionTable);
         String type = property.getIndexColumnType("integer");
-        new SimpleValueColumnBinder().bindSimpleValue(iv, type, columnName, true);
+        simpleValueColumnBinder.bindSimpleValue(iv, type, columnName, true);
         iv.setTypeName(type);
         list.setIndex(iv);
         list.setBaseIndex(0);
