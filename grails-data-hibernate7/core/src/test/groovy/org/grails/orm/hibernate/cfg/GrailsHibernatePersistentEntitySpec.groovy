@@ -233,6 +233,73 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         then:
         result2 == ["'VEHICLE'", "'TRUCK'"] as Set
     }
+
+    def "test getHibernateCompositeIdentity returns CompositeIdentity when conditions met"() {
+        given:
+        def context = getMappingContext()
+        GrailsHibernatePersistentEntity entity = Spy(HibernatePersistentEntity, constructorArgs: [Person, context])
+        def mapping = Mock(Mapping)
+        def compositeIdentity = new CompositeIdentity()
+
+        entity.getMappedForm() >> mapping
+        mapping.hasCompositeIdentifier() >> true
+        mapping.getIdentity() >> compositeIdentity
+
+        when:
+        Optional<CompositeIdentity> result = entity.getHibernateCompositeIdentity()
+
+        then:
+        result.isPresent()
+        result.get() == compositeIdentity
+    }
+
+    def "test getHibernateCompositeIdentity returns empty when mapping is null"() {
+        given:
+        def context = getMappingContext()
+        GrailsHibernatePersistentEntity entity = Spy(HibernatePersistentEntity, constructorArgs: [Person, context])
+
+        entity.getMappedForm() >> null
+
+        when:
+        Optional<CompositeIdentity> result = entity.getHibernateCompositeIdentity()
+
+        then:
+        !result.isPresent()
+    }
+
+    def "test getHibernateCompositeIdentity returns empty when mapping has no composite identifier"() {
+        given:
+        def context = getMappingContext()
+        GrailsHibernatePersistentEntity entity = Spy(HibernatePersistentEntity, constructorArgs: [Person, context])
+        def mapping = Mock(Mapping)
+
+        entity.getMappedForm() >> mapping
+        mapping.hasCompositeIdentifier() >> false
+
+        when:
+        Optional<CompositeIdentity> result = entity.getHibernateCompositeIdentity()
+
+        then:
+        !result.isPresent()
+    }
+
+    def "test getHibernateCompositeIdentity returns empty when mapping.getIdentity is not CompositeIdentity"() {
+        given:
+        def context = getMappingContext()
+        GrailsHibernatePersistentEntity entity = Spy(HibernatePersistentEntity, constructorArgs: [Person, context])
+        def mapping = Mock(Mapping)
+        def nonCompositeIdentity = new Identity()
+
+        entity.getMappedForm() >> mapping
+        mapping.hasCompositeIdentifier() >> true
+        mapping.getIdentity() >> nonCompositeIdentity
+
+        when:
+        Optional<CompositeIdentity> result = entity.getHibernateCompositeIdentity()
+
+        then:
+        !result.isPresent()
+    }
 }
 
 @Entity

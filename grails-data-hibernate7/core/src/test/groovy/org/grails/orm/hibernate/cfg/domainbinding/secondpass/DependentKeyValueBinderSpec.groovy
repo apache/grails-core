@@ -5,7 +5,6 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
-import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
 import org.hibernate.mapping.DependantValue
@@ -31,7 +30,6 @@ class DependentKeyValueBinderSpec extends HibernateGormDatastoreSpec {
         given:
         HibernateToManyProperty property = createTestProperty(TestEntityWithMany)
         GrailsHibernatePersistentEntity owner = (GrailsHibernatePersistentEntity) property.getOwner()
-        Mapping mapping = owner.getMappedForm()
         DependantValue key = Mock(DependantValue)
 
         when:

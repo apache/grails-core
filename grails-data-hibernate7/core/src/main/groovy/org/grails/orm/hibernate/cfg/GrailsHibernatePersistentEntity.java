@@ -79,6 +79,14 @@ package org.grails.orm.hibernate.cfg;
     @Override
     GrailsHibernatePersistentProperty[] getCompositeIdentity();
 
+    default Optional<CompositeIdentity> getHibernateCompositeIdentity() {
+        return Optional.ofNullable(getMappedForm())
+                .filter(Mapping::hasCompositeIdentifier)
+                .map(Mapping::getIdentity)
+                .filter(CompositeIdentity.class::isInstance)
+                .map(CompositeIdentity.class::cast);
+    }
+
     default String getDiscriminatorValue() {
         return Optional.ofNullable(getMappedForm())
                 .map(Mapping::getDiscriminator)

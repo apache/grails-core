@@ -23,14 +23,6 @@ import org.grails.orm.hibernate.cfg.Mapping;
  */
 public interface GrailsHibernatePersistentProperty extends PersistentProperty<PropertyConfig> {
 
-    default Optional<CompositeIdentity> getCompositeIdentity(Mapping mapping) {
-        return Optional.ofNullable(mapping)
-                .filter(m -> m.hasCompositeIdentifier() && supportsJoinColumnMapping())
-                .map(Mapping::getIdentity)
-                .filter(CompositeIdentity.class::isInstance)
-                .map(CompositeIdentity.class::cast);
-    }
-
     default boolean isOwningSide() {
         return this instanceof Association<?> association && association.isOwningSide();
     }
