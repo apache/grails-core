@@ -16,15 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-configurations.register('documentation') {
-    canBeConsumed = false
-    canBeResolved = true
-    attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.LIBRARY))
-        attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling, Bundling.EXTERNAL))
-        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
-    }
-}
+apply plugin: 'org.apache.grails.buildsrc.groovydoc'
 
 dependencies {
     add('documentation', platform(project(':grails-bom')))
@@ -50,127 +42,32 @@ String resolveProjectVersion(String artifact) {
     }
 }
 
-// Resolve a Groovydoc task property that may be either a Gradle Property<T> or a plain value.
-// Gradle 8.x Groovydoc uses a mix of both types depending on the property.
-Object resolveGroovydocProperty(Object value) {
-    if (value instanceof org.gradle.api.provider.Provider) {
-        return value.getOrNull()
-    }
-    return value
-}
-
-// Compute the javaVersion string for groovydoc's JavaParser language level.
-// Requires Groovy 4.0.27+ (GROOVY-11668). Gradle's built-in Groovydoc task does not
-// expose this parameter (https://github.com/gradle/gradle/issues/33659), so we replace
-// the task execution with AntBuilder to pass it directly to the Groovy Ant task.
-String groovydocJavaVersion = "JAVA_${project.findProperty('javaVersion') ?: '17'}"
-
 tasks.withType(Groovydoc).configureEach { Groovydoc gdoc ->
     gdoc.exclude('META-INF/**', '*yml', '*properties', '*xml', '**/Application.groovy', '**/Bootstrap.groovy', '**/resources.groovy')
-    gdoc.groovyClasspath = configurations.documentation
     gdoc.windowTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
     gdoc.docTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
-    gdoc.access = GroovydocAccess.PROTECTED
-    gdoc.includeAuthor = false
-    gdoc.includeMainForScripts = false
-    gdoc.processScripts = false
-    gdoc.noTimestamp = true
-    gdoc.noVersionStamp = false
-    gdoc.footer = '''<!-- Matomo -->
-<script>
-    var _paq = window._paq = window._paq || [];
-    /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
-    _paq.push(["setDoNotTrack", true]);
-    _paq.push(["disableCookies"]);
-    _paq.push(['trackPageView']);
-    _paq.push(['enableLinkTracking']);
-    (function() {
-        var u="https://analytics.apache.org/";
-        _paq.push(['setTrackerUrl', u+'matomo.php']);
-        _paq.push(['setSiteId', '79']);
-        var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
-        g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
-    })();
-</script>
-<!-- End Matomo Code -->'''
 
-    // Replace Gradle's built-in Groovydoc execution with AntBuilder to support javaVersion.
-    // See: https://github.com/apache/grails-core/issues/15385
-    gdoc.actions.clear()
-    gdoc.doLast {
-        def destDir = gdoc.destinationDir
-        destDir.mkdirs()
-
-        // Source directories: set by modules via ext.groovydocSourceDirs, or derived from source sets
-        List<File> sourceDirs
-        if (gdoc.ext.has('groovydocSourceDirs') && gdoc.ext.groovydocSourceDirs) {
-            sourceDirs = (gdoc.ext.groovydocSourceDirs as List<File>).findAll { it.exists() }
-        } else {
-            sourceDirs = []
-            def sourceSetsExt = project.extensions.findByType(SourceSetContainer)
-            if (sourceSetsExt) {
-                def mainSS = sourceSetsExt.findByName('main')
-                if (mainSS) {
-                    sourceDirs.addAll(mainSS.groovy.srcDirs.findAll { it.exists() })
-                    sourceDirs.addAll(mainSS.java.srcDirs.findAll { it.exists() })
-                }
-            }
-        }
-        sourceDirs = sourceDirs.unique()
-
-        if (sourceDirs.isEmpty()) {
-            logger.lifecycle("Skipping groovydoc for ${gdoc.name}: no source directories found")
-            return
-        }
-
-        ant.taskdef(
-                name: 'groovydoc',
-                classname: 'org.codehaus.groovy.ant.Groovydoc',
-                classpath: configurations.documentation.asPath
-        )
-
-        // Resolve dynamic links from project dependencies
-        List<Map<String, String>> groovydocLinks = []
+    gdoc.doFirst {
+        List<Map<String, String>> links = []
         def gebVersion = resolveProjectVersion('geb-spock')
         if (gebVersion) {
-            groovydocLinks << [packages: 'geb.', href: "https://groovy.apache.org/geb/manual/${gebVersion}/api/"]
+            links << [packages: 'geb.', href: "https://groovy.apache.org/geb/manual/${gebVersion}/api/"]
         }
         def testContainersVersion = resolveProjectVersion('testcontainers')
         if (testContainersVersion) {
-            groovydocLinks << [packages: 'org.testcontainers.', href: "https://javadoc.io/doc/org.testcontainers/testcontainers/${testContainersVersion}/"]
+            links << [packages: 'org.testcontainers.', href: "https://javadoc.io/doc/org.testcontainers/testcontainers/${testContainersVersion}/"]
         }
         def springVersion = resolveProjectVersion('spring-core')
         if (springVersion) {
-            groovydocLinks << [packages: 'org.springframework.core.', href: "https://docs.spring.io/spring-framework/docs/${springVersion}/javadoc-api/"]
+            links << [packages: 'org.springframework.core.', href: "https://docs.spring.io/spring-framework/docs/${springVersion}/javadoc-api/"]
         }
         def springBootVersion = resolveProjectVersion('spring-boot')
         if (springBootVersion) {
-            groovydocLinks << [packages: 'org.springframework.boot.', href: "https://docs.spring.io/spring-boot/docs/${springBootVersion}/api/"]
+            links << [packages: 'org.springframework.boot.', href: "https://docs.spring.io/spring-boot/docs/${springBootVersion}/api/"]
         }
         if (gdoc.ext.has('groovydocLinks')) {
-            groovydocLinks.addAll(gdoc.ext.groovydocLinks as List<Map<String, String>>)
+            links.addAll(gdoc.ext.groovydocLinks as List<Map<String, String>>)
         }
-
-        def sourcepath = sourceDirs.collect { it.absolutePath }.join(File.pathSeparator)
-
-        ant.groovydoc(
-                destdir: destDir.absolutePath,
-                sourcepath: sourcepath,
-                packagenames: '**.*',
-                windowtitle: gdoc.windowTitle ?: '',
-                doctitle: gdoc.docTitle ?: '',
-                footer: gdoc.footer ?: '',
-                access: resolveGroovydocProperty(gdoc.access)?.name()?.toLowerCase() ?: 'protected',
-                author: resolveGroovydocProperty(gdoc.includeAuthor) as String,
-                noTimestamp: resolveGroovydocProperty(gdoc.noTimestamp) as String,
-                noVersionStamp: resolveGroovydocProperty(gdoc.noVersionStamp) as String,
-                processScripts: resolveGroovydocProperty(gdoc.processScripts) as String,
-                includeMainForScripts: resolveGroovydocProperty(gdoc.includeMainForScripts) as String,
-                javaVersion: groovydocJavaVersion
-        ) {
-            for (Map<String, String> l in groovydocLinks) {
-                link(packages: l.packages, href: l.href)
-            }
-        }
+        gdoc.ext.groovydocLinks = links
     }
 }

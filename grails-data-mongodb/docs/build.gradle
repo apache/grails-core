@@ -31,13 +31,7 @@ ext {
     coreProjects = ['grails-datastore-core', 'grails-datamapping-core']
 }
 
-configurations {
-    documentation {
-        attributes {
-            attribute(Bundling.BUNDLING_ATTRIBUTE, (Bundling) (objects.named(Bundling, 'external')))
-        }
-    }
-}
+apply plugin: 'org.apache.grails.buildsrc.groovydoc'
 
 tasks.register('resolveMongodbVersion').configure { Task docTask ->
     docTask.group = 'documentation'
@@ -103,40 +97,12 @@ tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
     ]
 }
 
-// Compute the javaVersion string for groovydoc's JavaParser language level.
-// Requires Groovy 4.0.27+ (GROOVY-11668).
-String groovydocJavaVersion = "JAVA_${project.findProperty('javaVersion') ?: '17'}"
-
-// Resolve a Groovydoc task property that may be either a Gradle Property<T> or a plain value.
-Object resolveGroovydocProperty(Object value) {
-    if (value instanceof org.gradle.api.provider.Provider) {
-        return value.getOrNull()
-    }
-    return value
-}
-
 tasks.withType(Groovydoc).configureEach { Groovydoc groovydoc ->
     groovydoc.dependsOn(rootProject.subprojects
             .findAll { it.findProperty('gormApiDocs') }
             .collect { ":${it.name}:groovydoc" })
     groovydoc.docTitle = "GORM for MongoDB - $project.version"
-    groovydoc.footer = '''<!-- Matomo -->
-<script>
-    var _paq = window._paq = window._paq || [];
-    /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
-    _paq.push(["setDoNotTrack", true]);
-    _paq.push(["disableCookies"]);
-    _paq.push(['trackPageView']);
-    _paq.push(['enableLinkTracking']);
-    (function() {
-        var u="https://analytics.apache.org/";
-        _paq.push(['setTrackerUrl', u+'matomo.php']);
-        _paq.push(['setSiteId', '79']);
-        var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
-        g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
-    })();
-</script>
-<!-- End Matomo Code -->'''
+    groovydoc.includeAuthor = true
 
     def sourceFiles = coreProjects.collect {
         layout.projectDirectory.files("$it/src/main/groovy")
@@ -148,15 +114,8 @@ tasks.withType(Groovydoc).configureEach { Groovydoc groovydoc ->
 
     groovydoc.source = sourceFiles
     groovydoc.destinationDir = layout.buildDirectory.dir('combined-api/api').get().asFile
-    groovydoc.access = GroovydocAccess.PROTECTED
-    groovydoc.processScripts = false
-    groovydoc.includeMainForScripts = false
-    groovydoc.includeAuthor = true
     groovydoc.classpath = configurations.documentation
-    groovydoc.groovyClasspath += configurations.documentation
-    groovydoc.noVersionStamp = false
 
-    // Collect source directories for AntBuilder groovydoc
     List<File> groovydocSrcDirs = coreProjects.collect {
         layout.projectDirectory.dir("$it/src/main/groovy").asFile
     }
@@ -164,43 +123,6 @@ tasks.withType(Groovydoc).configureEach { Groovydoc groovydoc ->
             .findAll { sp -> sp.findProperty('gormApiDocs') }
             .each { sp -> groovydocSrcDirs << new File(sp.projectDir, 'src/main/groovy') }
     groovydoc.ext.groovydocSourceDirs = groovydocSrcDirs
-
-    // Replace Gradle's built-in Groovydoc execution with AntBuilder to support javaVersion.
-    // See: https://github.com/apache/grails-core/issues/15385
-    groovydoc.actions.clear()
-    groovydoc.doLast { Groovydoc gdoc ->
-        def destDir = gdoc.destinationDir
-        destDir.mkdirs()
-
-        List<File> sourceDirs = (gdoc.ext.groovydocSourceDirs as List<File>).findAll { File f -> f.exists() }.unique()
-        if (sourceDirs.isEmpty()) {
-            logger.lifecycle("Skipping groovydoc for ${gdoc.name}: no source directories found")
-            return
-        }
-
-        ant.taskdef(
-                name: 'groovydoc',
-                classname: 'org.codehaus.groovy.ant.Groovydoc',
-                classpath: configurations.documentation.asPath
-        )
-
-        def sourcepath = sourceDirs.collect { File f -> f.absolutePath }.join(File.pathSeparator)
-
-        ant.groovydoc(
-                destdir: destDir.absolutePath,
-                sourcepath: sourcepath,
-                packagenames: '**.*',
-                doctitle: gdoc.docTitle ?: '',
-                footer: gdoc.footer ?: '',
-                access: resolveGroovydocProperty(gdoc.access)?.name()?.toLowerCase() ?: 'protected',
-                author: resolveGroovydocProperty(gdoc.includeAuthor) as String,
-                noTimestamp: 'true',
-                noVersionStamp: resolveGroovydocProperty(gdoc.noVersionStamp) as String,
-                processScripts: resolveGroovydocProperty(gdoc.processScripts) as String,
-                includeMainForScripts: resolveGroovydocProperty(gdoc.includeMainForScripts) as String,
-                javaVersion: groovydocJavaVersion
-        )
-    }
 }
 
 tasks.register('docs', Sync).configure { Sync docTask ->

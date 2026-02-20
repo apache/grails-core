@@ -22,12 +22,3 @@ apply from: rootProject.layout.projectDirectory.file('gradle/docs-dependencies.g
 ext {
     includeInApiDocs = true
 }
-
-// Set source directories for AntBuilder groovydoc execution (per-module tasks)
-tasks.withType(Groovydoc).configureEach { Groovydoc gdoc ->
-    SourceSetContainer sourceSets = project.extensions.getByType(SourceSetContainer)
-    SourceSet mainSS = sourceSets.findByName('main')
-    if (mainSS) {
-        gdoc.ext.groovydocSourceDirs = (mainSS.groovy.srcDirs + mainSS.java.srcDirs).findAll { it.exists() }
-    }
-}
