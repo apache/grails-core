@@ -39,8 +39,8 @@ public class PredicateGenerator {
     private static final Logger log = LoggerFactory.getLogger(PredicateGenerator.class);
 
     public Predicate[] getPredicates(HibernateCriteriaBuilder cb,
-                                     CriteriaQuery criteriaQuery,
-                                     From root_,
+                                     CriteriaQuery<?> criteriaQuery,
+                                     From<?, ?> root_,
                                      List criteriaList, 
                                      JpaFromProvider fromsByProvider, 
                                      PersistentEntity entity) {
@@ -56,7 +56,7 @@ public class PredicateGenerator {
         return list.toArray(new Predicate[0]);
     }
 
-    private Predicate handleCriterion(HibernateCriteriaBuilder cb, CriteriaQuery criteriaQuery, From root_, JpaFromProvider fromsByProvider, PersistentEntity entity, Object criterion) {
+    private Predicate handleCriterion(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, From<?, ?> root_, JpaFromProvider fromsByProvider, PersistentEntity entity, Object criterion) {
         if (criterion instanceof Query.Junction junction) {
             return handleJunction(cb, criteriaQuery, root_, fromsByProvider, entity, junction);
         } else if (criterion instanceof Query.DistinctProjection) {
@@ -77,7 +77,7 @@ public class PredicateGenerator {
         throw new IllegalArgumentException("Unsupported criterion: " + criterion);
     }
 
-    private Predicate handleJunction(HibernateCriteriaBuilder cb, CriteriaQuery criteriaQuery, From root_, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.Junction junction) {
+    private Predicate handleJunction(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, From<?, ?> root_, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.Junction junction) {
         var predicates = getPredicates(cb, criteriaQuery, root_, junction.getCriteria(), fromsByProvider, entity);
         if (junction instanceof Query.Disjunction) {
             return cb.or(predicates);
@@ -93,14 +93,14 @@ public class PredicateGenerator {
         return null;
     }
 
-    private Predicate handleAssociationCriteria(HibernateCriteriaBuilder cb, CriteriaQuery criteriaQuery, From root_, JpaFromProvider fromsByProvider, PersistentEntity entity, DetachedAssociationCriteria<?> c) {
+    private Predicate handleAssociationCriteria(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, From<?, ?> root_, JpaFromProvider fromsByProvider, PersistentEntity entity, DetachedAssociationCriteria<?> c) {
         Join child = root_.join(c.getAssociationPath(), JoinType.LEFT);
         JpaFromProvider childTablesByName = (JpaFromProvider) fromsByProvider.clone();
         childTablesByName.put("root", child);
         return cb.and(getPredicates(cb, criteriaQuery, child, c.getCriteria(), childTablesByName, entity));
     }
 
-    private Predicate handlePropertyCriterion(HibernateCriteriaBuilder cb, CriteriaQuery criteriaQuery, From root_, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.PropertyCriterion pc) {
+    private Predicate handlePropertyCriterion(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, From<?, ?> root_, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.PropertyCriterion pc) {
         var fullyQualifiedPath = fromsByProvider.getFullyQualifiedPath(pc.getProperty());
 
         if (pc instanceof Query.NotIn c) {
@@ -147,7 +147,7 @@ public class PredicateGenerator {
         return null;
     }
 
-    private Predicate handleNotIn(HibernateCriteriaBuilder cb, CriteriaQuery criteriaQuery, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.NotIn c, Path fullyQualifiedPath) {
+    private Predicate handleNotIn(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.NotIn c, Path fullyQualifiedPath) {
         var queryableCriteria = getQueryableCriteriaFromInCriteria(c);
         if (Objects.nonNull(queryableCriteria)) {
             return cb.not(getQueryableCriteriaValue(cb, criteriaQuery, fromsByProvider, entity, c, queryableCriteria));
@@ -170,7 +170,7 @@ public class PredicateGenerator {
         return cb.not(cb.in(fullyQualifiedPath, c.getValue()));
     }
 
-    private Predicate handleIn(HibernateCriteriaBuilder cb, CriteriaQuery criteriaQuery, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.In c, Path fullyQualifiedPath) {
+    private Predicate handleIn(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.In c, Path fullyQualifiedPath) {
         var queryableCriteria = getQueryableCriteriaFromInCriteria(c);
         if (Objects.nonNull(queryableCriteria)) {
             return getQueryableCriteriaValue(cb, criteriaQuery, fromsByProvider, entity, c, queryableCriteria);
@@ -192,7 +192,7 @@ public class PredicateGenerator {
         return cb.equal(cb.function(GrailsRLikeFunctionContributor.RLIKE, Boolean.class, fullyQualifiedPath, cb.literal(pattern)), true);
     }
 
-    private Predicate handleSubqueryCriterion(HibernateCriteriaBuilder cb, CriteriaQuery criteriaQuery, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.SubqueryCriterion c) {
+    private Predicate handleSubqueryCriterion(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.SubqueryCriterion c) {
         Subquery subquery = criteriaQuery.subquery(Number.class);
         Root from = subquery.from(c.getValue().getPersistentEntity().getJavaClass());
         JpaFromProvider newMap = (JpaFromProvider) fromsByProvider.clone();
@@ -231,7 +231,7 @@ public class PredicateGenerator {
         return null;
     }
 
-    private Predicate handlePropertyComparisonCriterion(HibernateCriteriaBuilder cb, JpaFromProvider fromsByProvider, From root_, Query.PropertyComparisonCriterion c) {
+    private Predicate handlePropertyComparisonCriterion(HibernateCriteriaBuilder cb, JpaFromProvider fromsByProvider, From<?, ?> root_, Query.PropertyComparisonCriterion c) {
         Path path = fromsByProvider.getFullyQualifiedPath(c.getProperty());
         Path otherPath = root_.get(c.getOtherProperty());
         if (c instanceof Query.EqualsProperty) return cb.equal(path, otherPath);
@@ -252,7 +252,7 @@ public class PredicateGenerator {
         return null;
     }
 
-    private Predicate handleExists(HibernateCriteriaBuilder cb, CriteriaQuery criteriaQuery, From root_, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.Exists c) {
+    private Predicate handleExists(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, From<?, ?> root_, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.Exists c) {
         Subquery subquery = criteriaQuery.subquery(Integer.class);
         PersistentEntity childPersistentEntity = c.getSubquery().getPersistentEntity();
         Root subRoot = subquery.from(childPersistentEntity.getJavaClass());
@@ -265,7 +265,7 @@ public class PredicateGenerator {
         return cb.exists(subquery);
     }
 
-    private CriteriaBuilder.In getQueryableCriteriaValue(HibernateCriteriaBuilder cb, CriteriaQuery criteriaQuery, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.PropertyNameCriterion criterion, QueryableCriteria queryableCriteria) {
+    private CriteriaBuilder.In getQueryableCriteriaValue(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.PropertyNameCriterion criterion, QueryableCriteria queryableCriteria) {
         var projection = findPropertyOrIdProjection(queryableCriteria);
         var subProperty = findSubproperty(projection);
         var path = fromsByProvider.getFullyQualifiedPath(criterion.getProperty());
@@ -279,7 +279,7 @@ public class PredicateGenerator {
         return in.value(subquery);
     }
 
-    private Predicate getExistsPredicate(HibernateCriteriaBuilder cb, From root_, PersistentEntity childPersistentEntity, Root subRoot) {
+    private Predicate getExistsPredicate(HibernateCriteriaBuilder cb, From<?, ?> root_, PersistentEntity childPersistentEntity, Root subRoot) {
         Association owner = childPersistentEntity.getAssociations().stream()
                 .filter(assoc -> assoc.getAssociatedEntity().getJavaClass().equals(root_.getJavaType()))
                 .findFirst().orElseThrow();

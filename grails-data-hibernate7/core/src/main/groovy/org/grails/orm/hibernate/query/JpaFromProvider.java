@@ -21,18 +21,18 @@ import java.util.stream.Stream;
 
 public class JpaFromProvider implements Cloneable {
 
-    private Map<String, From> fromMap;
+    private Map<String, From<?, ?>> fromMap;
 
-    private JpaFromProvider(Map<String, From> fromMap) {
+    private JpaFromProvider(Map<String, From<?, ?>> fromMap) {
         this.fromMap = new HashMap<>(fromMap);
     }
 
 
-    public JpaFromProvider(DetachedCriteria detachedCriteria, JpaCriteriaQuery<?> cq, From root) {
+    public JpaFromProvider(DetachedCriteria<?> detachedCriteria, JpaCriteriaQuery<?> cq, From<?, ?> root) {
         fromMap = getFromsByName(detachedCriteria, cq, root);
     }
 
-    private Map<String, From> getFromsByName(DetachedCriteria detachedCriteria, JpaCriteriaQuery<?> cq, From root) {
+    private Map<String, From<?, ?>> getFromsByName(DetachedCriteria<?> detachedCriteria, JpaCriteriaQuery<?> cq, From<?, ?> root) {
         var detachedAssociationCriteriaList = ((List<Query.Criterion>) detachedCriteria.getCriteria())
                 .stream()
                 .map(new DetachedAssociationFunction())
@@ -42,7 +42,7 @@ public class JpaFromProvider implements Cloneable {
         var aliasMap = createAliasMap(detachedAssociationCriteriaList);
         //The join column is column for joining from the root entity
         var detachedFroms = createDetachedFroms(cq, detachedAssociationCriteriaList);
-        Map<String, From> fromsByName = Stream.concat(aliasMap.keySet().stream(), ((Map<String, FetchType>) detachedCriteria.getFetchStrategies())
+        Map<String, From<?, ?>> fromsByName = Stream.concat(aliasMap.keySet().stream(), ((Map<String, FetchType>) detachedCriteria.getFetchStrategies())
                         .entrySet()
                         .stream()
                         .filter(entry -> entry.getValue().equals(FetchType.EAGER))
@@ -55,7 +55,7 @@ public class JpaFromProvider implements Cloneable {
                             .map(dac -> dac.getAssociation().getOwner().getJavaClass())
                             .orElse(root.getJavaType());
                     // Choose base From: use outer root only if join belongs to the outer root type; otherwise create a detached root for the owner
-                    From base = ownerClass.equals(root.getJavaType())
+                    From<?, ?> base = ownerClass.equals(root.getJavaType())
                             ? root
                             : detachedFroms.computeIfAbsent(joinColumn, s -> cq.from(ownerClass));
 
@@ -77,7 +77,7 @@ public class JpaFromProvider implements Cloneable {
         return fromsByName;
     }
 
-    private Map<String, From> createDetachedFroms(JpaCriteriaQuery<?> cq, List<DetachedAssociationCriteria> detachedAssociationCriteriaList) {
+    private Map<String, From<?, ?>> createDetachedFroms(JpaCriteriaQuery<?> cq, List<DetachedAssociationCriteria> detachedAssociationCriteriaList) {
         return detachedAssociationCriteriaList.stream()
                 .collect(Collectors.toMap(
                         DetachedAssociationCriteria::getAssociationPath,
@@ -121,7 +121,7 @@ public class JpaFromProvider implements Cloneable {
     }
 
 
-    public void put(String tableName, From child) {
+    public void put(String tableName, From<?, ?> child) {
         fromMap.put(tableName, child);
     }
 }

@@ -55,14 +55,14 @@ public class HibernateQuery extends Query {
     protected static final String ALIAS = "_alias";
     protected String alias;
     protected int aliasCount;
-    public DetachedCriteria getDetachedCriteria() {
+    public DetachedCriteria<?> getDetachedCriteria() {
         return detachedCriteria;
     }
     protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
     protected LinkedList<String> aliasStack = new LinkedList<>();
     protected LinkedList<PersistentEntity> entityStack = new LinkedList<PersistentEntity>();
     protected LinkedList<Association> associationStack = new LinkedList<Association>();
-    protected DetachedCriteria detachedCriteria;
+    protected DetachedCriteria<?> detachedCriteria;
     protected ProxyHandler proxyHandler = new HibernateProxyHandler();
 
     private Integer fetchSize;
@@ -76,7 +76,7 @@ public class HibernateQuery extends Query {
 
     }
 
-    public void setDetachedCriteria(DetachedCriteria detachedCriteria) {
+    public void setDetachedCriteria(DetachedCriteria<?> detachedCriteria) {
         this.detachedCriteria = detachedCriteria;
     }
 
@@ -470,7 +470,7 @@ public class HibernateQuery extends Query {
 
 
 
-    public DetachedCriteria getHibernateCriteria() {
+    public DetachedCriteria<?> getHibernateCriteria() {
         return detachedCriteria;
     }
 

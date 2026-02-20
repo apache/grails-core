@@ -5,6 +5,10 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Path;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Selection;
+import jakarta.persistence.criteria.Order;
+import jakarta.persistence.criteria.Predicate;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.query.Query;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
@@ -15,19 +19,20 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class JpaCriteriaQueryCreator {
 
     private final Query.ProjectionList projections;
     private final HibernateCriteriaBuilder criteriaBuilder;
     private final PersistentEntity entity;
-    private final DetachedCriteria detachedCriteria;
+    private final DetachedCriteria<?> detachedCriteria;
 
 
     public JpaCriteriaQueryCreator(
             Query.ProjectionList projections
             , HibernateCriteriaBuilder criteriaBuilder
             , PersistentEntity entity
-            , DetachedCriteria detachedCriteria
+            , DetachedCriteria<?> detachedCriteria
     ) {
         this.projections = projections;
         this.criteriaBuilder = criteriaBuilder;
@@ -39,7 +44,7 @@ public class JpaCriteriaQueryCreator {
 
         var projectionList = collectProjections();
         var cq = createCriteriaQuery(projectionList);
-        var root = cq.from(entity.getJavaClass());
+        Root<?> root = cq.from(entity.getJavaClass());
         var tablesByName = new JpaFromProvider(detachedCriteria,cq,root);
 
 
@@ -73,72 +78,65 @@ public class JpaCriteriaQueryCreator {
         return cq;
     }
 
-    private void assignProjections(List<Query.Projection> projections, CriteriaQuery cq, JpaFromProvider tablesByName) {
-        var projectionExpressions = projections
+    private <T> void assignProjections(List<Query.Projection> projections, CriteriaQuery<T> cq, JpaFromProvider tablesByName) {
+        List<Selection<?>> projectionExpressions = (List) projections
                 .stream()
                 .map(projectionToJpaExpression(tablesByName))
                 .filter(Objects::nonNull)
-                .map(Expression.class::cast)
                 .toList();
         if (projectionExpressions.size() == 1) {
-            cq.select(projectionExpressions.get(0));
+            cq.select((Selection<? extends T>) projectionExpressions.get(0));
         } else if (projectionExpressions.size() > 1){
             cq.multiselect(projectionExpressions);
         } else {
-            cq.select(tablesByName.getFullyQualifiedPath("root"));
+            cq.select((Selection<? extends T>) tablesByName.getFullyQualifiedPath("root"));
         }
     }
 
-    private void assignGroupBy(List<Query.GroupPropertyProjection> groupProjections, From root, CriteriaQuery cq, JpaFromProvider tablesByName) {
+    private void assignGroupBy(List<Query.GroupPropertyProjection> groupProjections, From<?, ?> root, CriteriaQuery<?> cq, JpaFromProvider tablesByName) {
         if (!groupProjections.isEmpty()) {
-            List<Expression> groupByPaths = groupProjections
+            List<Expression<?>> groupByPaths = (List) groupProjections
                     .stream()
                     .map(groupPropertyProjection -> {
                         String propertyName = groupPropertyProjection.getPropertyName();
                         return tablesByName.getFullyQualifiedPath(propertyName);
                     })
-                    .map(Expression.class::cast)
+                    .filter(Objects::nonNull)
                     .toList();
             cq.groupBy(groupByPaths);
         }
     }
 
-    private void assignOrderBy(CriteriaQuery cq, JpaFromProvider tablesByName) {
+    private void assignOrderBy(CriteriaQuery<?> cq, JpaFromProvider tablesByName) {
         List<Query.Order> orders = detachedCriteria.getOrders();
         if (!orders.isEmpty()) {
-            cq.orderBy(orders
-                    .stream()
+            List<Order> jpaOrders = (List) orders.stream()
                     .map(order -> {
-                        Path expression = tablesByName.getFullyQualifiedPath(order.getProperty());
+                        Path<?> expression = tablesByName.getFullyQualifiedPath(order.getProperty());
                         if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
-                            if (order.getDirection().equals(Query.Order.Direction.ASC)) {
-                                return criteriaBuilder.asc(criteriaBuilder.lower(expression));
-                            }  else {
-                                return criteriaBuilder.desc(criteriaBuilder.lower(expression));
-                            }
+                            return order.getDirection().equals(Query.Order.Direction.ASC)
+                                    ? criteriaBuilder.asc(criteriaBuilder.lower((Expression<String>) expression))
+                                    : criteriaBuilder.desc(criteriaBuilder.lower((Expression<String>) expression));
                         } else {
-                            if (order.getDirection().equals(Query.Order.Direction.ASC)) {
-                                return criteriaBuilder.asc(expression);
-                            }  else {
-                                return criteriaBuilder.desc(expression);
-                            }
+                            return order.getDirection().equals(Query.Order.Direction.ASC)
+                                    ? criteriaBuilder.asc(expression)
+                                    : criteriaBuilder.desc(expression);
                         }
-
                     })
-                    .toList()
-            );
+                    .toList();
+            cq.orderBy(jpaOrders);
         }
     }
 
-    private void assignCriteria(CriteriaQuery cq , From root, JpaFromProvider tablesByName, PersistentEntity entity) {
-        List<Query.Criterion>  criteriaList =detachedCriteria.getCriteria();
+    private void assignCriteria(CriteriaQuery<?> cq, From<?, ?> root, JpaFromProvider tablesByName, PersistentEntity entity) {
+        List<Query.Criterion> criteriaList = detachedCriteria.getCriteria();
         if (!criteriaList.isEmpty()) {
-            jakarta.persistence.criteria.Predicate[] predicates = new PredicateGenerator().getPredicates(criteriaBuilder, cq, root, criteriaList, tablesByName,entity);
+            Predicate[] predicates = new PredicateGenerator().getPredicates(criteriaBuilder, cq, root, criteriaList, tablesByName, entity);
             cq.where(criteriaBuilder.and(predicates));
         }
     }
 
-    private Function<Query.Projection, JpaExpression> projectionToJpaExpression(
+    private Function<Query.Projection, JpaExpression<?>> projectionToJpaExpression(
             JpaFromProvider tablesByName) {
         return projection -> {
             if (projection instanceof Query.CountProjection) {
@@ -147,34 +145,33 @@ public class JpaCriteriaQueryCreator {
                 var propertyName = countDistinctProjection.getPropertyName();
                 return criteriaBuilder.countDistinct(tablesByName.getFullyQualifiedPath("root." + propertyName));
             } else if (projection instanceof Query.IdProjection) {
-                return (JpaExpression) tablesByName.getFullyQualifiedPath("root.id");
+                return (JpaExpression<?>) tablesByName.getFullyQualifiedPath("root.id");
             } else if (projection instanceof Query.DistinctProjection) {
                 return null;
             } else {
                 var propertyName = ((Query.PropertyProjection) projection).getPropertyName();
-                Path path = tablesByName.getFullyQualifiedPath(propertyName);
+                Path<?> path = tablesByName.getFullyQualifiedPath(propertyName);
                 if (projection instanceof Query.MaxProjection) {
-                    return criteriaBuilder.max(path);
+                    return criteriaBuilder.max((Expression<? extends Number>)path);
                 } else if (projection instanceof Query.MinProjection) {
-                    return criteriaBuilder.min(path);
+                    return criteriaBuilder.min((Expression<? extends Number>)path);
                 } else if (projection instanceof Query.AvgProjection) {
-                    return criteriaBuilder.avg(path);
+                    return criteriaBuilder.avg((Expression<? extends Number>)path);
                 } else if (projection instanceof Query.SumProjection) {
-                    return criteriaBuilder.sum(path);
+                    return criteriaBuilder.sum((Expression<? extends Number>)path);
                 } else { // keep this last!!!
-                    return (JpaExpression)path;
+                    return (JpaExpression<?>)path;
                 }
             }
         };
     }
 
     private List<Query.GroupPropertyProjection> collectGroupProjections() {
-        List<Query.GroupPropertyProjection> groupProjections = projections.getProjectionList()
+        return projections.getProjectionList()
                 .stream()
                 .filter(Query.GroupPropertyProjection.class::isInstance)
                 .map(Query.GroupPropertyProjection.class::cast)
                 .toList();
-        return groupProjections;
     }
 
 }
