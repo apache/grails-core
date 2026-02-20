@@ -16,17 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package functionaltests.scaffolding
+package namespaces.pages
 
-import functionaltests.pages.FooListPage
-import grails.plugin.geb.ContainerGebSpec
-import grails.testing.mixin.integration.Integration
+import geb.Page
 
-@Integration
-class FooFunctionalSpec extends ContainerGebSpec {
+class FrontendPage extends Page {
 
-    void "Test that a scaffolded view is resolved correctly"() {
-        expect:
-        to(FooListPage)
-    }
+    static String pageTitle = 'Frontend Page'
+
+    static url = '/myAppTest/page/index'
+    static at = { title == pageTitle }
 }

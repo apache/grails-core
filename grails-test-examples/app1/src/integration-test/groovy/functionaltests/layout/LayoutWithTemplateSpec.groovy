@@ -16,22 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functionaltests.layout
 
-import functionaltests.Application
-import grails.gorm.transactions.Rollback
+import functionaltests.pages.PartialPage
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 
-@Integration(applicationClass = Application)
-@Rollback
+@Integration
 class LayoutWithTemplateSpec extends ContainerGebSpec {
 
     void "Test that a layout is not applied to a template rendered by a controller by default"() {
-        when:"The home page is visited"
-        go('/layoutTemplate/index')
-        then:"The title is correct"
-            title == "Welcome to My Partial"
+        expect:
+        to(PartialPage)
     }
 }

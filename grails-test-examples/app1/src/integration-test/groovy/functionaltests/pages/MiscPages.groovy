@@ -16,17 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package functionaltests.scaffolding
+package functionaltests.pages
 
-import functionaltests.pages.FooListPage
-import grails.plugin.geb.ContainerGebSpec
-import grails.testing.mixin.integration.Integration
+import geb.Page
 
-@Integration
-class FooFunctionalSpec extends ContainerGebSpec {
+class ActionReturnsNullPage extends Page {
 
-    void "Test that a scaffolded view is resolved correctly"() {
-        expect:
-        to(FooListPage)
-    }
+    static String pageTitle = 'Action Which Returns Null GSP'
+
+    static url = '/misc/actionWhichReturnsNull'
+    static at = { title == pageTitle }
+}
+
+class BeanPropertyOverridePage extends Page {
+
+    static url = '/misc/beanPropertyOverrideTest'
+    static at = { $().text().contains('Brian') }
+}
+
+class PlaceHolderConfigPage extends Page {
+
+    static url = '/misc/placeHolderConfig'
+    static at = { $().text().contains('[test test test]') }
 }
