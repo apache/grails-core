@@ -23,12 +23,10 @@ import groovy.transform.CompileStatic
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Configuration
 import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.Usage
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.javadoc.Groovydoc
 
@@ -38,7 +36,9 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
         GroovydocEnhancerExtension extension = project.extensions.create(
-                'groovydocEnhancer', GroovydocEnhancerExtension, project
+                'groovydocEnhancer',
+                GroovydocEnhancerExtension,
+                project
         )
         registerDocumentationConfiguration(project)
         configureGroovydocDefaults(project, extension)
@@ -49,56 +49,60 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
         if (project.configurations.names.contains('documentation')) {
             return
         }
-        project.configurations.register('documentation') { Configuration config ->
-            config.canBeConsumed = false
-            config.canBeResolved = true
-            config.attributes { container ->
-                container.attribute(Category.CATEGORY_ATTRIBUTE, project.objects.named(Category, Category.LIBRARY))
-                container.attribute(Bundling.BUNDLING_ATTRIBUTE, project.objects.named(Bundling, Bundling.EXTERNAL))
-                container.attribute(Usage.USAGE_ATTRIBUTE, project.objects.named(Usage, Usage.JAVA_RUNTIME))
+        project.configurations.register('documentation') {
+            it.canBeConsumed = false
+            it.canBeResolved = true
+            it.attributes {
+                it.attribute(Category.CATEGORY_ATTRIBUTE, project.objects.named(Category, Category.LIBRARY))
+                it.attribute(Bundling.BUNDLING_ATTRIBUTE, project.objects.named(Bundling, Bundling.EXTERNAL))
+                it.attribute(Usage.USAGE_ATTRIBUTE, project.objects.named(Usage, Usage.JAVA_RUNTIME))
             }
         }
     }
 
     @CompileDynamic
     private static void configureGroovydocDefaults(Project project, GroovydocEnhancerExtension extension) {
-        project.tasks.withType(Groovydoc).configureEach { Groovydoc gdoc ->
-            gdoc.includeAuthor = false
-            gdoc.includeMainForScripts = false
-            gdoc.processScripts = false
-            gdoc.noTimestamp = true
-            gdoc.noVersionStamp = false
-            String footerValue = extension.footer.getOrElse('')
+        project.tasks.withType(Groovydoc).configureEach {
+            it.includeAuthor.set(false)
+            it.includeMainForScripts.set(false)
+            it.processScripts.set(false)
+            it.noTimestamp = true
+            it.noVersionStamp = false
+            def footerValue = extension.footer.getOrElse('')
             if (footerValue) {
-                gdoc.footer = footerValue
+                it.footer = footerValue
             }
             if (project.configurations.names.contains('documentation')) {
-                gdoc.groovyClasspath = project.configurations.getByName('documentation')
+                it.groovyClasspath = project.configurations.getByName('documentation')
             }
         }
     }
 
     @CompileDynamic
     private static void configureAntBuilderExecution(Project project, GroovydocEnhancerExtension extension) {
-        project.tasks.withType(Groovydoc).configureEach { Groovydoc gdoc ->
+        project.tasks.withType(Groovydoc).configureEach { gdoc ->
             if (!extension.useAntBuilder.get()) {
                 return
             }
 
             gdoc.actions.clear()
             gdoc.doLast {
-                File destDir = gdoc.destinationDir
-                destDir.mkdirs()
-
-                List<File> sourceDirs = resolveSourceDirectories(gdoc, project)
+                def destDir = gdoc.destinationDir.tap { it.mkdirs() }
+                def sourceDirs = resolveSourceDirectories(gdoc, project)
                 if (sourceDirs.isEmpty()) {
-                    project.logger.lifecycle("Skipping groovydoc for ${gdoc.name}: no source directories found")
+                    project.logger.lifecycle(
+                            'Skipping groovydoc for {}: no source directories found',
+                            gdoc.name
+                    )
                     return
                 }
 
-                Configuration docConfig = project.configurations.findByName('documentation')
+                def docConfig = project.configurations.findByName('documentation')
                 if (!docConfig) {
-                    project.logger.warn("Skipping groovydoc for ${gdoc.name}: 'documentation' configuration not found")
+                    project.logger.warn(
+                            'Skipping groovydoc for {}: \'documentation\' configuration not found',
+                            gdoc.name
+                    )
                     return
                 }
 
@@ -108,10 +112,12 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
                         classpath: docConfig.asPath
                 )
 
-                List<Map<String, String>> links = resolveLinks(gdoc)
-                String sourcepath = sourceDirs.collect { it.absolutePath }.join(File.pathSeparator)
+                def links = resolveLinks(gdoc)
+                def sourcepath = sourceDirs
+                        .collect { it.absolutePath }
+                        .join(File.pathSeparator)
 
-                Map<String, Object> antArgs = [
+                def antArgs = [
                         destdir: destDir.absolutePath,
                         sourcepath: sourcepath,
                         packagenames: '**.*',
@@ -131,7 +137,7 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
                 }
 
                 project.ant.groovydoc(antArgs) {
-                    for (Map<String, String> l in links) {
+                    for (var l in links) {
                         link(packages: l.packages, href: l.href)
                     }
                 }
@@ -142,19 +148,21 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
     @CompileDynamic
     private static List<File> resolveSourceDirectories(Groovydoc gdoc, Project project) {
         if (gdoc.ext.has('groovydocSourceDirs') && gdoc.ext.groovydocSourceDirs) {
-            return (gdoc.ext.groovydocSourceDirs as List<File>).findAll { it.exists() }.unique() as List<File>
+            return (gdoc.ext.groovydocSourceDirs as List<File>)
+                    .findAll { it.exists() }
+                    .unique()
         }
 
         List<File> sourceDirs = []
-        SourceSetContainer sourceSets = project.extensions.findByType(SourceSetContainer)
+        def sourceSets = project.extensions.findByType(SourceSetContainer)
         if (sourceSets) {
-            SourceSet mainSS = sourceSets.findByName('main')
+            def mainSS = sourceSets.findByName('main')
             if (mainSS) {
                 sourceDirs.addAll(mainSS.groovy.srcDirs.findAll { it.exists() })
                 sourceDirs.addAll(mainSS.java.srcDirs.findAll { it.exists() })
             }
         }
-        sourceDirs.unique() as List<File>
+        sourceDirs.unique()
     }
 
     @CompileDynamic

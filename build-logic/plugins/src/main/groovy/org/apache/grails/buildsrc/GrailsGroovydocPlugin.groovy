@@ -48,8 +48,7 @@ class GrailsGroovydocPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
         project.pluginManager.apply(GroovydocEnhancerPlugin)
-
-        GroovydocEnhancerExtension enhancer = project.extensions.getByType(GroovydocEnhancerExtension)
-        enhancer.footer.set(MATOMO_FOOTER)
+        project.extensions.getByType(GroovydocEnhancerExtension)
+                .footer.set(MATOMO_FOOTER)
     }
 }
