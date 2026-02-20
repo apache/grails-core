@@ -1,6 +1,7 @@
 package org.grails.orm.hibernate.query;
 
 import grails.gorm.DetachedCriteria;
+
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
@@ -51,7 +52,7 @@ public class JpaCriteriaQueryCreator {
         assignProjections(projectionList, cq, tablesByName);
 
         List<Query.GroupPropertyProjection> groupProjections = collectGroupProjections();
-        assignGroupBy(groupProjections, root, cq, tablesByName);
+        assignGroupBy(groupProjections, cq, tablesByName);
 
         assignOrderBy(cq, tablesByName);
         assignCriteria(cq, root,tablesByName,entity);
@@ -72,9 +73,7 @@ public class JpaCriteriaQueryCreator {
         projections.stream()
                 .filter( it -> it instanceof Query.DistinctProjection || it instanceof Query.DistinctPropertyProjection)
                 .findFirst()
-                .ifPresent(projection -> {
-                    cq.distinct(true);
-                });
+                .ifPresent(projection -> cq.distinct(true));
         return cq;
     }
 
@@ -87,13 +86,14 @@ public class JpaCriteriaQueryCreator {
         if (projectionExpressions.size() == 1) {
             cq.select((Selection<? extends T>) projectionExpressions.get(0));
         } else if (projectionExpressions.size() > 1){
-            cq.multiselect(projectionExpressions);
+            var selectionArray = projectionExpressions.toArray(new Selection<?>[0]);
+            ((JpaCriteriaQuery<Object[]>)cq).select(criteriaBuilder.array(selectionArray));
         } else {
             cq.select((Selection<? extends T>) tablesByName.getFullyQualifiedPath("root"));
         }
     }
 
-    private void assignGroupBy(List<Query.GroupPropertyProjection> groupProjections, From<?, ?> root, CriteriaQuery<?> cq, JpaFromProvider tablesByName) {
+    private void assignGroupBy(List<Query.GroupPropertyProjection> groupProjections, CriteriaQuery<?> cq, JpaFromProvider tablesByName) {
         if (!groupProjections.isEmpty()) {
             List<Expression<?>> groupByPaths = (List) groupProjections
                     .stream()
