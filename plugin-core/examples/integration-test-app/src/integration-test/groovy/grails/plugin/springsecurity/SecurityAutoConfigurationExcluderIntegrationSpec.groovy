@@ -18,14 +18,16 @@
  */
 package grails.plugin.springsecurity
 
-import grails.testing.mixin.integration.Integration
+import spock.lang.Specification
+
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.web.SecurityFilterChain
-import spock.lang.Specification
 
-@Integration(applicationClass = integration.test.app.Application)
+import grails.testing.mixin.integration.Integration
+
+@Integration
 class SecurityAutoConfigurationExcluderIntegrationSpec extends Specification {
 
     @Autowired
@@ -33,28 +35,37 @@ class SecurityAutoConfigurationExcluderIntegrationSpec extends Specification {
 
     void "SecurityAutoConfigurationExcluder class is on the classpath"() {
         expect:
-        Class.forName('grails.plugin.springsecurity.SecurityAutoConfigurationExcluder')
+        Class.forName(
+                'grails.plugin.springsecurity.SecurityAutoConfigurationExcluder'
+        )
     }
 
     void "SecurityAutoConfiguration bean is not registered"() {
         given:
-        Class secAutoConfig = Class.forName('org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration')
+        def secAutoConfig = Class.forName(
+                'org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration'
+        )
 
         expect:
-        applicationContext.getBeanNamesForType(secAutoConfig).length == 0
+        applicationContext
+                .getBeanNamesForType(secAutoConfig).length == 0
     }
 
     void "SecurityFilterAutoConfiguration bean is not registered"() {
         given:
-        Class secFilterAutoConfig = Class.forName('org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration')
+        def secFilterAutoConfig = Class.forName(
+                'org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration'
+        )
 
         expect:
-        applicationContext.getBeanNamesForType(secFilterAutoConfig).length == 0
+        applicationContext
+                .getBeanNamesForType(secFilterAutoConfig).length == 0
     }
 
     void "no duplicate SecurityFilterChain beans from auto-configuration"() {
         given:
-        String[] filterChainBeans = applicationContext.getBeanNamesForType(SecurityFilterChain)
+        def filterChainBeans = applicationContext
+                .getBeanNamesForType(SecurityFilterChain)
 
         expect:
         filterChainBeans.length <= 1
@@ -62,7 +73,8 @@ class SecurityAutoConfigurationExcluderIntegrationSpec extends Specification {
 
     void "only the plugin UserDetailsService is registered"() {
         given:
-        String[] udsBeans = applicationContext.getBeanNamesForType(UserDetailsService)
+        def udsBeans = applicationContext
+                .getBeanNamesForType(UserDetailsService)
 
         expect:
         udsBeans.length >= 1

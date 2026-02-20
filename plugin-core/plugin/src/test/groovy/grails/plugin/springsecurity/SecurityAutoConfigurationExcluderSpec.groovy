@@ -18,10 +18,11 @@
  */
 package grails.plugin.springsecurity
 
-import org.springframework.core.env.Environment
 import spock.lang.Specification
 import spock.lang.Subject
 import spock.lang.Unroll
+
+import org.springframework.core.env.Environment
 
 /**
  * Tests for {@link SecurityAutoConfigurationExcluder}.
@@ -38,10 +39,10 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
     @Unroll
     def "match excludes conflicting auto-configuration: #className"() {
         given:
-        String[] autoConfigs = [className] as String[]
+        def autoConfigs = [className] as String[]
 
         when:
-        boolean[] results = excluder.match(autoConfigs, null)
+        def results = excluder.match(autoConfigs, null)
 
         then: 'the conflicting auto-configuration is excluded (false = filtered out)'
         !results[0]
@@ -61,10 +62,10 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
     @Unroll
     def "match preserves non-security auto-configuration: #className"() {
         given:
-        String[] autoConfigs = [className] as String[]
+        def autoConfigs = [className] as String[]
 
         when:
-        boolean[] results = excluder.match(autoConfigs, null)
+        def results = excluder.match(autoConfigs, null)
 
         then: 'non-security auto-configurations pass through (true = included)'
         results[0]
@@ -81,7 +82,7 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
 
     def "match handles mixed array of included and excluded auto-configurations"() {
         given:
-        String[] autoConfigs = [
+        def autoConfigs = [
                 'org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration',
                 'org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration',
                 'org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration',
@@ -90,7 +91,7 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
         ] as String[]
 
         when:
-        boolean[] results = excluder.match(autoConfigs, null)
+        def results = excluder.match(autoConfigs, null)
 
         then:
         results[0]  // DataSource — included
@@ -102,10 +103,10 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
 
     def "match handles empty array"() {
         given:
-        String[] autoConfigs = [] as String[]
+        def autoConfigs = [] as String[]
 
         when:
-        boolean[] results = excluder.match(autoConfigs, null)
+        def results = excluder.match(autoConfigs, null)
 
         then:
         results.length == 0
@@ -113,12 +114,12 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
 
     def "match handles null metadata parameter gracefully"() {
         given: 'autoConfigurationMetadata is null (not used by this filter)'
-        String[] autoConfigs = [
+        def autoConfigs = [
                 'org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration',
         ] as String[]
 
         when:
-        boolean[] results = excluder.match(autoConfigs, null)
+        def results = excluder.match(autoConfigs, null)
 
         then: 'still works correctly'
         !results[0]
@@ -126,7 +127,7 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
 
     def "getExcludedAutoConfigurations returns all 7 known conflicting classes"() {
         when:
-        Set<String> excluded = SecurityAutoConfigurationExcluder.excludedAutoConfigurations
+        def excluded = SecurityAutoConfigurationExcluder.excludedAutoConfigurations
 
         then:
         excluded.size() == 7
@@ -141,7 +142,7 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
 
     def "getExcludedAutoConfigurations returns unmodifiable set"() {
         when:
-        Set<String> excluded = SecurityAutoConfigurationExcluder.excludedAutoConfigurations
+        def excluded = SecurityAutoConfigurationExcluder.excludedAutoConfigurations
         excluded.add('some.new.AutoConfiguration')
 
         then:
@@ -150,19 +151,19 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
 
     def "match allows all auto-configurations when disabled via environment property"() {
         given:
-        Environment env = Mock(Environment)
+        def env = Mock(Environment)
         env.getProperty(SecurityAutoConfigurationExcluder.ENABLED_PROPERTY, Boolean, true) >> false
-        excluder.setEnvironment(env)
+        excluder.environment = env
 
         and:
-        String[] autoConfigs = [
+        def autoConfigs = [
                 'org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration',
                 'org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration',
                 'org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration',
         ] as String[]
 
         when:
-        boolean[] results = excluder.match(autoConfigs, null)
+        def results = excluder.match(autoConfigs, null)
 
         then: 'all auto-configurations pass through when filter is disabled'
         results[0]
@@ -172,17 +173,17 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
 
     def "match excludes by default when environment has no property set"() {
         given:
-        Environment env = Mock(Environment)
+        def env = Mock(Environment)
         env.getProperty(SecurityAutoConfigurationExcluder.ENABLED_PROPERTY, Boolean, true) >> true
-        excluder.setEnvironment(env)
+        excluder.environment = env
 
         and:
-        String[] autoConfigs = [
+        def autoConfigs = [
                 'org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration',
         ] as String[]
 
         when:
-        boolean[] results = excluder.match(autoConfigs, null)
+        def results = excluder.match(autoConfigs, null)
 
         then: 'exclusion is active by default'
         !results[0]
@@ -190,12 +191,12 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
 
     def "match excludes by default when no environment is set"() {
         given: 'excluder without environment (e.g. unit test usage)'
-        String[] autoConfigs = [
+        def autoConfigs = [
                 'org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration',
         ] as String[]
 
         when:
-        boolean[] results = excluder.match(autoConfigs, null)
+        def results = excluder.match(autoConfigs, null)
 
         then: 'exclusion is active by default'
         !results[0]
@@ -203,14 +204,14 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
 
     def "spring.factories registers the filter correctly"() {
         when: 'enumerating all spring.factories resources on the classpath'
-        Enumeration<URL> resources = getClass().getClassLoader().getResources('META-INF/spring.factories')
-        List<String> allContents = Collections.list(resources).collect { it.text }
+        def resources = getClass().classLoader.getResources('META-INF/spring.factories')
+        def allContents = resources.collect { it.text }
 
         then: 'at least one spring.factories exists'
         !allContents.isEmpty()
 
         and: 'one of them registers SecurityAutoConfigurationExcluder as an AutoConfigurationImportFilter'
-        allContents.any { String content ->
+        allContents.any { content ->
             content.contains('org.springframework.boot.autoconfigure.AutoConfigurationImportFilter') &&
                 content.contains('grails.plugin.springsecurity.SecurityAutoConfigurationExcluder')
         }
