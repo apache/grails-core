@@ -7,10 +7,10 @@ import java.util.function.Function;
 
 public class AliasMapEntryFunction
         implements
-        Function<DetachedAssociationCriteria,
-                Map.Entry<String, DetachedAssociationCriteria>> {
+        Function<DetachedAssociationCriteria<?>,
+                Map.Entry<String, DetachedAssociationCriteria<?>>> {
     @Override
-    public Map.Entry<String, DetachedAssociationCriteria> apply(DetachedAssociationCriteria detachedAssociationCriteria) {
+    public Map.Entry<String, DetachedAssociationCriteria<?>> apply(DetachedAssociationCriteria<?> detachedAssociationCriteria) {
         return Map.entry(detachedAssociationCriteria.getAssociationPath(), detachedAssociationCriteria);
     }
 }

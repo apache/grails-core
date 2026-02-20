@@ -41,7 +41,7 @@ public class PredicateGenerator {
     public Predicate[] getPredicates(HibernateCriteriaBuilder cb,
                                      CriteriaQuery<?> criteriaQuery,
                                      From<?, ?> root_,
-                                     List<Query.Criterion> criteriaList,
+                                     List criteriaList,
                                      JpaFromProvider fromsByProvider, 
                                      PersistentEntity entity) {
 
@@ -57,7 +57,7 @@ public class PredicateGenerator {
         return list.toArray(new Predicate[0]);
     }
 
-    private Predicate handleCriterion(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, From<?, ?> root, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.Criterion criterion) {
+    private Predicate handleCriterion(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, From<?, ?> root, JpaFromProvider fromsByProvider, PersistentEntity entity, Object criterion) {
         if (criterion instanceof Query.Junction junction) {
             return handleJunction(cb, criteriaQuery, root, fromsByProvider, entity, junction);
         } else if (criterion instanceof Query.DistinctProjection) {

@@ -75,15 +75,16 @@ public class JpaFromProvider implements Cloneable {
         return fromsByName;
     }
 
-    private Map<String, From<?, ?>> createDetachedFroms(JpaCriteriaQuery<?> cq, List<DetachedAssociationCriteria> detachedAssociationCriteriaList) {
-        return detachedAssociationCriteriaList.stream()
+    private Map<String, From<?, ?>> createDetachedFroms(JpaCriteriaQuery<?> cq, List<DetachedAssociationCriteria<?>> detachedAssociationCriteriaList) {
+        return detachedAssociationCriteriaList
+                .stream()
                 .collect(Collectors.toMap(
                         DetachedAssociationCriteria::getAssociationPath,
-                        criteria -> cq.from(criteria.getAssociation().getOwner().getJavaClass()) , (oldValue, newValue) -> newValue)
+                        criteria -> (From<?, ?>) cq.from(criteria.getAssociation().getOwner().getJavaClass()) , (oldValue, newValue) -> newValue)
                 );
     }
 
-    private Map<String, DetachedAssociationCriteria> createAliasMap(List<DetachedAssociationCriteria> detachedAssociationCriteriaList) {
+    private Map<String, DetachedAssociationCriteria<?>> createAliasMap(List<DetachedAssociationCriteria<?>> detachedAssociationCriteriaList) {
         // Use a merge function and a stable map type to avoid DuplicateKey exceptions when the same
         // association path/alias appears multiple times (e.g., referenced in both predicate and sort).
         // Keep the first occurrence to preserve deterministic aliasing.
