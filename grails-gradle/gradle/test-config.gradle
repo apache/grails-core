@@ -40,6 +40,8 @@ tasks.withType(Test).configureEach {
     }
 
     useJUnitPlatform()
+    systemProperty 'projectVersion', projectVersion
+    systemProperty 'currentJdk', JavaVersion.current().majorVersion
     jvmArgs += java17moduleReflectionCompatibilityArguments
     testLogging {
         events('passed', 'skipped', 'failed')

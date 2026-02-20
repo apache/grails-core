@@ -54,6 +54,7 @@ import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.testing.Test
+import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.process.JavaForkOptions
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
@@ -556,6 +557,44 @@ class GrailsGradlePlugin extends GroovyPlugin {
         String grailsEnvSystemProperty = System.getProperty(Environment.KEY)
         tasks.withType(Test).configureEach(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.TEST.getName()))
         tasks.withType(JavaExec).configureEach(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.DEVELOPMENT.getName()))
+
+        configureToolchainForForkTasks(project)
+    }
+
+    /**
+     * Configures {@link JavaExec} tasks to inherit the project's Java toolchain.
+     *
+     * <p>Gradle's {@code JavaPlugin} already sets toolchain conventions on
+     * {@code JavaCompile}, {@code Javadoc}, and {@code Test} tasks, but does
+     * <strong>not</strong> set them on {@code JavaExec} tasks. This means forked
+     * JVM processes (dbm-* migration tasks, console, shell, and application
+     * context commands) use the JDK running Gradle instead of the project's
+     * configured toolchain. When the project targets a different JDK version
+     * than the one running Gradle, this causes {@code UnsupportedClassVersionError}
+     * or silent runtime failures.</p>
+     *
+     * <p>This method only acts when the user has explicitly configured a toolchain
+     * via {@code java.toolchain.languageVersion}. When no toolchain is configured,
+     * behavior is unchanged - tasks use the JDK running Gradle as before.</p>
+     *
+     * <p>Uses {@code convention()} so that individual tasks can still override
+     * the launcher via {@code javaLauncher.set(...)} if needed.</p>
+     *
+     * @param project the Gradle project
+     * @since 7.0.8
+     */
+    protected void configureToolchainForForkTasks(Project project) {
+        project.afterEvaluate {
+            def javaExtension = project.extensions.findByType(org.gradle.api.plugins.JavaPluginExtension)
+            if (javaExtension?.toolchain?.languageVersion?.isPresent()) {
+                def toolchainService = project.extensions.getByType(JavaToolchainService)
+                def launcher = toolchainService.launcherFor(javaExtension.toolchain)
+
+                project.tasks.withType(JavaExec).configureEach { JavaExec task ->
+                    task.javaLauncher.convention(launcher)
+                }
+            }
+        }
     }
 
     protected void configureConsoleTask(Project project) {

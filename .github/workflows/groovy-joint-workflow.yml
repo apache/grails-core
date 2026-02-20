@@ -46,7 +46,7 @@ jobs:
           path: ~/.m2/repository
           key: cache-local-maven-${{ github.sha }}
       - name: "📥 Checkout Grails Core to fetch Gradle Plugin versions it uses"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           sparse-checkout-cone-mode: false
           sparse-checkout: settings.gradle
@@ -137,7 +137,7 @@ jobs:
           --health-retries 5
     steps:
       - name: "📥 Checkout project"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:

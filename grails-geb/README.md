@@ -145,7 +145,7 @@ The following system properties exist to configure timeouts:
   * purpose: how often to retry waiting operations
   * type: Number
   * defaults to `0.1` seconds
-* `grails.geb.timeouts.waiting`
+* `grails.geb.timeouts.timeout`
   * purpose: amount of time to wait for waiting operations
   * type: Number
   * defaults to `5.0` seconds

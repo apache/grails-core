@@ -265,6 +265,8 @@ project(':grails-test-examples-hibernate5-grails-schema-per-tenant').projectDir 
 
 include 'grails-test-examples-hibernate5-grails-partitioned-multi-tenancy'
 project(':grails-test-examples-hibernate5-grails-partitioned-multi-tenancy').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-partitioned-multi-tenancy')
+include 'grails-test-examples-hibernate5-grails-multitenant-multi-datasource'
+project(':grails-test-examples-hibernate5-grails-multitenant-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-multitenant-multi-datasource')
 
 include 'grails-test-examples-hibernate5-standalone-hibernate'
 project(':grails-test-examples-hibernate5-standalone-hibernate').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/standalone-hibernate')
@@ -275,11 +277,17 @@ project(':grails-test-examples-hibernate5-spring-boot-hibernate').projectDir = n
 include 'grails-test-examples-hibernate5-grails-data-service'
 project(':grails-test-examples-hibernate5-grails-data-service').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-data-service')
 
+include 'grails-test-examples-hibernate5-grails-data-service-multi-datasource'
+project(':grails-test-examples-hibernate5-grails-data-service-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-data-service-multi-datasource')
+
 include 'grails-test-examples-hibernate5-grails-hibernate-groovy-proxy'
 project(':grails-test-examples-hibernate5-grails-hibernate-groovy-proxy').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-hibernate-groovy-proxy')
 
 include 'grails-test-examples-hibernate5-issue450'
 project(':grails-test-examples-hibernate5-issue450').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/issue450')
+
+include 'grails-test-examples-hibernate5-grails-multitenant-multi-datasource'
+project(':grails-test-examples-hibernate5-grails-multitenant-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-multitenant-multi-datasource')
 
 // Mongodb
 // core

@@ -1,0 +1,26 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(__CURRENT_JDK__)
+    }
+}
+
+tasks.register('printLauncher', JavaExec) {
+    classpath = files()
+    mainClass = 'does.not.Matter'
+}
+
+tasks.register('checkToolchain') {
+    doLast {
+        def launcher = tasks.named('printLauncher', JavaExec).get().javaLauncher
+        if (launcher.isPresent()) {
+            def metadata = launcher.get().metadata
+            println "TOOLCHAIN_VERSION=${metadata.languageVersion.asInt()}"
+        } else {
+            println 'TOOLCHAIN_VERSION=none'
+        }
+    }
+}
