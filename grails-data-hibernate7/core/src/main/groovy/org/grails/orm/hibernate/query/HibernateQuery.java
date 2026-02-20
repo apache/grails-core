@@ -317,33 +317,18 @@ public class HibernateQuery extends Query {
     private CriteriaAndAlias getOrCreateAlias(String associationName, String alias) {
         CriteriaAndAlias subCriteria = null;
         String associationPath = getAssociationPath(associationName);
-        CriteriaQuery parentCriteria = getCriteriaBuilder().createQuery(entity.getJavaClass());
         if(alias == null) {
             alias = generateAlias(associationName);
         }
-        else {
-            CriteriaAndAlias criteriaAndAlias = createdAssociationPaths.get(alias);
-            if(criteriaAndAlias != null) {
-                parentCriteria = criteriaAndAlias.criteria;
-                if(parentCriteria != null) {
-                    alias = associationName + '_' + alias;
-                    associationPath = criteriaAndAlias.associationPath + '.' + associationPath;
-                }
-            }
-        }
-        if (createdAssociationPaths.containsKey(associationName)) {
-            subCriteria = createdAssociationPaths.get(associationName);
+
+        if (createdAssociationPaths.containsKey(associationPath)) {
+            subCriteria = createdAssociationPaths.get(associationPath);
         }
         else {
-            JoinType joinType = joinTypes.get(associationName);
-            if(parentCriteria != null) {
-//                Criteria sc = parentCriteria.createAlias(associationPath, alias, resolveJoinType(joinType));
-//                subCriteria = new CriteriaAndAlias(sc, alias, associationPath);
-            }
-            if(subCriteria != null) {
-                createdAssociationPaths.put(associationPath,subCriteria);
-                createdAssociationPaths.put(alias,subCriteria);
-            }
+            CriteriaQuery criteriaQuery = getCriteriaBuilder().createQuery(entity.getJavaClass());
+            subCriteria = new CriteriaAndAlias(criteriaQuery, alias, associationPath);
+            createdAssociationPaths.put(associationPath, subCriteria);
+            createdAssociationPaths.put(alias, subCriteria);
         }
         return subCriteria;
     }

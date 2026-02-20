@@ -911,6 +911,155 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         results.size() == 1
         results[0] == "Bob"
     }
+
+    def countMethod() {
+        given:
+        new Person(firstName: "Fred", lastName: "Rogers", age: 51).save(flush: true)
+        hibernateQuery.count()
+        when:
+        def count = hibernateQuery.singleResult()
+        then:
+        count == 2
+    }
+
+    def addCriterion() {
+        given:
+        hibernateQuery.add(new Query.Equals("firstName", "Bob"))
+        when:
+        def bob = hibernateQuery.singleResult()
+        then:
+        bob == oldBob
+    }
+
+    def addDetachedCriteria() {
+        given:
+        hibernateQuery.add(new DetachedCriteria(Person).eq("firstName", "Bob"))
+        when:
+        def bob = hibernateQuery.singleResult()
+        then:
+        bob == oldBob
+    }
+
+    def addJunctionCriterion() {
+        given:
+        hibernateQuery.add(new Query.Disjunction(), new Query.Equals("firstName", "Bob"))
+        when:
+        def bob = hibernateQuery.singleResult()
+        then:
+        bob == oldBob
+    }
+
+    def andList() {
+        given:
+        hibernateQuery.and([new Query.Equals("firstName", "Bob"), new Query.Equals("age", 50)])
+        when:
+        def bob = hibernateQuery.singleResult()
+        then:
+        bob == oldBob
+    }
+
+    def orList() {
+        given:
+        hibernateQuery.or([new Query.Equals("firstName", "Fred"), new Query.Equals("firstName", "Bob")])
+        when:
+        def bob = hibernateQuery.singleResult()
+        then:
+        bob == oldBob
+    }
+
+    def notList() {
+        given:
+        new Person(firstName: "Fred", lastName: "Rogers", age: 51).save(flush: true)
+        hibernateQuery.not([new Query.Equals("firstName", "Fred")])
+        when:
+        def bob = hibernateQuery.singleResult()
+        then:
+        bob == oldBob
+    }
+
+    def lock() {
+        given:
+        hibernateQuery.eq("firstName", "Bob").lock(true)
+        when:
+        def bob = hibernateQuery.singleResult()
+        then:
+        bob == oldBob
+    }
+
+    def cloneQuery() {
+        given:
+        hibernateQuery.eq("firstName", "Bob").max(10).offset(5)
+        when:
+        HibernateQuery cloned = (HibernateQuery) hibernateQuery.clone()
+        then:
+        cloned != hibernateQuery
+        cloned.max == hibernateQuery.max
+        cloned.offset == hibernateQuery.offset
+        cloned.hibernateCriteria != null
+    }
+
+    def queryArguments() {
+        given:
+        hibernateQuery.setFetchSize(100)
+        hibernateQuery.setTimeout(10)
+        hibernateQuery.setHibernateFlushMode(org.hibernate.FlushMode.COMMIT)
+        hibernateQuery.setReadOnly(true)
+        hibernateQuery.eq("firstName", "Bob")
+        when:
+        def bob = hibernateQuery.singleResult()
+        then:
+        bob == oldBob
+    }
+
+    def listWithSession() {
+        given:
+        hibernateQuery.eq("firstName", "Bob")
+        when:
+        def session = sessionFactory.openSession()
+        def results = hibernateQuery.list(session)
+        session.close()
+        then:
+        results.size() == 1
+        results[0] == oldBob
+    }
+
+    def singleResultWithSession() {
+        given:
+        hibernateQuery.eq("firstName", "Bob")
+        when:
+        def session = sessionFactory.openSession()
+        def result = hibernateQuery.singleResult(session)
+        session.close()
+        then:
+        result == oldBob
+    }
+
+    def scroll() {
+        given:
+        hibernateQuery.eq("firstName", "Bob")
+        when:
+        def scroll = hibernateQuery.scroll()
+        then:
+        scroll != null
+    }
+
+    def equalsAllQueryable() {
+        given:
+        new Pet(name: "Lucky", age: 50, owner: oldBob).save(flush:true)
+        hibernateQuery.eqAll("age", new DetachedCriteria(Pet).eq("name", "Lucky").property("age"))
+        when:
+        def result = hibernateQuery.singleResult()
+        then:
+        result == oldBob
+    }
+
+    def testCreateQuery() {
+        when:
+        def associationQuery = hibernateQuery.createQuery("pets")
+        then:
+        associationQuery != null
+        associationQuery.getEntity() != null
+    }
 }
 
 
