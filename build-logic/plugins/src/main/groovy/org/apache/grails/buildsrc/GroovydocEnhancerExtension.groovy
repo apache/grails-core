@@ -89,7 +89,7 @@ class GroovydocEnhancerExtension {
     @Inject
     GroovydocEnhancerExtension(ObjectFactory objects, Project project) {
         javaVersion = objects.property(String).convention(
-                "JAVA_${GradleUtils.findProperty(project, 'javaVersion') ?: '17'}" as String
+                project.provider { "JAVA_${GradleUtils.findProperty(project, 'javaVersion') ?: '17'}" as String }
         )
         javaVersionEnabled = objects.property(Boolean).convention(true)
         useAntBuilder = objects.property(Boolean).convention(true)
