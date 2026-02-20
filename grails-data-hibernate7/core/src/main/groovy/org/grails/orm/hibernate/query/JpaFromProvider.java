@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class JpaFromProvider implements Cloneable {
 
     private final Map<String, From<?, ?>> fromMap;

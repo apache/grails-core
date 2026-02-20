@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class DetachedAssociationFunction implements Function<Query.Criterion, List<DetachedAssociationCriteria<?>>> {
     @Override
     public List<DetachedAssociationCriteria<?>> apply(Query.Criterion o) {
