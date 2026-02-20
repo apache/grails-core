@@ -380,12 +380,10 @@ class GrailsGradlePlugin extends GroovyPlugin {
             }
 
             project.logger.info('Configuring CLASSIC boot loader for Micronaut compatibility in {}', project.name)
-            project.tasks.withType(BootJar).configureEach { BootJar bootJar ->
-                bootJar.loaderImplementation.convention(LoaderImplementation.CLASSIC)
+            project.tasks.withType(BootArchive).configureEach {
+                it.loaderImplementation.convention(LoaderImplementation.CLASSIC)
             }
-            project.tasks.withType(BootWar).configureEach { BootWar bootWar ->
-                bootWar.loaderImplementation.convention(LoaderImplementation.CLASSIC)
-            }
+
         }
     }
 
