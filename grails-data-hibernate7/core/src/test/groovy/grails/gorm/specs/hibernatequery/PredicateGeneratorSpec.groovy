@@ -37,7 +37,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with Equals criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.Equals("firstName", "Bob")]
+        List criteria = [new Query.Equals("firstName", "Bob")]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -46,7 +46,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with NotEquals criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.NotEquals("firstName", "Bob")]
+        List criteria = [new Query.NotEquals("firstName", "Bob")]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -55,7 +55,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with IdEquals criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.IdEquals(1L)]
+        List criteria = [new Query.IdEquals(1L)]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -64,7 +64,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with GreaterThan criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.GreaterThan("age", 20)]
+        List criteria = [new Query.GreaterThan("age", 20)]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -73,7 +73,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with GreaterThanEquals criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.GreaterThanEquals("age", 20)]
+        List criteria = [new Query.GreaterThanEquals("age", 20)]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -82,7 +82,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with LessThan criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.LessThan("age", 20)]
+        List criteria = [new Query.LessThan("age", 20)]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -91,7 +91,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with LessThanEquals criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.LessThanEquals("age", 20)]
+        List criteria = [new Query.LessThanEquals("age", 20)]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -100,7 +100,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with SizeEquals criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.SizeEquals("pets", 1)]
+        List criteria = [new Query.SizeEquals("pets", 1)]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -109,7 +109,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with SizeNotEquals criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.SizeNotEquals("pets", 1)]
+        List criteria = [new Query.SizeNotEquals("pets", 1)]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -118,7 +118,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with SizeGreaterThan criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.SizeGreaterThan("pets", 1)]
+        List criteria = [new Query.SizeGreaterThan("pets", 1)]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -127,7 +127,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with SizeGreaterThanEquals criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.SizeGreaterThanEquals("pets", 1)]
+        List criteria = [new Query.SizeGreaterThanEquals("pets", 1)]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -136,7 +136,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with SizeLessThan criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.SizeLessThan("pets", 1)]
+        List criteria = [new Query.SizeLessThan("pets", 1)]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -145,7 +145,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with SizeLessThanEquals criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.SizeLessThanEquals("pets", 1)]
+        List criteria = [new Query.SizeLessThanEquals("pets", 1)]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -154,7 +154,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with Between criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.Between("age", 18, 30)]
+        List criteria = [new Query.Between("age", 18, 30)]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -163,7 +163,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with ILike criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.ILike("firstName", "B%")]
+        List criteria = [new Query.ILike("firstName", "B%")]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -172,7 +172,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with RLike criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.RLike("firstName", "B.*")]
+        List criteria = [new Query.RLike("firstName", "B.*")]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -181,7 +181,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with Like criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.Like("firstName", "B%")]
+        List criteria = [new Query.Like("firstName", "B%")]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -190,7 +190,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with In criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.In("firstName", ["Bob", "Fred"])]
+        List criteria = [new Query.In("firstName", ["Bob", "Fred"])]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -199,7 +199,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with NotIn criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.NotIn("firstName", new DetachedCriteria(Person).eq("firstName", "Bob").property("firstName"))]
+        List criteria = [new Query.NotIn("firstName", new DetachedCriteria(Person).eq("firstName", "Bob").property("firstName"))]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -208,7 +208,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with IsNull criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.IsNull("firstName")]
+        List criteria = [new Query.IsNull("firstName")]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -217,7 +217,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with IsNotNull criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.IsNotNull("firstName")]
+        List criteria = [new Query.IsNotNull("firstName")]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -226,7 +226,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with IsEmpty criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.IsEmpty("pets")]
+        List criteria = [new Query.IsEmpty("pets")]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -235,7 +235,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with IsNotEmpty criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.IsNotEmpty("pets")]
+        List criteria = [new Query.IsNotEmpty("pets")]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -244,7 +244,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with EqualsProperty criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.EqualsProperty("firstName", "lastName")]
+        List criteria = [new Query.EqualsProperty("firstName", "lastName")]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -253,7 +253,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with NotEqualsProperty criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.NotEqualsProperty("firstName", "lastName")]
+        List criteria = [new Query.NotEqualsProperty("firstName", "lastName")]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -262,7 +262,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with LessThanEqualsProperty criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.LessThanEqualsProperty("age", "age")]
+        List criteria = [new Query.LessThanEqualsProperty("age", "age")]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -271,7 +271,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with LessThanProperty criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.LessThanProperty("age", "age")]
+        List criteria = [new Query.LessThanProperty("age", "age")]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -280,7 +280,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with GreaterThanEqualsProperty criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.GreaterThanEqualsProperty("age", "age")]
+        List criteria = [new Query.GreaterThanEqualsProperty("age", "age")]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -289,7 +289,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with GreaterThanProperty criterion"() {
         given:
-        List<Query.Criterion> criteria = [new Query.GreaterThanProperty("age", "age")]
+        List criteria = [new Query.GreaterThanProperty("age", "age")]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -311,7 +311,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         var conjunction = new Query.Conjunction()
         conjunction.add(new Query.Equals("firstName", "Bob"))
         conjunction.add(new Query.GreaterThan("age", 20))
-        List<Query.Criterion> criteria = [conjunction]
+        List criteria = [conjunction]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -323,7 +323,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         var disjunction = new Query.Disjunction()
         disjunction.add(new Query.Equals("firstName", "Bob"))
         disjunction.add(new Query.Equals("firstName", "Fred"))
-        List<Query.Criterion> criteria = [disjunction]
+        List criteria = [disjunction]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -334,7 +334,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         given:
         var negation = new Query.Negation()
         negation.add(new Query.Equals("firstName", "Bob"))
-        List<Query.Criterion> criteria = [negation]
+        List criteria = [negation]
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
@@ -348,12 +348,116 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         associationCriteria.eq("name", "Lucky")
         List criteria = [associationCriteria]
         when:
-        def predicates = predicateGenerator.getPredicates(cb, query, root, (List<Query.Criterion>)criteria, fromProvider, personEntity)
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
         predicates.length == 1
     }
 
-    private jakarta.persistence.criteria.Predicate[] callGetPredicatesUntyped(List criteria) {
-        return predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+    def "test getPredicates with In criterion and subquery"() {
+        given:
+        List criteria = [new Query.In("firstName", new DetachedCriteria(Person).eq("lastName", "Builder").property("firstName"))]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with GreaterThanEqualsAll"() {
+        given:
+        List criteria = [new Query.GreaterThanEqualsAll("age", new DetachedCriteria(Person).eq("firstName", "Bob").property("age"))]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with GreaterThanAll"() {
+        given:
+        List criteria = [new Query.GreaterThanAll("age", new DetachedCriteria(Person).eq("firstName", "Bob").property("age"))]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with LessThanEqualsAll"() {
+        given:
+        List criteria = [new Query.LessThanEqualsAll("age", new DetachedCriteria(Person).eq("firstName", "Bob").property("age"))]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with LessThanAll"() {
+        given:
+        List criteria = [new Query.LessThanAll("age", new DetachedCriteria(Person).eq("firstName", "Bob").property("age"))]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with EqualsAll"() {
+        given:
+        List criteria = [new Query.EqualsAll("age", new DetachedCriteria(Person).eq("firstName", "Bob").property("age"))]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with GreaterThanEqualsSome"() {
+        given:
+        List criteria = [new Query.GreaterThanEqualsSome("age", new DetachedCriteria(Person).eq("firstName", "Bob").property("age"))]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with GreaterThanSome"() {
+        given:
+        List criteria = [new Query.GreaterThanSome("age", new DetachedCriteria(Person).eq("firstName", "Bob").property("age"))]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with LessThanEqualsSome"() {
+        given:
+        List criteria = [new Query.LessThanEqualsSome("age", new DetachedCriteria(Person).eq("firstName", "Bob").property("age"))]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with LessThanSome"() {
+        given:
+        List criteria = [new Query.LessThanSome("age", new DetachedCriteria(Person).eq("firstName", "Bob").property("age"))]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with Exists"() {
+        given:
+        List criteria = [new Query.Exists(new DetachedCriteria(Pet).eq("name", "Lucky"))]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with NotExists"() {
+        given:
+        List criteria = [new Query.NotExists(new DetachedCriteria(Pet).eq("name", "Lucky"))]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        predicates.length == 1
     }
 }
