@@ -5,7 +5,6 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Expression;
-import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
@@ -21,7 +20,6 @@ import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaInPredicate;
-import org.hibernate.query.criteria.JpaPredicate;
 import org.hibernate.query.sqm.tree.domain.SqmPath;
 import org.hibernate.query.sqm.tree.predicate.SqmInListPredicate;
 import org.slf4j.Logger;
@@ -173,7 +171,7 @@ public class PredicateGenerator {
         return cb.not(cb.in(fullyQualifiedPath, c.getValue()));
     }
 
-    private Predicate handleIn(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.In c, Path fullyQualifiedPath) {
+    private Predicate handleIn(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.In c, Path<?> fullyQualifiedPath) {
         var queryableCriteria = getQueryableCriteriaFromInCriteria(c);
         if (Objects.nonNull(queryableCriteria)) {
             return getQueryableCriteriaValue(cb, criteriaQuery, fromsByProvider, entity, c, queryableCriteria);
