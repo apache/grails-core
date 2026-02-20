@@ -4,6 +4,7 @@ import groovy.util.logging.Slf4j;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
@@ -35,17 +36,19 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 @Slf4j
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class PredicateGenerator {
     private static final Logger log = LoggerFactory.getLogger(PredicateGenerator.class);
 
     public Predicate[] getPredicates(HibernateCriteriaBuilder cb,
                                      CriteriaQuery<?> criteriaQuery,
                                      From<?, ?> root_,
-                                     List criteriaList, 
+                                     List<Query.Criterion> criteriaList,
                                      JpaFromProvider fromsByProvider, 
                                      PersistentEntity entity) {
 
-        List<Predicate> list = ((List<Object>) criteriaList).stream()
+        List<Predicate> list = criteriaList
+                .stream()
                 .map(criterion -> handleCriterion(cb, criteriaQuery, root_, fromsByProvider, entity, criterion))
                 .filter(Objects::nonNull)
                 .toList();
@@ -56,23 +59,23 @@ public class PredicateGenerator {
         return list.toArray(new Predicate[0]);
     }
 
-    private Predicate handleCriterion(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, From<?, ?> root_, JpaFromProvider fromsByProvider, PersistentEntity entity, Object criterion) {
+    private Predicate handleCriterion(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, From<?, ?> root, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.Criterion criterion) {
         if (criterion instanceof Query.Junction junction) {
-            return handleJunction(cb, criteriaQuery, root_, fromsByProvider, entity, junction);
+            return handleJunction(cb, criteriaQuery, root, fromsByProvider, entity, junction);
         } else if (criterion instanceof Query.DistinctProjection) {
             return cb.conjunction();
         } else if (criterion instanceof DetachedAssociationCriteria<?> c) {
-            return handleAssociationCriteria(cb, criteriaQuery, root_, fromsByProvider, entity, c);
+            return handleAssociationCriteria(cb, criteriaQuery, root, fromsByProvider, entity, c);
         } else if (criterion instanceof Query.PropertyCriterion pc) {
-            return handlePropertyCriterion(cb, criteriaQuery, root_, fromsByProvider, entity, pc);
+            return handlePropertyCriterion(cb, criteriaQuery, root, fromsByProvider, entity, pc);
         } else if (criterion instanceof Query.PropertyComparisonCriterion c) {
-            return handlePropertyComparisonCriterion(cb, fromsByProvider, root_, c);
+            return handlePropertyComparisonCriterion(cb, fromsByProvider, root, c);
         } else if (criterion instanceof Query.PropertyNameCriterion c) {
             return handlePropertyNameCriterion(cb, fromsByProvider, c);
         } else if (criterion instanceof Query.Exists c) {
-            return handleExists(cb, criteriaQuery, root_, fromsByProvider, entity, c);
+            return handleExists(cb, criteriaQuery, root, fromsByProvider, entity, c);
         } else if (criterion instanceof Query.NotExists c) {
-            return cb.not(handleExists(cb, criteriaQuery, root_, fromsByProvider, entity, new Query.Exists(c.getSubquery())));
+            return cb.not(handleExists(cb, criteriaQuery, root, fromsByProvider, entity, new Query.Exists(c.getSubquery())));
         }
         throw new IllegalArgumentException("Unsupported criterion: " + criterion);
     }
@@ -93,14 +96,14 @@ public class PredicateGenerator {
         return null;
     }
 
-    private Predicate handleAssociationCriteria(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, From<?, ?> root_, JpaFromProvider fromsByProvider, PersistentEntity entity, DetachedAssociationCriteria<?> c) {
-        Join child = root_.join(c.getAssociationPath(), JoinType.LEFT);
+    private Predicate handleAssociationCriteria(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, From<?, ?> root, JpaFromProvider fromsByProvider, PersistentEntity entity, DetachedAssociationCriteria<?> c) {
+        var child = root.join(c.getAssociationPath(), JoinType.LEFT);
         JpaFromProvider childTablesByName = (JpaFromProvider) fromsByProvider.clone();
         childTablesByName.put("root", child);
         return cb.and(getPredicates(cb, criteriaQuery, child, c.getCriteria(), childTablesByName, entity));
     }
 
-    private Predicate handlePropertyCriterion(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, From<?, ?> root_, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.PropertyCriterion pc) {
+    private Predicate handlePropertyCriterion(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, From<?, ?> root, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.PropertyCriterion pc) {
         var fullyQualifiedPath = fromsByProvider.getFullyQualifiedPath(pc.getProperty());
 
         if (pc instanceof Query.NotIn c) {
@@ -110,39 +113,39 @@ public class PredicateGenerator {
         } else if (pc instanceof Query.In c) {
             return handleIn(cb, criteriaQuery, fromsByProvider, entity, c, fullyQualifiedPath);
         } else if (pc instanceof Query.ILike c) {
-            return cb.ilike(fullyQualifiedPath, c.getValue().toString());
+            return cb.ilike((Expression<String>) fullyQualifiedPath, c.getValue().toString());
         } else if (pc instanceof Query.RLike c) {
             return handleRLike(cb, fullyQualifiedPath, c);
         } else if (pc instanceof Query.Like c) {
-            return cb.like(fullyQualifiedPath, c.getValue().toString());
+            return cb.like((Expression<String>) fullyQualifiedPath, c.getValue().toString());
         } else if (pc instanceof Query.Equals c) {
             return cb.equal(fullyQualifiedPath, c.getValue());
         } else if (pc instanceof Query.NotEquals c) {
             return cb.or(cb.notEqual(fullyQualifiedPath, c.getValue()), cb.isNull(fullyQualifiedPath));
         } else if (pc instanceof Query.IdEquals c) {
-            return cb.equal(root_.get("id"), c.getValue());
+            return cb.equal(root.get("id"), c.getValue());
         } else if (pc instanceof Query.GreaterThan c) {
-            return cb.gt(fullyQualifiedPath, getNumericValue(c));
+            return cb.gt((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
         } else if (pc instanceof Query.GreaterThanEquals c) {
-            return cb.ge(fullyQualifiedPath, getNumericValue(c));
+            return cb.ge((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
         } else if (pc instanceof Query.LessThan c) {
-            return cb.lt(fullyQualifiedPath, getNumericValue(c));
+            return cb.lt((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
         } else if (pc instanceof Query.LessThanEquals c) {
-            return cb.le(fullyQualifiedPath, getNumericValue(c));
+            return cb.le((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
         } else if (pc instanceof Query.SizeEquals c) {
-            return cb.equal(cb.size(fullyQualifiedPath), c.getValue());
+            return cb.equal(cb.size((Expression) fullyQualifiedPath), c.getValue());
         } else if (pc instanceof Query.SizeNotEquals c) {
-            return cb.notEqual(cb.size(fullyQualifiedPath), c.getValue());
+            return cb.notEqual(cb.size((Expression) fullyQualifiedPath), c.getValue());
         } else if (pc instanceof Query.SizeGreaterThan c) {
-            return cb.gt(cb.size(fullyQualifiedPath), getNumericValue(c));
+            return cb.gt(cb.size((Expression) fullyQualifiedPath), getNumericValue(c));
         } else if (pc instanceof Query.SizeGreaterThanEquals c) {
-            return cb.ge(cb.size(fullyQualifiedPath), getNumericValue(c));
+            return cb.ge(cb.size((Expression) fullyQualifiedPath), getNumericValue(c));
         } else if (pc instanceof Query.SizeLessThan c) {
-            return cb.lt(cb.size(fullyQualifiedPath), getNumericValue(c));
+            return cb.lt(cb.size((Expression) fullyQualifiedPath), getNumericValue(c));
         } else if (pc instanceof Query.SizeLessThanEquals c) {
-            return cb.le(cb.size(fullyQualifiedPath), getNumericValue(c));
+            return cb.le(cb.size((Expression) fullyQualifiedPath), getNumericValue(c));
         } else if (pc instanceof Query.Between c) {
-            return cb.between(fullyQualifiedPath, (Comparable) c.getFrom(), (Comparable) c.getTo());
+            return cb.between((Expression) fullyQualifiedPath, (Comparable) c.getFrom(), (Comparable) c.getTo());
         }
         return null;
     }

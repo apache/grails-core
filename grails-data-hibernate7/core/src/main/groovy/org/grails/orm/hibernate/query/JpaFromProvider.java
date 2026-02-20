@@ -21,7 +21,7 @@ import java.util.stream.Stream;
 
 public class JpaFromProvider implements Cloneable {
 
-    private Map<String, From<?, ?>> fromMap;
+    private final Map<String, From<?, ?>> fromMap;
 
     private JpaFromProvider(Map<String, From<?, ?>> fromMap) {
         this.fromMap = new HashMap<>(fromMap);
@@ -99,7 +99,7 @@ public class JpaFromProvider implements Cloneable {
                 ));
     }
 
-    public Path getFullyQualifiedPath(String propertyName) {
+    public Path<?> getFullyQualifiedPath(String propertyName) {
         if (Objects.isNull(propertyName) || propertyName.trim().isEmpty()) {
             throw new IllegalArgumentException("propertyName cannot be null");
         }
