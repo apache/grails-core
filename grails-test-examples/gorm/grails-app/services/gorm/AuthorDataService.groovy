@@ -29,13 +29,11 @@ import grails.gorm.services.Service
 @Service(Author)
 interface AuthorDataService {
 
+    Author findByName(String name)
     Author get(Serializable id)
-
     Author save(Author author)
 
     List<Author> list()
 
     Long count()
-
-    Author findByName(String name)
 }

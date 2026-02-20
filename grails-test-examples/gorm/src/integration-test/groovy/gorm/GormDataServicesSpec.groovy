@@ -65,54 +65,54 @@ class GormDataServicesSpec extends Specification {
     // ============================================
 
     void "test get by id"() {
-        given: "an existing book"
+        given: 'an existing book'
         def book = Book.findByTitle('The Stand')
 
-        when: "retrieving by id through data service"
+        when: 'retrieving by id through data service'
         def result = bookDataService.get(book.id)
 
-        then: "the book is found"
+        then: 'the book is found'
         result != null
         result.title == 'The Stand'
         result.isbn == '1234567890'
     }
 
     void "test list with pagination"() {
-        when: "listing books with pagination"
+        when: 'listing books with pagination'
         def results = bookDataService.list([max: 2, offset: 0, sort: 'title'])
 
-        then: "correct number of results"
+        then: 'correct number of results'
         results.size() == 2
     }
 
     void "test count"() {
-        expect: "correct count of books"
+        expect: 'correct count of books'
         bookDataService.count() == 5
     }
 
     void "test save new book"() {
-        given: "a new book"
+        given: 'a new book'
         def book = new Book(title: 'Doctor Sleep', pageCount: 531, price: 16.99, inStock: true)
 
-        when: "saving through data service"
+        when: 'saving through data service'
         def saved = bookDataService.save(book)
 
-        then: "book is persisted"
+        then: 'book is persisted'
         saved.id != null
         saved.title == 'Doctor Sleep'
         bookDataService.count() == 6
     }
 
     void "test delete"() {
-        given: "an existing book"
+        given: 'an existing book'
         def book = Book.findByTitle('Carrie')
         def bookId = book.id
 
-        when: "deleting through data service"
+        when: 'deleting through data service'
         bookDataService.delete(bookId)
         Book.withSession { it.flush(); it.clear() }
 
-        then: "book is removed"
+        then: 'book is removed'
         Book.get(bookId) == null
         bookDataService.findByTitle('Carrie') == null
     }
@@ -122,36 +122,36 @@ class GormDataServicesSpec extends Specification {
     // ============================================
 
     void "test findByTitle"() {
-        expect: "finding by title works"
+        expect: 'finding by title works'
         bookDataService.findByTitle('It') != null
         bookDataService.findByTitle('It').isbn == '0987654321'
         bookDataService.findByTitle('NonExistent') == null
     }
 
     void "test findAllByTitle"() {
-        when: "finding all by title"
+        when: 'finding all by title'
         def results = bookDataService.findAllByTitle('The Stand')
 
-        then: "returns matching books"
+        then: 'returns matching books'
         results.size() == 1
         results[0].title == 'The Stand'
     }
 
     void "test findAllByInStock"() {
-        when: "finding all in stock books"
+        when: 'finding all in stock books'
         def inStock = bookDataService.findAllByInStock(true)
         def outOfStock = bookDataService.findAllByInStock(false)
 
-        then: "correct results"
+        then: 'correct results'
         inStock.size() == 3
         outOfStock.size() == 2
     }
 
     void "test findAllByInStock with manual ordering"() {
-        when: "finding in stock books and sorting manually"
+        when: 'finding in stock books and sorting manually'
         def results = bookDataService.findAllByInStock(true).sort { it.title }
 
-        then: "results can be ordered"
+        then: 'results can be ordered'
         results.size() == 3
         results[0].title < results[1].title
         results[1].title < results[2].title
@@ -162,7 +162,7 @@ class GormDataServicesSpec extends Specification {
     // ============================================
 
     void "test countByInStock"() {
-        expect: "count queries work"
+        expect: 'count queries work'
         bookDataService.countByInStock(true) == 3
         bookDataService.countByInStock(false) == 2
     }
@@ -172,13 +172,13 @@ class GormDataServicesSpec extends Specification {
     // ============================================
 
     void "test existsByTitle (manual implementation)"() {
-        expect: "exists queries work via manual implementation"
+        expect: 'exists queries work via manual implementation'
         bookDataService.existsByTitle('It') == true
         bookDataService.existsByTitle('NonExistent') == false
     }
 
     void "test findByIsbnValue for nullable field"() {
-        expect: "finding by nullable isbn works via manual HQL"
+        expect: 'finding by nullable isbn works via manual HQL'
         bookDataService.findByIsbnValue('1234567890') != null
         bookDataService.findByIsbnValue('1234567890').title == 'The Stand'
         bookDataService.findByIsbnValue('0000000000') == null
@@ -186,13 +186,13 @@ class GormDataServicesSpec extends Specification {
     }
 
     void "test countByTitleLike"() {
-        expect: "count with like pattern works"
+        expect: 'count with like pattern works'
         bookDataService.countByTitleLike('The%') == 2  // 'The Stand', 'The Shining'
         bookDataService.countByTitleLike('%Lot') == 1  // "Salem's Lot"
     }
 
     void "test findByTitleAndOptionalIsbn"() {
-        expect: "finding with optional isbn works"
+        expect: 'finding with optional isbn works'
         bookDataService.findByTitleAndOptionalIsbn('The Stand', '1234567890') != null
         bookDataService.findByTitleAndOptionalIsbn('The Stand', 'wrong-isbn') == null
         bookDataService.findByTitleAndOptionalIsbn('The Stand', null)?.title == 'The Stand'
@@ -203,28 +203,28 @@ class GormDataServicesSpec extends Specification {
     // ============================================
 
     void "test findByTitlePattern with regex-like pattern"() {
-        when: "searching with pattern"
+        when: 'searching with pattern'
         def results = bookDataService.findByTitlePattern('The%')
 
-        then: "matching books are found"
+        then: 'matching books are found'
         results.size() == 2
         results*.title.every { it.startsWith('The') }
     }
 
     void "test findByPageRange"() {
-        when: "searching by page range"
+        when: 'searching by page range'
         def results = bookDataService.findByPageRange(400, 500)
 
-        then: "books in range are found"
+        then: 'books in range are found'
         results.size() == 2  // The Shining (447), Salem's Lot (439)
         results.every { it.pageCount >= 400 && it.pageCount <= 500 }
     }
 
     void "test findAffordableInStockBooks"() {
-        when: "searching for affordable in-stock books"
+        when: 'searching for affordable in-stock books'
         def results = bookDataService.findAffordableInStockBooks(15.00)
 
-        then: "matching books are found"
+        then: 'matching books are found'
         results.size() == 1  // Only Carrie at 12.99 is in stock and under 15
         results[0].title == 'Carrie'
     }
@@ -234,10 +234,10 @@ class GormDataServicesSpec extends Specification {
     // ============================================
 
     void "test searchByTitleHql"() {
-        when: "searching with HQL pattern"
+        when: 'searching with HQL pattern'
         def results = bookDataService.searchByTitleHql('The%')
 
-        then: "results are found and ordered"
+        then: 'results are found and ordered'
         results.size() == 2
         // Ordered by title
         results[0].title == 'The Shining'
@@ -245,15 +245,15 @@ class GormDataServicesSpec extends Specification {
     }
 
     void "test countBooksWithAuthor"() {
-        expect: "count books with author works"
+        expect: 'count books with author works'
         bookDataService.countBooksWithAuthor() == 3  // Stand, It, Shining
     }
 
     void "test findAllDistinctTitles"() {
-        when: "finding distinct titles"
+        when: 'finding distinct titles'
         def titles = bookDataService.findAllDistinctTitles()
 
-        then: "all titles returned"
+        then: 'all titles returned'
         titles.size() == 5
         titles.containsAll(['The Stand', 'It', 'The Shining', 'Carrie', 'Salem\'s Lot'])
     }
@@ -263,16 +263,16 @@ class GormDataServicesSpec extends Specification {
     // ============================================
 
     void "test updateStockStatus"() {
-        given: "an out of stock book"
+        given: 'an out of stock book'
         def book = Book.findByTitle('The Shining')
         assert book.inStock == false
 
-        when: "updating stock status"
+        when: 'updating stock status'
         def updated = bookDataService.updateStockStatus(book.id, true)
         Book.withSession { it.flush(); it.clear() }
         book = Book.findByTitle('The Shining')
 
-        then: "update is applied"
+        then: 'update is applied'
         updated == 1
         book.inStock == true
     }
@@ -282,10 +282,10 @@ class GormDataServicesSpec extends Specification {
     // ============================================
 
     void "test deleteByTitle"() {
-        when: "deleting by title"
+        when: 'deleting by title'
         def deleted = bookDataService.deleteByTitle('Carrie')
 
-        then: "book is deleted"
+        then: 'book is deleted'
         deleted == 1
         Book.findByTitle('Carrie') == null
         bookDataService.count() == 4
@@ -296,27 +296,27 @@ class GormDataServicesSpec extends Specification {
     // ============================================
 
     void "test findTitlesAndPrices projection"() {
-        when: "querying title and price projection"
+        when: 'querying title and price projection'
         def results = bookDataService.findTitlesAndPrices()
 
-        then: "projections returned as arrays"
+        then: 'projections returned as arrays'
         results.size() == 5
         results.every { it instanceof Object[] && it.length == 2 }
         results.every { it[0] instanceof String && it[1] instanceof BigDecimal }
     }
 
     void "test findAveragePrice"() {
-        when: "calculating average price"
+        when: 'calculating average price'
         def avg = bookDataService.findAveragePrice()
 
-        then: "average is calculated"
+        then: 'average is calculated'
         avg != null
         // Average of 19.99, 18.99, 14.99, 12.99, 15.99 = 16.59
         Math.abs(avg - 16.59) < 0.01
     }
 
     void "test findMaxPageCount"() {
-        expect: "max page count is found"
+        expect: 'max page count is found'
         bookDataService.findMaxPageCount() == 1153  // The Stand
     }
 
@@ -325,13 +325,13 @@ class GormDataServicesSpec extends Specification {
     // ============================================
 
     void "test get non-existent id returns null"() {
-        expect: "null returned for non-existent id"
+        expect: 'null returned for non-existent id'
         bookDataService.get(999999L) == null
     }
 
     @Unroll
     void "test dynamic finder with various inputs: title=#title, expected=#expectedFound"() {
-        expect: "finder returns expected result"
+        expect: 'finder returns expected result'
         (bookDataService.findByTitle(title) != null) == expectedFound
 
         where:
@@ -347,38 +347,38 @@ class GormDataServicesSpec extends Specification {
     // ============================================
 
     void "test @CompileStatic service is autowired"() {
-        expect: "the @CompileStatic service is available"
+        expect: 'the @CompileStatic service is available'
         compileStaticBookService != null
     }
 
     void "test @CompileStatic service basic CRUD operations"() {
-        when: "saving a book through the @CompileStatic service"
+        when: 'saving a book through the @CompileStatic service'
         def book = compileStaticBookService.save(new Book(title: 'Static Book', pageCount: 100, price: 9.99, inStock: true))
 
-        then: "the book is persisted"
+        then: 'the book is persisted'
         book != null
         book.id != null
         book.title == 'Static Book'
 
-        and: "it can be retrieved"
+        and: 'it can be retrieved'
         compileStaticBookService.get(book.id) != null
         compileStaticBookService.findByTitle('Static Book') != null
     }
 
     void "test @CompileStatic service injected AuthorDataService works"() {
-        expect: "the injected authorDataService is available"
+        expect: 'the injected authorDataService is available'
         compileStaticBookService.authorDataService != null
     }
 
     void "test @CompileStatic service cross-service method returns book with author details"() {
-        given: "an author and a book"
+        given: 'an author and a book'
         def author = new Author(name: 'CS Author', email: 'csauthor@test.com').save(flush: true)
         def book = new Book(title: 'CS Book', pageCount: 200, price: 14.99, inStock: true, author: author).save(flush: true)
 
-        when: "calling the custom cross-service method"
+        when: 'calling the custom cross-service method'
         def result = compileStaticBookService.getBookWithAuthorDetails(book.id)
 
-        then: "the result contains book and author details"
+        then: 'the result contains book and author details'
         result != null
         result['bookTitle'] == 'CS Book'
         result['bookId'] == book.id
@@ -387,13 +387,13 @@ class GormDataServicesSpec extends Specification {
     }
 
     void "test @CompileStatic service cross-service method with no author"() {
-        given: "a book without an author"
+        given: 'a book without an author'
         def book = new Book(title: 'Orphan CS Book', pageCount: 50, price: 5.99, inStock: true).save(flush: true)
 
-        when: "calling the custom cross-service method"
+        when: 'calling the custom cross-service method'
         def result = compileStaticBookService.getBookWithAuthorDetails(book.id)
 
-        then: "the result contains book details but no author"
+        then: 'the result contains book details but no author'
         result != null
         result['bookTitle'] == 'Orphan CS Book'
         result['bookId'] == book.id
@@ -402,18 +402,18 @@ class GormDataServicesSpec extends Specification {
     }
 
     void "test @CompileStatic service cross-service method with non-existent book"() {
-        when: "calling with a non-existent book ID"
+        when: 'calling with a non-existent book ID'
         def result = compileStaticBookService.getBookWithAuthorDetails(999999L)
 
-        then: "null is returned"
+        then: 'null is returned'
         result == null
     }
 
     void "test @CompileStatic service getCounts returns both book and author counts"() {
-        when: "calling getCounts"
-        def counts = compileStaticBookService.getCounts()
+        when: 'calling getCounts'
+        def counts = compileStaticBookService.counts
 
-        then: "both counts are present and correct"
+        then: 'both counts are present and correct'
         counts != null
         counts['books'] == compileStaticBookService.count()
         counts['authors'] == authorDataService.count()

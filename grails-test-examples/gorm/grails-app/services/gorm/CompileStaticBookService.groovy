@@ -43,15 +43,13 @@ abstract class CompileStaticBookService {
 
     AuthorDataService authorDataService
 
+    abstract Book findByTitle(String title)
     abstract Book get(Serializable id)
-
     abstract Book save(Book book)
 
     abstract List<Book> list()
 
     abstract Long count()
-
-    abstract Book findByTitle(String title)
 
     /**
      * Custom method that uses the injected AuthorDataService.
@@ -61,7 +59,7 @@ abstract class CompileStaticBookService {
      */
     @Transactional(readOnly = true)
     Map<String, Object> getBookWithAuthorDetails(Serializable bookId) {
-        Book book = get(bookId)
+        def book = get(bookId)
         if (book == null) {
             return null
         }
@@ -69,7 +67,7 @@ abstract class CompileStaticBookService {
         result.put('bookTitle', book.title)
         result.put('bookId', book.id)
         if (book.author != null) {
-            Author author = authorDataService.get(book.author.id)
+            def author = authorDataService.get(book.author.id)
             if (author != null) {
                 result.put('authorName', author.name)
                 result.put('authorId', author.id)

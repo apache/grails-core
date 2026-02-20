@@ -18,8 +18,9 @@
  */
 package grails.gorm.services
 
-import org.grails.datastore.mapping.core.Datastore
 import spock.lang.Specification
+
+import org.grails.datastore.mapping.core.Datastore
 
 /**
  * Tests that @Service abstract classes with injected @Service-typed properties
@@ -39,7 +40,7 @@ class CompileStaticServiceInjectionSpec extends Specification {
 
     void "test @CompileStatic abstract class with injected @Service properties compiles"() {
         when: "A @CompileStatic @Service abstract class has a property of another @Service type"
-        Class service = new GroovyClassLoader().parseClass('''
+        def service = new GroovyClassLoader().parseClass('''
 import grails.gorm.services.Service
 import grails.gorm.annotation.Entity
 import groovy.transform.CompileStatic
@@ -81,13 +82,13 @@ interface BookDataService {
         then: "Compilation succeeds (previously failed with 'Unexpected return statement')"
         noExceptionThrown()
 
-        and: "The abstract class is recognized"
+        and: 'The abstract class is recognized'
         !service.isInterface()
 
-        when: "The implementation class is loaded"
-        Class impl = service.classLoader.loadClass('$BookServiceImplementation')
+        when: 'The implementation class is loaded'
+        def impl = service.classLoader.loadClass('$BookServiceImplementation')
 
-        then: "The impl exists and has the datastore infrastructure"
+        then: 'The impl exists and has the datastore infrastructure'
         impl != null
         impl.getDeclaredMethod('getDatastore').returnType == Datastore
         impl.getDeclaredMethod('setDatastore', Datastore) != null
@@ -95,8 +96,8 @@ interface BookDataService {
     }
 
     void "test abstract class without @CompileStatic still works with injected @Service properties"() {
-        when: "A @Service abstract class without @CompileStatic has a @Service-typed property"
-        Class service = new GroovyClassLoader().parseClass('''
+        when: 'A @Service abstract class without @CompileStatic has a @Service-typed property'
+        def service = new GroovyClassLoader().parseClass('''
 import grails.gorm.services.Service
 import grails.gorm.annotation.Entity
 
@@ -132,20 +133,20 @@ interface ItemDataService {
 }
 ''')
 
-        then: "Compilation succeeds (regression test — dynamic mode always worked)"
+        then: 'Compilation succeeds (regression test — dynamic mode always worked)'
         noExceptionThrown()
 
-        when: "The impl is loaded"
-        Class impl = service.classLoader.loadClass('$ItemServiceImplementation')
+        when: 'The impl is loaded'
+        def impl = service.classLoader.loadClass('$ItemServiceImplementation')
 
-        then: "The impl has datastore infrastructure"
+        then: 'The impl has datastore infrastructure'
         impl != null
         impl.getDeclaredMethod('getDatastore').returnType == Datastore
     }
 
     void "test abstract class without @Service-typed properties does NOT get datastore infrastructure"() {
-        when: "A @Service abstract class has NO @Service-typed properties"
-        Class service = new GroovyClassLoader().parseClass('''
+        when: 'A @Service abstract class has NO @Service-typed properties'
+        def service = new GroovyClassLoader().parseClass('''
 import grails.gorm.services.Service
 import grails.gorm.annotation.Entity
 
@@ -170,19 +171,19 @@ interface TaskDataService {
 }
 ''')
 
-        then: "Compilation succeeds"
+        then: 'Compilation succeeds'
         noExceptionThrown()
 
-        when: "The impl is loaded"
-        Class impl = service.classLoader.loadClass('$TaskServiceImplementation')
+        when: 'The impl is loaded'
+        def impl = service.classLoader.loadClass('$TaskServiceImplementation')
 
-        then: "The impl does NOT have datastore field (no @Service-typed properties to wire)"
+        then: 'The impl does NOT have datastore field (no @Service-typed properties to wire)'
         impl.declaredFields.find { it.name == 'datastore' } == null
     }
 
     void "test @CompileStatic abstract class with multiple injected @Service properties compiles"() {
-        when: "A @CompileStatic @Service abstract class has multiple @Service-typed properties"
-        Class service = new GroovyClassLoader().parseClass('''
+        when: 'A @CompileStatic @Service abstract class has multiple @Service-typed properties'
+        def service = new GroovyClassLoader().parseClass('''
 import grails.gorm.services.Service
 import grails.gorm.annotation.Entity
 import groovy.transform.CompileStatic
@@ -232,21 +233,21 @@ interface OrderDataService {
 }
 ''')
 
-        then: "Compilation succeeds with multiple @Service-typed properties under @CompileStatic"
+        then: 'Compilation succeeds with multiple @Service-typed properties under @CompileStatic'
         noExceptionThrown()
 
-        when: "The impl is loaded"
-        Class impl = service.classLoader.loadClass('$OrderServiceImplementation')
+        when: 'The impl is loaded'
+        def impl = service.classLoader.loadClass('$OrderServiceImplementation')
 
-        then: "The impl has datastore infrastructure for service injection"
+        then: 'The impl has datastore infrastructure for service injection'
         impl != null
         impl.getDeclaredMethod('getDatastore').returnType == Datastore
         impl.getDeclaredMethod('setDatastore', Datastore) != null
     }
 
     void "test @CompileStatic with custom methods and return statements compiles"() {
-        when: "A @CompileStatic @Service abstract class has custom methods with complex return statements"
-        Class service = new GroovyClassLoader().parseClass('''
+        when: 'A @CompileStatic @Service abstract class has custom methods with complex return statements'
+        def service = new GroovyClassLoader().parseClass('''
 import grails.gorm.services.Service
 import grails.gorm.annotation.Entity
 import groovy.transform.CompileStatic
@@ -299,20 +300,20 @@ interface ReportDataService {
 }
 ''')
 
-        then: "Compilation succeeds — return statements in custom methods work under @CompileStatic"
+        then: 'Compilation succeeds — return statements in custom methods work under @CompileStatic'
         noExceptionThrown()
 
-        when: "The impl is loaded"
-        Class impl = service.classLoader.loadClass('$ReportServiceImplementation')
+        when: 'The impl is loaded'
+        def impl = service.classLoader.loadClass('$ReportServiceImplementation')
 
-        then: "The impl is valid"
+        then: 'The impl is valid'
         impl != null
         org.grails.datastore.mapping.services.Service.isAssignableFrom(impl)
     }
 
     void "test impl has datastore infrastructure when abstract class has @Service properties"() {
-        when: "A @Service abstract class with @Service-typed properties is compiled"
-        Class service = new GroovyClassLoader().parseClass('''
+        when: 'A @Service abstract class with @Service-typed properties is compiled'
+        def service = new GroovyClassLoader().parseClass('''
 import grails.gorm.services.Service
 import grails.gorm.annotation.Entity
 
@@ -341,13 +342,13 @@ interface RecordDataService {
 }
 ''')
 
-        then: "Compilation succeeds"
+        then: 'Compilation succeeds'
         noExceptionThrown()
 
-        when: "The impl class is inspected"
-        Class impl = service.classLoader.loadClass('$RecordServiceImplementation')
+        when: 'The impl class is inspected'
+        def impl = service.classLoader.loadClass('$RecordServiceImplementation')
 
-        then: "The impl has datastore infrastructure for service injection"
+        then: 'The impl has datastore infrastructure for service injection'
         impl.getDeclaredMethod('setDatastore', Datastore) != null
         impl.getDeclaredMethod('getDatastore').returnType == Datastore
         impl.getDeclaredField('datastore') != null
