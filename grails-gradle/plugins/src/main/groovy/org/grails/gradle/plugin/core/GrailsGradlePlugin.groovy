@@ -71,8 +71,6 @@ import org.springframework.boot.gradle.dsl.SpringBootExtension
 import org.springframework.boot.gradle.plugin.ResolveMainClassName
 import org.springframework.boot.gradle.plugin.SpringBootPlugin
 import org.springframework.boot.gradle.tasks.bundling.BootArchive
-import org.springframework.boot.gradle.tasks.bundling.BootJar
-import org.springframework.boot.gradle.tasks.bundling.BootWar
 import org.springframework.boot.gradle.tasks.run.BootRun
 import org.springframework.boot.loader.tools.LoaderImplementation
 
