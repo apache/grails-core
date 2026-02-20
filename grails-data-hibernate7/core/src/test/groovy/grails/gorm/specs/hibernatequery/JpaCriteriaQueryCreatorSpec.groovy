@@ -22,9 +22,9 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         var detachedCriteria = new DetachedCriteria(Person)
         var projections = new Query.ProjectionList()
         projections.property("firstName")
-        var predicateGenerator = new PredicateGenerator()
+
         
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, predicateGenerator)
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()
@@ -42,9 +42,9 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         var projections = new Query.ProjectionList()
         projections.property("firstName")
         projections.property("lastName")
-        var predicateGenerator = new PredicateGenerator()
 
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, predicateGenerator)
+
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()
@@ -61,9 +61,9 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         var detachedCriteria = new DetachedCriteria(Person)
         var projections = new Query.ProjectionList()
         projections.count()
-        var predicateGenerator = new PredicateGenerator()
 
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, predicateGenerator)
+
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()
@@ -79,9 +79,9 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         var detachedCriteria = new DetachedCriteria(Person)
         var projections = new Query.ProjectionList()
         projections.countDistinct("firstName")
-        var predicateGenerator = new PredicateGenerator()
 
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, predicateGenerator)
+
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()
@@ -97,9 +97,9 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         var detachedCriteria = new DetachedCriteria(Person)
         var projections = new Query.ProjectionList()
         projections.id()
-        var predicateGenerator = new PredicateGenerator()
 
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, predicateGenerator)
+
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()
@@ -118,9 +118,9 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         projections.min("age")
         projections.avg("age")
         projections.sum("age")
-        var predicateGenerator = new PredicateGenerator()
 
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, predicateGenerator)
+
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()
@@ -140,9 +140,9 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         var projections = new Query.ProjectionList()
         projections.groupProperty("lastName")
         projections.count()
-        var predicateGenerator = new PredicateGenerator()
 
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, predicateGenerator)
+
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()
@@ -159,9 +159,9 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         detachedCriteria.eq("firstName", "Bob")
         
         var projections = new Query.ProjectionList()
-        var predicateGenerator = new PredicateGenerator()
 
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, predicateGenerator)
+
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()
@@ -179,9 +179,9 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         var projections = new Query.ProjectionList()
         projections.distinct()
         projections.property("firstName")
-        var predicateGenerator = new PredicateGenerator()
 
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, predicateGenerator)
+
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()

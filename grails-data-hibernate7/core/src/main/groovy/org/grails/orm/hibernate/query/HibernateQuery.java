@@ -64,7 +64,7 @@ public class HibernateQuery extends Query {
     protected LinkedList<Association> associationStack = new LinkedList<Association>();
     protected DetachedCriteria detachedCriteria;
     protected ProxyHandler proxyHandler = new HibernateProxyHandler();
-    protected PredicateGenerator predicateGenerator;
+
     private Integer fetchSize;
     private Integer timeout;
     private FlushMode flushMode;
@@ -73,7 +73,7 @@ public class HibernateQuery extends Query {
     public HibernateQuery(AbstractHibernateSession session, PersistentEntity entity) {
         super(session, entity);
         this.detachedCriteria = new DetachedCriteria(entity.getJavaClass());
-        this.predicateGenerator = new PredicateGenerator();
+
     }
 
     public void setDetachedCriteria(DetachedCriteria detachedCriteria) {
@@ -394,7 +394,7 @@ public class HibernateQuery extends Query {
     }
 
     public JpaCriteriaQuery<?> getJpaCriteriaQuery() {
-        return new JpaCriteriaQueryCreator(projections, getCriteriaBuilder(), entity, detachedCriteria, predicateGenerator).createQuery();
+        return new JpaCriteriaQueryCreator(projections, getCriteriaBuilder(), entity, detachedCriteria).createQuery();
     }
 
     public void setFetchSize(Integer fetchSize) {
@@ -622,7 +622,7 @@ public class HibernateQuery extends Query {
                 hibernateQuery.offset(this.offset);
             }
             hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());
-            hibernateQuery.predicateGenerator = this.predicateGenerator;
+
             return hibernateQuery;
         });
     }
