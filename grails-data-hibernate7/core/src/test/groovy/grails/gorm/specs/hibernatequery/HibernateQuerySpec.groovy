@@ -900,6 +900,17 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         results[0] == "Bob"
     }
 
+
+    def distinctQuery() {
+        given:
+        new Person(firstName: "Bob", lastName: "Builder", age: 50).save(flush: true)
+        hibernateQuery.select("firstName").distinct()
+        when:
+        def results = hibernateQuery.list()
+        then:
+        results.size() == 1
+        results[0] == "Bob"
+    }
 }
 
 

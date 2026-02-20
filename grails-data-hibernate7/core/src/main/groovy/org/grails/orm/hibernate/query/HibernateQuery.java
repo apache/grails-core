@@ -37,15 +37,12 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
-import org.springframework.core.convert.ConversionService;
-import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Bridges the Query API with the Hibernate Criteria API
@@ -55,27 +52,16 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @SuppressWarnings("rawtypes")
 public class HibernateQuery extends Query {
-
-    public static final String SIZE_CONSTRAINT_PREFIX = "Size";
-
     protected static final String ALIAS = "_alias";
-    protected static ConversionService conversionService = new DefaultConversionService();
-
-    private static final Map<String, Boolean> JOIN_STATUS_CACHE = new ConcurrentHashMap<String, Boolean>();
-
     protected String alias;
     protected int aliasCount;
-
     public DetachedCriteria getDetachedCriteria() {
         return detachedCriteria;
     }
-
-    protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<String, CriteriaAndAlias>();
-    protected LinkedList<String> aliasStack = new LinkedList<String>();
+    protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
+    protected LinkedList<String> aliasStack = new LinkedList<>();
     protected LinkedList<PersistentEntity> entityStack = new LinkedList<PersistentEntity>();
     protected LinkedList<Association> associationStack = new LinkedList<Association>();
-    protected LinkedList aliasInstanceStack = new LinkedList();
-    private boolean hasJoins = false;
     protected DetachedCriteria detachedCriteria;
     protected ProxyHandler proxyHandler = new HibernateProxyHandler();
     protected PredicateGenerator predicateGenerator;
@@ -93,9 +79,6 @@ public class HibernateQuery extends Query {
     public void setDetachedCriteria(DetachedCriteria detachedCriteria) {
         this.detachedCriteria = detachedCriteria;
     }
-
-
-
 
     @Override
     protected Object resolveIdIfEntity(Object value) {
@@ -321,11 +304,9 @@ public class HibernateQuery extends Query {
     @Override
     public AssociationQuery createQuery(String associationName) {
         final PersistentProperty property = entity.getPropertyByName(calculatePropertyName(associationName));
-        if ((property instanceof Association)) {
+        if ((property instanceof Association association)) {
             String alias = generateAlias(associationName);
             CriteriaAndAlias subCriteria = getOrCreateAlias(associationName, alias);
-
-            Association association = (Association) property;
             if(subCriteria.criteria != null) {
                 return new HibernateAssociationQuery(subCriteria.criteria, (AbstractHibernateSession) getSession(), association.getAssociatedEntity(), association, alias);
             }

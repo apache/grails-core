@@ -41,7 +41,7 @@ public class JpaCriteriaQueryCreator {
 
         var projectionList = collectProjections();
         var cq = createCriteriaQuery(projectionList);
-        From root = cq.from(entity.getJavaClass());
+        var root = cq.from(entity.getJavaClass());
         var tablesByName = new JpaFromProvider(detachedCriteria,cq,root);
 
 

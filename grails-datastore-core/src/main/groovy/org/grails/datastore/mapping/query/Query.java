@@ -1520,6 +1520,7 @@ public abstract class Query implements Cloneable {
         }
 
         public ProjectionList distinct() {
+            add(Projections.distinct());
             return this;
         }
 
