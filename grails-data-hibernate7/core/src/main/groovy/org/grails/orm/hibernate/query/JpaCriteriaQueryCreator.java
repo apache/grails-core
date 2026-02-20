@@ -21,17 +21,20 @@ public class JpaCriteriaQueryCreator {
     private final HibernateCriteriaBuilder criteriaBuilder;
     private final PersistentEntity entity;
     private final DetachedCriteria detachedCriteria;
+    private final PredicateGenerator predicateGenerator;
 
     public JpaCriteriaQueryCreator(
             Query.ProjectionList projections
             , HibernateCriteriaBuilder criteriaBuilder
             , PersistentEntity entity
             , DetachedCriteria detachedCriteria
+            , PredicateGenerator predicateGenerator
     ) {
         this.projections = projections;
         this.criteriaBuilder = criteriaBuilder;
         this.entity = entity;
         this.detachedCriteria = detachedCriteria;
+        this.predicateGenerator = predicateGenerator;
     }
 
     public JpaCriteriaQuery<?> createQuery() {
@@ -132,7 +135,7 @@ public class JpaCriteriaQueryCreator {
     private void assignCriteria(CriteriaQuery cq , From root, JpaFromProvider tablesByName, PersistentEntity entity) {
         List<Query.Criterion>  criteriaList =detachedCriteria.getCriteria();
         if (!criteriaList.isEmpty()) {
-            jakarta.persistence.criteria.Predicate[] predicates = PredicateGenerator.getPredicates(criteriaBuilder, cq, root, criteriaList, tablesByName,entity);
+            jakarta.persistence.criteria.Predicate[] predicates = predicateGenerator.getPredicates(criteriaBuilder, cq, root, criteriaList, tablesByName,entity);
             cq.where(criteriaBuilder.and(predicates));
         }
     }
