@@ -30,13 +30,15 @@ configurations.register('documentation') {
 dependencies {
     documentation "org.codehaus.groovy:groovy-templates:$groovyVersion"
     documentation "org.codehaus.groovy:groovy-dateutil:$groovyVersion"
+    documentation "org.codehaus.groovy:groovy-ant:$groovyVersion"
+    documentation "org.codehaus.groovy:groovy-groovydoc:$groovyVersion"
 }
 
-tasks.withType(Groovydoc).configureEach {
-    classpath += project.configurations.documentation
-    windowTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
-    docTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
-    footer = '''<!-- Matomo -->
+tasks.withType(Groovydoc).configureEach { Groovydoc gdoc ->
+    gdoc.classpath += project.configurations.documentation
+    gdoc.windowTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
+    gdoc.docTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
+    gdoc.footer = '''<!-- Matomo -->
 <script>
     var _paq = window._paq = window._paq || [];
     /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
@@ -53,10 +55,68 @@ tasks.withType(Groovydoc).configureEach {
     })();
 </script>
 <!-- End Matomo Code -->'''
-    access = GroovydocAccess.PROTECTED
-    includeAuthor = false
-    includeMainForScripts = false
-    processScripts = false
-    noTimestamp = true
-    noVersionStamp = false
+    gdoc.access = GroovydocAccess.PROTECTED
+    gdoc.includeAuthor = false
+    gdoc.includeMainForScripts = false
+    gdoc.processScripts = false
+    gdoc.noTimestamp = true
+    gdoc.noVersionStamp = false
+
+    // Resolve a Groovydoc task property that may be either a Gradle Property<T> or a plain value.
+    Closure resolveGroovydocProperty = { Object value ->
+        if (value instanceof org.gradle.api.provider.Provider) {
+            return value.getOrNull()
+        }
+        return value
+    }
+
+    // Replace Gradle's built-in Groovydoc execution with AntBuilder for consistency
+    // with the main build. The javaVersion parameter is not available in Groovy 3.x
+    // (requires Groovy 4.0.27+, GROOVY-11668) - it will be added when forge upgrades.
+    // See: https://github.com/apache/grails-core/issues/15385
+    gdoc.actions.clear()
+    gdoc.doLast {
+        def destDir = gdoc.destinationDir
+        destDir.mkdirs()
+
+        List<File> sourceDirs = []
+        def sourceSetsExt = project.extensions.findByType(SourceSetContainer)
+        if (sourceSetsExt) {
+            def mainSS = sourceSetsExt.findByName('main')
+            if (mainSS) {
+                sourceDirs.addAll(mainSS.groovy.srcDirs.findAll { it.exists() })
+                sourceDirs.addAll(mainSS.java.srcDirs.findAll { it.exists() })
+            }
+        }
+        sourceDirs = sourceDirs.unique()
+
+        if (sourceDirs.isEmpty()) {
+            logger.lifecycle("Skipping groovydoc for ${gdoc.name}: no source directories found")
+            return
+        }
+
+        ant.taskdef(
+                name: 'groovydoc',
+                classname: 'org.codehaus.groovy.ant.Groovydoc',
+                classpath: configurations.documentation.asPath
+        )
+
+        def sourcepath = sourceDirs.collect { File f -> f.absolutePath }.join(File.pathSeparator)
+
+        // Note: javaVersion omitted - not supported in Groovy 3.x (forge uses Groovy $groovyVersion)
+        ant.groovydoc(
+                destdir: destDir.absolutePath,
+                sourcepath: sourcepath,
+                packagenames: '**.*',
+                windowtitle: gdoc.windowTitle ?: '',
+                doctitle: gdoc.docTitle ?: '',
+                footer: gdoc.footer ?: '',
+                access: resolveGroovydocProperty(gdoc.access)?.name()?.toLowerCase() ?: 'protected',
+                author: resolveGroovydocProperty(gdoc.includeAuthor) as String,
+                noTimestamp: resolveGroovydocProperty(gdoc.noTimestamp) as String,
+                noVersionStamp: resolveGroovydocProperty(gdoc.noVersionStamp) as String,
+                processScripts: resolveGroovydocProperty(gdoc.processScripts) as String,
+                includeMainForScripts: resolveGroovydocProperty(gdoc.includeMainForScripts) as String
+        )
+    }
 }

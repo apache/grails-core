@@ -44,7 +44,11 @@ dependencies {
     documentation 'com.github.javaparser:javaparser-core'
     documentation "info.picocli:picocli:$picocliVersion"
     documentation 'org.apache.groovy:groovy-dateutil'
+    documentation 'org.apache.groovy:groovy-ant'
+    documentation 'org.apache.groovy:groovy-groovydoc'
+    documentation 'org.apache.groovy:groovy-templates'
     documentation 'org.fusesource.jansi:jansi'
+    documentation 'jline:jline'
     documentation project(':grails-bootstrap')
     documentation project(':grails-core')
     documentation project(':grails-spring')
@@ -90,6 +94,18 @@ tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
     ]
 }
 
+// Resolve a Groovydoc task property that may be either a Gradle Property<T> or a plain value.
+Object resolveGroovydocProperty(Object value) {
+    if (value instanceof org.gradle.api.provider.Provider) {
+        return value.getOrNull()
+    }
+    return value
+}
+
+// Compute the javaVersion string for groovydoc's JavaParser language level.
+// Requires Groovy 4.0.27+ (GROOVY-11668).
+String groovydocJavaVersion = "JAVA_${project.findProperty('javaVersion') ?: '17'}"
+
 tasks.withType(Groovydoc).configureEach {
     it.dependsOn(rootProject.subprojects
             .findAll { it.findProperty('gormApiDocs') }
@@ -131,6 +147,52 @@ tasks.withType(Groovydoc).configureEach {
     it.classpath = configurations.documentation
     it.groovyClasspath += configurations.documentation
     it.noVersionStamp = false
+
+    // Collect source directories for AntBuilder groovydoc
+    List<File> groovydocSrcDirs = coreProjects.collect {
+        rootProject.layout.projectDirectory.dir("$it/src/main/groovy").asFile
+    }
+    rootProject.subprojects
+            .findAll { sp -> sp.findProperty('gormApiDocs') }
+            .each { sp -> groovydocSrcDirs << new File(sp.projectDir, 'src/main/groovy') }
+    it.ext.groovydocSourceDirs = groovydocSrcDirs
+
+    // Replace Gradle's built-in Groovydoc execution with AntBuilder to support javaVersion.
+    // See: https://github.com/apache/grails-core/issues/15385
+    it.actions.clear()
+    it.doLast { Groovydoc gdoc ->
+        def destDir = gdoc.destinationDir
+        destDir.mkdirs()
+
+        List<File> sourceDirs = (gdoc.ext.groovydocSourceDirs as List<File>).findAll { File f -> f.exists() }.unique()
+        if (sourceDirs.isEmpty()) {
+            logger.lifecycle("Skipping groovydoc for ${gdoc.name}: no source directories found")
+            return
+        }
+
+        ant.taskdef(
+                name: 'groovydoc',
+                classname: 'org.codehaus.groovy.ant.Groovydoc',
+                classpath: configurations.documentation.asPath
+        )
+
+        def sourcepath = sourceDirs.collect { File f -> f.absolutePath }.join(File.pathSeparator)
+
+        ant.groovydoc(
+                destdir: destDir.absolutePath,
+                sourcepath: sourcepath,
+                packagenames: '**.*',
+                doctitle: gdoc.docTitle ?: '',
+                footer: gdoc.footer ?: '',
+                access: resolveGroovydocProperty(gdoc.access)?.name()?.toLowerCase() ?: 'protected',
+                author: resolveGroovydocProperty(gdoc.includeAuthor) as String,
+                noTimestamp: 'true',
+                noVersionStamp: resolveGroovydocProperty(gdoc.noVersionStamp) as String,
+                processScripts: resolveGroovydocProperty(gdoc.processScripts) as String,
+                includeMainForScripts: resolveGroovydocProperty(gdoc.includeMainForScripts) as String,
+                javaVersion: groovydocJavaVersion
+        )
+    }
 }
 
 tasks.register('docs', Sync).configure { Sync docTask ->

@@ -42,6 +42,18 @@ ext {
     includeInApiDocs = true
 }
 
+// Resolve a Groovydoc task property that may be either a Gradle Property<T> or a plain value.
+Object resolveGroovydocProperty(Object value) {
+    if (value instanceof org.gradle.api.provider.Provider) {
+        return value.getOrNull()
+    }
+    return value
+}
+
+// Compute the javaVersion string for groovydoc's JavaParser language level.
+// Requires Groovy 4.0.27+ (GROOVY-11668).
+String groovydocJavaVersion = "JAVA_${project.findProperty('javaVersion') ?: '17'}"
+
 TaskProvider<Groovydoc> groovydocTask = tasks.named('groovydoc', Groovydoc)
 groovydocTask.configure { Groovydoc it ->
     it.classpath = configurations.documentation
@@ -70,6 +82,48 @@ groovydocTask.configure { Groovydoc it ->
 </script>
 <!-- End Matomo Code -->'''
     it.destinationDir = project.file('build/docs/api')
+
+    // Replace Gradle's built-in Groovydoc execution with AntBuilder to support javaVersion.
+    // See: https://github.com/apache/grails-core/issues/15385
+    it.actions.clear()
+    it.doLast {
+        def destDir = it.destinationDir
+        destDir.mkdirs()
+
+        SourceSetContainer sourceSets = project.extensions.getByType(SourceSetContainer)
+        List<File> sourceDirs = ([] + sourceSets.main.groovy.srcDirs + sourceSets.main.java.srcDirs)
+                .findAll { File f -> f.exists() }
+                .unique()
+
+        if (sourceDirs.isEmpty()) {
+            logger.lifecycle("Skipping groovydoc for ${it.name}: no source directories found")
+            return
+        }
+
+        ant.taskdef(
+                name: 'groovydoc',
+                classname: 'org.codehaus.groovy.ant.Groovydoc',
+                classpath: configurations.documentation.asPath
+        )
+
+        def sourcepath = sourceDirs.collect { File f -> f.absolutePath }.join(File.pathSeparator)
+
+        ant.groovydoc(
+                destdir: destDir.absolutePath,
+                sourcepath: sourcepath,
+                packagenames: '**.*',
+                windowtitle: it.windowTitle ?: '',
+                doctitle: it.docTitle ?: '',
+                footer: it.footer ?: '',
+                access: resolveGroovydocProperty(it.access)?.name()?.toLowerCase() ?: 'protected',
+                author: resolveGroovydocProperty(it.includeAuthor) as String,
+                noTimestamp: resolveGroovydocProperty(it.noTimestamp) as String,
+                noVersionStamp: resolveGroovydocProperty(it.noVersionStamp) as String,
+                processScripts: resolveGroovydocProperty(it.processScripts) as String,
+                includeMainForScripts: resolveGroovydocProperty(it.includeMainForScripts) as String,
+                javaVersion: groovydocJavaVersion
+        )
+    }
 }
 
 tasks.named('javadoc').configure {

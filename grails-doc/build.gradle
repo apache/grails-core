@@ -127,7 +127,9 @@ combinedGroovydoc.configure { Groovydoc gdoc ->
                 sourceDirs
             }
 
-    gdoc.source(project.files((baseSourceDirs + includedBuildSourceDirs).unique()))
+    def allSourceDirs = (baseSourceDirs + includedBuildSourceDirs).unique()
+    gdoc.source(project.files(allSourceDirs))
+    gdoc.ext.groovydocSourceDirs = allSourceDirs
 
     gdoc.classpath = files(sources.collect { SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten().unique())
     gdoc.destinationDir = project.layout.buildDirectory.dir('combined-api/api').get().asFile
