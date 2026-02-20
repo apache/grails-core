@@ -8,7 +8,6 @@ import org.hibernate.Session;
 import org.hibernate.query.Query;
 import org.hibernate.query.ResultListTransformer;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
-import org.hibernate.transform.ResultTransformer;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,7 +21,6 @@ public record HibernateQueryExecutor(
         , Integer timeout
         , FlushMode flushMode
         , Boolean readOnly
-        , ResultTransformer resultTransformer
         , ProxyHandler proxyHandler
 
 ) {
@@ -55,7 +53,6 @@ public record HibernateQueryExecutor(
       Optional.ofNullable(queryCache).ifPresent( qc -> query.setHint("org.hibernate.cacheable", qc));
       Optional.ofNullable(maxResults).filter(v -> v > 0).ifPresent(query::setMaxResults);
       Optional.ofNullable(lockResult).ifPresent(query::setLockMode);
-      Optional.ofNullable(resultTransformer).ifPresent(query::setResultTransformer);
       Optional.ofNullable(fetchSize).filter(v -> v > 0).ifPresent(query::setFetchSize);
       Optional.ofNullable(timeout).filter(v -> v > 0).ifPresent(query::setTimeout);
       Optional.ofNullable(flushMode).map(mode -> mode.toJpaFlushMode()).ifPresent(query::setFlushMode);

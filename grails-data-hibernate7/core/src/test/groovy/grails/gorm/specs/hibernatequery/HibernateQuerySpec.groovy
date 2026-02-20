@@ -810,6 +810,96 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     }
 
+    def notCriterion() {
+        given:
+        new Person(firstName: "Fred", lastName: "Rogers", age: 51).save(flush: true)
+        hibernateQuery.not(new Query.Equals("firstName", "Fred"))
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def andClosure() {
+        given:
+        new Person(firstName: "Bob", lastName: "Builder", age: 51).save(flush: true)
+        hibernateQuery.and {
+            eq "lastName", "Builder"
+            eq "age", 50
+        }
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def orClosure() {
+        given:
+        new Person(firstName: "Bob", lastName: "Builder", age: 51).save(flush: true)
+        hibernateQuery.or {
+            eq "lastName", "Rogers"
+            eq "age", 50
+        }
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def notClosure() {
+        given:
+        new Person(firstName: "Fred", lastName: "Rogers", age: 51).save(flush: true)
+        hibernateQuery.not {
+            eq "firstName", "Fred"
+        }
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def firstResult() {
+        given:
+        new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
+        hibernateQuery.firstResult(1).order(Query.Order.asc("age"))
+        when:
+        def bobs = hibernateQuery.list()
+        then:
+        bobs.size() == 1
+        bobs[0].firstName == "Fred"
+    }
+
+    def select() {
+        given:
+        hibernateQuery.select("firstName")
+        when:
+        def names = hibernateQuery.list()
+        then:
+        names.size() == 1
+        names[0] == "Bob"
+    }
+
+    def sizeNe() {
+        given:
+        new Pet(name: "Lucky", age: 48, owner: oldBob).save(flush:true)
+        hibernateQuery.sizeNe("pets", 0)
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def distinct() {
+        given:
+        new Person(firstName: "Bob", lastName: "Builder", age: 50).save(flush: true)
+        hibernateQuery.projections().distinct("firstName")
+        when:
+        def results = hibernateQuery.list()
+        then:
+        results.size() == 1
+        results[0] == "Bob"
+    }
+
 }
 
 
@@ -820,4 +910,3 @@ class BigDecimalEntity implements Serializable {
     Long version
     BigDecimal amount
 }
-

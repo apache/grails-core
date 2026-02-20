@@ -46,7 +46,6 @@ import org.grails.orm.hibernate.query.HibernateQueryConstants;
 import org.hibernate.FetchMode;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.transform.ResultTransformer;
 import org.hibernate.type.BasicTypeReference;
 import org.hibernate.type.StandardBasicTypes;
 import org.slf4j.Logger;
@@ -433,13 +432,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
 
     }
 
-    /**
-     * Sets the resultTransformer.
-     * @param transformer The result transformer to use.
-     */
-    public void resultTransformer(ResultTransformer transformer) {
-        hibernateQuery.setResultTransformer(transformer);
-    }
+
 
 
     /**

@@ -35,10 +35,8 @@ import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
-import org.hibernate.transform.ResultTransformer;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
@@ -80,7 +78,6 @@ public class HibernateQuery extends Query {
     private boolean hasJoins = false;
     protected DetachedCriteria detachedCriteria;
     protected ProxyHandler proxyHandler = new HibernateProxyHandler();
-    protected ResultTransformer resultTransformer;
     private Integer fetchSize;
     private Integer timeout;
     private FlushMode flushMode;
@@ -95,13 +92,8 @@ public class HibernateQuery extends Query {
         this.detachedCriteria = detachedCriteria;
     }
 
-    public void setResultTransformer(ResultTransformer resultTransformer) {
-        this.resultTransformer = resultTransformer;
-    }
 
-    public ResultTransformer getResultTransformer() {
-        return resultTransformer;
-    }
+
 
     @Override
     protected Object resolveIdIfEntity(Object value) {
@@ -327,7 +319,7 @@ public class HibernateQuery extends Query {
     @Override
     public AssociationQuery createQuery(String associationName) {
         final PersistentProperty property = entity.getPropertyByName(calculatePropertyName(associationName));
-        if (property != null && (property instanceof Association)) {
+        if ((property instanceof Association)) {
             String alias = generateAlias(associationName);
             CriteriaAndAlias subCriteria = getOrCreateAlias(associationName, alias);
 
@@ -415,6 +407,8 @@ public class HibernateQuery extends Query {
     @Override
     public Query select(String property) {
         detachedCriteria.select(property);
+        // Ensure property is added to projections for Hibernate 7
+        projections.property(property);
         return this;
     }
 
@@ -428,7 +422,7 @@ public class HibernateQuery extends Query {
     }
 
     private HibernateQueryExecutor getHibernateQueryExecutor() {
-        return new HibernateQueryExecutor(offset, max, lockResult, queryCache, fetchSize, timeout, flushMode, readOnly, resultTransformer, proxyHandler);
+        return new HibernateQueryExecutor(offset, max, lockResult, queryCache, fetchSize, timeout, flushMode, readOnly, proxyHandler);
     }
 
     public JpaCriteriaQuery<?> getJpaCriteriaQuery() {
