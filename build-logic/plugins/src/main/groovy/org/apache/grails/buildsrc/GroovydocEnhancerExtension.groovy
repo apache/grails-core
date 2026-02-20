@@ -27,17 +27,24 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 
 /**
- * Extension for configuring the Grails Groovydoc convention plugin.
+ * Extension for configuring the Groovydoc Enhancer convention plugin.
  *
- * <p>Allows per-project control over the {@code javaVersion} parameter
- * passed to the Groovy Ant groovydoc task. The {@code javaVersion}
- * parameter was added in Groovy 4.0.27 (GROOVY-11668) and controls
- * the JavaParser language level used when parsing Java sources.</p>
+ * <p>This plugin replaces Gradle's built-in Groovydoc task execution with
+ * a direct AntBuilder invocation of the Groovy {@code org.codehaus.groovy.ant.Groovydoc}
+ * Ant task. This enables the {@code javaVersion} parameter (added in Groovy 4.0.27,
+ * GROOVY-11668) which controls the JavaParser language level used when parsing
+ * Java source files.</p>
+ *
+ * <p>When Gradle natively supports the {@code javaVersion} property
+ * (see <a href="https://github.com/gradle/gradle/issues/33659">gradle#33659</a>),
+ * set {@link #useAntBuilder} to {@code false} to revert to Gradle's built-in
+ * Groovydoc task execution while retaining all other configuration (footer,
+ * defaults, etc.).</p>
  *
  * @since 7.0.8
  */
 @CompileStatic
-class GrailsGroovydocExtension {
+class GroovydocEnhancerExtension {
 
     /**
      * The Java language level string passed to the groovydoc Ant task's
@@ -57,11 +64,35 @@ class GrailsGroovydocExtension {
      */
     final Property<Boolean> javaVersionEnabled
 
+    /**
+     * Whether to replace Gradle's built-in Groovydoc task execution with
+     * AntBuilder invocation. When {@code true} (default), the plugin clears
+     * the task's actions and replaces them with a {@code doLast} that uses
+     * AntBuilder. When {@code false}, the plugin only applies property
+     * defaults (footer, etc.) and lets Gradle's built-in task run normally.
+     *
+     * <p>Set to {@code false} when Gradle adds native {@code javaVersion}
+     * support (gradle/gradle#33659).</p>
+     *
+     * <p>Defaults to {@code true}.</p>
+     */
+    final Property<Boolean> useAntBuilder
+
+    /**
+     * HTML footer appended to every generated groovydoc page. Useful for
+     * analytics scripts, copyright notices, or custom branding.
+     *
+     * <p>Defaults to an empty string (no footer).</p>
+     */
+    final Property<String> footer
+
     @Inject
-    GrailsGroovydocExtension(ObjectFactory objects, Project project) {
+    GroovydocEnhancerExtension(ObjectFactory objects, Project project) {
         javaVersion = objects.property(String).convention(
                 "JAVA_${GradleUtils.findProperty(project, 'javaVersion') ?: '17'}" as String
         )
         javaVersionEnabled = objects.property(Boolean).convention(true)
+        useAntBuilder = objects.property(Boolean).convention(true)
+        footer = objects.property(String).convention('')
     }
 }

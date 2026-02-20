@@ -19,7 +19,7 @@
 
 apply plugin: 'org.apache.grails.buildsrc.groovydoc'
 
-grailsGroovydoc {
+groovydocEnhancer {
     javaVersionEnabled = false
 }
 

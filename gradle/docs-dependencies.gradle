@@ -40,6 +40,7 @@ String resolveProjectVersion(String artifact) {
     if (!version) {
         return null
     }
+    version
 }
 
 tasks.withType(Groovydoc).configureEach { Groovydoc gdoc ->
