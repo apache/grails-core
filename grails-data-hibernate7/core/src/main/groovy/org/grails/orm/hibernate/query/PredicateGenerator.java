@@ -49,14 +49,14 @@ public class PredicateGenerator {
     public Predicate[] getPredicates(HibernateCriteriaBuilder cb,
                                             CriteriaQuery criteriaQuery,
                                             From root_,
-                                            List<Query.Criterion> criteriaList, JpaFromProvider fromsByProvider, PersistentEntity entity) {
+                                            List criteriaList, JpaFromProvider fromsByProvider, PersistentEntity entity) {
 
 
         List<Predicate> list = criteriaList.stream().
-                map(criterion -> {
+                map((Object criterion) -> {
                     if (criterion instanceof Query.Junction junction) {
                         var criterionList = junction.getCriteria();
-                        var predicates = this.getPredicates(cb, criteriaQuery, root_, criterionList, fromsByProvider, entity);
+                        var predicates = (Predicate[])this.getPredicates(cb, criteriaQuery, root_, (List)criterionList, fromsByProvider, entity);
                         if (junction instanceof Query.Disjunction) {
                             return cb.or(predicates);
                         } else if (junction instanceof Query.Conjunction) {
@@ -76,7 +76,7 @@ public class PredicateGenerator {
                         List<Query.Criterion> criterionList = c.getCriteria();
                         JpaFromProvider childTablesByName = (JpaFromProvider) fromsByProvider.clone();
                         childTablesByName.put("root", child);
-                        return cb.and(this.getPredicates(cb, criteriaQuery, child, criterionList, childTablesByName, entity));
+                        return cb.and((Predicate[])this.getPredicates(cb, criteriaQuery, child, (List)criterionList, childTablesByName, entity));
                     } else if (criterion instanceof Query.PropertyCriterion pc) {
                         var fullyQualifiedPath = fromsByProvider.getFullyQualifiedPath(pc.getProperty());
                         if (criterion instanceof Query.Equals c) {
@@ -122,10 +122,10 @@ public class PredicateGenerator {
                         } else if (criterion instanceof Query.Like c) {
                             return cb.like(fullyQualifiedPath, c.getValue().toString());
                         } else if (criterion instanceof Query.In c) {
-                            var queryableCriteria = getQueryableCriteriaFromInCriteria(criterion);
+                            var queryableCriteria = getQueryableCriteriaFromInCriteria((Query.Criterion)criterion);
                             if (Objects.nonNull(queryableCriteria)) {
 
-                                CriteriaBuilder.In value = getQueryableCriteriaValue(cb, criteriaQuery, fromsByProvider, entity, (Query.PropertyNameCriterion) criterion, queryableCriteria);
+                                CriteriaBuilder.In value = getQueryableCriteriaValue(cb, criteriaQuery, fromsByProvider, entity, (Query.PropertyNameCriterion)criterion, queryableCriteria);
                                 return value;
                             } else if (!c.getValues().isEmpty()) {
                                 boolean areGormEntities = c.getValues().stream().allMatch(GormEntity.class::isInstance);
@@ -138,9 +138,9 @@ public class PredicateGenerator {
                                 return cb.in(fullyQualifiedPath, c.getValues());
                             }
                         } else if (criterion instanceof Query.NotIn c) {
-                            var queryableCriteria = getQueryableCriteriaFromInCriteria(criterion);
+                            var queryableCriteria = getQueryableCriteriaFromInCriteria((Query.Criterion)criterion);
                             if (Objects.nonNull(queryableCriteria)) {
-                                CriteriaBuilder.In value = getQueryableCriteriaValue(cb, criteriaQuery, fromsByProvider, entity, (Query.PropertyNameCriterion) criterion, queryableCriteria);
+                                CriteriaBuilder.In value = getQueryableCriteriaValue(cb, criteriaQuery, fromsByProvider, entity, (Query.PropertyNameCriterion)criterion, queryableCriteria);
                                 return cb.not(value);
                             } else if (Objects.nonNull(c.getSubquery())
                                     && !c.getSubquery().getProjections().isEmpty()
@@ -152,7 +152,7 @@ public class PredicateGenerator {
                                 Query.PropertyProjection projection = (Query.PropertyProjection) c.getSubquery().getProjections().get(0);
                                 boolean distinct = projection instanceof Query.DistinctPropertyProjection;
                                 JpaFromProvider newMap2 = (JpaFromProvider) fromsByProvider.clone();
-                                Predicate[] predicates2 = this.getPredicates(cb, criteriaQuery, from2, subCriteria2, newMap2, entity);
+                                Predicate[] predicates2 = (Predicate[])this.getPredicates(cb, criteriaQuery, from2, (List)subCriteria2, newMap2, entity);
                                 subquery2.select(from2.get(projection.getPropertyName())).distinct(distinct).where(cb.and(predicates2));
                                 return cb.not(cb.in(fullyQualifiedPath).value(subquery2));
                             } else if ( Objects.nonNull(c.getSubquery())
@@ -163,7 +163,7 @@ public class PredicateGenerator {
                                 Root from2 = subquery2.from(c.getValue().getPersistentEntity().getJavaClass());
                                 List subCriteria2 = c.getValue().getCriteria();
                                 JpaFromProvider newMap2 = (JpaFromProvider) fromsByProvider.clone();
-                                Predicate[] predicates2 = this.getPredicates(cb, criteriaQuery, from2, subCriteria2, newMap2, entity);
+                                Predicate[] predicates2 = (Predicate[])this.getPredicates(cb, criteriaQuery, from2, (List)subCriteria2, newMap2, entity);
                                 subquery2.select(from2).where(cb.and(predicates2));
                                 return cb.not(cb.in(root_.get("id")).value(subquery2));
                             } else {
@@ -176,7 +176,7 @@ public class PredicateGenerator {
                             List subCriteria = c.getValue().getCriteria();
                             JpaFromProvider newMap = (JpaFromProvider) fromsByProvider.clone();
                             newMap.put("root", from);
-                            Predicate[] predicates = this.getPredicates(cb, criteriaQuery, from, subCriteria, newMap, entity);
+                            Predicate[] predicates = (Predicate[])this.getPredicates(cb, criteriaQuery, from, (List)subCriteria, newMap, entity);
                             if (c instanceof Query.GreaterThanEqualsAll sc) {
                                 subquery.select(cb.max(from.get(c.getProperty()))).where(cb.and(predicates));
                                 return cb.greaterThanOrEqualTo(fromsByProvider.getFullyQualifiedPath(sc.getProperty()), subquery);
@@ -236,7 +236,7 @@ public class PredicateGenerator {
 
                         JpaFromProvider newMap = (JpaFromProvider) fromsByProvider.clone();
                         newMap.put("root", subRoot);
-                        var predicates = this.getPredicates(cb, criteriaQuery, subRoot, c.getSubquery().getCriteria(), newMap, entity);
+                        var predicates = (Predicate[])this.getPredicates(cb, criteriaQuery, subRoot, (List)c.getSubquery().getCriteria(), newMap, entity);
 
                         var existsPredicate = getExistsPredicate(cb, root_, childPersistentEntity, subRoot);
                         Predicate[] allPredicates = Stream.concat(
@@ -255,7 +255,7 @@ public class PredicateGenerator {
 
                         JpaFromProvider newMap = (JpaFromProvider) fromsByProvider.clone();
                         newMap.put("root", subRoot);
-                        var predicates = this.getPredicates(cb, criteriaQuery, subRoot, c.getSubquery().getCriteria(), newMap, entity);
+                        var predicates = (Predicate[])this.getPredicates(cb, criteriaQuery, subRoot, (List)c.getSubquery().getCriteria(), newMap, entity);
 
                         var existsPredicate = getExistsPredicate(cb, root_, childPersistentEntity, subRoot);
                         Predicate[] allPredicates = Stream.concat(
