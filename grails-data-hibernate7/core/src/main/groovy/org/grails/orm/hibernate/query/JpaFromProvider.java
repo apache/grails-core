@@ -3,11 +3,9 @@ package org.grails.orm.hibernate.query;
 import grails.gorm.DetachedCriteria;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.From;
-import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
-import org.grails.datastore.mapping.query.Query;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
 
 import java.util.AbstractMap;
@@ -33,7 +31,7 @@ public class JpaFromProvider implements Cloneable {
     }
 
     private Map<String, From<?, ?>> getFromsByName(DetachedCriteria<?> detachedCriteria, JpaCriteriaQuery<?> cq, From<?, ?> root) {
-        var detachedAssociationCriteriaList = ((List<Query.Criterion>) detachedCriteria.getCriteria())
+        var detachedAssociationCriteriaList = detachedCriteria.getCriteria()
                 .stream()
                 .map(new DetachedAssociationFunction())
                 .flatMap(List::stream)
@@ -42,7 +40,7 @@ public class JpaFromProvider implements Cloneable {
         var aliasMap = createAliasMap(detachedAssociationCriteriaList);
         //The join column is column for joining from the root entity
         var detachedFroms = createDetachedFroms(cq, detachedAssociationCriteriaList);
-        Map<String, From<?, ?>> fromsByName = Stream.concat(aliasMap.keySet().stream(), ((Map<String, FetchType>) detachedCriteria.getFetchStrategies())
+        Map<String, From<?, ?>> fromsByName = Stream.concat(aliasMap.keySet().stream(), detachedCriteria.getFetchStrategies()
                         .entrySet()
                         .stream()
                         .filter(entry -> entry.getValue().equals(FetchType.EAGER))
@@ -59,7 +57,7 @@ public class JpaFromProvider implements Cloneable {
                             ? root
                             : detachedFroms.computeIfAbsent(joinColumn, s -> cq.from(ownerClass));
 
-                    var table = base.join(joinColumn, ((Map<String, JoinType>) detachedCriteria.getJoinTypes())
+                    var table = base.join(joinColumn, detachedCriteria.getJoinTypes()
                             .entrySet()
                             .stream()
                             .filter(entry -> entry.getKey().equals(joinColumn))
