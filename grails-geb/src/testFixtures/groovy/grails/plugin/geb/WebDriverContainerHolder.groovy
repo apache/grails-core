@@ -260,9 +260,9 @@ class WebDriverContainerHolder {
         if (settings.atCheckWaiting != DEFAULT_AT_CHECK_WAITING)
             browser.config.atCheckWaiting = settings.atCheckWaiting
         if (settings.timeout != Wait.DEFAULT_TIMEOUT)
-            (browser.config.rawConfig.waiting as ConfigObject).timeout = settings.timeout
+            browser.config.defaultWaitTimeout = settings.timeout
         if (settings.retryInterval != Wait.DEFAULT_RETRY_INTERVAL)
-            (browser.config.rawConfig.waiting as ConfigObject).retryInterval = settings.retryInterval
+            browser.config.defaultWaitRetryInterval = settings.retryInterval
     }
 
     private static void startContainer(BrowserWebDriverContainer container, DockerImageName dockerImageName, String customBrowser) {

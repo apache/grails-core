@@ -463,14 +463,11 @@ public class GroovyPageParser implements Tokens {
     }
 
     private void declare(boolean gsp) {
-        if (finalPass) {
-            return;
-        }
-
-        out.println();
-        write(scan.getToken().trim(), gsp);
-        out.println();
-        out.println();
+        String syntax = gsp ? "!{ ... }!" : "<%! ... %>";
+        throw new GrailsTagException(
+                "JSP-style declaration blocks (" + syntax + ") are not supported in Groovy Server Pages. " +
+                "Use <% ... %> for scriptlet code or move logic to a controller or service.",
+                pageName, getCurrentOutputLineNumber());
     }
 
     private void direct() {

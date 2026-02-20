@@ -28,6 +28,7 @@ class EmployeeListPage extends ScaffoldListPage {
 
     static at = {
         title == 'Employee List' || title?.contains('Employee')
+        createNewButton.displayed
     }
 
     static content = {
@@ -52,6 +53,10 @@ class EmployeeCreatePage extends ScaffoldCreatePage {
 
     static at = {
         title == 'Create Employee' || title?.contains('Employee')
+        createForm.displayed
+        firstNameField.displayed
+        lastNameField.displayed
+        emailField.displayed
     }
 
     static content = {
@@ -74,6 +79,11 @@ class EmployeeCreatePage extends ScaffoldCreatePage {
         cityField { $('input[name="address.city"]') }
         postalCodeField { $('input[name="address.postalCode"]') }
         countryField { $('input[name="address.country"]') }
+    }
+
+    void createEmployee(String firstName, String lastName, String email) {
+        fillBasicInfo(firstName, lastName, email)
+        createButton.click()
     }
 
     /**

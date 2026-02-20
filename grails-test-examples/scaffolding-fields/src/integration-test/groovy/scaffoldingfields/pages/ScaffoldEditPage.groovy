@@ -39,7 +39,7 @@ class ScaffoldEditPage extends Page {
         editForm { $('form') }
 
         // Submit and cancel buttons
-        updateButton { $('input[type=submit], button[type=submit]', value: contains('Update')) }
+        updateButton { $('input[type=submit], button[type=submit]') }
         cancelButton(required: false) { $('a', text: contains('Cancel')) }
         deleteButton(required: false) { $('input[type=submit][value*="Delete"], button:contains("Delete")') }
 
