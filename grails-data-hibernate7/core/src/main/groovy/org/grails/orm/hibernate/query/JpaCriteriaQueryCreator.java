@@ -2,6 +2,7 @@ package org.grails.orm.hibernate.query;
 
 import grails.gorm.DetachedCriteria;
 
+import jakarta.persistence.Tuple;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
@@ -69,7 +70,7 @@ public class JpaCriteriaQueryCreator {
     private JpaCriteriaQuery<?> createCriteriaQuery(List<Query.Projection> projections) {
         var cq = projections.stream()
                 .filter( it -> !(it instanceof Query.DistinctProjection || it instanceof Query.DistinctPropertyProjection))
-                .toList().size() > 1 ?  criteriaBuilder.createQuery(Object[].class) : criteriaBuilder.createQuery(Object.class);
+                .toList().size() > 1 ?  criteriaBuilder.createTupleQuery() : criteriaBuilder.createQuery(Object.class);
         projections.stream()
                 .filter( it -> it instanceof Query.DistinctProjection || it instanceof Query.DistinctPropertyProjection)
                 .findFirst()
@@ -84,12 +85,15 @@ public class JpaCriteriaQueryCreator {
                 .filter(Objects::nonNull)
                 .toList();
         if (projectionExpressions.size() == 1) {
-            cq.select((Selection<? extends T>) projectionExpressions.get(0));
+            JpaExpression<?> jpaExpression = projectionExpressions.get(0);
+            cq.select((Selection<? extends T>) jpaExpression);
         } else if (projectionExpressions.size() > 1){
             var selectionArray = projectionExpressions.toArray(new Selection<?>[0]);
-            ((JpaCriteriaQuery<Object[]>)cq).select(criteriaBuilder.array(selectionArray));
+            CriteriaQuery<Tuple> tupleCriteriaQuery = (CriteriaQuery<Tuple>) cq;
+            tupleCriteriaQuery.select(criteriaBuilder.tuple(selectionArray));
         } else {
-            cq.select((Selection<? extends T>) tablesByName.getFullyQualifiedPath("root"));
+            Path<?> root = tablesByName.getFullyQualifiedPath("root");
+            cq.select((Selection<? extends T>) root);
         }
     }
 

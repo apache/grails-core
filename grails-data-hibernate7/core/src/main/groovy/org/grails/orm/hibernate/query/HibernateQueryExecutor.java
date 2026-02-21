@@ -1,12 +1,12 @@
 package org.grails.orm.hibernate.query;
 
 import jakarta.persistence.LockModeType;
+import jakarta.persistence.Tuple;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.hibernate.FlushMode;
 import org.hibernate.NonUniqueResultException;
 import org.hibernate.Session;
 import org.hibernate.query.Query;
-import org.hibernate.query.ResultListTransformer;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
 
 import java.util.List;
@@ -49,6 +49,7 @@ public record HibernateQueryExecutor(
 
   private Query configureQuery(Session session, JpaCriteriaQuery jpaCq) {
       var query = session.createQuery(jpaCq);
+      if (jakarta.persistence.Tuple.class.equals(jpaCq.getResultType())) { query.setTupleTransformer((payload, aliases) -> payload); }
       Optional.ofNullable(offset).filter(v -> v > 0).ifPresent(query::setFirstResult);
       Optional.ofNullable(queryCache).ifPresent( qc -> query.setHint("org.hibernate.cacheable", qc));
       Optional.ofNullable(maxResults).filter(v -> v > 0).ifPresent(query::setMaxResults);

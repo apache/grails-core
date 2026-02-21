@@ -751,7 +751,12 @@ public abstract class Query implements Cloneable {
     /**
      * Represents a criterion to be used in a criteria query
      */
-    public static interface Criterion {}
+    /**
+     * Common interface for all query elements
+     */
+    public static interface QueryElement {}
+
+    public static interface Criterion extends QueryElement {}
 
     /**
      * The ordering of results.
@@ -1395,7 +1400,7 @@ public abstract class Query implements Cloneable {
     /**
      * A projection
      */
-    public static class Projection {}
+    public static class Projection implements QueryElement {}
 
     /**
      * A projection used to obtain the identifier of an object

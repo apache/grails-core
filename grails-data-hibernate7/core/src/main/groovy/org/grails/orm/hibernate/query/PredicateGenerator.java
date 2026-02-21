@@ -34,14 +34,13 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 @Slf4j
-@SuppressWarnings({"unchecked", "rawtypes"})
 public class PredicateGenerator {
     private static final Logger log = LoggerFactory.getLogger(PredicateGenerator.class);
 
     public Predicate[] getPredicates(HibernateCriteriaBuilder cb,
                                      CriteriaQuery<?> criteriaQuery,
                                      From<?, ?> root_,
-                                     List criteriaList,
+                                     List<? extends Query.QueryElement> criteriaList,
                                      JpaFromProvider fromsByProvider, 
                                      PersistentEntity entity) {
 
@@ -57,7 +56,7 @@ public class PredicateGenerator {
         return list.toArray(new Predicate[0]);
     }
 
-    private Predicate handleCriterion(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, From<?, ?> root, JpaFromProvider fromsByProvider, PersistentEntity entity, Object criterion) {
+    private Predicate handleCriterion(HibernateCriteriaBuilder cb, CriteriaQuery<?> criteriaQuery, From<?, ?> root, JpaFromProvider fromsByProvider, PersistentEntity entity, Query.QueryElement criterion) {
         if (criterion instanceof Query.Junction junction) {
             return handleJunction(cb, criteriaQuery, root, fromsByProvider, entity, junction);
         } else if (criterion instanceof Query.DistinctProjection) {
