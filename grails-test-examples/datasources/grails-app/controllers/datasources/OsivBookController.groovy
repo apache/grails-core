@@ -31,7 +31,7 @@ class OsivBookController {
             book.addToChapters(new Chapter(title: 'Chapter Two'))
             book.save(flush: true)
         }
-        Book book = Book.secondary.first()
+        Book book = Book.secondary.findByTitle('OSIV Test Book')
         [book: book]
     }
 }
