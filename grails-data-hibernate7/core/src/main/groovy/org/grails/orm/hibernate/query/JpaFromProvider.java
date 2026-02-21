@@ -14,10 +14,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@SuppressWarnings({"unchecked", "rawtypes"})
 public class JpaFromProvider implements Cloneable {
 
     private final Map<String, From<?, ?>> fromMap;
@@ -77,11 +77,15 @@ public class JpaFromProvider implements Cloneable {
     }
 
     private Map<String, From<?, ?>> createDetachedFroms(JpaCriteriaQuery<?> cq, List<DetachedAssociationCriteria<?>> detachedAssociationCriteriaList) {
+        Function<DetachedAssociationCriteria<?>, String> getAssociationPath = DetachedAssociationCriteria::getAssociationPath;
         return detachedAssociationCriteriaList
                 .stream()
-                .collect(Collectors.toMap(
-                        DetachedAssociationCriteria::getAssociationPath,
-                        criteria -> (From<?, ?>) cq.from(criteria.getAssociation().getOwner().getJavaClass()) , (oldValue, newValue) -> newValue)
+                .collect(
+                        Collectors.toMap(getAssociationPath,
+                        criteria -> {
+                            Class<?> javaClass = criteria.getAssociation().getOwner().getJavaClass();
+                            return cq.from(javaClass);
+                        }, (oldValue, newValue) -> newValue)
                 );
     }
 
