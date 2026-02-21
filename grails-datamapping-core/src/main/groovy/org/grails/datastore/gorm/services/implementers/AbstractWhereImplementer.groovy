@@ -96,16 +96,16 @@ abstract class AbstractWhereImplementer extends AbstractReadOperationImplementer
             body.addStatement(
                     declS(queryVar, ctorX(getDetachedCriteriaType(domainClassNode), args(classX(domainClassNode.plainNodeReference))))
             )
-            Expression connectionId = findConnectionId(newMethodNode)
+            body.addStatement(
+                    assignS(queryVar, callX(queryVar, 'build', closureExpression))
+            )
+            Expression connectionId = findConnectionId(abstractMethodNode)
 
             if (connectionId != null) {
                 body.addStatement(
                         assignS(queryVar, callX(queryVar, 'withConnection', connectionId))
                 )
             }
-            body.addStatement(
-                    assignS(queryVar, callX(queryVar, 'build', closureExpression))
-            )
             Expression queryExpression = callX(queryVar, getQueryMethodToExecute(domainClassNode, newMethodNode), argsExpression != null ? argsExpression : AstUtils.ZERO_ARGUMENTS)
             body.addStatement(
                 buildReturnStatement(domainClassNode, abstractMethodNode, newMethodNode, queryExpression)

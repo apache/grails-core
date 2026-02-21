@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package scaffoldingfields
 
 import grails.gorm.transactions.Rollback
@@ -28,242 +27,189 @@ import scaffoldingfields.pages.*
  * Functional tests for scaffolded CRUD operations.
  * Tests Create, Read, Update, Delete operations via browser.
  */
-@Integration(applicationClass = Application)
-@Rollback
+@Integration
 class CrudFunctionalSpec extends ContainerGebSpec {
 
     // ==================== LIST (INDEX) TESTS ====================
 
     def "Employee list page displays correctly"() {
-        when: "navigating to the employee list page"
-        go '/employee/index'
+        when: 'navigating to the employee list page'
+        def page = to(EmployeeListPage)
 
-        then: "the list page is displayed with correct title"
-        title == 'Employee List'
-
-        and: "the data table is present"
-        $('table').displayed
+        then: 'the employee table is present'
+        page.employeeTable.displayed
     }
 
     def "Department list page displays correctly"() {
-        when: "navigating to the department list page"
-        go '/department/index'
-
-        then: "the list page is displayed with correct title"
-        title == 'Department List'
+        expect: 'department list page renders'
+        to(DepartmentListPage)
     }
 
     def "Project list page displays correctly"() {
-        when: "navigating to the project list page"
-        go '/project/index'
-
-        then: "the list page is displayed with correct title"
-        title == 'Project List'
+        expect: 'project list page renders'
+        to(ProjectListPage)
     }
 
     def "List page shows create new button"() {
-        when: "navigating to the employee list page"
-        go '/employee/index'
-
-        then: "the create new button is present"
-        $('a', text: contains('New')).displayed
+        expect: 'employee list page renders'
+        to(EmployeeListPage)
     }
 
     // ==================== CREATE TESTS ====================
 
     def "Create page displays correctly"() {
-        when: "navigating to the employee create page"
-        go '/employee/create'
-
-        then: "the create page is displayed with correct title"
-        title == 'Create Employee'
-
-        and: "the form is present"
-        $('form').displayed
-
-        and: "required fields are present"
-        $('input[name="firstName"]').displayed
-        $('input[name="lastName"]').displayed
-        $('input[name="email"]').displayed
+        expect: 'employee create page renders'
+        to(EmployeeCreatePage)
     }
 
+    @Rollback
     def "Create employee with valid data succeeds"() {
-        given: "navigating to the create page"
-        go '/employee/create'
+        when: 'filling in valid employee data and submitting the form'
+        to(EmployeeCreatePage)
+                .createEmployee('Integration', 'Test', 'integration.test@example.com')
 
-        when: "filling in valid employee data"
-        $('input[name="firstName"]').value('Integration')
-        $('input[name="lastName"]').value('Test')
-        $('input[name="email"]').value('integration.test@example.com')
-
-        and: "submitting the form"
-        $('input[type="submit"], button[type="submit"]').click()
-
-        then: "redirected to show page or list page"
-        title.contains('Employee') || title.contains('Show') || title.contains('List')
+        then: 'redirected to employee list page'
+        at(EmployeeListPage)
     }
 
+    @Rollback
     def "Create department with valid data succeeds"() {
-        given: "navigating to the create page"
-        go '/department/create'
+        when: 'filling in valid department data and submitting the form'
+        to(DepartmentCreatePage).createDepartment('Test Department')
 
-        when: "filling in valid department data"
-        $('input[name="name"]').value('Test Department')
-
-        and: "submitting the form"
-        $('input[type="submit"], button[type="submit"]').click()
-
-        then: "redirected to show page or list page"
-        title.contains('Department') || title.contains('Show') || title.contains('List')
+        then: 'redirected to department list page'
+        at(DepartmentListPage)
     }
 
     // ==================== SHOW (READ) TESTS ====================
 
+    @Rollback
     def "Show page displays employee details"() {
-        given: "create an employee to view"
-        go '/employee/create'
-        $('input[name="firstName"]').value('ShowTest')
-        $('input[name="lastName"]').value('Employee')
-        $('input[name="email"]').value('showtest@example.com')
-        $('input[type="submit"], button[type="submit"]').click()
+        when: 'creating an employee'
+        to(EmployeeCreatePage)
+                .createEmployee('ShowTest', 'Employee', 'showtest@example.com')
 
-        when: "on the show page after create"
-        // Should be redirected to show page after successful create
+        then: 'on the show page after create'
+        def page = at(EmployeeShowPage)
 
-        then: "the show page is displayed"
-        title.contains('Show') || title.contains('Employee')
-
-        and: "employee details are shown (at least one property list or table element)"
+        and: 'employee details are shown (at least one property list or table element)'
         $('.property-list, ol.property-list, table').size() > 0
     }
 
+    @Rollback
     def "Show page has edit and delete buttons"() {
-        given: "create an employee to view"
-        go '/employee/create'
-        $('input[name="firstName"]').value('EditButtonTest')
-        $('input[name="lastName"]').value('Employee')
-        $('input[name="email"]').value('editbuttontest@example.com')
-        $('input[type="submit"], button[type="submit"]').click()
+        when: 'creating an employee'
+        to(EmployeeCreatePage)
+                .createEmployee('EditButtonTest', 'Employee', 'editbuttontest@example.com')
 
-        when: "on the show page after create"
-        // Should be redirected to show page
+        then: 'on the show page after create'
+        def page = at(EmployeeShowPage)
 
-        then: "edit button is present"
-        $('a', text: contains('Edit')).size() > 0 || $('a[href*="edit"]').size() > 0
+        and: 'edit button is present'
+        page.editButton.displayed
     }
 
     // ==================== EDIT (UPDATE) TESTS ====================
 
+    @Rollback
     def "Edit page displays correctly with existing data"() {
-        given: "create an employee to edit"
-        go '/employee/create'
-        $('input[name="firstName"]').value('EditTest')
-        $('input[name="lastName"]').value('Employee')
-        $('input[name="email"]').value('edittest@example.com')
-        $('input[type="submit"], button[type="submit"]').click()
+        when: 'creating an employee'
+        to(EmployeeCreatePage)
+                .createEmployee('EditTest', 'Employee', 'edittest@example.com')
 
-        when: "clicking edit from the show page"
-        $('a', text: contains('Edit')).click()
+        then: 'on the show page after create'
+        def page = at(EmployeeShowPage)
 
-        then: "the edit page is displayed with correct title"
-        title.contains('Edit') || title.contains('Employee')
+        when: 'clicking edit from the show page'
+        page.clickEdit()
+        page = at(EmployeeEditPage)
 
-        and: "the form is present with existing values"
-        $('form').displayed
-        $('input[name="firstName"]').value() == 'EditTest'
+        then: 'the form is present with existing values'
+        page.firstNameField.value() == 'EditTest'
     }
 
+    @Rollback
     def "Edit employee with valid data succeeds"() {
-        given: "create an employee to edit"
-        go '/employee/create'
-        $('input[name="firstName"]').value('UpdateTest')
-        $('input[name="lastName"]').value('BeforeUpdate')
-        $('input[name="email"]').value('updatetest@example.com')
-        $('input[type="submit"], button[type="submit"]').click()
+        when: "creating an employee to edit"
+        to(EmployeeCreatePage)
+                .createEmployee('UpdateTest', 'BeforeUpdate', 'updatetest@example.com')
 
-        and: "navigating to the edit page"
-        $('a', text: contains('Edit')).click()
+        then: 'on the show page after create'
+        def page = at(EmployeeShowPage)
 
-        when: "modifying the last name"
-        def lastNameField = $('input[name="lastName"]')
-        lastNameField.value('')
-        lastNameField.value('AfterUpdate')
+        when: 'clicking edit from the show page'
+        page.clickEdit()
+        page = at(EmployeeEditPage)
 
-        and: "submitting the form"
-        $('input[type="submit"], button[type="submit"]').click()
+        and: 'modifying the last name'
+        page.lastNameField.value('AfterUpdate')
 
-        then: "redirected to show page with updated data"
-        title.contains('Employee') || title.contains('Show') || title.contains('List')
+        and: 'submitting the form'
+        page.submitForm()
+
+        then: 'redirected to show page with updated data'
+        at(EmployeeShowPage)
     }
 
     // ==================== DELETE TESTS ====================
 
+    @Rollback
     def "Delete removes employee from list"() {
-        given: "navigate to employee list and count rows"
-        go '/employee/index'
+        when: 'navigating to employee list and count rows'
+        to(EmployeeListPage)
+
+        and: 'reading initial row count'
         def initialRowCount = $('table tbody tr').size()
 
-        and: "create a new employee to delete"
-        go '/employee/create'
-        $('input[name="firstName"]').value('ToDelete')
-        $('input[name="lastName"]').value('Employee')
-        $('input[name="email"]').value('todelete@example.com')
-        $('input[type="submit"], button[type="submit"]').click()
+        and: 'create a new employee to delete'
+        to(EmployeeCreatePage)
+                .createEmployee('DeleteTest', 'Employee', 'todelete@example.com')
 
-        when: "on the show page of the new employee"
-        // The scaffolding uses either a button or input for delete with a form submission
-        def deleteButton = $('input[type="submit"][value*="Delete"]')
-        if (!deleteButton.size()) {
-            deleteButton = $('button', text: 'Delete')
-        }
-        if (!deleteButton.size()) {
-            deleteButton = $('form[action*="delete"] input[type="submit"]')
-        }
+        then: 'on the show page of the new employee'
+        def page = at(EmployeeShowPage)
 
-        then: "delete button is present or we can proceed"
-        deleteButton.size() >= 0 // Test passes regardless - delete UI varies by scaffolding version
+        when: 'clicking delete'
+        withConfirm { page.clickDelete() }
+
+        then: 'on the list page after deletion'
+        at(EmployeeListPage)
+
+        and: 'row count is back to initial (employee deleted)'
+        $('table tbody tr').size() == initialRowCount
     }
 
     // ==================== NAVIGATION TESTS ====================
 
     def "Can navigate from list to create to list"() {
-        when: "starting on the list page"
-        go '/employee/index'
+        when: 'starting on the list page'
+        def page = to(EmployeeListPage)
 
-        and: "clicking create new"
-        $('a', text: contains('New')).click()
+        and: 'clicking create new'
+        page.clickCreateNew()
 
-        then: "on create page"
-        title == 'Create Employee'
+        then: 'on create page'
+        at(EmployeeCreatePage)
 
-        when: "clicking cancel or navigating back"
-        go '/employee/index'
-
-        then: "back on list page"
-        title == 'Employee List'
+        expect: 'navigating back back to list page works'
+        to(EmployeeListPage)
     }
 
+    @Rollback
     def "Can navigate from list to show to edit to show"() {
-        given: "create an employee to navigate"
-        go '/employee/create'
-        $('input[name="firstName"]').value('NavTest')
-        $('input[name="lastName"]').value('Employee')
-        $('input[name="email"]').value('navtest@example.com')
-        $('input[type="submit"], button[type="submit"]').click()
+        when: 'creating an employee to navigate'
+        to(EmployeeCreatePage)
+                .createEmployee('NavTest', 'Employee', 'navtest@example.com')
 
-        expect: "on show page after create"
-        title.contains('Show') || title.contains('Employee')
+        then: 'on show page after create'
+        def page = at(EmployeeShowPage)
 
-        when: "clicking edit"
-        $('a', text: contains('Edit')).click()
+        when: 'clicking edit'
+        page.clickEdit()
 
-        then: "on edit page"
-        title.contains('Edit') || title.contains('Employee')
+        then: 'on edit page'
+        at(EmployeeEditPage)
 
-        when: "going back to list"
-        go '/employee/index'
-
-        then: "back on list page"
-        title == 'Employee List'
+        expect: 'going back to list works'
+        to(EmployeeListPage)
     }
 }

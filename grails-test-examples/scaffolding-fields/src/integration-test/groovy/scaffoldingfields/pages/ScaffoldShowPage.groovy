@@ -41,7 +41,7 @@ class ScaffoldShowPage extends Page {
 
         // Action buttons
         editButton { $('a', text: contains('Edit')) }
-        deleteButton { $('input[type=submit][value*="Delete"], button[type=submit]:contains("Delete"), a:contains("Delete")') }
+        deleteButton { $('button[type=submit]') }
         listButton(required: false) { $('a', text: contains('List')) }
 
         // Flash messages

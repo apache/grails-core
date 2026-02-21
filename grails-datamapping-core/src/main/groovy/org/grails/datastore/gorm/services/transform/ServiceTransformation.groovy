@@ -90,12 +90,9 @@ import org.grails.datastore.mapping.core.order.OrderedComparator
 
 import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
-import static org.codehaus.groovy.ast.tools.GeneralUtils.assignX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.equalsNullX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.param
 import static org.codehaus.groovy.ast.tools.GeneralUtils.params
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
@@ -191,16 +188,18 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                 ClassNode propertyType = pn.type
                 if (hasAnnotation(propertyType, Service) && propertyType != classNode && Modifier.isPublic(pn.modifiers) && pn.getterBlock == null && pn.setterBlock == null) {
                     FieldNode field = pn.field
-                    VariableExpression fieldVar = varX(field)
                     propertiesFields.add(field)
-                    pn.setGetterBlock(
-                            block(
-                                    ifS(equalsNullX(fieldVar),
-                                            assignX(fieldVar, callX(varX('datastore'), 'getService', classX(propertyType.plainNodeReference)))
-                                    ),
-                                    returnS(fieldVar)
-                            )
-                    )
+                    // NOTE:
+                    // We intentionally do NOT set a getter block on the abstract class's
+                    // PropertyNode here. The previous approach of setting a lazy getter that
+                    // referenced varX('datastore') caused two problems under @CompileStatic:
+                    //
+                    // 1. The 'datastore' field only exists on the generated impl class
+                    // 2. StaticTypeCheckingVisitor.visitProperty() throws "Unexpected return
+                    //    statement" when encountering ReturnStatement in a property getter block
+                    //
+                    // Instead, service properties are eagerly populated in the generated
+                    // setDatastore() method on the impl class (below).
                 }
             }
 
