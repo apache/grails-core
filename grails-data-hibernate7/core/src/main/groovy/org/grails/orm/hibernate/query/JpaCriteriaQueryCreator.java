@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
-@SuppressWarnings({"unchecked", "rawtypes"})
 public class JpaCriteriaQueryCreator {
 
     private final Query.ProjectionList projections;
@@ -45,7 +44,8 @@ public class JpaCriteriaQueryCreator {
 
         var projectionList = collectProjections();
         var cq = createCriteriaQuery(projectionList);
-        Root<?> root = cq.from(entity.getJavaClass());
+        Class<?> javaClass = entity.getJavaClass();
+        Root<?> root = cq.from(javaClass);
         var tablesByName = new JpaFromProvider(detachedCriteria,cq,root);
 
 
@@ -78,7 +78,7 @@ public class JpaCriteriaQueryCreator {
     }
 
     private <T> void assignProjections(List<Query.Projection> projections, CriteriaQuery<T> cq, JpaFromProvider tablesByName) {
-        List<Selection<?>> projectionExpressions = (List) projections
+        var projectionExpressions = projections
                 .stream()
                 .map(projectionToJpaExpression(tablesByName))
                 .filter(Objects::nonNull)
@@ -95,14 +95,14 @@ public class JpaCriteriaQueryCreator {
 
     private void assignGroupBy(List<Query.GroupPropertyProjection> groupProjections, CriteriaQuery<?> cq, JpaFromProvider tablesByName) {
         if (!groupProjections.isEmpty()) {
-            List<Expression<?>> groupByPaths = (List) groupProjections
+            var groupByPaths = groupProjections
                     .stream()
                     .map(groupPropertyProjection -> {
                         String propertyName = groupPropertyProjection.getPropertyName();
                         return tablesByName.getFullyQualifiedPath(propertyName);
                     })
                     .filter(Objects::nonNull)
-                    .toList();
+                    .toArray(Path<?>[]::new);
             cq.groupBy(groupByPaths);
         }
     }
@@ -110,7 +110,7 @@ public class JpaCriteriaQueryCreator {
     private void assignOrderBy(CriteriaQuery<?> cq, JpaFromProvider tablesByName) {
         List<Query.Order> orders = detachedCriteria.getOrders();
         if (!orders.isEmpty()) {
-            List<Order> jpaOrders = (List) orders.stream()
+            var jpaOrders = orders.stream()
                     .map(order -> {
                         Path<?> expression = tablesByName.getFullyQualifiedPath(order.getProperty());
                         if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
@@ -123,7 +123,7 @@ public class JpaCriteriaQueryCreator {
                                     : criteriaBuilder.desc(expression);
                         }
                     })
-                    .toList();
+                    .toArray(Order[]::new);
             cq.orderBy(jpaOrders);
         }
     }
