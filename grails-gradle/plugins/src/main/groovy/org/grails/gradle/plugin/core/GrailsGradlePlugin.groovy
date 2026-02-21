@@ -31,6 +31,7 @@ import org.apache.tools.ant.filters.EscapeUnicode
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
+import org.gradle.api.JavaVersion
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -45,6 +46,7 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.ExtraPropertiesExtension
 import org.gradle.api.plugins.GroovyPlugin
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.AbstractCopyTask
 import org.gradle.api.tasks.JavaExec
@@ -140,6 +142,8 @@ class GrailsGradlePlugin extends GroovyPlugin {
         configureConsoleTask(project)
 
         configureForkSettings(project, grailsVersion)
+
+        configureJavaCompatibilityArgs(project)
 
         configureGrailsSourceDirs(project)
 
@@ -586,17 +590,80 @@ class GrailsGradlePlugin extends GroovyPlugin {
      * @since 7.0.8
      */
     protected void configureToolchainForForkTasks(Project project) {
-        project.afterEvaluate {
-            def javaExtension = project.extensions.findByType(org.gradle.api.plugins.JavaPluginExtension)
-            if (javaExtension?.toolchain?.languageVersion?.isPresent()) {
-                def toolchainService = project.extensions.getByType(JavaToolchainService)
-                def launcher = toolchainService.launcherFor(javaExtension.toolchain)
-
-                project.tasks.withType(JavaExec).configureEach { JavaExec task ->
+        project.plugins.withId('java') {
+            project.tasks.withType(JavaExec).configureEach { JavaExec task ->
+                def javaExtension = project.extensions.findByType(JavaPluginExtension)
+                if (javaExtension?.toolchain?.languageVersion?.isPresent()) {
+                    def toolchainService = project.extensions.getByType(JavaToolchainService)
+                    def launcher = toolchainService.launcherFor(javaExtension.toolchain)
                     task.javaLauncher.convention(launcher)
                 }
             }
         }
+    }
+
+    /**
+     * Configures JVM arguments required for compatibility with Java 23+.
+     *
+     * <p>Java 24 introduced restrictions on native access ({@code JEP 472}) that cause
+     * warnings from libraries such as hawtjni (used by JLine) and Netty that call
+     * {@code System.loadLibrary} or declare native methods. The
+     * {@code --enable-native-access=ALL-UNNAMED} flag suppresses these warnings and
+     * will become mandatory in a future JDK release when the default changes to deny.</p>
+     *
+     * <p>Java 23 began terminal deprecation of {@code sun.misc.Unsafe} memory-access
+     * methods ({@code JEP 471/498}). Netty 4.1.x uses {@code Unsafe.allocateMemory}
+     * for off-heap buffers. The {@code --sun-misc-unsafe-memory-access=allow} flag
+     * suppresses the resulting warnings until Netty migrates to {@code MemorySegment}
+     * APIs (Netty 4.2+).</p>
+     *
+     * <p>Both flags are only added when the target JVM version (from the configured
+     * toolchain, or the JVM running Gradle if no toolchain is set) is high enough to
+     * recognize them, avoiding {@code Unrecognized option} errors on older JDKs.</p>
+     *
+     * @param project the Gradle project
+     * @see <a href="https://github.com/apache/grails-core/issues/15216">#15216 - Java 25 native access warnings</a>
+     * @see <a href="https://github.com/apache/grails-core/issues/15343">#15343 - sun.misc.Unsafe deprecation warnings</a>
+     * @since 7.0.8
+     */
+    protected void configureJavaCompatibilityArgs(Project project) {
+        project.plugins.withId('java') {
+            project.tasks.withType(Test).configureEach { Test task ->
+                applyCompatArgs(project, task, task.name)
+            }
+            project.tasks.withType(JavaExec).configureEach { JavaExec task ->
+                applyCompatArgs(project, task, task.name)
+            }
+        }
+    }
+
+    private void applyCompatArgs(Project project, JavaForkOptions task, String taskName) {
+        int targetVersion = resolveTargetJavaVersion(project)
+
+        if (targetVersion >= 24) {
+            task.jvmArgs('--enable-native-access=ALL-UNNAMED')
+            project.logger.info("Grails: adding --enable-native-access=ALL-UNNAMED to ${taskName} for Java ${targetVersion} compatibility")
+        }
+
+        if (targetVersion >= 23) {
+            task.jvmArgs('--sun-misc-unsafe-memory-access=allow')
+            project.logger.info("Grails: adding --sun-misc-unsafe-memory-access=allow to ${taskName} for Java ${targetVersion} compatibility")
+        }
+    }
+
+    /**
+     * Resolves the Java version that forked tasks will use. Checks the project's
+     * toolchain configuration first, falling back to the JVM running Gradle.
+     *
+     * @param project the Gradle project
+     * @return the major Java version number (e.g. 17, 21, 24, 25)
+     */
+    private int resolveTargetJavaVersion(Project project) {
+        JavaPluginExtension javaExtension = project.extensions.findByType(JavaPluginExtension)
+        if (javaExtension?.toolchain?.languageVersion?.isPresent()) {
+            return javaExtension.toolchain.languageVersion.get().asInt()
+        }
+        return JavaVersion.current().majorVersion.toInteger()
     }
 
     protected void configureConsoleTask(Project project) {

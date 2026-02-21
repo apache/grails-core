@@ -38,6 +38,7 @@ import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.mongo.AbstractMongoSession
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoSettings
 import org.grails.datastore.mapping.query.Query
@@ -59,6 +60,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     MappingContext mappingContext
 
     Map<String, Object> configuration
+    MongoDatastore multiDataSourceDatastore
 
     @Override
     void setupSpec() {
@@ -145,6 +147,42 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
         }
 
         super.destroy()
+    }
+
+    @Override
+    boolean supportsMultipleDataSources() {
+        true
+    }
+
+    @Override
+    void setupMultiDataSource(Class... domainClasses) {
+        String host = mongoDBContainer.host
+        int port = mongoDBContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT)
+        Map config = [
+                'grails.mongodb.url'       : "mongodb://${host}:${port}/tckDefaultDB" as String,
+                'grails.mongodb.connections': [
+                        'secondary': ['url': "mongodb://${host}:${port}/tckSecondaryDB" as String],
+                ],
+        ]
+        multiDataSourceDatastore = new MongoDatastore(DatastoreUtils.createPropertyResolver(config), domainClasses)
+    }
+
+    @Override
+    void cleanupMultiDataSource() {
+        if (multiDataSourceDatastore != null) {
+            multiDataSourceDatastore.getMongoClient().listDatabaseNames()
+                    .findAll { it.startsWith('tck') }
+                    .each { multiDataSourceDatastore.getMongoClient().getDatabase(it).drop() }
+            multiDataSourceDatastore.close()
+            multiDataSourceDatastore = null
+        }
+    }
+
+    @Override
+    def getServiceForConnection(Class serviceType, String connectionName) {
+        multiDataSourceDatastore
+                .getDatastoreForConnection(connectionName)
+                .getService(serviceType)
     }
 
     void setupValidator(Class entityClass, Validator validator = null) {
