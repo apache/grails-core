@@ -17,20 +17,26 @@
  *  under the License.
  */
 
-package ds2
+package functionaltests
 
-import static grails.gorm.hibernate.mapping.MappingBuilder.*
+import functionaltests.pages.OsivBookPage
 
-class Book {
+import grails.plugin.geb.ContainerGebSpec
+import grails.testing.mixin.integration.Integration
+import spock.lang.Issue
 
-    String title
+@Integration
+class OsivGspRenderingSpec extends ContainerGebSpec {
 
-    static hasMany = [chapters: Chapter]
+    @Issue('https://github.com/apache/grails-core/pull/15425')
+    void 'OSIV keeps secondary datasource session open during GSP view rendering'() {
+        when: 'visiting a GSP page that accesses lazy-loaded chapters from secondary datasource'
+        to(OsivBookPage)
 
-    static constraints = {
-    }
+        then: 'the book title from secondary datasource is rendered'
+        bookTitle == 'OSIV Test Book'
 
-    static mapping = orm {
-        datasource 'secondary'
+        and: 'the lazy-loaded chapters are accessible without LazyInitializationException'
+        chapterTitles.containsAll(['Chapter One', 'Chapter Two'])
     }
 }

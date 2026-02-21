@@ -17,20 +17,17 @@
  *  under the License.
  */
 
-package ds2
+package functionaltests.pages
 
-import static grails.gorm.hibernate.mapping.MappingBuilder.*
+import geb.Page
 
-class Book {
+class OsivBookPage extends Page {
 
-    String title
+    static url = '/osivBook/show'
+    static at = { title == 'OSIV Test' }
 
-    static hasMany = [chapters: Chapter]
-
-    static constraints = {
-    }
-
-    static mapping = orm {
-        datasource 'secondary'
+    static content = {
+        bookTitle { $('#bookTitle').text() }
+        chapterTitles { $('#chapters .chapter')*.text() }
     }
 }

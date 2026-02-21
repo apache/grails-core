@@ -61,10 +61,12 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
      * that needs OSIV session management.
      */
     private static class AdditionalSessionFactoryConfig {
+        final String connectionName;
         final SessionFactory sessionFactory;
         final FlushMode flushMode;
 
-        AdditionalSessionFactoryConfig(SessionFactory sessionFactory, FlushMode flushMode) {
+        AdditionalSessionFactoryConfig(String connectionName, SessionFactory sessionFactory, FlushMode flushMode) {
+            this.connectionName = connectionName;
             this.sessionFactory = sessionFactory;
             this.flushMode = flushMode;
         }
@@ -91,7 +93,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                 continue;
             }
             if (logger.isDebugEnabled()) {
-                logger.debug("Opening additional Hibernate Session for datasource in OpenSessionInViewInterceptor");
+                logger.debug("Opening additional Hibernate Session for datasource '" + config.connectionName + "' in OpenSessionInViewInterceptor");
             }
             Session session = sf.openSession();
             session.setHibernateFlushMode(config.flushMode);
@@ -131,7 +133,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                     boolean additionalIsNotManual = additionalFlushMode != FlushMode.MANUAL && additionalFlushMode != FlushMode.COMMIT;
                     if (additionalIsNotManual) {
                         if (logger.isDebugEnabled()) {
-                            logger.debug("Eagerly flushing additional Hibernate session");
+                            logger.debug("Eagerly flushing additional Hibernate session for datasource '" + config.connectionName + "'");
                         }
                         additionalSession.flush();
                     }
@@ -154,13 +156,13 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                     Session session = sessionHolder.getSession();
                     TransactionSynchronizationManager.unbindResource(sf);
                     if (logger.isDebugEnabled()) {
-                        logger.debug("Closing additional Hibernate Session in OpenSessionInViewInterceptor");
+                        logger.debug("Closing additional Hibernate Session for datasource '" + config.connectionName + "' in OpenSessionInViewInterceptor");
                     }
                     try {
                         SessionFactoryUtils.closeSession(session);
                     }
                     catch (RuntimeException closeEx) {
-                        logger.error("Unexpected exception on closing additional Hibernate Session", closeEx);
+                        logger.error("Unexpected exception on closing additional Hibernate Session for datasource '" + config.connectionName + "'", closeEx);
                     }
                 }
             }
@@ -194,7 +196,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                         childFlushMode = FlushMode.valueOf(childDatastore.getDefaultFlushModeName());
                     }
                     additionalSessionFactories.add(
-                            new AdditionalSessionFactoryConfig(childDatastore.getSessionFactory(), childFlushMode)
+                            new AdditionalSessionFactoryConfig(connectionName, childDatastore.getSessionFactory(), childFlushMode)
                     );
                 }
             }

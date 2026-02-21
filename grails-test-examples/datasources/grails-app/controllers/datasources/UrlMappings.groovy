@@ -17,20 +17,14 @@
  *  under the License.
  */
 
-package ds2
+package datasources
 
-import static grails.gorm.hibernate.mapping.MappingBuilder.*
+class UrlMappings {
 
-class Book {
-
-    String title
-
-    static hasMany = [chapters: Chapter]
-
-    static constraints = {
-    }
-
-    static mapping = orm {
-        datasource 'secondary'
+    static mappings = {
+        "/$controller/$action?/$id?(.$format)?" {
+            constraints {
+            }
+        }
     }
 }

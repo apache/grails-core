@@ -17,20 +17,21 @@
  *  under the License.
  */
 
-package ds2
+package datasources
 
-import static grails.gorm.hibernate.mapping.MappingBuilder.*
+import ds2.Book
+import ds2.Chapter
 
-class Book {
+class OsivBookController {
 
-    String title
-
-    static hasMany = [chapters: Chapter]
-
-    static constraints = {
-    }
-
-    static mapping = orm {
-        datasource 'secondary'
+    def show() {
+        Book.withTransaction {
+            Book book = new Book(title: 'OSIV Test Book')
+            book.addToChapters(new Chapter(title: 'Chapter One'))
+            book.addToChapters(new Chapter(title: 'Chapter Two'))
+            book.save(flush: true)
+        }
+        Book book = Book.secondary.first()
+        [book: book]
     }
 }

@@ -21,11 +21,11 @@ package ds2
 
 import static grails.gorm.hibernate.mapping.MappingBuilder.*
 
-class Book {
+class Chapter {
 
     String title
 
-    static hasMany = [chapters: Chapter]
+    static belongsTo = [book: Book]
 
     static constraints = {
     }
