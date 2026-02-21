@@ -1,32 +1,45 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
 package org.grails.orm.hibernate.query;
-
-import org.grails.datastore.mapping.config.Property;
-import org.grails.datastore.mapping.reflect.ClassUtils;
-import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.datastore.gorm.finders.DynamicFinder;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.Embedded;
-import org.grails.orm.hibernate.cfg.MappingCacheHolder;
-
-import org.hibernate.FetchMode;
-import org.hibernate.FlushMode;
-import org.hibernate.query.Query;
-import org.hibernate.query.sqm.tree.domain.SqmBasicValuedSimplePath;
-import org.hibernate.query.sqm.tree.expression.SqmFunction;
-
-import org.springframework.core.convert.ConversionService;
 
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.criteria.*;
-
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-
+import org.grails.datastore.gorm.finders.DynamicFinder;
+import org.grails.datastore.mapping.config.Property;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.reflect.ClassUtils;
+import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.orm.hibernate.cfg.MappingCacheHolder;
+import org.hibernate.FetchMode;
+import org.hibernate.FlushMode;
+import org.hibernate.query.Query;
+import org.hibernate.query.sqm.tree.domain.SqmBasicValuedSimplePath;
+import org.hibernate.query.sqm.tree.expression.SqmFunction;
+import org.springframework.core.convert.ConversionService;
 
 /**
  * Utility methods for configuring Hibernate queries
@@ -36,285 +49,314 @@ import java.util.Optional;
  */
 public class GrailsHibernateQueryUtils {
 
+  /**
+   * Populates criteria arguments for the given target class and arguments map
+   *
+   * @param entity The {@link org.grails.datastore.mapping.model.PersistentEntity} instance
+   * @param query The criteria instance
+   * @param argMap The arguments map
+   */
+  @SuppressWarnings("rawtypes")
+  public static void populateArgumentsForCriteria(
+      PersistentEntity entity,
+      CriteriaQuery query,
+      Root queryRoot,
+      CriteriaBuilder criteriaBuilder,
+      Map argMap,
+      ConversionService conversionService,
+      boolean useDefaultMapping) {
+    String orderParam = (String) argMap.get(DynamicFinder.ARGUMENT_ORDER);
+    Object fetchObj = argMap.get(DynamicFinder.ARGUMENT_FETCH);
+    if (fetchObj instanceof Map) {
+      Map fetch = (Map) fetchObj;
+      for (Object o : fetch.keySet()) {
+        String associationName = (String) o;
 
-
-    /**
-     * Populates criteria arguments for the given target class and arguments map
-     *
-     * @param entity The {@link org.grails.datastore.mapping.model.PersistentEntity} instance
-     * @param query  The criteria instance
-     * @param argMap The arguments map
-     */
-    @SuppressWarnings("rawtypes")
-    public static void populateArgumentsForCriteria(
-            PersistentEntity entity,
-            CriteriaQuery query,
-            Root queryRoot,
-            CriteriaBuilder criteriaBuilder,
-            Map argMap,
-            ConversionService conversionService,
-            boolean useDefaultMapping) {
-        String orderParam = (String) argMap.get(DynamicFinder.ARGUMENT_ORDER);
-        Object fetchObj = argMap.get(DynamicFinder.ARGUMENT_FETCH);
-        if (fetchObj instanceof Map) {
-            Map fetch = (Map) fetchObj;
-            for (Object o : fetch.keySet()) {
-                String associationName = (String) o;
-
-                final FetchMode fetchMode = getFetchMode(fetch.get(associationName));
-                if (fetchMode == FetchMode.JOIN) {
-                    queryRoot.join(associationName);
-                }
-            }
+        final FetchMode fetchMode = getFetchMode(fetch.get(associationName));
+        if (fetchMode == FetchMode.JOIN) {
+          queryRoot.join(associationName);
         }
-
-        final Object sortObj = argMap.get(DynamicFinder.ARGUMENT_SORT);
-        if (sortObj != null) {
-            boolean ignoreCase = true;
-            Object caseArg = argMap.get(DynamicFinder.ARGUMENT_IGNORE_CASE);
-            if (caseArg instanceof Boolean) {
-                ignoreCase = (Boolean) caseArg;
-            }
-            if (sortObj instanceof Map) {
-                Map sortMap = (Map) sortObj;
-                for (Object sort : sortMap.keySet()) {
-                    final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(query,queryRoot, criteriaBuilder, entity, (String) sort, order, ignoreCase);
-                }
-            } else {
-                final String sort = (String) sortObj;
-                final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase(orderParam) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                addOrderPossiblyNested(query, queryRoot, criteriaBuilder,entity, sort, order, ignoreCase);
-            }
-        } else if (useDefaultMapping) {
-            Class<?> theClass = entity.getJavaClass();
-            Mapping m = MappingCacheHolder.getInstance().getMapping(theClass);
-            if (m != null) {
-                Map sortMap = m.getSort().getNamesAndDirections();
-                for (Object sort : sortMap.keySet()) {
-                    final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(query,queryRoot, criteriaBuilder, entity, (String) sort, order, true);
-                }
-            }
-        }
+      }
     }
 
-    /**
-     * Populates criteria arguments for the given target class and arguments map
-     *
-     * @param entity The {@link org.grails.datastore.mapping.model.PersistentEntity} instance
-     * @param query  The criteria instance
-     * @param argMap The arguments map
-     */
-    @SuppressWarnings("rawtypes")
-    public static void populateArgumentsForCriteria(
-            PersistentEntity entity,
-            Query query,
-            Map argMap,
-            ConversionService conversionService,
-            boolean useDefaultMapping) {
-        Integer maxParam = null;
-        Integer offsetParam = null;
-        if (argMap.containsKey(DynamicFinder.ARGUMENT_MAX)) {
-            maxParam = conversionService.convert(argMap.get(DynamicFinder.ARGUMENT_MAX), Integer.class);
+    final Object sortObj = argMap.get(DynamicFinder.ARGUMENT_SORT);
+    if (sortObj != null) {
+      boolean ignoreCase = true;
+      Object caseArg = argMap.get(DynamicFinder.ARGUMENT_IGNORE_CASE);
+      if (caseArg instanceof Boolean) {
+        ignoreCase = (Boolean) caseArg;
+      }
+      if (sortObj instanceof Map) {
+        Map sortMap = (Map) sortObj;
+        for (Object sort : sortMap.keySet()) {
+          final String order =
+              DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort))
+                  ? DynamicFinder.ORDER_DESC
+                  : DynamicFinder.ORDER_ASC;
+          addOrderPossiblyNested(
+              query, queryRoot, criteriaBuilder, entity, (String) sort, order, ignoreCase);
         }
-        if (argMap.containsKey(DynamicFinder.ARGUMENT_OFFSET)) {
-            offsetParam = conversionService.convert(argMap.get(DynamicFinder.ARGUMENT_OFFSET), Integer.class);
+      } else {
+        final String sort = (String) sortObj;
+        final String order =
+            DynamicFinder.ORDER_DESC.equalsIgnoreCase(orderParam)
+                ? DynamicFinder.ORDER_DESC
+                : DynamicFinder.ORDER_ASC;
+        addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, sort, order, ignoreCase);
+      }
+    } else if (useDefaultMapping) {
+      Class<?> theClass = entity.getJavaClass();
+      Mapping m = MappingCacheHolder.getInstance().getMapping(theClass);
+      if (m != null) {
+        Map sortMap = m.getSort().getNamesAndDirections();
+        for (Object sort : sortMap.keySet()) {
+          final String order =
+              DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort))
+                  ? DynamicFinder.ORDER_DESC
+                  : DynamicFinder.ORDER_ASC;
+          addOrderPossiblyNested(
+              query, queryRoot, criteriaBuilder, entity, (String) sort, order, true);
         }
-        if (argMap.containsKey(DynamicFinder.ARGUMENT_FETCH_SIZE)) {
-            query.setFetchSize(conversionService.convert(argMap.get(DynamicFinder.ARGUMENT_FETCH_SIZE), Integer.class));
-        }
-        if (argMap.containsKey(DynamicFinder.ARGUMENT_TIMEOUT)) {
-            query.setTimeout(conversionService.convert(argMap.get(DynamicFinder.ARGUMENT_TIMEOUT), Integer.class));
-        }
-        if (argMap.containsKey(DynamicFinder.ARGUMENT_FLUSH_MODE)) {
-            query.setHibernateFlushMode(convertFlushMode(argMap.get(DynamicFinder.ARGUMENT_FLUSH_MODE)));
-        }
-        if (argMap.containsKey(DynamicFinder.ARGUMENT_READ_ONLY)) {
-            query.setReadOnly(ClassUtils.getBooleanFromMap(DynamicFinder.ARGUMENT_READ_ONLY, argMap));
-        }
+      }
+    }
+  }
 
-        final int max = maxParam == null ? -1 : maxParam;
-        final int offset = offsetParam == null ? -1 : offsetParam;
-        if (max > -1) {
-            query.setMaxResults(max);
-        }
-        if (offset > -1) {
-            query.setFirstResult(offset);
-        }
-        if (ClassUtils.getBooleanFromMap(DynamicFinder.ARGUMENT_LOCK, argMap)) {
-            query.setLockMode(LockModeType.PESSIMISTIC_WRITE);
-            query.setCacheable(false);
-        } else {
-            if (argMap.containsKey(DynamicFinder.ARGUMENT_CACHE)) {
-                query.setCacheable(ClassUtils.getBooleanFromMap(DynamicFinder.ARGUMENT_CACHE, argMap));
-            } else {
-                cacheCriteriaByMapping(entity.getJavaClass(), query);
+  /**
+   * Populates criteria arguments for the given target class and arguments map
+   *
+   * @param entity The {@link org.grails.datastore.mapping.model.PersistentEntity} instance
+   * @param query The criteria instance
+   * @param argMap The arguments map
+   */
+  @SuppressWarnings("rawtypes")
+  public static void populateArgumentsForCriteria(
+      PersistentEntity entity,
+      Query query,
+      Map argMap,
+      ConversionService conversionService,
+      boolean useDefaultMapping) {
+    Integer maxParam = null;
+    Integer offsetParam = null;
+    if (argMap.containsKey(DynamicFinder.ARGUMENT_MAX)) {
+      maxParam = conversionService.convert(argMap.get(DynamicFinder.ARGUMENT_MAX), Integer.class);
+    }
+    if (argMap.containsKey(DynamicFinder.ARGUMENT_OFFSET)) {
+      offsetParam =
+          conversionService.convert(argMap.get(DynamicFinder.ARGUMENT_OFFSET), Integer.class);
+    }
+    if (argMap.containsKey(DynamicFinder.ARGUMENT_FETCH_SIZE)) {
+      query.setFetchSize(
+          conversionService.convert(argMap.get(DynamicFinder.ARGUMENT_FETCH_SIZE), Integer.class));
+    }
+    if (argMap.containsKey(DynamicFinder.ARGUMENT_TIMEOUT)) {
+      query.setTimeout(
+          conversionService.convert(argMap.get(DynamicFinder.ARGUMENT_TIMEOUT), Integer.class));
+    }
+    if (argMap.containsKey(DynamicFinder.ARGUMENT_FLUSH_MODE)) {
+      query.setHibernateFlushMode(convertFlushMode(argMap.get(DynamicFinder.ARGUMENT_FLUSH_MODE)));
+    }
+    if (argMap.containsKey(DynamicFinder.ARGUMENT_READ_ONLY)) {
+      query.setReadOnly(ClassUtils.getBooleanFromMap(DynamicFinder.ARGUMENT_READ_ONLY, argMap));
+    }
+
+    final int max = maxParam == null ? -1 : maxParam;
+    final int offset = offsetParam == null ? -1 : offsetParam;
+    if (max > -1) {
+      query.setMaxResults(max);
+    }
+    if (offset > -1) {
+      query.setFirstResult(offset);
+    }
+    if (ClassUtils.getBooleanFromMap(DynamicFinder.ARGUMENT_LOCK, argMap)) {
+      query.setLockMode(LockModeType.PESSIMISTIC_WRITE);
+      query.setCacheable(false);
+    } else {
+      if (argMap.containsKey(DynamicFinder.ARGUMENT_CACHE)) {
+        query.setCacheable(ClassUtils.getBooleanFromMap(DynamicFinder.ARGUMENT_CACHE, argMap));
+      } else {
+        cacheCriteriaByMapping(entity.getJavaClass(), query);
+      }
+    }
+  }
+
+  /**
+   * Add order to criteria, creating necessary subCriteria if nested sort property (ie.
+   * sort:'nested.property').
+   */
+  private static void addOrderPossiblyNested(
+      CriteriaQuery query,
+      From queryRoot,
+      CriteriaBuilder criteriaBuilder,
+      PersistentEntity entity,
+      String sort,
+      String order,
+      boolean ignoreCase) {
+    int firstDotPos = sort.indexOf(".");
+    if (firstDotPos == -1) {
+      final PersistentProperty<? extends Property> property = entity.getPropertyByName(sort);
+      ignoreCase = isIgnoreCaseProperty(ignoreCase, property);
+      addOrder(entity, query, queryRoot, criteriaBuilder, sort, order, ignoreCase);
+    } else { // nested property
+      String sortHead = sort.substring(0, firstDotPos);
+      String sortTail = sort.substring(firstDotPos + 1);
+      final PersistentProperty<? extends Property> property = entity.getPropertyByName(sortHead);
+      if (property instanceof Embedded) {
+        // embedded objects cannot reference entities (at time of writing), so no more recursion
+        // needed
+        final PersistentProperty<? extends Property> associatedProperty =
+            ((Embedded<?>) property).getAssociatedEntity().getPropertyByName(sortTail);
+        ignoreCase = isIgnoreCaseProperty(ignoreCase, associatedProperty);
+        addOrder(entity, query, queryRoot, criteriaBuilder, sort, order, ignoreCase);
+      } else if (property instanceof Association) {
+        final Association<? extends Property> a = (Association<? extends Property>) property;
+        final Join join = queryRoot.join(sortHead);
+        PersistentEntity associatedEntity = a.getAssociatedEntity();
+        Class<?> propertyTargetClass = associatedEntity.getJavaClass();
+        addOrderPossiblyNested(
+            query,
+            join,
+            criteriaBuilder,
+            associatedEntity,
+            sortTail,
+            order,
+            ignoreCase); // Recurse on nested sort
+      }
+    }
+  }
+
+  private static boolean isIgnoreCaseProperty(
+      boolean ignoreCase, PersistentProperty<? extends Property> persistentProperty) {
+    if (ignoreCase && persistentProperty != null && persistentProperty.getType() != String.class) {
+      ignoreCase = false;
+    }
+    return ignoreCase;
+  }
+
+  /** Add order directly to criteria. */
+  private static void addOrder(
+      PersistentEntity entity,
+      CriteriaQuery query,
+      From queryRoot,
+      CriteriaBuilder criteriaBuilder,
+      String sort,
+      String order,
+      boolean ignoreCase) {
+    var compositeIdSortOptional =
+        Optional.ofNullable(entity.getCompositeIdentity()).stream()
+            .flatMap(Arrays::stream)
+            .filter(Objects::nonNull)
+            .filter(id -> sort.equalsIgnoreCase(id.getName()))
+            .findFirst();
+
+    if (compositeIdSortOptional.isPresent()) {
+      Comparator<Order> orderComparator =
+          new Comparator<Order>() {
+            @Override
+            public int compare(Order o1, Order o2) {
+              String name1 = getOrderName(o1);
+              String name2 = getOrderName(o2);
+
+              boolean name1IsSort = name1.equalsIgnoreCase(sort);
+              boolean name2IsSort = name2.equalsIgnoreCase(sort);
+
+              if (name1IsSort && !name2IsSort) {
+                return -1; // o1 (the sort property) comes first
+              }
+              if (!name1IsSort && name2IsSort) {
+                return 1; // o2 (the sort property) comes first
+              }
+              return 0; // Maintain original order for other properties
             }
-        }
 
-    }
-
-
-
-
-    /**
-     * Add order to criteria, creating necessary subCriteria if nested sort property (ie. sort:'nested.property').
-     */
-    private static void addOrderPossiblyNested(CriteriaQuery query,
-                                               From queryRoot,
-                                               CriteriaBuilder criteriaBuilder,
-                                               PersistentEntity entity,
-                                               String sort,
-                                               String order,
-                                               boolean ignoreCase) {
-        int firstDotPos = sort.indexOf(".");
-        if (firstDotPos == -1) {
-            final PersistentProperty<? extends Property> property = entity.getPropertyByName(sort);
-            ignoreCase = isIgnoreCaseProperty(ignoreCase, property);
-            addOrder(entity, query, queryRoot, criteriaBuilder, sort, order, ignoreCase);
-        } else { // nested property
-            String sortHead = sort.substring(0, firstDotPos);
-            String sortTail = sort.substring(firstDotPos + 1);
-            final PersistentProperty<? extends Property> property = entity.getPropertyByName(sortHead);
-            if (property instanceof Embedded) {
-                // embedded objects cannot reference entities (at time of writing), so no more recursion needed
-                final PersistentProperty<? extends Property> associatedProperty = ((Embedded<?>) property).getAssociatedEntity().getPropertyByName(sortTail);
-                ignoreCase = isIgnoreCaseProperty(ignoreCase, associatedProperty);
-                addOrder(entity, query, queryRoot, criteriaBuilder, sort, order, ignoreCase);
-            } else if (property instanceof Association) {
-                final Association<? extends Property> a = (Association<? extends Property>) property;
-                final Join join = queryRoot.join(sortHead);
-                PersistentEntity associatedEntity = a.getAssociatedEntity();
-                Class<?> propertyTargetClass = associatedEntity.getJavaClass();
-                addOrderPossiblyNested(query, join, criteriaBuilder, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
+            private static String getOrderName(Order o1) {
+              return ((SqmBasicValuedSimplePath)
+                      ((SqmFunction) o1.getExpression()).getArguments().get(0))
+                  .getNavigablePath()
+                  .getLocalName();
             }
-        }
+          };
+      Order[] orders =
+          Arrays.stream(entity.getCompositeIdentity())
+              .map(PersistentProperty::getName)
+              .map(
+                  name ->
+                      ignoreCase ? criteriaBuilder.upper(queryRoot.get(name)) : queryRoot.get(name))
+              .map(
+                  path ->
+                      DynamicFinder.ORDER_DESC.equals(order)
+                          ? criteriaBuilder.desc(path)
+                          : criteriaBuilder.asc(path))
+              .sorted(orderComparator)
+              .toArray(Order[]::new);
+      query.orderBy(orders);
+
+    } else if (entity.getIdentity() != null
+        && sort.equalsIgnoreCase(entity.getIdentity().getName())) {
+      Expression path = queryRoot;
+
+      if (ignoreCase) {
+        path = criteriaBuilder.upper(path);
+      }
+      if (DynamicFinder.ORDER_DESC.equals(order)) {
+        query.orderBy(criteriaBuilder.desc(path));
+      } else {
+        query.orderBy(criteriaBuilder.asc(path));
+      }
+    } else {
+      Expression path = queryRoot.get(sort);
+
+      if (ignoreCase) {
+        path = criteriaBuilder.upper(path);
+      }
+      if (DynamicFinder.ORDER_DESC.equals(order)) {
+        query.orderBy(criteriaBuilder.desc(path));
+      } else {
+        query.orderBy(criteriaBuilder.asc(path));
+      }
     }
+  }
 
-    private static boolean isIgnoreCaseProperty(boolean ignoreCase, PersistentProperty<? extends Property> persistentProperty) {
-        if (ignoreCase && persistentProperty != null && persistentProperty.getType() != String.class) {
-            ignoreCase = false;
-        }
-        return ignoreCase;
+  /**
+   * Configures the criteria instance to cache based on the configured mapping.
+   *
+   * @param targetClass The target class
+   * @param criteria The criteria
+   */
+  private static void cacheCriteriaByMapping(Class<?> targetClass, Query criteria) {
+    Mapping m = MappingCacheHolder.getInstance().getMapping(targetClass);
+    if (m != null && m.getCache() != null && m.getCache().getEnabled()) {
+      criteria.setCacheable(true);
     }
+  }
 
-    /**
-     * Add order directly to criteria.
-     */
-    private static void addOrder(PersistentEntity entity,
-                                 CriteriaQuery query,
-                                 From queryRoot,
-                                 CriteriaBuilder criteriaBuilder,
-                                 String sort, String order, boolean ignoreCase) {
-        var compositeIdSortOptional = Optional.ofNullable(entity.getCompositeIdentity())
-                .stream()
-                .flatMap(Arrays::stream)
-                .filter(Objects::nonNull)
-                .filter(id -> sort.equalsIgnoreCase(id.getName()))
-                .findFirst();
-
-        if (compositeIdSortOptional.isPresent()) {
-            Comparator<Order> orderComparator = new Comparator<Order>() {
-                @Override
-                public int compare(Order o1, Order o2) {
-                    String name1 = getOrderName(o1);
-                    String name2 = getOrderName(o2);
-
-                    boolean name1IsSort = name1.equalsIgnoreCase(sort);
-                    boolean name2IsSort = name2.equalsIgnoreCase(sort);
-
-                    if (name1IsSort && !name2IsSort) {
-                        return -1; // o1 (the sort property) comes first
-                    }
-                    if (!name1IsSort && name2IsSort) {
-                        return 1; // o2 (the sort property) comes first
-                    }
-                    return 0; // Maintain original order for other properties
-                }
-
-                private static String getOrderName(Order o1) {
-                    return ((SqmBasicValuedSimplePath) ((SqmFunction) o1.getExpression()).getArguments().get(0)).getNavigablePath().getLocalName();
-                }
-            };
-            Order[] orders = Arrays.stream(entity.getCompositeIdentity())
-                    .map(PersistentProperty::getName)
-                    .map(name ->
-                            ignoreCase ? criteriaBuilder.upper(queryRoot.get(name)) : queryRoot.get(name)
-                    )
-                    .map(path -> DynamicFinder.ORDER_DESC.equals(order) ? criteriaBuilder.desc(path) : criteriaBuilder.asc(path))
-                    .sorted(orderComparator)
-                    .toArray(Order[]::new);
-            query.orderBy(orders);
-
-        } else if (entity.getIdentity() != null && sort.equalsIgnoreCase(entity.getIdentity().getName())) {
-            Expression path = queryRoot;
-
-            if (ignoreCase) {
-                path = criteriaBuilder.upper(path);
-            }
-            if (DynamicFinder.ORDER_DESC.equals(order)) {
-                query.orderBy(criteriaBuilder.desc(path));
-            } else {
-                query.orderBy(criteriaBuilder.asc(path));
-            }
-        } else {
-            Expression path = queryRoot.get(sort);
-
-            if (ignoreCase) {
-                path = criteriaBuilder.upper(path);
-            }
-            if (DynamicFinder.ORDER_DESC.equals(order)) {
-                query.orderBy(criteriaBuilder.desc(path));
-            } else {
-                query.orderBy(criteriaBuilder.asc(path));
-            }
-        }
+  private static FlushMode convertFlushMode(Object object) {
+    if (object == null) {
+      return null;
     }
-
-
-    /**
-     * Configures the criteria instance to cache based on the configured mapping.
-     *
-     * @param targetClass The target class
-     * @param criteria    The criteria
-     */
-    private static void cacheCriteriaByMapping(Class<?> targetClass, Query criteria) {
-        Mapping m = MappingCacheHolder.getInstance().getMapping(targetClass);
-        if (m != null && m.getCache() != null && m.getCache().getEnabled()) {
-            criteria.setCacheable(true);
-        }
+    if (object instanceof FlushMode) {
+      return (FlushMode) object;
     }
-
-    private static FlushMode convertFlushMode(Object object) {
-        if (object == null) {
-            return null;
-        }
-        if (object instanceof FlushMode) {
-            return (FlushMode) object;
-        }
-        try {
-            return FlushMode.valueOf(object.toString());
-        } catch (IllegalArgumentException e) {
-            return FlushMode.COMMIT;
-        }
+    try {
+      return FlushMode.valueOf(object.toString());
+    } catch (IllegalArgumentException e) {
+      return FlushMode.COMMIT;
     }
+  }
 
-    /**
-     * Retrieves the fetch mode for the specified instance; otherwise returns the default FetchMode.
-     *
-     * @param object The object, converted to a string
-     * @return The FetchMode
-     */
-    public static FetchMode getFetchMode(Object object) {
-        String name = object != null ? object.toString() : "default";
-        if (name.equalsIgnoreCase(FetchMode.JOIN.toString()) || name.equalsIgnoreCase("eager")) {
-            return FetchMode.JOIN;
-        }
-        if (name.equalsIgnoreCase(FetchMode.SELECT.toString()) || name.equalsIgnoreCase("lazy")) {
-            return FetchMode.SELECT;
-        }
-        return FetchMode.DEFAULT;
+  /**
+   * Retrieves the fetch mode for the specified instance; otherwise returns the default FetchMode.
+   *
+   * @param object The object, converted to a string
+   * @return The FetchMode
+   */
+  public static FetchMode getFetchMode(Object object) {
+    String name = object != null ? object.toString() : "default";
+    if (name.equalsIgnoreCase(FetchMode.JOIN.toString()) || name.equalsIgnoreCase("eager")) {
+      return FetchMode.JOIN;
     }
-
+    if (name.equalsIgnoreCase(FetchMode.SELECT.toString()) || name.equalsIgnoreCase("lazy")) {
+      return FetchMode.SELECT;
+    }
+    return FetchMode.DEFAULT;
+  }
 }

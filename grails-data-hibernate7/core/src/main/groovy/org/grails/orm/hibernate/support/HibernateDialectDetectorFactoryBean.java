@@ -1,29 +1,30 @@
 /*
- * Copyright 2004-2005 the original author or authors.
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.grails.orm.hibernate.support;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
-import java.util.HashMap;
-
 import javax.sql.DataSource;
-
 import org.checkerframework.checker.initialization.qual.Initialized;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -56,136 +57,142 @@ import org.springframework.util.StringUtils;
  */
 public class HibernateDialectDetectorFactoryBean implements FactoryBean<String>, InitializingBean {
 
-    private DataSource dataSource;
-    private Properties vendorNameDialectMappings;
-    private String hibernateDialectClassName;
-    private Dialect hibernateDialect;
-    private Properties hibernateProperties = new Properties();
+  private DataSource dataSource;
+  private Properties vendorNameDialectMappings;
+  private String hibernateDialectClassName;
+  private Dialect hibernateDialect;
+  private Properties hibernateProperties = new Properties();
 
-    public void setHibernateProperties(Properties hibernateProperties) {
-        this.hibernateProperties = hibernateProperties;
-    }
+  public void setHibernateProperties(Properties hibernateProperties) {
+    this.hibernateProperties = hibernateProperties;
+  }
 
-    public void setDataSource(DataSource dataSource) {
-        this.dataSource = dataSource;
-    }
+  public void setDataSource(DataSource dataSource) {
+    this.dataSource = dataSource;
+  }
 
-    public void setVendorNameDialectMappings(Properties mappings) {
-        vendorNameDialectMappings = mappings;
-    }
+  public void setVendorNameDialectMappings(Properties mappings) {
+    vendorNameDialectMappings = mappings;
+  }
 
-    public String getObject() {
-        return hibernateDialectClassName;
-    }
+  public String getObject() {
+    return hibernateDialectClassName;
+  }
 
-    public Class<String> getObjectType() {
-        return String.class;
-    }
+  public Class<String> getObjectType() {
+    return String.class;
+  }
 
-    public boolean isSingleton() {
-        return true;
-    }
+  public boolean isSingleton() {
+    return true;
+  }
 
-    public void afterPropertiesSet() throws MetaDataAccessException {
-        Assert.notNull(dataSource, "Data source is not set!");
-        Assert.notNull(vendorNameDialectMappings, "Vendor name/dialect mappings are not set!");
+  public void afterPropertiesSet() throws MetaDataAccessException {
+    Assert.notNull(dataSource, "Data source is not set!");
+    Assert.notNull(vendorNameDialectMappings, "Vendor name/dialect mappings are not set!");
 
-        Connection connection = null;
+    Connection connection = null;
 
-        String dbName = (String)JdbcUtils.extractDatabaseMetaData(dataSource, "getDatabaseProductName");
+    String dbName =
+        (String) JdbcUtils.extractDatabaseMetaData(dataSource, "getDatabaseProductName");
 
-        try {
-            connection = DataSourceUtils.getConnection(dataSource);
+    try {
+      connection = DataSourceUtils.getConnection(dataSource);
 
-            try {
-                final DialectFactory dialectFactory = createDialectFactory();
-                final Connection finalConnection = connection;
-                DialectResolutionInfoSource infoSource = new DialectResolutionInfoSource() {
-                    @Override
-                    public DialectResolutionInfo getDialectResolutionInfo() {
-                        try {
-                            return new DatabaseMetaDataDialectResolutionInfoAdapter(finalConnection.getMetaData());
-                        } catch (SQLException e) {
-                            throw new CouldNotDetermineHibernateDialectException(
-                                    "Could not determine Hibernate dialect", e);
-                        }
-                    }
-                };
-                HashMap<String, Object> collect = hibernateProperties.entrySet().stream().collect(
-                        Collectors.toMap(
-                                e -> String.valueOf(e.getKey()),
-                                Map.Entry::getValue,
-                                (prev, next) -> next, HashMap::new
-                        ));
-                hibernateDialect = dialectFactory.buildDialect(collect, infoSource);
-                hibernateDialectClassName = hibernateDialect.getClass().getName();
-            } catch (HibernateException e) {
-                hibernateDialectClassName = vendorNameDialectMappings.getProperty(dbName);
-            }
-
-           if (!StringUtils.hasText(hibernateDialectClassName)) {
-                throw new CouldNotDetermineHibernateDialectException(
-                        "Could not determine Hibernate dialect for database name [" + dbName + "]!");
-           }
-        } finally {
-            DataSourceUtils.releaseConnection(connection,dataSource);
-        }
-    }
-
-    // should be using the ServiceRegistry, but getting it from the SessionFactory at startup fails in Spring
-    protected DialectFactory createDialectFactory() {
-        DialectFactoryImpl factory = new DialectFactoryImpl();
-        factory.injectServices(new ServiceRegistryImplementor() {
-
-            @Override
-            public <R extends Service> R getService(Class<R> serviceRole) {
-                if (serviceRole == DialectResolver.class) {
-                    return (R) new StandardDialectResolver();
-                } else if (serviceRole == StrategySelector.class) {
-                    return (R) new StrategySelectorImpl(new ClassLoaderServiceImpl(Thread.currentThread().getContextClassLoader()));
+      try {
+        final DialectFactory dialectFactory = createDialectFactory();
+        final Connection finalConnection = connection;
+        DialectResolutionInfoSource infoSource =
+            new DialectResolutionInfoSource() {
+              @Override
+              public DialectResolutionInfo getDialectResolutionInfo() {
+                try {
+                  return new DatabaseMetaDataDialectResolutionInfoAdapter(
+                      finalConnection.getMetaData());
+                } catch (SQLException e) {
+                  throw new CouldNotDetermineHibernateDialectException(
+                      "Could not determine Hibernate dialect", e);
                 }
-                return null;
-            }
+              }
+            };
+        HashMap<String, Object> collect =
+            hibernateProperties.entrySet().stream()
+                .collect(
+                    Collectors.toMap(
+                        e -> String.valueOf(e.getKey()),
+                        Map.Entry::getValue,
+                        (prev, next) -> next,
+                        HashMap::new));
+        hibernateDialect = dialectFactory.buildDialect(collect, infoSource);
+        hibernateDialectClassName = hibernateDialect.getClass().getName();
+      } catch (HibernateException e) {
+        hibernateDialectClassName = vendorNameDialectMappings.getProperty(dbName);
+      }
 
-            @Override
-            public <R extends Service> R requireService(@UnknownKeyFor @NonNull @Initialized Class<R> serviceRole) {
-                return ServiceRegistryImplementor.super.requireService(serviceRole);
-            }
-
-            @Override
-            public <R extends Service> ServiceBinding<R> locateServiceBinding(Class<R> serviceRole) {
-                return null;
-            }
-
-            @Override
-            public void close() {
-                ServiceRegistryImplementor.super.close();
-            }
-
-            @Override
-            public void destroy() {
-
-            }
-
-            @Override
-            public void registerChild(ServiceRegistryImplementor child) {
-            }
-
-            @Override
-            public void deRegisterChild(ServiceRegistryImplementor child) {
-            }
-
-            @Override
-            public <T extends Service> @Nullable T fromRegistryOrChildren(@UnknownKeyFor @NonNull @Initialized Class<T> serviceRole) {
-                return null;
-            }
-
-            @Override
-            public ServiceRegistry getParentServiceRegistry() {
-                return null;
-            }
-        });
-        return factory;
+      if (!StringUtils.hasText(hibernateDialectClassName)) {
+        throw new CouldNotDetermineHibernateDialectException(
+            "Could not determine Hibernate dialect for database name [" + dbName + "]!");
+      }
+    } finally {
+      DataSourceUtils.releaseConnection(connection, dataSource);
     }
+  }
 
+  // should be using the ServiceRegistry, but getting it from the SessionFactory at startup fails in
+  // Spring
+  protected DialectFactory createDialectFactory() {
+    DialectFactoryImpl factory = new DialectFactoryImpl();
+    factory.injectServices(
+        new ServiceRegistryImplementor() {
+
+          @Override
+          public <R extends Service> R getService(Class<R> serviceRole) {
+            if (serviceRole == DialectResolver.class) {
+              return (R) new StandardDialectResolver();
+            } else if (serviceRole == StrategySelector.class) {
+              return (R)
+                  new StrategySelectorImpl(
+                      new ClassLoaderServiceImpl(Thread.currentThread().getContextClassLoader()));
+            }
+            return null;
+          }
+
+          @Override
+          public <R extends Service> R requireService(
+              @UnknownKeyFor @NonNull @Initialized Class<R> serviceRole) {
+            return ServiceRegistryImplementor.super.requireService(serviceRole);
+          }
+
+          @Override
+          public <R extends Service> ServiceBinding<R> locateServiceBinding(Class<R> serviceRole) {
+            return null;
+          }
+
+          @Override
+          public void close() {
+            ServiceRegistryImplementor.super.close();
+          }
+
+          @Override
+          public void destroy() {}
+
+          @Override
+          public void registerChild(ServiceRegistryImplementor child) {}
+
+          @Override
+          public void deRegisterChild(ServiceRegistryImplementor child) {}
+
+          @Override
+          public <T extends Service> @Nullable T fromRegistryOrChildren(
+              @UnknownKeyFor @NonNull @Initialized Class<T> serviceRole) {
+            return null;
+          }
+
+          @Override
+          public ServiceRegistry getParentServiceRegistry() {
+            return null;
+          }
+        });
+    return factory;
+  }
 }

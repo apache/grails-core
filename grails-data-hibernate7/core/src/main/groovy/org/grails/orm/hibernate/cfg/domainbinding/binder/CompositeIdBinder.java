@@ -1,56 +1,81 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
+import jakarta.annotation.Nonnull;
+import org.grails.orm.hibernate.cfg.CompositeIdentity;
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.RootClass;
 
-import org.grails.orm.hibernate.cfg.CompositeIdentity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
-
-import jakarta.annotation.Nonnull;
-
 public class CompositeIdBinder {
 
-    private final MetadataBuildingContext metadataBuildingContext;
-    private final ComponentBinder componentBinder;
-    private final ComponentUpdater componentUpdater;
-    private final GrailsPropertyBinder grailsPropertyBinder;
+  private final MetadataBuildingContext metadataBuildingContext;
+  private final ComponentBinder componentBinder;
+  private final ComponentUpdater componentUpdater;
+  private final GrailsPropertyBinder grailsPropertyBinder;
 
-    public CompositeIdBinder(MetadataBuildingContext metadataBuildingContext, ComponentBinder componentBinder, ComponentUpdater componentUpdater, GrailsPropertyBinder grailsPropertyBinder) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.componentBinder = componentBinder;
-        this.componentUpdater = componentUpdater;
-        this.grailsPropertyBinder = grailsPropertyBinder;
+  public CompositeIdBinder(
+      MetadataBuildingContext metadataBuildingContext,
+      ComponentBinder componentBinder,
+      ComponentUpdater componentUpdater,
+      GrailsPropertyBinder grailsPropertyBinder) {
+    this.metadataBuildingContext = metadataBuildingContext;
+    this.componentBinder = componentBinder;
+    this.componentUpdater = componentUpdater;
+    this.grailsPropertyBinder = grailsPropertyBinder;
+  }
+
+  public void bindCompositeId(
+      @Nonnull GrailsHibernatePersistentEntity domainClass,
+      RootClass root,
+      CompositeIdentity compositeIdentity,
+      @Nonnull InFlightMetadataCollector mappings) {
+    Component id = new Component(metadataBuildingContext, root);
+    id.setNullValue("undefined");
+    root.setIdentifier(id);
+    root.setIdentifierMapper(id);
+    root.setEmbeddedIdentifier(true);
+    id.setComponentClassName(domainClass.getName());
+    id.setKey(true);
+    id.setEmbedded(true);
+
+    String path = GrailsHibernateUtil.qualify(root.getEntityName(), "id");
+
+    id.setRoleName(path);
+
+    if (compositeIdentity == null) {
+      compositeIdentity = new CompositeIdentity();
     }
+    GrailsHibernatePersistentProperty[] composite =
+        compositeIdentity.getHibernateProperties(domainClass);
 
-
-    public void bindCompositeId(@Nonnull GrailsHibernatePersistentEntity domainClass, RootClass root,
-                                 CompositeIdentity compositeIdentity, @Nonnull InFlightMetadataCollector mappings) {
-        Component id = new Component(metadataBuildingContext, root);
-        id.setNullValue("undefined");
-        root.setIdentifier(id);
-        root.setIdentifierMapper(id);
-        root.setEmbeddedIdentifier(true);
-        id.setComponentClassName(domainClass.getName());
-        id.setKey(true);
-        id.setEmbedded(true);
-
-        String path = GrailsHibernateUtil.qualify(root.getEntityName(), "id");
-
-        id.setRoleName(path);
-
-        if (compositeIdentity == null) {
-            compositeIdentity = new CompositeIdentity();
-        }
-        GrailsHibernatePersistentProperty[] composite = compositeIdentity.getHibernateProperties(domainClass);
-
-        GrailsHibernatePersistentProperty identifierProp = domainClass.getIdentity();
-        for (GrailsHibernatePersistentProperty property : composite) {
-           var value = grailsPropertyBinder.bindProperty(root, root.getTable(), "", identifierProp, property, mappings);
-           componentUpdater.updateComponent(id, identifierProp, property, value);
-        }
+    GrailsHibernatePersistentProperty identifierProp = domainClass.getIdentity();
+    for (GrailsHibernatePersistentProperty property : composite) {
+      var value =
+          grailsPropertyBinder.bindProperty(
+              root, root.getTable(), "", identifierProp, property, mappings);
+      componentUpdater.updateComponent(id, identifierProp, property, value);
     }
+  }
 }

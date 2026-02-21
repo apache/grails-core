@@ -1,3 +1,21 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
@@ -7,30 +25,36 @@ import org.hibernate.mapping.Column;
 import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.PersistentClass;
 
-/**
- * Links bidirectional one-to-many associations by copying columns.
- */
+/** Links bidirectional one-to-many associations by copying columns. */
 public class BidirectionalOneToManyLinker {
 
-    private final GrailsPropertyResolver grailsPropertyResolver;
+  private final GrailsPropertyResolver grailsPropertyResolver;
 
-    public BidirectionalOneToManyLinker(GrailsPropertyResolver grailsPropertyResolver) {
-        this.grailsPropertyResolver = grailsPropertyResolver;
+  public BidirectionalOneToManyLinker(GrailsPropertyResolver grailsPropertyResolver) {
+    this.grailsPropertyResolver = grailsPropertyResolver;
+  }
+
+  public void link(
+      Collection collection,
+      PersistentClass associatedClass,
+      DependantValue key,
+      GrailsHibernatePersistentProperty otherSide) {
+    collection.setInverse(true);
+
+    for (Column column :
+        grailsPropertyResolver
+            .getProperty(associatedClass, otherSide.getName())
+            .getValue()
+            .getColumns()) {
+      Column mappingColumn = new Column();
+      mappingColumn.setName(column.getName());
+      mappingColumn.setLength(column.getLength());
+      mappingColumn.setNullable(otherSide.isNullable());
+      mappingColumn.setSqlType(column.getSqlType());
+
+      mappingColumn.setValue(key);
+      key.addColumn(mappingColumn);
+      key.getTable().addColumn(mappingColumn);
     }
-
-    public void link(Collection collection, PersistentClass associatedClass, DependantValue key, GrailsHibernatePersistentProperty otherSide) {
-        collection.setInverse(true);
-
-        for (Column column : grailsPropertyResolver.getProperty(associatedClass, otherSide.getName()).getValue().getColumns()) {
-            Column mappingColumn = new Column();
-            mappingColumn.setName(column.getName());
-            mappingColumn.setLength(column.getLength());
-            mappingColumn.setNullable(otherSide.isNullable());
-            mappingColumn.setSqlType(column.getSqlType());
-
-            mappingColumn.setValue(key);
-            key.addColumn(mappingColumn);
-            key.getTable().addColumn(mappingColumn);
-        }
-    }
+  }
 }

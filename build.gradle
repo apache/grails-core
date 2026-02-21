@@ -20,6 +20,11 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
+plugins {
+    // This makes the plugin available to all subprojects and scripts like java-config.gradle
+    id "com.diffplug.spotless" version "6.25.0" apply false
+}
+
 ext {
     isReproducibleBuild = System.getenv("SOURCE_DATE_EPOCH") != null
     buildInstant = java.util.Optional.ofNullable(System.getenv("SOURCE_DATE_EPOCH"))

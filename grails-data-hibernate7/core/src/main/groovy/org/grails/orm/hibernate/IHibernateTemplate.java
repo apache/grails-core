@@ -1,24 +1,26 @@
 /*
- * Copyright 2013 SpringSource.
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.grails.orm.hibernate;
 
+import groovy.lang.Closure;
 import java.io.Serializable;
 import java.util.Collection;
-
-import groovy.lang.Closure;
 import org.hibernate.LockMode;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.Query;
@@ -31,47 +33,48 @@ import org.hibernate.query.Query;
  */
 public interface IHibernateTemplate {
 
-    void persist(Object o);
+  void persist(Object o);
 
-    /**
-     * Merge the state of the given entity into the current persistence context.
-     * Returns the managed instance that the state was merged to.
-     */
-    Object merge(Object o);
+  /**
+   * Merge the state of the given entity into the current persistence context. Returns the managed
+   * instance that the state was merged to.
+   */
+  Object merge(Object o);
 
-    void refresh(Object o);
+  void refresh(Object o);
 
-    void lock(Object o, LockMode lockMode);
+  void lock(Object o, LockMode lockMode);
 
-    void flush();
+  void flush();
 
-    void clear();
+  void clear();
 
-    void evict(Object o);
+  void evict(Object o);
 
-    boolean contains(Object o);
+  boolean contains(Object o);
 
-    void setFlushMode(int mode);
+  void setFlushMode(int mode);
 
-    int getFlushMode();
+  int getFlushMode();
 
-    void deleteAll(Collection<?> list);
+  void deleteAll(Collection<?> list);
 
-    void applySettings(Query<?> query);
+  void applySettings(Query<?> query);
 
-    <T> T get(Class<T> type, Serializable key);
+  <T> T get(Class<T> type, Serializable key);
 
-    <T> T get(Class<T> type, Serializable key, LockMode mode);
+  <T> T get(Class<T> type, Serializable key, LockMode mode);
 
-    <T> T load(Class<T> type, Serializable key);
+  <T> T load(Class<T> type, Serializable key);
 
-    void remove(Object o);
+  void remove(Object o);
 
-    SessionFactory getSessionFactory();
+  SessionFactory getSessionFactory();
 
-    <T> T execute(Closure<T> callable);
+  <T> T execute(Closure<T> callable);
 
-    <T> T executeWithNewSession(Closure<T> callable);
+  <T> T executeWithNewSession(Closure<T> callable);
 
-    <T1> T1 executeWithExistingOrCreateNewSession(SessionFactory sessionFactory, Closure<T1> callable);
+  <T1> T1 executeWithExistingOrCreateNewSession(
+      SessionFactory sessionFactory, Closure<T1> callable);
 }

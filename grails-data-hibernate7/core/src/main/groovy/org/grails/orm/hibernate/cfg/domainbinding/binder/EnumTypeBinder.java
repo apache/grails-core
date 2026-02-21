@@ -1,111 +1,139 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.ENUM_CLASS_PROP;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.ENUM_TYPE_CLASS;
+
+import java.sql.Types;
+import java.util.Properties;
+import org.grails.orm.hibernate.HibernateLegacyEnumType;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.IdentityEnumType;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
+import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType;
 import org.hibernate.MappingException;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
-import org.grails.orm.hibernate.HibernateLegacyEnumType;
-import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Types;
-import java.util.Properties;
-
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.ENUM_CLASS_PROP;
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.ENUM_TYPE_CLASS;
-
-
 public class EnumTypeBinder {
 
-    private final MetadataBuildingContext metadataBuildingContext;
-    private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
-    private final IndexBinder indexBinder;
-    private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
+  private final MetadataBuildingContext metadataBuildingContext;
+  private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
+  private final IndexBinder indexBinder;
+  private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
 
-    public EnumTypeBinder(MetadataBuildingContext metadataBuildingContext, ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher) {
-        this(metadataBuildingContext, columnNameForPropertyAndPathFetcher, new IndexBinder(), new ColumnConfigToColumnBinder());
+  public EnumTypeBinder(
+      MetadataBuildingContext metadataBuildingContext,
+      ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher) {
+    this(
+        metadataBuildingContext,
+        columnNameForPropertyAndPathFetcher,
+        new IndexBinder(),
+        new ColumnConfigToColumnBinder());
+  }
+
+  protected EnumTypeBinder(
+      MetadataBuildingContext metadataBuildingContext,
+      ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
+      IndexBinder indexBinder,
+      ColumnConfigToColumnBinder columnConfigToColumnBinder) {
+    this.metadataBuildingContext = metadataBuildingContext;
+    this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
+    this.indexBinder = indexBinder;
+    this.columnConfigToColumnBinder = columnConfigToColumnBinder;
+  }
+
+  private static final Logger LOG = LoggerFactory.getLogger(EnumTypeBinder.class);
+
+  public BasicValue bindEnumType(
+      GrailsHibernatePersistentProperty property, Class<?> propertyType, Table table, String path) {
+    BasicValue simpleValue = new BasicValue(metadataBuildingContext, table);
+    String columnName =
+        columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(property, path, null);
+    bindEnumType(property, propertyType, simpleValue, columnName);
+    return simpleValue;
+  }
+
+  public void bindEnumType(
+      GrailsHibernatePersistentProperty property,
+      Class<?> propertyType,
+      SimpleValue simpleValue,
+      String columnName) {
+    PropertyConfig pc = property.getMappedForm();
+    String enumType = pc.getEnumType();
+    Properties enumProperties = new Properties();
+    enumProperties.put(ENUM_CLASS_PROP, propertyType.getName());
+    String typeName = property.getTypeName(propertyType);
+    if (typeName != null) {
+      simpleValue.setTypeName(typeName);
+    } else {
+      if (GrailsEnumType.DEFAULT.getType().equals(enumType)
+          || GrailsEnumType.STRING.getType().equalsIgnoreCase(enumType)) {
+        simpleValue.setTypeName(ENUM_TYPE_CLASS);
+        enumProperties.put(HibernateLegacyEnumType.TYPE, String.valueOf(Types.VARCHAR));
+        enumProperties.put(HibernateLegacyEnumType.NAMED, Boolean.TRUE.toString());
+      } else if (GrailsEnumType.ORDINAL.getType().equalsIgnoreCase(enumType)) {
+        simpleValue.setTypeName(ENUM_TYPE_CLASS);
+        enumProperties.put(HibernateLegacyEnumType.TYPE, String.valueOf(Types.INTEGER));
+        enumProperties.put(HibernateLegacyEnumType.NAMED, Boolean.FALSE.toString());
+      } else if (GrailsEnumType.IDENTITY.getType().equals(enumType)) {
+        simpleValue.setTypeName(IdentityEnumType.class.getName());
+      } else {
+        throw new MappingException("Invalid enum type [" + enumType + "].");
+      }
+    }
+    simpleValue.setTypeParameters(enumProperties);
+
+    Column column = new Column();
+    boolean isTablePerHierarchySubclass =
+        property.getHibernateOwner().isTablePerHierarchySubclass();
+    if (isTablePerHierarchySubclass) {
+      // Properties on subclasses in a table-per-hierarchy strategy must be nullable.
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "[GrailsDomainBinder] Sub class property [{}] for column name [{}] forced to nullable",
+            property.getName(),
+            columnName);
+      }
+      column.setNullable(true);
+    } else {
+      column.setNullable(property.isNullable());
     }
 
-    protected EnumTypeBinder(MetadataBuildingContext metadataBuildingContext,
-                             ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
-                             IndexBinder indexBinder,
-                             ColumnConfigToColumnBinder columnConfigToColumnBinder) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
-        this.indexBinder = indexBinder;
-        this.columnConfigToColumnBinder = columnConfigToColumnBinder;
+    column.setValue(simpleValue);
+    column.setName(columnName);
+    Table t = simpleValue.getTable();
+    t.addColumn(column);
+    simpleValue.addColumn(column);
+
+    if (!pc.getColumns().isEmpty()) {
+      ColumnConfig columnConfig = pc.getColumns().get(0);
+      indexBinder.bindIndex(columnName, column, columnConfig, t);
+      columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, pc);
     }
-
-
-    private static final Logger LOG = LoggerFactory.getLogger(EnumTypeBinder.class);
-
-    public BasicValue bindEnumType(GrailsHibernatePersistentProperty property, Class<?> propertyType, Table table, String path) {
-        BasicValue simpleValue = new BasicValue(metadataBuildingContext, table);
-        String columnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(property, path, null);
-        bindEnumType(property, propertyType, simpleValue, columnName);
-        return simpleValue;
-    }
-
-    public void bindEnumType(GrailsHibernatePersistentProperty property, Class<?> propertyType, SimpleValue simpleValue, String columnName) {
-        PropertyConfig pc = property.getMappedForm();
-        String enumType = pc.getEnumType();
-        Properties enumProperties = new Properties();
-        enumProperties.put(ENUM_CLASS_PROP, propertyType.getName());
-        String typeName = property.getTypeName(propertyType);
-        if (typeName != null) {
-            simpleValue.setTypeName(typeName);
-        } else {
-            if (GrailsEnumType.DEFAULT.getType().equals(enumType) || GrailsEnumType.STRING.getType().equalsIgnoreCase(enumType)) {
-                simpleValue.setTypeName(ENUM_TYPE_CLASS);
-                enumProperties.put(HibernateLegacyEnumType.TYPE, String.valueOf(Types.VARCHAR));
-                enumProperties.put(HibernateLegacyEnumType.NAMED, Boolean.TRUE.toString());
-            } else if (GrailsEnumType.ORDINAL.getType().equalsIgnoreCase(enumType)) {
-                simpleValue.setTypeName(ENUM_TYPE_CLASS);
-                enumProperties.put(HibernateLegacyEnumType.TYPE, String.valueOf(Types.INTEGER));
-                enumProperties.put(HibernateLegacyEnumType.NAMED, Boolean.FALSE.toString());
-            } else if (GrailsEnumType.IDENTITY.getType().equals(enumType)) {
-                simpleValue.setTypeName(IdentityEnumType.class.getName());
-            } else {
-                throw new MappingException("Invalid enum type [" + enumType + "].");
-            }
-
-        }
-        simpleValue.setTypeParameters(enumProperties);
-
-        Column column = new Column();
-        boolean isTablePerHierarchySubclass = property.getHibernateOwner().isTablePerHierarchySubclass();
-        if (isTablePerHierarchySubclass) {
-            // Properties on subclasses in a table-per-hierarchy strategy must be nullable.
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("[GrailsDomainBinder] Sub class property [{}] for column name [{}] forced to nullable",
-                        property.getName(), columnName);
-            }
-            column.setNullable(true);
-        }
-        else {
-            column.setNullable(property.isNullable());
-        }
-
-        column.setValue(simpleValue);
-        column.setName(columnName);
-        Table t = simpleValue.getTable();
-        t.addColumn(column);
-        simpleValue.addColumn(column);
-
-        if (!pc.getColumns().isEmpty()) {
-            ColumnConfig columnConfig = pc.getColumns().get(0);
-            indexBinder.bindIndex(columnName, column, columnConfig, t);
-            columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, pc);
-        }
-    }
-
+  }
 }
