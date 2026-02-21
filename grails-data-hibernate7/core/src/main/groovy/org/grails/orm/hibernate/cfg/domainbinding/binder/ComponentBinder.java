@@ -24,48 +24,26 @@ import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ComponentBinder {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ComponentBinder.class);
 
   private final MetadataBuildingContext metadataBuildingContext;
   private final MappingCacheHolder mappingCacheHolder;
-  private final EnumTypeBinder enumTypeBinder;
-  private final CollectionBinder collectionBinder;
-  private final ManyToOneBinder manyToOneBinder;
-  private final OneToOneBinder oneToOneBinder;
-  private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
-  private final SimpleValueBinder simpleValueBinder;
   private final ComponentUpdater componentUpdater;
   private GrailsPropertyBinder grailsPropertyBinder;
 
   public ComponentBinder(
       MetadataBuildingContext metadataBuildingContext,
       MappingCacheHolder mappingCacheHolder,
-      EnumTypeBinder enumTypeBinder,
-      CollectionBinder collectionBinder,
-      SimpleValueBinder simpleValueBinder,
-      OneToOneBinder oneToOneBinder,
-      ManyToOneBinder manyToOneBinder,
-      ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
       ComponentUpdater componentUpdater) {
     this.metadataBuildingContext = metadataBuildingContext;
     this.mappingCacheHolder = mappingCacheHolder;
-    this.enumTypeBinder = enumTypeBinder;
-    this.collectionBinder = collectionBinder;
-    this.simpleValueBinder = simpleValueBinder;
-    this.oneToOneBinder = oneToOneBinder;
-    this.manyToOneBinder = manyToOneBinder;
-    this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
     this.componentUpdater = componentUpdater;
   }
 

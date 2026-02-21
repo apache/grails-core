@@ -164,12 +164,6 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
         new ComponentBinder(
             metadataBuildingContext,
             getMappingCacheHolder(),
-            enumTypeBinder,
-            collectionBinder,
-            simpleValueBinder,
-            oneToOneBinder,
-            manyToOneBinder,
-            columnNameForPropertyAndPathFetcher,
             componentUpdater);
 
     GrailsPropertyBinder grailsPropertyBinder =

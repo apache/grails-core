@@ -148,12 +148,6 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         ComponentBinder componentBinder = new ComponentBinder(
                 metadataBuildingContext,
                 binder.getMappingCacheHolder(),
-                enumTypeBinderToUse,
-                collectionBinder,
-                simpleValueBinder,
-                oneToOneBinder,
-                manyToOneBinder,
-                columnNameForPropertyAndPathFetcher,
                 componentUpdater
         )
         GrailsPropertyBinder propertyBinder = new GrailsPropertyBinder(
