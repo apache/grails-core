@@ -74,6 +74,9 @@ public class CollectionBinder {
   private final UnidirectionalOneToManyBinder unidirectionalOneToManyBinder;
   private final MapSecondPassBinder mapSecondPassBinder;
 
+  /**
+   * Creates a new {@link CollectionBinder} instance.
+   */
   public CollectionBinder(
       MetadataBuildingContext metadataBuildingContext,
       PersistentEntityNamingStrategy namingStrategy,
@@ -136,6 +139,9 @@ public class CollectionBinder {
             simpleValueColumnFetcher);
   }
 
+  /**
+   * Creates a new {@link CollectionBinder} instance.
+   */
   public CollectionBinder(
       MetadataBuildingContext metadataBuildingContext,
       PersistentEntityNamingStrategy namingStrategy,
@@ -168,6 +174,7 @@ public class CollectionBinder {
    * @param owner The owning persistent class
    * @param mappings The Hibernate mappings instance
    * @param path The property path
+    * @return the result
    */
   public Collection bindCollection(
       HibernateToManyProperty property,

@@ -51,6 +51,9 @@ public class CollectionWithJoinTableBinder {
   private final SimpleValueColumnBinder simpleValueColumnBinder;
   private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
 
+  /**
+   * Creates a new {@link CollectionWithJoinTableBinder} instance.
+   */
   public CollectionWithJoinTableBinder(
       MetadataBuildingContext metadataBuildingContext,
       PersistentEntityNamingStrategy namingStrategy,
@@ -72,6 +75,9 @@ public class CollectionWithJoinTableBinder {
     this.columnConfigToColumnBinder = columnConfigToColumnBinder;
   }
 
+  /**
+   * Bind collection with join table.
+   */
   public void bindCollectionWithJoinTable(
       @Nonnull HibernateToManyProperty property,
       @Nonnull InFlightMetadataCollector mappings,

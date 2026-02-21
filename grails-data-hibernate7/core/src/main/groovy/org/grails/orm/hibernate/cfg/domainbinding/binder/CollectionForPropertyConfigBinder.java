@@ -24,8 +24,14 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
 import org.hibernate.FetchMode;
 import org.hibernate.mapping.Collection;
 
+/**
+ * The collection for property config binder class.
+ */
 public class CollectionForPropertyConfigBinder {
 
+  /**
+   * Bind collection for property config.
+   */
   public void bindCollectionForPropertyConfig(
       @Nonnull Collection collection, @Nonnull HibernateToManyProperty property) {
     collection.setLazy(!FetchMode.JOIN.equals(property.getFetchMode()));

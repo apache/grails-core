@@ -46,10 +46,16 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 public abstract class AbstractHibernateSession extends AbstractAttributeStoringSession
     implements QueryAliasAwareSession {
 
+  /** The datastore. */
   protected AbstractHibernateDatastore datastore;
+  /** The connected. */
   protected boolean connected = true;
+  /** The hibernate template. */
   protected IHibernateTemplate hibernateTemplate;
 
+  /**
+   * Creates a new {@link AbstractHibernateSession} instance.
+   */
   protected AbstractHibernateSession(
       AbstractHibernateDatastore hibernateDatastore, SessionFactory sessionFactory) {
     datastore = hibernateDatastore;
@@ -147,7 +153,7 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
   /**
    * @deprecated persist method needs to be changed to void
    * @param objects The Objects
-   * @return
+   * @return the result
    */
   @Deprecated()
   public List<Serializable> persist(Iterable objects) {
@@ -176,6 +182,7 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
     hibernateTemplate.deleteAll(list);
   }
 
+  /** TODO: Add description. */
   @SuppressWarnings("unchecked")
   protected Collection getIterableAsCollection(Iterable objects) {
     Collection list;

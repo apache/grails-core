@@ -40,13 +40,14 @@ import org.springframework.core.env.PropertyResolver;
 public abstract class AbstractHibernateConnectionSourceFactory
     extends AbstractConnectionSourceFactory<SessionFactory, HibernateConnectionSourceSettings> {
 
+  /** The data source connection source factory. */
   protected DataSourceConnectionSourceFactory dataSourceConnectionSourceFactory =
       new CachedDataSourceConnectionSourceFactory();
 
   /**
    * Sets the factory for creating SQL {@link DataSource} connection sources
    *
-   * @param dataSourceConnectionSourceFactory
+   * @param dataSourceConnectionSourceFactory the data source connection source factory
    */
   public void setDataSourceConnectionSourceFactory(
       DataSourceConnectionSourceFactory dataSourceConnectionSourceFactory) {

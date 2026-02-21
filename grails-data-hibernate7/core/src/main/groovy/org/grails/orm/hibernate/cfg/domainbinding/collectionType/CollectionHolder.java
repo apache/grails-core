@@ -25,8 +25,14 @@ import java.util.Set;
 import java.util.SortedSet;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 
+/**
+ * Collection holder.
+ */
 public record CollectionHolder(Map<Class<?>, CollectionType> map) {
 
+  /**
+   * Creates a new {@link CollectionHolder} instance.
+   */
   public CollectionHolder(MetadataBuildingContext buildingContext) {
     this(
         Map.ofEntries(
@@ -37,6 +43,9 @@ public record CollectionHolder(Map<Class<?>, CollectionType> map) {
             Map.entry(Map.class, new MapCollectionType(buildingContext))));
   }
 
+  /**
+   * Get.
+   */
   public CollectionType get(Class<?> collectionClass) {
     return map.get(collectionClass);
   }

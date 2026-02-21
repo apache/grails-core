@@ -20,6 +20,7 @@
 plugins {
     id 'groovy'
     id 'java-library'
+    id 'jacoco'
 }
 
 version = projectVersion
@@ -133,4 +134,16 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/hibernate7-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+}
+
+test {
+    finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+    }
 }

@@ -26,6 +26,9 @@ import org.hibernate.mapping.DependantValue;
 /** Forces columns to be nullable and checks if the key is updateable. */
 public class CollectionKeyColumnUpdater {
 
+  /**
+   * Force nullable and check updatable.
+   */
   public void forceNullableAndCheckUpdatable(DependantValue key, HibernateToManyProperty property) {
     StreamSupport.stream(key.getColumns().spliterator(), false)
         .filter(Objects::nonNull)

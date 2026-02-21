@@ -31,11 +31,19 @@ import org.hibernate.mapping.PersistentClass;
  */
 public abstract class CollectionType {
 
+  /** The clazz. */
   protected final Class<?> clazz;
+  /** The building context. */
   protected final MetadataBuildingContext buildingContext;
 
+  /**
+   * Create collection.
+   */
   public abstract Collection createCollection(PersistentClass owner);
 
+  /**
+   * Create.
+   */
   public Collection create(HibernateToManyProperty property, PersistentClass owner)
       throws MappingException {
     Collection coll = createCollection(owner);
@@ -44,6 +52,9 @@ public abstract class CollectionType {
     return coll;
   }
 
+  /**
+   * Creates a new {@link CollectionType} instance.
+   */
   protected CollectionType(Class<?> clazz, MetadataBuildingContext buildingContext) {
     this.clazz = clazz;
     this.buildingContext = buildingContext;
@@ -54,6 +65,9 @@ public abstract class CollectionType {
     return clazz.getName();
   }
 
+  /**
+   * Gets the type name.
+   */
   public String getTypeName(HibernateToManyProperty property) {
     return property.getTypeName();
   }

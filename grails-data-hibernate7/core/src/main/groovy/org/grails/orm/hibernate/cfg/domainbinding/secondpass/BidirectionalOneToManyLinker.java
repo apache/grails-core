@@ -30,10 +30,16 @@ public class BidirectionalOneToManyLinker {
 
   private final GrailsPropertyResolver grailsPropertyResolver;
 
+  /**
+   * Creates a new {@link BidirectionalOneToManyLinker} instance.
+   */
   public BidirectionalOneToManyLinker(GrailsPropertyResolver grailsPropertyResolver) {
     this.grailsPropertyResolver = grailsPropertyResolver;
   }
 
+  /**
+   * Link.
+   */
   public void link(
       Collection collection,
       PersistentClass associatedClass,

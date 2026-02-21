@@ -131,18 +131,26 @@ public class ClosureEventTriggeringInterceptor extends AbstractClosureEventTrigg
   @Deprecated
   public static final String AFTER_LOAD_EVENT = AbstractPersistenceEvent.AFTER_LOAD_EVENT;
 
+  /** The datastore. */
   protected AbstractHibernateDatastore datastore;
+  /** The event publisher. */
   protected ConfigurableApplicationEventPublisher eventPublisher;
 
   private MappingContext mappingContext;
   private ProxyHandler proxyHandler;
 
+  /**
+   * Sets the datastore.
+   */
   public void setDatastore(AbstractHibernateDatastore datastore) {
     this.datastore = datastore;
     this.mappingContext = datastore.getMappingContext();
     this.proxyHandler = mappingContext.getProxyHandler();
   }
 
+  /**
+   * Sets the event publisher.
+   */
   public void setEventPublisher(ConfigurableApplicationEventPublisher eventPublisher) {
     this.eventPublisher = eventPublisher;
   }

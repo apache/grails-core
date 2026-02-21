@@ -70,28 +70,49 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore
         MessageSourceAware,
         MultipleConnectionSourceCapableDatastore {
 
+  /** The config property cache queries. */
   public static final String CONFIG_PROPERTY_CACHE_QUERIES = "grails.hibernate.cache.queries";
+  /** The config property osiv readonly. */
   public static final String CONFIG_PROPERTY_OSIV_READONLY = "grails.hibernate.osiv.readonly";
+  /** The config property pass readonly to hibernate. */
   public static final String CONFIG_PROPERTY_PASS_READONLY_TO_HIBERNATE =
       "grails.hibernate.pass.readonly";
+  /** The session factory. */
   protected final SessionFactory sessionFactory;
+  /** The connection sources. */
   protected final ConnectionSources<SessionFactory, HibernateConnectionSourceSettings>
       connectionSources;
+  /** The default flush mode name. */
   protected final String defaultFlushModeName;
+  /** The multi tenant mode. */
   protected final MultiTenancySettings.MultiTenancyMode multiTenantMode;
+  /** The schema handler. */
   protected final SchemaHandler schemaHandler;
+  /** The event triggering interceptor. */
   protected AbstractHibernateEventListener eventTriggeringInterceptor;
+  /** The auto timestamp event listener. */
   protected AutoTimestampEventListener autoTimestampEventListener;
+  /** The osiv read only. */
   protected final boolean osivReadOnly;
+  /** The pass read only to hibernate. */
   protected final boolean passReadOnlyToHibernate;
+  /** The is cache queries. */
   protected final boolean isCacheQueries;
+  /** The default flush mode. */
   protected final int defaultFlushMode;
+  /** The fail on error. */
   protected final boolean failOnError;
+  /** The mark dirty. */
   protected final boolean markDirty;
+  /** The data source name. */
   protected final String dataSourceName;
+  /** The tenant resolver. */
   protected final TenantResolver tenantResolver;
   private boolean destroyed;
 
+  /**
+   * Creates a new {@link AbstractHibernateDatastore} instance.
+   */
   protected AbstractHibernateDatastore(
       ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources,
       HibernateMappingContext mappingContext) {
@@ -125,6 +146,9 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore
     }
   }
 
+  /**
+   * Creates a new {@link AbstractHibernateDatastore} instance.
+   */
   protected AbstractHibernateDatastore(
       MappingContext mappingContext,
       SessionFactory sessionFactory,
@@ -163,6 +187,9 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore
     this.schemaHandler = new DefaultSchemaHandler();
   }
 
+  /**
+   * Creates a new {@link AbstractHibernateDatastore} instance.
+   */
   public AbstractHibernateDatastore(
       MappingContext mappingContext, SessionFactory sessionFactory, PropertyResolver config) {
     this(mappingContext, sessionFactory, config, null, ConnectionSource.DEFAULT);
@@ -174,6 +201,9 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore
     this.mappingContext.setValidatorRegistry(validatorRegistry);
   }
 
+  /**
+   * Create validator registry.
+   */
   protected ValidatorRegistry createValidatorRegistry(MessageSource messageSource) {
     return ValidatorRegistries.createValidatorRegistry(
         mappingContext,
@@ -216,6 +246,9 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore
    */
   public abstract AbstractHibernateDatastore getDatastoreForConnection(String connectionName);
 
+  /**
+   * Resolve tenant ids.
+   */
   public Iterable<Serializable> resolveTenantIds() {
     if (this.tenantResolver instanceof AllTenantsResolver) {
       return ((AllTenantsResolver) tenantResolver).resolveTenantIds();
@@ -232,10 +265,16 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore
     }
   }
 
+  /**
+   * Resolve tenant identifier.
+   */
   public Serializable resolveTenantIdentifier() throws TenantNotFoundException {
     return Tenants.currentId(this);
   }
 
+  /**
+   * Returns whether auto flush.
+   */
   public boolean isAutoFlush() {
     return defaultFlushMode == FlushMode.AUTO.level;
   }
@@ -254,18 +293,30 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore
     return defaultFlushModeName;
   }
 
+  /**
+   * Returns whether fail on error.
+   */
   public boolean isFailOnError() {
     return failOnError;
   }
 
+  /**
+   * Returns whether osiv read only.
+   */
   public boolean isOsivReadOnly() {
     return osivReadOnly;
   }
 
+  /**
+   * Returns whether pass read only to hibernate.
+   */
   public boolean isPassReadOnlyToHibernate() {
     return passReadOnlyToHibernate;
   }
 
+  /**
+   * Returns whether cache queries.
+   */
   public boolean isCacheQueries() {
     return isCacheQueries;
   }
@@ -285,6 +336,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore
         .getDataSource();
   }
 
+  /** TODO: Add description. */
   // for testing
   public AbstractHibernateEventListener getEventTriggeringInterceptor() {
     return eventTriggeringInterceptor;
@@ -320,7 +372,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore
   /**
    * Execute the given operation with the given flush mode
    *
-   * @param flushMode
+   * @param flushMode the flush mode
    * @param callable The callable
    */
   public abstract void withFlushMode(FlushMode flushMode, Callable<Boolean> callable);
@@ -331,9 +383,13 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore
    * @see org.hibernate.FlushMode
    */
   public enum FlushMode {
+    /** The manual constant. */
     MANUAL(0),
+    /** The commit constant. */
     COMMIT(5),
+    /** The auto constant. */
     AUTO(10),
+    /** The always constant. */
     ALWAYS(20);
 
     private final int level;
@@ -342,6 +398,9 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore
       this.level = level;
     }
 
+    /**
+     * Gets the level.
+     */
     public int getLevel() {
       return level;
     }
@@ -379,6 +438,9 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore
    */
   public abstract IHibernateTemplate getHibernateTemplate(int flushMode);
 
+  /**
+   * Gets the hibernate template.
+   */
   public IHibernateTemplate getHibernateTemplate() {
     return getHibernateTemplate(defaultFlushMode);
   }
@@ -394,6 +456,9 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore
     return getHibernateTemplate().execute(multiTenantCallable);
   }
 
+  /**
+   * With new session.
+   */
   public <T> T withNewSession(final Closure<T> callable) {
     Closure<T> multiTenantCallable = prepareMultiTenantClosure(callable);
     return getHibernateTemplate().executeWithNewSession(multiTenantCallable);
@@ -435,6 +500,9 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore
         .disableFilter(GormProperties.TENANT_IDENTITY);
   }
 
+  /**
+   * Prepare multi tenant closure.
+   */
   protected <T> Closure<T> prepareMultiTenantClosure(final Closure<T> callable) {
     final boolean isMultiTenant =
         getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR;

@@ -60,6 +60,9 @@ public class CollectionSecondPassBinder {
   private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder;
   private final SimpleValueColumnBinder simpleValueColumnBinder;
 
+  /**
+   * Creates a new {@link CollectionSecondPassBinder} instance.
+   */
   public CollectionSecondPassBinder(
       ManyToOneBinder manyToOneBinder,
       PrimaryKeyValueCreator primaryKeyValueCreator,
@@ -84,6 +87,9 @@ public class CollectionSecondPassBinder {
     this.orderByClauseBuilder = new OrderByClauseBuilder();
   }
 
+  /**
+   * Bind collection second pass.
+   */
   public void bindCollectionSecondPass(
       @Nonnull HibernateToManyProperty property,
       @Nonnull InFlightMetadataCollector mappings,

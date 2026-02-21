@@ -79,6 +79,11 @@ subprojects {
             cacheChangingModulesFor(cacheHours, 'hours')
         }
     }
+    pluginManager.withPlugin('jacoco') {
+        jacoco {
+            toolVersion = "0.8.14" // Set the specific tool version here
+        }
+    }
 }
 
 apply {
