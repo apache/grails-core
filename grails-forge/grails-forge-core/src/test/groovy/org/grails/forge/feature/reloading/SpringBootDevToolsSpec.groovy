@@ -16,34 +16,29 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.forge.feature.reloading
+
+import spock.lang.Unroll
 
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
-import org.grails.forge.feature.Features
 import org.grails.forge.fixture.CommandOutputFixture
 
 class SpringBootDevToolsSpec extends ApplicationContextSpec implements CommandOutputFixture {
 
     void "test spring-boot-devtools feature"() {
-
-        when:
-        final Features features = getFeatures(["spring-boot-devtools"])
-
-        then:
-        features.contains("spring-boot-devtools")
-
+        expect:
+        'spring-boot-devtools' in getFeatures(['spring-boot-devtools'])
     }
 
-    void "test spring-boot-devtools dependency is present for #applicationType application type"() {
-
+    @Unroll
+    void "test spring-boot-devtools dependency is present for #applicationType application type"(ApplicationType applicationType) {
         when:
-        def output = generate(applicationType, ["spring-boot-devtools"])
-        def build = output["build.gradle"]
+        def output = generate(applicationType, ['spring-boot-devtools'])
+        def build = output['build.gradle']
 
         then:
-        build.contains("developmentOnly \"org.springframework.boot:spring-boot-devtools\"")
+        build.contains('developmentOnly "org.springframework.boot:spring-boot-devtools"')
 
         where:
         applicationType << [ApplicationType.WEB, ApplicationType.REST_API]
@@ -51,10 +46,15 @@ class SpringBootDevToolsSpec extends ApplicationContextSpec implements CommandOu
 
     void "test there can be only one of Reloading feature"() {
         when:
-        getFeatures(["spring-boot-devtools", "jrebel"])
+        getFeatures(['spring-boot-devtools', 'jrebel'])
 
         then:
         def ex = thrown(IllegalArgumentException)
-        ex.message.contains("There can only be one of the following features selected")
+        ex.message.contains('There can only be one of the following features selected')
+    }
+
+    void "test spring-boot-devtools is not applied when grails-micronaut is selected"() {
+        expect:
+        !('spring-boot-devtools' in getFeatures(['grails-micronaut']))
     }
 }
