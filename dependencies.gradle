@@ -71,6 +71,7 @@ ext {
             'bootstrap-icons.version'     : '1.13.1',
             'bootstrap.version'           : '5.3.8',
             'commons-codec.version'       : '1.18.0',
+            'commons-lang3.version'       : '3.20.0',
             'geb-spock.version'           : '8.0.1',
             'groovy.version'              : '4.0.30',
             'jackson.version'             : '2.19.1',
@@ -100,6 +101,7 @@ ext {
             'bootstrap'                : "org.webjars.npm:bootstrap:${bomDependencyVersions['bootstrap.version']}",
             'bootstrap-icons'          : "org.webjars.npm:bootstrap-icons:${bomDependencyVersions['bootstrap-icons.version']}",
             'commons-codec'            : "commons-codec:commons-codec:${bomDependencyVersions['commons-codec.version']}",
+            'commons-lang3'            : "org.apache.commons:commons-lang3:${bomDependencyVersions['commons-lang3.version']}",
             'geb-spock'                : "org.apache.groovy.geb:geb-spock:${bomDependencyVersions['geb-spock.version']}",
             // start - restate the groovy-bom includes here because the spring dependency management will pick the library from spring-boot-dependencies otherwise
             'groovy'              : "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}",
