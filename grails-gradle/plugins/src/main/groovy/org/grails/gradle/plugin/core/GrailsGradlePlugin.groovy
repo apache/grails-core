@@ -626,31 +626,27 @@ class GrailsGradlePlugin extends GroovyPlugin {
      * @since 7.0.8
      */
     protected void configureJavaCompatibilityArgs(Project project) {
-        project.afterEvaluate {
-            int targetVersion = resolveTargetJavaVersion(project)
-
-            List<String> compatArgs = []
-
-            // JEP 472: Prepare to Restrict the Use of JNI - suppress native access warnings
-            // from hawtjni (JLine 2.x) and Netty calling System.loadLibrary / native methods
-            if (targetVersion >= 24) {
-                compatArgs.add('--enable-native-access=ALL-UNNAMED')
+        project.plugins.withId('java') {
+            project.tasks.withType(Test).configureEach { Test task ->
+                applyCompatArgs(project, task, task.name)
             }
-
-            // JEP 471/498: sun.misc.Unsafe memory-access terminal deprecation - suppress
-            // warnings from Netty's PlatformDependent0 using Unsafe.allocateMemory
-            if (targetVersion >= 23) {
-                compatArgs.add('--sun-misc-unsafe-memory-access=allow')
+            project.tasks.withType(JavaExec).configureEach { JavaExec task ->
+                applyCompatArgs(project, task, task.name)
             }
+        }
+    }
 
-            if (compatArgs) {
-                project.tasks.withType(Test).configureEach { Test task ->
-                    task.jvmArgs(compatArgs)
-                }
-                project.tasks.withType(JavaExec).configureEach { JavaExec task ->
-                    task.jvmArgs(compatArgs)
-                }
-            }
+    private void applyCompatArgs(Project project, JavaForkOptions task, String taskName) {
+        int targetVersion = resolveTargetJavaVersion(project)
+
+        if (targetVersion >= 24) {
+            task.jvmArgs('--enable-native-access=ALL-UNNAMED')
+            project.logger.info("Grails: adding --enable-native-access=ALL-UNNAMED to ${taskName} for Java ${targetVersion} compatibility")
+        }
+
+        if (targetVersion >= 23) {
+            task.jvmArgs('--sun-misc-unsafe-memory-access=allow')
+            project.logger.info("Grails: adding --sun-misc-unsafe-memory-access=allow to ${taskName} for Java ${targetVersion} compatibility")
         }
     }
 
