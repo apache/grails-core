@@ -37,9 +37,14 @@ import spock.lang.TempDir
  *   <li>{@code application.groovy} - Groovy-based configuration</li>
  *   <li>{@code @ConfigurationProperties} - Type-safe configuration beans</li>
  * </ul>
+ *
+ * <p>The hybrid report uses curated property metadata (from {@code config-properties.yml})
+ * to produce a 3-column AsciiDoc table (Property | Description | Default) for known
+ * Grails properties, with runtime values overriding static defaults. Properties not
+ * found in the metadata appear in a separate "Other Properties" section.
  */
 @Integration
-@Narrative('Verifies that ConfigReportCommand generates an AsciiDoc report containing properties from application.yml, application.groovy, and @ConfigurationProperties sources')
+@Narrative('Verifies that ConfigReportCommand generates a hybrid AsciiDoc report merging static property metadata with runtime-collected values')
 class ConfigReportCommandIntegrationSpec extends Specification {
 
     @Autowired
@@ -57,14 +62,7 @@ class ConfigReportCommandIntegrationSpec extends Specification {
         return command
     }
 
-    private File executeCommand(ConfigReportCommand command) {
-        ExecutionContext executionContext = new ExecutionContext(Mock(CommandLine))
-        File reportFile = new File(executionContext.baseDir, ConfigReportCommand.DEFAULT_REPORT_FILE)
-        command.handle(executionContext)
-        return reportFile
-    }
-
-    def "ConfigReportCommand generates a report file"() {
+    def "ConfigReportCommand generates a report file with hybrid format"() {
         given: 'a ConfigReportCommand wired to the live application context'
         ConfigReportCommand command = createCommand()
 
@@ -82,18 +80,18 @@ class ConfigReportCommandIntegrationSpec extends Specification {
         reportFile.exists()
         reportFile.length() > 0
 
-        and: 'the report has valid AsciiDoc structure'
+        and: 'the report has valid AsciiDoc structure with 3-column format'
         String content = reportFile.text
         content.startsWith('= Grails Application Configuration Report')
         content.contains(':toc: left')
-        content.contains('[cols="2,3", options="header"]')
-        content.contains('| Property | Value')
+        content.contains('[cols="2,5,2", options="header"]')
+        content.contains('| Property | Description | Default')
 
         cleanup:
         reportFile?.delete()
     }
 
-    def "report contains properties from application.yml"() {
+    def "report shows known Grails properties in metadata categories"() {
         given: 'a ConfigReportCommand wired to the live application context'
         ConfigReportCommand command = createCommand()
         ExecutionContext executionContext = new ExecutionContext(Mock(CommandLine))
@@ -103,29 +101,22 @@ class ConfigReportCommandIntegrationSpec extends Specification {
         command.handle(executionContext)
         String content = reportFile.text
 
-        then: 'YAML-defined properties are present in the report'
-        content.contains('`myapp.yaml.greeting`')
-        content.contains('`Hello from YAML`')
+        then: 'known metadata categories are present as section headers'
+        content.contains('== Core Properties')
+        content.contains('== Web & Controllers')
+        content.contains('== DataSource')
 
-        and: 'YAML numeric properties are present'
-        content.contains('`myapp.yaml.maxRetries`')
-        content.contains('`5`')
-
-        and: 'YAML nested properties are present'
-        content.contains('`myapp.yaml.feature.enabled`')
-        content.contains('`true`')
-        content.contains('`myapp.yaml.feature.timeout`')
-        content.contains('`30000`')
-
-        and: 'standard Grails YAML properties are present'
+        and: 'grails.profile appears in the Core Properties section with its description'
         content.contains('`grails.profile`')
+
+        and: 'runtime value overrides the static default for grails.profile'
         content.contains('`web`')
 
         cleanup:
         reportFile?.delete()
     }
 
-    def "report contains properties from application.groovy"() {
+    def "report puts custom application properties in Other Properties section"() {
         given: 'a ConfigReportCommand wired to the live application context'
         ConfigReportCommand command = createCommand()
         ExecutionContext executionContext = new ExecutionContext(Mock(CommandLine))
@@ -135,7 +126,34 @@ class ConfigReportCommandIntegrationSpec extends Specification {
         command.handle(executionContext)
         String content = reportFile.text
 
-        then: 'Groovy config properties are present in the report'
+        then: 'YAML-defined custom properties appear in Other Properties'
+        content.contains('== Other Properties')
+        content.contains('`myapp.yaml.greeting`')
+        content.contains('`Hello from YAML`')
+
+        and: 'YAML numeric properties are in Other Properties'
+        content.contains('`myapp.yaml.maxRetries`')
+        content.contains('`5`')
+
+        and: 'YAML nested properties are in Other Properties'
+        content.contains('`myapp.yaml.feature.enabled`')
+        content.contains('`myapp.yaml.feature.timeout`')
+
+        cleanup:
+        reportFile?.delete()
+    }
+
+    def "report contains properties from application.groovy in Other Properties"() {
+        given: 'a ConfigReportCommand wired to the live application context'
+        ConfigReportCommand command = createCommand()
+        ExecutionContext executionContext = new ExecutionContext(Mock(CommandLine))
+        File reportFile = new File(executionContext.baseDir, ConfigReportCommand.DEFAULT_REPORT_FILE)
+
+        when: 'the command is executed'
+        command.handle(executionContext)
+        String content = reportFile.text
+
+        then: 'Groovy config properties are present in Other Properties'
         content.contains('`myapp.groovy.appName`')
         content.contains('`Config Report Test App`')
 
@@ -166,7 +184,7 @@ class ConfigReportCommandIntegrationSpec extends Specification {
         reportFile?.delete()
     }
 
-    def "report contains properties bound via @ConfigurationProperties"() {
+    def "report contains properties bound via @ConfigurationProperties in Other Properties"() {
         given: 'a ConfigReportCommand wired to the live application context'
         ConfigReportCommand command = createCommand()
         ExecutionContext executionContext = new ExecutionContext(Mock(CommandLine))
@@ -181,7 +199,7 @@ class ConfigReportCommandIntegrationSpec extends Specification {
         appProperties.pageSize == 50
         appProperties.debugEnabled == true
 
-        and: 'the typed properties appear in the config report'
+        and: 'the typed properties appear in Other Properties'
         content.contains('`myapp.typed.name`')
         content.contains('`Configured App`')
         content.contains('`myapp.typed.pageSize`')
@@ -193,7 +211,7 @@ class ConfigReportCommandIntegrationSpec extends Specification {
         reportFile?.delete()
     }
 
-    def "report groups properties by top-level namespace"() {
+    def "report separates known metadata properties from custom properties"() {
         given: 'a ConfigReportCommand wired to the live application context'
         ConfigReportCommand command = createCommand()
         ExecutionContext executionContext = new ExecutionContext(Mock(CommandLine))
@@ -203,20 +221,27 @@ class ConfigReportCommandIntegrationSpec extends Specification {
         command.handle(executionContext)
         String content = reportFile.text
 
-        then: 'properties are organized into namespace sections'
-        content.contains('== grails')
-        content.contains('== myapp')
-        content.contains('== dataSource')
+        then: 'known Grails properties appear in categorized sections before Other Properties'
+        int coreIdx = content.indexOf('== Core Properties')
+        int otherIdx = content.indexOf('== Other Properties')
+        coreIdx >= 0
+        otherIdx >= 0
+        coreIdx < otherIdx
 
-        and: 'sections are in alphabetical order'
-        content.indexOf('== dataSource') < content.indexOf('== grails')
-        content.indexOf('== grails') < content.indexOf('== myapp')
+        and: 'grails.profile is in the Core Properties section (not Other Properties)'
+        String otherSection = content.substring(otherIdx)
+        !otherSection.contains('`grails.profile`')
+
+        and: 'custom myapp properties are in Other Properties (not in categorized sections)'
+        String beforeOther = content.substring(0, otherIdx)
+        !beforeOther.contains('`myapp.yaml.greeting`')
+        !beforeOther.contains('`myapp.groovy.appName`')
 
         cleanup:
         reportFile?.delete()
     }
 
-    def "report contains properties from all three config sources simultaneously"() {
+    def "report contains properties from all three config sources"() {
         given: 'a ConfigReportCommand wired to the live application context'
         ConfigReportCommand command = createCommand()
         ExecutionContext executionContext = new ExecutionContext(Mock(CommandLine))
@@ -235,17 +260,11 @@ class ConfigReportCommandIntegrationSpec extends Specification {
         and: 'typed @ConfigurationProperties are present'
         content.contains('`myapp.typed.name`')
 
-        and: 'all properties are in the same myapp section'
-        int myappSectionIndex = content.indexOf('== myapp')
-        myappSectionIndex >= 0
-
-        and: 'each table row has the correct AsciiDoc format'
-        content.contains('| `myapp.yaml.greeting`')
-        content.contains('| `Hello from YAML`')
-        content.contains('| `myapp.groovy.appName`')
-        content.contains('| `Config Report Test App`')
-        content.contains('| `myapp.typed.name`')
-        content.contains('| `Configured App`')
+        and: 'Other Properties section uses 2-column format'
+        int otherIdx = content.indexOf('== Other Properties')
+        String otherSection = content.substring(otherIdx)
+        otherSection.contains('[cols="2,3", options="header"]')
+        otherSection.contains('| Property | Default')
 
         cleanup:
         reportFile?.delete()

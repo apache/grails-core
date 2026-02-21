@@ -21,6 +21,8 @@ package grails.dev.commands
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
+import org.yaml.snakeyaml.Yaml
+
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.EnumerablePropertySource
 import org.springframework.core.env.PropertySource
@@ -108,7 +110,26 @@ class ConfigReportCommand implements ApplicationCommand {
      * @param sorted the sorted configuration properties
      * @param reportFile the file to write the report to
      */
-    void writeReport(Map<String, String> sorted, File reportFile) {
+    void writeReport(Map<String, String> runtimeProperties, File reportFile) {
+        Map<String, Map<String, String>> metadata = loadPropertyMetadata()
+        Map<String, List<Map<String, String>>> categories = new LinkedHashMap<String, List<Map<String, String>>>()
+        for (Map.Entry<String, Map<String, String>> entry : metadata.entrySet()) {
+            Map<String, String> property = entry.value
+            String category = property.get('category')
+            if (!categories.containsKey(category)) {
+                categories.put(category, new ArrayList<Map<String, String>>())
+            }
+            categories.get(category).add(property)
+        }
+
+        Set<String> knownKeys = metadata.keySet()
+        Map<String, String> otherProperties = new TreeMap<String, String>()
+        runtimeProperties.each { String key, String value ->
+            if (!knownKeys.contains(key)) {
+                otherProperties.put(key, value)
+            }
+        }
+
         reportFile.withWriter('UTF-8') { BufferedWriter writer ->
             writer.writeLine('= Grails Application Configuration Report')
             writer.writeLine(':toc: left')
@@ -116,30 +137,105 @@ class ConfigReportCommand implements ApplicationCommand {
             writer.writeLine(':source-highlighter: coderay')
             writer.writeLine('')
 
-            String currentSection = ''
-            sorted.each { String key, String value ->
-                String section = key.contains('.') ? key.substring(0, key.indexOf('.')) : key
-                if (section != currentSection) {
-                    if (currentSection) {
-                        writer.writeLine('|===')
-                        writer.writeLine('')
+            categories.each { String categoryName, List<Map<String, String>> categoryProperties ->
+                writer.writeLine("== ${categoryName}")
+                writer.writeLine('')
+                writer.writeLine('[cols="2,5,2", options="header"]')
+                writer.writeLine('|===')
+                writer.writeLine('| Property | Description | Default')
+                writer.writeLine('')
+
+                categoryProperties.each { Map<String, String> property ->
+                    String key = property.get('key')
+                    String description = property.get('description')
+                    String defaultValue = property.get('default')
+                    String resolvedValue
+                    if (runtimeProperties.containsKey(key)) {
+                        resolvedValue = "`${escapeAsciidoc(runtimeProperties.get(key))}`"
                     }
-                    currentSection = section
-                    writer.writeLine("== ${section}")
-                    writer.writeLine('')
-                    writer.writeLine('[cols="2,3", options="header"]')
-                    writer.writeLine('|===')
-                    writer.writeLine('| Property | Value')
+                    else {
+                        resolvedValue = escapeAsciidoc(defaultValue)
+                    }
+                    writer.writeLine("| `${key}`")
+                    writer.writeLine("| ${escapeAsciidoc(description)}")
+                    writer.writeLine("| ${resolvedValue}")
                     writer.writeLine('')
                 }
-                writer.writeLine("| `${key}`")
-                writer.writeLine("| `${escapeAsciidoc(value)}`")
+                writer.writeLine('|===')
                 writer.writeLine('')
             }
-            if (currentSection) {
+
+            if (!otherProperties.isEmpty()) {
+                writer.writeLine('== Other Properties')
+                writer.writeLine('')
+                writer.writeLine('[cols="2,3", options="header"]')
+                writer.writeLine('|===')
+                writer.writeLine('| Property | Default')
+                writer.writeLine('')
+                otherProperties.each { String key, String value ->
+                    writer.writeLine("| `${key}`")
+                    writer.writeLine("| `${escapeAsciidoc(value)}`")
+                    writer.writeLine('')
+                }
                 writer.writeLine('|===')
             }
         }
+    }
+
+    Map<String, Map<String, String>> loadPropertyMetadata() {
+        InputStream stream = ConfigReportCommand.classLoader.getResourceAsStream('META-INF/grails/config-properties.yml')
+        if (stream == null) {
+            return new LinkedHashMap<String, Map<String, String>>()
+        }
+        Map<String, Map<String, String>> metadata = new LinkedHashMap<String, Map<String, String>>()
+        Map<String, Object> yamlData
+        try {
+            yamlData = (Map<String, Object>) new Yaml().load(stream)
+        }
+        finally {
+            stream.close()
+        }
+        Object categories = yamlData.get('categories')
+        if (!(categories instanceof List)) {
+            return metadata
+        }
+        for (Object categoryObject : (List<Object>) categories) {
+            if (!(categoryObject instanceof Map)) {
+                continue
+            }
+            Map<String, Object> categoryMap = (Map<String, Object>) categoryObject
+            Object categoryNameObject = categoryMap.get('name')
+            if (!(categoryNameObject instanceof String)) {
+                continue
+            }
+            String categoryName = (String) categoryNameObject
+            Object properties = categoryMap.get('properties')
+            if (!(properties instanceof List)) {
+                continue
+            }
+            for (Object propertyObject : (List<Object>) properties) {
+                if (!(propertyObject instanceof Map)) {
+                    continue
+                }
+                Map<String, Object> propertyMap = (Map<String, Object>) propertyObject
+                Object keyObject = propertyMap.get('key')
+                Object descriptionObject = propertyMap.get('description')
+                Object defaultObject = propertyMap.get('default')
+                if (!(keyObject instanceof String)) {
+                    continue
+                }
+                String key = (String) keyObject
+                String description = descriptionObject instanceof String ? (String) descriptionObject : ''
+                String defaultValue = defaultObject instanceof String ? (String) defaultObject : ''
+                Map<String, String> entry = new LinkedHashMap<String, String>()
+                entry.put('key', key)
+                entry.put('description', description)
+                entry.put('default', defaultValue)
+                entry.put('category', categoryName)
+                metadata.put(key, entry)
+            }
+        }
+        metadata
     }
 
     /**

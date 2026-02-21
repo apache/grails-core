@@ -86,16 +86,20 @@ class ConfigReportCommandSpec extends Specification {
         File reportFile = new File(executionContext.baseDir, ConfigReportCommand.DEFAULT_REPORT_FILE)
         reportFile.exists()
 
-        and:
+        and: "report has correct AsciiDoc structure"
         String content = reportFile.text
         content.contains('= Grails Application Configuration Report')
-        content.contains('== grails')
-        content.contains('== server')
-        content.contains('== spring')
+
+        and: "known Grails properties appear in their metadata category sections"
         content.contains('`grails.profile`')
-        content.contains('`web`')
+        content.contains('`grails.codegen.defaultPackage`')
+
+        and: "unknown runtime properties appear in the Other Properties section"
+        content.contains('== Other Properties')
         content.contains('`server.port`')
         content.contains('`8080`')
+        content.contains('`spring.main.banner-mode`')
+        content.contains('`off`')
 
         cleanup:
         reportFile?.delete()
@@ -178,50 +182,90 @@ class ConfigReportCommandSpec extends Specification {
         !result.containsKey('app.bad')
     }
 
-    def "writeReport groups properties by top-level namespace"() {
+    def "writeReport uses 3-column format with metadata categories"() {
         given:
-        Map<String, String> sorted = new TreeMap<String, String>()
-        sorted.put('grails.controllers.defaultScope', 'singleton')
-        sorted.put('grails.profile', 'web')
-        sorted.put('server.port', '8080')
+        Map<String, String> runtimeProperties = new TreeMap<String, String>()
+        runtimeProperties.put('grails.controllers.defaultScope', 'singleton')
+        runtimeProperties.put('grails.profile', 'web')
+        runtimeProperties.put('server.port', '8080')
 
         File reportFile = new File(tempDir, 'test-report.adoc')
 
         when:
-        command.writeReport(sorted, reportFile)
+        command.writeReport(runtimeProperties, reportFile)
 
         then:
         String content = reportFile.text
 
-        and: "report has correct AsciiDoc structure"
+        and: "report has correct AsciiDoc header"
         content.startsWith('= Grails Application Configuration Report')
         content.contains(':toc: left')
-        content.contains('[cols="2,3", options="header"]')
-        content.contains('| Property | Value')
 
-        and: "properties are grouped by namespace"
-        content.contains('== grails')
-        content.contains('== server')
+        and: "metadata categories are used as section headers"
+        content.contains('== Core Properties')
+        content.contains('== Web & Controllers')
 
-        and: "grails section appears before server section (alphabetical)"
-        content.indexOf('== grails') < content.indexOf('== server')
+        and: "3-column table format is used for known properties"
+        content.contains('[cols="2,5,2", options="header"]')
+        content.contains('| Property | Description | Default')
 
-        and: "properties are listed under correct sections"
+        and: "known properties appear with descriptions"
+        content.contains('`grails.profile`')
         content.contains('`grails.controllers.defaultScope`')
+
+        and: "runtime values override static defaults for known properties"
+        content.contains('`web`')
         content.contains('`singleton`')
+
+        and: "unknown runtime properties go to Other Properties section"
+        content.contains('== Other Properties')
         content.contains('`server.port`')
         content.contains('`8080`')
     }
 
+    def "writeReport shows static defaults when no runtime value exists"() {
+        given: "no runtime properties provided"
+        Map<String, String> runtimeProperties = new TreeMap<String, String>()
+        File reportFile = new File(tempDir, 'defaults-report.adoc')
+
+        when:
+        command.writeReport(runtimeProperties, reportFile)
+
+        then:
+        String content = reportFile.text
+
+        and: "metadata categories are still present with static defaults"
+        content.contains('== Core Properties')
+        content.contains('`grails.profile`')
+        content.contains('Set by project template')
+    }
+
+    def "writeReport runtime values override static defaults"() {
+        given:
+        Map<String, String> runtimeProperties = new TreeMap<String, String>()
+        runtimeProperties.put('grails.profile', 'rest-api')
+
+        File reportFile = new File(tempDir, 'override-report.adoc')
+
+        when:
+        command.writeReport(runtimeProperties, reportFile)
+
+        then:
+        String content = reportFile.text
+
+        and: "runtime value overrides the static default"
+        content.contains('`rest-api`')
+    }
+
     def "writeReport escapes pipe characters in values"() {
         given:
-        Map<String, String> sorted = new TreeMap<String, String>()
-        sorted.put('test.key', 'value|with|pipes')
+        Map<String, String> runtimeProperties = new TreeMap<String, String>()
+        runtimeProperties.put('test.key', 'value|with|pipes')
 
         File reportFile = new File(tempDir, 'escape-test.adoc')
 
         when:
-        command.writeReport(sorted, reportFile)
+        command.writeReport(runtimeProperties, reportFile)
 
         then:
         String content = reportFile.text
@@ -229,19 +273,70 @@ class ConfigReportCommandSpec extends Specification {
         !content.contains('value|with|pipes')
     }
 
-    def "writeReport handles empty configuration"() {
+    def "writeReport handles empty configuration with no Other Properties"() {
         given:
-        Map<String, String> sorted = new TreeMap<String, String>()
+        Map<String, String> runtimeProperties = new TreeMap<String, String>()
         File reportFile = new File(tempDir, 'empty-report.adoc')
 
         when:
-        command.writeReport(sorted, reportFile)
+        command.writeReport(runtimeProperties, reportFile)
 
         then:
         reportFile.exists()
         String content = reportFile.text
         content.contains('= Grails Application Configuration Report')
-        !content.contains('|===')
+
+        and: "metadata categories still appear from the YAML"
+        content.contains('== Core Properties')
+
+        and: "no Other Properties section when no unknown runtime properties"
+        !content.contains('== Other Properties')
+    }
+
+    def "writeReport puts only unknown runtime properties in Other Properties"() {
+        given:
+        Map<String, String> runtimeProperties = new TreeMap<String, String>()
+        runtimeProperties.put('custom.app.setting', 'myvalue')
+        runtimeProperties.put('grails.profile', 'web')
+
+        File reportFile = new File(tempDir, 'other-props-report.adoc')
+
+        when:
+        command.writeReport(runtimeProperties, reportFile)
+
+        then:
+        String content = reportFile.text
+
+        and: "known property is in its category, not in Other Properties"
+        content.contains('== Core Properties')
+        content.contains('`grails.profile`')
+
+        and: "unknown property appears in Other Properties"
+        content.contains('== Other Properties')
+        content.contains('`custom.app.setting`')
+        content.contains('`myvalue`')
+
+        and: "Other Properties uses 2-column format"
+        int otherIdx = content.indexOf('== Other Properties')
+        String otherSection = content.substring(otherIdx)
+        otherSection.contains('[cols="2,3", options="header"]')
+        otherSection.contains('| Property | Default')
+    }
+
+    def "loadPropertyMetadata returns properties from classpath YAML"() {
+        when:
+        Map<String, Map<String, String>> metadata = command.loadPropertyMetadata()
+
+        then: "metadata is loaded from the config-properties.yml on the classpath"
+        !metadata.isEmpty()
+        metadata.containsKey('grails.profile')
+
+        and: "each entry has the expected fields"
+        Map<String, String> profileEntry = metadata.get('grails.profile')
+        profileEntry.get('key') == 'grails.profile'
+        profileEntry.get('description') != null
+        profileEntry.get('description').length() > 0
+        profileEntry.get('category') == 'Core Properties'
     }
 
     def "escapeAsciidoc handles null and empty strings"() {
