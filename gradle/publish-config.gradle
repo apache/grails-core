@@ -40,6 +40,15 @@ extensions.configure(GrailsPublishExtension) {
         url = 'https://apache.org/'
     }
     it.developers = project.property('pomDevelopers') as Map<String, String>
+    it.pomCustomization = { xml ->
+        xml.asNode().dependencies?.dependency?.findAll {
+            it.groupId.text() == 'org.ehcache' && it.artifactId.text() == 'ehcache'
+        }?.each {
+            if (!it.classifier) {
+                it.appendNode('classifier', 'jakarta')
+            }
+        }
+    }
 }
 
 afterEvaluate {
