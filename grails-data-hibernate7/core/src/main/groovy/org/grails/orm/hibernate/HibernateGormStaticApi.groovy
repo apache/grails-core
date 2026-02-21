@@ -434,52 +434,8 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         }
     }
 
-    protected Map<String,Object> filterQueryArgumentMap(Map<String,Object> query) {
-        Map<String,Object> queryArgs = new HashMap<>()
-        for (entry in query.entrySet()) {
-            if (entry.value instanceof CharSequence) {
-                queryArgs[entry.key] = entry.value.toString()
-            }
-            else {
-                queryArgs[entry.key] = entry.value
-            }
-        }
-        return queryArgs
-    }
 
 
-
-    protected String buildNamedParameterQueryFromGString(GString query, Map params) {
-        StringBuilder sqlString = new StringBuilder()
-        int i = 0
-        Object[] values = query.values
-        def strings = query.getStrings()
-        for (str in strings) {
-            sqlString.append(str)
-            if (i < values.length) {
-                String parameterName = "p$i"
-                sqlString.append(':').append(parameterName)
-                params.put(parameterName, values[i++])
-            }
-        }
-        return sqlString.toString()
-    }
-
-
-
-
-
-    protected List<String> removeNullNames(Map query) {
-        List<String> nullNames = []
-        Set<String> allNames = new HashSet<>(query.keySet() as Set<String>)
-        for (String name in allNames) {
-            if (query[name] == null) {
-                query.remove name
-                nullNames << name
-            }
-        }
-        nullNames
-    }
 
     protected Serializable convertIdentifier(Serializable id) {
         def identity = persistentEntity.identity
