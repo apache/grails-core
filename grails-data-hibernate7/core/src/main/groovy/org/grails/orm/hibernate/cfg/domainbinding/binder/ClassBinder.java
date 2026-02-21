@@ -26,9 +26,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.PersistentClass;
 
-/**
- * The class binder class.
- */
+/** The class binder class. */
 public class ClassBinder {
 
   /**

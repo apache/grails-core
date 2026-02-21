@@ -48,14 +48,14 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
 
   /** The datastore. */
   protected AbstractHibernateDatastore datastore;
+
   /** The connected. */
   protected boolean connected = true;
+
   /** The hibernate template. */
   protected IHibernateTemplate hibernateTemplate;
 
-  /**
-   * Creates a new {@link AbstractHibernateSession} instance.
-   */
+  /** Creates a new {@link AbstractHibernateSession} instance. */
   protected AbstractHibernateSession(
       AbstractHibernateDatastore hibernateDatastore, SessionFactory sessionFactory) {
     datastore = hibernateDatastore;

@@ -28,34 +28,26 @@ import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Table;
 
-/**
- * The basic value id creator class.
- */
+/** The basic value id creator class. */
 public class BasicValueIdCreator {
 
   private final JdbcEnvironment jdbcEnvironment;
   private final GrailsSequenceWrapper grailsSequenceWrapper;
 
-  /**
-   * Creates a new {@link BasicValueIdCreator} instance.
-   */
+  /** Creates a new {@link BasicValueIdCreator} instance. */
   public BasicValueIdCreator(JdbcEnvironment jdbcEnvironment) {
     this.jdbcEnvironment = jdbcEnvironment;
     this.grailsSequenceWrapper = new GrailsSequenceWrapper();
   }
 
-  /**
-   * Creates a new {@link BasicValueIdCreator} instance.
-   */
+  /** Creates a new {@link BasicValueIdCreator} instance. */
   protected BasicValueIdCreator(
       JdbcEnvironment jdbcEnvironment, GrailsSequenceWrapper grailsSequenceWrapper) {
     this.jdbcEnvironment = jdbcEnvironment;
     this.grailsSequenceWrapper = grailsSequenceWrapper;
   }
 
-  /**
-   * Gets the basic value id.
-   */
+  /** Gets the basic value id. */
   public BasicValue getBasicValueId(
       MetadataBuildingContext metadataBuildingContext,
       Table table,

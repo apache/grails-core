@@ -21,9 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.util;
 import java.util.Arrays;
 import org.hibernate.MappingException;
 
-/**
- * The cascade behavior enum.
- */
+/** The cascade behavior enum. */
 public enum CascadeBehavior {
 
   /** Cascades all operations, including delete-orphan. Maps to "all". */
@@ -69,9 +67,7 @@ public enum CascadeBehavior {
     return value;
   }
 
-  /**
-   * Returns whether save update.
-   */
+  /** Returns whether save update. */
   public boolean isSaveUpdate() {
     return this == ALL || this == ALL_DELETE_ORPHAN || this == SAVE_UPDATE;
   }
@@ -103,9 +99,7 @@ public enum CascadeBehavior {
     return cascade.contains(PERSIST.getValue()) && cascade.contains(MERGE.getValue());
   }
 
-  /**
-   * From string.
-   */
+  /** From string. */
   public static CascadeBehavior fromString(String value) {
     return Arrays.stream(CascadeBehavior.values())
         .filter(

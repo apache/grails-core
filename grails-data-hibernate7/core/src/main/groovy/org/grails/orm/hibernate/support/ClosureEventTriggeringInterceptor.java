@@ -133,24 +133,21 @@ public class ClosureEventTriggeringInterceptor extends AbstractClosureEventTrigg
 
   /** The datastore. */
   protected AbstractHibernateDatastore datastore;
+
   /** The event publisher. */
   protected ConfigurableApplicationEventPublisher eventPublisher;
 
   private MappingContext mappingContext;
   private ProxyHandler proxyHandler;
 
-  /**
-   * Sets the datastore.
-   */
+  /** Sets the datastore. */
   public void setDatastore(AbstractHibernateDatastore datastore) {
     this.datastore = datastore;
     this.mappingContext = datastore.getMappingContext();
     this.proxyHandler = mappingContext.getProxyHandler();
   }
 
-  /**
-   * Sets the event publisher.
-   */
+  /** Sets the event publisher. */
   public void setEventPublisher(ConfigurableApplicationEventPublisher eventPublisher) {
     this.eventPublisher = eventPublisher;
   }

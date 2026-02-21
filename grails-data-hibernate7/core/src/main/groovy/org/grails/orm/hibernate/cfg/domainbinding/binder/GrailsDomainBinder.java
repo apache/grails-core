@@ -161,10 +161,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
             collectionHolder);
     ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator);
     ComponentBinder componentBinder =
-        new ComponentBinder(
-            metadataBuildingContext,
-            getMappingCacheHolder(),
-            componentUpdater);
+        new ComponentBinder(metadataBuildingContext, getMappingCacheHolder(), componentUpdater);
 
     GrailsPropertyBinder grailsPropertyBinder =
         new GrailsPropertyBinder(

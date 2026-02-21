@@ -39,9 +39,7 @@ public class ClassPropertiesBinder {
   private final PropertyFromValueCreator propertyFromValueCreator;
   private final NaturalIdentifierBinder naturalIdentifierBinder;
 
-  /**
-   * Creates a new {@link ClassPropertiesBinder} instance.
-   */
+  /** Creates a new {@link ClassPropertiesBinder} instance. */
   public ClassPropertiesBinder(
       GrailsPropertyBinder grailsPropertyBinder,
       PropertyFromValueCreator propertyFromValueCreator,
@@ -51,9 +49,7 @@ public class ClassPropertiesBinder {
     this.naturalIdentifierBinder = naturalIdentifierBinder;
   }
 
-  /**
-   * Creates a new {@link ClassPropertiesBinder} instance.
-   */
+  /** Creates a new {@link ClassPropertiesBinder} instance. */
   public ClassPropertiesBinder(
       GrailsPropertyBinder grailsPropertyBinder,
       PropertyFromValueCreator propertyFromValueCreator) {

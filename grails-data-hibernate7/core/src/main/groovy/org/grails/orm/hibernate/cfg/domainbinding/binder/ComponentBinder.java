@@ -32,7 +32,6 @@ import org.hibernate.mapping.Table;
 
 public class ComponentBinder {
 
-
   private final MetadataBuildingContext metadataBuildingContext;
   private final MappingCacheHolder mappingCacheHolder;
   private final ComponentUpdater componentUpdater;

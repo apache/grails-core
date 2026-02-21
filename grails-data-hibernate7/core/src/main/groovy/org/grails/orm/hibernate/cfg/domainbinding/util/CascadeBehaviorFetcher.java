@@ -37,32 +37,24 @@ import org.hibernate.MappingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * The cascade behavior fetcher class.
- */
+/** The cascade behavior fetcher class. */
 public class CascadeBehaviorFetcher {
 
   private static final Logger LOG = LoggerFactory.getLogger(CascadeBehaviorFetcher.class);
 
   private final LogCascadeMapping logCascadeMapping;
 
-  /**
-   * Creates a new {@link CascadeBehaviorFetcher} instance.
-   */
+  /** Creates a new {@link CascadeBehaviorFetcher} instance. */
   public CascadeBehaviorFetcher(LogCascadeMapping logCascadeMapping) {
     this.logCascadeMapping = logCascadeMapping;
   }
 
-  /**
-   * Creates a new {@link CascadeBehaviorFetcher} instance.
-   */
+  /** Creates a new {@link CascadeBehaviorFetcher} instance. */
   public CascadeBehaviorFetcher() {
     this(new LogCascadeMapping(LOG));
   }
 
-  /**
-   * Gets the cascade behaviour.
-   */
+  /** Gets the cascade behaviour. */
   public String getCascadeBehaviour(Association<?> association) {
     var cascadeStrategy =
         getDefinedBehavior((GrailsHibernatePersistentProperty) association)

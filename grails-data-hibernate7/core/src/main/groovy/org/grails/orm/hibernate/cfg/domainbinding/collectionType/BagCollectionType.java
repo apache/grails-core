@@ -22,14 +22,10 @@ import java.util.Collection;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.PersistentClass;
 
-/**
- * The bag collection type class.
- */
+/** The bag collection type class. */
 public class BagCollectionType extends CollectionType {
 
-  /**
-   * Creates a new {@link BagCollectionType} instance.
-   */
+  /** Creates a new {@link BagCollectionType} instance. */
   public BagCollectionType(MetadataBuildingContext buildingContext) {
     super(Collection.class, buildingContext);
   }

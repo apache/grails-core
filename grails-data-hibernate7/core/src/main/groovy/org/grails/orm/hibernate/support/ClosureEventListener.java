@@ -77,6 +77,7 @@ public class ClosureEventListener
         CallbackRegistryConsumer {
 
   private static final long serialVersionUID = 1;
+
   /** The log. */
   protected static final Logger LOG = LoggerFactory.getLogger(ClosureEventListener.class);
 
@@ -99,9 +100,7 @@ public class ClosureEventListener
   private Field actionQueueUpdatesField;
   private Field entityUpdateActionStateField;
 
-  /**
-   * Creates a new {@link ClosureEventListener} instance.
-   */
+  /** Creates a new {@link ClosureEventListener} instance. */
   public ClosureEventListener(
       PersistentEntity persistentEntity, boolean failOnError, List failOnErrorPackages) {
     this.persistentEntity = persistentEntity;
@@ -279,9 +278,7 @@ public class ClosureEventListener
         });
   }
 
-  /**
-   * On pre insert.
-   */
+  /** On pre insert. */
   public boolean onPreInsert(final PreInsertEvent event) {
     return doWithManualSession(
         event,
@@ -304,16 +301,12 @@ public class ClosureEventListener
         });
   }
 
-  /**
-   * On validate.
-   */
+  /** On validate. */
   public void onValidate(ValidationEvent event) {
     beforeValidateEventListener.call(event.getEntityObject(), event.getValidatedFields());
   }
 
-  /**
-   * Do validate.
-   */
+  /** Do validate. */
   protected boolean doValidate(Object entity) {
     boolean evict = false;
     GormValidateable validateable = (GormValidateable) entity;

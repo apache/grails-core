@@ -41,14 +41,14 @@ public abstract class AbstractHibernateEventListener extends AbstractPersistence
   /** The cached should trigger. */
   protected final transient ConcurrentMap<SoftKey<Class<?>>, Boolean> cachedShouldTrigger =
       new ConcurrentHashMap<SoftKey<Class<?>>, Boolean>();
+
   /** The fail on error. */
   protected final boolean failOnError;
+
   /** The fail on error packages. */
   protected final List<?> failOnErrorPackages;
 
-  /**
-   * Creates a new {@link AbstractHibernateEventListener} instance.
-   */
+  /** Creates a new {@link AbstractHibernateEventListener} instance. */
   protected AbstractHibernateEventListener(AbstractHibernateDatastore datastore) {
     super(datastore);
     HibernateConnectionSourceSettings settings =
