@@ -24,22 +24,13 @@ import example.InheritedProductService
 import org.springframework.beans.factory.annotation.Autowired
 
 import grails.testing.mixin.integration.Integration
-import org.grails.orm.hibernate.HibernateDatastore
 import spock.lang.Specification
 
 @Integration
 class DataServiceDatasourceInheritanceSpec extends Specification {
 
     @Autowired
-    HibernateDatastore hibernateDatastore
-
     InheritedProductService inheritedProductService
-
-    void setup() {
-        inheritedProductService = hibernateDatastore
-                .getDatastoreForConnection('secondary')
-                .getService(InheritedProductService)
-    }
 
     void cleanup() {
         Product.secondary.withTransaction {

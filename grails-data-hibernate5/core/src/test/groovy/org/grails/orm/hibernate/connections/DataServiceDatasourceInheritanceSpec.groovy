@@ -48,19 +48,18 @@ class DataServiceDatasourceInheritanceSpec extends Specification {
     )
 
     @Shared InventoryService inventoryService
+    @Shared InventoryService defaultDatastoreInventoryService
     @Shared InventoryDataService inventoryDataService
-    @Shared ExplicitInventoryService explicitInventoryService
 
     void setupSpec() {
         inventoryService = datastore
                 .getDatastoreForConnection('warehouse')
                 .getService(InventoryService)
+        defaultDatastoreInventoryService = datastore
+                .getService(InventoryService)
         inventoryDataService = datastore
                 .getDatastoreForConnection('warehouse')
                 .getService(InventoryDataService)
-        explicitInventoryService = datastore
-                .getDatastoreForConnection('warehouse')
-                .getService(ExplicitInventoryService)
     }
 
     void setup() {
@@ -83,6 +82,23 @@ class DataServiceDatasourceInheritanceSpec extends Specification {
         GormEnhancer.findStaticApi(Inventory, 'warehouse').withNewTransaction {
             GormEnhancer.findStaticApi(Inventory, 'warehouse').count()
         } == 1
+    }
+
+    void "service obtained from default datastore still routes to inherited datasource"() {
+        when: "saving through a service obtained from the default datastore"
+        def saved = defaultDatastoreInventoryService.save(new Inventory(sku: 'DEFAULT-001', quantity: 33))
+
+        then: "the entity is persisted"
+        saved != null
+        saved.id != null
+
+        and: "it exists on the warehouse datasource"
+        GormEnhancer.findStaticApi(Inventory, 'warehouse').withNewTransaction {
+            GormEnhancer.findStaticApi(Inventory, 'warehouse').count()
+        } == 1
+
+        and: "retrievable through the same service"
+        defaultDatastoreInventoryService.get(saved.id) != null
     }
 
     void "get by ID routes to inherited datasource"() {
@@ -145,14 +161,18 @@ class DataServiceDatasourceInheritanceSpec extends Specification {
         inventoryDataService.get(saved.id) != null
     }
 
-    void "explicit @Transactional(connection) wins over domain datasource"() {
-        when: "saving through a service with explicit @Transactional(connection='warehouse')"
-        def saved = explicitInventoryService.save(new Inventory(sku: 'EXPL-001', quantity: 75))
+    void "explicit @Transactional(connection) is preserved and not overwritten by domain datasource"() {
+        when: "checking the annotation on a service with explicit @Transactional(connection='archive')"
+        def transactionalAnn = ExplicitArchiveInventoryService.getAnnotation(Transactional)
 
-        then: "the entity is persisted correctly"
-        saved != null
-        saved.id != null
-        saved.sku == 'EXPL-001'
+        then: "the explicit connection value 'archive' is preserved, not overwritten with domain's 'warehouse'"
+        transactionalAnn != null
+        transactionalAnn.connection() == 'archive'
+
+        and: "the inherited service uses the domain's 'warehouse' connection"
+        def inheritedAnn = InventoryService.getAnnotation(Transactional)
+        inheritedAnn != null
+        inheritedAnn.connection() == 'warehouse'
     }
 
     void "abstract and interface services share the same inherited datasource"() {
@@ -208,8 +228,10 @@ interface InventoryDataService {
 }
 
 @Service(Inventory)
-@Transactional(connection = 'warehouse')
-abstract class ExplicitInventoryService {
+@Transactional(connection = 'archive')
+abstract class ExplicitArchiveInventoryService {
+
+    abstract Inventory get(Serializable id)
 
     abstract Inventory save(Inventory item)
 }

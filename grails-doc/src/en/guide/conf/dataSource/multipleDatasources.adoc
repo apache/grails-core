@@ -288,7 +288,7 @@ abstract class ZipCodeService {
    abstract ZipCode get(Serializable id)
    abstract ZipCode save(ZipCode zipCode)
    abstract ZipCode delete(Serializable id)
-   abstract List<ZipCode> findByCode(String code)
+   abstract List<ZipCode> findAllByCode(String code)
 }
 ----
 

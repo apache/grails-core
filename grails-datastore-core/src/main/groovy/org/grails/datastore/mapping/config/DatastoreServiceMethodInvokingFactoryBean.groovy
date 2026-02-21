@@ -76,6 +76,15 @@ class DatastoreServiceMethodInvokingFactoryBean extends MethodInvokingFactoryBea
             return defaultDatastore
         }
 
+        // Check for explicit @Transactional(connection=...) on the service first - it takes precedence
+        String serviceConnection = getServiceTransactionalConnection()
+        if (serviceConnection != null
+                && !ConnectionSource.DEFAULT.equals(serviceConnection)
+                && !ConnectionSource.ALL.equals(serviceConnection)) {
+            return ((MultipleConnectionSourceCapableDatastore) defaultDatastore).getDatastoreForConnection(serviceConnection)
+        }
+
+        // Fall back to domain class mapping datasource
         Class<?> domainClass = getServiceDomainClass()
         if (domainClass == null || domainClass == Object) {
             return defaultDatastore
@@ -94,6 +103,22 @@ class DatastoreServiceMethodInvokingFactoryBean extends MethodInvokingFactoryBea
         }
 
         return defaultDatastore
+    }
+
+    private String getServiceTransactionalConnection() {
+        try {
+            for (Annotation ann : serviceClass.getAnnotations()) {
+                if ('grails.gorm.transactions.Transactional' == ann.annotationType().getName()) {
+                    String connection = (String) ann.annotationType().getMethod('connection').invoke(ann)
+                    if (connection != null && !connection.isEmpty()) {
+                        return connection
+                    }
+                }
+            }
+        }
+        catch (Exception ignored) {
+        }
+        return null
     }
 
     private Class<?> getServiceDomainClass() {
