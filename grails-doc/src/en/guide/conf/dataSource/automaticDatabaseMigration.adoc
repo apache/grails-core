@@ -43,5 +43,5 @@ To disable the automatic exclusion, add the following to your project's `gradle.
 
 [source,properties]
 ----
-systemProp.grails.dbmigration.excludeLiquibaseAutoConfiguration=false
+systemProp.grails.autoconfigure.exclude.liquibase=false
 ----

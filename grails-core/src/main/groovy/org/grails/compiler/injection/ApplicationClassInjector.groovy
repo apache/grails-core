@@ -77,14 +77,14 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
      * <p>The system property defaults to {@code "true"} (exclusion enabled).
      * Set it to {@code "false"} in {@code gradle.properties} to opt out:</p>
      * <pre>
-     * systemProp.grails.dbmigration.excludeLiquibaseAutoConfiguration=false
+     * systemProp.grails.autoconfigure.exclude.liquibase=false
      * </pre>
      */
     static final List<Map<String, String>> CONDITIONAL_EXCLUSIONS = [
             [
                     pluginClass: 'org.grails.plugins.databasemigration.DatabaseMigrationGrailsPlugin',
                     excludeClass: 'org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration',
-                    systemProperty: 'grails.dbmigration.excludeLiquibaseAutoConfiguration'
+                    systemProperty: 'grails.autoconfigure.exclude.liquibase'
             ]
     ]
 

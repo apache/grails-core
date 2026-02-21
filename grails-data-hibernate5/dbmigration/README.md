@@ -75,7 +75,7 @@ This is handled at compile time via the `@EnableAutoConfiguration(excludeName=..
 To disable the automatic exclusion, add the following to your project's `gradle.properties`:
 
 ```properties
-systemProp.grails.dbmigration.excludeLiquibaseAutoConfiguration=false
+systemProp.grails.autoconfigure.exclude.liquibase=false
 ```
 
 This system property is read at compile time during the Grails AST transformation. When set to `false`, the

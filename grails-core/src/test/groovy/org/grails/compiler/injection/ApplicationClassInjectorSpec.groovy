@@ -55,14 +55,14 @@ class ApplicationClassInjectorSpec extends Specification {
             [
                     excludeClass: 'org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration',
                     pluginClass: 'org.grails.plugins.databasemigration.DatabaseMigrationGrailsPlugin',
-                    systemProperty: 'grails.dbmigration.excludeLiquibaseAutoConfiguration'
+                    systemProperty: 'grails.autoconfigure.exclude.liquibase'
             ]
         ]
     }
 
     def "system property defaults to true (exclusion enabled)"() {
         given:
-        def prop = 'grails.dbmigration.excludeLiquibaseAutoConfiguration'
+        def prop = 'grails.autoconfigure.exclude.liquibase'
 
         when:
         System.clearProperty(prop)
@@ -73,7 +73,7 @@ class ApplicationClassInjectorSpec extends Specification {
 
     def "system property set to false disables exclusion"() {
         given:
-        def prop = 'grails.dbmigration.excludeLiquibaseAutoConfiguration'
+        def prop = 'grails.autoconfigure.exclude.liquibase'
 
         when:
         System.setProperty(prop, 'false')
