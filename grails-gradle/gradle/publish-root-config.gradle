@@ -26,6 +26,7 @@ group = 'this.will.be.overridden'
 def publishedProjects = [
         'grails-gradle-bom',
         'grails-gradle-common',
+        'grails-gradle-groovydoc',
         'grails-gradle-model',
         'grails-gradle-plugins',
         'grails-gradle-tasks',

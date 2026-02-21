@@ -30,7 +30,10 @@ build:
         - eclipse
         - idea
         - org.apache.grails.gradle.grails-app
+        - org.apache.grails.gradle.groovydoc
 dependencies:
+    - scope: build
+      coords: "org.apache.grails.gradle:grails-gradle-groovydoc"
     - scope: build
       coords: "org.apache.grails:grails-gradle-plugins"
     - scope: developmentOnly

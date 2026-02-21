@@ -44,6 +44,7 @@ ext {
     // TODO: It should be possible to pull these build names using includedBuild, but I haven't found a way to do so
     gradleBuildProjects = [
             'grails-gradle-plugins':'org.apache.grails',
+            'grails-gradle-groovydoc':'org.apache.grails.gradle',
             'grails-gradle-model':'org.apache.grails.gradle',
             'grails-gradle-common':'org.apache.grails.gradle',
             'grails-gradle-tasks':'org.apache.grails',
