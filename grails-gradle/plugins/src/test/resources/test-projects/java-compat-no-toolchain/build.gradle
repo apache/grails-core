@@ -1,0 +1,21 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+tasks.register('dummyJavaExec', JavaExec) {
+    classpath = files()
+    mainClass = 'does.not.Matter'
+}
+
+tasks.register('inspectCompatArgs') {
+    doLast {
+        def javaExecTask = tasks.named('dummyJavaExec', JavaExec).get()
+        def testTask = tasks.named('test', Test).get()
+        def execArgs = javaExecTask.jvmArgs.join(',')
+        def testArgs = testTask.jvmArgs.join(',')
+        println "EXEC_ARGS=${execArgs}"
+        println "TEST_ARGS=${testArgs}"
+        println "HAS_NATIVE_ACCESS=${execArgs.contains('--enable-native-access=ALL-UNNAMED')}"
+        println "HAS_UNSAFE_ACCESS=${execArgs.contains('--sun-misc-unsafe-memory-access=allow')}"
+    }
+}

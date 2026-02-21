@@ -16,23 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functionaltests.scaffolding
 
-import functionaltests.Application
-import grails.gorm.transactions.Rollback
+import functionaltests.pages.FooListPage
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 
-@Integration(applicationClass = Application)
-@Rollback
+@Integration
 class FooFunctionalSpec extends ContainerGebSpec {
 
     void "Test that a scaffolded view is resolved correctly"() {
-        when:
-        go('/foo/index')
-
-        then:
-        title == "Foo List"
+        expect:
+        to(FooListPage)
     }
 }

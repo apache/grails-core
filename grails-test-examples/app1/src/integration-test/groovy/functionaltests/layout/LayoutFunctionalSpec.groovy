@@ -16,43 +16,36 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functionaltests.layout
 
-import functionaltests.Application
+import functionaltests.pages.ConventionLayoutPage
+import functionaltests.pages.FooLayoutPage
+import functionaltests.pages.FooLayoutSnippetPage
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 import spock.lang.Issue
 
-@Integration(applicationClass = Application)
+@Integration
 class LayoutFunctionalSpec extends ContainerGebSpec {
 
     @Issue('GRAILS-12045')
     void 'test layout by convention'() {
-        when:
-        go('/layoutByConvention')
-
-        then:
-        title == 'Convention Layout'
+        expect:
+        to(ConventionLayoutPage)
     }
 
     @Issue('GRAILS-12045')
     void 'test layout specified in controller property'() {
-        when:
-        go('/layoutSpecifiedByProperty')
-
-        then:
-        title == 'Foo Layout'
-
+        expect:
+        to(FooLayoutPage)
     }
 
     @Issue('GRAILS-12045')
     void 'test layout specified in controller property applied to a GSP that does not contain a root html tag'() {
         when:
-        go('/layoutSpecifiedByProperty/snippetView')
+        to(FooLayoutSnippetPage)
 
         then:
-        title  == 'Foo Layout'
-        $().text().contains 'this is some content'
+        $().text().contains('this is some content')
     }
 }
