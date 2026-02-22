@@ -219,11 +219,11 @@ abstract class AuthorService implements AuthorDataService {
 }
 ----
 
-When the Spring context initializes the generated implementation class, it eagerly populates all `@Service`-typed properties via `datastore.getService()`. By the time any user code runs, injected Data Services are fully available.
+When the Spring context initializes the generated implementation class, it autowires all `@Service`-typed properties by type. By the time any user code runs, injected Data Services are fully available.
 
 ==== Multi-Tenancy with Multiple Datasources
 
-Domain classes that implement `GormEntity` with the `MultiTenant` trait and declare an explicit non-default datasource (e.g., `datasource 'analytics'`) route correctly through Data Services. GORM's `GormEnhancer` preserves explicit datasource qualifiers for multi-tenant entities, so Data Services using `@Transactional(connection = 'analytics')` work the same way as for non-tenant domain classes:
+Domain classes that use the `MultiTenant` trait and declare an explicit non-default datasource (e.g., `datasource 'analytics'`) route correctly through Data Services. GORM preserves explicit datasource qualifiers for multi-tenant entities, so Data Services using `@Transactional(connection = 'analytics')` work the same way as for non-tenant domain classes:
 
 [source,groovy]
 ----
