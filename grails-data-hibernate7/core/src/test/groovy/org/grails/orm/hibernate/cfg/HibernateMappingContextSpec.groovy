@@ -161,10 +161,10 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
         entity.persistentProperties.find { it.name == "books" } != null
     }
 
-    void "getMappingFactory returns the HibernateMappingFactory"() {
+    void "getMappingFactory returns a HibernateMappingFactory"() {
         expect:
         mappingContext.mappingFactory != null
-        mappingContext.mappingFactory.class.simpleName == "HibernateMappingFactory"
+        mappingContext.mappingFactory instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateMappingFactory
     }
 }
 
