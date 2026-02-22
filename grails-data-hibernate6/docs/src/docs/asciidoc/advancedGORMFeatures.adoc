@@ -1,1 +1,0 @@
-The following sections cover more advanced usages of GORM including caching, custom mapping and events.

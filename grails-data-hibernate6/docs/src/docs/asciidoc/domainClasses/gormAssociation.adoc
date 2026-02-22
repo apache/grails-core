@@ -1,2 +1,0 @@
-Relationships define how domain classes interact with each other. Unless specified explicitly at both ends, a relationship exists only in the direction it is defined.
-

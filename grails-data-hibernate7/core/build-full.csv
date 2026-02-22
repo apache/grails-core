@@ -1,0 +1,418 @@
+fully_qualified_class,line_number,rule,message
+grails.orm.CriteriaMethodInvoker,109,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'ignoreCase' (lines '109'-'112').
+grails.orm.CriteriaMethodInvoker,154,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'hibernateQuery' (lines '154'-'201').
+grails.orm.CriteriaMethodInvoker,156,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'callable' (lines '156'-'201').
+grails.orm.CriteriaMethodInvoker,157,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'joinType' (lines '157'-'190').
+grails.orm.CriteriaMethodInvoker,157,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'joinType' (lines '157'-'201').
+grails.orm.CriteriaMethodInvoker,208,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'value' (lines '208'-'231').
+grails.orm.CriteriaMethodInvoker,210,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'hibernateQuery' (lines '210'-'231').
+grails.orm.CriteriaMethodInvoker,220,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'propertyName' (lines '220'-'231').
+grails.orm.CriteriaMethodInvoker,238,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'propertyName' (lines '238'-'292').
+grails.orm.CriteriaMethodInvoker,243,AvoidLiteralsInIfCondition,Avoid using Literals in Conditional Statements
+grails.orm.HibernateCriteriaBuilder,101,AvoidFieldNameMatchingMethodName,Field scroll has the same name as a method
+grails.orm.HibernateCriteriaBuilder,102,AvoidFieldNameMatchingMethodName,Field count has the same name as a method
+grails.orm.HibernateCriteriaBuilder,114,AvoidFieldNameMatchingMethodName,Field readOnly has the same name as a method
+grails.orm.HibernateCriteriaBuilder,115,AvoidFieldNameMatchingMethodName,Field distinct has the same name as a method
+grails.orm.HibernateCriteriaBuilder,117,AvoidDuplicateLiterals,"The String literal ""rawtypes"" appears 16 times in this file; the first occurrence is on line 117"
+grails.orm.HibernateCriteriaBuilder,121,ConstructorCallsOverridableMethod,Overridable method 'setDatastore' called during object construction
+grails.orm.HibernateCriteriaBuilder,128,ConstructorCallsOverridableMethod,Overridable method 'setDefaultFlushMode' called during object construction
+grails.orm.HibernateCriteriaBuilder,504,AvoidDuplicateLiterals,"The String literal ""unchecked"" appears 5 times in this file; the first occurrence is on line 504"
+grails.orm.HibernateCriteriaBuilder,855,CompareObjectsWithEquals,Use equals() to compare object references.
+grails.orm.HibernateCriteriaBuilder,1213,NullAssignment,Assigning an Object to null is a code smell.  Consider refactoring.
+org.grails.orm.hibernate.AbstractHibernateDatastore,112,AvoidFieldNameMatchingMethodName,Field isCacheQueries has the same name as a method
+org.grails.orm.hibernate.AbstractHibernateDatastore,137,CloseResource,Ensure that resources like this HibernateConnectionSource object are closed after use
+org.grails.orm.hibernate.AbstractHibernateDatastore,265,CloseResource,Ensure that resources like this ConnectionSource object are closed after use
+org.grails.orm.hibernate.AbstractHibernateDatastore,460,CloseResource,Ensure that resources like this AbstractHibernateDatastore object are closed after use
+org.grails.orm.hibernate.AbstractHibernateDatastore,461,CloseResource,Ensure that resources like this SessionFactory object are closed after use
+org.grails.orm.hibernate.AbstractHibernateDatastore,499,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'multiTenantCallable' (lines '499'-'515').
+org.grails.orm.hibernate.AbstractHibernateDatastore,499,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'multiTenantCallable' (lines '499'-'515').
+org.grails.orm.hibernate.AbstractHibernateSession,107,EmptyCatchBlock,Avoid empty catch blocks
+org.grails.orm.hibernate.EventListenerIntegrator,82,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'listenerRegistry' (lines '82'-'103').
+org.grails.orm.hibernate.EventListenerIntegrator,87,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'type' (lines '87'-'87').
+org.grails.orm.hibernate.EventListenerIntegrator,87,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'type' (lines '87'-'103').
+org.grails.orm.hibernate.EventListenerIntegrator,98,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'listenerMap' (lines '98'-'103').
+org.grails.orm.hibernate.EventListenerIntegrator,108,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'group' (lines '108'-'122').
+org.grails.orm.hibernate.GrailsHibernateTemplate,135,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'previousHolder' (lines '135'-'221').
+org.grails.orm.hibernate.GrailsHibernateTemplate,136,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'previousConnectionHolder' (lines '136'-'221').
+org.grails.orm.hibernate.GrailsHibernateTemplate,138,CloseResource,Ensure that resources like this Session object are closed after use
+org.grails.orm.hibernate.GrailsHibernateTemplate,138,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'newSession' (lines '138'-'164').
+org.grails.orm.hibernate.GrailsHibernateTemplate,141,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'transactionSynchronizations' (lines '141'-'221').
+org.grails.orm.hibernate.GrailsHibernateTemplate,191,CloseResource,Ensure that resources like this Connection object are closed after use
+org.grails.orm.hibernate.GrailsHibernateTemplate,303,CloseResource,Ensure that resources like this Session object are closed after use
+org.grails.orm.hibernate.GrailsHibernateTemplate,309,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'previousFlushMode' (lines '309'-'311').
+org.grails.orm.hibernate.GrailsHibernateTemplate,311,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'previousFlushMode' (lines '311'-'343').
+org.grails.orm.hibernate.GrailsHibernateTemplate,348,CompareObjectsWithEquals,Use equals() to compare object references.
+org.grails.orm.hibernate.GrailsHibernateTemplate,382,UseProperClassLoader,"In J2EE, getClassLoader() might not work as expected.  Use Thread.currentThread().getContextClassLoader() instead."
+org.grails.orm.hibernate.GrailsHibernateTemplate,539,CompareObjectsWithEquals,Use equals() to compare object references.
+org.grails.orm.hibernate.GrailsHibernateTemplate,683,EmptyIfStmt,Avoid empty if statements
+org.grails.orm.hibernate.GrailsSessionContext,136,EmptyIfStmt,Avoid empty if statements
+org.grails.orm.hibernate.GrailsSessionContext,146,CompareObjectsWithEquals,Use equals() to compare object references.
+org.grails.orm.hibernate.GrailsSessionContext,191,EmptyIfStmt,Avoid empty if statements
+org.grails.orm.hibernate.GrailsSessionContext,199,CompareObjectsWithEquals,Use equals() to compare object references.
+org.grails.orm.hibernate.GrailsSessionContext,202,AvoidCatchingThrowable,A catch statement should never catch throwable since it includes errors.
+org.grails.orm.hibernate.GrailsSessionContext,209,CloseResource,Ensure that resources like this SessionFactoryImplementor object are closed after use
+org.grails.orm.hibernate.GrailsSessionContext,209,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'sessionFactoryImpl' (lines '209'-'211').
+org.grails.orm.hibernate.GrailsSessionContext,209,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'sessionFactoryImpl' (lines '209'-'215').
+org.grails.orm.hibernate.GrailsSessionContext,213,CloseResource,Ensure that resources like this SessionFactory object are closed after use
+org.grails.orm.hibernate.HibernateDatastore,111,ConstructorCallsOverridableMethod,"Overridable method 'getMetadata' called during object construction (call stack: [getMetadataInternal, getMetadata])"
+org.grails.orm.hibernate.HibernateDatastore,113,CloseResource,Ensure that resources like this HibernateConnectionSource object are closed after use
+org.grails.orm.hibernate.HibernateDatastore,131,ConstructorCallsOverridableMethod,Overridable method 'registerEventListeners' called during object construction
+org.grails.orm.hibernate.HibernateDatastore,132,ConstructorCallsOverridableMethod,Overridable method 'configureValidatorRegistry' called during object construction
+org.grails.orm.hibernate.HibernateDatastore,144,CloseResource,Ensure that resources like this HibernateDatastore object are closed after use
+org.grails.orm.hibernate.HibernateDatastore,147,CloseResource,Ensure that resources like this ConnectionSource object are closed after use
+org.grails.orm.hibernate.HibernateDatastore,150,CloseResource,Ensure that resources like this ConnectionSource object are closed after use
+org.grails.orm.hibernate.HibernateDatastore,150,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'singletonConnectionSources' (lines '150'-'150').
+org.grails.orm.hibernate.HibernateDatastore,150,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'singletonConnectionSources' (lines '150'-'170').
+org.grails.orm.hibernate.HibernateDatastore,153,CloseResource,Ensure that resources like this HibernateDatastore object are closed after use
+org.grails.orm.hibernate.HibernateDatastore,198,ConstructorCallsOverridableMethod,Overridable method 'initialize' called during object construction
+org.grails.orm.hibernate.HibernateDatastore,198,ConstructorCallsOverridableMethod,Overridable method 'initialize' called during object construction
+org.grails.orm.hibernate.HibernateDatastore,198,ConstructorCallsOverridableMethod,Overridable method 'initialize' called during object construction
+org.grails.orm.hibernate.HibernateDatastore,488,CloseResource,Ensure that resources like this HibernateConnectionSource object are closed after use
+org.grails.orm.hibernate.HibernateDatastore,542,CloseResource,Ensure that resources like this HibernateDatastore object are closed after use
+org.grails.orm.hibernate.HibernateDatastore,543,CompareObjectsWithEquals,Use equals() to compare object references.
+org.grails.orm.hibernate.HibernateDatastore,580,CloseResource,Ensure that resources like this Session object are closed after use
+org.grails.orm.hibernate.HibernateDatastore,581,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'previousMode' (lines '581'-'585').
+org.grails.orm.hibernate.HibernateDatastore,582,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'reset' (lines '582'-'589').
+org.grails.orm.hibernate.HibernateDatastore,589,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'reset' (lines '589'-'591').
+org.grails.orm.hibernate.HibernateDatastore,632,CloseResource,Ensure that resources like this HibernateConnectionSource object are closed after use
+org.grails.orm.hibernate.HibernateDatastore,641,CloseResource,Ensure that resources like this Connection object are closed after use
+org.grails.orm.hibernate.HibernateDatastore,669,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'factory' (lines '669'-'751').
+org.grails.orm.hibernate.HibernateDatastore,669,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'factory' (lines '669'-'751').
+org.grails.orm.hibernate.HibernateDatastore,669,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'factory' (lines '669'-'751').
+org.grails.orm.hibernate.HibernateDatastore,669,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'factory' (lines '669'-'751').
+org.grails.orm.hibernate.HibernateDatastore,671,CloseResource,Ensure that resources like this HibernateConnectionSource object are closed after use
+org.grails.orm.hibernate.HibernateDatastore,671,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'defaultConnectionSource' (lines '671'-'751').
+org.grails.orm.hibernate.HibernateDatastore,671,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'defaultConnectionSource' (lines '671'-'751').
+org.grails.orm.hibernate.HibernateDatastore,671,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'defaultConnectionSource' (lines '671'-'751').
+org.grails.orm.hibernate.HibernateDatastore,671,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'defaultConnectionSource' (lines '671'-'751').
+org.grails.orm.hibernate.HibernateDatastore,675,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'tenantSettings' (lines '675'-'751').
+org.grails.orm.hibernate.HibernateDatastore,675,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'tenantSettings' (lines '675'-'751').
+org.grails.orm.hibernate.HibernateDatastore,675,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'tenantSettings' (lines '675'-'751').
+org.grails.orm.hibernate.HibernateDatastore,675,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'tenantSettings' (lines '675'-'751').
+org.grails.orm.hibernate.HibernateDatastore,710,EmptyCatchBlock,Avoid empty catch blocks
+org.grails.orm.hibernate.HibernateDatastore,734,CloseResource,Ensure that resources like this DefaultConnectionSource object are closed after use
+org.grails.orm.hibernate.HibernateDatastore,736,CloseResource,Ensure that resources like this ConnectionSource object are closed after use
+org.grails.orm.hibernate.HibernateDatastore,739,CloseResource,Ensure that resources like this ConnectionSource object are closed after use
+org.grails.orm.hibernate.HibernateDatastore,742,CloseResource,Ensure that resources like this SingletonConnectionSources object are closed after use
+org.grails.orm.hibernate.HibernateDatastore,754,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'metadata' (lines '754'-'763').
+org.grails.orm.hibernate.HibernateDatastore,755,CloseResource,Ensure that resources like this ServiceRegistry object are closed after use
+org.grails.orm.hibernate.HibernateDatastore,763,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'metadata' (lines '763'-'763').
+org.grails.orm.hibernate.HibernateLegacyEnumType,61,MissingSerialVersionUID,Classes implementing Serializable should set a serialVersionUID
+org.grails.orm.hibernate.HibernateLegacyEnumType,75,AvoidFieldNameMatchingMethodName,Field isOrdinal has the same name as a method
+org.grails.orm.hibernate.HibernateLegacyEnumType,116,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'reader' (lines '116'-'163').
+org.grails.orm.hibernate.HibernateMappingContextSessionFactoryBean,460,UseProperClassLoader,"In J2EE, getClassLoader() might not work as expected.  Use Thread.currentThread().getContextClassLoader() instead."
+org.grails.orm.hibernate.HibernateMappingContextSessionFactoryBean,502,EmptyIfStmt,Avoid empty if statements
+org.grails.orm.hibernate.HibernateSession,80,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'cpf' (lines '80'-'88').
+org.grails.orm.hibernate.HibernateSession,183,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'persistentEntity' (lines '183'-'200').
+org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,50,NullAssignment,Assigning an Object to null is a code smell.  Consider refactoring.
+org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,85,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'getter' (lines '85'-'115').
+org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,85,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'getter' (lines '85'-'115').
+org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,85,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'getter' (lines '85'-'115').
+org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,85,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'getter' (lines '85'-'115').
+org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,91,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'setter' (lines '91'-'115').
+org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,91,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'setter' (lines '91'-'115').
+org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,91,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'setter' (lines '91'-'115').
+org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,91,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'setter' (lines '91'-'115').
+org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,94,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'getter' (lines '94'-'115').
+org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,94,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'getter' (lines '94'-'115').
+org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,94,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'getter' (lines '94'-'115').
+org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,94,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'getter' (lines '94'-'115').
+org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,95,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'setter' (lines '95'-'115').
+org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,95,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'setter' (lines '95'-'115').
+org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,95,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'setter' (lines '95'-'115').
+org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,95,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'setter' (lines '95'-'115').
+org.grails.orm.hibernate.cfg.GrailsHibernateUtil,80,CloseResource,Ensure that resources like this Session object are closed after use
+org.grails.orm.hibernate.cfg.GrailsHibernateUtil,104,CloseResource,Ensure that resources like this Session object are closed after use
+org.grails.orm.hibernate.cfg.GrailsHibernateUtil,109,CloseResource,Ensure that resources like this SessionImplementor object are closed after use
+org.grails.orm.hibernate.cfg.GrailsHibernateUtil,116,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'actualTarget' (lines '116'-'118').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,191,EmptyCatchBlock,Avoid empty catch blocks
+org.grails.orm.hibernate.cfg.HibernateMappingContext,193,EmptyCatchBlock,Avoid empty catch blocks
+org.grails.orm.hibernate.cfg.HibernateMappingContext,337,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'customTypeMarshaller' (lines '337'-'340').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,364,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'resolvedGenerator' (lines '364'-'368').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,364,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'resolvedGenerator' (lines '364'-'368').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,364,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'resolvedGenerator' (lines '364'-'368').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,364,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'resolvedGenerator' (lines '364'-'368').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,364,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'resolvedGenerator' (lines '364'-'368').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,364,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'resolvedGenerator' (lines '364'-'370').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,364,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'resolvedGenerator' (lines '364'-'370').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,364,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'resolvedGenerator' (lines '364'-'370').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,364,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'resolvedGenerator' (lines '364'-'370').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,364,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'resolvedGenerator' (lines '364'-'370').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,364,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'resolvedGenerator' (lines '364'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,364,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'resolvedGenerator' (lines '364'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,364,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'resolvedGenerator' (lines '364'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,364,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'resolvedGenerator' (lines '364'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,364,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'resolvedGenerator' (lines '364'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,379,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'generator' (lines '379'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,379,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'generator' (lines '379'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,379,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'generator' (lines '379'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,379,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'generator' (lines '379'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,379,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'generator' (lines '379'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,381,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'generator' (lines '381'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,381,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'generator' (lines '381'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,381,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'generator' (lines '381'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,381,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'generator' (lines '381'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,381,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'generator' (lines '381'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,384,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'generator' (lines '384'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,384,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'generator' (lines '384'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,384,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'generator' (lines '384'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,384,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'generator' (lines '384'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContext,384,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'generator' (lines '384'-'417').
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,118,UseProperClassLoader,"In J2EE, getClassLoader() might not work as expected.  Use Thread.currentThread().getContextClassLoader() instead."
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,139,UseProperClassLoader,"In J2EE, getClassLoader() might not work as expected.  Use Thread.currentThread().getContextClassLoader() instead."
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,192,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'readerFactory' (lines '192'-'192').
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,192,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'readerFactory' (lines '192'-'210').
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,197,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'className' (lines '197'-'197').
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,197,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'className' (lines '197'-'210').
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,199,UseProperClassLoader,"In J2EE, getClassLoader() might not work as expected.  Use Thread.currentThread().getContextClassLoader() instead."
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,251,UseProperClassLoader,"In J2EE, getClassLoader() might not work as expected.  Use Thread.currentThread().getContextClassLoader() instead."
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,256,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'domainBinder' (lines '256'-'330').
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,256,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'domainBinder' (lines '256'-'330').
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,256,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'domainBinder' (lines '256'-'330').
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,256,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'domainBinder' (lines '256'-'330').
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,277,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'classLoaderService' (lines '277'-'330').
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,277,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'classLoaderService' (lines '277'-'330').
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,277,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'classLoaderService' (lines '277'-'330').
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,277,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'classLoaderService' (lines '277'-'330').
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,292,CloseResource,Ensure that resources like this BootstrapServiceRegistry object are closed after use
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,321,CloseResource,Ensure that resources like this StandardServiceRegistry object are closed after use
+org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,324,AvoidCatchingThrowable,A catch statement should never catch throwable since it includes errors.
+org.grails.orm.hibernate.cfg.IdentityEnumType,63,AvoidFieldNameMatchingMethodName,Field sqlTypes has the same name as a method
+org.grails.orm.hibernate.cfg.IdentityEnumType,118,SuspiciousEqualsMethodName,The method name and parameter number are suspiciously close to equals(Object)
+org.grails.orm.hibernate.cfg.IdentityEnumType,119,CompareObjectsWithEquals,Use equals() to compare object references.
+org.grails.orm.hibernate.cfg.MappingCacheHolder,65,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'className' (lines '65'-'73').
+org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder,72,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'table' (lines '72'-'89').
+org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder,265,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'schemaName' (lines '265'-'269').
+org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder,266,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'catalogName' (lines '266'-'272').
+org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder,80,NullAssignment,Assigning an Object to null is a code smell.  Consider refactoring.
+org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder,81,NullAssignment,Assigning an Object to null is a code smell.  Consider refactoring.
+org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder,82,NullAssignment,Assigning an Object to null is a code smell.  Consider refactoring.
+org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder,83,NullAssignment,Assigning an Object to null is a code smell.  Consider refactoring.
+org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder,84,NullAssignment,Assigning an Object to null is a code smell.  Consider refactoring.
+org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder,139,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'mappedForm' (lines '139'-'145').
+org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder,139,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'mappedForm' (lines '139'-'148').
+org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder,139,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'mappedForm' (lines '139'-'186').
+org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder,68,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'table' (lines '68'-'86').
+org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder,69,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'persistentClass' (lines '69'-'86').
+org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder,70,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'currentPath' (lines '70'-'86').
+org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdBinder,73,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'identifierProp' (lines '73'-'80').
+org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder,89,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'j' (lines '89'-'151').
+org.grails.orm.hibernate.cfg.domainbinding.binder.DiscriminatorPropertyBinder,68,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'typeName' (lines '68'-'76').
+org.grails.orm.hibernate.cfg.domainbinding.binder.DiscriminatorPropertyBinder,68,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'typeName' (lines '68'-'78').
+org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder,87,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'enumType' (lines '87'-'138').
+org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder,240,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'rootBinder' (lines '240'-'256').
+org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder,89,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'value' (lines '89'-'106').
+org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder,89,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'value' (lines '89'-'109').
+org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder,89,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'value' (lines '89'-'113').
+org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder,89,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'value' (lines '89'-'115').
+org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder,89,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'value' (lines '89'-'118').
+org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder,89,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'value' (lines '89'-'94').
+org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder,89,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'value' (lines '89'-'99').
+org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder,123,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'config' (lines '123'-'141').
+org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder,36,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'scale' (lines '36'-'56').
+org.grails.orm.hibernate.cfg.domainbinding.binder.RootBinder,86,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'm' (lines '86'-'99').
+org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder,88,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'id' (lines '88'-'125').
+org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder,92,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'identifier' (lines '92'-'125').
+org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder,80,NullAssignment,Assigning an Object to null is a code smell.  Consider refactoring.
+org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder,81,NullAssignment,Assigning an Object to null is a code smell.  Consider refactoring.
+org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder,82,NullAssignment,Assigning an Object to null is a code smell.  Consider refactoring.
+org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder,83,NullAssignment,Assigning an Object to null is a code smell.  Consider refactoring.
+org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder,84,NullAssignment,Assigning an Object to null is a code smell.  Consider refactoring.
+org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder,85,NullAssignment,Assigning an Object to null is a code smell.  Consider refactoring.
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIdentityGenerator,27,MissingSerialVersionUID,Classes implementing Serializable should set a serialVersionUID
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator,49,MissingSerialVersionUID,Classes implementing Serializable should set a serialVersionUID
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator,70,UseLocaleWithCaseConversions,"When doing a String.toLowerCase()/toUpperCase() call, use a Locale"
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator,110,AvoidAccessibilityAlteration,"You should not modify visibility of constructors, methods or fields using setAccessible()"
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator,114,AvoidAccessibilityAlteration,"You should not modify visibility of constructors, methods or fields using setAccessible()"
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator,116,EmptyCatchBlock,Avoid empty catch blocks
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator,138,AvoidAccessibilityAlteration,"You should not modify visibility of constructors, methods or fields using setAccessible()"
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator,146,AvoidAccessibilityAlteration,"You should not modify visibility of constructors, methods or fields using setAccessible()"
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator,156,AvoidAccessibilityAlteration,"You should not modify visibility of constructors, methods or fields using setAccessible()"
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator,177,EmptyCatchBlock,Avoid empty catch blocks
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator,186,AvoidAccessibilityAlteration,"You should not modify visibility of constructors, methods or fields using setAccessible()"
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator,197,AvoidAccessibilityAlteration,"You should not modify visibility of constructors, methods or fields using setAccessible()"
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator,202,AvoidAccessibilityAlteration,"You should not modify visibility of constructors, methods or fields using setAccessible()"
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator,205,EmptyCatchBlock,Avoid empty catch blocks
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator,27,MissingSerialVersionUID,Classes implementing Serializable should set a serialVersionUID
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator,34,EmptyCatchBlock,Avoid empty catch blocks
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceStyleGenerator,30,MissingSerialVersionUID,Classes implementing Serializable should set a serialVersionUID
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceStyleGenerator,59,ConstructorCallsOverridableMethod,Overridable method 'initialize' called during object construction
+org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsTableGenerator,30,MissingSerialVersionUID,Classes implementing Serializable should set a serialVersionUID
+org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty,131,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'userType' (lines '131'-'133').
+org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty,131,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'userType' (lines '131'-'137').
+org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty,138,EmptyCatchBlock,Avoid empty catch blocks
+org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty,283,ReturnEmptyCollectionRatherThanNull,Return an empty collection rather than null.
+org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPersistentEntity,50,ReturnEmptyArrayRatherThanNull,Return an empty array rather than null.
+org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPersistentEntity,51,ReturnEmptyCollectionRatherThanNull,Return an empty collection rather than null.
+org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,77,ReturnEmptyCollectionRatherThanNull,Return an empty collection rather than null.
+org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,79,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'result' (lines '79'-'82').
+org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,82,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'result' (lines '82'-'82').
+org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,83,NullAssignment,Assigning an Object to null is a code smell.  Consider refactoring.
+org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionSecondPassBinder,95,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'associatedClass' (lines '95'-'179').
+org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionWithJoinTableBinder,96,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'joinColumnMappingOptional' (lines '96'-'152').
+org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPass,32,NonSerializableClass,The field 'listSecondPassBinder' of serializable class 'org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPass' is of non-serializable type 'org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinder'.
+org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinder,73,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'columnName' (lines '73'-'152').
+org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinder,106,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'referenced' (lines '106'-'152').
+org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPass,32,NonSerializableClass,The field 'mapSecondPassBinder' of serializable class 'org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPass' is of non-serializable type 'org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPassBinder'.
+org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPassBinder,96,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'typeName' (lines '96'-'98').
+org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSecondPass,39,NonSerializableClass,The field 'collectionSecondPassBinder' of serializable class 'org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSecondPass' is of non-serializable type 'org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionSecondPassBinder'.
+org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator,60,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'generatorName' (lines '60'-'64').
+org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior,94,EmptyCatchBlock,Avoid empty catch blocks
+org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps,58,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'owner' (lines '58'-'75').
+org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher,49,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'columnName' (lines '49'-'87').
+org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher,51,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'association' (lines '51'-'87').
+org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,30,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'expectedForeignKeyColumnLength' (lines '30'-'38').
+org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,30,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'expectedForeignKeyColumnLength' (lines '30'-'41').
+org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,38,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'expectedForeignKeyColumnLength' (lines '38'-'38').
+org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,38,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'expectedForeignKeyColumnLength' (lines '38'-'41').
+org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,41,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'expectedForeignKeyColumnLength' (lines '41'-'38').
+org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,41,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'expectedForeignKeyColumnLength' (lines '41'-'41').
+org.grails.orm.hibernate.cfg.domainbinding.util.GrailsOneToOne,44,MissingSerialVersionUID,Classes implementing Serializable should set a serialVersionUID
+org.grails.orm.hibernate.cfg.domainbinding.util.LogCascadeMapping,30,LoggerIsNotStaticFinal,The Logger variable declaration does not contain the static and final modifiers
+org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,57,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'entries' (lines '57'-'83').
+org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,68,UseLocaleWithCaseConversions,"When doing a String.toLowerCase()/toUpperCase() call, use a Locale"
+org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,95,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'tablePrefix' (lines '95'-'101').
+org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,96,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'direction' (lines '96'-'101').
+org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,106,CompareObjectsWithEquals,Use equals() to compare object references.
+org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,56,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'propertyColumnName' (lines '56'-'118').
+org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,59,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'hasJoinTableMapping' (lines '59'-'118').
+org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,61,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'left' (lines '61'-'118').
+org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,92,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'right' (lines '92'-'118').
+org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator,51,AvoidLiteralsInIfCondition,Avoid using Literals in Conditional Statements
+org.grails.orm.hibernate.connections.AbstractHibernateConnectionSourceFactory,60,CloseResource,Ensure that resources like this ConnectionSource object are closed after use
+org.grails.orm.hibernate.connections.AbstractHibernateConnectionSourceFactory,104,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'dsfallbackSettings' (lines '104'-'106').
+org.grails.orm.hibernate.connections.AbstractHibernateConnectionSourceFactory,104,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'dsfallbackSettings' (lines '104'-'109').
+org.grails.orm.hibernate.connections.AbstractHibernateConnectionSourceFactory,130,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'dsfallbackSettings' (lines '130'-'132').
+org.grails.orm.hibernate.connections.AbstractHibernateConnectionSourceFactory,130,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'dsfallbackSettings' (lines '130'-'134').
+org.grails.orm.hibernate.connections.AbstractHibernateConnectionSourceFactory,130,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'dsfallbackSettings' (lines '130'-'156').
+org.grails.orm.hibernate.connections.AbstractHibernateConnectionSourceFactory,132,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'dsfallbackSettings' (lines '132'-'156').
+org.grails.orm.hibernate.connections.AbstractHibernateConnectionSourceFactory,134,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'dsfallbackSettings' (lines '134'-'156').
+org.grails.orm.hibernate.connections.HibernateConnectionSource,53,CloseResource,Ensure that resources like this SessionFactory object are closed after use
+org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,101,CloseResource,Ensure that resources like this SessionFactory object are closed after use
+org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,110,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'isDefault' (lines '110'-'277').
+org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,133,CloseResource,Ensure that resources like this JakartaValidatorRegistry object are closed after use
+org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,155,AvoidDuplicateLiterals,"The String literal ""Cannot configure Hibernate config for location: "" appears 5 times in this file; the first occurrence is on line 155"
+org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,205,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'file' (lines '205'-'277').
+org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,258,AvoidCatchingThrowable,A catch statement should never catch throwable since it includes errors.
+org.grails.orm.hibernate.event.listener.HibernateEventListener,106,CloseResource,Ensure that resources like this EventSource object are closed after use
+org.grails.orm.hibernate.event.listener.HibernateEventListener,119,CloseResource,Ensure that resources like this EventSource object are closed after use
+org.grails.orm.hibernate.event.listener.HibernateEventListener,154,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'evict' (lines '154'-'158').
+org.grails.orm.hibernate.event.listener.HibernateEventListener,164,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'evict' (lines '164'-'168').
+org.grails.orm.hibernate.event.listener.HibernateEventListener,182,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'evict' (lines '182'-'186').
+org.grails.orm.hibernate.event.listener.HibernateEventListener,222,CloseResource,Ensure that resources like this AbstractHibernateDatastore object are closed after use
+org.grails.orm.hibernate.multitenancy.MultiTenantEventListener,59,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'hibernateDatastore' (lines '59'-'114').
+org.grails.orm.hibernate.multitenancy.MultiTenantEventListener,79,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'tenantId' (lines '79'-'114').
+org.grails.orm.hibernate.multitenancy.MultiTenantEventListener,93,CompareObjectsWithEquals,Use equals() to compare object references.
+org.grails.orm.hibernate.proxy.HibernateProxyHandler,155,CloseResource,Ensure that resources like this Session object are closed after use
+org.grails.orm.hibernate.query.GrailsHibernateQueryUtils,68,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'orderParam' (lines '68'-'122').
+org.grails.orm.hibernate.query.GrailsHibernateQueryUtils,84,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'ignoreCase' (lines '84'-'87').
+org.grails.orm.hibernate.query.GrailsHibernateQueryUtils,84,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'ignoreCase' (lines '84'-'122').
+org.grails.orm.hibernate.query.GrailsHibernateQueryUtils,87,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'ignoreCase' (lines '87'-'122').
+org.grails.orm.hibernate.query.GrailsHibernateQueryUtils,138,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'maxParam' (lines '138'-'141').
+org.grails.orm.hibernate.query.GrailsHibernateQueryUtils,139,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'offsetParam' (lines '139'-'144').
+org.grails.orm.hibernate.query.GrailsHibernateQueryUtils,201,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'sortTail' (lines '201'-'225').
+org.grails.orm.hibernate.query.GrailsHibernateQueryUtils,214,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'propertyTargetClass' (lines '214'-'225').
+org.grails.orm.hibernate.query.GrailsHibernateQueryUtils,252,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'orderComparator' (lines '252'-'317').
+org.grails.orm.hibernate.query.GrailsHibernateQueryUtils,252,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'orderComparator' (lines '252'-'317').
+org.grails.orm.hibernate.query.GrailsHibernateQueryUtils,252,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'orderComparator' (lines '252'-'317').
+org.grails.orm.hibernate.query.HibernateHqlQuery,100,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'values' (lines '100'-'112').
+org.grails.orm.hibernate.query.HibernateHqlQuery,131,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'positionalParams' (lines '131'-'176').
+org.grails.orm.hibernate.query.HibernateHqlQuery,136,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'args' (lines '136'-'176').
+org.grails.orm.hibernate.query.HibernateHqlQuery,138,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'hibernateHqlQuery' (lines '138'-'176').
+org.grails.orm.hibernate.query.HibernateHqlQuery,143,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'clazz' (lines '143'-'176').
+org.grails.orm.hibernate.query.HibernateHqlQuery,144,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'q' (lines '144'-'146').
+org.grails.orm.hibernate.query.HibernateHqlQuery,144,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'q' (lines '144'-'148').
+org.grails.orm.hibernate.query.HibernateHqlQuery,144,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'q' (lines '144'-'150').
+org.grails.orm.hibernate.query.HibernateHqlQuery,193,UseLocaleWithCaseConversions,"When doing a String.toLowerCase()/toUpperCase() call, use a Locale"
+org.grails.orm.hibernate.query.HibernateHqlQuery,194,AvoidDuplicateLiterals,"The String literal ""select "" appears 6 times in this file; the first occurrence is on line 194"
+org.grails.orm.hibernate.query.HibernateHqlQuery,200,AvoidDuplicateLiterals,"The String literal "" from "" appears 5 times in this file; the first occurrence is on line 200"
+org.grails.orm.hibernate.query.HibernateHqlQuery,210,UseLocaleWithCaseConversions,"When doing a String.toLowerCase()/toUpperCase() call, use a Locale"
+org.grails.orm.hibernate.query.HibernateHqlQuery,211,AvoidDuplicateLiterals,"The String literal ""distinct "" appears 9 times in this file; the first occurrence is on line 211"
+org.grails.orm.hibernate.query.HibernateHqlQuery,213,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'selLower' (lines '213'-'266').
+org.grails.orm.hibernate.query.HibernateHqlQuery,213,UseLocaleWithCaseConversions,"When doing a String.toLowerCase()/toUpperCase() call, use a Locale"
+org.grails.orm.hibernate.query.HibernateHqlQuery,214,AvoidDuplicateLiterals,"The String literal ""all "" appears 8 times in this file; the first occurrence is on line 214"
+org.grails.orm.hibernate.query.HibernateHqlQuery,216,UseLocaleWithCaseConversions,"When doing a String.toLowerCase()/toUpperCase() call, use a Locale"
+org.grails.orm.hibernate.query.HibernateHqlQuery,219,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'depth' (lines '219'-'253').
+org.grails.orm.hibernate.query.HibernateHqlQuery,222,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'topLevelCommas' (lines '222'-'261').
+org.grails.orm.hibernate.query.HibernateHqlQuery,236,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'i' (lines '236'-'229').
+org.grails.orm.hibernate.query.HibernateHqlQuery,261,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'topLevelCommas' (lines '261'-'261').
+org.grails.orm.hibernate.query.HibernateHqlQuery,302,UseLocaleWithCaseConversions,"When doing a String.toLowerCase()/toUpperCase() call, use a Locale"
+org.grails.orm.hibernate.query.HibernateHqlQuery,316,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'selectClauseOrig' (lines '316'-'427').
+org.grails.orm.hibernate.query.HibernateHqlQuery,317,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'selectClauseLower' (lines '317'-'427').
+org.grails.orm.hibernate.query.HibernateHqlQuery,336,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'hasAlias' (lines '336'-'372').
+org.grails.orm.hibernate.query.HibernateHqlQuery,337,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'alias' (lines '337'-'373').
+org.grails.orm.hibernate.query.HibernateHqlQuery,337,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'alias' (lines '337'-'427').
+org.grails.orm.hibernate.query.HibernateHqlQuery,338,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'aliasStart' (lines '338'-'427').
+org.grails.orm.hibernate.query.HibernateHqlQuery,340,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'nextWord' (lines '340'-'427').
+org.grails.orm.hibernate.query.HibernateHqlQuery,340,UseLocaleWithCaseConversions,"When doing a String.toLowerCase()/toUpperCase() call, use a Locale"
+org.grails.orm.hibernate.query.HibernateHqlQuery,358,UseLocaleWithCaseConversions,"When doing a String.toLowerCase()/toUpperCase() call, use a Locale"
+org.grails.orm.hibernate.query.HibernateHqlQuery,373,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'alias' (lines '373'-'427').
+org.grails.orm.hibernate.query.HibernateHqlQuery,386,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'prefix' (lines '386'-'390').
+org.grails.orm.hibernate.query.HibernateHqlQuery,386,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'prefix' (lines '386'-'397').
+org.grails.orm.hibernate.query.HibernateHqlQuery,387,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'projOrig' (lines '387'-'398').
+org.grails.orm.hibernate.query.HibernateHqlQuery,390,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'prefix' (lines '390'-'395').
+org.grails.orm.hibernate.query.HibernateHqlQuery,402,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'adjustedProjection' (lines '402'-'405').
+org.grails.orm.hibernate.query.HibernateHqlQuery,402,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'adjustedProjection' (lines '402'-'411').
+org.grails.orm.hibernate.query.HibernateHqlQuery,404,UnnecessaryCaseChange,Using equalsIgnoreCase() is cleaner than using toUpperCase/toLowerCase().equals().
+org.grails.orm.hibernate.query.HibernateHqlQuery,404,UseLocaleWithCaseConversions,"When doing a String.toLowerCase()/toUpperCase() call, use a Locale"
+org.grails.orm.hibernate.query.HibernateHqlQuery,419,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'tail' (lines '419'-'427').
+org.grails.orm.hibernate.query.HibernateHqlQuery,430,UseLocaleWithCaseConversions,"When doing a String.toLowerCase()/toUpperCase() call, use a Locale"
+org.grails.orm.hibernate.query.HibernateQuery,334,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'subCriteria' (lines '334'-'341').
+org.grails.orm.hibernate.query.HibernateQuery,334,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'subCriteria' (lines '334'-'344').
+org.grails.orm.hibernate.query.HibernateQuery,628,CloneMethodReturnTypeMustMatchClassName,The return type of the clone() method must be the class name when implements Cloneable
+org.grails.orm.hibernate.query.HibernateQuery,628,CloneThrowsCloneNotSupportedException,clone() method should throw CloneNotSupportedException
+org.grails.orm.hibernate.query.JpaCriteriaQueryCreator,131,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'jpaOrders' (lines '131'-'151').
+org.grails.orm.hibernate.query.JpaFromProvider,62,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'fromsByName' (lines '62'-'112').
+org.grails.orm.hibernate.query.JpaFromProvider,150,AvoidLiteralsInIfCondition,Avoid using Literals in Conditional Statements
+org.grails.orm.hibernate.query.JpaFromProvider,162,ProperCloneImplementation,Object clone() should be implemented with super.clone()
+org.grails.orm.hibernate.query.JpaFromProvider,162,CloneMethodReturnTypeMustMatchClassName,The return type of the clone() method must be the class name when implements Cloneable
+org.grails.orm.hibernate.query.JpaFromProvider,162,CloneThrowsCloneNotSupportedException,clone() method should throw CloneNotSupportedException
+org.grails.orm.hibernate.query.PagedResultList,31,MissingSerialVersionUID,Classes implementing Serializable should set a serialVersionUID
+org.grails.orm.hibernate.query.PredicateGenerator,114,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'predicates' (lines '114'-'128').
+org.grails.orm.hibernate.query.PredicateGenerator,121,AvoidLiteralsInIfCondition,Avoid using Literals in Conditional Statements
+org.grails.orm.hibernate.query.PredicateGenerator,139,AvoidDuplicateLiterals,"The String literal ""root"" appears 4 times in this file; the first occurrence is on line 139"
+org.grails.orm.hibernate.query.PredicateGenerator,151,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'fullyQualifiedPath' (lines '151'-'196').
+org.grails.orm.hibernate.query.PredicateGenerator,212,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'from2' (lines '212'-'232').
+org.grails.orm.hibernate.query.PredicateGenerator,213,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'newMap2' (lines '213'-'232').
+org.grails.orm.hibernate.query.PredicateGenerator,280,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'predicates' (lines '280'-'313').
+org.grails.orm.hibernate.query.PredicateGenerator,282,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'path' (lines '282'-'313').
+org.grails.orm.hibernate.query.PredicateGenerator,320,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'path' (lines '320'-'329').
+org.grails.orm.hibernate.query.PredicateGenerator,321,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'otherPath' (lines '321'-'329').
+org.grails.orm.hibernate.query.PredicateGenerator,333,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'path' (lines '333'-'339').
+org.grails.orm.hibernate.support.ClosureEventListener,142,AvoidAccessibilityAlteration,"You should not modify visibility of constructors, methods or fields using setAccessible()"
+org.grails.orm.hibernate.support.ClosureEventListener,144,AvoidAccessibilityAlteration,"You should not modify visibility of constructors, methods or fields using setAccessible()"
+org.grails.orm.hibernate.support.ClosureEventListener,145,EmptyCatchBlock,Avoid empty catch blocks
+org.grails.orm.hibernate.support.ClosureEventListener,187,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'entity' (lines '187'-'201').
+org.grails.orm.hibernate.support.ClosureEventListener,187,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'entity' (lines '187'-'201').
+org.grails.orm.hibernate.support.ClosureEventListener,214,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'entity' (lines '214'-'228').
+org.grails.orm.hibernate.support.ClosureEventListener,214,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'entity' (lines '214'-'228').
+org.grails.orm.hibernate.support.ClosureEventListener,231,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'entity' (lines '231'-'245').
+org.grails.orm.hibernate.support.ClosureEventListener,231,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'entity' (lines '231'-'245').
+org.grails.orm.hibernate.support.ClosureEventListener,311,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'evict' (lines '311'-'314').
+org.grails.orm.hibernate.support.ClosureEventListener,314,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'evict' (lines '314'-'323').
+org.grails.orm.hibernate.support.ClosureEventListener,340,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'reflector' (lines '340'-'366').
+org.grails.orm.hibernate.support.ClosureEventListener,342,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'entityMetamodel' (lines '342'-'366').
+org.grails.orm.hibernate.support.ClosureEventListener,359,CompareObjectsWithEquals,Use equals() to compare object references.
+org.grails.orm.hibernate.support.ClosureEventListener,381,CompareObjectsWithEquals,Use equals() to compare object references.
+org.grails.orm.hibernate.support.ClosureEventListener,385,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'updateState' (lines '385'-'382').
+org.grails.orm.hibernate.support.ClosureEventListener,385,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'updateState' (lines '385'-'385').
+org.grails.orm.hibernate.support.ClosureEventListener,385,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'updateState' (lines '385'-'395').
+org.grails.orm.hibernate.support.ClosureEventListener,398,CloseResource,Ensure that resources like this Session object are closed after use
+org.grails.orm.hibernate.support.ClosureEventListener,399,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'current' (lines '399'-'406').
+org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor,72,NonSerializableClass,The field 'persistEventListener' of serializable class 'org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor' is of non-serializable type 'org.hibernate.event.internal.DefaultPersistEventListener'.
+org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor,74,NonSerializableClass,The field 'mergeEventListener' of serializable class 'org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor' is of non-serializable type 'org.hibernate.event.internal.DefaultMergeEventListener'.
+org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor,234,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'entityAccess' (lines '234'-'236').
+org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor,305,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'entityMetamodel' (lines '305'-'312').
+org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor,328,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'entityAccess' (lines '328'-'330').
+org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor,397,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'dirtyCheckable' (lines '397'-'415').
+org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,94,CloseResource,Ensure that resources like this Connection object are closed after use
+org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,94,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'connection' (lines '94'-'100').
+org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,94,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'connection' (lines '94'-'100').
+org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,96,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'dbName' (lines '96'-'139').
+org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,96,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'dbName' (lines '96'-'139').
+org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,103,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'dialectFactory' (lines '103'-'139').
+org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,103,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'dialectFactory' (lines '103'-'139').
+org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,104,CloseResource,Ensure that resources like this Connection object are closed after use
+org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,105,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'infoSource' (lines '105'-'139').
+org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,105,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'infoSource' (lines '105'-'139').
+org.grails.orm.hibernate.transaction.HibernateJtaTransactionManagerAdapter,217,CompareObjectsWithEquals,Use equals() to compare object references.
