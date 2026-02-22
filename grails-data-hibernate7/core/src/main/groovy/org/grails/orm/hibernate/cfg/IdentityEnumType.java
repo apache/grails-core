@@ -19,19 +19,20 @@
 package org.grails.orm.hibernate.cfg;
 
 import jakarta.persistence.AttributeConverter;
+
+import java.io.Serial;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.*;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+
 import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
-import org.hibernate.dialect.Dialect;
-import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.type.AbstractStandardBasicType;
-import org.hibernate.type.descriptor.jdbc.JdbcType;
 import org.hibernate.type.spi.TypeConfiguration;
 import org.hibernate.usertype.ParameterizedType;
 import org.hibernate.usertype.UserType;
@@ -47,6 +48,7 @@ import org.slf4j.LoggerFactory;
  */
 public class IdentityEnumType implements UserType, ParameterizedType, Serializable {
 
+  @Serial
   private static final long serialVersionUID = -6625622185856547501L;
 
   private static final Logger LOG = LoggerFactory.getLogger(IdentityEnumType.class);
@@ -102,7 +104,7 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
     }
   }
 
-  public int[] sqlTypes() {
+  public int[] getSqlTypes() {
     return sqlTypes;
   }
 
@@ -115,32 +117,17 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
     return enumClass;
   }
 
+  @Override
   public boolean equals(Object o1, Object o2) throws HibernateException {
     return o1 == o2;
   }
 
+  @Override
   public int hashCode(Object o) throws HibernateException {
     return o.hashCode();
   }
 
-  @Override
-  public Object nullSafeGet(
-      ResultSet rs, int position, SharedSessionContractImplementor session, Object owner)
-      throws SQLException {
-    Object result = rs.getObject(position, returnedClass());
-    return rs.wasNull() ? null : result;
-  }
 
-  @Override
-  public void nullSafeSet(
-      PreparedStatement st, Object value, int index, SharedSessionContractImplementor session)
-      throws HibernateException, SQLException {
-    if (value == null) {
-      st.setNull(index, sqlTypes[0]);
-    } else {
-      type.nullSafeSet(st, bidiMap.getKey(value), index, session);
-    }
-  }
 
   public Object deepCopy(Object o) throws HibernateException {
     return o;
@@ -162,19 +149,17 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
     return orig;
   }
 
-  @Override
-  public long getDefaultSqlLength(Dialect dialect, JdbcType jdbcType) {
-    return UserType.super.getDefaultSqlLength(dialect, jdbcType);
+
+  public long getDefaultSqlLength() {
+    return  UserType.super.getDefaultSqlLength();
   }
 
-  @Override
-  public int getDefaultSqlPrecision(Dialect dialect, JdbcType jdbcType) {
-    return UserType.super.getDefaultSqlPrecision(dialect, jdbcType);
+  public int getDefaultSqlPrecision() {
+    return UserType.super.getDefaultSqlPrecision();
   }
 
-  @Override
-  public int getDefaultSqlScale(Dialect dialect, JdbcType jdbcType) {
-    return UserType.super.getDefaultSqlScale(dialect, jdbcType);
+  public int getDefaultSqlScale() {
+    return UserType.super.getDefaultSqlScale();
   }
 
   @Override
@@ -185,10 +170,11 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
   @SuppressWarnings({"rawtypes", "unchecked"})
   private static class BidiEnumMap implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 3325751131102095834L;
     private final Map enumToKey;
     private final Map keytoEnum;
-    private Class keyType;
+    private final Class keyType;
 
     private BidiEnumMap(Class<? extends Enum> enumClass)
         throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {

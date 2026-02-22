@@ -24,12 +24,9 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.EnumType
 import org.grails.orm.hibernate.cfg.IdentityEnumType
 import org.hibernate.MappingException
-import org.hibernate.engine.spi.SharedSessionContractImplementor
 
 import javax.sql.DataSource
-import java.sql.PreparedStatement
 import java.sql.ResultSet
-import java.sql.Types
 
 /**
  * Created by graemerocher on 16/11/16.
@@ -79,8 +76,8 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
 
         then:
         type.returnedClass() == IdentityStatusEnum
-        type.sqlTypes() != null
-        type.sqlTypes().length > 0
+        type.getSqlTypes() != null
+        type.getSqlTypes().length > 0
     }
 
     def "setParameterValues throws MappingException for enum without getId method"() {
@@ -162,74 +159,6 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
 
         expect:
         type.replace(IdentityStatusEnum.ACTIVE, IdentityStatusEnum.INACTIVE, null).is(IdentityStatusEnum.ACTIVE)
-    }
-
-    def "nullSafeSet with null value sets SQL null on PreparedStatement"() {
-        given:
-        def type = new IdentityEnumType()
-        def props = new Properties()
-        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
-        type.setParameterValues(props)
-        def stmt = Mock(PreparedStatement)
-        def session = Mock(SharedSessionContractImplementor)
-
-        when:
-        type.nullSafeSet(stmt, null, 1, session)
-
-        then:
-        1 * stmt.setNull(1, type.sqlTypes()[0])
-    }
-
-    def "nullSafeSet with non-null value writes the enum id to PreparedStatement"() {
-        given:
-        def type = new IdentityEnumType()
-        def props = new Properties()
-        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
-        type.setParameterValues(props)
-        def stmt = Mock(PreparedStatement)
-        def session = Mock(SharedSessionContractImplementor)
-
-        when:
-        type.nullSafeSet(stmt, IdentityStatusEnum.ACTIVE, 1, session)
-
-        then:
-        // The String id "A" is written via setString
-        1 * stmt.setString(1, "A")
-        0 * stmt.setNull(_, _)
-    }
-
-    def "nullSafeGet returns null when ResultSet value is null"() {
-        given:
-        def type = new IdentityEnumType()
-        def props = new Properties()
-        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
-        type.setParameterValues(props)
-        def rs = Mock(ResultSet)
-        rs.getObject(1, IdentityStatusEnum) >> null
-        rs.wasNull() >> true
-
-        when:
-        def result = type.nullSafeGet(rs, 1, Mock(SharedSessionContractImplementor), null)
-
-        then:
-        result == null
-    }
-
-    def "nullSafeGet returns the enum value from ResultSet"() {
-        given:
-        def type = new IdentityEnumType()
-        def props = new Properties()
-        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
-        type.setParameterValues(props)
-        def rs = Mock(ResultSet)
-        rs.getObject(1, IdentityStatusEnum) >> IdentityStatusEnum.INACTIVE
-        rs.wasNull() >> false
-
-        when:
-        def result = type.nullSafeGet(rs, 1, Mock(SharedSessionContractImplementor), null)
-
-        then:
-        result == IdentityStatusEnum.INACTIVE
     }
 
     def "getBidiEnumMap logs warning for duplicate enum ids and still returns a map"() {
