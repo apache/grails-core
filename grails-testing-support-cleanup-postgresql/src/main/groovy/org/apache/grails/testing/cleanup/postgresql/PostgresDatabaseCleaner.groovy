@@ -93,15 +93,16 @@ class PostgresDatabaseCleaner implements DatabaseCleaner {
     @Override
     DatabaseCleanupStats cleanup(ApplicationContext applicationContext, DataSource dataSource) {
         DatabaseCleanupStats stats = new DatabaseCleanupStats()
+        stats.start()
 
         Sql sql = null
         try {
             sql = new Sql(dataSource)
-            
+
             // Disable all triggers and referential integrity checks for this session
             // This is more efficient than using CASCADE on each truncate
             sql.execute('SET session_replication_role = replica')
-            
+
             String currentSchema = PostgresDatabaseCleanupHelper.resolveCurrentSchema(dataSource)
 
             if (currentSchema) {
@@ -129,6 +130,7 @@ class PostgresDatabaseCleaner implements DatabaseCleaner {
                     log.error('Error closing SQL connection after cleanup', e)
                 }
             }
+            stats.stop()
         }
 
         stats

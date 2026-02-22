@@ -84,10 +84,12 @@ class H2DatabaseCleaner implements DatabaseCleaner {
     @Override
     DatabaseCleanupStats cleanup(ApplicationContext applicationContext, DataSource dataSource) {
         DatabaseCleanupStats stats = new DatabaseCleanupStats()
+        stats.start()
 
         String schemaName = H2DatabaseCleanupHelper.resolveSchemaName(dataSource)
         if (!schemaName) {
             log.warn('Could not resolve schema name for datasource, skipping cleanup')
+            stats.stop()
             return stats
         }
 
@@ -112,6 +114,7 @@ class H2DatabaseCleaner implements DatabaseCleaner {
             catch (e) {
                 log.error('Error cleaning up after cleaning up database', e)
             }
+            stats.stop()
         }
 
         stats

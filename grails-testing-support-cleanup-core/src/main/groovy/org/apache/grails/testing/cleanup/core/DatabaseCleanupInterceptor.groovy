@@ -27,6 +27,8 @@ import org.spockframework.runtime.extension.IMethodInvocation
 
 import org.springframework.context.ApplicationContext
 
+import java.text.SimpleDateFormat
+
 /**
  * Spock method interceptor that performs database cleanup after tests annotated
  * with {@link DatabaseCleanup}. Supports both class-level and method-level annotations.
@@ -70,16 +72,18 @@ class DatabaseCleanupInterceptor extends AbstractMethodInterceptor {
                 ensureApplicationContext(invocation)
                 log.debug('Performing database cleanup after test method: {}',
                         invocation.feature?.name ?: 'unknown')
+                long startTime = System.currentTimeMillis()
                 List<DatabaseCleanupStats> stats = context.performCleanup(mapping)
-                logStats(stats)
+                logStats(stats, startTime)
             }
             else if (isCurrentFeatureAnnotated(invocation)) {
                 ensureApplicationContext(invocation)
                 DatasourceCleanupMapping methodMapping = getMethodMapping(invocation)
                 log.debug('Performing database cleanup after test method: {}',
                         invocation.feature?.name ?: 'unknown')
+                long startTime = System.currentTimeMillis()
                 List<DatabaseCleanupStats> stats = context.performCleanup(methodMapping)
-                logStats(stats)
+                logStats(stats, startTime)
             }
         }
     }
@@ -93,8 +97,9 @@ class DatabaseCleanupInterceptor extends AbstractMethodInterceptor {
             if (classLevelCleanup) {
                 ensureApplicationContext(invocation)
                 log.debug('Performing database cleanup after spec: {}', invocation.spec?.name ?: 'unknown')
+                long startTime = System.currentTimeMillis()
                 List<DatabaseCleanupStats> stats = context.performCleanup(mapping)
-                logStats(stats)
+                logStats(stats, startTime)
             }
         }
     }
@@ -135,13 +140,45 @@ class DatabaseCleanupInterceptor extends AbstractMethodInterceptor {
         }
     }
 
-    private static void logStats(List<DatabaseCleanupStats> statsList) {
+    /**
+     * Logs cleanup statistics and overall timing information for the cleanup operation.
+     *
+     * @param statsList the list of cleanup statistics from individual datasources
+     * @param overallStartTime the overall start time of the cleanup operation
+     */
+    private static void logStats(List<DatabaseCleanupStats> statsList, long overallStartTime) {
         if (DatabaseCleanupStats.debugEnabled) {
+            long overallEndTime = System.currentTimeMillis()
+            long overallDuration = overallEndTime - overallStartTime
+
+            String separator = '=========================================================='
+            String startTimeFormatted = formatTime(overallStartTime)
+            String endTimeFormatted = formatTime(overallEndTime)
+
+            System.out.println(separator)
+            System.out.println('Overall Cleanup Timing')
+            System.out.println("Start Time: ${startTimeFormatted}")
+            System.out.println("End Time:   ${endTimeFormatted}")
+            System.out.println("Duration:   ${overallDuration} ms")
+            System.out.println(separator)
+
             for (DatabaseCleanupStats stats : statsList) {
                 if (stats.tableRowCounts) {
                     System.out.println(stats.toFormattedReport())
                 }
             }
         }
+    }
+
+    /**
+     * Formats a timestamp in milliseconds as an ISO 8601 string.
+     *
+     * @param timeMillis the timestamp in milliseconds since epoch
+     * @return the formatted time string
+     */
+    private static String formatTime(long timeMillis) {
+        SimpleDateFormat sdf = new SimpleDateFormat('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'')
+        sdf.setTimeZone(TimeZone.getTimeZone('UTC'))
+        sdf.format(new Date(timeMillis))
     }
 }

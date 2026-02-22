@@ -346,7 +346,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         ex.message.contains('Could not resolve ApplicationContext')
     }
 
-    def "interceptCleanupMethod prints formatted stats when debug property is set"() {
+      def "interceptCleanupMethod prints formatted stats when debug property is set"() {
         given:
         System.setProperty(DatabaseCleanupStats.DEBUG_PROPERTY, 'true')
 
@@ -387,8 +387,14 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         1 * invocation.proceed()
         1 * cleaner.cleanup(appCtx, dataSource) >> stats
 
-        and:
+        and: 'overall timing information is printed'
         String output = baos.toString()
+        output.contains('Overall Cleanup Timing')
+        output.contains('Start Time:')
+        output.contains('End Time:')
+        output.contains('Duration:')
+
+        and: 'individual datasource stats are printed'
         output.contains('Database Cleanup Stats (datasource: dataSource)')
         output.contains('BOOK')
         output.contains('AUTHOR')

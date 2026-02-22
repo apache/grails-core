@@ -169,4 +169,134 @@ class DatabaseCleanupStatsSpec extends Specification {
         lines[0] == '=========================================================='
         lines.last() == '=========================================================='
     }
+
+    def "startTimeMillis defaults to 0L"() {
+        when:
+        def stats = new DatabaseCleanupStats()
+
+        then:
+        stats.startTimeMillis == 0L
+    }
+
+    def "endTimeMillis defaults to 0L"() {
+        when:
+        def stats = new DatabaseCleanupStats()
+
+        then:
+        stats.endTimeMillis == 0L
+    }
+
+    def "start() records current time"() {
+        given:
+        def stats = new DatabaseCleanupStats()
+        def beforeStart = System.currentTimeMillis()
+
+        when:
+        stats.start()
+        def afterStart = System.currentTimeMillis()
+
+        then:
+        stats.startTimeMillis >= beforeStart
+        stats.startTimeMillis <= afterStart
+    }
+
+    def "stop() records current time"() {
+        given:
+        def stats = new DatabaseCleanupStats()
+        def beforeStop = System.currentTimeMillis()
+
+        when:
+        stats.stop()
+        def afterStop = System.currentTimeMillis()
+
+        then:
+        stats.endTimeMillis >= beforeStop
+        stats.endTimeMillis <= afterStop
+    }
+
+    def "durationMillis returns 0 when times are not set"() {
+        when:
+        def stats = new DatabaseCleanupStats()
+
+        then:
+        stats.durationMillis == 0L
+    }
+
+    def "durationMillis calculates difference when both times are set"() {
+        given:
+        def stats = new DatabaseCleanupStats()
+        stats.startTimeMillis = 1000L
+        stats.endTimeMillis = 1500L
+
+        when:
+        long duration = stats.durationMillis
+
+        then:
+        duration == 500L
+    }
+
+    def "toFormattedReport includes timing information when times are set"() {
+        given:
+        def stats = new DatabaseCleanupStats()
+        stats.datasourceName = 'dataSource'
+        stats.tableRowCounts['BOOK'] += 1L
+        stats.startTimeMillis = 1708516496789L  // Some timestamp
+        stats.endTimeMillis = 1708516496999L   // 210ms later
+
+        when:
+        String report = stats.toFormattedReport()
+
+        then:
+        report.contains('Start Time:')
+        report.contains('End Time:')
+        report.contains('Duration:')
+        report.contains('210 ms')  // Duration should be 210ms
+    }
+
+    def "toFormattedReport omits timing when times are not set"() {
+        given:
+        def stats = new DatabaseCleanupStats()
+        stats.datasourceName = 'dataSource'
+        stats.tableRowCounts['BOOK'] += 1L
+
+        when:
+        String report = stats.toFormattedReport()
+
+        then:
+        !report.contains('Start Time:')
+        !report.contains('End Time:')
+        !report.contains('Duration:')
+    }
+
+    def "toFormattedReport includes only start time if only startTimeMillis is set"() {
+        given:
+        def stats = new DatabaseCleanupStats()
+        stats.datasourceName = 'dataSource'
+        stats.startTimeMillis = 1708516496789L
+        stats.endTimeMillis = 0L
+
+        when:
+        String report = stats.toFormattedReport()
+
+        then:
+        report.contains('Start Time:')
+        !report.contains('End Time:')
+        !report.contains('Duration:')
+    }
+
+    def "toFormattedReport includes only end time if only endTimeMillis is set"() {
+        given:
+        def stats = new DatabaseCleanupStats()
+        stats.datasourceName = 'dataSource'
+        stats.startTimeMillis = 0L
+        stats.endTimeMillis = 1708516496999L
+
+        when:
+        String report = stats.toFormattedReport()
+
+        then:
+        !report.contains('Start Time:')
+        report.contains('End Time:')
+        !report.contains('Duration:')
+    }
 }

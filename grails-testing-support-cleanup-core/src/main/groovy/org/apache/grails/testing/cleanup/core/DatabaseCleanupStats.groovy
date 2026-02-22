@@ -20,6 +20,7 @@
 package org.apache.grails.testing.cleanup.core
 
 import groovy.transform.CompileStatic
+import java.text.SimpleDateFormat
 
 /**
  * Captures statistics from a single datasource cleanup operation, including which
@@ -28,6 +29,9 @@ import groovy.transform.CompileStatic
  * <p>The {@link #datasourceName} field identifies which datasource these stats belong to.
  * The {@link #tableRowCounts} map tracks per-table row counts using a default of {@code 0L}
  * for unknown keys, enabling convenient {@code +=} accumulation.</p>
+ *
+ * <p>Individual cleanup timing can be tracked using the {@link #start()} and {@link #stop()}
+ * methods. These capture the start and end times for schema/datasource purging.</p>
  *
  * <p>When debug output is enabled via the {@code grails.testing.cleanup.debug} system property,
  * the {@link #toFormattedReport()} method produces a human-readable summary suitable for
@@ -55,11 +59,53 @@ class DatabaseCleanupStats {
     Map<String, Long> tableRowCounts = [:].withDefault { 0L }
 
     /**
+     * The start time of the cleanup operation in milliseconds since epoch.
+     * Set by calling {@link #start()} before cleaning begins.
+     */
+    long startTimeMillis = 0L
+
+    /**
+     * The end time of the cleanup operation in milliseconds since epoch.
+     * Set by calling {@link #stop()} after cleaning completes.
+     */
+    long endTimeMillis = 0L
+
+    /**
+     * Starts the timer for individual schema/datasource cleanup.
+     * Records the current time as the start time.
+     */
+    void start() {
+        this.startTimeMillis = System.currentTimeMillis()
+    }
+
+    /**
+     * Stops the timer for individual schema/datasource cleanup.
+     * Records the current time as the end time.
+     */
+    void stop() {
+        this.endTimeMillis = System.currentTimeMillis()
+    }
+
+    /**
      * Returns {@code true} if the {@code grails.testing.cleanup.debug} system property
      * is set to {@code "true"}.
      */
     static boolean isDebugEnabled() {
         Boolean.getBoolean(DEBUG_PROPERTY)
+    }
+
+    /**
+     * Calculates the duration of the cleanup operation in milliseconds.
+     *
+     * @return the duration in milliseconds, or 0 if times were not set
+     */
+    long getDurationMillis() {
+        if (startTimeMillis > 0L && endTimeMillis > 0L) {
+            endTimeMillis - startTimeMillis
+        }
+        else {
+            0L
+        }
     }
 
     /**
@@ -69,6 +115,9 @@ class DatabaseCleanupStats {
      * <pre>
      * ==========================================================
      * Database Cleanup Stats (datasource: dataSource)
+     * Start Time: 2024-02-21T12:34:56.789Z
+     * End Time:   2024-02-21T12:34:57.123Z
+     * Duration:   334 ms
      * ==========================================================
      * Table Name                          | Row Count
      * ----------------------------------------------------------
@@ -91,6 +140,20 @@ class DatabaseCleanupStats {
         else {
             sb.append('Database Cleanup Stats').append('\n')
         }
+
+        // Add timing information if available
+        if (startTimeMillis > 0L || endTimeMillis > 0L) {
+            if (startTimeMillis > 0L) {
+                sb.append("Start Time: ${formatTime(startTimeMillis)}").append('\n')
+            }
+            if (endTimeMillis > 0L) {
+                sb.append("End Time:   ${formatTime(endTimeMillis)}").append('\n')
+            }
+            if (startTimeMillis > 0L && endTimeMillis > 0L) {
+                sb.append("Duration:   ${durationMillis} ms").append('\n')
+            }
+        }
+
         sb.append(separator).append('\n')
 
         if (tableRowCounts.isEmpty()) {
@@ -106,5 +169,17 @@ class DatabaseCleanupStats {
 
         sb.append(separator).append('\n')
         sb.toString()
+    }
+
+    /**
+     * Formats a timestamp in milliseconds as an ISO 8601 string.
+     *
+     * @param timeMillis the timestamp in milliseconds since epoch
+     * @return the formatted time string
+     */
+    private static String formatTime(long timeMillis) {
+        SimpleDateFormat sdf = new SimpleDateFormat('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'')
+        sdf.setTimeZone(TimeZone.getTimeZone('UTC'))
+        sdf.format(new Date(timeMillis))
     }
 }
