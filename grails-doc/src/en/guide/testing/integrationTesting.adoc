@@ -148,7 +148,13 @@ If you do have a series of tests that will share state you can remove the `Rollb
 
 As an alternative to `@Rollback`, the `@DatabaseCleanup` annotation truncates all database tables after each test method, rather than rolling back the transaction. This is useful when your tests need data to actually be committed to the database (for example, to test behavior that depends on committed data or to verify transactional boundaries).
 
-To use `@DatabaseCleanup`, add the `grails-testing-support-cleanup-h2` dependency (or the appropriate cleanup module for your database) to your integration test configuration:
+===== Supported Databases
+
+Database cleanup is automatically discovered and applied based on your datasource configuration. The following database implementations are available:
+
+====== H2 Database
+
+To use `@DatabaseCleanup` with H2 databases, add the `grails-testing-support-cleanup-h2` dependency:
 
 [source,groovy]
 ----
@@ -157,7 +163,24 @@ dependencies {
 }
 ----
 
-The annotation can be applied at the class level to clean up after every test:
+This module will clean up schema the specified schema by default, otherwise it will purge from all schemas.
+
+====== PostgreSQL
+
+To use `@DatabaseCleanup` with PostgreSQL databases, add the `grails-testing-support-cleanup-postgresql` dependency:
+
+[source,groovy]
+----
+dependencies {
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-cleanup-postgresql'
+}
+----
+
+This module will clean up the schema specified by `currentSchema` in the jdbc url, or it will clean up all non-system schemas.
+
+===== Using DatabaseCleanup
+
+To use `@DatabaseCleanup`, add the appropriate cleanup module for your database to your integration test configuration. The annotation can be applied at the class level to clean up after every test:
 
 [source,groovy]
 ----
