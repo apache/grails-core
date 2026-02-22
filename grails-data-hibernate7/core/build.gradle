@@ -17,10 +17,15 @@
  *  under the License.
  */
 
+
+import com.github.spotbugs.snom.Effort
+import com.github.spotbugs.snom.Confidence
 plugins {
     id 'groovy'
     id 'java-library'
     id 'jacoco'
+    id 'com.github.spotbugs'
+    id 'pmd'
 }
 
 version = projectVersion
@@ -146,4 +151,27 @@ jacocoTestReport {
         xml.required = true
         html.required = true
     }
+}
+
+spotbugs {
+    effort = Effort.valueOf('MAX')
+    reportLevel = Confidence.valueOf('HIGH')// or Confidence.MEDIUM, Confidence.LOW
+    // other settings...
+}
+
+tasks.withType(com.github.spotbugs.snom.SpotBugsTask).configureEach {
+    reports {
+        xml.enabled = false
+        html.enabled = true     // → nice HTML report in build/reports/spotbugs
+    }
+}
+
+pmd {
+    consoleOutput = true
+//    ruleSets = ['category/java/bestpractices.xml', 'category/java/errorprone.xml', 'category/java/security.xml']
+    // toolVersion = '7.0.0'   // optional: override default PMD version if needed
+}
+
+tasks.named('check') {
+    dependsOn 'spotbugsMain', 'pmdMain'
 }
