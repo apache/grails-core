@@ -27,5 +27,5 @@ import org.junit.platform.suite.api.Suite
  */
 @Suite
 @SelectClasses([FirstAndLastMethodSpec])
-class Hibernate6Suite {
+class Hibernate7Suite {
 }

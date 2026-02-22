@@ -37,7 +37,6 @@ import org.hibernate.annotations.Nationalized;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
-import org.hibernate.internal.CoreLogging;
 import org.hibernate.internal.util.ReflectHelper;
 import org.hibernate.type.SqlTypes;
 import org.hibernate.type.descriptor.java.EnumJavaType;
@@ -50,6 +49,7 @@ import org.hibernate.usertype.DynamicParameterizedType;
 import org.hibernate.usertype.EnhancedUserType;
 import org.hibernate.usertype.LoggableUserType;
 import org.jboss.logging.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Value type mapper for enumerations.
@@ -64,7 +64,7 @@ public class HibernateLegacyEnumType<T extends Enum<T>>
         LoggableUserType,
         TypeConfigurationAware,
         Serializable {
-  private static final Logger LOG = CoreLogging.logger(EnumType.class);
+  private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(EnumType.class);
 
   public static final String ENUM = "enumClass";
   public static final String NAMED = "useNamed";
@@ -156,8 +156,8 @@ public class HibernateLegacyEnumType<T extends Enum<T>>
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debugf(
-          "Using %s-based conversion for Enum %s",
+      LOG.debug(
+          "Using {}-based conversion for Enum {}",
           isOrdinal() ? "ORDINAL" : "NAMED", enumClass.getName());
     }
   }
