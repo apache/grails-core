@@ -367,4 +367,90 @@ class DatasourceSwitchingSpec extends Specification {
         and: "secondary books still exist"
         SecondBook.withTransaction { SecondBook.countByTitleLike("Delete Me%") } == 2
     }
+
+    def "executeQuery routes to secondary datasource"() {
+        given: "books in both datasources"
+        def primaryTitle = "Primary Query ${UUID.randomUUID()}"
+        def secondaryTitle = "Secondary Query ${UUID.randomUUID()}"
+        new Book(title: primaryTitle).save(flush: true)
+        SecondBook.withTransaction {
+            new SecondBook(title: secondaryTitle).save(flush: true)
+        }
+
+        when: "executing query on secondary"
+        def results
+        SecondBook.withTransaction {
+            results = SecondBook.executeQuery("from ds2.Book where title = :t", [t: secondaryTitle])
+        }
+
+        then: "only secondary data is returned"
+        results.size() == 1
+        results.first().title == secondaryTitle
+    }
+
+    def "withCriteria routes to secondary datasource"() {
+        given: "books in both datasources"
+        def primaryTitle = "Primary Criteria ${UUID.randomUUID()}"
+        def secondaryTitle = "Secondary Criteria ${UUID.randomUUID()}"
+        new Book(title: primaryTitle).save(flush: true)
+        SecondBook.withTransaction {
+            new SecondBook(title: secondaryTitle).save(flush: true)
+        }
+
+        when: "executing criteria on secondary"
+        def results
+        SecondBook.withTransaction {
+            results = SecondBook.withCriteria {
+                eq('title', secondaryTitle)
+            }
+        }
+
+        then: "only secondary data is returned"
+        results.size() == 1
+        results.first().title == secondaryTitle
+    }
+
+    def "createCriteria routes to secondary datasource"() {
+        given: "books in both datasources"
+        def primaryTitle = "Primary CreateCriteria ${UUID.randomUUID()}"
+        def secondaryTitle = "Secondary CreateCriteria ${UUID.randomUUID()}"
+        new Book(title: primaryTitle).save(flush: true)
+        SecondBook.withTransaction {
+            new SecondBook(title: secondaryTitle).save(flush: true)
+        }
+
+        when: "executing createCriteria on secondary"
+        def results
+        SecondBook.withTransaction {
+            results = SecondBook.createCriteria().list {
+                eq('title', secondaryTitle)
+            }
+        }
+
+        then: "only secondary data is returned"
+        results.size() == 1
+        results.first().title == secondaryTitle
+    }
+
+    def "executeUpdate routes to secondary datasource"() {
+        given: "books in both datasources"
+        def primaryTitle = "Primary Update ${UUID.randomUUID()}"
+        def secondaryTitle = "Secondary Update ${UUID.randomUUID()}"
+        def updatedTitle = "Secondary Updated ${UUID.randomUUID()}"
+        new Book(title: primaryTitle).save(flush: true)
+        SecondBook.withTransaction {
+            new SecondBook(title: secondaryTitle).save(flush: true)
+        }
+
+        when: "executing update on secondary"
+        int updated
+        SecondBook.withTransaction {
+            updated = SecondBook.executeUpdate("update ds2.Book set title = :newTitle where title = :oldTitle", [newTitle: updatedTitle, oldTitle: secondaryTitle])
+        }
+
+        then: "only secondary data is updated"
+        updated == 1
+        SecondBook.withTransaction { SecondBook.findByTitle(updatedTitle) } != null
+        Book.findByTitle(updatedTitle) == null
+    }
 }
