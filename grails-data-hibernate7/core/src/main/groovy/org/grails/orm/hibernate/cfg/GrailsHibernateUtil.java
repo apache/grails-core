@@ -18,9 +18,14 @@
  */
 package org.grails.orm.hibernate.cfg;
 
+import java.lang.annotation.Annotation;
+
+import groovy.lang.Closure;
 import groovy.lang.GroovyObject;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
+
+import org.grails.datastore.gorm.GormEntity;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
@@ -38,6 +43,8 @@ import org.hibernate.proxy.HibernateProxy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import grails.gorm.annotation.Entity;
 
 /**
  * Utility methods for configuring Hibernate inside Grails.
@@ -211,4 +218,50 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
   public static String unqualify(final String qualifiedName) {
     return StringHelper.unqualify(qualifiedName);
   }
+
+    public static boolean isDomainClass(Class clazz) {
+      if (GormEntity.class.isAssignableFrom(clazz)) {
+        return true;
+      }
+
+      // it's not a closure
+      if (Closure.class.isAssignableFrom(clazz)) {
+        return false;
+      }
+
+      if (((Class<?>) clazz).isEnum()) return false;
+
+      Annotation[] allAnnotations = ((Class<?>) clazz).getAnnotations();
+      for (Annotation annotation : allAnnotations) {
+        Class<? extends Annotation> type = annotation.annotationType();
+        String annName = type.getName();
+        if (annName.equals("grails.persistence.Entity")) {
+          return true;
+        }
+        if (type.equals(Entity.class)) {
+          return true;
+        }
+      }
+
+      Class<?> testClass = (Class<?>) clazz;
+      while (testClass != null
+          && !testClass.equals(GroovyObject.class)
+          && !testClass.equals(Object.class)) {
+        try {
+          // make sure the identify and version field exist
+          testClass.getDeclaredField(GormProperties.IDENTITY);
+          testClass.getDeclaredField(GormProperties.VERSION);
+
+          // passes all conditions return true
+          return true;
+        } catch (SecurityException e) {
+          // ignore
+        } catch (NoSuchFieldException e) {
+          // ignore
+        }
+        testClass = testClass.getSuperclass();
+      }
+
+      return false;
+    }
 }

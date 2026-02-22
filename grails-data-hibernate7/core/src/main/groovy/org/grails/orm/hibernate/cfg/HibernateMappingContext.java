@@ -18,30 +18,29 @@
  */
 package org.grails.orm.hibernate.cfg;
 
-import grails.gorm.annotation.Entity;
 import grails.gorm.hibernate.HibernateEntity;
 import groovy.lang.Closure;
-import groovy.lang.GroovyObject;
+
 import java.beans.PropertyDescriptor;
-import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Optional;
+import java.util.List;
+
 import org.grails.datastore.gorm.GormEntity;
 import org.grails.datastore.mapping.config.AbstractGormMappingFactory;
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.config.groovy.MappingConfigurationBuilder;
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
 import org.grails.datastore.mapping.model.*;
-import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.datastore.mapping.model.config.JpaMappingConfigurationStrategy;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsJpaMappingConfigurationStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCustomProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCollectionProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentityMapping;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentityProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
@@ -53,7 +52,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimplePrope
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateTenantIdProperty;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
-import org.springframework.validation.Errors;
 
 /**
  * A Mapping context for Hibernate
@@ -63,7 +61,6 @@ import org.springframework.validation.Errors;
  */
 public class HibernateMappingContext extends AbstractMappingContext {
 
-  private static final String[] DEFAULT_IDENTITY_MAPPING = new String[] {GormProperties.IDENTITY};
   private final HibernateMappingFactory mappingFactory;
   private final MappingConfigurationStrategy syntaxStrategy;
 
@@ -88,13 +85,7 @@ public class HibernateMappingContext extends AbstractMappingContext {
       this.mappingFactory.setDefaultConstraints(settings.getDefault().getConstraints());
     }
     this.mappingFactory.setContextObject(contextObject);
-    this.syntaxStrategy =
-        new JpaMappingConfigurationStrategy(mappingFactory) {
-          @Override
-          protected boolean supportsCustomType(Class<?> propertyType) {
-            return !Errors.class.isAssignableFrom(propertyType);
-          }
-        };
+    this.syntaxStrategy = new GrailsJpaMappingConfigurationStrategy(mappingFactory);
     this.proxyFactory = new HibernateProxyHandler();
     addPersistentEntities(persistentClasses);
   }
@@ -149,56 +140,6 @@ public class HibernateMappingContext extends AbstractMappingContext {
     return createPersistentEntity(javaClass);
   }
 
-  public static boolean isDomainClass(Class clazz) {
-    return doIsDomainClassCheck(clazz);
-  }
-
-  private static boolean doIsDomainClassCheck(Class<?> clazz) {
-    if (GormEntity.class.isAssignableFrom(clazz)) {
-      return true;
-    }
-
-    // it's not a closure
-    if (Closure.class.isAssignableFrom(clazz)) {
-      return false;
-    }
-
-    if (clazz.isEnum()) return false;
-
-    Annotation[] allAnnotations = clazz.getAnnotations();
-    for (Annotation annotation : allAnnotations) {
-      Class<? extends Annotation> type = annotation.annotationType();
-      String annName = type.getName();
-      if (annName.equals("grails.persistence.Entity")) {
-        return true;
-      }
-      if (type.equals(Entity.class)) {
-        return true;
-      }
-    }
-
-    Class<?> testClass = clazz;
-    while (testClass != null
-        && !testClass.equals(GroovyObject.class)
-        && !testClass.equals(Object.class)) {
-      try {
-        // make sure the identify and version field exist
-        testClass.getDeclaredField(GormProperties.IDENTITY);
-        testClass.getDeclaredField(GormProperties.VERSION);
-
-        // passes all conditions return true
-        return true;
-      } catch (SecurityException e) {
-        // ignore
-      } catch (NoSuchFieldException e) {
-        // ignore
-      }
-      testClass = testClass.getSuperclass();
-    }
-
-    return false;
-  }
-
   @Override
   public PersistentEntity createEmbeddedEntity(Class type) {
     HibernateEmbeddedPersistentEntity embedded = new HibernateEmbeddedPersistentEntity(type, this);
@@ -217,11 +158,16 @@ public class HibernateMappingContext extends AbstractMappingContext {
 
   public Collection<GrailsHibernatePersistentEntity> getHibernatePersistentEntities(
       String dataSourceName) {
-    return Optional.ofNullable(persistentEntities).orElse(new ArrayList<>()).stream()
-        .filter(GrailsHibernatePersistentEntity.class::isInstance)
-        .map(GrailsHibernatePersistentEntity.class::cast)
-        .peek(persistentEntity -> persistentEntity.setDataSourceName(dataSourceName))
-        .toList();
+    List<GrailsHibernatePersistentEntity> result = new ArrayList<>();
+    if (persistentEntities != null) {
+      for (PersistentEntity entity : persistentEntities) {
+        if (entity instanceof GrailsHibernatePersistentEntity hibernateEntity) {
+          hibernateEntity.setDataSourceName(dataSourceName);
+          result.add(hibernateEntity);
+        }
+      }
+    }
+    return result;
   }
 
   class HibernateMappingFactory extends AbstractGormMappingFactory<Mapping, PropertyConfig> {
@@ -383,37 +329,7 @@ public class HibernateMappingContext extends AbstractMappingContext {
       } else {
         generator = ValueGenerator.AUTO;
       }
-      return new IdentityMapping() {
-        @Override
-        public String[] getIdentifierName() {
-          if (identity instanceof Identity) {
-            final String name = ((Identity) identity).getName();
-            if (name != null) {
-              return new String[] {name};
-            } else {
-              return DEFAULT_IDENTITY_MAPPING;
-            }
-          } else if (identity instanceof CompositeIdentity) {
-            return ((CompositeIdentity) identity).getPropertyNames();
-          }
-          return DEFAULT_IDENTITY_MAPPING;
-        }
-
-        @Override
-        public ValueGenerator getGenerator() {
-          return generator;
-        }
-
-        @Override
-        public ClassMapping getClassMapping() {
-          return classMapping;
-        }
-
-        @Override
-        public Property getMappedForm() {
-          return (Property) identity;
-        }
-      };
+      return new HibernateIdentityMapping(identity, generator, classMapping);
     }
 
     @Override

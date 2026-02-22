@@ -19,65 +19,193 @@
 package org.grails.orm.hibernate.cfg
 
 import grails.gorm.annotation.Entity
+import grails.gorm.hibernate.HibernateEntity
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.ValueGenerator
+import org.grails.datastore.mapping.model.config.JpaMappingConfigurationStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsJpaMappingConfigurationStrategy
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings
-import spock.lang.Specification
+import org.springframework.validation.Errors
 
-/**
- * Created by graemerocher on 07/10/2016.
- */
-class HibernateMappingContextSpec extends Specification {
+class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
 
-    void "test entity with custom id generator"() {
-        when:"A context is created"
-        def mappingContext = new HibernateMappingContext()
-        PersistentEntity entity = mappingContext.addPersistentEntity(CustomIdGeneratorEntity)
+    def setupSpec() {
+        manager.addAllDomainClasses([MappingContextBook, MappingContextAuthor, MappingContextAddress])
+    }
 
-        then:"The mapping is correct"
+    // --- unit-style tests (no datastore required) ---
+
+    void "default constructor creates a usable context"() {
+        when:
+        def ctx = new HibernateMappingContext()
+
+        then:
+        ctx.mappingFactory != null
+        ctx.getMappingSyntaxStrategy() instanceof JpaMappingConfigurationStrategy
+    }
+
+    void "custom type marshaller is registered on the mapping factory"() {
+        given:
+        HibernateConnectionSourceSettings settings = new HibernateConnectionSourceSettings()
+        settings.custom.types = [new MappingContextTypeMarshaller(MappingContextUUID)]
+
+        when:
+        def ctx = new HibernateMappingContext(settings)
+
+        then:
+        ctx.mappingFactory.isCustomType(MappingContextUUID)
+    }
+
+    void "entity with custom id generator resolves to ValueGenerator.CUSTOM"() {
+        when:
+        def ctx = new HibernateMappingContext()
+        PersistentEntity entity = ctx.addPersistentEntity(CustomIdGeneratorEntity)
+
+        then:
         entity.mapping.identifier.generator == ValueGenerator.CUSTOM
     }
 
-    void "test entity with custom type marshaller is registered correctly"() {
-        given:"A configured custom type marshaller"
-        HibernateConnectionSourceSettings settings = new HibernateConnectionSourceSettings()
-        settings.custom.types = [new MyTypeMarshaller(MyUUIDGenerator)]
+    void "Errors type is not treated as a custom type by the syntax strategy"() {
+        when:
+        def ctx = new HibernateMappingContext()
+        def strategy = ctx.getMappingSyntaxStrategy() as GrailsJpaMappingConfigurationStrategy
 
-        when:"A context is created"
-        def mappingContext = new HibernateMappingContext(settings)
+        then:
+        !strategy.supportsCustomType(Errors)
+    }
 
-        then:"The mapping is created successfully"
-        mappingContext
-        mappingContext.mappingFactory
+    void "arbitrary non-Errors type is supported as a custom type by the syntax strategy"() {
+        when:
+        def ctx = new HibernateMappingContext()
+        def strategy = ctx.getMappingSyntaxStrategy() as GrailsJpaMappingConfigurationStrategy
 
-        and:"The type is registered as a custom type with the mapping factory"
-        mappingContext.mappingFactory.isCustomType(MyUUIDGenerator)
+        then:
+        strategy.supportsCustomType(MappingContextUUID)
+    }
+
+    void "getPersistentEntity strips Hibernate proxy suffix"() {
+        when:
+        def ctx = new HibernateMappingContext()
+        ctx.addPersistentEntity(CustomIdGeneratorEntity)
+
+        then:
+        ctx.getPersistentEntity("org.grails.orm.hibernate.cfg.CustomIdGeneratorEntity\$HibernateProxy\$XYZ") != null
+    }
+
+    void "non-GormEntity class is not added as a persistent entity"() {
+        when:
+        def ctx = new HibernateMappingContext()
+        def entity = ctx.addPersistentEntity(MappingContextUUID)
+
+        then:
+        entity == null
+    }
+
+    // --- integration-style tests (use live datastore) ---
+
+    void "mappingContext is a HibernateMappingContext"() {
+        expect:
+        mappingContext instanceof HibernateMappingContext
+    }
+
+    void "registered domain classes appear as persistent entities"() {
+        expect:
+        mappingContext.getPersistentEntity(MappingContextBook.name) != null
+        mappingContext.getPersistentEntity(MappingContextAuthor.name) != null
+    }
+
+    void "getHibernatePersistentEntities returns GrailsHibernatePersistentEntity instances"() {
+        when:
+        def entities = mappingContext.getHibernatePersistentEntities("DEFAULT")
+
+        then:
+        entities.every { it instanceof GrailsHibernatePersistentEntity }
+        entities.every { it.dataSourceName == "DEFAULT" }
+    }
+
+    void "getHibernatePersistentEntities sets the dataSourceName on each entity"() {
+        when:
+        def entities = mappingContext.getHibernatePersistentEntities("myDs")
+
+        then:
+        entities.every { it.dataSourceName == "myDs" }
+    }
+
+    void "embedded entity is created correctly"() {
+        when:
+        def embedded = mappingContext.createEmbeddedEntity(MappingContextAddress)
+
+        then:
+        embedded != null
+        embedded.javaClass == MappingContextAddress
+    }
+
+    void "MappingContextBook has expected persistent properties"() {
+        when:
+        PersistentEntity entity = mappingContext.getPersistentEntity(MappingContextBook.name)
+
+        then:
+        entity.persistentProperties.find { it.name == "title" } != null
+        entity.persistentProperties.find { it.name == "author" } != null
+    }
+
+    void "MappingContextAuthor oneToMany relationship is mapped"() {
+        when:
+        PersistentEntity entity = mappingContext.getPersistentEntity(MappingContextAuthor.name)
+
+        then:
+        entity.persistentProperties.find { it.name == "books" } != null
+    }
+
+    void "getMappingFactory returns the HibernateMappingFactory"() {
+        expect:
+        mappingContext.mappingFactory != null
+        mappingContext.mappingFactory.class.simpleName == "HibernateMappingFactory"
     }
 }
+
+// --- domain classes used in integration tests ---
+
+@Entity
+class MappingContextBook implements HibernateEntity<MappingContextBook> {
+    String title
+    MappingContextAuthor author
+    static belongsTo = [author: MappingContextAuthor]
+}
+
+@Entity
+class MappingContextAuthor implements HibernateEntity<MappingContextAuthor> {
+    String name
+    static hasMany = [books: MappingContextBook]
+}
+
+class MappingContextAddress {
+    String street
+    String city
+}
+
+// --- helpers for unit tests ---
 
 @Entity
 class CustomIdGeneratorEntity {
     String name
     static mapping = {
-        id(generator: "org.grails.orm.hibernate.cfg.MyUUIDGenerator", type: "uuid-binary")
+        id(generator: "org.grails.orm.hibernate.cfg.MappingContextUUID", type: "uuid-binary")
     }
 }
 
-class MyUUIDGenerator {
-}
+class MappingContextUUID {}
 
-class MyTypeMarshaller extends AbstractMappingAwareCustomTypeMarshaller {
-    MyTypeMarshaller(Class targetType) {
-        super(targetType)
-    }
+class MappingContextTypeMarshaller extends AbstractMappingAwareCustomTypeMarshaller {
+    MappingContextTypeMarshaller(Class targetType) { super(targetType) }
+
     @Override
-    protected Object writeInternal(PersistentProperty property, String key, Object value, Object nativeTarget) {
-        return value
-    }
+    protected Object writeInternal(PersistentProperty property, String key, Object value, Object nativeTarget) { value }
+
     @Override
-    protected Object readInternal(PersistentProperty property, String key, Object nativeSource) {
-        return nativeSource
-    }
+    protected Object readInternal(PersistentProperty property, String key, Object nativeSource) { nativeSource }
 }
