@@ -40,6 +40,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCustomPrope
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCollectionProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentityMapping;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentityProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
@@ -184,7 +185,8 @@ public class HibernateMappingContext extends AbstractMappingContext {
     public org.grails.datastore.mapping.model.types.Identity<PropertyConfig> createIdentity(
         PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
       HibernateIdentityProperty identity = new HibernateIdentityProperty(owner, context, pd);
-      identity.setMapping(createPropertyMapping(identity, owner));
+      PropertyMapping<PropertyConfig> propertyMapping = createPropertyMapping(identity, owner);
+      identity.setMapping(propertyMapping);
       return identity;
     }
 
@@ -298,8 +300,8 @@ public class HibernateMappingContext extends AbstractMappingContext {
 
     @Override
     public IdentityMapping createIdentityMapping(final ClassMapping classMapping) {
-      final Mapping mappedForm = createMappedForm(classMapping.getEntity());
-      final Object identity = mappedForm.getIdentity();
+      final Mapping mappedForm = (Mapping) createMappedForm(classMapping.getEntity());
+      final HibernateIdentity identity = mappedForm.getIdentity();
       final ValueGenerator generator;
       if (identity instanceof Identity) {
         Identity id = (Identity) identity;
