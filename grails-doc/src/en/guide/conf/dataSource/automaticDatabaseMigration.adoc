@@ -29,6 +29,19 @@ In <<environments,development>> mode `dbCreate` is by default set to "create-dro
 
 It's tempting to switch to `update` so you retain existing data and only update the schema when your code changes, but Hibernate's update support is very conservative. It won't make any changes that could result in data loss, and doesn't detect renamed columns or tables, so you'll be left with the old one and will also have the new one.
 
-Grails supports migrations with Liquibase plugin.
+Grails supports migrations with the Liquibase-based Database Migration plugin.
 
 *  link:{hibernate5Guide}#databaseMigration[Database Migration]
+
+==== Automatic LiquibaseAutoConfiguration Exclusion
+
+When the Database Migration plugin is on the classpath, Grails automatically excludes Spring Boot's `LiquibaseAutoConfiguration` to prevent conflicts. The plugin manages Liquibase through its own lifecycle, and Spring Boot's auto-configuration would create duplicate `SpringLiquibase` beans that cause lock contention and startup failures.
+
+This exclusion is applied at compile time via the `@EnableAutoConfiguration(excludeName=...)` annotation on your `Application` class. You no longer need to manually add `spring.liquibase.enabled: false` to your `application.yml`.
+
+To disable the automatic exclusion, add the following to your project's `gradle.properties`:
+
+[source,properties]
+----
+systemProp.grails.autoconfigure.exclude.liquibase=false
+----

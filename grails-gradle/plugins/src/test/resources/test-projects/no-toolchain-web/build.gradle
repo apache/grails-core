@@ -1,0 +1,9 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-web'
+}
+
+tasks.register('checkNoError') {
+    doLast {
+        println 'WEB_PLUGIN_OK=true'
+    }
+}

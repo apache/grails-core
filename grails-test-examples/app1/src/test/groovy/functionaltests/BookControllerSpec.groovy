@@ -64,7 +64,7 @@ class BookControllerSpec extends Specification implements ControllerUnitTest<Boo
         when:"The save action is executed with a valid instance"
             response.reset()
             populateValidParams(params)
-            book = new Book(params)
+            book = new Book(params.subMap(['title']))
 
             controller.save(book)
 
@@ -83,7 +83,7 @@ class BookControllerSpec extends Specification implements ControllerUnitTest<Boo
 
         when:"A domain instance is passed to the show action"
             populateValidParams(params)
-            def book = new Book(params)
+            def book = new Book(params.subMap(['title']))
             controller.show(book)
 
         then:"A model is populated containing the domain instance"
@@ -99,7 +99,7 @@ class BookControllerSpec extends Specification implements ControllerUnitTest<Boo
 
         when:"A domain instance is passed to the edit action"
             populateValidParams(params)
-            def book = new Book(params)
+            def book = new Book(params.subMap(['title']))
             controller.edit(book)
 
         then:"A model is populated containing the domain instance"
@@ -129,7 +129,7 @@ class BookControllerSpec extends Specification implements ControllerUnitTest<Boo
         when:"A valid domain instance is passed to the update action"
             response.reset()
             populateValidParams(params)
-            book = new Book(params).save(flush: true)
+            book = new Book(params.subMap(['title'])).save(flush: true)
             controller.update(book)
 
         then:"A redirect is issued to the show action"
@@ -151,7 +151,7 @@ class BookControllerSpec extends Specification implements ControllerUnitTest<Boo
         when:"A domain instance is created"
             response.reset()
             populateValidParams(params)
-            def book = new Book(params).save(flush: true)
+            def book = new Book(params.subMap(['title'])).save(flush: true)
 
         then:"It exists"
             Book.count() == 1

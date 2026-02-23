@@ -16,7 +16,7 @@ limitations under the License.
 
 # Grails Geb Plugin
 
-[![Maven Central](https://img.shields.io/maven-central/v/org.grails.plugins/geb.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/org.grails.plugins/geb)
+[![Maven Central](https://img.shields.io/maven-central/v/org.apache.grails/grails-geb.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/org.apache.grails/grails-geb)
 
 ## Geb Functional Testing for the Grails® framework
 
@@ -145,7 +145,7 @@ The following system properties exist to configure timeouts:
   * purpose: how often to retry waiting operations
   * type: Number
   * defaults to `0.1` seconds
-* `grails.geb.timeouts.waiting`
+* `grails.geb.timeouts.timeout`
   * purpose: amount of time to wait for waiting operations
   * type: Number
   * defaults to `5.0` seconds
@@ -187,8 +187,11 @@ To make this work, ensure:
 
 Example `GebConfig.groovy`:
 ```groovy
+import org.openqa.selenium.firefox.FirefoxOptions
+import org.openqa.selenium.remote.RemoteWebDriver
+
 driver = {
-  new RemoteWebDriver(new FireFoxOptions())
+  new RemoteWebDriver(new FirefoxOptions())
 }
 containerBrowser = 'firefox'
 ```

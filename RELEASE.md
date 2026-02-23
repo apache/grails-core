@@ -297,11 +297,11 @@ Publish the released version to [Grails Forge](https://start.grails.org) using o
 
 Grails Forge organizes deployments into version slots as follows:
 
-- **RELEASE** - GA releases only
-- **NEXT** - Milestones and Release Candidate
-- **SNAPSHOT** - current or next version snapshot
-- **PREV** - previous release version
-- **PREV-SNAPSHOT** - previous version snapshot
+- **RELEASE** - Full Final Releases - https://github.com/apache/grails-core/actions/workflows/forge-deploy-release.yml
+- **NEXT** - Milestones and Release Candidate for Next Release (also Next version snapshot prior to Milestone) - https://github.com/apache/grails-core/actions/workflows/forge-deploy-next.yml
+- **SNAPSHOT** - current or next version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
+- **PREV** - previous release version - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev.yml
+- **PREV-SNAPSHOT** - previous version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev-snapshot.yml
 
 Use the action whose name matches the slot you want to deploy to.\
 In the **“Run workflow/Use workflow from”** dropdown, choose the release tag you just created.
@@ -321,6 +321,8 @@ version from Maven Central.
 ### Close out the `grails-core` release
 
 The last step in the `grails-core` release workflow is to run the `Close Release` step.  This will create a merge branch for the original tag with version number and then open a PR to merge back into the next branch.  You will need to merge this PR into the branch after correcting any merge conflict.
+
+After this PR is merged, deploy the new SNAPSHOT to Forge via: https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
 
 ### Update the `grails-static-website`
 
@@ -403,7 +405,7 @@ In the event that artifacts differ, simply copy them to your project directory a
 
 ```bash
     cd ~/project
-    rsync -av grails-verify/grails/etc/bin/results/ etc/bin/results/
+    rsync -av ../grails-verify/grails/etc/bin/results/ etc/bin/results/
 ```
 
 # Appendix: Versioning
@@ -487,12 +489,12 @@ Some common gotchas with Java build reproducibility problems:
    not ship property files with dynamic timestamps.
 4. Gradle builds are not reproducible by default because Gradle does not guarantee file ordering. Grails configures all
    tasks that create archive files to ensure file ordering is reproducible. This configuration can be found in
-   `gradle/java-config.gradle`
+   the `CompilePlugin` in the `build-logic` project.
 5. Grails makes heavy use of Groovy AST transforms. These transforms often lookup methods on a class, and the methods
    returned by Java will vary by operating system. Any code using reflection to lookup methods or fields must sort the
    results to ensure reproducibility.
 6. Javadoc / Groovydoc will by default write out dates in it's documentation headers. Grails configures these settings
-   in `gradle/java-config.gradle`.
+   in the `CompilePlugin` in the `build-logic` project.
 
 After a build is made reproducible on the same machine, the next step is to ensure it's reproducible in GitHub actions.
 OS differences will exist and even exist between different Docker Runtimes. To help test reproducible builds, we found

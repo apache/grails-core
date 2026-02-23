@@ -52,7 +52,7 @@ class CommandSpec extends Specification {
         } else {
             gradleCommand.append('./gradlew')
         }
-        gradleCommand.append(' --no-daemon ').append(command)
+        gradleCommand.append(' --no-daemon -S ').append(command)
         executeCommand(gradleCommand)
     }
 

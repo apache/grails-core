@@ -22,6 +22,7 @@ package org.grails.forge.feature.assetPipeline
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.BuildBuilder
 import org.grails.forge.application.ApplicationType
+import org.grails.forge.application.OperatingSystem
 import org.grails.forge.feature.Features
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.DevelopmentReloading
@@ -94,23 +95,36 @@ assets {
         applicationType << [ApplicationType.WEB_PLUGIN]
     }
 
-    void "test assets files are present"() {
+    void 'the expected assets are generated'(String assetPath) {
         given:
-        final Map<String, String> output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
+        def output = generate(
+                ApplicationType.WEB,
+                new Options(DevelopmentReloading.DEVTOOLS)
+        )
 
         expect:
-        output.containsKey("grails-app/assets/images/advancedgrails.svg")
-        output.containsKey("grails-app/assets/images/apple-touch-icon.png")
-        output.containsKey("grails-app/assets/images/apple-touch-icon-retina.png")
-        output.containsKey("grails-app/assets/images/documentation.svg")
-        output.containsKey("grails-app/assets/images/favicon.ico")
-        output.containsKey("grails-app/assets/images/grails.svg")
-        output.containsKey("grails-app/assets/images/grails-cupsonly-logo-white.svg")
-        output.containsKey("grails-app/assets/images/slack.svg")
-        output.containsKey("grails-app/assets/javascripts/application.js")
-        output.containsKey("grails-app/assets/stylesheets/application.css")
-        output.containsKey("grails-app/assets/stylesheets/errors.css")
-        output.containsKey("grails-app/assets/stylesheets/grails.css")
+        output.containsKey(assetPath)
+
+        where:
+        assetPath << [
+                'grails-app/assets/images/advancedgrails.svg',
+                'grails-app/assets/images/community.svg',
+                'grails-app/assets/images/documentation.svg',
+                'grails-app/assets/images/favicon.ico',
+                'grails-app/assets/images/grails.svg',
+                'grails-app/assets/images/groovy.svg',
+                'grails-app/assets/images/java.svg',
+                'grails-app/assets/images/spring.svg',
+                'grails-app/assets/images/spring-boot.svg',
+
+                'grails-app/assets/javascripts/application.js',
+                'grails-app/assets/javascripts/welcome.js',
+
+                'grails-app/assets/stylesheets/application.css',
+                'grails-app/assets/stylesheets/errors.css',
+                'grails-app/assets/stylesheets/grails.css',
+                'grails-app/assets/stylesheets/welcome.css'
+        ]
     }
 
     @Unroll

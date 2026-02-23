@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-The servletContext object is an instance of the Servlet API's {jakartaee}jakarta/servlet/ServletContext.html[ServletContext] class.
+The `servletContext` object is an instance of the Servlet API's {jakartaee}jakarta/servlet/ServletContext.html[ServletContext] class.
 
 
 === Examples

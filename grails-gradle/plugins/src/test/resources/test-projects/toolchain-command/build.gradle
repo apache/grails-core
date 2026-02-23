@@ -1,0 +1,25 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-web'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(__CURRENT_JDK__)
+    }
+}
+
+tasks.register('checkCommandToolchain') {
+    doLast {
+        def cmdTask = tasks.named('urlMappingsReport').get()
+        if (cmdTask instanceof JavaExec) {
+            def launcher = ((JavaExec) cmdTask).javaLauncher
+            if (launcher.isPresent()) {
+                println "CMD_TOOLCHAIN_VERSION=${launcher.get().metadata.languageVersion.asInt()}"
+            } else {
+                println 'CMD_TOOLCHAIN_VERSION=none'
+            }
+        } else {
+            println 'CMD_TOOLCHAIN_VERSION=not_javaexec'
+        }
+    }
+}

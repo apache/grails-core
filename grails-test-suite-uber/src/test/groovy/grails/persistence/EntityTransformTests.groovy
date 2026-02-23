@@ -18,6 +18,7 @@
  */
 package grails.persistence
 
+import org.grails.validation.ConstraintEvalUtils
 import spock.lang.Specification
 
 /**
@@ -25,6 +26,14 @@ import spock.lang.Specification
  * @since 1.0
  */
 class EntityTransformTests extends Specification {
+
+    def setup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+    }
+
+    def cleanup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+    }
 
     // test for http://jira.codehaus.org/browse/GRAILS-5238
     void testGRAILS_5238() {

@@ -222,7 +222,7 @@ Grails now utilizes the Gradle Build System for project management. The project'
 [source, groovy]
 ----
 plugins {
-    id 'org.apache.grails.gradle.grails-web' version 'x.y.z' // Grails plugin
+    id 'org.apache.grails.gradle.grails-web' version "{version}" // Grails Application Gradle Plugin
 }
 
 repositories {
@@ -230,8 +230,9 @@ repositories {
 }
 
 dependencies {
+    implementation platform("org.apache.grails:grails-bom:{version}")
     implementation 'org.springframework.boot:spring-boot-starter'
-    implementation 'org.grails:grails-core'
+    implementation 'org.apache.grails:grails-core'
     // Add more dependencies as needed...
 }
 ----

@@ -16,32 +16,30 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functional.tests
 
+import functional.tests.pages.AuthorCreatePage
+import functional.tests.pages.AuthorListPage
+import functional.tests.pages.AuthorShowPage
+
+import grails.gorm.transactions.Rollback
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 
-@Integration(applicationClass = Application)
+@Integration
 class AuthorControllerSpec extends ContainerGebSpec {
 
     void "Test list authors"() {
-        when:"The home page is visited"
-        go('/author/index')
-
-        then:"The name is correct"
-        title == "Author List"
+        expect: 'The author list page is rendered'
+        to(AuthorListPage)
     }
 
+    @Rollback
     void "Test save author"() {
-        when:
-        go("/author/create")
-        $('form').name = "Stephen King"
-        $('input.save').click()
+        when: 'The create author page is visited and an author is created'
+        to(AuthorCreatePage).createAuthor('Stephen King')
 
-        then:"The author is correct"
-        title == "Show Author"
-        $('li.fieldcontain div').text() == 'Stephen King'
-
+        then: 'The author is saved and the show page is rendered'
+        at(AuthorShowPage).authorName == 'Stephen King'
     }
 }

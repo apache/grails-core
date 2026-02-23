@@ -29,6 +29,11 @@ class BookController {
 
     static allowedMethods = [save: "POST", update: "PUT", delete: "DELETE"]
 
+    /**
+     * Fields to bind for explicit data binding
+     */
+    def bindParams = ['title', 'tenantId']
+
     BookService bookService
 
     @WithoutTenant
@@ -49,7 +54,8 @@ class BookController {
     }
 
     def create() {
-        respond new Book(params)
+        def book = new Book(params.subMap(bindParams))
+        respond book
     }
 
     def save(String title) {

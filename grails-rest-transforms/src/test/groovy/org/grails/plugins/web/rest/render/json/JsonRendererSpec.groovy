@@ -31,6 +31,7 @@ import org.grails.plugins.web.rest.render.ServletRenderContext
 import org.grails.web.converters.configuration.ConvertersConfigurationHolder
 import org.grails.web.converters.configuration.ConvertersConfigurationInitializer
 import org.springframework.context.ApplicationContext
+import org.springframework.web.context.request.RequestContextHolder
 import spock.lang.Specification
 
 /**
@@ -48,6 +49,7 @@ class JsonRendererSpec extends Specification {
     void cleanup() {
         GroovySystem.metaClassRegistry.removeMetaClass(Album)
         ConvertersConfigurationHolder.clear()
+        RequestContextHolder.resetRequestAttributes()
         ShutdownOperations.runOperations()
     }
 

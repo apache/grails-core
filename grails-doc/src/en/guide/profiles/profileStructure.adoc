@@ -112,9 +112,9 @@ A map of scopes and dependencies to configure. The `excludes` scope can be used 
 ----
 dependencies:
     - scope: excludes
-      coords: "org.grails:hibernate:*"
+      coords: "org.apache.grails:grails-data-hibernate5:*"
     - scope: build
-      coords: "org.grails:grails-gradle-plugin:$grailsVersion"
+      coords: "org.apache.grails:grails-gradle-plugins:{GrailsVersion}"
     - scope: compile
       coords: "org.springframework.boot:spring-boot-starter-logging"
     - scope: compile

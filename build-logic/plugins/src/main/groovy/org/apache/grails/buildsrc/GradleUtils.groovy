@@ -27,18 +27,42 @@ import org.gradle.api.file.Directory
 class GradleUtils {
 
     static Directory findRootGrailsCoreDir(Project project) {
-        def rootLayout = project.rootProject.layout
         // .github / .git related directories are purged from source releases, so use the .asf.yaml as an indicator of
         // the parent directory
-        if (rootLayout.projectDirectory.file('.asf.yaml').asFile.exists()) {
-            return rootLayout.projectDirectory
-        }
+        findAsfRootDir(project.layout.projectDirectory)
+    }
 
-        // we currently only nest 1 project level deep
-        rootLayout.projectDirectory.dir('../')
+    static Directory findAsfRootDir(Directory currentDirectory) {
+        def asfFile = currentDirectory.file('.asf.yaml').asFile
+        asfFile.exists() ? currentDirectory : findAsfRootDir(currentDirectory.dir('../'))
     }
 
     static <T> T lookupProperty(Project project, String name, T defaultValue = null) {
-        project.findProperty(name) as T ?: defaultValue
+        T v = lookupPropertyByType(project, name, defaultValue?.class) as T
+        return v == null ? defaultValue : v
+    }
+
+    static <T> T lookupPropertyByType(Project project, String name, Class<T> type) {
+        // a cast exception will occur without this
+        if (type && (type == Integer || type == int.class)) {
+            def v = findProperty(project, name)
+            return v == null ? null : Integer.valueOf(v as String) as T
+        }
+
+        findProperty(project, name) as T
+    }
+
+    static Object findProperty(Project project, String name) {
+        def property = project.findProperty(name)
+        if (property != null) {
+            return property
+        }
+
+        def ext = project.extensions.extraProperties
+        if (ext.has(name)) {
+            return ext.get(name)
+        }
+
+        null
     }
 }

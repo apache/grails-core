@@ -37,6 +37,12 @@ import java.lang.reflect.Method
  */
 class DomainClassTraitSpec extends Specification {
 
+    void cleanupSpec() {
+        // Use cleanupSpec() instead of cleanup() to clear Holders only after all tests
+        // in this class complete, preventing test environment pollution
+        Holders.clear()
+    }
+
     @Issue("GRAILS-9245")
     void "test getConstrainedProperties"() {
         given:

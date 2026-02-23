@@ -18,7 +18,7 @@ limitations under the License.
 
 ## Branches
 
-**9.0.x** Version of the plugin compatible with Grails 7 and Liquibase 4.27
+**7.0.x** Version of the plugin compatible with Grails 7 and Liquibase 4.27
 
 **5.0.x** Version of the plugin compatible with Grails 6 and Liquibase 4.19
 
@@ -47,7 +47,7 @@ One popular approach is to have a root changelog named changelog.groovy (or chan
 * 3.x: Grails 3 with Hibernate 5
 * 4.0.x Grails 5
 * 5.0.x Grails 6
-* 9.0.x Grails 7
+* 7.0.x Grails 7
 
 ## Documentation
 
@@ -59,6 +59,28 @@ One popular approach is to have a root changelog named changelog.groovy (or chan
 * Grails 5 (Hibernate 5): https://grails.github.io/grails-database-migration/4.0.x/index.html
 * Grails 6 (Hibernate 5): https://grails.github.io/grails-database-migration/5.0.x/index.html
 * Grails 7 (Hibernate 5): https://grails.apache.org/docs/7.0.x/grails-data/hibernate5/manual/index.html#databaseMigration
+
+## Automatic LiquibaseAutoConfiguration Exclusion
+
+When the Database Migration plugin is on the classpath, Grails automatically excludes Spring Boot's
+`LiquibaseAutoConfiguration` to prevent conflicts. The plugin manages Liquibase through its own lifecycle
+(`doWithSpring` + `doWithApplicationContext`), and Spring Boot's auto-configuration would create duplicate
+`SpringLiquibase` beans that cause lock contention on `DATABASECHANGELOGLOCK` and startup failures.
+
+This is handled at compile time via the `@EnableAutoConfiguration(excludeName=...)` annotation on your
+`Application` class. You no longer need to manually add `spring.liquibase.enabled: false` to `application.yml`.
+
+### Opting Out
+
+To disable the automatic exclusion, add the following to your project's `gradle.properties`:
+
+```properties
+systemProp.grails.autoconfigure.exclude.liquibase=false
+```
+
+This system property is read at compile time during the Grails AST transformation. When set to `false`, the
+`LiquibaseAutoConfiguration` exclusion is not added, and Spring Boot's Liquibase auto-configuration will run
+alongside the plugin.
 
 ## Package distribution
 

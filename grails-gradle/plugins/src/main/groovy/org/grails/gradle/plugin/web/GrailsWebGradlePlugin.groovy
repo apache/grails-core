@@ -20,12 +20,10 @@ package org.grails.gradle.plugin.web
 
 import javax.inject.Inject
 
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
 import org.gradle.api.Project
-import org.gradle.api.file.FileCollection
-import org.gradle.api.tasks.TaskContainer
+import org.gradle.process.CommandLineArgumentProvider
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 
 import grails.util.Environment
@@ -41,24 +39,42 @@ import org.grails.gradle.plugin.core.GrailsGradlePlugin
 @CompileStatic
 class GrailsWebGradlePlugin extends GrailsGradlePlugin {
 
+    private static final String URL_MAPPINGS_REPORT = 'urlMappingsReport'
+
     @Inject
     GrailsWebGradlePlugin(ToolingModelBuilderRegistry registry) {
         super(registry)
     }
 
-    @CompileDynamic
     @Override
     void apply(Project project) {
         super.apply(project)
 
-        TaskContainer taskContainer = project.tasks
-        if (taskContainer.findByName('urlMappingsReport') == null) {
-            FileCollection fileCollection = buildClasspath(project, project.configurations.runtimeClasspath, project.configurations.console)
-            taskContainer.create('urlMappingsReport', ApplicationContextCommandTask) {
-                classpath = fileCollection
-                systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
-                command = 'url-mappings-report'
-            }
+        // The task could theoretically already be registered by
+        // GrailsGradlePlugin in configureApplicationCommands()
+        // if grails-web-urlmappings is on the build classpath
+        if (!project.tasks.names.contains(URL_MAPPINGS_REPORT))  {
+            registerUrlMappingsTask(project)
+        }
+    }
+
+    private void registerUrlMappingsTask(Project project) {
+        project.tasks.register(URL_MAPPINGS_REPORT, ApplicationContextCommandTask) { task ->
+            task.classpath = buildClasspath(
+                    project,
+                    'runtimeClasspath', 'console'
+            )
+            task.systemProperty(
+                    Environment.KEY,
+                    System.getProperty(
+                            Environment.KEY,
+                            Environment.DEVELOPMENT.name
+                    )
+            )
+            def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
+            task.argumentProviders.add({
+                ['url-mappings-report', appClassProvider.get()]
+            } as CommandLineArgumentProvider)
         }
     }
 }

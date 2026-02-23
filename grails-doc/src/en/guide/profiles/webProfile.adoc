@@ -81,7 +81,7 @@ Provided Features:
 --------------------
 * asset-pipeline - Adds Asset Pipeline to a Grails project
 * events - Adds support for the Grails EventBus abstraction
-* geb2 - Adds Geb dependencies to run functional tests.
+* geb2 - Adds Geb dependencies to run functional tests
 * gsp - Adds support for GSP to the project
 * hibernate5 - Adds GORM for Hibernate 5 to the project
 * json-views - Adds support for JSON Views to the project

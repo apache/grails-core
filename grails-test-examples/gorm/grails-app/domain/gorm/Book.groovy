@@ -21,13 +21,42 @@ package gorm
 
 import static grails.gorm.hibernate.mapping.MappingBuilder.*
 
+/**
+ * Enhanced Book domain class with more field types for testing
+ * scaffolding and fields plugin rendering.
+ */
 class Book {
 
-    def testService
-
     String title
+    String isbn
+    String description
+    Integer pageCount
+    BigDecimal price
+    Date publicationDate
+    Boolean inStock = true
+
+    // Association - belongsTo Author
+    Author author
+
+    static belongsTo = [author: Author]
+
+    static constraints = {
+        title blank: false, size: 1..255
+        isbn nullable: true, matches: /^(?:\d{10}|\d{13})$/
+        description nullable: true, maxSize: 1000, widget: 'textarea'
+        pageCount nullable: true, min: 1
+        price nullable: true, min: 0.0
+        publicationDate nullable: true
+        inStock nullable: false
+        author nullable: true
+    }
 
     static mapping = orm {
         autowire true
+        description type: 'text'
+    }
+
+    String toString() {
+        title
     }
 }

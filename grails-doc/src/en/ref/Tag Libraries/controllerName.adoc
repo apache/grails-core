@@ -33,14 +33,18 @@ Returns the name of the currently executing controller
 
 [source,groovy]
 ----
-class BookController {
+class ExamplesTagLib {
 
-    def list() {
-        log.info "Executing within controller $controllerName"
-
-        render(view: actionName)
+    def showControllerName = { attrs, body ->
+        out << "Executing controller: ${controllerName}"
     }
+
 }
+----
+
+[source,xml]
+----
+<g:showControllerName />
 ----
 
 

@@ -25,7 +25,7 @@ on:
 # queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 jobs:
@@ -46,7 +46,7 @@ jobs:
           path: ~/.m2/repository
           key: cache-local-maven-${{ github.sha }}
       - name: "📥 Checkout Grails Core to fetch Gradle Plugin versions it uses"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           sparse-checkout-cone-mode: false
           sparse-checkout: settings.gradle
@@ -89,7 +89,7 @@ jobs:
           echo "VALUE<<EOF" >> $GITHUB_OUTPUT
           echo "def isAuthenticated = System.getenv('GRAILS_DEVELOCITY_ACCESS_KEY ') != null" >> $GITHUB_OUTPUT
           echo "develocity {" >> $GITHUB_OUTPUT
-          echo "    server = 'https://ge.grails.org'" >> $GITHUB_OUTPUT
+          echo "    server = 'https://develocity.apache.org'" >> $GITHUB_OUTPUT
           echo "    buildScan {" >> $GITHUB_OUTPUT
           echo "        tag('groovy')" >> $GITHUB_OUTPUT
           echo "        tag('grails-core')" >> $GITHUB_OUTPUT
@@ -137,7 +137,7 @@ jobs:
           --health-retries 5
     steps:
       - name: "📥 Checkout project"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -152,9 +152,6 @@ jobs:
         with:
           path: ~/.m2/repository
           key: cache-local-maven-${{ github.sha }}
-      - name: "🪶 Add mavenLocal repository to build"
-        run: |
-          sed -i 's|// mavenLocal() // Keep|mavenLocal() // Keep|' settings.gradle
       - name: 'Swap Groovy Version'
         run: |
           sed -i "/['\"]groovy\.version['\"][[:space:]]*:/c\'groovy.version':'${{ needs.build_groovy.outputs.groovyVersion }}'," dependencies.gradle
@@ -163,3 +160,5 @@ jobs:
           ./gradlew build
           -x groovydoc
           -PskipCodeStyle
+        env:
+          GRAILS_INCLUDE_MAVEN_LOCAL: true

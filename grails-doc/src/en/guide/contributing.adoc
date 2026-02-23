@@ -17,4 +17,4 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Grails is an open source project with an active community, and we rely heavily on that community to help make Grails better. For details on how to contribute or interact with the Grails Developers, please see the [Contribution Guide](https://github.com/apache/grails-core/blob/HEAD/CONTRIBUTING.md) on GitHub.
+Grails is an open source project with an active community, and we rely heavily on that community to help make Grails better. For details on how to contribute or interact with the Grails Developers, please see the https://github.com/apache/grails-core/blob/HEAD/CONTRIBUTING.md[Contribution Guide] on GitHub.

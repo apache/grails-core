@@ -23,7 +23,7 @@ plugins {
 }
 
 gradleEnterprise {
-    server = 'https://ge.grails.org'
+    server = 'https://develocity.apache.org'
     buildScan {
         publishAlwaysIf(System.getenv('CI') == 'true')
         publishIfAuthenticated()

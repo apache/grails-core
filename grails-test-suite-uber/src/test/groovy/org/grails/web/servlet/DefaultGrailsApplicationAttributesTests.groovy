@@ -21,6 +21,7 @@ package org.grails.web.servlet
 import org.grails.buffer.StreamCharBuffer
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.mock.web.MockHttpServletRequest
@@ -48,6 +49,11 @@ class DefaultGrailsApplicationAttributesTests {
         controller.controllerName = 'mycontroller'
         request = new MockHttpServletRequest()
         request.setAttribute(GrailsApplicationAttributes.CONTROLLER, controller)
+    }
+
+    @AfterEach
+    void tearDown() {
+        RequestContextHolder.resetRequestAttributes()
     }
 
     @Test

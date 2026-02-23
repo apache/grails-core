@@ -28,7 +28,7 @@ jobs:
       release_version: ${{ github.event.inputs.release }}
     steps:
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -49,7 +49,7 @@ jobs:
     needs: build
     steps:
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -106,7 +106,7 @@ jobs:
     needs: build
     steps:
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:

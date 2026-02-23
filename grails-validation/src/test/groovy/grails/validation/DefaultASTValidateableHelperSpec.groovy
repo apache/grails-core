@@ -20,6 +20,7 @@ package grails.validation
 
 import grails.util.Holders
 import groovy.transform.Generated
+import org.grails.validation.ConstraintEvalUtils
 import org.grails.web.context.ServletEnvironmentGrailsApplicationDiscoveryStrategy
 import org.springframework.web.context.support.GenericWebApplicationContext
 import org.codehaus.groovy.ast.ClassNode
@@ -86,6 +87,14 @@ class DefaultASTValidateableHelperSpec extends Specification {
 
     def cleanupSpec() {
         Holders.clear()
+    }
+
+    def setup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+    }
+
+    def cleanup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
     }
 
     void 'Test constraints property'() {

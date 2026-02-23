@@ -21,6 +21,9 @@ plugins {
     id 'groovy'
     id 'java-library'
     id 'project-report'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
 
 version = projectVersion
@@ -70,10 +73,4 @@ dependencies {
 tasks.withType(Groovydoc).configureEach {
     // tests do not have groovydoc
     enabled = false
-}
-
-apply {
-    // java-configuration must be applied first since tasks are now lazy registered
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
 }

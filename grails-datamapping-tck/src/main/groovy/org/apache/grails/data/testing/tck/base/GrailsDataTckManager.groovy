@@ -130,4 +130,20 @@ abstract class GrailsDataTckManager {
     void destroy() {
         // noop
     }
+
+    boolean supportsMultipleDataSources() {
+        false
+    }
+
+    void setupMultiDataSource(Class... domainClasses) {
+        // noop - override in implementations that support multiple datasources
+    }
+
+    void cleanupMultiDataSource() {
+        // noop - override in implementations that support multiple datasources
+    }
+
+    def getServiceForConnection(Class serviceType, String connectionName) {
+        null
+    }
 }

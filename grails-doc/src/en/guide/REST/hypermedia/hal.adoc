@@ -288,6 +288,19 @@ grails.mime.types = [
 ]
 ----
 
+Or the equivalent in `grails-app/conf/application.yml`:
+
+[source,yaml]
+----
+grails:
+    mime:
+        types:
+            all: "*/*"
+            book: "application/vnd.books.org.book+json"
+            bookList: "application/vnd.books.org.booklist+json"
+            ...:
+----
+
 WARNING: It is critical that place your new mime types after the 'all' Mime Type because if the Content Type of the request cannot be established then the first entry in the map is used for the response. If you have your new Mime Type at the top then Grails will always try and send back your new Mime Type if the requested Mime Type cannot be established.
 
 Then override the renderer to return HAL using the custom Mime Types:

@@ -21,6 +21,8 @@ import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowNoticeTransform
 plugins {
     id 'groovy'
     id 'com.gradleup.shadow'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
 }
 
 version = projectVersion
@@ -48,10 +50,6 @@ dependencies {
         // which will cause a duplicate warning message
         exclude group: 'org.slf4j', module: 'slf4j-nop'
     }
-}
-
-apply {
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
 }
 
 TaskProvider<Jar> shadowJarTask = tasks.named('shadowJar', ShadowJar)

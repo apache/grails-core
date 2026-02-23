@@ -20,6 +20,8 @@
 plugins {
     id 'groovy'
     id 'project-report'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
 }
 
 version = projectVersion
@@ -147,7 +149,7 @@ tasks.withType(Test).configureEach {
     }
     useJUnitPlatform()
     maxParallelForks = configuredTestParallel
-    forkEvery = isCiBuild ? 25 : 100
+    forkEvery = isCiBuild ? 50 : 100
     maxHeapSize = isCiBuild ? '768m' : '1024m'
     jvmArgs('--add-opens=java.base/java.lang=ALL-UNNAMED', '--add-opens=java.base/java.util=ALL-UNNAMED')
 }
@@ -171,11 +173,6 @@ tasks.named('test', Test).configure {
             isolatedTestPatterns.containsKey(it.name)
         })
     })
-}
-
-apply {
-    // java-configuration must be applied first since tasks are now lazy registered
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
 }
 
 tasks.withType(Groovydoc).configureEach {

@@ -18,9 +18,12 @@
  */
 plugins {
     id 'java-test-fixtures'
+    id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
 
 version = projectVersion
@@ -29,13 +32,6 @@ group = 'org.apache.grails'
 ext {
     pomTitle = 'Grails Geb Plugin'
     pomDescription = 'Provides Integration with Geb for Functional Testing'
-    pomDevelopers = [
-            graemerocher: 'Graeme Rocher',
-            puneetbehl: 'Puneet Behl',
-            sbglasius: 'Søren Berg Glasius',
-            matrei: 'Mattias Reichel',
-            jdaugherty: 'James Daugherty'
-    ]
 }
 
 dependencies {
@@ -64,9 +60,6 @@ dependencies {
 }
 
 apply {
-    // java-configuration must be applied first since tasks are now lazy registered
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')

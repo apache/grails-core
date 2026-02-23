@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
@@ -35,6 +36,8 @@ import org.grails.datastore.mapping.reflect.AstUtils
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
@@ -71,14 +74,27 @@ class FindAndDeleteImplementer extends FindOneImplementer implements SingleResul
     @Override
     protected Statement buildReturnStatement(ClassNode targetDomainClass, MethodNode abstractMethodNode, Expression queryMethodCall, Expression args, MethodNode newMethodNode) {
         VariableExpression var = varX('$obj', targetDomainClass)
-        MethodCallExpression deleteCall = args != null ? callX(var, 'delete', args) : callX(var, 'delete')
-
-        deleteCall.setSafe(true) // null safe
-        block(
-            declS(var, queryMethodCall),
-            stmt(deleteCall),
-            returnS(var)
-        )
+        Expression connectionId = findConnectionId(abstractMethodNode)
+        if (connectionId != null) {
+            // Route delete through the instance API for the specified connection
+            block(
+                declS(var, queryMethodCall),
+                ifS(
+                    notNullX(var),
+                    stmt(callX(buildInstanceApiLookup(targetDomainClass, connectionId), 'delete', new ArgumentListExpression(var)))
+                ),
+                returnS(var)
+            )
+        }
+        else {
+            MethodCallExpression deleteCall = args != null ? callX(var, 'delete', args) : callX(var, 'delete')
+            deleteCall.setSafe(true) // null safe
+            block(
+                declS(var, queryMethodCall),
+                stmt(deleteCall),
+                returnS(var)
+            )
+        }
     }
 
     @Override
