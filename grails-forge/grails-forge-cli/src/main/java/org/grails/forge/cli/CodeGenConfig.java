@@ -136,6 +136,11 @@ public class CodeGenConfig {
                     }
                 });
 
+                // Backwards compatibility: if old YAML has 'testFramework' field, default reloading to NONE
+                if (map.containsKey("testFramework") && !map.containsKey("reloading")) {
+                    codeGenConfig.setReloading(DevelopmentReloading.NONE);
+                }
+
                 if (map.containsKey("profile")) {
                     codeGenConfig.legacy = true;
                     String profile = map.get("profile").toString();
