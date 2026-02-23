@@ -1,0 +1,54 @@
+[[upgrade-notes]]
+== Upgrade Notes
+
+=== Grails 8 / Hibernate 7
+
+==== Query API — Breaking Changes for Injection Safety
+
+As part of the Grails 8 / Hibernate 7 security hardening, several GORM query methods now enforce safe parameterization at runtime.
+
+===== Single-argument HQL overloads require GString
+
+The following single-argument overloads now throw `UnsupportedOperationException` when passed a plain `String`:
+
+* `find(CharSequence)`
+* `findAll(CharSequence)`
+* `executeQuery(CharSequence)`
+* `executeUpdate(CharSequence)`
+
+These overloads are retained for GString use only. GORM extracts GString interpolations as named JDBC parameters, preventing HQL injection. Passing a pre-evaluated `String` bypasses this protection and is no longer permitted.
+
+*Migration*: Choose one of the following patterns:
+
+[source,groovy]
+----
+// Option 1: GString interpolation (GORM binds ${value} as :p0)
+Book.findAll("from Book where title = ${params.title}")
+
+// Option 2: Named parameters with plain String
+Book.findAll("from Book where title = :title", [title: params.title])
+
+// Option 3: Positional parameters
+Book.executeQuery("from Book where title like ?1", [params.title + '%'])
+----
+
+===== `findWithSql` / `findAllWithSql` renamed
+
+`findWithSql` and `findAllWithSql` are deprecated. Use `findWithNativeSql` and `findAllWithNativeSql` instead. The old names remain as delegating aliases for backwards compatibility.
+
+[source,groovy]
+----
+// Before (deprecated)
+Book.findAllWithSql("select * from book where ...")
+
+// After
+Book.findAllWithNativeSql("select * from book where ...")
+----
+
+==== Schema-per-Tenant — Schema Names Are Now Quoted
+
+`DefaultSchemaHandler` now quotes schema names using the JDBC identifier quote character (`connection.metaData.identifierQuoteString`) before executing `SET SCHEMA` and `CREATE SCHEMA` DDL statements. This prevents SQL injection via tenant identifiers.
+
+Embedded quote characters are stripped from the schema name before quoting. If the JDBC driver does not support identifier quoting (returns `" "` or empty), the name is used unquoted as before — no behaviour change for such drivers.
+
+No application changes are required unless your tenant resolver intentionally produces schema names containing the database's identifier quote character (typically `"` or `` ` ``), in which case those characters will be stripped.

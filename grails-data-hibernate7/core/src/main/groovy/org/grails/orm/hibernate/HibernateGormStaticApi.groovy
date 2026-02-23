@@ -221,32 +221,59 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
       doListInternal(query, namedParams, [], args, false)
     }
 
-    D findWithSql(CharSequence sql, Map args = Collections.emptyMap()) {
+    D findWithNativeSql(CharSequence sql, Map args = Collections.emptyMap()) {
         doSingleInternal(sql, [:], [], args, true) as D
     }
 
-    List<D> findAllWithSql(CharSequence query, Map args = Collections.emptyMap()) {
+    List<D> findAllWithNativeSql(CharSequence query, Map args = Collections.emptyMap()) {
         doListInternal(query, [:], [], args, true)
+    }
+
+    /** @deprecated Use {@link #findWithNativeSql(CharSequence, Map)} — the new name makes the native SQL risk surface explicit. */
+    @Deprecated
+    D findWithSql(CharSequence sql, Map args = Collections.emptyMap()) {
+        findWithNativeSql(sql, args)
+    }
+
+    /** @deprecated Use {@link #findAllWithNativeSql(CharSequence, Map)} — the new name makes the native SQL risk surface explicit. */
+    @Deprecated
+    List<D> findAllWithSql(CharSequence query, Map args = Collections.emptyMap()) {
+        findAllWithNativeSql(query, args)
     }
 
     @Override
     List<D> findAll(CharSequence query) {
+        requireGString(query, "findAll")
         doListInternal(query, [:], [], [:], false)
     }
 
     @Override
     List executeQuery(CharSequence query) {
+        requireGString(query, "executeQuery")
         doListInternal(query, [:], [], [:], false)
     }
 
     @Override
     Integer executeUpdate(CharSequence query) {
-       doInternalExecuteUpdate(query,[:],[],[:])
+        requireGString(query, "executeUpdate")
+        doInternalExecuteUpdate(query,[:],[],[:])
     }
 
     @Override
     D find(CharSequence query) {
-       doSingleInternal(query, [:], [], [:], false)
+        requireGString(query, "find")
+        doSingleInternal(query, [:], [], [:], false)
+    }
+
+    private static void requireGString(CharSequence query, String method) {
+        if (!(query instanceof GString)) {
+            throw new UnsupportedOperationException(
+                "${method}(CharSequence) only accepts a Groovy GString with interpolated parameters " +
+                "(e.g. ${method}(\"from Foo where bar = \${value}\")). " +
+                "Use the parameterized overload ${method}(CharSequence, Map) or ${method}(CharSequence, Collection, Map) " +
+                "to pass a plain String query safely."
+            )
+        }
     }
 
     @Override

@@ -1,0 +1,97 @@
+[[querying-hql]]
+== HQL Queries
+
+GORM supports querying using http://docs.jboss.org/hibernate/orm/current/querylanguage/html_single/Hibernate_Query_Language_Guide.html[Hibernate Query Language (HQL)], which is an object-oriented query language similar to SQL but operating on domain class names and properties rather than table and column names.
+
+=== Basic HQL
+
+The following static methods accept HQL strings:
+
+* `find(CharSequence)` — returns the first matching instance
+* `findAll(CharSequence)` — returns all matching instances
+* `executeQuery(CharSequence)` — returns a list (supports projections)
+* `executeUpdate(CharSequence)` — executes a bulk update/delete, returns the count
+
+=== Safe Parameterization with GString
+
+GORM automatically converts Groovy http://docs.groovy-lang.org/latest/html/documentation/#_string_interpolation[GString] interpolations into safe named parameters before the query reaches Hibernate. This is the **preferred** way to pass user-supplied values.
+
+[source,groovy]
+----
+String title = params.title  // user input
+
+// ✅ SAFE — ${title} is extracted and bound as :p0
+List results = Book.findAll("from Book b where b.title = ${title}")
+
+// ✅ SAFE — multiple interpolations become :p0, :p1
+List results = Book.findAll(
+    "from Book b where b.title like ${title} and b.genre = ${genre}")
+----
+
+WARNING: The single-argument overloads (`find`, `findAll`, `executeQuery`, `executeUpdate`) only accept a Groovy `GString`. Passing a plain `String` throws `UnsupportedOperationException` to prevent accidental injection via string concatenation.
+
+[source,groovy]
+----
+// ❌ BLOCKED — throws UnsupportedOperationException at runtime
+String hql = "from Book where title = '" + userInput + "'"
+Book.findAll(hql)
+
+// ✅ Use the parameterized overload for plain String queries
+Book.findAll("from Book where title = :title", [title: userInput])
+----
+
+=== Named Parameters
+
+Use the `(CharSequence, Map)` overload to pass named parameters explicitly. This also accepts a plain `String`, making it safe for dynamically constructed queries where GString syntax is inconvenient.
+
+[source,groovy]
+----
+// Named parameters — safe with plain String
+List results = Book.findAll(
+    "from Book b where b.title = :title and b.author = :author",
+    [title: params.title, author: params.author])
+
+Book.executeUpdate(
+    "update Book set active = :flag where genre = :genre",
+    [flag: false, genre: 'Horror'])
+----
+
+=== Positional Parameters
+
+[source,groovy]
+----
+// Positional parameters (?1, ?2, ...)
+List results = Book.executeQuery(
+    "from Book b where b.title like ?1 and b.genre = ?2",
+    ['%Groovy%', 'Tech'])
+----
+
+=== Pagination and Sorting
+
+All `findAll` and `executeQuery` overloads accept a settings map as the last argument:
+
+[source,groovy]
+----
+List results = Book.findAll(
+    "from Book b where b.genre = ${genre} order by b.title",
+    [max: 10, offset: 20])
+
+List results = Book.executeQuery(
+    "from Book b where b.genre = :genre",
+    [genre: 'Tech'],
+    [max: 5, offset: 0, cache: true])
+----
+
+=== Bulk Updates and Deletes
+
+[source,groovy]
+----
+// Bulk update with named params
+int count = Book.executeUpdate(
+    "update Book set active = :flag where publishedYear < :year",
+    [flag: false, year: 2000])
+
+// Bulk delete
+int count = Book.executeUpdate(
+    "delete Book where active = false")
+----

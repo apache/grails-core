@@ -157,16 +157,52 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instances.size() == 2
     }
 
-    void "Test findAll with HQL"() {
+    void "Test findAll with HQL using named params"() {
         given:
         new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
         new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
 
         when:
-        def instances = HibernateGormStaticApiEntity.findAll("from HibernateGormStaticApiEntity where name like 'test%'")
+        def instances = HibernateGormStaticApiEntity.findAll("from HibernateGormStaticApiEntity where name like :pattern", [pattern: 'test%'])
 
         then:
         instances.size() == 2
+    }
+
+    void "Test findAll with plain String throws UnsupportedOperationException"() {
+        when:
+        String hql = "from HibernateGormStaticApiEntity"
+        HibernateGormStaticApiEntity.findAll(hql)
+
+        then:
+        thrown(UnsupportedOperationException)
+    }
+
+    void "Test find with plain String throws UnsupportedOperationException"() {
+        when:
+        String hql = "from HibernateGormStaticApiEntity"
+        HibernateGormStaticApiEntity.find(hql)
+
+        then:
+        thrown(UnsupportedOperationException)
+    }
+
+    void "Test executeQuery with plain String throws UnsupportedOperationException"() {
+        when:
+        String hql = "from HibernateGormStaticApiEntity"
+        HibernateGormStaticApiEntity.executeQuery(hql)
+
+        then:
+        thrown(UnsupportedOperationException)
+    }
+
+    void "Test executeUpdate with plain String throws UnsupportedOperationException"() {
+        when:
+        String hql = "update HibernateGormStaticApiEntity set name = 'x'"
+        HibernateGormStaticApiEntity.executeUpdate(hql)
+
+        then:
+        thrown(UnsupportedOperationException)
     }
 
 
@@ -219,7 +255,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         def entityId = entity.id
 
         when:
-        def updatedCount = HibernateGormStaticApiEntity.executeUpdate("update HibernateGormStaticApiEntity set name = 'updated' where name = 'test'")
+        def updatedCount = HibernateGormStaticApiEntity.executeUpdate("update HibernateGormStaticApiEntity set name = :newName where name = :oldName", [newName: 'updated', oldName: 'test'])
         session.clear()
         def instance = HibernateGormStaticApiEntity.get(entityId)
 
@@ -445,8 +481,8 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         given:
         setupTestData()
 
-        when:"Some test data is saved"
-        List<Club> results = Club.findAllWithSql("select * from club c order by c.name")
+        when:"A static native SQL query with no user input"
+        List<Club> results = Club.findAllWithNativeSql("select * from club c order by c.name")
 
         then:"The results are correct"
         results.size() == 3
@@ -455,13 +491,36 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         club.name == 'Arsenal'
     }
 
+    void "test deprecated findAllWithSql delegates to findAllWithNativeSql"() {
+        given:
+        setupTestData()
+
+        when:"The deprecated name still works as a delegate"
+        List<Club> results = Club.findAllWithSql("select * from club c order by c.name")
+
+        then:"The results are correct"
+        results.size() == 3
+    }
+
+    void "test deprecated findWithSql delegates to findWithNativeSql"() {
+        given:
+        setupTestData()
+
+        when:"The deprecated name still works as a delegate"
+        Club result = Club.findWithSql("select * from club c where c.name = 'Arsenal'")
+
+        then:
+        result != null
+        result.name == 'Arsenal'
+    }
+
     void "test sql query with gstring parameters"() {
         given:
         setupTestData()
 
         when:"Some test data is saved"
         String p = "%l%"
-        List<Club> results = Club.findAllWithSql("select * from club c where c.name like $p order by c.name")
+        List<Club> results = Club.findAllWithNativeSql("select * from club c where c.name like $p order by c.name")
 
         then:"The results are correct"
         results.size() == 2
