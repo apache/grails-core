@@ -138,19 +138,12 @@ The `executeUpdate(CharSequence)` single-arg overload was the highest-severity i
 
 ---
 
-### M-3 · `HibernateGormInstanceApi.nextId()` — GString with Class Name in HQL ✅ FIXED
+### M-3 · `HibernateGormInstanceApi.nextId()` — Dead Code Removed ✅ FIXED
 
 | Field | Value |
 |-------|-------|
 | **File** | `core/src/main/groovy/org/grails/orm/hibernate/HibernateGormInstanceApi.groovy` |
-| **Line** | 178 |
-| **Status** | ✅ Fixed — not an active injection risk; renamed to plain concatenation to avoid confusing the GString parameterizer |
-
-`persistentEntity.name` is framework metadata, not user input. The GString caused `buildNamedParameterQueryFromGString` to bind the class name as `:p0`, producing malformed HQL. Fixed to plain concatenation:
-
-```groovy
-String hql = "select max(e.id) from " + persistentEntity.name + " e"
-```
+| **Status** | ✅ Removed — method had no callers; was left over from the Hibernate 5 `GrailsIncrementGenerator` strategy |
 
 ---
 

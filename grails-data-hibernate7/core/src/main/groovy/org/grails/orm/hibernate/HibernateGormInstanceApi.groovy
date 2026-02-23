@@ -174,24 +174,6 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
 
-    private Long nextId() {
-        String hql = "select max(e.id) from ${persistentEntity.name} e"
-
-        def result = (Long) HibernateHqlQuery.createHqlQuery(
-                (HibernateDatastore) datastore,
-                sessionFactory,
-                persistentEntity,
-                hql,
-                false,
-                false,
-                null,
-                null
-                , null
-                , (GrailsHibernateTemplate) hibernateTemplate).singleResult() ?: 0
-        Random random = new Random()
-        return result + random.nextInt(100) + 1
-    }
-
     @CompileDynamic
     private void runDeferredBinding() {
         DEFERRED_BINDING?.runActions()
