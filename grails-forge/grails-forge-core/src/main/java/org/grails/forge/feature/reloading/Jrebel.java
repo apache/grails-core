@@ -19,9 +19,14 @@
 package org.grails.forge.feature.reloading;
 
 import jakarta.inject.Singleton;
+import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.gradle.GradlePlugin;
+import org.grails.forge.feature.Feature;
 import org.grails.forge.options.DevelopmentReloading;
+import org.grails.forge.options.Options;
+
+import java.util.Set;
 
 @Singleton
 public class Jrebel implements ReloadingFeature {
@@ -60,5 +65,10 @@ public class Jrebel implements ReloadingFeature {
     @Override
     public String getDocumentation() {
         return "https://manuals.jrebel.com/jrebel/standalone/springboot.html";
+    }
+
+    @Override
+    public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
+        return options.getDevelopmentReloading() == DevelopmentReloading.JREBEL;
     }
 }

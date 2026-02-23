@@ -24,7 +24,6 @@ import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.build.dependencies.Scope;
-import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.micronaut.GrailsMicronaut;
 import org.grails.forge.options.DevelopmentReloading;
@@ -33,7 +32,7 @@ import org.grails.forge.options.Options;
 import java.util.Set;
 
 @Singleton
-public class SpringBootDevTools implements ReloadingFeature, DefaultFeature {
+public class SpringBootDevTools implements ReloadingFeature {
 
     @Override
     public String getName() {
@@ -63,21 +62,11 @@ public class SpringBootDevTools implements ReloadingFeature, DefaultFeature {
     }
 
     @Override
-    public boolean isVisible() {
-        return true;
-    }
-
-    @Override
     public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
         if (selectedFeatures.stream().anyMatch(f -> f instanceof GrailsMicronaut)) {
             return false;
         }
-        return selectedFeatures.stream().noneMatch(f -> f instanceof ReloadingFeature);
-    }
-
-    @Override
-    public boolean supports(ApplicationType applicationType) {
-        return true;
+        return options.getDevelopmentReloading() == DevelopmentReloading.DEVTOOLS;
     }
 
     @Override
