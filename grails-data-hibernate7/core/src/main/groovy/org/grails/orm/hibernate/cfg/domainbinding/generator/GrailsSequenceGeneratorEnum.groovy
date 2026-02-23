@@ -1,6 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding.generator
 
-
+import groovy.transform.CompileStatic
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.generator.Assigned
 import org.hibernate.generator.Generator
@@ -13,6 +13,7 @@ import org.grails.orm.hibernate.cfg.Identity
 /**
  * Enum for Grails ID generator strategies.
  */
+@CompileStatic
 enum GrailsSequenceGeneratorEnum {
     IDENTITY("identity"),
     SEQUENCE("sequence"),

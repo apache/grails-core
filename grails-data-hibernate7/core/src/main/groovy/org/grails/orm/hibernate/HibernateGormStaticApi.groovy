@@ -221,12 +221,10 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
       doListInternal(query, namedParams, [], args, false)
     }
 
-    @CompileDynamic // required for Hibernate 5.2 compatibility
-    def <D> D findWithSql(CharSequence sql, Map args = Collections.emptyMap()) {
+    D findWithSql(CharSequence sql, Map args = Collections.emptyMap()) {
         doSingleInternal(sql, [:], [], args, true) as D
     }
 
-    @CompileDynamic // required for Hibernate 5.2 compatibility
     List<D> findAllWithSql(CharSequence query, Map args = Collections.emptyMap()) {
         doListInternal(query, [:], [], args, true)
     }

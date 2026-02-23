@@ -432,28 +432,28 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
      * @return true if the field is dirty
      */
 
-    @CompileDynamic
     boolean isDirty(D instance, String fieldName) {
         SessionImplementor session = (SessionImplementor)sessionFactory.currentSession
-        def entry = findEntityEntry(instance, session)
+        EntityEntry entry = findEntityEntry(instance, session)
         if (!entry || !entry.loadedState) {
             return false
         }
 
         EntityPersister persister = entry.persister
         Object[] values = persister.getPropertyValues(instance)
-        def dirtyProperties = findDirty(persister, values, entry, instance, session)
-        if(dirtyProperties == null) {
+        int[] dirtyProperties = findDirty(persister, values, entry, instance, session)
+        if (dirtyProperties == null) {
             return false
         }
-        else {
-            int fieldIndex = persister.getEntityMetamodel().getProperties().findIndexOf { NonIdentifierAttribute attribute -> fieldName == attribute.name }
-            return fieldIndex in dirtyProperties
+        NonIdentifierAttribute[] props = persister.getEntityMetamodel().getProperties()
+        int fieldIndex = -1
+        for (int i = 0; i < props.length; i++) {
+            if (props[i].name == fieldName) { fieldIndex = i; break }
         }
+        return fieldIndex in dirtyProperties
     }
 
-    @CompileDynamic // required for Hibernate 5.2 compatibility
-    private def findDirty(EntityPersister persister, Object[] values, EntityEntry entry, D instance, SessionImplementor session) {
+    private int[] findDirty(EntityPersister persister, Object[] values, EntityEntry entry, D instance, SessionImplementor session) {
         persister.findDirty(values, entry.loadedState, instance, session)
     }
 
@@ -463,16 +463,15 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
      * @param instance The instance
      * @return true if it is dirty
      */
-    @CompileDynamic
     boolean isDirty(D instance) {
         SessionImplementor session = (SessionImplementor)sessionFactory.currentSession
-        def entry = findEntityEntry(instance, session)
+        EntityEntry entry = findEntityEntry(instance, session)
         if (!entry || !entry.loadedState) {
             return false
         }
         EntityPersister persister = entry.persister
         Object[] currentState = persister.getPropertyValues(instance)
-        def dirtyPropertyIndexes = findDirty(persister, currentState, entry, instance, session)
+        int[] dirtyPropertyIndexes = findDirty(persister, currentState, entry, instance, session)
         return dirtyPropertyIndexes != null
     }
 
@@ -482,11 +481,9 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
      * @param instance The instance
      * @return A list of property names that are dirty
      */
-
-    @CompileDynamic
-    List getDirtyPropertyNames(D instance) {
+    List<String> getDirtyPropertyNames(D instance) {
         SessionImplementor session = (SessionImplementor)sessionFactory.currentSession
-        def entry = findEntityEntry(instance, session)
+        EntityEntry entry = findEntityEntry(instance, session)
         if (!entry || !entry.loadedState) {
             return []
         }
@@ -495,9 +492,11 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         Object[] currentState = persister.getPropertyValues(instance)
         int[] dirtyPropertyIndexes = findDirty(persister, currentState, entry, instance, session)
         List<String> names = []
-        def entityProperties = persister.getEntityMetamodel().getProperties()
-        for (index in dirtyPropertyIndexes) {
-            names.add entityProperties[index].name
+        NonIdentifierAttribute[] entityProperties = persister.getEntityMetamodel().getProperties()
+        if (dirtyPropertyIndexes != null) {
+            for (int index : dirtyPropertyIndexes) {
+                names.add(entityProperties[index].name)
+            }
         }
         return names
     }

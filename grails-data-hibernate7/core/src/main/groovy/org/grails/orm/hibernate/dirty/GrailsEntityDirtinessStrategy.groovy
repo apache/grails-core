@@ -15,7 +15,6 @@
  */
 package org.grails.orm.hibernate.dirty
 
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
@@ -27,6 +26,7 @@ import org.grails.datastore.mapping.model.types.Embedded
 import org.hibernate.CustomEntityDirtinessStrategy
 import org.hibernate.Hibernate
 import org.hibernate.Session
+import org.hibernate.engine.spi.EntityEntry
 import org.hibernate.engine.spi.SessionImplementor
 import org.hibernate.engine.spi.Status
 import org.hibernate.persister.entity.EntityPersister
@@ -140,10 +140,10 @@ class GrailsEntityDirtinessStrategy implements CustomEntityDirtinessStrategy {
         }
     }
 
-    @CompileDynamic
     Status getStatus(Session session, Object entity) {
         SessionImplementor si = (SessionImplementor) session
-        return si.getPersistenceContext().getEntry(entity)?.getStatus()
+        EntityEntry entry = si.getPersistenceContext().getEntry(entity)
+        return entry != null ? entry.getStatus() : null
     }
 
     private DirtyCheckable cast(Object entity) {

@@ -1,5 +1,6 @@
 package org.grails.orm.hibernate.support
 
+import groovy.transform.CompileStatic
 import org.grails.orm.hibernate.AbstractHibernateDatastore
 import org.grails.orm.hibernate.connections.HibernateConnectionSource
 import org.springframework.beans.factory.FactoryBean
@@ -13,6 +14,7 @@ import javax.sql.DataSource
  *
  * @author James Kleeh
  */
+@CompileStatic
 class DataSourceFactoryBean implements FactoryBean<DataSource> {
 
     AbstractHibernateDatastore datastore
