@@ -97,9 +97,6 @@ org.grails.orm.hibernate.HibernateDatastore,742,CloseResource,Ensure that resour
 org.grails.orm.hibernate.HibernateDatastore,754,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'metadata' (lines '754'-'763').
 org.grails.orm.hibernate.HibernateDatastore,755,CloseResource,Ensure that resources like this ServiceRegistry object are closed after use
 org.grails.orm.hibernate.HibernateDatastore,763,DataflowAnomalyAnalysis,Found 'DD'-anomaly for variable 'metadata' (lines '763'-'763').
-org.grails.orm.hibernate.HibernateLegacyEnumType,61,MissingSerialVersionUID,Classes implementing Serializable should set a serialVersionUID
-org.grails.orm.hibernate.HibernateLegacyEnumType,75,AvoidFieldNameMatchingMethodName,Field isOrdinal has the same name as a method
-org.grails.orm.hibernate.HibernateLegacyEnumType,116,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'reader' (lines '116'-'163').
 org.grails.orm.hibernate.HibernateMappingContextSessionFactoryBean,460,UseProperClassLoader,"In J2EE, getClassLoader() might not work as expected.  Use Thread.currentThread().getContextClassLoader() instead."
 org.grails.orm.hibernate.HibernateMappingContextSessionFactoryBean,502,EmptyIfStmt,Avoid empty if statements
 org.grails.orm.hibernate.HibernateSession,80,DataflowAnomalyAnalysis,Found 'DU'-anomaly for variable 'cpf' (lines '80'-'88').

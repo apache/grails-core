@@ -262,9 +262,10 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         then:
         Property prop = rootClass.getProperty("status")
         prop != null
-        prop.value instanceof SimpleValue
-        // Enums use HibernateLegacyEnumType by default in Grails
-        ((SimpleValue)prop.value).typeName == GrailsDomainBinder.ENUM_TYPE_CLASS
+        prop.value instanceof BasicValue
+        // Default enum mapping uses Hibernate 7 native STRING style (no typeName)
+        ((BasicValue)prop.value).typeName == null
+        ((BasicValue)prop.value).enumerationStyle == jakarta.persistence.EnumType.STRING
     }
 
     void "Test bind many-to-one"() {

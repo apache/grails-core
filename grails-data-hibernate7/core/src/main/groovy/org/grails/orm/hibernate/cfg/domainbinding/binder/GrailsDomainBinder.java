@@ -61,8 +61,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
   public static final String EMPTY_PATH = "";
   public static final char UNDERSCORE = '_';
 
-  public static final String ENUM_TYPE_CLASS =
-      org.grails.orm.hibernate.HibernateLegacyEnumType.class.getName();
+
   public static final String ENUM_CLASS_PROP = "enumClass";
   public static final Logger LOG = LoggerFactory.getLogger(GrailsDomainBinder.class);
 

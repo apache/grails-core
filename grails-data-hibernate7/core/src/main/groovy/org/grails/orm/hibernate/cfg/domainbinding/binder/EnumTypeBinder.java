@@ -19,22 +19,18 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.ENUM_CLASS_PROP;
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.ENUM_TYPE_CLASS;
 
-import java.sql.Types;
 import java.util.Properties;
-import org.grails.orm.hibernate.HibernateLegacyEnumType;
+import jakarta.persistence.EnumType;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.IdentityEnumType;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType;
-import org.hibernate.MappingException;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Column;
-import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,29 +77,27 @@ public class EnumTypeBinder {
   public void bindEnumType(
       GrailsHibernatePersistentProperty property,
       Class<?> propertyType,
-      SimpleValue simpleValue,
+      BasicValue simpleValue,
       String columnName) {
     PropertyConfig pc = property.getMappedForm();
-    String enumType = pc.getEnumType();
     Properties enumProperties = new Properties();
     enumProperties.put(ENUM_CLASS_PROP, propertyType.getName());
     String typeName = property.getTypeName(propertyType);
     if (typeName != null) {
       simpleValue.setTypeName(typeName);
     } else {
-      if (GrailsEnumType.DEFAULT.getType().equals(enumType)
-          || GrailsEnumType.STRING.getType().equalsIgnoreCase(enumType)) {
-        simpleValue.setTypeName(ENUM_TYPE_CLASS);
-        enumProperties.put(HibernateLegacyEnumType.TYPE, String.valueOf(Types.VARCHAR));
-        enumProperties.put(HibernateLegacyEnumType.NAMED, Boolean.TRUE.toString());
-      } else if (GrailsEnumType.ORDINAL.getType().equalsIgnoreCase(enumType)) {
-        simpleValue.setTypeName(ENUM_TYPE_CLASS);
-        enumProperties.put(HibernateLegacyEnumType.TYPE, String.valueOf(Types.INTEGER));
-        enumProperties.put(HibernateLegacyEnumType.NAMED, Boolean.FALSE.toString());
-      } else if (GrailsEnumType.IDENTITY.getType().equals(enumType)) {
-        simpleValue.setTypeName(IdentityEnumType.class.getName());
-      } else {
-        throw new MappingException("Invalid enum type [" + enumType + "].");
+      switch (GrailsEnumType.fromString(pc.getEnumType())) {
+        case DEFAULT, STRING -> {
+          // Hibernate 7 native string enum mapping: store by Enum.name() as VARCHAR.
+          simpleValue.setImplicitJavaTypeAccess(tc -> propertyType);
+          simpleValue.setEnumerationStyle(EnumType.STRING);
+        }
+        case ORDINAL -> {
+          // Hibernate 7 native ordinal enum mapping: store by Enum.ordinal() as INTEGER.
+          simpleValue.setImplicitJavaTypeAccess(tc -> propertyType);
+          simpleValue.setEnumerationStyle(EnumType.ORDINAL);
+        }
+        case IDENTITY -> simpleValue.setTypeName(IdentityEnumType.class.getName());
       }
     }
     simpleValue.setTypeParameters(enumProperties);

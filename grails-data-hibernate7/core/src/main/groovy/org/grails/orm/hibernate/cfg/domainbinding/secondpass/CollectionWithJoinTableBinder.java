@@ -112,7 +112,7 @@ public class CollectionWithJoinTableBinder {
       }
 
       if (isEnum) {
-        enumTypeBinder.bindEnumType(property, referencedType, element, columnName);
+        enumTypeBinder.bindEnumType(property, referencedType, (BasicValue) element, columnName);
       } else {
 
         String typeName = property.getTypeName(referencedType);

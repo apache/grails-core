@@ -17,13 +17,6 @@ Generated from a clean build of `grails-data-hibernate7` (and its four Gradle su
 
 | Fully Qualified Class Name | Line | Warning |
 |---|---|---|
-| `org.grails.orm.hibernate.HibernateLegacyEnumType` | 61 | `[serial]` serializable class HibernateLegacyEnumType has no definition of serialVersionUID |
-| `org.grails.orm.hibernate.HibernateLegacyEnumType` | 63 | `[removal]` DynamicParameterizedType in org.hibernate.usertype has been deprecated and marked for removal |
-| `org.grails.orm.hibernate.HibernateLegacyEnumType` | 123 | `[unchecked]` unchecked cast |
-| `org.grails.orm.hibernate.HibernateLegacyEnumType` | 128 | `[unchecked]` unchecked cast |
-| `org.grails.orm.hibernate.HibernateLegacyEnumType` | 221 | `[removal]` nullSafeGet(ResultSet,int,SharedSessionContractImplementor,Object) in UserType has been deprecated and marked for removal |
-| `org.grails.orm.hibernate.HibernateLegacyEnumType` | 236 | `[removal]` nullSafeSet(PreparedStatement,J,int,SharedSessionContractImplementor) in UserType has been deprecated and marked for removal |
-| `org.grails.orm.hibernate.HibernateLegacyEnumType` | 260 | `[unchecked]` unchecked cast |
 | `org.grails.orm.hibernate.access.TraitPropertyAccessStrategy` | 39 | `[rawtypes]` found raw type: Class |
 | `org.grails.orm.hibernate.access.TraitPropertyAccessStrategy` | 117 | `[rawtypes]` found raw type: Class |
 | `org.grails.orm.hibernate.cfg.HibernateMappingContext` | 39 | `[rawtypes]` found raw type: Class |

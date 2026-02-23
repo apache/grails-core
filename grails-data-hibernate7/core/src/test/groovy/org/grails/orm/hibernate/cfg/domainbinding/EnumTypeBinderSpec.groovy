@@ -5,6 +5,8 @@ import grails.persistence.Entity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.IdentityEnumType
+import jakarta.persistence.EnumType
+import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
@@ -12,7 +14,6 @@ import org.hibernate.engine.spi.SharedSessionContractImplementor
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.Table
-import org.grails.orm.hibernate.HibernateLegacyEnumType
 import org.hibernate.usertype.UserType
 import spock.lang.Subject
 import spock.lang.Unroll
@@ -20,7 +21,6 @@ import spock.lang.Unroll
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
-import java.sql.Types
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder
@@ -62,20 +62,19 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
 
         then: "the correct hibernate type is set"
         simpleValue.getTypeName() == expectedHibernateType
+        simpleValue.getEnumerationStyle() == expectedEnumStyle
         simpleValue.isNullable() == nullable
 
-        and: "the type parameters are configured correctly"
-        def props = simpleValue.getTypeParameters()
-        (props.getProperty(HibernateLegacyEnumType.TYPE) == String.valueOf(expectedSqlType)) == typeExpected
-        (props.getProperty(HibernateLegacyEnumType.NAMED) == String.valueOf(namedExpected)) == namedIsExpected
+        and: "the enum class property is always set"
+        simpleValue.getTypeParameters().getProperty(GrailsDomainBinder.ENUM_CLASS_PROP) == Status01.name
 
         where:
-        clazz | enumTypeMapping   | expectedHibernateType            | expectedSqlType   | typeExpected | namedExpected | namedIsExpected | nullable
-        Person01| "default"       | HibernateLegacyEnumType.class.getName()         | Types.VARCHAR     | true         | true          | true            | false
-        Person02|"string"         | HibernateLegacyEnumType.class.getName()         | Types.VARCHAR     | true         | true          | true            | true
-        Person03|"ordinal"        | HibernateLegacyEnumType.class.getName()         | Types.INTEGER     | true         | false         | true            | true
-        Person04|"identity"       | IdentityEnumType.class.getName() | null              | false        | null          | false           | false
-        Person05|UserTypeEnumType | UserTypeEnumType.class.getName() | null              | false        | null          | false           | false
+        clazz    | enumTypeMapping  | expectedHibernateType                   | expectedEnumStyle | nullable
+        Person01 | "default"        | null                                    | EnumType.STRING   | false
+        Person02 | "string"         | null                                    | EnumType.STRING   | true
+        Person03 | "ordinal"        | null                                    | EnumType.ORDINAL  | true
+        Person04 | "identity"       | IdentityEnumType.class.getName()        | null              | false
+        Person05 | UserTypeEnumType | UserTypeEnumType.class.getName()        | null              | false
     }
 
 
@@ -148,7 +147,8 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         then: "a BasicValue is returned and bound correctly"
         result instanceof BasicValue
         result.getTable() == table
-        result.getTypeName() == HibernateLegacyEnumType.class.getName()
+        result.getTypeName() == null
+        result.getEnumerationStyle() == EnumType.STRING
         result.getColumns().size() == 1
         result.getColumns()[0].getName() == "status"
     }
