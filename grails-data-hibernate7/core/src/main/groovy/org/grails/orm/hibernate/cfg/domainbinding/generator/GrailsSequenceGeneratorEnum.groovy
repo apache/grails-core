@@ -7,6 +7,7 @@ import org.hibernate.generator.Generator
 import org.hibernate.generator.GeneratorCreationContext
 import org.hibernate.id.uuid.UuidGenerator
 
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Identity
 
@@ -51,8 +52,9 @@ enum GrailsSequenceGeneratorEnum {
             GeneratorCreationContext context,
             Identity mappedId,
             GrailsHibernatePersistentEntity domainClass,
-            JdbcEnvironment jdbcEnvironment) {
-        return getGenerator(fromName(name).orElse(NATIVE), context, mappedId, domainClass, jdbcEnvironment)
+            JdbcEnvironment jdbcEnvironment,
+            PersistentEntityNamingStrategy namingStrategy) {
+        return getGenerator(fromName(name).orElse(NATIVE), context, mappedId, domainClass, jdbcEnvironment, namingStrategy)
     }
 
     static Generator getGenerator(
@@ -60,14 +62,15 @@ enum GrailsSequenceGeneratorEnum {
             GeneratorCreationContext context,
             Identity mappedId,
             GrailsHibernatePersistentEntity domainClass,
-            JdbcEnvironment jdbcEnvironment) {
+            JdbcEnvironment jdbcEnvironment,
+            PersistentEntityNamingStrategy namingStrategy) {
         switch (sequenceGeneratorEnum) {
             case IDENTITY:
                 return new GrailsIdentityGenerator(context, mappedId)
             case [SEQUENCE, SEQUENCE_IDENTITY, HILO]:
                 return new GrailsSequenceStyleGenerator(context, mappedId, jdbcEnvironment)
             case INCREMENT:
-                return new GrailsIncrementGenerator(context, mappedId, domainClass)
+                return new GrailsIncrementGenerator(context, mappedId, domainClass, namingStrategy)
             case [UUID, UUID2]:
                 return new UuidGenerator(context.getType().getReturnedClass())
             case ASSIGNED:

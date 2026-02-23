@@ -3,6 +3,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Identity
 import org.hibernate.boot.spi.MetadataBuildingContext
@@ -26,17 +27,19 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
     Table table
     GrailsSequenceWrapper grailsSequenceWrapper
     JdbcEnvironment jdbcEnvironment
+    PersistentEntityNamingStrategy namingStrategy
 
     def setup() {
         metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         jdbcEnvironment = Mock(JdbcEnvironment)
+        namingStrategy = Mock(PersistentEntityNamingStrategy)
         grailsSequenceWrapper = Mock(GrailsSequenceWrapper)
         entity = new RootClass(metadataBuildingContext)
         table = new Table("test_table")
         entity.setTable(table)
         // Use a real BasicValue to test that the generator creator lambda is correctly set and executable
         basicValue = new BasicValue(metadataBuildingContext, table)
-        creator = new BasicValueIdCreator(jdbcEnvironment, grailsSequenceWrapper)
+        creator = new BasicValueIdCreator(jdbcEnvironment, namingStrategy, grailsSequenceWrapper)
     }
 
     @Unroll
@@ -54,7 +57,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         Generator generator = generatorCreator.createGenerator(context)
 
         then:
-        1 * grailsSequenceWrapper.getGenerator(generatorName, context, mappedId, domainClass, jdbcEnvironment) >> mockGenerator
+        1 * grailsSequenceWrapper.getGenerator(generatorName, context, mappedId, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
         generator == mockGenerator
 
         where:
@@ -83,7 +86,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         Generator generator = generatorCreator.createGenerator(context)
 
         then:
-        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.NATIVE.toString(), context, null, domainClass, jdbcEnvironment) >> mockGenerator
+        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.NATIVE.toString(), context, null, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
         generator == mockGenerator
     }
 
@@ -99,7 +102,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         Generator generator = generatorCreator.createGenerator(context)
 
         then:
-        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString(), context, null, domainClass, jdbcEnvironment) >> mockGenerator
+        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString(), context, null, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
         generator == mockGenerator
     }
 
@@ -117,7 +120,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         Generator generator = generatorCreator.createGenerator(context)
 
         then:
-        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString(), context, mappedId, domainClass, jdbcEnvironment) >> mockGenerator
+        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString(), context, mappedId, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
         generator == mockGenerator
     }
 
@@ -134,6 +137,6 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         generatorCreator.createGenerator(context)
 
         then:
-        1 * grailsSequenceWrapper.getGenerator("custom", context, mappedId, domainClass, jdbcEnvironment) >> Mock(Generator)
+        1 * grailsSequenceWrapper.getGenerator("custom", context, mappedId, domainClass, jdbcEnvironment, namingStrategy) >> Mock(Generator)
     }
 }

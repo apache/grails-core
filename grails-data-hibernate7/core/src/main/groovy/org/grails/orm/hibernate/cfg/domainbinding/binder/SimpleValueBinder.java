@@ -146,6 +146,7 @@ public class SimpleValueBinder {
         context,
         null,
         (GrailsHibernatePersistentEntity) property.getHibernateOwner(),
-        jdbcEnvironment);
+        jdbcEnvironment,
+        namingStrategy);
   }
 }

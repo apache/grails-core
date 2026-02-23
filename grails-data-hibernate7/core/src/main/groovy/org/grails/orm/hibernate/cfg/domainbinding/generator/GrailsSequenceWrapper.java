@@ -22,6 +22,7 @@ import static org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenc
 import static org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum.fromName;
 
 import org.grails.orm.hibernate.cfg.Identity;
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.generator.Generator;
@@ -34,8 +35,9 @@ public class GrailsSequenceWrapper {
       GeneratorCreationContext context,
       Identity mappedId,
       GrailsHibernatePersistentEntity domainClass,
-      JdbcEnvironment jdbcEnvironment) {
+      JdbcEnvironment jdbcEnvironment,
+      PersistentEntityNamingStrategy namingStrategy) {
     return GrailsSequenceGeneratorEnum.getGenerator(
-        fromName(name).orElse(NATIVE), context, mappedId, domainClass, jdbcEnvironment);
+        fromName(name).orElse(NATIVE), context, mappedId, domainClass, jdbcEnvironment, namingStrategy);
   }
 }

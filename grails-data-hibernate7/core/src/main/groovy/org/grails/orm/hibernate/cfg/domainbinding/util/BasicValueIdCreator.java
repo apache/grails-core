@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
 import org.grails.orm.hibernate.cfg.Identity;
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -32,18 +33,21 @@ import org.hibernate.mapping.Table;
 public class BasicValueIdCreator {
 
   private final JdbcEnvironment jdbcEnvironment;
+  private final PersistentEntityNamingStrategy namingStrategy;
   private final GrailsSequenceWrapper grailsSequenceWrapper;
 
   /** Creates a new {@link BasicValueIdCreator} instance. */
-  public BasicValueIdCreator(JdbcEnvironment jdbcEnvironment) {
+  public BasicValueIdCreator(JdbcEnvironment jdbcEnvironment, PersistentEntityNamingStrategy namingStrategy) {
     this.jdbcEnvironment = jdbcEnvironment;
+    this.namingStrategy = namingStrategy;
     this.grailsSequenceWrapper = new GrailsSequenceWrapper();
   }
 
   /** Creates a new {@link BasicValueIdCreator} instance. */
   protected BasicValueIdCreator(
-      JdbcEnvironment jdbcEnvironment, GrailsSequenceWrapper grailsSequenceWrapper) {
+      JdbcEnvironment jdbcEnvironment, PersistentEntityNamingStrategy namingStrategy, GrailsSequenceWrapper grailsSequenceWrapper) {
     this.jdbcEnvironment = jdbcEnvironment;
+    this.namingStrategy = namingStrategy;
     this.grailsSequenceWrapper = grailsSequenceWrapper;
   }
 
@@ -69,6 +73,6 @@ public class BasicValueIdCreator {
       GeneratorCreationContext context,
       String generatorName) {
     return grailsSequenceWrapper.getGenerator(
-        generatorName, context, mappedId, domainClass, jdbcEnvironment);
+        generatorName, context, mappedId, domainClass, jdbcEnvironment, namingStrategy);
   }
 }
