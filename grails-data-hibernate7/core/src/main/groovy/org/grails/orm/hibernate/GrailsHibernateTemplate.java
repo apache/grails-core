@@ -384,10 +384,12 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
             new CloseSuppressingInvocationHandler(session));
   }
 
+  @Deprecated(since = "7.0", forRemoval = true)
   public <T> T get(final Class<T> entityClass, final Serializable id) throws DataAccessException {
-    return doExecute(session -> session.get(entityClass, id), true);
+    return doExecute(session -> session.find(entityClass, id), true);
   }
 
+  @Deprecated(since = "7.0", forRemoval = true)
   public <T> T get(final Class<T> entityClass, final Serializable id, final LockMode mode) {
     return lock(entityClass, id, mode);
   }
@@ -416,7 +418,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
 
   public <T> T lock(final Class<T> entityClass, final Serializable id, final LockMode lockMode)
       throws DataAccessException {
-    return doExecute(session -> session.get(entityClass, id, new LockOptions(lockMode)), true);
+    return doExecute(session -> session.find(entityClass, id, lockMode), true);
   }
 
   public <T> List<T> loadAll(final Class<T> entityClass) throws DataAccessException {
@@ -464,7 +466,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
           if (lockMode == null) {
             session.refresh(entity);
           } else {
-            session.refresh(entity, new LockOptions(lockMode));
+            session.refresh(entity,lockMode);
           }
           return null;
         },
