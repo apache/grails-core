@@ -717,14 +717,14 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
     dataSource =
         new MultiTenantDataSource(dataSource, schemaName) {
           @Override
-          public Connection getConnection()  {
+          public Connection getConnection() throws SQLException {
             Connection connection = super.getConnection();
             schemaHandler.useSchema(connection, schemaName);
             return new MultiTenantConnection(connection, schemaHandler);
           }
 
           @Override
-          public Connection getConnection(String username, String password){
+          public Connection getConnection(String username, String password) throws SQLException {
             Connection connection = super.getConnection(username, password);
             schemaHandler.useSchema(connection, schemaName);
             return new MultiTenantConnection(connection, schemaHandler);

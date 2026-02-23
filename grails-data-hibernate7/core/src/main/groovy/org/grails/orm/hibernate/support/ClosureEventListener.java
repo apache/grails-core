@@ -46,8 +46,9 @@ import org.hibernate.engine.spi.ExecutableList;
 import org.hibernate.event.spi.*;
 import org.hibernate.jpa.event.spi.CallbackRegistry;
 import org.hibernate.jpa.event.spi.CallbackRegistryConsumer;
+import org.hibernate.metamodel.mapping.AttributeMapping;
+import org.hibernate.metamodel.mapping.EntityMappingType;
 import org.hibernate.persister.entity.EntityPersister;
-import org.hibernate.tuple.entity.EntityMetamodel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.ReflectionUtils;
@@ -339,11 +340,12 @@ public class ClosureEventListener
     Object entity = event.getEntity();
     EntityReflector reflector = persistentEntity.getReflector();
     HashMap<Integer, Object> changedState = new HashMap<>();
-    EntityMetamodel entityMetamodel = persister.getEntityMetamodel();
+    EntityMappingType entityMappingType = persister.getEntityMappingType();
     for (int i = 0; i < propertyNames.length; i++) {
       String p = propertyNames[i];
-      Integer index = entityMetamodel.getPropertyIndexOrNull(p);
-      if (index == null) continue;
+      AttributeMapping attributeMapping = entityMappingType.findAttributeMapping(p);
+      if (attributeMapping == null) continue;
+      int index = attributeMapping.getStateArrayPosition();
 
       PersistentProperty property = persistentEntity.getPropertyByName(p);
       if (property == null) {
