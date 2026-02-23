@@ -49,8 +49,9 @@ import org.hibernate.event.spi.PreInsertEvent;
 import org.hibernate.event.spi.PreLoadEvent;
 import org.hibernate.event.spi.PreUpdateEvent;
 import org.hibernate.jpa.event.spi.CallbackRegistry;
+import org.hibernate.metamodel.mapping.AttributeMapping;
+import org.hibernate.metamodel.mapping.EntityMappingType;
 import org.hibernate.persister.entity.EntityPersister;
-import org.hibernate.tuple.entity.EntityMetamodel;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -283,30 +284,34 @@ public class ClosureEventTriggeringInterceptor extends AbstractClosureEventTrigg
   private void updateModifiedPropertiesWithAutoTimestamp(
       Map<String, Object> modifiedProperties, PreUpdateEvent hibernateEvent) {
 
-    EntityMetamodel entityMetamodel = hibernateEvent.getPersister().getEntityMetamodel();
-    Integer dateCreatedIdx =
-        entityMetamodel.getPropertyIndexOrNull(AutoTimestampEventListener.DATE_CREATED_PROPERTY);
+
+    EntityPersister persister = hibernateEvent.getPersister();
+    EntityMappingType entityMappingType = persister.getEntityMappingType();
+    AttributeMapping dateCreatedMapping =
+        entityMappingType.findAttributeMapping(AutoTimestampEventListener.DATE_CREATED_PROPERTY);
 
     Object[] oldState = hibernateEvent.getOldState();
     Object[] state = hibernateEvent.getState();
 
     // Only for "dateCreated" property, "lastUpdated" is handled correctly
-    if (dateCreatedIdx != null
-        && oldState != null
-        && oldState[dateCreatedIdx] != null
-        && !oldState[dateCreatedIdx].equals(state[dateCreatedIdx])) {
-      modifiedProperties.put(
-          AutoTimestampEventListener.DATE_CREATED_PROPERTY, oldState[dateCreatedIdx]);
+    if (dateCreatedMapping != null) {
+      int dateCreatedIdx = dateCreatedMapping.getStateArrayPosition();
+      if (oldState != null
+          && oldState[dateCreatedIdx] != null
+          && !oldState[dateCreatedIdx].equals(state[dateCreatedIdx])) {
+        modifiedProperties.put(
+            AutoTimestampEventListener.DATE_CREATED_PROPERTY, oldState[dateCreatedIdx]);
+      }
     }
   }
 
   private void synchronizeHibernateState(
       EntityPersister persister, Object[] state, Map<String, Object> modifiedProperties) {
-    EntityMetamodel entityMetamodel = persister.getEntityMetamodel();
+    EntityMappingType entityMappingType = persister.getEntityMappingType();
     for (Map.Entry<String, Object> entry : modifiedProperties.entrySet()) {
-      Integer index = entityMetamodel.getPropertyIndexOrNull(entry.getKey());
-      if (index != null) {
-        state[index] = entry.getValue();
+      AttributeMapping attributeMapping = entityMappingType.findAttributeMapping(entry.getKey());
+      if (attributeMapping != null) {
+        state[attributeMapping.getStateArrayPosition()] = entry.getValue();
       }
     }
   }
