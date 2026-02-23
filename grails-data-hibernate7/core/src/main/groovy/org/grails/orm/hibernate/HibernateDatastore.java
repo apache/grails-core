@@ -63,12 +63,12 @@ import org.grails.orm.hibernate.multitenancy.MultiTenantEventListener;
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.Metadata;
-import org.hibernate.boot.SchemaAutoTooling;
 import org.hibernate.cfg.Environment;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.integrator.spi.Integrator;
 import org.hibernate.integrator.spi.IntegratorService;
 import org.hibernate.service.ServiceRegistry;
+import org.hibernate.tool.schema.Action;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -683,11 +683,10 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
 
     String dbCreate = tenantSettings.getDataSource().getDbCreate();
 
-    SchemaAutoTooling schemaAutoTooling =
-        dbCreate != null ? SchemaAutoTooling.interpret(dbCreate) : null;
-    if (schemaAutoTooling != null
-        && schemaAutoTooling != SchemaAutoTooling.VALIDATE
-        && schemaAutoTooling != SchemaAutoTooling.NONE) {
+    Action schemaAutoTooling =
+        Action.interpretHbm2ddlSetting(dbCreate);
+    if (schemaAutoTooling != Action.VALIDATE
+        && schemaAutoTooling != Action.NONE) {
 
       Connection connection = null;
       try {
@@ -718,14 +717,14 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
     dataSource =
         new MultiTenantDataSource(dataSource, schemaName) {
           @Override
-          public Connection getConnection() throws SQLException {
+          public Connection getConnection()  {
             Connection connection = super.getConnection();
             schemaHandler.useSchema(connection, schemaName);
             return new MultiTenantConnection(connection, schemaHandler);
           }
 
           @Override
-          public Connection getConnection(String username, String password) throws SQLException {
+          public Connection getConnection(String username, String password){
             Connection connection = super.getConnection(username, password);
             schemaHandler.useSchema(connection, schemaName);
             return new MultiTenantConnection(connection, schemaHandler);

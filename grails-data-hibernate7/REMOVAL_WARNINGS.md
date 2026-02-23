@@ -9,10 +9,6 @@ Generated from: Hibernate `7.1.11.Final`
 
 | Fully Qualified Class | Line | Warning |
 |---|---|---|
-| `org.grails.orm.hibernate.HibernateDatastore` | 686 | `SchemaAutoTooling in org.hibernate.boot` has been deprecated and marked for removal |
-| `org.grails.orm.hibernate.HibernateDatastore` | 687 | `SchemaAutoTooling in org.hibernate.boot` has been deprecated and marked for removal |
-| `org.grails.orm.hibernate.HibernateDatastore` | 689 | `SchemaAutoTooling in org.hibernate.boot` has been deprecated and marked for removal |
-| `org.grails.orm.hibernate.HibernateDatastore` | 690 | `SchemaAutoTooling in org.hibernate.boot` has been deprecated and marked for removal |
 | `org.grails.orm.hibernate.support.ClosureEventListener` | 342 | `EntityMetamodel in org.hibernate.tuple.entity` has been deprecated and marked for removal |
 | `org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor` | 286 | `EntityMetamodel in org.hibernate.tuple.entity` has been deprecated and marked for removal |
 | `org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor` | 305 | `EntityMetamodel in org.hibernate.tuple.entity` has been deprecated and marked for removal |
