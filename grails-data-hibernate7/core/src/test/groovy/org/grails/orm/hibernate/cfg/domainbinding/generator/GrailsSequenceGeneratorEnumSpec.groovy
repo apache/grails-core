@@ -5,6 +5,7 @@ import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Identity
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.generator.Assigned
@@ -15,7 +16,6 @@ import org.hibernate.mapping.Column
 import org.hibernate.mapping.Value
 import org.hibernate.mapping.Property
 import org.hibernate.type.Type
-import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.spock.Testcontainers
 import spock.lang.Requires
@@ -23,9 +23,7 @@ import spock.lang.Shared
 import spock.lang.Unroll
 
 @Testcontainers
-@Requires({
-    try { DockerClientFactory.instance().client(); true } catch (ignored) { false }
-})
+@Requires({ HibernateGormDatastoreSpec.isDockerAvailable() })
 class GrailsSequenceGeneratorEnumSpec extends HibernateGormDatastoreSpec {
 
     @Shared PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16")
@@ -51,7 +49,9 @@ class GrailsSequenceGeneratorEnumSpec extends HibernateGormDatastoreSpec {
      * Column is sealed so we use a real instance; Value/Property are interfaces so we mock them.
      */
     private GeneratorCreationContext buildContext() {
-        def db = collector.database
+        // Use the real PostgreSQL database from the running datastore so DDL type
+        // registries (needed by TableGenerator.registerExportables) are correct.
+        def db = datastore.metadata.database
         def column = new Column("id")
         def value = Mock(Value) {
             getColumns() >> [column]
@@ -82,11 +82,13 @@ class GrailsSequenceGeneratorEnumSpec extends HibernateGormDatastoreSpec {
         def domainClass = Mock(GrailsHibernatePersistentEntity) {
             getMappedForm() >> null
             getJavaClass()  >> GrailsSequenceGeneratorEnumSpecEntity
+            getTableName(_ as PersistentEntityNamingStrategy) >> "grails_sequence_generator_enum_spec_entity"
         }
         def jdbcEnvironment = serviceRegistry.requireService(JdbcEnvironment)
+        def namingStrategy = Mock(PersistentEntityNamingStrategy)
 
         when:
-        def generator = GrailsSequenceGeneratorEnum.getGenerator(strategyName, context, mappedId, domainClass, jdbcEnvironment)
+        def generator = GrailsSequenceGeneratorEnum.getGenerator(strategyName, context, mappedId, domainClass, jdbcEnvironment, namingStrategy)
 
         then:
         expectedClass.isInstance(generator)

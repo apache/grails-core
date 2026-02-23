@@ -146,4 +146,21 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
     protected HibernateQuery getQuery(Class clazz) {
         return  new HibernateQuery(session, getPersistentEntity(clazz))
     }
+
+    /**
+     * Returns true when a Docker daemon is reachable on this machine.
+     * <p>
+     * Checks the well-known socket paths used by Docker Desktop on macOS and Linux.
+     * Prefer this over calling {@code DockerClientFactory.instance().client()} directly,
+     * which can throw a 500 error on macOS when the daemon API version doesn't match
+     * the docker-java client version bundled with Testcontainers.
+     */
+    static boolean isDockerAvailable() {
+        def candidates = [
+            System.getProperty('user.home') + '/.docker/run/docker.sock',
+            '/var/run/docker.sock',
+            System.getenv('DOCKER_HOST') ?: ''
+        ]
+        candidates.any { it && new File(it).exists() }
+    }
 }
