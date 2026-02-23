@@ -1,0 +1,9 @@
+dependencyAnalysis {
+    issues {
+        all {
+            onAny {
+                severity 'fail'
+            }
+        }
+    }
+}

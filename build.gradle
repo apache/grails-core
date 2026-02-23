@@ -15,10 +15,6 @@
  *  limitations under the License.
  */
 
-plugins {
-    id 'com.autonomousapps.dependency-analysis' version '3.5.1'
-}
-
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -47,20 +43,6 @@ ext {
     docProjects = [ /* Will be populated by subprojects loop below */]
     cliProjects = [ /* Will be populated by subprojects loop below */]
     profileProjects = [ /* Will be populated by subprojects loop below */]
-}
-
-dependencyAnalysis {
-    issues {
-        all {
-            onAny {
-                severity 'fail'
-            }
-        }
-    }
-}
-
-project(':grails-core') {
-    apply plugin: 'com.autonomousapps.dependency-analysis'
 }
 
 subprojects {
