@@ -21,15 +21,15 @@ package org.grails.orm.hibernate.cfg.domainbinding.util;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy;
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
+import org.hibernate.boot.model.naming.PhysicalNamingStrategySnakeCaseImpl;
 
 public class NamingStrategyProvider {
   private final ConcurrentHashMap<String, PhysicalNamingStrategy> physicalProviderMap;
 
   public NamingStrategyProvider() {
     physicalProviderMap = new ConcurrentHashMap<>();
-    physicalProviderMap.put(ConnectionSource.DEFAULT, new CamelCaseToUnderscoresNamingStrategy());
+    physicalProviderMap.put(ConnectionSource.DEFAULT, new PhysicalNamingStrategySnakeCaseImpl());
   }
 
   /**
@@ -54,7 +54,7 @@ public class NamingStrategyProvider {
     if (strategyInstance instanceof PhysicalNamingStrategy physicalStrategy) {
       physicalProviderMap.put(datasourceName, physicalStrategy);
     } else {
-      physicalProviderMap.put(datasourceName, new CamelCaseToUnderscoresNamingStrategy());
+      physicalProviderMap.put(datasourceName, new PhysicalNamingStrategySnakeCaseImpl());
     }
   }
 
@@ -78,7 +78,7 @@ public class NamingStrategyProvider {
 
   public PhysicalNamingStrategy getPhysicalNamingStrategy(String sessionFactoryBeanName) {
     String key = getKey(sessionFactoryBeanName);
-    physicalProviderMap.putIfAbsent(key, new CamelCaseToUnderscoresNamingStrategy());
+    physicalProviderMap.putIfAbsent(key, new PhysicalNamingStrategySnakeCaseImpl());
     return physicalProviderMap.get(key);
   }
 

@@ -32,7 +32,6 @@ import org.grails.orm.hibernate.EventListenerIntegrator;
 import org.grails.orm.hibernate.GrailsSessionContext;
 import org.grails.orm.hibernate.HibernateEventListeners;
 import org.grails.orm.hibernate.MetadataIntegrator;
-import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
 import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
@@ -44,14 +43,13 @@ import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl;
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService;
-import org.hibernate.boot.registry.selector.spi.StrategySelector;
 import org.hibernate.boot.spi.AdditionalMappingContributor;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.cfg.Environment;
+import org.hibernate.cfg.JdbcSettings;
 import org.hibernate.context.spi.CurrentSessionContext;
 import org.hibernate.internal.util.config.ConfigurationHelper;
-import org.hibernate.property.access.spi.PropertyAccessStrategy;
 import org.hibernate.service.ServiceRegistry;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
 import org.springframework.beans.BeansException;
@@ -112,7 +110,7 @@ public class HibernateMappingContextConfiguration extends Configuration
     Properties properties = getProperties();
 
     if (applicationContext.containsBean(dsName)) {
-      properties.put(Environment.DATASOURCE, applicationContext.getBean(dsName));
+      properties.put(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, applicationContext.getBean(dsName));
     }
     properties.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, currentSessionContext.getName());
     properties.put(AvailableSettings.CLASSLOADERS, applicationContext.getClassLoader());
@@ -127,7 +125,7 @@ public class HibernateMappingContextConfiguration extends Configuration
       ConnectionSource<DataSource, DataSourceSettings> connectionSource) {
     this.dataSourceName = connectionSource.getName();
     DataSource source = connectionSource.getSource();
-    getProperties().put(Environment.DATASOURCE, source);
+    getProperties().put(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, source);
     getProperties()
         .put(Environment.CURRENT_SESSION_CONTEXT_CLASS, GrailsSessionContext.class.getName());
     final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
@@ -295,10 +293,9 @@ public class HibernateMappingContextConfiguration extends Configuration
             .applyIntegrator(new MetadataIntegrator())
             .applyClassLoaderService(classLoaderService)
             .build();
-    StrategySelector strategySelector = bootstrapServiceRegistry.getService(StrategySelector.class);
 
-    strategySelector.registerStrategyImplementor(
-        PropertyAccessStrategy.class, "traitProperty", TraitPropertyAccessStrategy.class);
+
+
 
     SessionFactoryObserver sessionFactoryObserver =
         new SessionFactoryObserver() {

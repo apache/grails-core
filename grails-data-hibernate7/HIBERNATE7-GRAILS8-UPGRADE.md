@@ -164,18 +164,6 @@ Do **not** drop Hibernate 5.6 support in 8.0.0. Ship both:
 **Priority**: **P2** - SQL injection is OWASP #3. Framework should make the safe path the easy path.
 **Effort**: Medium
 
-### 1.4 Static Compilation Coverage Expansion
-
-**Current state in grails-core/src/main**: 45 out of 73 Groovy files (62%) have `@CompileStatic` or `@GrailsCompileStatic`.
-
-Without `@CompileStatic`, every Groovy method call goes through dynamic dispatch:
-- MetaClass lookup per call
-- No JIT inlining
-- Indy call site caching defeated by metaclass changes (ties into 1.1)
-- GraalVM native image impossible for dynamically-dispatched code
-
-**Required work**:
-1. Audit all `.groovy` files in `src/main` across every module for `@CompileStatic` eligibility
 
 ### 2.6 GORM Query Safety Audit
 

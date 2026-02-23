@@ -1,7 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+import org.hibernate.boot.model.naming.PhysicalNamingStrategySnakeCaseImpl
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy
 
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider
@@ -14,7 +14,7 @@ class NamingStrategyProviderSpec extends HibernateGormDatastoreSpec {
         def strategy = provider.getPhysicalNamingStrategy("sessionFactory")
 
         then:
-        strategy instanceof CamelCaseToUnderscoresNamingStrategy
+        strategy instanceof PhysicalNamingStrategySnakeCaseImpl
     }
 
     void "Test configureNamingStrategy with null strategy throws exception"() {
@@ -73,7 +73,7 @@ class NamingStrategyProviderSpec extends HibernateGormDatastoreSpec {
         def strategy = provider.getPhysicalNamingStrategy("sessionFactory")
 
         then:
-        strategy instanceof CamelCaseToUnderscoresNamingStrategy
+        strategy instanceof PhysicalNamingStrategySnakeCaseImpl
     }
 
     void "Test getPhysicalNamingStrategy with custom session factory"() {
