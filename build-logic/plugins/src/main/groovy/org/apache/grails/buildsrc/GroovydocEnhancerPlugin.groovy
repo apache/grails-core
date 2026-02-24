@@ -90,20 +90,18 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
                 def destDir = gdoc.destinationDir.tap { it.mkdirs() }
                 def sourceDirs = resolveSourceDirectories(gdoc, project)
                 if (sourceDirs.isEmpty()) {
-                    project.logger.lifecycle(
-                            'Skipping groovydoc for {}: no source directories found',
-                            gdoc.name
+                    throw new org.gradle.api.GradleException(
+                            "groovydoc task '${gdoc.name}': no source directories found. " +
+                            'Every published module must produce a groovydoc jar for Maven Central.'
                     )
-                    return
                 }
 
                 def classpath = gdoc.groovyClasspath
                 if (!classpath || classpath.empty) {
-                    project.logger.warn(
-                            'Skipping groovydoc for {}: groovyClasspath is empty',
-                            gdoc.name
+                    throw new org.gradle.api.GradleException(
+                            "groovydoc task '${gdoc.name}': groovyClasspath is empty. " +
+                            'Every published module must produce a groovydoc jar for Maven Central.'
                     )
-                    return
                 }
 
                 project.ant.taskdef(
