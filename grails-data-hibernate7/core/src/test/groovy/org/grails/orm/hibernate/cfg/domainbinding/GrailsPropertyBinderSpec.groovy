@@ -133,14 +133,14 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         CollectionBinder collectionBinder = new CollectionBinder(
                 metadataBuildingContext,
-                namingStrategy,
-                jdbcEnvironment,
+                namingStrategy
+                ,
                 simpleValueBinder,
                 enumTypeBinderToUse,
                 manyToOneBinder,
                 compositeIdentifierToManyToOneBinder,
-                simpleValueColumnFetcher,
-                columnNameForPropertyAndPathFetcher,
+                simpleValueColumnFetcher
+                ,
                 collectionHolder
         )
         PropertyFromValueCreator propertyFromValueCreator = new PropertyFromValueCreator()

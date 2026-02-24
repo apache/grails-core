@@ -41,7 +41,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.secondpass.PrimaryKeyValueCrea
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSecondPass;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyInverseValuesBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
@@ -52,7 +51,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
 import org.hibernate.FetchMode;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.OneToMany;
 import org.hibernate.mapping.PersistentClass;
@@ -68,27 +66,22 @@ public class CollectionBinder {
   private final MetadataBuildingContext metadataBuildingContext;
   private final PersistentEntityNamingStrategy namingStrategy;
   private final CollectionHolder collectionHolder;
-  private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
   private final ListSecondPassBinder listSecondPassBinder;
   private final CollectionSecondPassBinder collectionSecondPassBinder;
-  private final UnidirectionalOneToManyBinder unidirectionalOneToManyBinder;
   private final MapSecondPassBinder mapSecondPassBinder;
 
   /** Creates a new {@link CollectionBinder} instance. */
   public CollectionBinder(
       MetadataBuildingContext metadataBuildingContext,
       PersistentEntityNamingStrategy namingStrategy,
-      JdbcEnvironment jdbcEnvironment,
       SimpleValueBinder simpleValueBinder,
       EnumTypeBinder enumTypeBinder,
       ManyToOneBinder manyToOneBinder,
       CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder,
       SimpleValueColumnFetcher simpleValueColumnFetcher,
-      ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
       CollectionHolder collectionHolder) {
     this.metadataBuildingContext = metadataBuildingContext;
     this.namingStrategy = namingStrategy;
-    this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
     this.collectionHolder = collectionHolder;
     GrailsPropertyResolver grailsPropertyResolver = new GrailsPropertyResolver();
     CollectionForPropertyConfigBinder collectionForPropertyConfigBinder =
@@ -107,8 +100,6 @@ public class CollectionBinder {
             collectionForPropertyConfigBinder,
             simpleValueColumnBinder,
             new ColumnConfigToColumnBinder());
-    this.unidirectionalOneToManyBinder =
-        new UnidirectionalOneToManyBinder(collectionWithJoinTableBinder);
     this.collectionSecondPassBinder =
         new CollectionSecondPassBinder(
             manyToOneBinder,
@@ -116,7 +107,7 @@ public class CollectionBinder {
             new CollectionKeyColumnUpdater(),
             new BidirectionalOneToManyLinker(grailsPropertyResolver),
             new DependentKeyValueBinder(simpleValueBinder, compositeIdentifierToManyToOneBinder),
-            unidirectionalOneToManyBinder,
+                new UnidirectionalOneToManyBinder(collectionWithJoinTableBinder),
             collectionWithJoinTableBinder,
             collectionForPropertyConfigBinder,
             new DefaultColumnNameFetcher(namingStrategy),
@@ -137,31 +128,7 @@ public class CollectionBinder {
             simpleValueColumnFetcher);
   }
 
-  /** Creates a new {@link CollectionBinder} instance. */
-  public CollectionBinder(
-      MetadataBuildingContext metadataBuildingContext,
-      PersistentEntityNamingStrategy namingStrategy,
-      JdbcEnvironment jdbcEnvironment,
-      CollectionHolder collectionHolder) {
-    this(
-        metadataBuildingContext,
-        namingStrategy,
-        jdbcEnvironment,
-        new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment),
-        new EnumTypeBinder(
-            metadataBuildingContext,
-            new ColumnNameForPropertyAndPathFetcher(
-                namingStrategy,
-                new DefaultColumnNameFetcher(namingStrategy),
-                new BackticksRemover())),
-        new ManyToOneBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment),
-        new CompositeIdentifierToManyToOneBinder(
-            metadataBuildingContext, namingStrategy, jdbcEnvironment),
-        new SimpleValueColumnFetcher(),
-        new ColumnNameForPropertyAndPathFetcher(
-            namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()),
-        collectionHolder);
-  }
+
 
   /**
    * First pass to bind collection to Hibernate metamodel, sets up second pass
