@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate;
 
+import java.io.Serial;
+
 import jakarta.transaction.Status;
 import jakarta.transaction.Transaction;
 import jakarta.transaction.TransactionManager;
@@ -48,6 +50,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  */
 public class GrailsSessionContext implements CurrentSessionContext {
 
+  @Serial
   private static final long serialVersionUID = 1;
 
   private static final Logger LOG = LoggerFactory.getLogger(GrailsSessionContext.class);
@@ -194,7 +197,7 @@ public class GrailsSessionContext implements CurrentSessionContext {
       }
       jtaTx.registerSynchronization(
           new SpringJtaSynchronizationAdapter(
-              createSpringSessionSynchronization(holderToUse), jtaTm));
+              createSpringSessionSynchronization(holderToUse)));
       holderToUse.setSynchronizedWithTransaction(true);
       if (holderToUse != sessionHolder) {
         TransactionSynchronizationManager.bindResource(sessionFactory, holderToUse);
@@ -207,8 +210,8 @@ public class GrailsSessionContext implements CurrentSessionContext {
 
   protected TransactionManager getJtaTransactionManager(Session session) {
     SessionFactoryImplementor sessionFactoryImpl = null;
-    if (sessionFactory instanceof SessionFactoryImplementor) {
-      sessionFactoryImpl = ((SessionFactoryImplementor) sessionFactory);
+    if (sessionFactory != null) {
+      sessionFactoryImpl = sessionFactory;
     } else if (session != null) {
       SessionFactory internalFactory = session.getSessionFactory();
       if (internalFactory instanceof SessionFactoryImplementor) {
