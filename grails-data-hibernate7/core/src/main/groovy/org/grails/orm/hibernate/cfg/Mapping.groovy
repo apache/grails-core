@@ -15,7 +15,6 @@
  */
 package org.grails.orm.hibernate.cfg
 
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
@@ -522,34 +521,33 @@ class Mapping extends Entity<PropertyConfig> {
         }
     }
 
-    @CompileDynamic
     @Override
     def methodMissing(String name, Object args) {
         if(args && args.getClass().isArray()) {
-            if(args[0] instanceof Closure) {
-                property(name, (Closure)args[0])
+            Object[] argsArray = (Object[]) args
+            if(argsArray[0] instanceof Closure) {
+                property(name, (Closure)argsArray[0])
             }
-            else if(args[0] instanceof PropertyConfig) {
-                columns[name] = (PropertyConfig)args[0]
+            else if(argsArray[0] instanceof PropertyConfig) {
+                columns[name] = (PropertyConfig)argsArray[0]
             }
-            else if(args[0] instanceof Map) {
+            else if(argsArray[0] instanceof Map) {
                 PropertyConfig property = getOrInitializePropertyConfig(name)
-                Map namedArgs = (Map) args[0]
-                if(args[-1] instanceof Closure) {
+                Map namedArgs = (Map) argsArray[0]
+                if(argsArray[argsArray.length - 1] instanceof Closure) {
                     PropertyConfig.configureExisting(
                             property,
-                            ((Closure)args[-1])
+                            ((Closure)argsArray[argsArray.length - 1])
                     )
-
                 }
                 PropertyConfig.configureExisting(property, namedArgs)
             }
             else {
-                throw new MissingMethodException(name, getClass(), args)
+                throw new MissingMethodException(name, getClass(), argsArray)
             }
         }
         else {
-            throw new MissingMethodException(name, getClass(), args)
+            throw new MissingMethodException(name, getClass(), (Object[]) args)
         }
     }
 

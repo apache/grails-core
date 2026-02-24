@@ -54,6 +54,69 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         "a property in composite identity" | CompositeIdBook | 'title'      | false
     }
 
+    // --- methodMissing dispatch tests (pure unit, no datastore) ---
+
+    void "methodMissing dispatches Closure arg to property(name, closure)"() {
+        given:
+        Mapping mapping = new Mapping()
+
+        when:
+        mapping.firstName { column 'first_name' }
+
+        then:
+        mapping.columns['firstName'] != null
+        mapping.columns['firstName'].column == 'first_name'
+    }
+
+    void "methodMissing dispatches PropertyConfig arg directly into columns map"() {
+        given:
+        Mapping mapping = new Mapping()
+        PropertyConfig pc = new PropertyConfig()
+        pc.column('first_name')
+
+        when:
+        mapping.firstName(pc)
+
+        then:
+        mapping.columns['firstName'].is(pc)
+        mapping.columns['firstName'].column == 'first_name'
+    }
+
+    void "methodMissing dispatches Map arg to PropertyConfig.configureExisting"() {
+        given:
+        Mapping mapping = new Mapping()
+
+        when:
+        mapping.firstName(column: 'first_name')
+
+        then:
+        mapping.columns['firstName'] != null
+        mapping.columns['firstName'].column == 'first_name'
+    }
+
+    void "methodMissing dispatches Map + Closure args — Map configures, Closure also applied"() {
+        given:
+        Mapping mapping = new Mapping()
+
+        when: "Map is first arg, Closure is last arg"
+        mapping.firstName([column: 'first_name'], { formula = 'UPPER(first_name)' })
+
+        then:
+        mapping.columns['firstName'] != null
+        mapping.columns['firstName'].formula == 'UPPER(first_name)'
+    }
+
+    void "methodMissing throws MissingMethodException for unknown arg type"() {
+        given:
+        Mapping mapping = new Mapping()
+
+        when:
+        mapping.firstName(42)
+
+        then:
+        thrown(MissingMethodException)
+    }
+
 }
 
 // --- Test Domain Classes ---
