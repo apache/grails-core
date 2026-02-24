@@ -131,4 +131,50 @@ class DataServiceMultiDataSourceSpec extends Specification {
         found.size() == 2
         found.every { it.name == 'Duplicate' }
     }
+
+    void "@Query find-one routes to secondary datasource"() {
+        given:
+        productService.save(new Product(name: 'QueryOne', amount: 50))
+
+        when:
+        def found = productService.findOneByQuery('QueryOne')
+
+        then:
+        found != null
+        found.name == 'QueryOne'
+        found.amount == 50
+    }
+
+    void "@Query find-one returns null for non-existent"() {
+        expect:
+        productService.findOneByQuery('NonExistent') == null
+    }
+
+    void "@Query find-all routes to secondary datasource"() {
+        given:
+        productService.save(new Product(name: 'Expensive1', amount: 500))
+        productService.save(new Product(name: 'Expensive2', amount: 600))
+        productService.save(new Product(name: 'Cheap1', amount: 10))
+
+        when:
+        def found = productService.findAllByQuery(400)
+
+        then:
+        found.size() == 2
+        found*.name.containsAll(['Expensive1', 'Expensive2'])
+    }
+
+    void "@Query update routes to secondary datasource"() {
+        given:
+        productService.save(new Product(name: 'UpdateTarget', amount: 100))
+
+        when:
+        def updated = productService.updateAmountByName('UpdateTarget', 999)
+
+        then:
+        updated == 1
+
+        and:
+        productService.findByName('UpdateTarget').amount == 999
+    }
 }

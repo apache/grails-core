@@ -47,6 +47,10 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 4. **No wildcard imports** - Use explicit imports
 5. **4 spaces, no tabs** - See `.editorconfig`
 6. **Apache license header** - Required on all new source files
+7. **New features require docs** - Any user-facing change must include or update documentation in `grails-doc`; do not merge features without corresponding doc coverage
+8. **No internal APIs in docs** - Only document public APIs; never reference internal or package-private classes and methods in user-facing documentation
+9. **Test via public APIs** - Tests must exercise behavior through the same APIs an end user calls; never invoke internal implementations, package-private methods, or bypass the public surface directly
+10. **Always review and extend tests** - Review existing unit and functional tests before making changes; every code change must include new or enhanced tests that cover the affected behavior
 
 ## Available Skills
 

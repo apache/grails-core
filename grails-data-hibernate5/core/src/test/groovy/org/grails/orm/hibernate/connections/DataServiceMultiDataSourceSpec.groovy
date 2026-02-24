@@ -24,6 +24,7 @@ import spock.lang.Shared
 import spock.lang.Specification
 
 import grails.gorm.annotation.Entity
+import grails.gorm.services.Query
 import grails.gorm.services.Service
 import grails.gorm.transactions.Transactional
 import org.grails.datastore.gorm.GormEnhancer
@@ -298,6 +299,93 @@ class DataServiceMultiDataSourceSpec extends Specification {
         productService.count() == productDataService.count()
     }
 
+    void "@Query find-one routes to books datasource - abstract service"() {
+        given: 'a product saved on books'
+        productService.save(new Product(name: 'QueryOne', amount: 50))
+
+        when: 'we find one by HQL query'
+        def found = productService.findOneByQuery('QueryOne')
+
+        then: 'the correct entity is returned from books'
+        found != null
+        found.name == 'QueryOne'
+        found.amount == 50
+    }
+
+    void "@Query find-one returns null for non-existent - abstract service"() {
+        expect: 'null for non-existent product'
+        productService.findOneByQuery('NonExistent') == null
+    }
+
+    void "@Query find-all routes to books datasource - abstract service"() {
+        given: 'products saved on books with varying amounts'
+        productService.save(new Product(name: 'Expensive1', amount: 500))
+        productService.save(new Product(name: 'Expensive2', amount: 600))
+        productService.save(new Product(name: 'Cheap1', amount: 10))
+
+        when: 'we find all by HQL query with threshold'
+        def found = productService.findAllByQuery(400)
+
+        then: 'only matching products from books are returned'
+        found.size() == 2
+        found*.name.containsAll(['Expensive1', 'Expensive2'])
+    }
+
+    void "@Query update routes to books datasource - abstract service"() {
+        given: 'a product saved on books'
+        productService.save(new Product(name: 'UpdateTarget', amount: 100))
+
+        when: 'we update amount by HQL query'
+        def updated = productService.updateAmountByName('UpdateTarget', 999)
+
+        then: 'one row updated'
+        updated == 1
+
+        and: 'the change is reflected on books'
+        productService.findByName('UpdateTarget').amount == 999
+    }
+
+    void "@Query find-one routes to books datasource - interface service"() {
+        given: 'a product saved on books'
+        productService.save(new Product(name: 'InterfaceQueryOne', amount: 75))
+
+        when: 'we find one by HQL query through the interface service'
+        def found = productDataService.findOneByQuery('InterfaceQueryOne')
+
+        then: 'the correct entity is returned from books'
+        found != null
+        found.name == 'InterfaceQueryOne'
+        found.amount == 75
+    }
+
+    void "@Query find-all routes to books datasource - interface service"() {
+        given: 'products saved on books'
+        productService.save(new Product(name: 'IfaceExpensive1', amount: 500))
+        productService.save(new Product(name: 'IfaceExpensive2', amount: 600))
+        productService.save(new Product(name: 'IfaceCheap1', amount: 10))
+
+        when: 'we find all by HQL query through the interface service'
+        def found = productDataService.findAllByQuery(400)
+
+        then: 'only matching products from books are returned'
+        found.size() == 2
+        found*.name.containsAll(['IfaceExpensive1', 'IfaceExpensive2'])
+    }
+
+    void "@Query update routes to books datasource - interface service"() {
+        given: 'a product saved on books'
+        productService.save(new Product(name: 'InterfaceUpdate', amount: 100))
+
+        when: 'we update amount by HQL query through the interface service'
+        def updated = productDataService.updateAmountByName('InterfaceUpdate', 888)
+
+        then: 'one row updated'
+        updated == 1
+
+        and: 'the change is reflected on books'
+        productDataService.findByName('InterfaceUpdate').amount == 888
+    }
+
 }
 
 @Entity
@@ -338,6 +426,16 @@ abstract class ProductService {
      * Tests that SaveImplementer routes multi-arg saves through connection-aware API.
      */
     abstract Product saveProduct(String name, Integer amount)
+
+    @Query("from ${Product p} where $p.name = $name")
+    abstract Product findOneByQuery(String name)
+
+
+    @Query("from ${Product p} where $p.amount >= $minAmount")
+    abstract List<Product> findAllByQuery(Integer minAmount)
+
+    @Query("update ${Product p} set $p.amount = $newAmount where $p.name = $name")
+    abstract Number updateAmountByName(String name, Integer newAmount)
 }
 
 /**
@@ -362,4 +460,13 @@ interface ProductDataService {
     Product findByName(String name)
 
     List<Product> findAllByName(String name)
+
+    @Query("from ${Product p} where $p.name = $name")
+    Product findOneByQuery(String name)
+
+    @Query("from ${Product p} where $p.amount >= $minAmount")
+    List<Product> findAllByQuery(Integer minAmount)
+
+    @Query("update ${Product p} set $p.amount = $newAmount where $p.name = $name")
+    Number updateAmountByName(String name, Integer newAmount)
 }

@@ -19,6 +19,7 @@
 
 package example
 
+import grails.gorm.services.Query
 import grails.gorm.services.Service
 import grails.gorm.transactions.Transactional
 
@@ -45,4 +46,13 @@ abstract class ProductService {
     abstract Product findByName(String name)
 
     abstract List<Product> findAllByName(String name)
+
+    @Query("from ${Product p} where $p.name = $name")
+    abstract Product findOneByQuery(String name)
+
+    @Query("from ${Product p} where $p.amount >= $minAmount")
+    abstract List<Product> findAllByQuery(Integer minAmount)
+
+    @Query("update ${Product p} set $p.amount = $newAmount where $p.name = $name")
+    abstract Number updateAmountByName(String name, Integer newAmount)
 }
