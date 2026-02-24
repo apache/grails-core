@@ -120,7 +120,7 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         SubClassBinder subClassBinder = new SubClassBinder(binder.getMappingCacheHolder(), subclassMappingBinder, multiTenantFilterBinder, defaultColumnNameFetcher, "dataSource")
         RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder = new RootPersistentClassCommonValuesBinder(metadataBuildingContext, namingStrategy, identityBinder, versionBinder, classBinder, classPropertiesBinder)
         DiscriminatorPropertyBinder discriminatorPropertyBinder = new DiscriminatorPropertyBinder(metadataBuildingContext, new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder(), new ColumnConfigToColumnBinder())
-        RootBinder rootBinder = new RootBinder(metadataBuildingContext, "default", namingStrategy, multiTenantFilterBinder, subClassBinder, defaultColumnNameFetcher, rootPersistentClassCommonValuesBinder, discriminatorPropertyBinder)
+        RootBinder rootBinder = new RootBinder("default", multiTenantFilterBinder, subClassBinder, defaultColumnNameFetcher, rootPersistentClassCommonValuesBinder, discriminatorPropertyBinder)
 
         return [
             propertyBinder: propertyBinder,

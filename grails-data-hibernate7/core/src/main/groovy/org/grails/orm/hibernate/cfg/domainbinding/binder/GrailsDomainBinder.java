@@ -237,10 +237,8 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
             new ColumnConfigToColumnBinder());
     RootBinder rootBinder =
         new RootBinder(
-            metadataBuildingContext,
-            dataSourceName,
-            getNamingStrategy(),
-            multiTenantFilterBinder,
+                dataSourceName,
+                multiTenantFilterBinder,
             subClassBinder,
             defaultColumnNameFetcher,
             rootPersistentClassCommonValuesBinder,

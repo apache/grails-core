@@ -1,6 +1,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import grails.gorm.annotation.Entity
+
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
@@ -9,7 +9,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.mapping.RootClass
-import spock.lang.Shared
 
 class RootBinderSpec extends HibernateGormDatastoreSpec {
 
@@ -34,9 +33,8 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
         discriminatorPropertyBinder = Mock(DiscriminatorPropertyBinder)
         
         binder = new RootBinder(
-                metadataBuildingContext,
-                "default",
-                namingStrategy,
+                "default"
+                ,
                 multiTenantFilterBinder,
                 subClassBinder,
                 defaultColumnNameFetcher,

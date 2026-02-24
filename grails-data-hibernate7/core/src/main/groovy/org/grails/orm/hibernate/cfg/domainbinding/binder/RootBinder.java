@@ -36,9 +36,7 @@ public class RootBinder {
 
   private static final Logger LOG = LoggerFactory.getLogger(RootBinder.class);
 
-  private final MetadataBuildingContext metadataBuildingContext;
   private final String dataSourceName;
-  private final PersistentEntityNamingStrategy namingStrategy;
   private final MultiTenantFilterBinder multiTenantFilterBinder;
   private final SubClassBinder subClassBinder;
   private final DefaultColumnNameFetcher defaultColumnNameFetcher;
@@ -46,17 +44,13 @@ public class RootBinder {
   private final DiscriminatorPropertyBinder discriminatorPropertyBinder;
 
   public RootBinder(
-      MetadataBuildingContext metadataBuildingContext,
       String dataSourceName,
-      PersistentEntityNamingStrategy namingStrategy,
       MultiTenantFilterBinder multiTenantFilterBinder,
       SubClassBinder subClassBinder,
       DefaultColumnNameFetcher defaultColumnNameFetcher,
       RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder,
       DiscriminatorPropertyBinder discriminatorPropertyBinder) {
-    this.metadataBuildingContext = metadataBuildingContext;
     this.dataSourceName = dataSourceName;
-    this.namingStrategy = namingStrategy;
     this.multiTenantFilterBinder = multiTenantFilterBinder;
     this.subClassBinder = subClassBinder;
     this.defaultColumnNameFetcher = defaultColumnNameFetcher;
