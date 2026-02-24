@@ -24,7 +24,6 @@ import org.hibernate.generator.Assigned
 import org.hibernate.generator.Generator
 
 import grails.gorm.validation.CascadingValidator
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import jakarta.persistence.FlushModeType
 import org.grails.datastore.gorm.GormInstanceApi
@@ -174,9 +173,12 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
 
-    @CompileDynamic
     private void runDeferredBinding() {
-        DEFERRED_BINDING?.runActions()
+        if (DEFERRED_BINDING != null) {
+            // DeferredBindingActions is from grails-data-binding (optional dep); invoked via reflection
+            // because it belongs to the migration plugin, which runs once per deployment and need not be on the compile classpath
+            DEFERRED_BINDING.getMethod('runActions').invoke(null)
+        }
     }
 
     @Override
@@ -373,13 +375,11 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         return null
     }
 
-    @CompileDynamic
     protected void setErrorsOnInstance(Object target, Errors errors) {
-        if(target instanceof GormValidateable) {
-            ((GormValidateable)target).setErrors(errors)
-        }
-        else {
-            target."$GormProperties.ERRORS" = errors
+        if (target instanceof GormValidateable) {
+            ((GormValidateable) target).setErrors(errors)
+        } else {
+            ((GroovyObject) target).setProperty(GormProperties.ERRORS, errors)
         }
     }
 
@@ -391,12 +391,15 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         insertActiveThreadLocal.remove();
     }
 
-    @CompileDynamic
     protected void incrementVersion(Object target) {
-        if (target.hasProperty(GormProperties.VERSION)) {
-            Object version = target."${GormProperties.VERSION}"
-            if (version instanceof Long) {
-                target."${GormProperties.VERSION}" = ++((Long)version)
+        if (target instanceof GroovyObject) {
+            GroovyObject groovyTarget = (GroovyObject) target
+            MetaProperty versionProp = groovyTarget.metaClass.hasProperty(groovyTarget, GormProperties.VERSION)
+            if (versionProp != null) {
+                Object version = groovyTarget.getProperty(GormProperties.VERSION)
+                if (version instanceof Long) {
+                    groovyTarget.setProperty(GormProperties.VERSION, ++((Long) version))
+                }
             }
         }
     }

@@ -45,7 +45,7 @@ Legend:
 | `HibernateGormEnhancer.groovy` | ✅ Done | |
 | `HibernateGormValidationApi.groovy` | ✅ Done | |
 | `AbstractHibernateGormValidationApi.groovy` | ✅ Done | |
-| `HibernateGormInstanceApi.groovy` | ⚠️ Partial | `isDirty`/`findDirty`/`getDirtyPropertyNames` correctly typed. `nextId()` removed (dead code — no callers). Three remaining `@CompileDynamic` methods: `runDeferredBinding` (nullable dynamic dispatch on `DEFERRED_BINDING`), `setErrorsOnInstance` (dynamic property write `target."$GormProperties.ERRORS"`), `incrementVersion` (dynamic read/write of `VERSION` property). |
+| `HibernateGormInstanceApi.groovy` | ✅ Done | `isDirty`/`findDirty`/`getDirtyPropertyNames` correctly typed. `nextId()` removed (dead code). `incrementVersion` — `GroovyObject` cast + `metaClass.hasProperty`/`getProperty`/`setProperty`. `setErrorsOnInstance` — `GroovyObject.setProperty` replaces dynamic property write. `runDeferredBinding` — reflection (`Class.getMethod('runActions').invoke(null)`); `@CompileDynamic` not needed because `DeferredBindingActions` belongs to the migration plugin which runs once per deployment and need not be on the compile classpath. `@CompileDynamic` import removed. 1345/1345 tests pass. |
 | `HibernateGormStaticApi.groovy` | ✅ Done | `findWithSql`/`findAllWithSql` deprecated in favour of `findWithNativeSql`/`findAllWithNativeSql`. `getAllInternal` fully typed. |
 
 ### Infrastructure
@@ -120,12 +120,6 @@ Legend:
 
 ## Detailed Analysis of Remaining Partial Files
 
-### `cfg/Mapping.groovy`
-
-`methodMissing` is required for the GORM mapping DSL — domain property names (`firstName`, `lastName`, etc.) are user-defined and unknown to `Mapping` at compile time. The method itself must remain, but the `@CompileDynamic` annotation on its body has been removed. The only dynamic construct (`args[-1]`) was replaced with `((Object[])args)[args.length - 1]`.
-
----
-
 ### `liquibase/GroovyChangeLogParser.groovy`
 
 | Method | Reason dynamic | Can be fixed? |
@@ -139,9 +133,6 @@ Legend:
 
 | Action | File | Effort |
 |--------|------|--------|
-| Fix `runDeferredBinding` nullable dynamic dispatch | `HibernateGormInstanceApi.groovy:195` | Low |
-| Fix `setErrorsOnInstance` dynamic property write | `HibernateGormInstanceApi.groovy:394` | Low — use `GormValidateable` cast |
-| Fix `incrementVersion` dynamic read/write of VERSION | `HibernateGormInstanceApi.groovy:412` | Low — use `GroovyObject.getProperty`/`setProperty` with cast |
 | Remove metaClass guard + type locals in `parseToNode` | `GroovyChangeLogParser.groovy:48` | Medium |
 | Add `instanceof` guards for dynamic map values in `setChangeLogProperties` | `GroovyChangeLogParser.groovy:91` | Medium |
 | Accept as permanently dynamic |  `DatabaseMigrationTransactionManager`, `DatabaseMigrationGrailsPlugin`, `createDatabase` in `DatabaseMigrationCommand`, `mergeEnvironmentConfig` in `EnvironmentAwareCodeGenConfig` | No action |
