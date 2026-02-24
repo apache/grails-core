@@ -21,7 +21,6 @@ package org.apache.grails.data.testing.tck.tests
 import spock.lang.Requires
 import spock.util.environment.RestoreSystemProperties
 
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
@@ -147,12 +146,8 @@ class DataServiceMultiTenantConnectionRoutingSpec extends GrailsDataTckSpec {
 
     private void deleteAllForTenant(String tenantId) {
         tenant = tenantId
-        def api = GormEnhancer.findStaticApi(DataServiceRoutingMetric, 'secondary')
-        def instanceApi = GormEnhancer.findInstanceApi(DataServiceRoutingMetric, 'secondary')
-        api.withNewTransaction {
-            for (item in api.list()) {
-                instanceApi.delete(item, [flush: true])
-            }
+        DataServiceRoutingMetric.secondary.withNewTransaction {
+            DataServiceRoutingMetric.secondary.list().each { it.secondary.delete(flush: true) }
         }
     }
 }

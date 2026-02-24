@@ -20,7 +20,6 @@ package org.apache.grails.data.testing.tck.tests
 
 import spock.lang.Requires
 
-import org.grails.datastore.gorm.GormEnhancer
 
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.DataServiceRoutingProduct
@@ -253,37 +252,37 @@ class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
     // ---- Helper methods ----
 
     private void saveToConnection(String connectionName, String name, Integer amount) {
-        def api = connectionName
-                ? GormEnhancer.findStaticApi(DataServiceRoutingProduct, connectionName)
-                : GormEnhancer.findStaticApi(DataServiceRoutingProduct)
-        api.withNewTransaction {
-            def instanceApi = connectionName
-                    ? GormEnhancer.findInstanceApi(DataServiceRoutingProduct, connectionName)
-                    : GormEnhancer.findInstanceApi(DataServiceRoutingProduct)
-            def item = new DataServiceRoutingProduct(name: name, amount: amount)
-            instanceApi.save(item, [flush: true])
+        if (connectionName) {
+            DataServiceRoutingProduct."${connectionName}".withNewTransaction {
+                new DataServiceRoutingProduct(name: name, amount: amount)."${connectionName}".save(flush: true)
+            }
+        } else {
+            DataServiceRoutingProduct.withNewTransaction {
+                new DataServiceRoutingProduct(name: name, amount: amount).save(flush: true)
+            }
         }
     }
 
     private long countOnConnection(String connectionName) {
-        def api = connectionName
-                ? GormEnhancer.findStaticApi(DataServiceRoutingProduct, connectionName)
-                : GormEnhancer.findStaticApi(DataServiceRoutingProduct)
-        api.withNewTransaction {
-            api.count()
+        if (connectionName) {
+            DataServiceRoutingProduct."${connectionName}".withNewTransaction {
+                DataServiceRoutingProduct."${connectionName}".count()
+            }
+        } else {
+            DataServiceRoutingProduct.withNewTransaction {
+                DataServiceRoutingProduct.count()
+            }
         }
     }
 
     private void deleteAllFromConnection(String connectionName) {
-        def api = connectionName
-                ? GormEnhancer.findStaticApi(DataServiceRoutingProduct, connectionName)
-                : GormEnhancer.findStaticApi(DataServiceRoutingProduct)
-        def instanceApi = connectionName
-                ? GormEnhancer.findInstanceApi(DataServiceRoutingProduct, connectionName)
-                : GormEnhancer.findInstanceApi(DataServiceRoutingProduct)
-        api.withNewTransaction {
-            for (item in api.list()) {
-                instanceApi.delete(item, [flush: true])
+        if (connectionName) {
+            DataServiceRoutingProduct."${connectionName}".withNewTransaction {
+                DataServiceRoutingProduct."${connectionName}".list().each { it."${connectionName}".delete(flush: true) }
+            }
+        } else {
+            DataServiceRoutingProduct.withNewTransaction {
+                DataServiceRoutingProduct.list().each { it.delete(flush: true) }
             }
         }
     }
