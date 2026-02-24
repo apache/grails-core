@@ -89,6 +89,10 @@ import org.grails.datastore.gorm.services.implementers.SaveImplementer
 import org.grails.datastore.gorm.services.implementers.UpdateOneImplementer
 import org.grails.datastore.gorm.services.implementers.UpdateStringQueryImplementer
 import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
+import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
+import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
+import org.springframework.transaction.PlatformTransactionManager
 import org.grails.datastore.gorm.transform.AbstractTraitApplyingGormASTTransformation
 import org.grails.datastore.gorm.validation.jakarta.services.implementers.MethodValidationImplementer
 import org.grails.datastore.mapping.core.Datastore
@@ -96,14 +100,20 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.order.OrderedComparator
 
 import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
+import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifElseS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.param
 import static org.codehaus.groovy.ast.tools.GeneralUtils.params
+import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
+import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 import static org.grails.datastore.mapping.reflect.AstUtils.COMPILE_STATIC_TYPE
 import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.grails.datastore.mapping.reflect.AstUtils.addAnnotationIfNecessary
@@ -531,7 +541,6 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
     private static void applyDomainConnectionToService(ClassNode classNode, ClassNode implClass, String connectionName) {
         ConstantExpression connectionExpr = new ConstantExpression(connectionName)
-
         AnnotationNode classAnn = findAnnotation(classNode, Transactional)
         if (classAnn != null) {
             classAnn.setMember('connection', connectionExpr)
@@ -541,7 +550,6 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
             newAnn.setMember('connection', connectionExpr)
             classNode.addAnnotation(newAnn)
         }
-
         AnnotationNode implAnn = findAnnotation(implClass, Transactional)
         if (implAnn != null) {
             implAnn.setMember('connection', connectionExpr)
@@ -551,6 +559,52 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
             newImplAnn.setMember('connection', connectionExpr)
             implClass.addAnnotation(newImplAnn)
         }
+
+        // TransactionalTransform runs before ServiceTransformation creates the impl class, so it never
+        // gets a chance to weave getTransactionManager() with the correct connection-aware logic.
+        // We generate it here directly to ensure the right transaction manager is used at runtime.
+        generateConnectionAwareTransactionManager(implClass, connectionExpr)
+    }
+
+    /**
+     * Generates a {@code getTransactionManager()} method on the impl class that resolves the
+     * transaction manager for the inherited connection source. This mirrors the logic in
+     * {@link org.grails.datastore.gorm.transactions.transform.TransactionalTransform#weaveTransactionManagerAware}
+     * for classes implementing the {@link org.grails.datastore.mapping.services.Service} trait.
+     */
+    private static void generateConnectionAwareTransactionManager(ClassNode implClass, ConstantExpression connectionExpr) {
+        // Remove any existing getTransactionManager() that was added without connection awareness
+        implClass.getMethods('getTransactionManager').each { MethodNode existing ->
+            implClass.removeMethod(existing)
+        }
+
+        ClassNode transactionManagerClassNode = ClassHelper.make(PlatformTransactionManager)
+        ClassNode transactionCapableDatastore = ClassHelper.make(TransactionCapableDatastore)
+        ClassNode multipleConnectionDatastore = ClassHelper.make(MultipleConnectionSourceCapableDatastore)
+        ClassExpression gormEnhancerExpr = classX(GormEnhancer)
+
+        // datastore variable (field from Service trait)
+        VariableExpression datastoreVar = varX('datastore')
+        // ((MultipleConnectionSourceCapableDatastore) datastore).getDatastoreForConnection(connectionName)
+        Expression datastoreForConnection = callD(castX(multipleConnectionDatastore, datastoreVar), 'getDatastoreForConnection', connectionExpr)
+        // .getTransactionManager()
+        Expression datastoreTxManager = propX(castX(transactionCapableDatastore, datastoreForConnection), 'transactionManager')
+        // GormEnhancer.findSingleTransactionManager(connectionName)
+        Expression fallbackTxManager = callX(gormEnhancerExpr, 'findSingleTransactionManager', args(connectionExpr))
+
+        // if (datastore != null) { return <datastoreTxManager> } else { return <fallbackTxManager> }
+        Statement body = ifElseS(
+                notNullX(datastoreVar),
+                returnS(datastoreTxManager),
+                returnS(fallbackTxManager)
+        )
+
+        MethodNode methodNode = implClass.addMethod('getTransactionManager',
+                Modifier.PUBLIC,
+                transactionManagerClassNode,
+                ZERO_PARAMETERS, null,
+                body)
+        markAsGenerated(implClass, methodNode)
     }
 
     @Override
