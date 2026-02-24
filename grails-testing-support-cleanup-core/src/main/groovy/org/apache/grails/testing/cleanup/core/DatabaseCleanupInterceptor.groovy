@@ -141,8 +141,8 @@ class DatabaseCleanupInterceptor extends AbstractMethodInterceptor {
             long overallDuration = overallEndTime - overallStartTime
 
             String separator = '=========================================================='
-            String startTimeFormatted = formatTime(overallStartTime)
-            String endTimeFormatted = formatTime(overallEndTime)
+            String startTimeFormatted = DatabaseCleanupStats.formatTime(overallStartTime)
+            String endTimeFormatted = DatabaseCleanupStats.formatTime(overallEndTime)
 
             System.out.println(separator)
             System.out.println('Overall Cleanup Timing')
@@ -157,17 +157,5 @@ class DatabaseCleanupInterceptor extends AbstractMethodInterceptor {
                 }
             }
         }
-    }
-
-    /**
-     * Formats a timestamp in milliseconds as an ISO 8601 string.
-     *
-     * @param timeMillis the timestamp in milliseconds since epoch
-     * @return the formatted time string
-     */
-    private static String formatTime(long timeMillis) {
-        SimpleDateFormat sdf = new SimpleDateFormat('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'')
-        sdf.setTimeZone(TimeZone.getTimeZone('UTC'))
-        sdf.format(new Date(timeMillis))
     }
 }

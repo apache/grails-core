@@ -192,7 +192,7 @@ class DatabaseCleanupStats {
      * @param timeMillis the timestamp in milliseconds since epoch
      * @return the formatted time string
      */
-    private static String formatTime(long timeMillis) {
+    static String formatTime(long timeMillis) {
         SimpleDateFormat sdf = new SimpleDateFormat('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'')
         sdf.setTimeZone(TimeZone.getTimeZone('UTC'))
         sdf.format(new Date(timeMillis))
