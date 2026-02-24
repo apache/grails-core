@@ -15,6 +15,9 @@
  */
 package org.grails.orm.hibernate
 
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.hibernate.query.criteria.JpaRoot
+
 import grails.orm.HibernateCriteriaBuilder
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -431,32 +434,25 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         getAllInternal(ids as List)
     }
 
-    @CompileDynamic
-    private List getAllInternal(List ids) {
+    private List<D> getAllInternal(List ids) {
         if (!ids) return []
 
-        (List)hibernateTemplate.execute { Session session ->
-            def identityType = persistentEntity.identity.type
-            def identityName = persistentEntity.identity.name
-            List<Object> convertedIds = ids.collect { HibernateRuntimeUtils.convertValueToType((Serializable)it, identityType, conversionService) }
+        hibernateTemplate.execute { Session session ->
+            PersistentProperty identity = persistentEntity.identity
+            Class<?> identityType = identity.type
+            String identityName = identity.name
+            List<Object> convertedIds = ids.collect { HibernateRuntimeUtils.convertValueToType(it, identityType, conversionService) }
             CriteriaBuilder cb = session.getCriteriaBuilder()
-            CriteriaQuery cq = cb.createQuery(persistentEntity.javaClass)
-            def root = cq.from(persistentEntity.javaClass)
+            CriteriaQuery<D> cq = cb.createQuery((Class<D>)persistentEntity.javaClass)
+            Root<D> root = cq.from((Class<D>)persistentEntity.javaClass)
             cq.select(root).where(root.get("id").in(convertedIds))
             firePreQueryEvent()
 
-            List results =  session.createQuery(cq).resultList
+            List<D> results = session.createQuery(cq).resultList
             firePostQueryEvent(results)
-            def idsMap = [:]
-            for (object in results) {
-                idsMap[object[identityName]] = object
-            }
-            results.clear()
-            for (id in ids) {
-                results << idsMap[id]
-            }
-            results
-        }
+            Map<Object, D> idsMap = results.collectEntries { [it[identityName], it] }
+            ids.collect { idsMap[it] }
+        } as List<D>
     }
 
 
