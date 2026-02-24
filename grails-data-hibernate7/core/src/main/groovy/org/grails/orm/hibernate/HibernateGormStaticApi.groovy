@@ -35,6 +35,7 @@ import org.grails.datastore.mapping.query.event.PreQueryEvent
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.orm.hibernate.query.GrailsHibernateQueryUtils
 import org.grails.orm.hibernate.query.HibernateHqlQuery
+import org.grails.orm.hibernate.query.HqlQueryContext
 import org.grails.orm.hibernate.query.HibernateQuery
 import org.grails.orm.hibernate.query.PagedResultList
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils
@@ -329,17 +330,15 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                                    Map args
                                    , boolean isNative) {
         boolean isUpdate = false
+        def ctx = HqlQueryContext.prepare(hql, isNative, isUpdate, namedParams, persistentEntity)
         def hqlQuery = HibernateHqlQuery.createHqlQuery(
-                (HibernateDatastore)  datastore,
+                (HibernateDatastore) datastore,
                 sessionFactory,
                 persistentEntity,
-                hql,
-                isNative,
-                isUpdate,
+                ctx,
                 args,
-                namedParams,
-                positionalParams
-                ,getHibernateTemplate()
+                positionalParams,
+                getHibernateTemplate()
         )
         firePreQueryEvent()
         def ds = (List<D>) hqlQuery.list()
@@ -354,17 +353,15 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                                Map args
                                , boolean isNative) {
         boolean isUpdate = false
+        def ctx = HqlQueryContext.prepare(hql, isNative, isUpdate, namedParams, persistentEntity)
         def hqlQuery = HibernateHqlQuery.createHqlQuery(
-                (HibernateDatastore)  datastore,
+                (HibernateDatastore) datastore,
                 sessionFactory,
                 persistentEntity,
-                hql,
-                isNative,
-                isUpdate,
+                ctx,
                 args,
-                namedParams,
-                positionalParams
-                ,getHibernateTemplate()
+                positionalParams,
+                getHibernateTemplate()
         )
         firePreQueryEvent()
         def sm = hqlQuery.singleResult()
@@ -378,17 +375,15 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                                             Map args) {
         boolean isNative = false
         boolean isUpdate  = true
+        def ctx = HqlQueryContext.prepare(hql, isNative, isUpdate, namedParams, persistentEntity)
         def hqlQuery = HibernateHqlQuery.createHqlQuery(
-                (HibernateDatastore)  datastore,
+                (HibernateDatastore) datastore,
                 sessionFactory,
                 persistentEntity,
-                hql,
-                isNative,
-                isUpdate,
+                ctx,
                 args,
-                namedParams,
-                positionalParams
-                ,getHibernateTemplate()
+                positionalParams,
+                getHibernateTemplate()
         )
         firePreQueryEvent()
         def execute = hqlQuery.executeUpdate()
