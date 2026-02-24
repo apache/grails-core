@@ -88,6 +88,8 @@ public class PredicateGenerator {
       return cb.conjunction();
     } else if (criterion instanceof DetachedAssociationCriteria<?> c) {
       return handleAssociationCriteria(cb, criteriaQuery, root, fromsByProvider, entity, c);
+    } else if (criterion instanceof HibernateAssociationQuery haq) {
+      return handleHibernateAssociationQuery(cb, criteriaQuery, root, fromsByProvider, entity, haq);
     } else if (criterion instanceof Query.PropertyCriterion pc) {
       return handlePropertyCriterion(cb, criteriaQuery, root, fromsByProvider, entity, pc);
     } else if (criterion instanceof Query.PropertyComparisonCriterion c) {
@@ -139,6 +141,20 @@ public class PredicateGenerator {
     childTablesByName.put("root", child);
     return cb.and(
         getPredicates(cb, criteriaQuery, child, c.getCriteria(), childTablesByName, entity));
+  }
+
+  private Predicate handleHibernateAssociationQuery(
+      HibernateCriteriaBuilder cb,
+      CriteriaQuery<?> criteriaQuery,
+      From<?, ?> root,
+      JpaFromProvider fromsByProvider,
+      PersistentEntity entity,
+      HibernateAssociationQuery haq) {
+    var child = root.join(haq.associationPath, JoinType.LEFT);
+    JpaFromProvider childFroms = (JpaFromProvider) fromsByProvider.clone();
+    childFroms.put("root", child);
+    return cb.and(
+        getPredicates(cb, criteriaQuery, child, haq.getAssociationCriteria(), childFroms, haq.getEntity()));
   }
 
   private Predicate handlePropertyCriterion(

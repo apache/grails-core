@@ -18,146 +18,71 @@
  */
 package org.grails.orm.hibernate.query;
 
-import jakarta.persistence.criteria.CriteriaQuery;
 import java.util.List;
-import java.util.Map;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 
-class HibernateAssociationQuery extends AssociationQuery {
+/**
+ * A thin wrapper over {@link HibernateQuery} that collects criteria for a single association scope.
+ *
+ * <p>When {@link HibernateQuery#createQuery(String)} is called (e.g. via
+ * {@code Person.withCriteria { pets { eq 'name', 'Lucky' } }}), the
+ * {@code AbstractCriteriaBuilder} sets the current query to this instance and routes all
+ * criteria added inside the closure through {@link #add(Query.Criterion)}.
+ * Those criteria are held by an inner {@link HibernateQuery} scoped to the associated entity.
+ *
+ * <p>At query-execution time, {@link PredicateGenerator} dispatches on this type and performs
+ * a {@code LEFT JOIN} on {@link #associationPath}, then applies the collected predicates.
+ *
+ * @see PredicateGenerator
+ * @see HibernateQuery#createQuery(String)
+ */
+public class HibernateAssociationQuery extends AssociationQuery {
+  final String alias;
 
-  protected String alias;
-  protected CriteriaQuery assocationCriteria;
+  /** Dotted property path used for the JPA join (e.g. {@code "pets"} or {@code "owner.address"}) */
+  final String associationPath;
+
+  /** Criteria collector — a real HibernateQuery scoped to the associated entity */
+  private final HibernateQuery innerQuery;
 
   public HibernateAssociationQuery(
-      CriteriaQuery criteria,
       AbstractHibernateSession session,
       PersistentEntity associatedEntity,
       Association association,
+      String associationPath,
       String alias) {
     super(session, associatedEntity, association);
     this.alias = alias;
-    assocationCriteria = criteria;
+    this.associationPath = associationPath;
+    this.innerQuery = new HibernateQuery(session, associatedEntity);
+  }
+
+  /** Returns the criteria collected inside the association closure. */
+  public List<Query.Criterion> getAssociationCriteria() {
+    return innerQuery.getAllCriteria();
   }
 
   @Override
-  public Query order(Order order) {
-    return this;
+  public void add(Query.Criterion criterion) {
+    innerQuery.add(criterion);
   }
 
   @Override
-  public Query isEmpty(String property) {
-    return this;
+  public void add(Query.Junction currentJunction, Query.Criterion criterion) {
+    innerQuery.add(currentJunction, criterion);
   }
 
   @Override
-  public Query isNotEmpty(String property) {
-    return this;
+  public Query.Junction disjunction() {
+    return innerQuery.disjunction();
   }
 
   @Override
-  public Query isNull(String property) {
-    return this;
-  }
-
-  @Override
-  public Query isNotNull(String property) {
-    return this;
-  }
-
-  @Override
-  public void add(Criterion criterion) {}
-
-  @Override
-  public Junction disjunction() {
-    return null;
-  }
-
-  @Override
-  public Junction negation() {
-    return null;
-  }
-
-  @Override
-  public Query eq(String property, Object value) {
-    return this;
-  }
-
-  @Override
-  public Query idEq(Object value) {
-    return this;
-  }
-
-  @Override
-  public Query gt(String property, Object value) {
-    return this;
-  }
-
-  @Override
-  public Query and(Criterion a, Criterion b) {
-    return this;
-  }
-
-  @Override
-  public Query or(Criterion a, Criterion b) {
-    return this;
-  }
-
-  @Override
-  public Query allEq(Map<String, Object> values) {
-    return this;
-  }
-
-  @Override
-  public Query ge(String property, Object value) {
-    return this;
-  }
-
-  @Override
-  public Query le(String property, Object value) {
-    return this;
-  }
-
-  @Override
-  public Query gte(String property, Object value) {
-    return this;
-  }
-
-  @Override
-  public Query lte(String property, Object value) {
-    return this;
-  }
-
-  @Override
-  public Query lt(String property, Object value) {
-    return this;
-  }
-
-  @Override
-  public Query in(String property, List values) {
-    return this;
-  }
-
-  @Override
-  public Query between(String property, Object start, Object end) {
-    return this;
-  }
-
-  @Override
-  public Query like(String property, String expr) {
-    return this;
-  }
-
-  @Override
-  public Query ilike(String property, String expr) {
-    return this;
-  }
-
-  @Override
-  public Query rlike(String property, String expr) {
-    return this;
+  public Query.Junction negation() {
+    return innerQuery.negation();
   }
 }

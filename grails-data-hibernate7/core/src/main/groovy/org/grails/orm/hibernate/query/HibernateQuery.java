@@ -140,6 +140,10 @@ public class HibernateQuery extends Query {
     }
   }
 
+  public List<Criterion> getAllCriteria() {
+    return  detachedCriteria.getCriteria();
+  }
+
   public void add(Criterion criterion) {
     detachedCriteria.add(criterion);
   }
@@ -313,14 +317,12 @@ public class HibernateQuery extends Query {
     if ((property instanceof Association association)) {
       String alias = generateAlias(associationName);
       CriteriaAndAlias subCriteria = getOrCreateAlias(associationName, alias);
-      if (subCriteria.criteria != null) {
-        return new HibernateAssociationQuery(
-            subCriteria.criteria,
-            (AbstractHibernateSession) getSession(),
-            association.getAssociatedEntity(),
-            association,
-            alias);
-      }
+      return new HibernateAssociationQuery(
+          (AbstractHibernateSession) getSession(),
+          association.getAssociatedEntity(),
+          association,
+          subCriteria.associationPath,
+          alias);
     }
     throw new InvalidDataAccessApiUsageException(
         "Cannot query association ["

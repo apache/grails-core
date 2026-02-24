@@ -151,32 +151,10 @@ Do **not** drop Hibernate 5.6 support in 8.0.0. Ship both:
 **Effort**: Very High (binder refactoring must be applied to both versions; module consolidation required)
 
 
-### 2.6 GORM Query Safety Audit
-
-**Current state**: GORM's HQL/`@Query` support accepts string interpolation in queries. Dynamic finders are safe by design (parameterized). But `executeQuery()`, `executeUpdate()`, and `@Query` with GString interpolation can produce SQL injection.
-
-**Potentially for Grails 8**:
-- Add compile-time warning for GString-interpolated HQL queries (AST transform or type checking extension)
-- Document safe query patterns prominently
-- Consider deprecating `executeQuery(String)` in favor of parameterized-only API
-- Audit all internal GORM query construction for injection vectors
-
-**Priority**: **P2** - SQL injection is OWASP #3. Framework should make the safe path the easy path.
-**Effort**: Medium
 
 
 ### 2.6 GORM Query Safety Audit
 
-**Current state**: GORM's HQL/`@Query` support accepts string interpolation in queries. Dynamic finders are safe by design (parameterized). But `executeQuery()`, `executeUpdate()`, and `@Query` with GString interpolation can produce SQL injection.
-
-**Potentially for Grails 8**:
-- Add compile-time warning for GString-interpolated HQL queries (AST transform or type checking extension)
-- Document safe query patterns prominently
-- Consider deprecating `executeQuery(String)` in favor of parameterized-only API
-- Audit all internal GORM query construction for injection vectors
-
-**Priority**: **P2** - SQL injection is OWASP #3. Framework should make the safe path the easy path.
-**Effort**: Medium
 
 **8.1+ scope** (requires Groovy 5 features, deeper changes):
 - Replace GORM dynamic finders with AST-generated static methods
