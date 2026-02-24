@@ -97,10 +97,10 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
                     return
                 }
 
-                def docConfig = project.configurations.findByName('documentation')
-                if (!docConfig) {
+                def classpath = gdoc.groovyClasspath
+                if (!classpath || classpath.empty) {
                     project.logger.warn(
-                            'Skipping groovydoc for {}: \'documentation\' configuration not found',
+                            'Skipping groovydoc for {}: groovyClasspath is empty',
                             gdoc.name
                     )
                     return
@@ -109,7 +109,7 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
                 project.ant.taskdef(
                         name: 'groovydoc',
                         classname: 'org.codehaus.groovy.ant.Groovydoc',
-                        classpath: docConfig.asPath
+                        classpath: classpath.asPath
                 )
 
                 def links = resolveLinks(gdoc)
