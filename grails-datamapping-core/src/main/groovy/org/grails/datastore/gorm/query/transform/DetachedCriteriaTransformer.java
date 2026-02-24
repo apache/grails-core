@@ -364,9 +364,7 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                 VariableExpression var = (VariableExpression) leftExpression;
                 String variableName = var.getName();
                 ConstructorCallExpression cce = (ConstructorCallExpression) rightExpression;
-
-                ClassNode type = cce.getType();
-                if (DETACHED_CRITERIA_CLASS_NODE.getName().equals(type.getName())) {
+                if (DETACHED_CRITERIA_CLASS_NODE.getName().equals(cce.getType().getName())) {
                     Expression arguments = cce.getArguments();
                     if (arguments instanceof ArgumentListExpression) {
                         ArgumentListExpression ale = (ArgumentListExpression) arguments;
@@ -374,7 +372,20 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                             Expression exp = ale.getExpression(0);
                             if (exp instanceof ClassExpression) {
                                 ClassExpression clse = (ClassExpression) exp;
-                                detachedCriteriaVariables.put(variableName, clse.getType());
+                                ClassNode domainType = clse.getType();
+                                detachedCriteriaVariables.put(variableName, domainType);
+
+                                // Update the variable's type to DetachedCriteria<DomainClass>
+                                ClassNode classNode = new ClassNode(DetachedCriteria.class);
+                                classNode.setGenericsTypes(new GenericsType[]{new GenericsType(domainType)});
+                                if (var.isClosureSharedVariable()) {
+                                    Variable accessedVariable = var.getAccessedVariable();
+                                    if (accessedVariable instanceof VariableExpression) {
+                                        ((VariableExpression) accessedVariable).setType(classNode);
+                                    }
+                                } else {
+                                    var.setType(classNode);
+                                }
                             }
                         }
                     }
