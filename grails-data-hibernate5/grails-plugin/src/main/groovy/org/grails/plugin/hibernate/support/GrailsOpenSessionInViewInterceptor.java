@@ -145,6 +145,9 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                             firstFlushException = ex;
                         }
                         else {
+                            if (logger.isDebugEnabled()) {
+                                logger.debug("Additional flush exception for datasource '" + config.connectionName + "'", ex);
+                            }
                             firstFlushException.addSuppressed(ex);
                         }
                     }
