@@ -284,7 +284,6 @@ public class ClosureEventTriggeringInterceptor extends AbstractClosureEventTrigg
   private void updateModifiedPropertiesWithAutoTimestamp(
       Map<String, Object> modifiedProperties, PreUpdateEvent hibernateEvent) {
 
-
     EntityPersister persister = hibernateEvent.getPersister();
     EntityMappingType entityMappingType = persister.getEntityMappingType();
     AttributeMapping dateCreatedMapping =

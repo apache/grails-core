@@ -294,9 +294,6 @@ public class HibernateMappingContextConfiguration extends Configuration
             .applyClassLoaderService(classLoaderService)
             .build();
 
-
-
-
     SessionFactoryObserver sessionFactoryObserver =
         new SessionFactoryObserver() {
           private static final long serialVersionUID = 1;

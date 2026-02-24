@@ -466,7 +466,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
           if (lockMode == null) {
             session.refresh(entity);
           } else {
-            session.refresh(entity,lockMode);
+            session.refresh(entity, lockMode);
           }
           return null;
         },

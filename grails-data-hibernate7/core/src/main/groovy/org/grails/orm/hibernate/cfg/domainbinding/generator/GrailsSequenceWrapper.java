@@ -38,6 +38,11 @@ public class GrailsSequenceWrapper {
       JdbcEnvironment jdbcEnvironment,
       PersistentEntityNamingStrategy namingStrategy) {
     return GrailsSequenceGeneratorEnum.getGenerator(
-        fromName(name).orElse(NATIVE), context, mappedId, domainClass, jdbcEnvironment, namingStrategy);
+        fromName(name).orElse(NATIVE),
+        context,
+        mappedId,
+        domainClass,
+        jdbcEnvironment,
+        namingStrategy);
   }
 }

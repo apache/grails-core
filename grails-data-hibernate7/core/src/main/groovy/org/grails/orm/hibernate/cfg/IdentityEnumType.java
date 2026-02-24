@@ -19,7 +19,6 @@
 package org.grails.orm.hibernate.cfg;
 
 import jakarta.persistence.AttributeConverter;
-
 import java.io.Serial;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
@@ -29,7 +28,6 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-
 import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
 import org.hibernate.type.AbstractStandardBasicType;
@@ -48,8 +46,7 @@ import org.slf4j.LoggerFactory;
  */
 public class IdentityEnumType implements UserType, ParameterizedType, Serializable {
 
-  @Serial
-  private static final long serialVersionUID = -6625622185856547501L;
+  @Serial private static final long serialVersionUID = -6625622185856547501L;
 
   private static final Logger LOG = LoggerFactory.getLogger(IdentityEnumType.class);
 
@@ -127,8 +124,6 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
     return o.hashCode();
   }
 
-
-
   public Object deepCopy(Object o) throws HibernateException {
     return o;
   }
@@ -149,9 +144,8 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
     return orig;
   }
 
-
   public long getDefaultSqlLength() {
-    return  UserType.super.getDefaultSqlLength();
+    return UserType.super.getDefaultSqlLength();
   }
 
   public int getDefaultSqlPrecision() {
@@ -170,8 +164,7 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
   @SuppressWarnings({"rawtypes", "unchecked"})
   private static class BidiEnumMap implements Serializable {
 
-    @Serial
-    private static final long serialVersionUID = 3325751131102095834L;
+    @Serial private static final long serialVersionUID = 3325751131102095834L;
     private final Map enumToKey;
     private final Map keytoEnum;
     private final Class keyType;

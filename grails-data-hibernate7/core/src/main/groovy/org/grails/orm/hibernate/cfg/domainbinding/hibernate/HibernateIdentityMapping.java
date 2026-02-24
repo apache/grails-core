@@ -26,8 +26,8 @@ import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.Identity;
 
 /**
- * {@link IdentityMapping} implementation for Hibernate that resolves identifier names
- * from {@link Identity} and {@link CompositeIdentity} mapped forms.
+ * {@link IdentityMapping} implementation for Hibernate that resolves identifier names from {@link
+ * Identity} and {@link CompositeIdentity} mapped forms.
  */
 public class HibernateIdentityMapping implements IdentityMapping<Property> {
 
@@ -40,11 +40,12 @@ public class HibernateIdentityMapping implements IdentityMapping<Property> {
   /**
    * Constructs a HibernateIdentityMapping.
    *
-   * @param identity     the identity mapped form ({@link Identity} or {@link CompositeIdentity})
-   * @param generator    the resolved {@link ValueGenerator}
+   * @param identity the identity mapped form ({@link Identity} or {@link CompositeIdentity})
+   * @param generator the resolved {@link ValueGenerator}
    * @param classMapping the owning {@link ClassMapping}
    */
-  public HibernateIdentityMapping(Object identity, ValueGenerator generator, ClassMapping classMapping) {
+  public HibernateIdentityMapping(
+      Object identity, ValueGenerator generator, ClassMapping classMapping) {
     this.identity = identity;
     this.generator = generator;
     this.classMapping = classMapping;

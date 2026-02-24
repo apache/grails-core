@@ -683,10 +683,8 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
 
     String dbCreate = tenantSettings.getDataSource().getDbCreate();
 
-    Action schemaAutoTooling =
-        Action.interpretHbm2ddlSetting(dbCreate);
-    if (schemaAutoTooling != Action.VALIDATE
-        && schemaAutoTooling != Action.NONE) {
+    Action schemaAutoTooling = Action.interpretHbm2ddlSetting(dbCreate);
+    if (schemaAutoTooling != Action.VALIDATE && schemaAutoTooling != Action.NONE) {
 
       Connection connection = null;
       try {

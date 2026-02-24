@@ -18,102 +18,107 @@
  */
 package org.grails.plugin.hibernate.support;
 
+import grails.persistence.support.PersistenceContextInterceptor;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.hibernate.SessionFactory;
-
-import grails.persistence.support.PersistenceContextInterceptor;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSources;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
+import org.hibernate.SessionFactory;
 
 /**
- * Abstract implementation of the {@link grails.persistence.support.PersistenceContextInterceptor} interface that supports multiple data sources
+ * Abstract implementation of the {@link grails.persistence.support.PersistenceContextInterceptor}
+ * interface that supports multiple data sources
  *
  * @author Graeme Rocher
  * @since 2.0.7
  */
-public abstract class AbstractMultipleDataSourceAggregatePersistenceContextInterceptor implements PersistenceContextInterceptor {
+public abstract class AbstractMultipleDataSourceAggregatePersistenceContextInterceptor
+    implements PersistenceContextInterceptor {
 
-    protected final List<PersistenceContextInterceptor> interceptors = new ArrayList<>();
-    protected final AbstractHibernateDatastore hibernateDatastore;
+  protected final List<PersistenceContextInterceptor> interceptors = new ArrayList<>();
+  protected final AbstractHibernateDatastore hibernateDatastore;
 
-    public AbstractMultipleDataSourceAggregatePersistenceContextInterceptor(AbstractHibernateDatastore hibernateDatastore) {
-        this.hibernateDatastore = hibernateDatastore;
-        ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources = hibernateDatastore.getConnectionSources();
-        Iterable<ConnectionSource<SessionFactory, HibernateConnectionSourceSettings>> allConnectionSources = connectionSources.getAllConnectionSources();
-        for (ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource : allConnectionSources) {
-            SessionFactoryAwarePersistenceContextInterceptor interceptor = createPersistenceContextInterceptor(connectionSource.getName());
-            this.interceptors.add(interceptor);
-        }
+  public AbstractMultipleDataSourceAggregatePersistenceContextInterceptor(
+      AbstractHibernateDatastore hibernateDatastore) {
+    this.hibernateDatastore = hibernateDatastore;
+    ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources =
+        hibernateDatastore.getConnectionSources();
+    Iterable<ConnectionSource<SessionFactory, HibernateConnectionSourceSettings>>
+        allConnectionSources = connectionSources.getAllConnectionSources();
+    for (ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource :
+        allConnectionSources) {
+      SessionFactoryAwarePersistenceContextInterceptor interceptor =
+          createPersistenceContextInterceptor(connectionSource.getName());
+      this.interceptors.add(interceptor);
     }
+  }
 
-    public boolean isOpen() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
-            if (interceptor.isOpen()) {
-                // true at least one is true
-                return true;
-            }
-        }
-        return false;
+  public boolean isOpen() {
+    for (PersistenceContextInterceptor interceptor : interceptors) {
+      if (interceptor.isOpen()) {
+        // true at least one is true
+        return true;
+      }
     }
+    return false;
+  }
 
-    public void reconnect() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
-            interceptor.reconnect();
-        }
+  public void reconnect() {
+    for (PersistenceContextInterceptor interceptor : interceptors) {
+      interceptor.reconnect();
     }
+  }
 
-    public void destroy() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
-            try {
-                if (interceptor.isOpen()) {
-                    interceptor.destroy();
-                }
-            } catch (Exception e) {
-                // ignore exception
-            }
+  public void destroy() {
+    for (PersistenceContextInterceptor interceptor : interceptors) {
+      try {
+        if (interceptor.isOpen()) {
+          interceptor.destroy();
         }
+      } catch (Exception e) {
+        // ignore exception
+      }
     }
+  }
 
-    public void clear() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
-            interceptor.clear();
-        }
+  public void clear() {
+    for (PersistenceContextInterceptor interceptor : interceptors) {
+      interceptor.clear();
     }
+  }
 
-    public void disconnect() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
-            interceptor.disconnect();
-        }
+  public void disconnect() {
+    for (PersistenceContextInterceptor interceptor : interceptors) {
+      interceptor.disconnect();
     }
+  }
 
-    public void flush() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
-            interceptor.flush();
-        }
+  public void flush() {
+    for (PersistenceContextInterceptor interceptor : interceptors) {
+      interceptor.flush();
     }
+  }
 
-    public void init() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
-            interceptor.init();
-        }
+  public void init() {
+    for (PersistenceContextInterceptor interceptor : interceptors) {
+      interceptor.init();
     }
+  }
 
-    public void setReadOnly() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
-            interceptor.setReadOnly();
-        }
+  public void setReadOnly() {
+    for (PersistenceContextInterceptor interceptor : interceptors) {
+      interceptor.setReadOnly();
     }
+  }
 
-    public void setReadWrite() {
-        for (PersistenceContextInterceptor interceptor : interceptors) {
-            interceptor.setReadWrite();
-        }
+  public void setReadWrite() {
+    for (PersistenceContextInterceptor interceptor : interceptors) {
+      interceptor.setReadWrite();
     }
+  }
 
-    protected abstract SessionFactoryAwarePersistenceContextInterceptor createPersistenceContextInterceptor(String dataSourceName);
-
+  protected abstract SessionFactoryAwarePersistenceContextInterceptor
+      createPersistenceContextInterceptor(String dataSourceName);
 }

@@ -18,6 +18,11 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.generator;
 
+import static org.hibernate.id.IncrementGenerator.COLUMN;
+import static org.hibernate.id.IncrementGenerator.TABLES;
+import static org.hibernate.id.PersistentIdentifierGenerator.CATALOG;
+import static org.hibernate.id.PersistentIdentifierGenerator.SCHEMA;
+
 import java.util.Properties;
 import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
@@ -27,11 +32,6 @@ import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextIm
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.id.IncrementGenerator;
-
-import static org.hibernate.id.IncrementGenerator.COLUMN;
-import static org.hibernate.id.IncrementGenerator.TABLES;
-import static org.hibernate.id.PersistentIdentifierGenerator.CATALOG;
-import static org.hibernate.id.PersistentIdentifierGenerator.SCHEMA;
 
 /**
  * Grails-aware increment ID generator. Builds the standard {@link IncrementGenerator} parameters
@@ -56,15 +56,19 @@ public class GrailsIncrementGenerator extends IncrementGenerator {
 
     org.grails.orm.hibernate.cfg.Mapping mapping = domainClass.getMappedForm();
     if (mapping != null && mapping.getTable() != null) {
-      if (mapping.getTable().getCatalog() != null) params.put(CATALOG, mapping.getTable().getCatalog());
-      if (mapping.getTable().getSchema()  != null) params.put(SCHEMA,  mapping.getTable().getSchema());
+      if (mapping.getTable().getCatalog() != null)
+        params.put(CATALOG, mapping.getTable().getCatalog());
+      if (mapping.getTable().getSchema() != null)
+        params.put(SCHEMA, mapping.getTable().getSchema());
     }
 
     // Resolve column name — fall back to "id" if the property path is dotted (composite)
     String columnName = context.getProperty().getName();
     if (columnName == null || columnName.contains(".")) {
-      columnName = (mappedId != null && mappedId.getName() != null
-          && !mappedId.getName().contains(".")) ? mappedId.getName() : "id";
+      columnName =
+          (mappedId != null && mappedId.getName() != null && !mappedId.getName().contains("."))
+              ? mappedId.getName()
+              : "id";
     }
     params.put(COLUMN, columnName);
 
@@ -74,11 +78,12 @@ public class GrailsIncrementGenerator extends IncrementGenerator {
     // Build SqlStringGenerationContext and initialize the SQL query
     JdbcEnvironment jdbcEnvironment = context.getDatabase().getJdbcEnvironment();
     var physicalName = context.getDatabase().getDefaultNamespace().getPhysicalName();
-    String catalog = physicalName.catalog() != null ? physicalName.catalog().getCanonicalName() : null;
-    String schema  = physicalName.schema()  != null ? physicalName.schema().getCanonicalName()  : null;
+    String catalog =
+        physicalName.catalog() != null ? physicalName.catalog().getCanonicalName() : null;
+    String schema = physicalName.schema() != null ? physicalName.schema().getCanonicalName() : null;
     SqlStringGenerationContext sqlContext =
-        SqlStringGenerationContextImpl.fromExplicit(jdbcEnvironment, context.getDatabase(), catalog, schema);
+        SqlStringGenerationContextImpl.fromExplicit(
+            jdbcEnvironment, context.getDatabase(), catalog, schema);
     initialize(sqlContext);
   }
 }
-

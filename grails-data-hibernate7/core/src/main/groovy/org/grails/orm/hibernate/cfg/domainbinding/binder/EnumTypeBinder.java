@@ -20,8 +20,8 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.ENUM_CLASS_PROP;
 
-import java.util.Properties;
 import jakarta.persistence.EnumType;
+import java.util.Properties;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.IdentityEnumType;
 import org.grails.orm.hibernate.cfg.PropertyConfig;

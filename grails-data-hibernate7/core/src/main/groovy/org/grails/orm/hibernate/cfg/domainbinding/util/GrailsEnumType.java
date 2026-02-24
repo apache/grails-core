@@ -45,6 +45,7 @@ public enum GrailsEnumType {
         return candidate;
       }
     }
-    throw new MappingException("Invalid enum type [" + value + "]. Valid values are: default, string, ordinal, identity.");
+    throw new MappingException(
+        "Invalid enum type [" + value + "]. Valid values are: default, string, ordinal, identity.");
   }
 }

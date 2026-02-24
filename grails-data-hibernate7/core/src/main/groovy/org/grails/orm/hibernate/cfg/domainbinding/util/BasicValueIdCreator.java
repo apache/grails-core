@@ -37,7 +37,8 @@ public class BasicValueIdCreator {
   private final GrailsSequenceWrapper grailsSequenceWrapper;
 
   /** Creates a new {@link BasicValueIdCreator} instance. */
-  public BasicValueIdCreator(JdbcEnvironment jdbcEnvironment, PersistentEntityNamingStrategy namingStrategy) {
+  public BasicValueIdCreator(
+      JdbcEnvironment jdbcEnvironment, PersistentEntityNamingStrategy namingStrategy) {
     this.jdbcEnvironment = jdbcEnvironment;
     this.namingStrategy = namingStrategy;
     this.grailsSequenceWrapper = new GrailsSequenceWrapper();
@@ -45,7 +46,9 @@ public class BasicValueIdCreator {
 
   /** Creates a new {@link BasicValueIdCreator} instance. */
   protected BasicValueIdCreator(
-      JdbcEnvironment jdbcEnvironment, PersistentEntityNamingStrategy namingStrategy, GrailsSequenceWrapper grailsSequenceWrapper) {
+      JdbcEnvironment jdbcEnvironment,
+      PersistentEntityNamingStrategy namingStrategy,
+      GrailsSequenceWrapper grailsSequenceWrapper) {
     this.jdbcEnvironment = jdbcEnvironment;
     this.namingStrategy = namingStrategy;
     this.grailsSequenceWrapper = grailsSequenceWrapper;
