@@ -20,8 +20,6 @@ package org.apache.grails.data.testing.tck.tests
 
 import spock.lang.Requires
 
-import org.grails.datastore.gorm.GormEnhancer
-
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.DataServiceRoutingProduct
 
@@ -39,13 +37,9 @@ class DomainMultiDataSourceSpec extends GrailsDataTckSpec {
     }
 
     void "save to secondary datasource via domain API"() {
-        given: 'a secondary connection API'
-        def staticApi = GormEnhancer.findStaticApi(DataServiceRoutingProduct, 'secondary')
-        def instanceApi = GormEnhancer.findInstanceApi(DataServiceRoutingProduct, 'secondary')
-
-        when: 'a product is saved through the instance API'
-        staticApi.withNewTransaction {
-            instanceApi.save(new DataServiceRoutingProduct(name: 'Widget', amount: 42), [flush: true])
+        when: 'a product is saved through the secondary connection'
+        DataServiceRoutingProduct.secondary.withNewTransaction {
+            new DataServiceRoutingProduct(name: 'Widget', amount: 42).secondary.save(flush: true)
         }
 
         then: 'the secondary datasource records the entity'
@@ -54,17 +48,15 @@ class DomainMultiDataSourceSpec extends GrailsDataTckSpec {
 
     void "get by ID from secondary datasource via domain API"() {
         given: 'a product saved on secondary'
-        def staticApi = GormEnhancer.findStaticApi(DataServiceRoutingProduct, 'secondary')
-        def instanceApi = GormEnhancer.findInstanceApi(DataServiceRoutingProduct, 'secondary')
-        def id = staticApi.withNewTransaction {
+        def id = DataServiceRoutingProduct.secondary.withNewTransaction {
             def saved = new DataServiceRoutingProduct(name: 'Gadget', amount: 99)
-            instanceApi.save(saved, [flush: true])
+            saved.secondary.save(flush: true)
             saved.id
         }
 
         when: 'the product is retrieved by ID'
-        def found = staticApi.withNewTransaction {
-            staticApi.get(id)
+        def found = DataServiceRoutingProduct.secondary.withNewTransaction {
+            DataServiceRoutingProduct.secondary.get(id)
         }
 
         then: 'the correct entity is returned'
@@ -91,9 +83,9 @@ class DomainMultiDataSourceSpec extends GrailsDataTckSpec {
         saveToConnection('secondary', 'Two', 2)
         saveToConnection('secondary', 'Three', 3)
 
-        when: 'listing through the secondary static API'
-        def items = GormEnhancer.findStaticApi(DataServiceRoutingProduct, 'secondary').withNewTransaction {
-            GormEnhancer.findStaticApi(DataServiceRoutingProduct, 'secondary').list()
+        when: 'listing through the secondary connection'
+        def items = DataServiceRoutingProduct.secondary.withNewTransaction {
+            DataServiceRoutingProduct.secondary.list()
         }
 
         then: 'all secondary items are returned'
@@ -106,8 +98,8 @@ class DomainMultiDataSourceSpec extends GrailsDataTckSpec {
         saveToConnection('secondary', 'Other', 2)
 
         when: 'querying by name'
-        def results = GormEnhancer.findStaticApi(DataServiceRoutingProduct, 'secondary').withNewTransaction {
-            GormEnhancer.findStaticApi(DataServiceRoutingProduct, 'secondary').withCriteria {
+        def results = DataServiceRoutingProduct.secondary.withNewTransaction {
+            DataServiceRoutingProduct.secondary.withCriteria {
                 eq 'name', 'Match'
             }
         }
@@ -119,17 +111,15 @@ class DomainMultiDataSourceSpec extends GrailsDataTckSpec {
 
     void "delete from secondary datasource via domain API"() {
         given: 'a product saved on secondary'
-        def staticApi = GormEnhancer.findStaticApi(DataServiceRoutingProduct, 'secondary')
-        def instanceApi = GormEnhancer.findInstanceApi(DataServiceRoutingProduct, 'secondary')
-        def saved = staticApi.withNewTransaction {
+        def saved = DataServiceRoutingProduct.secondary.withNewTransaction {
             def item = new DataServiceRoutingProduct(name: 'Disposable', amount: 5)
-            instanceApi.save(item, [flush: true])
+            item.secondary.save(flush: true)
             item
         }
 
         when: 'the product is deleted'
-        staticApi.withNewTransaction {
-            instanceApi.delete(saved, [flush: true])
+        DataServiceRoutingProduct.secondary.withNewTransaction {
+            saved.secondary.delete(flush: true)
         }
 
         then: 'the secondary datasource is empty'
@@ -153,36 +143,37 @@ class DomainMultiDataSourceSpec extends GrailsDataTckSpec {
     }
 
     private void saveToConnection(String connectionName, String name, Integer amount) {
-        def staticApi = connectionName
-                ? GormEnhancer.findStaticApi(DataServiceRoutingProduct, connectionName)
-                : GormEnhancer.findStaticApi(DataServiceRoutingProduct)
-        def instanceApi = connectionName
-                ? GormEnhancer.findInstanceApi(DataServiceRoutingProduct, connectionName)
-                : GormEnhancer.findInstanceApi(DataServiceRoutingProduct)
-        staticApi.withNewTransaction {
-            instanceApi.save(new DataServiceRoutingProduct(name: name, amount: amount), [flush: true])
+        if (connectionName) {
+            DataServiceRoutingProduct."${connectionName}".withNewTransaction {
+                new DataServiceRoutingProduct(name: name, amount: amount)."${connectionName}".save(flush: true)
+            }
+        } else {
+            DataServiceRoutingProduct.withNewTransaction {
+                new DataServiceRoutingProduct(name: name, amount: amount).save(flush: true)
+            }
         }
     }
 
     private long countOnConnection(String connectionName) {
-        def staticApi = connectionName
-                ? GormEnhancer.findStaticApi(DataServiceRoutingProduct, connectionName)
-                : GormEnhancer.findStaticApi(DataServiceRoutingProduct)
-        staticApi.withNewTransaction {
-            staticApi.count()
+        if (connectionName) {
+            DataServiceRoutingProduct."${connectionName}".withNewTransaction {
+                DataServiceRoutingProduct."${connectionName}".count()
+            }
+        } else {
+            DataServiceRoutingProduct.withNewTransaction {
+                DataServiceRoutingProduct.count()
+            }
         }
     }
 
     private void deleteAllFromConnection(String connectionName) {
-        def staticApi = connectionName
-                ? GormEnhancer.findStaticApi(DataServiceRoutingProduct, connectionName)
-                : GormEnhancer.findStaticApi(DataServiceRoutingProduct)
-        def instanceApi = connectionName
-                ? GormEnhancer.findInstanceApi(DataServiceRoutingProduct, connectionName)
-                : GormEnhancer.findInstanceApi(DataServiceRoutingProduct)
-        staticApi.withNewTransaction {
-            for (item in staticApi.list()) {
-                instanceApi.delete(item, [flush: true])
+        if (connectionName) {
+            DataServiceRoutingProduct."${connectionName}".withNewTransaction {
+                DataServiceRoutingProduct."${connectionName}".list().each { it."${connectionName}".delete(flush: true) }
+            }
+        } else {
+            DataServiceRoutingProduct.withNewTransaction {
+                DataServiceRoutingProduct.list().each { it.delete(flush: true) }
             }
         }
     }

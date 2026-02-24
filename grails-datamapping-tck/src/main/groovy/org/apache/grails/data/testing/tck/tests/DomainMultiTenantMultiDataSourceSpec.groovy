@@ -21,7 +21,6 @@ package org.apache.grails.data.testing.tck.tests
 import spock.lang.Requires
 import spock.util.environment.RestoreSystemProperties
 
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
@@ -50,17 +49,14 @@ class DomainMultiTenantMultiDataSourceSpec extends GrailsDataTckSpec {
     void "save with tenant isolation on secondary via domain API"() {
         given: 'a tenant selected'
         setTenant('tenant1')
-        def staticApi = GormEnhancer.findStaticApi(DataServiceRoutingMetric, 'secondary')
-        def instanceApi = GormEnhancer.findInstanceApi(DataServiceRoutingMetric, 'secondary')
-
         when: 'a metric is saved under tenant1'
-        staticApi.withNewTransaction {
-            instanceApi.save(new DataServiceRoutingMetric(name: 'page_views', amount: 100), [flush: true])
+        DataServiceRoutingMetric.secondary.withNewTransaction {
+            new DataServiceRoutingMetric(name: 'page_views', amount: 100).secondary.save(flush: true)
         }
 
         then: 'count reflects tenant scoped data'
-        staticApi.withNewTransaction {
-            staticApi.count()
+        DataServiceRoutingMetric.secondary.withNewTransaction {
+            DataServiceRoutingMetric.secondary.count()
         } == 1
     }
 
@@ -112,17 +108,15 @@ class DomainMultiTenantMultiDataSourceSpec extends GrailsDataTckSpec {
     void "delete with tenant isolation on secondary via domain API"() {
         given: 'a metric saved under tenant1'
         setTenant('tenant1')
-        def staticApi = GormEnhancer.findStaticApi(DataServiceRoutingMetric, 'secondary')
-        def instanceApi = GormEnhancer.findInstanceApi(DataServiceRoutingMetric, 'secondary')
-        def saved = staticApi.withNewTransaction {
+        def saved = DataServiceRoutingMetric.secondary.withNewTransaction {
             def item = new DataServiceRoutingMetric(name: 'disposable', amount: 0)
-            instanceApi.save(item, [flush: true])
+            item.secondary.save(flush: true)
             item
         }
 
         when: 'the metric is deleted'
-        staticApi.withNewTransaction {
-            instanceApi.delete(saved, [flush: true])
+        DataServiceRoutingMetric.secondary.withNewTransaction {
+            saved.secondary.delete(flush: true)
         }
 
         then: 'tenant1 has no metrics'
@@ -146,24 +140,20 @@ class DomainMultiTenantMultiDataSourceSpec extends GrailsDataTckSpec {
     }
 
     private void saveMetric(String name, Integer amount) {
-        def staticApi = GormEnhancer.findStaticApi(DataServiceRoutingMetric, 'secondary')
-        def instanceApi = GormEnhancer.findInstanceApi(DataServiceRoutingMetric, 'secondary')
-        staticApi.withNewTransaction {
-            instanceApi.save(new DataServiceRoutingMetric(name: name, amount: amount), [flush: true])
+        DataServiceRoutingMetric.secondary.withNewTransaction {
+            new DataServiceRoutingMetric(name: name, amount: amount).secondary.save(flush: true)
         }
     }
 
     private long countMetrics() {
-        def staticApi = GormEnhancer.findStaticApi(DataServiceRoutingMetric, 'secondary')
-        staticApi.withNewTransaction {
-            staticApi.count()
+        DataServiceRoutingMetric.secondary.withNewTransaction {
+            DataServiceRoutingMetric.secondary.count()
         }
     }
 
     private List<DataServiceRoutingMetric> findByName(String name) {
-        def staticApi = GormEnhancer.findStaticApi(DataServiceRoutingMetric, 'secondary')
-        staticApi.withNewTransaction {
-            staticApi.withCriteria {
+        DataServiceRoutingMetric.secondary.withNewTransaction {
+            DataServiceRoutingMetric.secondary.withCriteria {
                 eq 'name', name
             }
         }
@@ -171,12 +161,8 @@ class DomainMultiTenantMultiDataSourceSpec extends GrailsDataTckSpec {
 
     private void deleteAllForTenant(String tenantId) {
         setTenant(tenantId)
-        def staticApi = GormEnhancer.findStaticApi(DataServiceRoutingMetric, 'secondary')
-        def instanceApi = GormEnhancer.findInstanceApi(DataServiceRoutingMetric, 'secondary')
-        staticApi.withNewTransaction {
-            for (item in staticApi.list()) {
-                instanceApi.delete(item, [flush: true])
-            }
+        DataServiceRoutingMetric.secondary.withNewTransaction {
+            DataServiceRoutingMetric.secondary.list().each { it.secondary.delete(flush: true) }
         }
     }
 }
