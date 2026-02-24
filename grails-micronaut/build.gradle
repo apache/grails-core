@@ -33,11 +33,10 @@ group = 'org.apache.grails'
 dependencies {
     compileOnlyApi platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
     compileOnlyApi 'io.micronaut:micronaut-inject-groovy'
-    compileOnlyApi 'io.micronaut:micronaut-inject-java'
 
+    // Use the micronaut spring starter so that any bean in the spring context will be exposed to micronaut
     api platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
     api 'io.micronaut.spring:micronaut-spring-boot-starter'
-    api 'io.micronaut.spring:micronaut-spring-context'
 
     // For the grails plugin interface
     compileOnly platform(project(':grails-bom'))

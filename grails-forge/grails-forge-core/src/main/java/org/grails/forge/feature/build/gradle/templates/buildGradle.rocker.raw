@@ -98,7 +98,7 @@ repositories {
 compileJava.options.release = @features.getTargetJdk()
 
 @if (features.contains("jrebel")) {
-bootRun {
+tasks.named('bootRun') {
     dependsOn(generateRebel)
     if (project.hasProperty("rebelAgent")) {
         jvmArgs(rebelAgent)

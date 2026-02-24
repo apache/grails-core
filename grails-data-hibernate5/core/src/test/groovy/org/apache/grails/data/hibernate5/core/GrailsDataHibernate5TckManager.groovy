@@ -30,6 +30,7 @@ import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration
 import org.h2.Driver
 import org.hibernate.SessionFactory
+import org.hibernate.dialect.H2Dialect
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.context.ApplicationContext
 import org.springframework.orm.hibernate5.SessionFactoryUtils
@@ -48,6 +49,7 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
     TransactionStatus transactionStatus
     HibernateMappingContextConfiguration hibernateConfig
     ApplicationContext applicationContext
+    HibernateDatastore multiDataSourceDatastore
 
     @Override
     void setup(Class<? extends Specification> spec) {
@@ -114,10 +116,53 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
         shutdownInMemDb()
     }
 
+    @Override
+    boolean supportsMultipleDataSources() {
+        true
+    }
+
+    @Override
+    void setupMultiDataSource(Class... domainClasses) {
+        Map config = [
+                'dataSource.url'           : "jdbc:h2:mem:tckDefaultDB;LOCK_TIMEOUT=10000",
+                'dataSource.dbCreate'      : 'create-drop',
+                'dataSource.dialect'       : H2Dialect.name,
+                'dataSource.formatSql'     : 'true',
+                'hibernate.flush.mode'     : 'COMMIT',
+                'hibernate.cache.queries'  : 'true',
+                'hibernate.hbm2ddl.auto'   : 'create-drop',
+                'dataSources.secondary'    : [url: "jdbc:h2:mem:tckSecondaryDB;LOCK_TIMEOUT=10000"],
+        ]
+        multiDataSourceDatastore = new HibernateDatastore(
+                DatastoreUtils.createPropertyResolver(config), domainClasses
+        )
+    }
+
+    @Override
+    void cleanupMultiDataSource() {
+        if (multiDataSourceDatastore != null) {
+            multiDataSourceDatastore.destroy()
+            multiDataSourceDatastore = null
+            shutdownInMemDb('jdbc:h2:mem:tckDefaultDB')
+            shutdownInMemDb('jdbc:h2:mem:tckSecondaryDB')
+        }
+    }
+
+    @Override
+    def getServiceForConnection(Class serviceType, String connectionName) {
+        multiDataSourceDatastore
+                .getDatastoreForConnection(connectionName)
+                .getService(serviceType)
+    }
+
     private void shutdownInMemDb() {
+        shutdownInMemDb('jdbc:h2:mem:grailsDb')
+    }
+
+    private void shutdownInMemDb(String url) {
         Sql sql = null
         try {
-            sql = Sql.newInstance('jdbc:h2:mem:grailsDb', 'sa', '', Driver.name)
+            sql = Sql.newInstance(url, 'sa', '', Driver.name)
             sql.executeUpdate('SHUTDOWN')
         } catch (e) {
             // already closed, ignore
