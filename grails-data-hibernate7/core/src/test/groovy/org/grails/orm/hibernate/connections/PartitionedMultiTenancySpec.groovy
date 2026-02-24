@@ -119,7 +119,7 @@ class PartitionedMultiTenancySpec extends HibernateGormDatastoreSpec {
         then: "The results are correct"
         author.tmp != null // the beforeInsert event was triggered
         MultiTenantAuthor.findByName("Stephen King")
-        MultiTenantAuthor.findAll("from MultiTenantAuthor a").size() == 1
+        MultiTenantAuthor.findAll("from MultiTenantAuthor a", Collections.emptyMap()).size() == 1
         MultiTenantAuthor.count() == 1
 
         when: "An a transaction is used"
@@ -151,7 +151,7 @@ class PartitionedMultiTenancySpec extends HibernateGormDatastoreSpec {
         then: "the correct tenant is used and no data exists for 'books'"
         MultiTenantAuthor.withNewSession { MultiTenantAuthor.count() } == 0
         MultiTenantAuthor.withNewSession { MultiTenantAuthor.findByName("Stephen King") } == null
-        MultiTenantAuthor.withNewSession { MultiTenantAuthor.findAll("from MultiTenantAuthor a").size() } == 0
+        MultiTenantAuthor.withNewSession { MultiTenantAuthor.findAll("from MultiTenantAuthor a", Collections.emptyMap()).size() } == 0
 
         when: "Save data for 'books' tenant"
         // Clear any stale first-level cache before switching to explicit tenant contexts
