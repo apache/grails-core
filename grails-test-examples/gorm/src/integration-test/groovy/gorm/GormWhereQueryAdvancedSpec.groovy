@@ -318,6 +318,53 @@ class GormWhereQueryAdvancedSpec extends Specification {
         expensiveInStock.list().every { it.inStock && it.price > 15.0 }
     }
 
+
+    // ============================================
+    // Where Query with Re-assigned Variables
+    // ============================================
+
+    void "test where query composition with re-assigned variable in if/else block"() {
+        when: "building a where query with conditional re-assignment"
+        boolean filterInStock = true
+        def query
+        if (filterInStock) {
+            query = Book.where { inStock == true }
+        } else {
+            query = Book.where { inStock == false }
+        }
+        query = query.where { price > 15.0 }
+        def results = query.list()
+
+        then: "both conditions are applied"
+        results.every { it.inStock && it.price > 15.0 }
+        results.size() >= 2
+    }
+
+    void "test where query composition with re-assigned variable without initializer"() {
+        when: "declaring variable without initializer then assigning a where query"
+        def query
+        query = Book.where { author.name == 'Stephen King' }
+        query = query.where { inStock == true }
+        def results = query.list()
+
+        then: "both conditions are applied"
+        results.every { it.author.name == 'Stephen King' && it.inStock }
+        results.size() == 2 // The Stand and It (The Shining is out of stock)
+    }
+
+    void "test where query with triple chained re-assigned variable"() {
+        when: "chaining three where clauses on a re-assigned variable"
+        def query
+        query = Book.where { inStock == true }
+        query = query.where { price >= 14.0 }
+        query = query.where { pageCount > 400 }
+        def results = query.list()
+
+        then: "all three conditions are applied"
+        results.every { it.inStock && it.price >= 14.0 && it.pageCount > 400 }
+        results.size() >= 2
+    }
+
     // ============================================
     // Where Query with Sorting
     // ============================================

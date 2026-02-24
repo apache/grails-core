@@ -1553,6 +1553,73 @@ class Project {
         }
     }
 
+    def "Test where query composition with re-assigned variable in if/else blocks"() {
+        given: "A bunch of people"
+        createPeople()
+
+        when: "A where query variable is assigned inside an if/else block and then chained"
+        def condition = true
+        def query
+        if (condition) {
+            query = Person.where { lastName == 'Simpson' }
+        } else {
+            query = Person.where { lastName == 'Rubble' }
+        }
+        query = query.where { age > 10 }
+        def results = query.list()
+
+        then: "Both criteria from the if block and the chained where are applied"
+        results.size() == 2
+        results.every { it.lastName == 'Simpson' && it.age > 10 }
+
+        when: "The else branch is taken instead"
+        condition = false
+        if (condition) {
+            query = Person.where { lastName == 'Simpson' }
+        } else {
+            query = Person.where { lastName == 'Rubble' }
+        }
+        query = query.where { age > 10 }
+        results = query.list()
+
+        then: "Both criteria from the else block and the chained where are applied"
+        results.size() == 1
+        results[0].lastName == 'Rubble'
+        results[0].firstName == 'Barney'
+    }
+
+    def "Test where query composition with re-assigned variable without initializer"() {
+        given: "A bunch of people"
+        createPeople()
+
+        when: "A variable is declared without initializer and then assigned a where query"
+        def query
+        query = Person.where { lastName == 'Simpson' }
+        query = query.where { firstName == 'Bart' }
+        def results = query.list()
+
+        then: "Both criteria are applied"
+        results.size() == 1
+        results[0].firstName == 'Bart'
+        results[0].lastName == 'Simpson'
+    }
+
+    def "Test where query composition with chained where on re-assigned variable"() {
+        given: "A bunch of people"
+        createPeople()
+
+        when: "Multiple where queries are chained on a re-assigned variable"
+        def query
+        query = Person.where { age > 5 }
+        query = query.where { age < 42 }
+        query = query.where { lastName == 'Simpson' }
+        def results = query.list()
+
+        then: "All three criteria are applied"
+        results.size() == 3
+        results.every { it.age > 5 && it.age < 42 && it.lastName == 'Simpson' }
+    }
+
     protected createContinentWithCountries() {
         final continent = new Continent(name: "Africa")
         continent.countries << new Country(name: "SA", population: 304830) << new Country(name: "Zim", population: 304830)
