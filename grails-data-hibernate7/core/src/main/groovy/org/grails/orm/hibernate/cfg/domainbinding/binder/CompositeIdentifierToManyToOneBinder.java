@@ -37,7 +37,6 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.SimpleValue;
 
 public class CompositeIdentifierToManyToOneBinder {
-  private final MetadataBuildingContext metadataBuildingContext;
   private final ForeignKeyColumnCountCalculator foreignKeyColumnCountCalculator;
   private final PersistentEntityNamingStrategy namingStrategy;
   private final DefaultColumnNameFetcher defaultColumnNameFetcher;
@@ -45,13 +44,11 @@ public class CompositeIdentifierToManyToOneBinder {
   private final SimpleValueBinder simpleValueBinder;
 
   public CompositeIdentifierToManyToOneBinder(
-      MetadataBuildingContext metadataBuildingContext,
       ForeignKeyColumnCountCalculator foreignKeyColumnCountCalculator,
       PersistentEntityNamingStrategy namingStrategy,
       DefaultColumnNameFetcher defaultColumnNameFetcher,
       BackticksRemover backticksRemover,
       SimpleValueBinder simpleValueBinder) {
-    this.metadataBuildingContext = metadataBuildingContext;
     this.foreignKeyColumnCountCalculator = foreignKeyColumnCountCalculator;
     this.namingStrategy = namingStrategy;
     this.defaultColumnNameFetcher = defaultColumnNameFetcher;
@@ -64,8 +61,7 @@ public class CompositeIdentifierToManyToOneBinder {
       PersistentEntityNamingStrategy namingStrategy,
       JdbcEnvironment jdbcEnvironment) {
     this(
-        metadataBuildingContext,
-        new ForeignKeyColumnCountCalculator(),
+            new ForeignKeyColumnCountCalculator(),
         namingStrategy,
         new DefaultColumnNameFetcher(namingStrategy),
         new BackticksRemover(),

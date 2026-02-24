@@ -50,7 +50,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         simpleValueBinder = Mock(SimpleValueBinder)
         propertyBinder = Spy(PropertyBinder)
 
-        simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, jdbcEnvironment, basicValueIdCreator, simpleValueBinder, propertyBinder)
+        simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, basicValueIdCreator, simpleValueBinder, propertyBinder)
     }
 
     def "bindSimpleId with identity generator"() {

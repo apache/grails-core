@@ -26,7 +26,7 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
     CompositeIdBinder binder
 
     def setup() {
-        binder = new CompositeIdBinder(getGrailsDomainBinder().getMetadataBuildingContext(), componentBinder, componentUpdater, grailsPropertyBinder)
+        binder = new CompositeIdBinder(getGrailsDomainBinder().getMetadataBuildingContext(), componentUpdater, grailsPropertyBinder)
     }
 
     def "should bind composite id using property names from CompositeIdentity"() {

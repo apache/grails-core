@@ -23,13 +23,11 @@ import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBind
 import jakarta.annotation.Nonnull;
 import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator;
 import org.hibernate.MappingException;
 import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.PrimaryKey;
 import org.hibernate.mapping.Property;
@@ -39,20 +37,16 @@ import org.hibernate.mapping.Table;
 public class SimpleIdBinder {
 
   private final MetadataBuildingContext metadataBuildingContext;
-  private final JdbcEnvironment jdbcEnvironment;
   private final SimpleValueBinder simpleValueBinder;
   private final PropertyBinder propertyBinder;
   private final BasicValueIdCreator basicValueIdCreator;
 
   public SimpleIdBinder(
       MetadataBuildingContext metadataBuildingContext,
-      PersistentEntityNamingStrategy namingStrategy,
-      JdbcEnvironment jdbcEnvironment,
       BasicValueIdCreator basicValueIdCreator,
       SimpleValueBinder simpleValueBinder,
       PropertyBinder propertyBinder) {
     this.metadataBuildingContext = metadataBuildingContext;
-    this.jdbcEnvironment = jdbcEnvironment;
     this.simpleValueBinder = simpleValueBinder;
     this.propertyBinder = propertyBinder;
     this.basicValueIdCreator = basicValueIdCreator;
@@ -62,18 +56,6 @@ public class SimpleIdBinder {
     return metadataBuildingContext;
   }
 
-  protected SimpleIdBinder(
-      MetadataBuildingContext metadataBuildingContext,
-      JdbcEnvironment jdbcEnvironment,
-      BasicValueIdCreator basicValueIdCreator,
-      SimpleValueBinder simpleValueBinder,
-      PropertyBinder propertyBinder) {
-    this.metadataBuildingContext = metadataBuildingContext;
-    this.jdbcEnvironment = jdbcEnvironment;
-    this.simpleValueBinder = simpleValueBinder;
-    this.propertyBinder = propertyBinder;
-    this.basicValueIdCreator = basicValueIdCreator;
-  }
 
   public void bindSimpleId(
       @Nonnull GrailsHibernatePersistentEntity domainClass,

@@ -32,15 +32,12 @@ import org.hibernate.type.ForeignKeyDirection;
 public class OneToOneBinder {
 
   private final MetadataBuildingContext metadataBuildingContext;
-  private final PersistentEntityNamingStrategy namingStrategy;
   private final SimpleValueBinder simpleValueBinder;
 
   public OneToOneBinder(
       MetadataBuildingContext metadataBuildingContext,
-      PersistentEntityNamingStrategy namingStrategy,
       SimpleValueBinder simpleValueBinder) {
     this.metadataBuildingContext = metadataBuildingContext;
-    this.namingStrategy = namingStrategy;
     this.simpleValueBinder = simpleValueBinder;
   }
 
@@ -50,8 +47,7 @@ public class OneToOneBinder {
       JdbcEnvironment jdbcEnvironment) {
     this(
         metadataBuildingContext,
-        namingStrategy,
-        new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment));
+            new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment));
   }
 
   public OneToOne bindOneToOne(

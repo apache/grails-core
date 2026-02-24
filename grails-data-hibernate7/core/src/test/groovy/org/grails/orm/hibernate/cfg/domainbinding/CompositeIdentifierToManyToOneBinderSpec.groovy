@@ -31,7 +31,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         def metadataBuildingContext = Mock(org.hibernate.boot.spi.MetadataBuildingContext)
 
         // Instantiate the binder with stubs
-        def binder = new CompositeIdentifierToManyToOneBinder(metadataBuildingContext, calculator, namingStrategy, columnNameFetcher, backticksRemover, simpleValueBinder)
+        def binder = new CompositeIdentifierToManyToOneBinder(calculator, namingStrategy, columnNameFetcher, backticksRemover, simpleValueBinder)
 
         // 2. Set up stubs for the method arguments
         def association = Mock(ToOne)
@@ -97,7 +97,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         def simpleValueBinder = Mock(SimpleValueBinder)
         def metadataBuildingContext = Mock(org.hibernate.boot.spi.MetadataBuildingContext)
 
-        def binder = new CompositeIdentifierToManyToOneBinder(metadataBuildingContext, calculator, namingStrategy, columnNameFetcher, backticksRemover, simpleValueBinder)
+        def binder = new CompositeIdentifierToManyToOneBinder(calculator, namingStrategy, columnNameFetcher, backticksRemover, simpleValueBinder)
 
         // 2. Set up arguments
         def association = Mock(ToOne)

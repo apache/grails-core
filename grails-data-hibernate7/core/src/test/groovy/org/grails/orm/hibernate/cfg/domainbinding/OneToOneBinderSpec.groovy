@@ -22,7 +22,7 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
     SimpleValueBinder mockSimpleValueBinder = Mock(SimpleValueBinder)
 
     def setup() {
-        binder = new OneToOneBinder(getGrailsDomainBinder().getMetadataBuildingContext(), getGrailsDomainBinder().getNamingStrategy(), mockSimpleValueBinder)
+        binder = new OneToOneBinder(getGrailsDomainBinder().getMetadataBuildingContext(), mockSimpleValueBinder)
     }
 
     def "should bind one-to-one mapping with defaults"() {

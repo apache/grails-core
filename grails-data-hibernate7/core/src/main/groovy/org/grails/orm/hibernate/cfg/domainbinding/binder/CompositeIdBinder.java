@@ -31,17 +31,14 @@ import org.hibernate.mapping.RootClass;
 public class CompositeIdBinder {
 
   private final MetadataBuildingContext metadataBuildingContext;
-  private final ComponentBinder componentBinder;
   private final ComponentUpdater componentUpdater;
   private final GrailsPropertyBinder grailsPropertyBinder;
 
   public CompositeIdBinder(
       MetadataBuildingContext metadataBuildingContext,
-      ComponentBinder componentBinder,
       ComponentUpdater componentUpdater,
       GrailsPropertyBinder grailsPropertyBinder) {
     this.metadataBuildingContext = metadataBuildingContext;
-    this.componentBinder = componentBinder;
     this.componentUpdater = componentUpdater;
     this.grailsPropertyBinder = grailsPropertyBinder;
   }

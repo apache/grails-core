@@ -61,14 +61,14 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         EnumTypeBinder enumTypeBinderToUse = new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher)
         SimpleValueColumnFetcher simpleValueColumnFetcher = new SimpleValueColumnFetcher()
         CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder = new CompositeIdentifierToManyToOneBinder(
-                metadataBuildingContext,
+
                 new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(),
                 namingStrategy,
                 defaultColumnNameFetcher,
                 backticksRemover,
                 simpleValueBinder
         )
-        OneToOneBinder oneToOneBinder = new OneToOneBinder(metadataBuildingContext, namingStrategy, simpleValueBinder)
+        OneToOneBinder oneToOneBinder = new OneToOneBinder(metadataBuildingContext, simpleValueBinder)
         ManyToOneBinder manyToOneBinder = new ManyToOneBinder(metadataBuildingContext, namingStrategy, simpleValueBinder, new ManyToOneValuesBinder(), compositeIdentifierToManyToOneBinder, simpleValueColumnFetcher)
 
         CollectionBinder collectionBinder = new CollectionBinder(
@@ -103,9 +103,9 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
                 manyToOneBinder
 
         )
-        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentBinder, componentUpdater, propertyBinder)
+        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentUpdater, propertyBinder)
         PropertyBinder propertyBinderHelper = new PropertyBinder()
-        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment, new BasicValueIdCreator(jdbcEnvironment, namingStrategy), simpleValueBinder, propertyBinderHelper)
+        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, new BasicValueIdCreator(jdbcEnvironment, namingStrategy), simpleValueBinder, propertyBinderHelper)
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder)
         VersionBinder versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinderHelper, BasicValue::new)
 
