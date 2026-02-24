@@ -1,6 +1,6 @@
 # GORM Query Safety Audit — `grails-data-hibernate7`
 
-> **Scope**: Section 2.6 of `HIBERNATE7-GRAILS8-UPGRADE.md`  
+> **Scope**: Section 2.6 of `UPGRADE.md`  
 > **Priority**: P2 — SQL injection is OWASP Top-10 #3  
 > **Module**: `grails-data-hibernate7-core`  
 > **Last updated**: 2026-02-23

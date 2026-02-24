@@ -183,7 +183,7 @@ public class GrailsHibernateQueryUtils {
    * Add order to criteria, creating necessary subCriteria if nested sort property (ie.
    * sort:'nested.property').
    */
-  private static void addOrderPossiblyNested(
+  protected static void addOrderPossiblyNested(
       CriteriaQuery query,
       From queryRoot,
       CriteriaBuilder criteriaBuilder,
@@ -224,7 +224,7 @@ public class GrailsHibernateQueryUtils {
     }
   }
 
-  private static boolean isIgnoreCaseProperty(
+  protected static boolean isIgnoreCaseProperty(
       boolean ignoreCase, PersistentProperty<? extends Property> persistentProperty) {
     if (ignoreCase && persistentProperty != null && persistentProperty.getType() != String.class) {
       ignoreCase = false;
@@ -233,7 +233,7 @@ public class GrailsHibernateQueryUtils {
   }
 
   /** Add order directly to criteria. */
-  private static void addOrder(
+  protected static void addOrder(
       PersistentEntity entity,
       CriteriaQuery query,
       From queryRoot,
@@ -322,14 +322,14 @@ public class GrailsHibernateQueryUtils {
    * @param targetClass The target class
    * @param criteria The criteria
    */
-  private static void cacheCriteriaByMapping(Class<?> targetClass, Query criteria) {
+  protected static void cacheCriteriaByMapping(Class<?> targetClass, Query criteria) {
     Mapping m = MappingCacheHolder.getInstance().getMapping(targetClass);
     if (m != null && m.getCache() != null && m.getCache().getEnabled()) {
       criteria.setCacheable(true);
     }
   }
 
-  private static FlushMode convertFlushMode(Object object) {
+  protected static FlushMode convertFlushMode(Object object) {
     if (object == null) {
       return null;
     }
