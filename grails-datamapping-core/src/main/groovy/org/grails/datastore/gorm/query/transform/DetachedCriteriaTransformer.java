@@ -787,7 +787,9 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
             ClosureExpression associationQuery = (ClosureExpression) arguments.getExpression(0);
             BlockStatement currentBody = closureAndArguments.getCurrentBody();
             ArgumentListExpression argList = closureAndArguments.getArguments();
-            newCode.addStatement(new ExpressionStatement(new MethodCallExpression(new VariableExpression("delegate"), methodName, argList)));
+            MethodCallExpression delegateCall = new MethodCallExpression(new VariableExpression("delegate"), methodName, argList);
+            delegateCall.setImplicitThis(false);
+            newCode.addStatement(new ExpressionStatement(delegateCall));
             Statement associationCode = associationQuery.getCode();
             if (associationCode instanceof BlockStatement) {
 
@@ -1059,7 +1061,9 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                     if (type == null) break;
 
                     currentType = type;
-                    currentBody.addStatement(new ExpressionStatement(new MethodCallExpression(delegateExpression, associationMethodCall, arguments)));
+                    MethodCallExpression assocDelegateCall = new MethodCallExpression(delegateExpression, associationMethodCall, arguments);
+                    assocDelegateCall.setImplicitThis(false);
+                    currentBody.addStatement(new ExpressionStatement(assocDelegateCall));
                     currentBody = closureAndArguments.getCurrentBody();
 
                     if (!iterator.hasNext()) {
@@ -1120,7 +1124,9 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                             this.currentClassNode = existing;
                         }
 
-                        newCode.addStatement(new ExpressionStatement(new MethodCallExpression(new VariableExpression("delegate"), actualPropertyName, arguments)));
+                        MethodCallExpression embeddedDelegateCall = new MethodCallExpression(new VariableExpression("delegate"), actualPropertyName, arguments);
+                        embeddedDelegateCall.setImplicitThis(false);
+                        newCode.addStatement(new ExpressionStatement(embeddedDelegateCall));
                     }
                     else {
                         addCriteriaCallMethodExpression(newCode, operator, pe, oppositeSide, associationProperty, Collections.<String>emptyList(), false, variableScope);
@@ -1152,7 +1158,9 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                     } finally {
                         this.currentClassNode = existing;
                     }
-                    newCode.addStatement(new ExpressionStatement(new MethodCallExpression(new VariableExpression("delegate"), actualPropertyName, arguments)));
+                    MethodCallExpression domainDelegateCall = new MethodCallExpression(new VariableExpression("delegate"), actualPropertyName, arguments);
+                    domainDelegateCall.setImplicitThis(false);
+                    newCode.addStatement(new ExpressionStatement(domainDelegateCall));
                 }
             } else if ((aliased instanceof ClassNode) && (oppositeSide instanceof PropertyExpression)) {
                 String rootReference = pe.getText();
